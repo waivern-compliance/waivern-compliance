@@ -1,0 +1,22 @@
+[project]
+name = "waivern-rulesets-wordpress"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "Ruan Comelli", email = "ruancomelli@gmail.com" }]
+requires-python = ">=3.9"
+dependencies = [
+    "waivern-analyser",
+    "waivern-rulesets-core",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+waivern-rulesets-core = { workspace = true }
+waivern-analyser = { workspace = true }
+
+[project.entry-points."waivern-plugins"]
+wordpress = "waivern_rulesets_wordpress:WordpressRulesetPlugin"
