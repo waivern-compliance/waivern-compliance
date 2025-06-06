@@ -7,10 +7,6 @@ from waivern_rulesets_core import Ruleset
 
 class Plugin(abc.ABC):
     @classmethod
-    @abc.abstractmethod
-    def get_name(cls) -> str: ...
-
-    @classmethod
     def get_connectors(cls) -> Iterable[Connector] | Iterator[Connector]:
         return ()
 

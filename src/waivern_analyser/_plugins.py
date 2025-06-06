@@ -12,7 +12,6 @@ from waivern_analyser.plugin import Plugin
 PLUGINS_GROUP_NAME = "waivern-plugins"
 
 PluginName: typing.TypeAlias = str
-PluginRegistry: typing.TypeAlias = dict[PluginName, type[Plugin]]
 
 
 class DuplicatePluginError(KeyError):
@@ -23,7 +22,7 @@ class DuplicatePluginError(KeyError):
         )
 
 
-class MissingPluginsError(KeyError):
+class MissingSelectedPluginsError(KeyError):
     def __init__(self, plugin_names: Iterable[PluginName]):
         plugin_names = sorted(frozenset(plugin_names))
 
@@ -44,6 +43,10 @@ class WrongPluginClassError(TypeError):
             plugin,
             f"Plugin {plugin} is not a valid Plugin (expected a subclass of {Plugin})",
         )
+
+
+class PluginRegistry(dict[PluginName, type[Plugin]]):
+    pass
 
 
 @typing.overload
@@ -79,6 +82,7 @@ def load_plugins(
 
     If `select` is provided, only the plugins in `select` will be loaded.
     If `exclude` is provided, the plugins in `exclude` will not be loaded.
+
     The arguments `select` and `exclude` are mutually exclusive.
 
     Args:
@@ -91,21 +95,21 @@ def load_plugins(
     select = frozenset(select) if select is not None else None
     exclude = frozenset(exclude) if exclude is not None else None
 
-    plugin_registry: PluginRegistry = {}
+    plugin_registry = PluginRegistry()
 
     for entry_point in entry_points(group=PLUGINS_GROUP_NAME):
+        plugin_name = entry_point.name
+
+        if select is not None and plugin_name not in select:
+            continue
+
+        if exclude is not None and plugin_name in exclude:
+            continue
+
         plugin = entry_point.load()
 
         if not issubclass(plugin, Plugin):
             raise WrongPluginClassError(plugin.__name__)
-
-        plugin_name = plugin.get_name()
-
-        if select and plugin_name not in select:
-            continue
-
-        if exclude and plugin_name in exclude:
-            continue
 
         if plugin_name in plugin_registry:
             raise DuplicatePluginError(plugin_name)
@@ -115,6 +119,6 @@ def load_plugins(
     if select:
         missing_required_plugins = select.difference(plugin_registry)
         if missing_required_plugins:
-            raise MissingPluginsError(missing_required_plugins)
+            raise MissingSelectedPluginsError(missing_required_plugins)
 
     return plugin_registry

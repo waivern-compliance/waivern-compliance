@@ -21,7 +21,12 @@ waivern-connectors-core = { workspace = true }
 waivern-rulesets-core = { workspace = true }
 
 [dependency-groups]
-dev = ["basedpyright>=1.29.2", "pytest>=8.4.0", "ruff>=0.11.12"]
+dev = [
+    "basedpyright>=1.29.2",
+    "pytest>=8.4.0",
+    "pytest-mock>=3.14.1",
+    "ruff>=0.11.12",
+]
 
 [build-system]
 requires = ["hatchling"]
