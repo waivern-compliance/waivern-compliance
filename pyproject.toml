@@ -6,12 +6,14 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "importlib-metadata ; python_full_version < '3.10'",
+    "pydantic>=2.11.5",
+    "typer>=0.16.0",
     "waivern-connectors-core",
     "waivern-rulesets-core",
 ]
 
 [project.scripts]
-waivern-analyser = "waivern_analyser:main"
+waivern-analyser = "waivern_analyser.__main__:app"
 
 [tool.uv.workspace]
 members = ["src/connectors/*", "src/rulesets/*"]

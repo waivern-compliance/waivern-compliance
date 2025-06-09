@@ -1,8 +1,8 @@
-from waivern_connectors_core import (
+from waivern_connectors_core.connector import (
     Connector,
     ConnectorInputSchema,
-    ConnectorOutputSchema,
 )
+from waivern_connectors_core.output_schema import ConnectorOutputSchema
 
 
 class SourceCodeConnectorInputSchema(ConnectorInputSchema):

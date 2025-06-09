@@ -1,7 +1,7 @@
 import abc
 from collections.abc import Iterable, Iterator
 
-from waivern_connectors_core import Connector
+from waivern_connectors_core.connector import Connector
 from waivern_rulesets_core import Ruleset
 
 

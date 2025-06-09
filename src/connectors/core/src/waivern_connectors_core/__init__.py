@@ -1,17 +1,13 @@
-import abc
-from dataclasses import dataclass
+from waivern_connectors_core.connector import (
+    Connector,
+    ConnectorCollection,
+    ConnectorInputSchema,
+)
+from waivern_connectors_core.output_schema import ConnectorOutputSchema
 
-
-@dataclass(frozen=True, slots=True)
-class ConnectorInputSchema:
-    pass
-
-
-@dataclass(frozen=True, slots=True)
-class ConnectorOutputSchema:
-    pass
-
-
-class Connector(abc.ABC):
-    @abc.abstractmethod
-    def run(self, input: ConnectorInputSchema) -> ConnectorOutputSchema: ...
+__all__ = (
+    "Connector",
+    "ConnectorCollection",
+    "ConnectorInputSchema",
+    "ConnectorOutputSchema",
+)

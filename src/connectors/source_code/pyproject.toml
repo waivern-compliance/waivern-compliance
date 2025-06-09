@@ -3,13 +3,9 @@ name = "waivern-connectors-source-code"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-authors = [
-    { name = "Ruan Comelli", email = "ruancomelli@gmail.com" }
-]
-requires-python = ">=3.13.4"
-dependencies = [
-    "waivern-connectors-core",
-]
+authors = [{ name = "Ruan Comelli", email = "ruancomelli@gmail.com" }]
+requires-python = ">=3.9"
+dependencies = ["waivern-connectors-core"]
 
 [build-system]
 requires = ["hatchling"]
