@@ -1,11 +1,6 @@
-import sys
 import typing
 from collections.abc import Iterable
-
-if sys.version_info < (3, 10):
-    from importlib_metadata import entry_points
-else:
-    from importlib.metadata import entry_points
+from importlib.metadata import entry_points
 
 from waivern_analyser.plugin import Plugin
 

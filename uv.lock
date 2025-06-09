@@ -1,12 +1,12 @@
 version = 1
 revision = 2
-requires-python = ">=3.10"
+requires-python = ">=3.10.8"
 
 [manifest]
 members = [
     "waivern-analyser",
     "waivern-connectors-core",
-    "waivern-connectors-source-code",
+    "waivern-connectors-wordpress",
     "waivern-rulesets-core",
     "waivern-rulesets-wordpress",
 ]
@@ -400,6 +400,7 @@ source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
     { name = "typer" },
+    { name = "typing-extensions" },
     { name = "waivern-connectors-core" },
     { name = "waivern-rulesets-core" },
 ]
@@ -414,9 +415,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "importlib-metadata", marker = "python_full_version < '3.10'" },
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "typer", specifier = ">=0.16.0" },
+    { name = "typing-extensions", specifier = ">=4.14.0" },
     { name = "waivern-connectors-core", editable = "src/connectors/core" },
     { name = "waivern-rulesets-core", editable = "src/rulesets/core" },
 ]
@@ -441,9 +442,9 @@ dependencies = [
 requires-dist = [{ name = "pydantic", specifier = ">=2.11.5" }]
 
 [[package]]
-name = "waivern-connectors-source-code"
+name = "waivern-connectors-wordpress"
 version = "0.1.0"
-source = { editable = "src/connectors/source_code" }
+source = { editable = "src/connectors/wordpress" }
 dependencies = [
     { name = "waivern-connectors-core" },
 ]
@@ -468,11 +469,13 @@ version = "0.1.0"
 source = { editable = "src/rulesets/wordpress" }
 dependencies = [
     { name = "waivern-analyser" },
+    { name = "waivern-connectors-wordpress" },
     { name = "waivern-rulesets-core" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "waivern-analyser", editable = "." },
+    { name = "waivern-connectors-wordpress", editable = "src/connectors/wordpress" },
     { name = "waivern-rulesets-core", editable = "src/rulesets/core" },
 ]

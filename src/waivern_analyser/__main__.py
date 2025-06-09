@@ -6,7 +6,7 @@ app = typer.Typer()
 
 
 @app.command()
-def main():
+def run():
     print("Hello from waivern-analyser!")
 
 

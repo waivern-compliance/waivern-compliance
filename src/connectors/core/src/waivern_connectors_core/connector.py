@@ -11,6 +11,10 @@ class ConnectorInputSchema:
 
 
 class Connector(abc.ABC):
+    @classmethod
+    @abc.abstractmethod
+    def get_name(cls) -> str: ...
+
     @abc.abstractmethod
     def run(self, input: ConnectorInputSchema) -> ConnectorOutputSchema: ...
 

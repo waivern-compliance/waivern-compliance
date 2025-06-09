@@ -1,11 +1,15 @@
 [project]
-name = "waivern-connectors-source-code"
+name = "waivern-connectors-wordpress"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-authors = [{ name = "Ruan Comelli", email = "ruancomelli@gmail.com" }]
-requires-python = ">=3.10"
-dependencies = ["waivern-connectors-core"]
+authors = [
+    { name = "Ruan Comelli", email = "ruancomelli@gmail.com" }
+]
+requires-python = ">=3.10.8"
+dependencies = [
+    "waivern-connectors-core",
+]
 
 [build-system]
 requires = ["hatchling"]
