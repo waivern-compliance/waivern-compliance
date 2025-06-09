@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [{ name = "Ruan Comelli", email = "ruancomelli@gmail.com" }]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = ["waivern-analyser", "waivern-rulesets-core"]
 
 [build-system]

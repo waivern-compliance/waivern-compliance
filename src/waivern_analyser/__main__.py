@@ -3,8 +3,6 @@ import typer
 from waivern_analyser._plugins import load_plugins
 
 app = typer.Typer()
-plugins_app = typer.Typer()
-app.add_typer(plugins_app, name="plugins")
 
 
 @app.command()
@@ -12,8 +10,8 @@ def main():
     print("Hello from waivern-analyser!")
 
 
-@plugins_app.command()
-def ls():
+@app.command()
+def ls_plugins():
     print("Loading plugins...")
     if plugins := load_plugins():
         print("Loaded plugins:")
