@@ -1,13 +1,8 @@
 import abc
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Iterable
 
 from waivern_connectors_core.output_schema import ConnectorOutputSchema
-
-
-@dataclass(frozen=True, slots=True)
-class ConnectorInputSchema:
-    pass
+from waivern_connectors_core.source import Source
 
 
 class Connector(abc.ABC):
@@ -15,10 +10,9 @@ class Connector(abc.ABC):
     @abc.abstractmethod
     def get_name(cls) -> str: ...
 
+    @classmethod
     @abc.abstractmethod
-    def run(self, input: ConnectorInputSchema) -> ConnectorOutputSchema: ...
+    def get_source_types(cls) -> Iterable[type[Source]]: ...
 
-
-@dataclass(frozen=True, slots=True)
-class ConnectorCollection:
-    connectors: Sequence[Connector]
+    @abc.abstractmethod
+    def run(self, source: Source) -> ConnectorOutputSchema: ...
