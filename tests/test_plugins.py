@@ -10,7 +10,7 @@ from waivern_analyser._plugins import (
     WrongPluginClassError,
     load_plugins,
 )
-from waivern_analyser.plugin import Plugin
+from waivern_analyser.plugins import Plugin
 
 
 class Plugin1(Plugin):

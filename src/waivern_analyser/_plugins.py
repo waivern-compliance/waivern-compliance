@@ -2,7 +2,7 @@ import typing
 from collections.abc import Iterable
 from importlib.metadata import entry_points
 
-from waivern_analyser.plugin import Plugin
+from waivern_analyser.plugins import Plugin
 
 PLUGINS_GROUP_NAME = "waivern-plugins"
 

@@ -5,10 +5,7 @@ requires-python = ">=3.10.8"
 [manifest]
 members = [
     "waivern-analyser",
-    "waivern-connectors-core",
-    "waivern-connectors-wordpress",
-    "waivern-rulesets-core",
-    "waivern-rulesets-wordpress",
+    "waivern-wordpress-plugin",
 ]
 
 [[package]]
@@ -401,8 +398,6 @@ dependencies = [
     { name = "pydantic" },
     { name = "typer" },
     { name = "typing-extensions" },
-    { name = "waivern-connectors-core" },
-    { name = "waivern-rulesets-core" },
 ]
 
 [package.dev-dependencies]
@@ -418,8 +413,6 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "typer", specifier = ">=0.16.0" },
     { name = "typing-extensions", specifier = ">=4.14.0" },
-    { name = "waivern-connectors-core", editable = "src/connectors/core" },
-    { name = "waivern-rulesets-core", editable = "src/rulesets/core" },
 ]
 
 [package.metadata.requires-dev]
@@ -431,51 +424,12 @@ dev = [
 ]
 
 [[package]]
-name = "waivern-connectors-core"
+name = "waivern-wordpress-plugin"
 version = "0.1.0"
-source = { editable = "src/connectors/core" }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.11.5" }]
-
-[[package]]
-name = "waivern-connectors-wordpress"
-version = "0.1.0"
-source = { editable = "src/connectors/wordpress" }
-dependencies = [
-    { name = "waivern-connectors-core" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "waivern-connectors-core", editable = "src/connectors/core" }]
-
-[[package]]
-name = "waivern-rulesets-core"
-version = "0.1.0"
-source = { editable = "src/rulesets/core" }
-dependencies = [
-    { name = "waivern-connectors-core" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "waivern-connectors-core", editable = "src/connectors/core" }]
-
-[[package]]
-name = "waivern-rulesets-wordpress"
-version = "0.1.0"
-source = { editable = "src/rulesets/wordpress" }
+source = { editable = "src/plugins/wordpress" }
 dependencies = [
     { name = "waivern-analyser" },
-    { name = "waivern-connectors-wordpress" },
-    { name = "waivern-rulesets-core" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "waivern-analyser", editable = "." },
-    { name = "waivern-connectors-wordpress", editable = "src/connectors/wordpress" },
-    { name = "waivern-rulesets-core", editable = "src/rulesets/core" },
-]
+requires-dist = [{ name = "waivern-analyser", editable = "." }]

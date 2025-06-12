@@ -8,19 +8,13 @@ dependencies = [
     "pydantic>=2.11.5",
     "typer>=0.16.0",
     "typing-extensions>=4.14.0",
-    "waivern-connectors-core",
-    "waivern-rulesets-core",
 ]
 
 [project.scripts]
-waivern-analyser = "waivern_analyser.__main__:app"
+waivern-analyser = "analyser.__main__:app"
 
 [tool.uv.workspace]
-members = ["src/connectors/*", "src/rulesets/*"]
-
-[tool.uv.sources]
-waivern-connectors-core = { workspace = true }
-waivern-rulesets-core = { workspace = true }
+members = ["src/plugins/*"]
 
 [dependency-groups]
 dev = [

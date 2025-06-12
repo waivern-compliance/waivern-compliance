@@ -1,8 +1,13 @@
 import abc
 from collections.abc import Iterable
+from dataclasses import dataclass
 
-from waivern_connectors_core.output_schema import ConnectorOutputSchema
-from waivern_connectors_core.source import Source
+from waivern_analyser.sources import Source
+
+
+@dataclass(frozen=True, slots=True)
+class ConnectorOutputSchema:
+    pass
 
 
 class Connector(abc.ABC):
