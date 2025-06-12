@@ -16,7 +16,7 @@ def run(
         typer.Option(
             "--config",
             "-c",
-            help="The path to the Waivern configuration file",
+            help="The path to the Waivern YAML configuration file",
             file_okay=True,
             dir_okay=False,
             readable=True,

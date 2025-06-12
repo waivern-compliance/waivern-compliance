@@ -34,5 +34,4 @@ class WordpressPlugin(Plugin):
 
     @classmethod
     def get_rulesets(cls) -> tuple[type[Ruleset], ...]:
-        # TODO: Add rulesets here
         return (WordpressRuleset,)

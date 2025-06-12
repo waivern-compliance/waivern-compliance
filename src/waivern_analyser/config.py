@@ -1,9 +1,11 @@
 from collections import Counter
 from pathlib import Path
 
+import yaml
 from pydantic import (
     BaseModel,
     ConfigDict,
+    ValidationError,
     ValidationInfo,
     field_validator,
     model_validator,
@@ -12,6 +14,18 @@ from typing_extensions import Self
 
 from waivern_analyser._plugins import PluginRegistry
 from waivern_analyser._plugins import load_plugins as _load_plugins
+
+
+class InvalidConfigFileError(ValueError):
+    """Raised when the config file is invalid."""
+
+
+class InvalidYamlConfigFileError(InvalidConfigFileError):
+    """Raised when the config file is invalid YAML."""
+
+
+class InvalidConfigFileSchemaError(InvalidConfigFileError):
+    """Raised when the config file is invalid schema."""
 
 
 class Config(BaseModel):
@@ -54,13 +68,40 @@ class Config(BaseModel):
 
     @classmethod
     def default(cls) -> Self:
-        # TODO: implement
         return cls()
 
     @classmethod
     def from_file(cls, path: Path) -> Self:
-        # TODO: implement
-        return cls()
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            raise InvalidYamlConfigFileError(
+                f"Error loading YAML config file {path}: {e}"
+            ) from e
+        except Exception as e:
+            raise InvalidConfigFileError(
+                f"Error loading config file {path}: {e}"
+            ) from e
+
+        if data is None:
+            return cls.default()
+
+        if not isinstance(data, dict):
+            raise InvalidConfigFileSchemaError(
+                f"Config file {path} must be a mapping, but got {type(data)}"
+            )
+
+        try:
+            return cls(**data)
+        except ValidationError as e:
+            raise InvalidConfigFileSchemaError(
+                f"Error validating config file {path}: {e}"
+            ) from e
+        except Exception as e:
+            raise InvalidConfigFileSchemaError(
+                f"Error parsing config file {path}: {e}"
+            ) from e
 
     def load_plugins(self) -> PluginRegistry:
         # The type-ignore comments are necessary because `_load_plugins`
