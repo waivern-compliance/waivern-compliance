@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import abc
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any
 
 from typing_extensions import Self
 
@@ -106,44 +106,3 @@ class ConnectorError(Exception):
     that the connector failed to connect to the source, and the user should
     be notified about the error.
     """
-
-
-def select_source_types(
-    source_types: tuple[type[Source], ...],
-) -> Callable[
-    [Callable[[_Connector, Source], Connection | NotConnected]],
-    Callable[[_Connector, Source], Connection | NotConnected],
-]:
-    """A decorator for connectors that selects the source types they support.
-
-    The decorator returns a new `connection` method that only returns a connection
-    if the source type is in the `source_types` parameter; otherwise, it returns a
-    `UnsupportedSourceType` instance.
-
-    Usage:
-    ```python
-    class MyConnector(Connector):
-        @select_source_types(MySource, OtherSource)
-        # Any other source type will return an `UnsupportedSourceType
-        def connect(self, source: MySource | OtherSource) -> Connection | NotConnected:
-            ...
-    ```
-    """
-
-    def decorator(
-        connect: Callable[[_Connector, Source], Connection | NotConnected],
-    ) -> Callable[[_Connector, Source], Connection | NotConnected]:
-        def new_connection(
-            self: _Connector,
-            source: Source,
-        ) -> Connection | NotConnected:
-            if isinstance(source, source_types):
-                return connect(self, source)
-            return UnsupportedSourceType(connector=self, source=source)
-
-        return new_connection
-
-    return decorator
-
-
-_Connector = TypeVar("_Connector", bound=Connector)
