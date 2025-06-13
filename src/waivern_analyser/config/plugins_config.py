@@ -1,8 +1,6 @@
 from collections import Counter
 
 from pydantic import (
-    BaseModel,
-    ConfigDict,
     ValidationInfo,
     field_validator,
     model_validator,
@@ -11,19 +9,15 @@ from typing_extensions import Self
 
 from waivern_analyser._plugins import PluginRegistry
 from waivern_analyser._plugins import load_plugins as _load_plugins
+from waivern_analyser.config.base import Config
 
 
-class PluginsConfig(BaseModel):
+class PluginsConfig(Config):
     """Configuration for the plugins."""
 
     # TODO: src/waivern_analyser/_plugins.py contains duplicate detection logic,
     # inexistent plugin detection logic etc.
     # We should move this logic to this class.
-
-    model_config = ConfigDict(
-        extra="forbid",
-        frozen=True,
-    )
 
     select: tuple[str, ...] | None = None
     exclude: tuple[str, ...] | None = None

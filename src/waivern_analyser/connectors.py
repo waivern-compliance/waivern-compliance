@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass
+from typing import Any
+
+from typing_extensions import Self
 
 from waivern_analyser.sources import Source
 
@@ -18,6 +21,15 @@ class Connector(abc.ABC):
     @abc.abstractmethod
     def get_name(cls) -> str:
         """The name of the connector."""
+
+    @classmethod
+    @abc.abstractmethod
+    def from_properties(cls, properties: dict[str, Any]) -> Self:
+        """Instantiate this connector from a dictionary of properties.
+
+        The `properties` dictionary is the configuration for the connector
+        as specified in the analyser configuration file.
+        """
 
     @abc.abstractmethod
     def connect(self, source: Source) -> Connection | NotConnected:

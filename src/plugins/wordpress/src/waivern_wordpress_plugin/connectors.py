@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated
+from typing import Any
 
-from annotated_types import MinLen
 from pydantic import BaseModel
-from typing_extensions import Self, assert_never
+from typing_extensions import Self
 
 from waivern_analyser.connectors import (
     Connection,
@@ -15,20 +13,29 @@ from waivern_analyser.connectors import (
     NotConnected,
     UnsupportedSourceType,
 )
-from waivern_analyser.sources import PathsSource, Source
+from waivern_analyser.sources import DirectorySource, FileSource, Source
 
 
 class WordpressProjectConnector(Connector):
-    def get_name(self) -> str:
+    """A connector for wordpress projects."""
+
+    @classmethod
+    def get_name(cls) -> str:
         return "wordpress-project-connector"
+
+    @classmethod
+    def from_properties(cls, properties: dict[str, Any]) -> Self:
+        return cls()
 
     def connect(
         self,
         source: Source,
     ) -> Connection | NoWordpressProject | UnsupportedSourceType:
         match source:
-            case PathsSource(paths=paths):
-                return WordpressMultipleProjectsConnection.from_paths(paths=paths)
+            case DirectorySource(path=path):
+                return WordpressProjectConnection.from_directory(path)
+            case FileSource(path=path):
+                return WordpressProjectConnection.from_file(path)
             case _:
                 return UnsupportedSourceType(source_type=type(source))
 
@@ -38,53 +45,18 @@ class WordpressProjectConnectorConfig(BaseModel):
 
 
 @dataclass(frozen=True, slots=True)
-class WordpressMultipleProjectsConnection(Connection):
-    """A connection to multiple wordpress projects."""
-
-    connections: Annotated[
-        tuple[WordpressProjectConnection, ...],
-        MinLen(1),
-    ]
-
-    @classmethod
-    def from_paths(cls, paths: Iterable[Path]) -> Self | NoWordpressProject:
-        connections: list[WordpressProjectConnection] = []
-
-        for path in paths:
-            match WordpressProjectConnection.from_path(path):
-                case WordpressProjectConnection() as connection:
-                    connections.append(connection)
-                case NoWordpressProject():
-                    continue
-                case never:
-                    assert_never(never)
-
-        if not connections:
-            return NoWordpressProject()
-
-        return cls(connections=tuple(connections))
-
-
-@dataclass(frozen=True, slots=True)
 class WordpressProjectConnection(Connection):
     """A connection to a wordpress project."""
 
     path: Path
 
     @classmethod
-    def from_path(cls, path: Path) -> Self | NoWordpressProject:
-        if not (path.is_dir() and (path / "wp-config.php").exists()):
-            return NoWordpressProject()
-
-        return cls(path=path)
-
-    @classmethod
-    def _from_directory(cls, directory: Path) -> Self | NoWordpressProject:
+    def from_file(cls, file: Path) -> Self | NoWordpressProject:
         # TODO: Implement
         return NoWordpressProject()
 
     @classmethod
-    def _from_file(cls, file: Path) -> Self | NoWordpressProject:
+    def from_directory(cls, directory: Path) -> Self | NoWordpressProject:
         # TODO: Implement
         return NoWordpressProject()
 

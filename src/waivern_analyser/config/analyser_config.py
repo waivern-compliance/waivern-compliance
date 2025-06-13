@@ -3,19 +3,13 @@ from typing import Annotated
 
 import yaml
 from annotated_types import MinLen
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    ValidationError,
-)
+from pydantic import ValidationError
 from typing_extensions import Self
 
 from waivern_analyser.config.base import Config
-
-# from waivern_analyser.config.connector_config import ConnectorConfig
+from waivern_analyser.config.connector_config import ConnectorConfig
 from waivern_analyser.config.plugins_config import PluginsConfig
-
-# from waivern_analyser.config.ruleset_config import RulesetConfig
+from waivern_analyser.config.ruleset_config import RulesetConfig
 from waivern_analyser.config.source_config import SourceConfig
 
 
@@ -35,9 +29,9 @@ class AnalyserConfig(Config):
     """Configuration for the Waivern analyser."""
 
     plugins: PluginsConfig = PluginsConfig()
-    # sources: Annotated[tuple[SourceConfig, ...], MinLen(1)]
-    # connectors: Annotated[tuple[ConnectorConfig, ...], MinLen(1)]
-    # rulesets: Annotated[tuple[RulesetConfig, ...], MinLen(1)]
+    sources: Annotated[tuple[SourceConfig, ...], MinLen(1)]
+    connectors: Annotated[tuple[ConnectorConfig, ...], MinLen(1)]
+    rulesets: Annotated[tuple[RulesetConfig, ...], MinLen(1)]
 
     select_plugins: tuple[str, ...] | None = None
     exclude_plugins: tuple[str, ...] | None = None

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from waivern_analyser.config import AnalyserConfig
+from waivern_analyser.config.analyser_config import AnalyserConfig
 
 
 @dataclass(frozen=True, slots=True)
