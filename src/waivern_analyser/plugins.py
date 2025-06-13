@@ -19,15 +19,15 @@ class Plugin(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def get_sources(cls) -> Iterable[type[Source]]:
+    def get_source_types(cls) -> Iterable[type[Source]]:
         """Get the new types of sources that this plugin defines."""
 
     @classmethod
     @abc.abstractmethod
-    def get_connectors(cls) -> Iterable[type[Connector]]:
+    def get_connector_types(cls) -> Iterable[type[Connector]]:
         """Get the new types of connectors that this plugin defines."""
 
     @classmethod
     @abc.abstractmethod
-    def get_rulesets(cls) -> Iterable[type[Ruleset]]:
+    def get_ruleset_types(cls) -> Iterable[type[Ruleset]]:
         """Get the new types of rulesets that this plugin defines."""

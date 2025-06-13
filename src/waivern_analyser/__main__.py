@@ -4,7 +4,7 @@ from typing import Annotated
 import typer
 
 from waivern_analyser._plugins import load_plugins
-from waivern_analyser.config import Config
+from waivern_analyser.config import AnalyserConfig
 
 app = typer.Typer()
 
@@ -49,11 +49,9 @@ def run(
     ] = False,
 ):
     if config_path is None:
-        config = Config.default()
+        config = AnalyserConfig.default()
     else:
-        config = Config.from_file(config_path)
-
-    print(config)
+        config = AnalyserConfig.from_file(config_path)
 
 
 @app.command()

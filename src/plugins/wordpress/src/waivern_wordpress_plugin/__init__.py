@@ -1,5 +1,8 @@
 """Wordpress plugin."""
 
+from plugins.wordpress.src.waivern_wordpress_plugin.connectors import (
+    WordpressProjectConnector,
+)
 from waivern_analyser.connectors import Connector
 from waivern_analyser.plugins import Plugin
 from waivern_analyser.rulesets import Ruleset, RulesetInputSchema, RulesetOutputSchema
@@ -25,13 +28,13 @@ class WordpressPlugin(Plugin):
         return "wordpress"
 
     @classmethod
-    def get_sources(cls) -> tuple[type[Source], ...]:
+    def get_source_types(cls) -> tuple[type[Source], ...]:
         return ()
 
     @classmethod
-    def get_connectors(cls) -> tuple[type[Connector], ...]:
-        return ()
+    def get_connector_types(cls) -> tuple[type[Connector], ...]:
+        return (WordpressProjectConnector,)
 
     @classmethod
-    def get_rulesets(cls) -> tuple[type[Ruleset], ...]:
+    def get_ruleset_types(cls) -> tuple[type[Ruleset], ...]:
         return (WordpressRuleset,)

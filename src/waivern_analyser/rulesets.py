@@ -2,9 +2,9 @@ import abc
 from dataclasses import dataclass
 from typing import TypeAlias
 
-from waivern_analyser.connectors import ConnectorOutputSchema
+from waivern_analyser.connectors import Connection
 
-RulesetInputSchema: TypeAlias = ConnectorOutputSchema
+RulesetInputSchema: TypeAlias = Connection
 
 
 @dataclass(frozen=True, slots=True)

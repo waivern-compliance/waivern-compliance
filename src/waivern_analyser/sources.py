@@ -1,6 +1,7 @@
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
+from annotated_types import MinLen
 from pydantic import BaseModel, ConfigDict
 
 
@@ -15,26 +16,26 @@ class Source(BaseModel):
     type: str
 
 
-class FilesSource(Source):
-    """A source of files.
+class PathsSource(Source):
+    """A source of files or directories.
 
-    The `files` field can be a single file or a list of files.
-    Directories are recursively searched for files, so
+    Each path in the `paths` field can be a file or a directory.
+    Consumers of this source should decide whether to recursively search for files
+    in the directories or not.
+
+    Example:
 
     ```yaml
-    type: files
-    files:
+    type: paths
+    paths:
     - path/to/file1.txt
     - path/to/file2.txt
     - path/to/directory/
     ```
-
-    will search for `file1.txt`, `file2.txt`, and all files in the `directory` directory.
     """
 
-    type: Literal["files"]
-    files: list[Path] | Path
-
-
-class Sources(BaseModel):
-    sources: list[Source]
+    type: Literal["paths"]
+    paths: Annotated[
+        tuple[Path, ...],
+        MinLen(1),
+    ]
