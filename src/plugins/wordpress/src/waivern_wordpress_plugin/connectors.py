@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
 from typing_extensions import Self
 
+from waivern_analyser.config.base import Config
 from waivern_analyser.connectors import (
     Connection,
     Connector,
@@ -42,7 +42,7 @@ class WordpressProjectConnector(Connector):
                 return UnsupportedSourceType(connector=self, source=source)
 
 
-class WordpressProjectConnectorConfig(BaseModel):
+class WordpressProjectConnectorConfig(Config):
     """A configuration for a wordpress project connector."""
 
     config_file: str = "wp-config.php"
