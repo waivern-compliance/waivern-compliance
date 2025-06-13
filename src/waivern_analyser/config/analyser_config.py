@@ -37,7 +37,7 @@ class AnalyserConfig(Config):
     exclude_plugins: tuple[str, ...] | None = None
 
     @classmethod
-    def from_file(cls, path: Path) -> Self:
+    def from_yaml_file(cls, path: Path) -> Self:
         try:
             with path.open("r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)

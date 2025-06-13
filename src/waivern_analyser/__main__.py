@@ -4,7 +4,8 @@ from typing import Annotated
 import typer
 
 from waivern_analyser._plugins import load_plugins
-from waivern_analyser.config import AnalyserConfig
+from waivern_analyser.analyser import Analyser
+from waivern_analyser.config.analyser_config import AnalyserConfig
 
 app = typer.Typer()
 
@@ -49,9 +50,14 @@ def run(
     ] = False,
 ):
     if config_path is None:
-        config = AnalyserConfig.default()
+        # FIXME: what to do in the default case?
+        # config = AnalyserConfig.default()
+        config = AnalyserConfig.from_yaml_file(Path(__file__).parent / "waivern.yaml")
     else:
-        config = AnalyserConfig.from_file(config_path)
+        config = AnalyserConfig.from_yaml_file(config_path)
+
+    analyser = Analyser.from_config(config)
+    report_items = analyser.run()
 
 
 @app.command()

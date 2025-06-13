@@ -5,21 +5,21 @@ from plugins.wordpress.src.waivern_wordpress_plugin.connectors import (
 )
 from waivern_analyser.connectors import Connector
 from waivern_analyser.plugins import Plugin
-from waivern_analyser.rulesets import Ruleset, RulesetInputSchema, RulesetOutputSchema
+from waivern_analyser.rulesets import Finding, ReportItem, Ruleset
 from waivern_analyser.sources import Source
 
 
-class WordpressRulesetInputSchema(RulesetInputSchema):
+class WordpressRulesetInputSchema(Finding):
     pass
 
 
-class WordpressRulesetOutputSchema(RulesetOutputSchema):
+class WordpressRulesetOutputSchema(ReportItem):
     pass
 
 
 class WordpressRuleset(Ruleset):
-    def run(self, input: RulesetInputSchema) -> RulesetOutputSchema:
-        return RulesetOutputSchema()
+    def run(self, input: Finding) -> ReportItem:
+        return ReportItem()
 
 
 class WordpressPlugin(Plugin):
