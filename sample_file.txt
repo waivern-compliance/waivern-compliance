@@ -1,0 +1,9 @@
+This is a sample file for testing the Waivern Compliance Tool.
+
+Here's some potentially sensitive information:
+- Email: john.doe@example.com
+- Password: password123
+- API Key: api_key=abcd1234567890abcdef1234567890
+
+And some normal content:
+This tool analyzes files for compliance issues and generates reports. 

@@ -3,9 +3,9 @@ from pathlib import Path
 import pytest
 from waivern_wordpress_plugin.connectors import (
     NoWordpressProject,
+    WordpressConnector,
     WordpressProjectConfig,
     WordpressProjectConnection,
-    WordpressProjectConnector,
 )
 
 from waivern_analyser.connectors import UnsupportedSourceType
@@ -21,21 +21,19 @@ class TestWordpressProjectConnector:
         return WordpressProjectConfig()
 
     @pytest.fixture
-    def connector(
-        self, wordpress_config: WordpressProjectConfig
-    ) -> WordpressProjectConnector:
+    def connector(self, wordpress_config: WordpressProjectConfig) -> WordpressConnector:
         """Fixture providing a WordpressProjectConnector instance."""
-        return WordpressProjectConnector(config=wordpress_config)
+        return WordpressConnector(config=wordpress_config)
 
     def test_get_name(self):
         """Test that get_name returns the correct connector name."""
-        assert WordpressProjectConnector.get_name() == "wordpress"
+        assert WordpressConnector.get_name() == "wordpress"
 
     def test_from_properties_with_empty_dict(self):
         """Test creating connector from empty properties dictionary."""
-        connector = WordpressProjectConnector.from_properties({})
+        connector = WordpressConnector.from_properties({})
 
-        assert isinstance(connector, WordpressProjectConnector)
+        assert isinstance(connector, WordpressConnector)
         assert isinstance(connector.config, WordpressProjectConfig)
         # Check that the default values are used
         assert connector.config == WordpressProjectConfig()
@@ -48,16 +46,14 @@ class TestWordpressProjectConnector:
             "db_table_prefix": "custom_wp_",
         }
 
-        connector = WordpressProjectConnector.from_properties(properties)
+        connector = WordpressConnector.from_properties(properties)
 
-        assert isinstance(connector, WordpressProjectConnector)
+        assert isinstance(connector, WordpressConnector)
         assert connector.config.config_file == "custom-wp-config.php"
         assert connector.config.core_files == ("custom-wp-load.php",)
         assert connector.config.db_table_prefix == "custom_wp_"
 
-    def test_connect_with_directory_source_success(
-        self, connector: WordpressProjectConnector
-    ):
+    def test_connect_with_directory_source_success(self, connector: WordpressConnector):
         """Test connecting with a DirectorySource that contains a valid WordPress project."""
         mock_path = Mock(spec=Path)
         directory_source = DirectorySource(path=mock_path)
@@ -279,7 +275,7 @@ class TestIntegration:
     def test_end_to_end_success(self, temp_wp_project):
         """Test the complete flow from connector to connection with a valid WordPress project."""
         config = WordpressProjectConfig()
-        connector = WordpressProjectConnector(config=config)
+        connector = WordpressConnector(config=config)
         source = DirectorySource(path=temp_wp_project)
 
         result = connector.connect(source)
@@ -291,7 +287,7 @@ class TestIntegration:
     def test_end_to_end_failure(self, incomplete_wp_project):
         """Test the complete flow with an incomplete WordPress project."""
         config = WordpressProjectConfig()
-        connector = WordpressProjectConnector(config=config)
+        connector = WordpressConnector(config=config)
         source = DirectorySource(path=incomplete_wp_project)
 
         result = connector.connect(source)
@@ -302,7 +298,7 @@ class TestIntegration:
     def test_file_source_integration(self, temp_wp_project):
         """Test integration with FileSource pointing to a file in a WordPress project."""
         config = WordpressProjectConfig()
-        connector = WordpressProjectConnector(config=config)
+        connector = WordpressConnector(config=config)
 
         # Point to a file within the WordPress project
         wp_file = temp_wp_project / "wp-config.php"

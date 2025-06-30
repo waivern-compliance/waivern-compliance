@@ -18,7 +18,7 @@ from waivern_analyser.sources import DirectorySource, FileSource, Source
 
 
 @dataclass(frozen=True, slots=True)
-class WordpressProjectConnector(Connector):
+class WordpressConnector(Connector):
     """A connector for wordpress projects."""
 
     config: WordpressProjectConfig

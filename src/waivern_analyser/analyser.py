@@ -60,6 +60,8 @@ class Analyser:
         )
 
     def run(self) -> Iterator[ReportItem]:
+        # sources -> connectors -> rulesets
+
         connections: list[Connection] = []
         for source in self.sources:
             for connector in self.connectors:

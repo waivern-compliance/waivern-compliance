@@ -1,0 +1,28 @@
+plugins:
+  select:
+  - wordpress
+  - another-plugin
+
+sources:
+- name: file-for-wordpress
+  type: file
+  properties:
+    path: path/to/my/wp-config.php
+- type: file
+  properties:
+    path: path/to/my/another-config.php
+
+connectors:
+- name: wordpress-connector
+  use:
+  - file-for-wordpress
+  type: wordpress
+  properties:
+    config_file: "custom-wp-config.php"
+    core_files: ["custom-wp-load.php"]
+    db_table_prefix: "custom_wp_"
+
+rulesets:
+- type: wordpress
+  properties:
+    ...
