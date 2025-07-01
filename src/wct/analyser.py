@@ -5,9 +5,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import BaseModel
 
 from wct.connectors import Connector, ConnectorError
-from wct.plugins import Plugin, PluginError
+from wct.plugins.base import Plugin, PluginError
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +18,31 @@ class ConnectorConfig:
     name: str
     type: str
     properties: dict[str, Any]
+
+
+class PathConnectorConfig(BaseModel):
+    """A shortcut configuration for `FileConnector` or `DirectoryConnector`, requiring only a path."""
+
+    path: Path
+
+    def to_connector_config(self) -> ConnectorConfig:
+        """Convert to a full `ConnectorConfig`."""
+        if self.path.is_file():
+            connector_name = f"file_{self.path.name}"
+            return ConnectorConfig(
+                name=connector_name,
+                type="file",
+                properties={"path": self.path},
+            )
+        elif self.path.is_dir():
+            connector_name = f"dir_{self.path.name}"
+            return ConnectorConfig(
+                name=connector_name,
+                type="directory",
+                properties={"path": self.path},
+            )
+        else:
+            raise FileNotFoundError(self.path)
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,12 +102,11 @@ class ComplianceAnalyser:
         For now, we'll manually register built-in components.
         """
         # Register built-in connectors
-        from wct.connectors import FileConnector
 
         self.register_connector(FileConnector)
 
         # Register built-in plugins
-        from wct.plugins import ContentAnalysisPlugin
+        from wct.plugins.base import ContentAnalysisPlugin
 
         self.register_plugin(ContentAnalysisPlugin)
 
