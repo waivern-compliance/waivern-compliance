@@ -37,6 +37,7 @@ repos:
   #       files: ^src/wct/
 
   # Security checks (focus on new WCT system)
+
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.10
     hooks:
