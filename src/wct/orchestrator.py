@@ -8,6 +8,7 @@ import yaml
 from pydantic import BaseModel
 
 from wct.connectors import Connector, ConnectorError
+from wct.errors import WCTError
 from wct.plugins.base import Plugin, PluginError
 
 
@@ -79,10 +80,10 @@ class AnalysisResult:
     error_message: str | None = None
 
 
-class ComplianceAnalyser:
+class Orchestrator:
     """Main orchestrator for the Waivern Compliance Tool.
 
-    The Analyser is the orchestrator of the WCF. It follows a middleware
+    The Orchestrator is the orchestrator of the WCF. It follows a middleware
     design and has three primary responsibilities:
 
     1. Run a list of analyses, chained or in parallel, reading YAML runbooks
@@ -102,8 +103,8 @@ class ComplianceAnalyser:
         For now, we'll manually register built-in components.
         """
         # Register built-in connectors
-
-        self.register_connector(FileConnector)
+        # TODO: Import and register FileConnector when implemented
+        # self.register_connector(FileConnector)
 
         # Register built-in plugins
         from wct.plugins.base import ContentAnalysisPlugin
@@ -124,7 +125,9 @@ class ComplianceAnalyser:
             with open(runbook_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
         except Exception as e:
-            raise AnalyserError(f"Failed to load runbook {runbook_path}: {e}") from e
+            raise OrchestratorError(
+                f"Failed to load runbook {runbook_path}: {e}"
+            ) from e
 
         try:
             connectors = [
@@ -154,7 +157,9 @@ class ComplianceAnalyser:
                 execution_order=data.get("execution_order", [p.name for p in plugins]),
             )
         except Exception as e:
-            raise AnalyserError(f"Invalid runbook format in {runbook_path}: {e}") from e
+            raise OrchestratorError(
+                f"Invalid runbook format in {runbook_path}: {e}"
+            ) from e
 
     def run_analysis(self, runbook: RunbookConfig) -> list[AnalysisResult]:
         """Execute analysis based on runbook configuration."""
@@ -166,7 +171,7 @@ class ComplianceAnalyser:
             try:
                 connector_class = self.connectors.get(connector_config.type)
                 if not connector_class:
-                    raise AnalyserError(
+                    raise OrchestratorError(
                         f"Unknown connector type: {connector_config.type}"
                     )
 
@@ -197,7 +202,9 @@ class ComplianceAnalyser:
             try:
                 plugin_class = self.plugins.get(plugin_config.type)
                 if not plugin_class:
-                    raise AnalyserError(f"Unknown plugin type: {plugin_config.type}")
+                    raise OrchestratorError(
+                        f"Unknown plugin type: {plugin_config.type}"
+                    )
 
                 plugin = plugin_class.from_properties(plugin_config.properties or {})
 
@@ -264,7 +271,5 @@ class ComplianceAnalyser:
         return self.plugins.copy()
 
 
-class AnalyserError(Exception):
-    """Base exception for analyser-related errors."""
-
-    pass
+class OrchestratorError(WCTError):
+    """Base exception for orchestrator errors."""

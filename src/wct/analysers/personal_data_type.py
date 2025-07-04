@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Final, Literal
+from typing import Any, Final, Literal
 
 from wct.analysers.base import Analyser
 
