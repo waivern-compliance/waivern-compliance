@@ -5,7 +5,7 @@ from typing import Annotated
 
 import typer
 
-from wct.analyser import ComplianceAnalyser
+from wct.orchestrator import Orchestrator
 
 app = typer.Typer(name="waivern-compliance-tool")
 
@@ -45,7 +45,7 @@ def analyze(
     ] = False,
 ):
     """Run compliance analysis using a runbook configuration."""
-    analyser = ComplianceAnalyser()
+    analyser = Orchestrator()
 
     if verbose:
         print(f"Loading runbook: {runbook}")
@@ -76,13 +76,13 @@ def analyze(
 
     except Exception as e:
         print(f"Analysis failed: {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
 @app.command(name="list-connectors")
 def list_connectors():
     """List available connectors."""
-    analyser = ComplianceAnalyser()
+    analyser = Orchestrator()
     connectors = analyser.list_connectors()
 
     if connectors:
@@ -99,7 +99,7 @@ def list_connectors():
 @app.command(name="list-plugins")
 def list_plugins():
     """List available plugins."""
-    analyser = ComplianceAnalyser()
+    analyser = Orchestrator()
     plugins = analyser.list_plugins()
 
     if plugins:
@@ -127,7 +127,7 @@ def validate_runbook(
     ],
 ):
     """Validate a runbook configuration file."""
-    analyser = ComplianceAnalyser()
+    analyser = Orchestrator()
 
     try:
         runbook_config = analyser.load_runbook(runbook)
@@ -138,7 +138,7 @@ def validate_runbook(
         print(f"  Execution order: {', '.join(runbook_config.execution_order)}")
     except Exception as e:
         print(f"✗ Runbook validation failed: {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
 if __name__ == "__main__":

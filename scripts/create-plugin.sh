@@ -23,11 +23,11 @@ fi
 
 # Step 2: Create the plugin directory and pyproject.toml file
 plugin_name="$1"
-plugin_full_name_kebab_case="waivern-$1-plugin"
+plugin_full_name_kebab_case="waivern-compliance-tool-$1"
 plugin_dir="src/plugins/$1"
 
 uv init --name "$plugin_full_name_kebab_case" --package --lib "$plugin_dir"
-uv add --package "$plugin_full_name_kebab_case" waivern-analyser
+uv add --package "$plugin_full_name_kebab_case" waivern-compliance-tool
 
 # Add entry point to the plugin's pyproject.toml file
 pyproject_file="$plugin_dir/pyproject.toml"
@@ -45,10 +45,10 @@ echo "$plugin_name = \"$plugin_full_name_snake_case:${class_name}\"" >> "$pyproj
 init_file="$plugin_dir/src/$plugin_full_name_snake_case/__init__.py"
 echo "\"\"\"Plugin $plugin_name.\"\"\"
 
-from analyser.connectors import Connector
-from analyser.plugins import Plugin
-from analyser.rulesets import Ruleset
-from analyser.sources import Source
+from wct.analysers import Analyser
+from wct.connectors import Connector
+from wct.plugins import Plugin
+from wct.rulesets import Ruleset
 
 class $class_name(Plugin):
     @classmethod
@@ -60,9 +60,9 @@ class $class_name(Plugin):
         return \"$plugin_name\"
 
     @classmethod
-    def get_sources(cls) -> tuple[type[Source], ...]:
-        \"\"\"Get the new types of sources that this plugin defines.\"\"\"
-		# TODO: Add sources here (if any - otherwise return an empty tuple)
+    def get_analysers(cls) -> tuple[type[Analyser], ...]:
+        \"\"\"Get the new types of analysers that this plugin defines.\"\"\"
+		# TODO: Add analysers here (if any - otherwise return an empty tuple)
         return ()
 
     @classmethod
