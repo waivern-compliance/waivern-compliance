@@ -1,15 +1,15 @@
 name: "File Content Analysis"
-description: "Analyze a file for potentially sensitive information"
+description: "Analyse a file for potentially sensitive information"
 
 connectors:
   - name: "file_reader"
     type: "file"
     properties:
-      path: "../sample_file.txt"
+      file_path: "../sample_file.txt"
 
 plugins:
-  - name: "content_analyzer"
-    type: "content_analysis"
+  - name: "file_content_analyser"
+    type: "file_content_analyser"
     properties:
       sensitivity_level: "medium"
     metadata:
@@ -17,4 +17,4 @@ plugins:
       compliance_frameworks: ["GDPR", "CCPA"]
 
 execution_order:
-  - "content_analyzer"
+  - "file_content_analyser"

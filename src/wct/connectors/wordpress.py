@@ -17,7 +17,7 @@ class WordpressConnector(Connector):
     def get_name(cls) -> str:
         """The name of the connector."""
 
-        return "WordPress"
+        return "wordpress"
 
     @classmethod
     def from_properties(cls, properties: dict[str, Any]) -> Self:

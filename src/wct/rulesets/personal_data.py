@@ -1,9 +1,8 @@
-from dataclasses import dataclass
-from typing import Any, Final, Literal
+"""Personal data detection ruleset."""
 
-from wct.analysers.base import Analyser
+from typing import Final
 
-DEFAULT_PERSONAL_DATA_PATTERNS: Final = {
+PERSONAL_DATA_PATTERNS: Final = {
     "basic_profile": {
         "patterns": [
             "first_name",
@@ -131,31 +130,3 @@ DEFAULT_PERSONAL_DATA_PATTERNS: Final = {
         "special_category": "Y",
     },
 }
-
-
-@dataclass(frozen=True, slots=True)
-class PersonalDataPattern:
-    """A pattern for a personal data type."""
-
-    name: str
-    patterns: list[str]
-    risk_level: Literal["low", "medium", "high"]
-    is_special_category: bool
-
-
-@dataclass(frozen=True, slots=True)
-class PersonalDataFinding:
-    """A finding of a personal data."""
-
-    type: str
-    risk_level: str
-    special_category: str
-    matched_pattern: str
-    source: str | None
-
-
-class PersonalDataAnalyser(Analyser):
-    """An analyser for personal data."""
-
-    def analyse(self, data: dict[str, Any]) -> list[PersonalDataFinding]:
-        pass
