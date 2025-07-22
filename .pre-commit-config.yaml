@@ -1,0 +1,46 @@
+repos:
+  # Ruff - Python linting and formatting (focus on new WCT system)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.12
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+        exclude: ^(src/waivern_analyser/|src/plugins/|tests/test_plugins\.py)$
+      # Run the formatter
+      - id: ruff-format
+        exclude: ^(src/waivern_analyser/|src/plugins/|tests/test_plugins\.py)$
+
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  # Type checking with basedpyright (focus on new WCT system only)
+  # Note: Currently disabled due to incomplete WCT implementation
+  # Re-enable when WCT architecture is more stable
+  # - repo: local
+  #   hooks:
+  #     - id: basedpyright
+  #       name: basedpyright
+  #       entry: uv run basedpyright src/wct
+  #       language: system
+  #       types: [python]
+  #       pass_filenames: false
+  #       files: ^src/wct/
+
+  # Security checks (focus on new WCT system)
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: ["-c", "pyproject.toml"]
+        additional_dependencies: ["bandit[toml]"]
+        exclude: ^(src/waivern_analyser/|src/plugins/|tests/test_plugins\.py)$

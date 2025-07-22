@@ -57,7 +57,11 @@ def run(
         config = AnalyserConfig.from_yaml_file(config_path)
 
     analyser = Analyser.from_config(config)
-    report_items = analyser.run()
+    report_items = list(analyser.run())
+
+    # Print results
+    for item in report_items:
+        print(item)
 
 
 @app.command()

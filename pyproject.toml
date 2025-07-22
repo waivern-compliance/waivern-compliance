@@ -24,6 +24,7 @@ dev = [
     "pytest>=8.4.0",
     "pytest-mock>=3.14.1",
     "ruff>=0.11.12",
+    "pre-commit>=4.0.0",
 ]
 
 [build-system]
@@ -41,3 +42,7 @@ addopts = [
     # See https://docs.pytest.org/en/stable/explanation/goodpractices.html#tests-outside-application-code
     "--import-mode=importlib",
 ]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]  # Skip assert_used test

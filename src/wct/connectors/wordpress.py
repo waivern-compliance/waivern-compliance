@@ -36,15 +36,15 @@ class WordpressConnector(Connector):
             )
 
         missing_core_files = sorted(
-            (
-                core_file
-                for core_file in config.core_files
-                if not core_file.is_file()
-            ),
+            (core_file for core_file in config.core_files if not core_file.is_file()),
             key=lambda file: file.name,
         )
 
         if missing_core_files:
+            raise ConnectorConfigError(
+                f"The directory {config.root} does not contain a valid Wordpress project:"
+                f" the core files {missing_core_files} were not found."
+            )
 
         return cls()
 

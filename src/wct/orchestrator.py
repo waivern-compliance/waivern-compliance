@@ -103,8 +103,8 @@ class Orchestrator:
         For now, we'll manually register built-in components.
         """
         # Register built-in connectors
-
-        self.register_connector(FileConnector)
+        # TODO: Import and register FileConnector when implemented
+        # self.register_connector(FileConnector)
 
         # Register built-in plugins
         from wct.plugins.base import ContentAnalysisPlugin

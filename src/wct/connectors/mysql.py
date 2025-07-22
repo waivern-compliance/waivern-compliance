@@ -1,3 +1,5 @@
+from typing import Any
+
 from wct.connectors.base import Connector
 
 
