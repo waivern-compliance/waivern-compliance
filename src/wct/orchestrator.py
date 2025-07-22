@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from wct.connectors import Connector, ConnectorError
 from wct.errors import WCTError
+from wct.logging import get_orchestrator_logger
 from wct.plugins.base import Plugin, PluginError
 
 
@@ -94,6 +95,7 @@ class Orchestrator:
     def __init__(self):
         self.connectors: dict[str, type[Connector]] = {}
         self.plugins: dict[str, type[Plugin]] = {}
+        self.logger = get_orchestrator_logger()
         self._discover_components()
 
     def _discover_components(self):
@@ -177,17 +179,14 @@ class Orchestrator:
 
                 connector = connector_class.from_properties(connector_config.properties)
 
-                # Validate configuration
-                connector.validate_config(connector_config.properties)
-
                 # Extract data
                 extracted_data = connector.extract(**connector_config.properties)
                 schema_name = connector.get_output_schema()
-                schema_data[schema_name] = extracted_data
+                schema_data[str(schema_name)] = extracted_data
 
             except (ConnectorError, Exception) as e:
                 # Log error but continue with other connectors
-                print(f"Connector {connector_config.name} failed: {e}")
+                self.logger.error("Connector %s failed: %s", connector_config.name, e)
                 continue
 
         # Step 2: Run plugins in specified order
@@ -196,16 +195,24 @@ class Orchestrator:
                 (p for p in runbook.plugins if p.name == plugin_name), None
             )
             if not plugin_config:
-                print(f"Plugin {plugin_name} not found in runbook")
+                self.logger.warning("Plugin %s not found in runbook", plugin_name)
+                continue
+
+            plugin_class = self.plugins.get(plugin_config.type)
+            if not plugin_class:
+                result = AnalysisResult(
+                    plugin_name=plugin_name,
+                    input_schema="unknown",
+                    output_schema="unknown",
+                    data={},
+                    metadata=plugin_config.metadata,
+                    success=False,
+                    error_message=f"Unknown plugin type: {plugin_config.type}",
+                )
+                results.append(result)
                 continue
 
             try:
-                plugin_class = self.plugins.get(plugin_config.type)
-                if not plugin_class:
-                    raise OrchestratorError(
-                        f"Unknown plugin type: {plugin_config.type}"
-                    )
-
                 plugin = plugin_class.from_properties(plugin_config.properties or {})
 
                 input_schema = plugin.get_input_schema()
@@ -245,8 +252,8 @@ class Orchestrator:
             except (PluginError, Exception) as e:
                 result = AnalysisResult(
                     plugin_name=plugin_name,
-                    input_schema=plugin.get_input_schema(),
-                    output_schema=plugin.get_output_schema(),
+                    input_schema="unknown",
+                    output_schema="unknown",
                     data={},
                     metadata=plugin_config.metadata,
                     success=False,

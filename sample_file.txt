@@ -6,4 +6,4 @@ Here's some potentially sensitive information:
 - API Key: api_key=abcd1234567890abcdef1234567890
 
 And some normal content:
-This tool analyzes files for compliance issues and generates reports. 
+This tool analyzes files for compliance issues and generates reports.

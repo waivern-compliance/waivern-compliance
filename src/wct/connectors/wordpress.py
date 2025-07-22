@@ -16,7 +16,8 @@ class WordpressConnector(Connector):
     @classmethod
     def get_name(cls) -> str:
         """The name of the connector."""
-        return "wordpress"
+
+        return "WordPress"
 
     @classmethod
     def from_properties(cls, properties: dict[str, Any]) -> Self:
@@ -31,7 +32,7 @@ class WordpressConnector(Connector):
 
         if not config.config_file.is_file():
             raise ConnectorConfigError(
-                f"The directory {config.root} does not contain a valid Wordpress project:"
+                f"The directory {config.root} does not contain a valid WordPress project:"
                 f" the config file {config.config_file} was not found."
             )
 
@@ -50,7 +51,7 @@ class WordpressConnector(Connector):
 
     def extract(self) -> dict[str, Any]:
         """Extract data from the WordPress site and return in WCF schema format."""
-        pass
+        return {}
 
 
 class WordpressConnectorConfig(BaseModel):

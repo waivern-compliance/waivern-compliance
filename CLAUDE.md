@@ -26,6 +26,20 @@ This is a Python project using `uv` for dependency management. Key commands:
 - `uv run python -m waivern_analyser run --config <config.yaml>` - Run legacy Waivern analyser
 - `uv run python -m waivern_analyser ls-plugins` - List plugins for legacy analyser
 
+**Logging Options:**
+All WCT commands support logging configuration:
+- `--log-level DEBUG` - Show all debug information
+- `--log-level INFO` - Show informational messages (default)
+- `--log-level WARNING` - Show warnings and errors only
+- `--log-level ERROR` - Show errors only
+- `--log-level CRITICAL` - Show critical errors only
+- `--verbose` or `-v` - Shortcut for `--log-level DEBUG`
+
+Examples:
+- `uv run wct analyze runbook.yaml --log-level DEBUG` - Detailed debugging
+- `uv run wct analyze runbook.yaml -v` - Verbose output
+- `uv run wct list-connectors --log-level WARNING` - Minimal output
+
 ## Architecture Overview
 
 This codebase contains two main systems that are being unified:

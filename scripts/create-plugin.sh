@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # A script to create a new plugin.
-# 
+#
 # Arguments:
 # - $1: The name of the plugin, e.g. "wordpress"
 
@@ -80,4 +80,3 @@ class $class_name(Plugin):
 
 # Step 5: Finalize script
 echo "Plugin '$plugin_name' created successfully at $plugin_dir"
-

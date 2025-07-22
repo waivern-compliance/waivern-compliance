@@ -9,7 +9,8 @@ _ConnectorOutputSchema = TypeVar("_ConnectorOutputSchema")
 
 
 class Connector(abc.ABC, Generic[_ConnectorOutputSchema]):
-    """Extracts data from sources and transforms it to WCF-defined schemas.
+    """Extracts data from sources and transforms it to Waivern
+    Compliance Framework (WCF) defined schemas.
 
     Connectors are the adapters between the WCF and vendor-specific software
     and services. They extract metadata and information from the source and

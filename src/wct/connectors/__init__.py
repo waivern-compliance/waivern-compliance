@@ -3,7 +3,6 @@ from wct.connectors.base import (
     ConnectorConfigError,
     ConnectorError,
     ConnectorExtractionError,
-    FileConnector,
 )
 
 __all__ = (
@@ -11,5 +10,4 @@ __all__ = (
     "ConnectorConfigError",
     "ConnectorError",
     "ConnectorExtractionError",
-    "FileConnector",
 )
