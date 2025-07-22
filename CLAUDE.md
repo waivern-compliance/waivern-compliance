@@ -71,10 +71,15 @@ This codebase contains two main systems that are being unified:
 
 ## Development Setup
 
-**Pre-commit hooks are configured** to automatically run:
-- Ruff linting and formatting
-- Type checking with basedpyright (excludes some files with known issues)
+**Pre-commit hooks are configured** to automatically run on the **new WCT system only**:
+- Ruff linting and formatting (excludes legacy `src/waivern_analyser/` and `src/plugins/`)
 - Basic file checks (YAML/TOML validation, trailing whitespace, etc.)
-- Security checks with bandit
+- Security checks with bandit (excludes legacy code)
+- Type checking with basedpyright (currently disabled while WCT architecture stabilizes)
 
-The pre-commit configuration excludes files with architectural issues that need broader refactoring. When working on new code, ensure it passes all pre-commit checks before committing.
+**Legacy code exclusions:** The pre-commit hooks intentionally ignore:
+- `src/waivern_analyser/` - Legacy Waivern Analyser system being migrated
+- `src/plugins/` - Plugin system being migrated to new WCT architecture
+- `tests/test_plugins.py` - Tests for legacy plugin system
+
+This approach ensures code quality standards are enforced for new WCT development while allowing legacy code migration to proceed without constant pre-commit failures.
