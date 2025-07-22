@@ -11,7 +11,7 @@ class MySQLConnector(Connector):
     @classmethod
     def get_name(cls) -> str:
         """The name of the connector."""
-        return "MySQL"
+        return "mysql"
 
     def extract(self, **config) -> dict[str, Any]:
         self.logger.info("Extracting data from MySQL database")

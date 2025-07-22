@@ -1,0 +1,181 @@
+"""File reader connector for WCT."""
+
+import logging
+from pathlib import Path
+from typing import Any, Generator
+
+from typing_extensions import Self
+
+from wct.connectors.base import (
+    Connector,
+    ConnectorConfigError,
+    ConnectorExtractionError,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class FileReaderConnector(Connector[dict[str, Any]]):
+    """Connector that reads file content for analysis.
+
+    This connector is memory-efficient for large files by reading content
+    in configurable chunks rather than loading the entire file into memory.
+    """
+
+    def __init__(
+        self,
+        file_path: str | Path,
+        chunk_size: int = 8192,
+        encoding: str = "utf-8",
+        errors: str = "replace",
+    ):
+        """Initialize the file reader connector.
+
+        Args:
+            file_path: Path to the file to read
+            chunk_size: Size of chunks to read at a time (bytes)
+            encoding: Text encoding to use
+            errors: How to handle encoding errors
+        """
+        self.file_path = Path(file_path)
+        self.chunk_size = chunk_size
+        self.encoding = encoding
+        self.errors = errors
+
+        if not self.file_path.exists():
+            raise ConnectorConfigError(f"File does not exist: {self.file_path}")
+
+        if not self.file_path.is_file():
+            raise ConnectorConfigError(f"Path is not a file: {self.file_path}")
+
+    @classmethod
+    def get_name(cls) -> str:
+        """The name of the connector."""
+        return "file_reader"
+
+    @classmethod
+    def from_properties(cls, properties: dict[str, Any]) -> Self:
+        """Create connector from configuration properties."""
+        file_path = properties.get("path")
+        if not file_path:
+            raise ConnectorConfigError("path property is required")
+
+        chunk_size = properties.get("chunk_size", 8192)
+        encoding = properties.get("encoding", "utf-8")
+        errors = properties.get("errors", "replace")
+
+        return cls(
+            file_path=file_path, chunk_size=chunk_size, encoding=encoding, errors=errors
+        )
+
+    def extract(self) -> dict[str, Any]:
+        """Extract file content and metadata.
+
+        Returns:
+            Dictionary containing file content and metadata in WCF schema format
+        """
+        try:
+            logger.info(f"Reading file: {self.file_path}")
+
+            # Get file metadata
+            stat = self.file_path.stat()
+
+            # Read file content efficiently
+            content = self._read_file_content()
+
+            return {
+                "file_path": str(self.file_path),
+                "content": content,
+                "size_bytes": stat.st_size,
+                "encoding": self.encoding,
+                "metadata": {
+                    "modified_time": stat.st_mtime,
+                    "created_time": stat.st_ctime,
+                    "permissions": oct(stat.st_mode)[-3:],
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to extract from file {self.file_path}: {e}")
+            raise ConnectorExtractionError(
+                f"Failed to read file {self.file_path}: {e}"
+            ) from e
+
+    def get_output_schema(self) -> type[dict[str, Any]]:
+        """Return the schema this connector produces."""
+        return dict[str, Any]
+
+    def _read_file_content(self) -> str:
+        """Read file content efficiently for large files."""
+        try:
+            # For small files, read all at once
+            if self.file_path.stat().st_size <= self.chunk_size:
+                return self.file_path.read_text(
+                    encoding=self.encoding, errors=self.errors
+                )
+
+            # For large files, read in chunks
+            logger.debug(f"Reading large file in chunks of {self.chunk_size} bytes")
+            content_parts = []
+
+            with open(
+                self.file_path, "r", encoding=self.encoding, errors=self.errors
+            ) as f:
+                while True:
+                    chunk = f.read(self.chunk_size)
+                    if not chunk:
+                        break
+                    content_parts.append(chunk)
+
+            return "".join(content_parts)
+
+        except UnicodeDecodeError as e:
+            logger.warning(f"Unicode decode error in {self.file_path}: {e}")
+            # Try reading as binary and decode with error handling
+            return self._read_as_binary()
+
+    def _read_as_binary(self) -> str:
+        """Fallback method to read file as binary when text decoding fails."""
+        logger.debug(f"Reading {self.file_path} as binary with error handling")
+
+        content_parts = []
+        with open(self.file_path, "rb") as f:
+            while True:
+                chunk = f.read(self.chunk_size)
+                if not chunk:
+                    break
+                # Decode chunk with error handling
+                decoded_chunk = chunk.decode(self.encoding, errors=self.errors)
+                content_parts.append(decoded_chunk)
+
+        return "".join(content_parts)
+
+    def read_streaming(self) -> Generator[str, None, None]:
+        """Read file content as a generator for very large files.
+
+        This method yields chunks of content without loading the entire file
+        into memory, useful for extremely large files.
+
+        Yields:
+            String chunks from the file
+        """
+        logger.debug(f"Streaming file content from {self.file_path}")
+
+        try:
+            with open(
+                self.file_path, "r", encoding=self.encoding, errors=self.errors
+            ) as f:
+                while True:
+                    chunk = f.read(self.chunk_size)
+                    if not chunk:
+                        break
+                    yield chunk
+
+        except UnicodeDecodeError:
+            # Fallback to binary reading
+            with open(self.file_path, "rb") as f:
+                while True:
+                    chunk = f.read(self.chunk_size)
+                    if not chunk:
+                        break
+                    yield chunk.decode(self.encoding, errors=self.errors)

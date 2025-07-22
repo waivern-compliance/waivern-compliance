@@ -1,84 +1,20 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel
 
+from wct.config import (
+    AnalysisResult,
+    ConnectorConfig,
+    PluginConfig,
+    RunbookConfig,
+)
 from wct.connectors import Connector, ConnectorError
 from wct.errors import WCTError
 from wct.logging import get_orchestrator_logger
 from wct.plugins.base import Plugin, PluginError
-
-
-@dataclass(frozen=True, slots=True)
-class ConnectorConfig:
-    """Configuration for a connector in a runbook."""
-
-    name: str
-    type: str
-    properties: dict[str, Any]
-
-
-class PathConnectorConfig(BaseModel):
-    """A shortcut configuration for `FileConnector` or `DirectoryConnector`, requiring only a path."""
-
-    path: Path
-
-    def to_connector_config(self) -> ConnectorConfig:
-        """Convert to a full `ConnectorConfig`."""
-        if self.path.is_file():
-            connector_name = f"file_{self.path.name}"
-            return ConnectorConfig(
-                name=connector_name,
-                type="file",
-                properties={"path": self.path},
-            )
-        elif self.path.is_dir():
-            connector_name = f"dir_{self.path.name}"
-            return ConnectorConfig(
-                name=connector_name,
-                type="directory",
-                properties={"path": self.path},
-            )
-        else:
-            raise FileNotFoundError(self.path)
-
-
-@dataclass(frozen=True, slots=True)
-class PluginConfig:
-    """Configuration for a plugin in a runbook."""
-
-    name: str
-    type: str
-    properties: dict[str, Any] = field(default_factory=dict)
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True, slots=True)
-class RunbookConfig:
-    """Configuration runbook defining the analysis pipeline."""
-
-    name: str
-    description: str
-    connectors: list[ConnectorConfig]
-    plugins: list[PluginConfig]
-    execution_order: list[str]  # Plugin execution order
-
-
-@dataclass(frozen=True, slots=True)
-class AnalysisResult:
-    """Result from a plugin analysis."""
-
-    plugin_name: str
-    input_schema: str
-    output_schema: str
-    data: dict[str, Any]
-    metadata: dict[str, Any]
-    success: bool
-    error_message: str | None = None
 
 
 class Orchestrator:
@@ -109,9 +45,9 @@ class Orchestrator:
         # self.register_connector(FileConnector)
 
         # Register built-in plugins
-        from wct.plugins.base import ContentAnalysisPlugin
+        # from wct.plugins.file_content_analysis import FileContentAnalyser
 
-        self.register_plugin(ContentAnalysisPlugin)
+        # self.register_plugin(FileContentAnalyser)
 
     def register_connector(self, connector_class: type[Connector]):
         """Register a connector class."""
