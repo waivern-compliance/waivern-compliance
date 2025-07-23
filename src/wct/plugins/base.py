@@ -3,9 +3,20 @@
 from __future__ import annotations
 
 import abc
+from dataclasses import dataclass, field
 from typing import Any
 
 from typing_extensions import Self
+
+
+@dataclass(frozen=True, slots=True)
+class PluginConfig:
+    """Configuration for a plugin in a runbook."""
+
+    name: str
+    type: str
+    properties: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class Plugin(abc.ABC):
