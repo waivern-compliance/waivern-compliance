@@ -3,13 +3,13 @@ description: "Analyse a file for potentially sensitive information"
 
 connectors:
   - name: "file_reader"
-    type: "file"
+    type: "FileReaderConnector"
     properties:
       file_path: "../sample_file.txt"
 
 plugins:
   - name: "file_content_analyser"
-    type: "file_content_analyser"
+    type: "FileContentAnalyser"
     properties:
       sensitivity_level: "medium"
     metadata:
