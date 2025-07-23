@@ -18,13 +18,11 @@ This is a Python project using `uv` for dependency management. Key commands:
 - `uv run pre-commit run --all-files` - Run all pre-commit hooks
 - `uv run pre-commit install` - Install pre-commit hooks (run once after cloning)
 
-**Running the Applications:**
+**Running the Application:**
 - `uv run wct analyze <runbook.yaml>` - Run WCT analysis with a runbook
 - `uv run wct list-connectors` - List available connectors
 - `uv run wct list-plugins` - List available plugins
 - `uv run wct validate-runbook <runbook.yaml>` - Validate a runbook configuration
-- `uv run python -m waivern_analyser run --config <config.yaml>` - Run legacy Waivern analyser
-- `uv run python -m waivern_analyser ls-plugins` - List plugins for legacy analyser
 
 **Logging Options:**
 All WCT commands support logging configuration:
@@ -42,58 +40,50 @@ Examples:
 
 ## Architecture Overview
 
-This codebase contains two main systems that are being unified:
+This codebase implements WCT (Waivern Compliance Tool), a modern compliance analysis framework:
 
-### 1. WCT (Waivern Compliance Tool) - New System
+### WCT System Architecture
 - **Entry point:** `src/wct/__main__.py`
 - **Core orchestrator:** `src/wct/orchestrator.py`
 - **Configuration:** YAML runbooks defining connectors, plugins, and execution order
 - **Architecture:** Plugin-based system with connectors for data extraction and plugins for analysis
-- **Key components:**
-  - **Connectors:** Extract data from various sources (files, databases, etc.)
-  - **Plugins:** Process extracted data to perform compliance analysis
-  - **Orchestrator:** Manages the pipeline execution and data flow between components
 
-### 2. Waivern Analyser - Legacy System
-- **Entry point:** `src/waivern_analyser/__main__.py`
-- **Core analyser:** `src/waivern_analyser/analyser.py`
-- **Configuration:** YAML config files with sources, connectors, and rulesets
-- **Architecture:** Three-stage pipeline: sources → connectors → rulesets
+### Key Components
+- **Connectors:** Extract data from various sources (files, databases, etc.)
+  - File connector (`src/wct/connectors/file.py`)
+  - MySQL connector (`src/wct/connectors/mysql.py`)
+  - WordPress connector (`src/wct/connectors/wordpress.py`)
+- **Plugins:** Process extracted data to perform compliance analysis
+  - File content analyser (`src/wct/plugins/file_content_analyser.py`)
+  - Personal data analyser (`src/wct/plugins/personal_data_analyser.py`)
+- **Orchestrator:** Manages the pipeline execution and data flow between components
+- **Rulesets:** Reusable rule definitions for compliance checks
+  - Personal data ruleset (`src/wct/rulesets/personal_data.py`)
 
-### Plugin System
-- **Location:** `src/plugins/` contains external plugins (workspace members)
-- **WordPress plugin:** `src/plugins/wordpress/` - Example plugin for WordPress compliance analysis
-- **Plugin discovery:** Both systems use plugin registries for component discovery
-- **Base classes:** `src/wct/plugins/base.py` and `src/wct/connectors/base.py`
+### Configuration Format
+WCT uses runbook YAML files with three main sections:
+- `connectors`: Define data sources and their configuration
+- `plugins`: Specify analysis plugins to run
+- `execution_order`: Control the sequence of connector→plugin execution
 
-### Configuration Patterns
-- **WCT:** Uses runbook YAML files with `connectors`, `plugins`, and `execution_order` sections
-- **Legacy:** Uses config YAML files with `sources`, `connectors`, and `rulesets` sections
-- **Base config:** All config classes inherit from `src/waivern_analyser/config/base.py:Config` (Pydantic models)
-
-### Key Abstractions
-- **Connectors:** Bridge between data sources and analysis plugins
-- **Plugins/Rulesets:** Perform the actual compliance analysis logic
-- **Sources:** Represent data input sources (files, databases, etc.)
-- **Schema-based data flow:** Components communicate through well-defined data schemas
+### Base Classes and Extension Points
+- **Connector base:** `src/wct/connectors/base.py`
+- **Plugin base:** `src/wct/plugins/base.py`
+- **Ruleset base:** `src/wct/rulesets/base.py`
+- All components support dynamic registration and configuration
 
 ## Project Structure Notes
-- Uses `uv` workspace with `src/plugins/*` as workspace members
+- Uses `uv` for dependency management
 - Type annotations are enforced with `basedpyright`
-- Main package is `wct` (new system), with `waivern_analyser` as legacy
+- Main package is `wct` located in `src/wct/`
 - Sample configurations: `wct.yaml` and `sample_runbook.yaml`
 
 ## Development Setup
 
-**Pre-commit hooks are configured** to automatically run on the **new WCT system only**:
-- Ruff linting and formatting (excludes legacy `src/waivern_analyser/` and `src/plugins/`)
+**Pre-commit hooks are configured** for the WCT system:
+- Ruff linting and formatting
 - Basic file checks (YAML/TOML validation, trailing whitespace, etc.)
-- Security checks with bandit (excludes legacy code)
+- Security checks with bandit
 - Type checking with basedpyright (currently disabled while WCT architecture stabilizes)
 
-**Legacy code exclusions:** The pre-commit hooks intentionally ignore:
-- `src/waivern_analyser/` - Legacy Waivern Analyser system being migrated
-- `src/plugins/` - Plugin system being migrated to new WCT architecture
-- `tests/test_plugins.py` - Tests for legacy plugin system
-
-This approach ensures code quality standards are enforced for new WCT development while allowing legacy code migration to proceed without constant pre-commit failures.
+The pre-commit hooks ensure code quality standards are enforced across the entire WCT codebase.
