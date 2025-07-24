@@ -25,4 +25,5 @@ plugins:
       compliance_frameworks: ["GDPR", "CCPA"]
 
 execution_order:
-  - "file_content_analyser"
+  - name: "file_content_analyser"
+    input_schema: "./src/wct/schemas/text.json"

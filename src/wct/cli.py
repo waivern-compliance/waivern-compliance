@@ -217,7 +217,9 @@ class OutputFormatter:
         print(f"  Description: {runbook.description}")
         print(f"  Connectors: {len(runbook.connectors)}")
         print(f"  Plugins: {len(runbook.plugins)}")
-        print(f"  Execution order: {', '.join(runbook.execution_order)}")
+        print(
+            f"  Execution order: {', '.join(step.name for step in runbook.execution_order)}"
+        )
 
         logger.debug(
             "Runbook details: connectors=%d, plugins=%d",

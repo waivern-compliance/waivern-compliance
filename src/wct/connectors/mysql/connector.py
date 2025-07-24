@@ -262,11 +262,16 @@ class MySQLConnector(Connector[dict[str, Any]]):
             ) from e
 
     @override
-    def extract(self) -> dict[str, Any]:
+    def extract(
+        self, schema: WctSchema[dict[str, Any]] | None = None
+    ) -> dict[str, Any]:
         """Extract data from MySQL database.
 
         This method extracts database metadata and can execute custom queries
         if specified in the configuration.
+
+        Args:
+            schema: Optional WCT schema for data validation
 
         Returns:
             Dictionary containing extracted data in WCF schema format

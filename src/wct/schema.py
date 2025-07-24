@@ -18,3 +18,5 @@ class WctSchema(Generic[_SchemaType]):
 
     name: str
     type: type[_SchemaType]
+    schema_json: str | None = None
+    """JSON schema definition as a string, if applicable."""
