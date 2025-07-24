@@ -4,9 +4,14 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from typing_extensions import Self
+
+from wct.schema import WctSchema
+
+_PluginInputSchema = TypeVar("_PluginInputSchema")
+_PluginOutputSchema = TypeVar("_PluginOutputSchema")
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,7 +24,7 @@ class PluginConfig:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-class Plugin(abc.ABC):
+class Plugin(abc.ABC, Generic[_PluginInputSchema, _PluginOutputSchema]):
     """Analysis processor that accepts WCF schema-compliant data and
     produces results in the WCF-defined result schema.
 
@@ -53,7 +58,7 @@ class Plugin(abc.ABC):
         """
 
     @abc.abstractmethod
-    def process(self, data: dict[str, Any]) -> dict[str, Any]:
+    def process(self, data: _PluginInputSchema) -> _PluginOutputSchema:
         """Process input data and return analysis results.
 
         This is the core method where the analysis happens. The plugin
@@ -71,23 +76,23 @@ class Plugin(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_input_schema(self) -> str:
-        """Return the name of the input schema this plugin expects.
+    def get_input_schema(self) -> WctSchema[_PluginInputSchema]:
+        """Return the input schema information this plugin expects.
 
         Returns:
-            The schema name that this plugin's process() method expects
+            SchemaInfo containing both the schema name and type
         """
 
     @abc.abstractmethod
-    def get_output_schema(self) -> str:
-        """Return the name of the output schema this plugin produces.
+    def get_output_schema(self) -> WctSchema[_PluginOutputSchema]:
+        """Return the output schema information this plugin produces.
 
         Returns:
-            The schema name that this plugin's process() method returns
+            SchemaInfo containing both the schema name and type
         """
 
     @abc.abstractmethod
-    def validate_input(self, data: dict[str, Any]) -> bool:
+    def validate_input(self, data: _PluginInputSchema) -> bool:
         """Validate that input data conforms to the expected schema.
 
         Args:

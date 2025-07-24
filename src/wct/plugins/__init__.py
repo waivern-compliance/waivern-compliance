@@ -5,6 +5,7 @@ from wct.plugins.base import (
     PluginInputError,
     PluginProcessingError,
 )
+from wct.schema import WctSchema
 from wct.plugins.file_content_analyser import FileContentAnalyser
 from wct.plugins.personal_data_analyser import (
     PersonalDataAnalyser,
@@ -18,6 +19,7 @@ __all__ = (
     "PluginError",
     "PluginInputError",
     "PluginProcessingError",
+    "WctSchema",
     "FileContentAnalyser",
     "PersonalDataAnalyser",
     "PersonalDataFinding",

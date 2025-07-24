@@ -24,14 +24,14 @@ class Orchestrator:
 
     def __init__(self):
         self.connectors: dict[str, type[Connector[Any]]] = {}
-        self.plugins: dict[str, type[Plugin]] = {}
+        self.plugins: dict[str, type[Plugin[Any, Any]]] = {}
         self.logger = get_orchestrator_logger()
 
     def register_connector(self, connector_class: type[Connector[Any]]):
         """Register a connector class."""
         self.connectors[connector_class.get_name()] = connector_class
 
-    def register_plugin(self, plugin_class: type[Plugin]):
+    def register_plugin(self, plugin_class: type[Plugin[Any, Any]]):
         """Register a plugin class."""
         self.plugins[plugin_class.get_name()] = plugin_class
 
@@ -183,7 +183,7 @@ class Orchestrator:
 
     def _process_plugin_data(
         self,
-        plugin: Plugin,
+        plugin: Plugin[Any, Any],
         plugin_config: PluginConfig,
         schema_data: dict[str, dict[str, Any]],
     ) -> AnalysisResult:
@@ -197,29 +197,30 @@ class Orchestrator:
         Returns:
             Analysis result from processing
         """
-        input_schema = plugin.get_input_schema()
+        input_schema_info = plugin.get_input_schema()
+        output_schema_info = plugin.get_output_schema()
 
         # Check if required input schema is available
-        if input_schema not in schema_data:
+        if input_schema_info.name not in schema_data:
             return AnalysisResult(
                 plugin_name=plugin_config.name,
-                input_schema=input_schema,
-                output_schema=plugin.get_output_schema(),
+                input_schema=input_schema_info.name,
+                output_schema=output_schema_info.name,
                 data={},
                 metadata=plugin_config.metadata,
                 success=False,
-                error_message=f"Required input schema '{input_schema}' not available",
+                error_message=f"Required input schema '{input_schema_info.name}' not available",
             )
 
         # Validate and process input data
-        input_data = schema_data[input_schema]
+        input_data = schema_data[input_schema_info.name]
         plugin.validate_input(input_data)
         result_data = plugin.process(input_data)
 
         return AnalysisResult(
             plugin_name=plugin_config.name,
-            input_schema=input_schema,
-            output_schema=plugin.get_output_schema(),
+            input_schema=input_schema_info.name,
+            output_schema=output_schema_info.name,
             data=result_data,
             metadata=plugin_config.metadata,
             success=True,
@@ -262,7 +263,7 @@ class Orchestrator:
         """Get all registered connectors."""
         return self.connectors.copy()
 
-    def list_plugins(self) -> dict[str, type[Plugin]]:
+    def list_plugins(self) -> dict[str, type[Plugin[Any, Any]]]:
         """Get all registered plugins."""
         return self.plugins.copy()
 

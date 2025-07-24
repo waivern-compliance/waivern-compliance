@@ -11,8 +11,8 @@ from wct.connectors.base import (
     Connector,
     ConnectorConfigError,
     ConnectorExtractionError,
-    SchemaInfo,
 )
+from wct.schema import WctSchema
 
 logger = logging.getLogger(__name__)
 
@@ -107,9 +107,9 @@ class FileReaderConnector(Connector[dict[str, Any]]):
             ) from e
 
     @override
-    def get_output_schema(self) -> SchemaInfo[dict[str, Any]]:
+    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
         """Return the schema this connector produces."""
-        return SchemaInfo(name="file_content", type=dict[str, Any])
+        return WctSchema(name="file_content", type=dict[str, Any])
 
     def _read_file_content(self) -> str:
         """Read file content efficiently for large files."""
