@@ -16,6 +16,10 @@ from wct.schema import WctSchema
 
 logger = logging.getLogger(__name__)
 
+SUPPORTED_OUTPUT_SCHEMAS = {
+    "text": WctSchema(name="text", type=dict[str, Any]),
+}
+
 
 class FileConnector(Connector[dict[str, Any]]):
     """Connector that reads file content for analysis.
@@ -73,8 +77,13 @@ class FileConnector(Connector[dict[str, Any]]):
         )
 
     @override
-    def extract(self) -> dict[str, Any]:
+    def extract(
+        self, schema: WctSchema[dict[str, Any]] | None = None
+    ) -> dict[str, Any]:
         """Extract file content and metadata.
+
+        Args:
+            schema: Optional schema to validate against
 
         Returns:
             Dictionary containing file content and metadata in WCF schema format
@@ -86,18 +95,37 @@ class FileConnector(Connector[dict[str, Any]]):
             stat = self.file_path.stat()
 
             # Read file content efficiently
-            content = self._read_file_content()
+            file_content = self._read_file_content()
+            if schema and schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
+                raise ConnectorConfigError(
+                    f"Unsupported output schema: {schema.name}. Supported schemas: {SUPPORTED_OUTPUT_SCHEMAS.keys()}"
+                )
+
+            # Transform content to WCF schema format
+            if schema and schema.name == "text":
+                wct_schema_transformed_content = schema.type(
+                    name=schema.name,
+                    description=f"Content from {self.file_path.name}",
+                    contentEncoding=self.encoding,
+                    source=str(self.file_path),
+                    metadata={
+                        "modified_time": stat.st_mtime,
+                        "created_time": stat.st_ctime,
+                        "permissions": oct(stat.st_mode)[-3:],
+                    },
+                    content=[{"text": file_content}],
+                )
+            else:
+                # Default transformation if no schema provided
+                logger.warning("No schema provided, using default text schema")
+                raise ConnectorConfigError(
+                    "No schema provided for data extraction. Please specify a valid WCT schema."
+                )
 
             return {
                 "file_path": str(self.file_path),
-                "content": content,
+                "content": wct_schema_transformed_content,
                 "size_bytes": stat.st_size,
-                "encoding": self.encoding,
-                "metadata": {
-                    "modified_time": stat.st_mtime,
-                    "created_time": stat.st_ctime,
-                    "permissions": oct(stat.st_mode)[-3:],
-                },
             }
 
         except Exception as e:
@@ -109,7 +137,7 @@ class FileConnector(Connector[dict[str, Any]]):
     @override
     def get_output_schema(self) -> WctSchema[dict[str, Any]]:
         """Return the schema this connector produces."""
-        return WctSchema(name="file_content", type=dict[str, Any])
+        return WctSchema(name="text", type=dict[str, Any])
 
     def _read_file_content(self) -> str:
         """Read file content efficiently for large files."""

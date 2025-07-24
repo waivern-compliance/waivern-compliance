@@ -77,7 +77,9 @@ class Connector(abc.ABC, Generic[_ConnectorOutputSchema]):
         """
 
     @abc.abstractmethod
-    def extract(self) -> _ConnectorOutputSchema:
+    def extract(
+        self, schema: WctSchema[_ConnectorOutputSchema]
+    ) -> _ConnectorOutputSchema:
         """Extract data from the source and return in WCF schema format.
 
         This method returns data that conforms to the WCF-defined schema for this connector.

@@ -16,7 +16,7 @@ app = typer.Typer(name="waivern-compliance-tool")
 
 
 @app.command()
-def run_analyses(
+def run(
     runbook: Annotated[
         Path,
         typer.Argument(

@@ -53,14 +53,16 @@ class WordpressConnector(Connector[dict[str, Any]]):
         return cls()
 
     @override
-    def extract(self) -> dict[str, Any]:
+    def extract(
+        self, schema: WctSchema[dict[str, Any]] | None = None
+    ) -> dict[str, Any]:
         """Extract data from the WordPress site and return in WCF schema format."""
         return {}
 
     @override
     def get_output_schema(self) -> WctSchema[dict[str, Any]]:
         """Return the schema this connector produces."""
-        return WctSchema(name="wordpress_data", type=dict[str, Any])
+        return WctSchema(name="wordpress_site", type=dict[str, Any])
 
 
 class WordpressConnectorConfig(BaseModel):
