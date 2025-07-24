@@ -71,15 +71,24 @@ execution_order:
 ### Core Components
 
 - **`src/wct/orchestrator.py`**: Main orchestration engine
-- **`src/wct/connectors/`**: Data source connectors
-  - File connector for local files
-  - MySQL connector for database analysis
-  - WordPress connector for CMS analysis
-- **`src/wct/plugins/`**: Analysis plugins
-  - File content analyser
-  - Personal data analyser
+- **`src/wct/connectors/`**: Data source connectors (modular architecture)
+  - `file/` - File connector for local files
+  - `mysql/` - MySQL connector for database analysis
+  - `wordpress/` - WordPress connector for CMS analysis
+- **`src/wct/plugins/`**: Analysis plugins (modular architecture)
+  - `file_content_analyser/` - File content analysis module
+  - `personal_data_analyser/` - Personal data analysis module
 - **`src/wct/rulesets/`**: Reusable compliance rules
   - Personal data detection rules
+
+### Modular Architecture Benefits
+
+Each connector and plugin is organized as an independent module with its own directory:
+
+- **Better Encapsulation**: Each component can contain supporting files, utilities, and tests
+- **Extensibility**: Easy to add complex logic, configuration files, and dependencies per component
+- **Maintainability**: Clear separation of concerns with dedicated directories
+- **Development Flexibility**: Teams can work on individual components without conflicts
 
 ### Configuration
 
@@ -158,15 +167,25 @@ class MyPlugin(Plugin):
 src/wct/
 ├── __main__.py           # CLI entry point
 ├── orchestrator.py       # Main orchestration engine
-├── connectors/           # Data source connectors
+├── connectors/           # Data source connectors (modular)
 │   ├── base.py          # Base connector class
-│   ├── file.py          # File system connector
-│   ├── mysql.py         # MySQL database connector
-│   └── wordpress.py     # WordPress connector
-├── plugins/             # Analysis plugins
+│   ├── file/            # File system connector module
+│   │   ├── __init__.py
+│   │   └── connector.py
+│   ├── mysql/           # MySQL database connector module
+│   │   ├── __init__.py
+│   │   └── connector.py
+│   └── wordpress/       # WordPress connector module
+│       ├── __init__.py
+│       └── connector.py
+├── plugins/             # Analysis plugins (modular)
 │   ├── base.py          # Base plugin class
-│   ├── file_content_analyser.py
-│   └── personal_data_analyser.py
+│   ├── file_content_analyser/    # File content analysis module
+│   │   ├── __init__.py
+│   │   └── plugin.py
+│   └── personal_data_analyser/   # Personal data analysis module
+│       ├── __init__.py
+│       └── plugin.py
 └── rulesets/            # Reusable compliance rules
     ├── base.py          # Base ruleset class
     └── personal_data.py # Personal data detection rules

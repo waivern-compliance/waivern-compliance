@@ -49,16 +49,23 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 - **Architecture:** Plugin-based system with connectors for data extraction and plugins for analysis
 
 ### Key Components
-- **Connectors:** Extract data from various sources (files, databases, etc.)
-  - File connector (`src/wct/connectors/file.py`)
-  - MySQL connector (`src/wct/connectors/mysql.py`)
-  - WordPress connector (`src/wct/connectors/wordpress.py`)
-- **Plugins:** Process extracted data to perform compliance analysis
-  - File content analyser (`src/wct/plugins/file_content_analyser.py`)
-  - Personal data analyser (`src/wct/plugins/personal_data_analyser.py`)
+- **Connectors:** Extract data from various sources (files, databases, etc.) - **Modular Architecture**
+  - File connector (`src/wct/connectors/file/`)
+  - MySQL connector (`src/wct/connectors/mysql/`)
+  - WordPress connector (`src/wct/connectors/wordpress/`)
+- **Plugins:** Process extracted data to perform compliance analysis - **Modular Architecture**
+  - File content analyser (`src/wct/plugins/file_content_analyser/`)
+  - Personal data analyser (`src/wct/plugins/personal_data_analyser/`)
 - **Orchestrator:** Manages the pipeline execution and data flow between components
 - **Rulesets:** Reusable rule definitions for compliance checks
   - Personal data ruleset (`src/wct/rulesets/personal_data.py`)
+
+### Modular Component Structure
+Each connector and plugin is organized as an independent module:
+- **Directory Structure:** Each component has its own directory with `__init__.py` and implementation files
+- **Encapsulation:** Components can contain supporting files, utilities, configuration, and tests
+- **Extensibility:** Easy to add complex logic and dependencies per component
+- **Import Compatibility:** Main `__init__.py` files maintain backward-compatible imports
 
 ### Configuration Format
 WCT uses runbook YAML files with three main sections:
