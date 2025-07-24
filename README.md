@@ -78,6 +78,14 @@ connectors:
       database: "mydb"
       port: 3306
 
+  mysql_db:
+    type: mysql
+    properties:
+      host: "localhost"
+      user: "dbuser"
+      password: "dbpass"
+      database: "mydb"
+
 plugins:
   - name: "content_analyser"
     type: "file_content_analyser"
@@ -96,6 +104,7 @@ execution_order:
 - **Schema-driven execution**: Plugins specify required input schemas
 - **Automatic connector matching**: Orchestrator matches connector outputs to plugin inputs
 - **Optional dependencies**: MySQL connector requires `uv sync --group mysql`
+
 
 ## Architecture
 
