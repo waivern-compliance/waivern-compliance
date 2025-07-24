@@ -59,7 +59,7 @@ class AnalysisRunner:
     def run_analysis(
         self, runbook_path: Path, output_dir: Path, verbose: bool = False
     ) -> list[AnalysisResult]:
-        """Run analysis using a runbook configuration.
+        """Run analysis using a runbook.
 
         Args:
             runbook_path: Path to the runbook YAML file
@@ -117,13 +117,13 @@ class RunbookValidator:
     """Handles runbook validation from CLI."""
 
     def validate_runbook(self, runbook_path: Path) -> Runbook:
-        """Validate a runbook configuration file.
+        """Validate a runbook YAML file.
 
         Args:
             runbook_path: Path to the runbook YAML file
 
         Returns:
-            Validated runbook configuration
+            Validated runbook YAML
 
         Raises:
             CLIError: If validation fails
@@ -211,7 +211,7 @@ class OutputFormatter:
         """Format and print runbook validation results.
 
         Args:
-            runbook: Validated runbook configuration
+            runbook: Validated runbook YAML file
         """
         print(f"✓ Runbook '{runbook.name}' is valid")
         print(f"  Description: {runbook.description}")

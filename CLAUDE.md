@@ -22,7 +22,7 @@ This is a Python project using `uv` for dependency management. Key commands:
 - `uv run wct analyze <runbook.yaml>` - Run WCT analysis with a runbook
 - `uv run wct list-connectors` - List available connectors
 - `uv run wct list-plugins` - List available plugins
-- `uv run wct validate-runbook <runbook.yaml>` - Validate a runbook configuration
+- `uv run wct validate-runbook <runbook.yaml>` - Validate a runbook
 
 **Logging Options:**
 All WCT commands support logging configuration:

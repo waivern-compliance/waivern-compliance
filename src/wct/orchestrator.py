@@ -17,7 +17,7 @@ class Orchestrator:
 
     The Orchestrator follows a middleware design pattern, managing the
     flow of data between connectors and plugins based on a runbook
-    configuration. It is responsible for loading runbook configurations,
+    configuration. It is responsible for loading runbook files,
     loading connectors and plugins, and executing the analysis
     workflow defined within the runbooks.
     """
@@ -36,7 +36,7 @@ class Orchestrator:
         self.plugins[plugin_class.get_name()] = plugin_class
 
     def load_runbook(self, runbook_path: Path) -> Runbook:
-        """Load and parse a runbook configuration file."""
+        """Load and parse a runbook file."""
         try:
             return load_runbook(runbook_path)
         except Exception as e:
@@ -45,7 +45,7 @@ class Orchestrator:
             ) from e
 
     def run_analysis(self, runbook: Runbook) -> list[AnalysisResult]:
-        """Execute analysis based on runbook configuration."""
+        """Execute analysis based on a runbook."""
         results = []
         schema_data: dict[str, dict[str, Any]] = {}
 

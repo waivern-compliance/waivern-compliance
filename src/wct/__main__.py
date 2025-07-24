@@ -57,7 +57,7 @@ def run_analyses(
         ),
     ] = "INFO",
 ):
-    """Run compliance analysis using a runbook configuration."""
+    """Run compliance analysis using a runbook."""
     run_analyses_command(runbook, output_dir, verbose, log_level)
 
 
@@ -112,7 +112,7 @@ def validate_runbook(
         ),
     ] = "INFO",
 ):
-    """Validate a runbook configuration file."""
+    """Validate a runbook YAML file."""
     validate_runbook_command(runbook, log_level)
 
 

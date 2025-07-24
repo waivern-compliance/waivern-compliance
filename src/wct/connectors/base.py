@@ -67,7 +67,7 @@ class Connector(abc.ABC, Generic[_ConnectorOutputSchema]):
         """Instantiate this connector from a dictionary of properties.
 
         The `properties` dictionary is the configuration for the connector
-        as specified in the runbook configuration file.
+        as specified in the runbook file.
 
         Returns:
             The connector instance

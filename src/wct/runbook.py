@@ -58,7 +58,7 @@ class Runbook:
         return errors
 
     def get_summary(self) -> dict[str, Any]:
-        """Get a summary of the runbook configuration.
+        """Get a summary of the runbook.
 
         Returns:
             Dictionary with runbook statistics
@@ -93,16 +93,16 @@ class RunbookValidationError(RunbookError):
 
 
 class RunbookLoader:
-    """Handles loading and parsing of runbook configuration files."""
+    """Handles loading and parsing of runbook files."""
 
     def load_from_file(self, runbook_path: Path) -> Runbook:
-        """Load and parse a runbook configuration file.
+        """Load and parse a runbook file.
 
         Args:
             runbook_path: Path to the runbook YAML file
 
         Returns:
-            Parsed runbook configuration
+            Parsed runbook
 
         Raises:
             RunbookLoadError: If the file cannot be loaded
@@ -158,7 +158,7 @@ class RunbookLoader:
             data: Raw runbook data from YAML
 
         Returns:
-            Parsed runbook configuration
+            Parsed runbook
 
         Raises:
             RunbookValidationError: If data structure is invalid
@@ -268,10 +268,10 @@ class RunbookLoader:
             return [plugin.name for plugin in plugins]
 
     def _validate_runbook(self, runbook: Runbook) -> None:
-        """Validate runbook configuration for consistency.
+        """Validate runbook for consistency.
 
         Args:
-            runbook: Runbook configuration to validate
+            runbook: Runbook to validate
 
         Raises:
             RunbookValidationError: If validation fails
@@ -283,7 +283,7 @@ class RunbookLoader:
         """Validate that execution order references existing plugins.
 
         Args:
-            runbook: Runbook configuration to validate
+            runbook: Runbook to validate
         """
         plugin_names = {plugin.name for plugin in runbook.plugins}
 
@@ -297,7 +297,7 @@ class RunbookLoader:
         """Validate that connector and plugin names are unique.
 
         Args:
-            runbook: Runbook configuration to validate
+            runbook: Runbook to validate
         """
         # Check connector name uniqueness
         connector_names = [conn.name for conn in runbook.connectors]
@@ -311,7 +311,7 @@ class RunbookLoader:
 
 
 class RunbookValidator:
-    """Validates runbook configurations for completeness and correctness."""
+    """Validates runbook for completeness and correctness."""
 
     def __init__(self, available_connectors: set[str], available_plugins: set[str]):
         """Initialize validator with available component types.
@@ -327,7 +327,7 @@ class RunbookValidator:
         """Validate runbook against available components.
 
         Args:
-            runbook: Runbook configuration to validate
+            runbook: Runbook to validate
 
         Returns:
             List of validation warnings (empty if fully valid)
@@ -348,13 +348,13 @@ class RunbookValidator:
 
 
 def load_runbook(runbook_path: Path) -> Runbook:
-    """Convenience function to load a runbook configuration.
+    """Convenience function to load a runbook.
 
     Args:
         runbook_path: Path to the runbook YAML file
 
     Returns:
-        Loaded runbook configuration
+        Loaded runbook
     """
     loader = RunbookLoader()
     return loader.load_from_file(runbook_path)

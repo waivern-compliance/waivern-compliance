@@ -54,7 +54,7 @@ class Plugin(abc.ABC, Generic[_PluginInputSchema, _PluginOutputSchema]):
         """Instantiate this plugin from a dictionary of properties.
 
         The `properties` dictionary is the configuration for the plugin
-        as specified in the runbook configuration file.
+        as specified in the runbook file.
         """
 
     @abc.abstractmethod
