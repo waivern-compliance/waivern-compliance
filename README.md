@@ -38,6 +38,9 @@ uv run pre-commit install
 - `mysql` - MySQL connector dependencies (pymysql, cryptography)
 - `dev` - Development tools (pytest, ruff, basedpyright, etc.)
 
+**Core Dependencies**:
+- `jsonschema` - JSON schema validation for comprehensive data validation
+
 Some connectors and plugins require additional dependencies that are not installed by default. Check the connector/plugin documentation or error messages for specific dependency group requirements.
 
 ### Basic Usage
@@ -95,14 +98,22 @@ plugins:
       priority: "high"
       compliance_frameworks: ["GDPR", "CCPA"]
 
-execution_order:
-  - name: "content_analyser"
+execution:
+  - connector: "file_reader"
+    plugin: "content_analyser"
     input_schema: "./src/wct/schemas/text.json"
+    output_schema: "./src/wct/schemas/content_analysis_result.json"
+    context:
+      description: "Analyze file content for sensitive information"
+      priority: "high"
+      compliance_frameworks: ["GDPR", "CCPA"]
 ```
 
 **Key Features**:
-- **Schema-driven execution**: Plugins specify required input schemas
-- **Automatic connector matching**: Orchestrator matches connector outputs to plugin inputs
+- **Comprehensive schema validation**: Automatic input and output validation against JSON schemas
+- **Explicit connector-plugin mapping**: Clear data flow specification in execution steps
+- **Dynamic schema loading**: Flexible schema file discovery with multiple search paths
+- **End-to-end validation**: Full pipeline validation from data extraction to analysis results
 - **Optional dependencies**: MySQL connector requires `uv sync --group mysql`
 
 
@@ -110,11 +121,13 @@ execution_order:
 
 ### Schema-Driven Design
 
-WCT uses a **unified schema system** (`WctSchema`) that provides:
+WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation:
 
 - **Type Safety**: Generic schema containers with compile-time type checking
+- **Automatic Validation**: Built-in input and output validation using JSON schemas
+- **Dynamic Schema Loading**: Flexible schema file discovery across multiple locations
+- **End-to-End Validation**: Complete pipeline validation from connector output to plugin results
 - **Interoperability**: Standardized data contracts between connectors and plugins
-- **Validation**: Runtime schema validation ensures data format consistency
 - **Extensibility**: Easy to add new schema types while maintaining compatibility
 
 ### Core Components
@@ -152,17 +165,19 @@ Each connector and plugin is organized as an independent module:
 
 ### Configuration Format
 
-WCT runbooks support both **legacy** and **schema-aware** execution formats:
+WCT runbooks use a **comprehensive execution format** with explicit connector-plugin mapping:
 
 ```yaml
-# Schema-aware format (recommended)
-execution_order:
-  - name: "plugin_name"
+# Modern execution format (required)
+execution:
+  - connector: "connector_name"
+    plugin: "plugin_name"
     input_schema: "./src/wct/schemas/schema_name.json"
-
-# Legacy format (still supported)
-execution_order:
-  - "plugin_name"
+    output_schema: "./src/wct/schemas/output_schema.json"  # optional
+    context:  # optional metadata
+      description: "Step description"
+      priority: "high"
+      compliance_frameworks: ["GDPR", "CCPA"]
 ```
 
 ## Development
@@ -244,6 +259,7 @@ class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
     @override
     def process(self, data: dict[str, Any]) -> dict[str, Any]:
         # Process schema-validated input data
+        # Input validation is handled automatically by the base class
         return {"findings": ["compliance_issue_1"]}
 
     @override
@@ -256,9 +272,17 @@ class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
 
     @override
     def validate_input(self, data: dict[str, Any]) -> bool:
-        # Validate input data structure
-        return "data" in data
+        # Dynamic validation using JSON schema files
+        # This method now automatically loads and validates against JSON schemas
+        # Custom validation logic can be added here if needed
+        return True  # Base class handles schema validation
 ```
+
+**Key Plugin Features**:
+- **Automatic Validation**: Use `process_with_validation()` for automatic input/output validation
+- **Dynamic Schema Loading**: JSON schema files are automatically discovered and loaded
+- **Type Safety**: Full type checking with generic type parameters
+- **Error Handling**: Comprehensive error messages for validation failures
 
 ### Project Structure
 
