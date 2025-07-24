@@ -21,4 +21,7 @@ __all__ = (
     "PathConnectorConfig",
     "WordpressConnector",
     "WordpressConnectorConfig",
+    "BUILTIN_CONNECTORS",
 )
+
+BUILTIN_CONNECTORS = (FileReaderConnector, MySQLConnector, WordpressConnector)
