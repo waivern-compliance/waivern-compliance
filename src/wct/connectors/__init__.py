@@ -5,6 +5,7 @@ from wct.connectors.base import (
     ConnectorError,
     ConnectorExtractionError,
     PathConnectorConfig,
+    SchemaInfo,
 )
 from wct.connectors.file import FileReaderConnector
 from wct.connectors.mysql import MySQLConnector
@@ -19,6 +20,7 @@ __all__ = (
     "FileReaderConnector",
     "MySQLConnector",
     "PathConnectorConfig",
+    "SchemaInfo",
     "WordpressConnector",
     "WordpressConnectorConfig",
     "BUILTIN_CONNECTORS",

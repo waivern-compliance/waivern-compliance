@@ -12,6 +12,14 @@ _ConnectorOutputSchema = TypeVar("_ConnectorOutputSchema")
 
 
 @dataclass(frozen=True, slots=True)
+class SchemaInfo(Generic[_ConnectorOutputSchema]):
+    """Information about a connector's output schema."""
+
+    name: str
+    type: type[_ConnectorOutputSchema]
+
+
+@dataclass(frozen=True, slots=True)
 class ConnectorConfig:
     """Configuration for a connector in a runbook."""
 
@@ -89,11 +97,11 @@ class Connector(abc.ABC, Generic[_ConnectorOutputSchema]):
         """
 
     @abc.abstractmethod
-    def get_output_schema(self) -> type[_ConnectorOutputSchema]:
-        """Return the schema this connector produces.
+    def get_output_schema(self) -> SchemaInfo[_ConnectorOutputSchema]:
+        """Return the schema information this connector produces.
 
         Returns:
-            The schema that this connector's extract() method returns
+            SchemaInfo containing both the schema name and type
         """
 
 

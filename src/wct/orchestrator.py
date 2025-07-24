@@ -101,9 +101,9 @@ class Orchestrator:
 
         connector = connector_class.from_properties(connector_config.properties)
         extracted_data = connector.extract()
-        schema_name = connector.get_output_schema()
+        schema_info = connector.get_output_schema()
 
-        return {str(schema_name): extracted_data}
+        return {schema_info.name: extracted_data}
 
     def _execute_plugins_in_order(
         self,
