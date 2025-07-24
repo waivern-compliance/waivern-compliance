@@ -1,7 +1,28 @@
-from wct.plugins.base import Plugin, PluginConfig
+from wct.plugins.base import (
+    Plugin,
+    PluginConfig,
+    PluginError,
+    PluginInputError,
+    PluginProcessingError,
+)
 from wct.plugins.file_content_analyser import FileContentAnalyser
-from wct.plugins.personal_data_analyser import PersonalDataAnalyser
+from wct.plugins.personal_data_analyser import (
+    PersonalDataAnalyser,
+    PersonalDataFinding,
+    PersonalDataPattern,
+)
 
-__all__ = ("Plugin", "PluginConfig", "BUILTIN_PLUGINS")
+__all__ = (
+    "Plugin",
+    "PluginConfig",
+    "PluginError",
+    "PluginInputError",
+    "PluginProcessingError",
+    "FileContentAnalyser",
+    "PersonalDataAnalyser",
+    "PersonalDataFinding",
+    "PersonalDataPattern",
+    "BUILTIN_PLUGINS",
+)
 
 BUILTIN_PLUGINS = (FileContentAnalyser, PersonalDataAnalyser)
