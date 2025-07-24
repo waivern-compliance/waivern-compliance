@@ -7,6 +7,7 @@ from typing_extensions import override
 
 from wct.plugins.base import Plugin
 from wct.rulesets import get_ruleset
+from wct.schema import WctSchema
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,7 +31,7 @@ class PersonalDataFinding:
     source: str | None
 
 
-class PersonalDataAnalyser(Plugin):
+class PersonalDataAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
     """Plugin for analyzing personal data patterns for GDPR compliance."""
 
     def __init__(self, ruleset_name: str = "personal_data"):
@@ -63,16 +64,14 @@ class PersonalDataAnalyser(Plugin):
         return self._patterns
 
     @override
-    def get_input_schema(self) -> str:
+    def get_input_schema(self) -> WctSchema[dict[str, Any]]:
         """Expected input schema."""
-        # TODO: Implement a proper schema definition - this should be a JSON schema or similar
-        return "file_content"
+        return WctSchema(name="file_content", type=dict[str, Any])
 
     @override
-    def get_output_schema(self) -> str:
+    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
         """Output schema produced."""
-        # TODO: Implement a proper schema definition - this should be a JSON schema or similar
-        return "personal_data_findings"
+        return WctSchema(name="personal_data_findings", type=dict[str, Any])
 
     @override
     def validate_input(self, data: dict[str, Any]) -> bool:

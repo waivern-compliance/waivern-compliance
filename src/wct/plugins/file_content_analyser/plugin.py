@@ -6,9 +6,10 @@ from typing import Any
 from typing_extensions import Self, override
 
 from wct.plugins.base import Plugin, PluginInputError
+from wct.schema import WctSchema
 
 
-class FileContentAnalyser(Plugin):
+class FileContentAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
     """Analyzes file content for potentially sensitive information.
 
     This plugin looks for patterns that might indicate sensitive data
@@ -69,12 +70,12 @@ class FileContentAnalyser(Plugin):
         }
 
     @override
-    def get_input_schema(self) -> str:
-        return "file_content"
+    def get_input_schema(self) -> WctSchema[dict[str, Any]]:
+        return WctSchema(name="file_content", type=dict[str, Any])
 
     @override
-    def get_output_schema(self) -> str:
-        return "content_analysis_result"
+    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
+        return WctSchema(name="content_analysis_result", type=dict[str, Any])
 
     @override
     def validate_input(self, data: dict[str, Any]) -> bool:

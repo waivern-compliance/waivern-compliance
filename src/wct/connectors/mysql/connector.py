@@ -3,6 +3,7 @@ from typing import Any
 from typing_extensions import Self, override
 
 from wct.connectors.base import Connector
+from wct.schema import WctSchema
 from wct.logging import get_connector_logger
 
 
@@ -29,6 +30,6 @@ class MySQLConnector(Connector[dict[str, Any]]):
         return {}
 
     @override
-    def get_output_schema(self) -> type[dict[str, Any]]:
+    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
         """Return the schema this connector produces."""
-        return dict[str, Any]
+        return WctSchema(name="mysql_data", type=dict[str, Any])

@@ -8,12 +8,40 @@ from pathlib import Path
 import typer
 
 from wct.analysis import AnalysisResult
-from wct.runbook import Runbook
+from wct.connectors import BUILTIN_CONNECTORS
 from wct.logging import setup_logging
 from wct.orchestrator import Orchestrator
-from wct.runbook import load_runbook
+from wct.plugins import BUILTIN_PLUGINS
+from wct.runbook import Runbook, load_runbook
 
 logger = logging.getLogger(__name__)
+
+
+def create_orchestrator() -> Orchestrator:
+    """Create and configure an orchestrator with built-in components.
+
+    Returns:
+        Configured orchestrator with all built-in connectors and plugins registered
+    """
+    orchestrator = Orchestrator()
+
+    # Register built-in connectors
+    for connector_class in BUILTIN_CONNECTORS:
+        orchestrator.register_connector(connector_class)
+        logger.debug("Registered connector: %s", connector_class.get_name())
+
+    # Register built-in plugins
+    for plugin_class in BUILTIN_PLUGINS:
+        orchestrator.register_plugin(plugin_class)
+        logger.debug("Registered plugin: %s", plugin_class.get_name())
+
+    logger.info(
+        "Orchestrator initialized with %d connectors and %d plugins",
+        len(BUILTIN_CONNECTORS),
+        len(BUILTIN_PLUGINS),
+    )
+
+    return orchestrator
 
 
 class CLIError(Exception):
@@ -26,7 +54,7 @@ class AnalysisRunner:
     """Handles running compliance analysis from CLI."""
 
     def __init__(self):
-        self.orchestrator = Orchestrator()
+        self.orchestrator = create_orchestrator()
 
     def run_analysis(
         self, runbook_path: Path, output_dir: Path, verbose: bool = False
@@ -60,7 +88,7 @@ class ComponentLister:
     """Handles listing available connectors and plugins."""
 
     def __init__(self):
-        self.orchestrator = Orchestrator()
+        self.orchestrator = create_orchestrator()
 
     def list_connectors(self) -> dict[str, type]:
         """List all available connectors.

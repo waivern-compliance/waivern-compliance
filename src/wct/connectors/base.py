@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing_extensions import Self
 
 from wct.errors import WCTError
+from wct.schema import WctSchema
 
 _ConnectorOutputSchema = TypeVar("_ConnectorOutputSchema")
 
@@ -89,11 +90,11 @@ class Connector(abc.ABC, Generic[_ConnectorOutputSchema]):
         """
 
     @abc.abstractmethod
-    def get_output_schema(self) -> type[_ConnectorOutputSchema]:
-        """Return the schema this connector produces.
+    def get_output_schema(self) -> WctSchema[_ConnectorOutputSchema]:
+        """Return the schema information this connector produces.
 
         Returns:
-            The schema that this connector's extract() method returns
+            SchemaInfo containing both the schema name and type
         """
 
 

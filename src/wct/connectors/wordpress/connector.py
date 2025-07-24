@@ -5,6 +5,7 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import Self, override
 
 from wct.connectors.base import Connector, ConnectorConfigError
+from wct.schema import WctSchema
 
 
 class WordpressConnector(Connector[dict[str, Any]]):
@@ -57,9 +58,9 @@ class WordpressConnector(Connector[dict[str, Any]]):
         return {}
 
     @override
-    def get_output_schema(self) -> type[dict[str, Any]]:
+    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
         """Return the schema this connector produces."""
-        return dict[str, Any]
+        return WctSchema(name="wordpress_data", type=dict[str, Any])
 
 
 class WordpressConnectorConfig(BaseModel):
