@@ -17,7 +17,7 @@ from wct.schema import WctSchema
 logger = logging.getLogger(__name__)
 
 
-class FileReaderConnector(Connector[dict[str, Any]]):
+class FileConnector(Connector[dict[str, Any]]):
     """Connector that reads file content for analysis.
 
     This connector is memory-efficient for large files by reading content

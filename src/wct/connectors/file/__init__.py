@@ -1,5 +1,5 @@
 """File connector module."""
 
-from .connector import FileReaderConnector
+from .connector import FileConnector
 
-__all__ = ["FileReaderConnector"]
+__all__ = ["FileConnector"]
