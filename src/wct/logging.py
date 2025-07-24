@@ -2,7 +2,6 @@
 
 import logging
 import sys
-from typing import Optional
 
 
 class ColoredFormatter(logging.Formatter):
@@ -28,7 +27,7 @@ class ColoredFormatter(logging.Formatter):
 
 
 def setup_logging(
-    level: str = "INFO", format_string: Optional[str] = None, use_colors: bool = True
+    level: str = "INFO", format_string: str | None = None, use_colors: bool = True
 ) -> None:
     """Configure logging for the WCT system.
 

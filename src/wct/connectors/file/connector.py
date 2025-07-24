@@ -2,9 +2,10 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
-from typing_extensions import Self
+from typing_extensions import Self, override
 
 from wct.connectors.base import (
     Connector,
@@ -49,11 +50,13 @@ class FileReaderConnector(Connector[dict[str, Any]]):
             raise ConnectorConfigError(f"Path is not a file: {self.file_path}")
 
     @classmethod
+    @override
     def get_name(cls) -> str:
         """The name of the connector."""
         return "file_reader"
 
     @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
         """Create connector from configuration properties."""
         file_path = properties.get("path")
@@ -68,6 +71,7 @@ class FileReaderConnector(Connector[dict[str, Any]]):
             file_path=file_path, chunk_size=chunk_size, encoding=encoding, errors=errors
         )
 
+    @override
     def extract(self) -> dict[str, Any]:
         """Extract file content and metadata.
 
@@ -101,6 +105,7 @@ class FileReaderConnector(Connector[dict[str, Any]]):
                 f"Failed to read file {self.file_path}: {e}"
             ) from e
 
+    @override
     def get_output_schema(self) -> type[dict[str, Any]]:
         """Return the schema this connector produces."""
         return dict[str, Any]

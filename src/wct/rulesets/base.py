@@ -1,7 +1,7 @@
 """Base classes and utilities for rulesets."""
 
 import abc
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class RulesetError(Exception):
@@ -20,7 +20,7 @@ class RulesetLoader(abc.ABC):
     """Abstract base class for loading rulesets from different sources."""
 
     @abc.abstractmethod
-    def load_ruleset(self, ruleset_name: str) -> Dict[str, Any]:
+    def load_ruleset(self, ruleset_name: str) -> dict[str, Any]:
         """Load a ruleset by name.
 
         Args:
@@ -37,7 +37,7 @@ class RulesetLoader(abc.ABC):
 class ModuleRulesetLoader(RulesetLoader):
     """Loads rulesets from Python modules in the rulesets package."""
 
-    def load_ruleset(self, ruleset_name: str) -> Dict[str, Any]:
+    def load_ruleset(self, ruleset_name: str) -> dict[str, Any]:
         """Load a ruleset from a Python module.
 
         Args:
@@ -66,8 +66,8 @@ class ModuleRulesetLoader(RulesetLoader):
 
 
 def get_ruleset(
-    ruleset_name: str, loader: Optional[RulesetLoader] = None
-) -> Dict[str, Any]:
+    ruleset_name: str, loader: RulesetLoader | None = None
+) -> dict[str, Any]:
     """Get a ruleset using the specified loader.
 
     Args:

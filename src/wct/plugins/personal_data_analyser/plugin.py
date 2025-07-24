@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from typing_extensions import override
+
 from wct.plugins.base import Plugin
 from wct.rulesets import get_ruleset
 
@@ -41,11 +43,13 @@ class PersonalDataAnalyser(Plugin):
         self._patterns = None
 
     @classmethod
+    @override
     def get_name(cls) -> str:
         """The name of the plugin."""
         return "personal_data_analyser"
 
     @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]):
         """Create plugin instance from properties."""
         ruleset_name = properties.get("ruleset", "personal_data")
@@ -58,22 +62,26 @@ class PersonalDataAnalyser(Plugin):
             self._patterns = get_ruleset(self.ruleset_name)
         return self._patterns
 
+    @override
     def get_input_schema(self) -> str:
         """Expected input schema."""
         # TODO: Implement a proper schema definition - this should be a JSON schema or similar
         return "file_content"
 
+    @override
     def get_output_schema(self) -> str:
         """Output schema produced."""
         # TODO: Implement a proper schema definition - this should be a JSON schema or similar
         return "personal_data_findings"
 
+    @override
     def validate_input(self, data: dict[str, Any]) -> bool:
         """Validate input data format."""
         if "content" not in data:
             raise ValueError("Input data must contain 'content' field")
         return True
 
+    @override
     def process(self, data: dict[str, Any]) -> dict[str, Any]:
         """Process data to find personal data patterns."""
         content = data.get("content", "")

@@ -179,7 +179,9 @@ class RunbookLoader:
         except Exception as e:
             raise RunbookValidationError(f"Invalid runbook structure: {e}") from e
 
-    def _parse_connectors(self, connectors_data: list[dict]) -> list[ConnectorConfig]:
+    def _parse_connectors(
+        self, connectors_data: list[dict[str, Any]]
+    ) -> list[ConnectorConfig]:
         """Parse connector configurations from runbook data.
 
         Args:
@@ -211,7 +213,7 @@ class RunbookLoader:
 
         return connectors
 
-    def _parse_plugins(self, plugins_data: list[dict]) -> list[PluginConfig]:
+    def _parse_plugins(self, plugins_data: list[dict[str, Any]]) -> list[PluginConfig]:
         """Parse plugin configurations from runbook data.
 
         Args:

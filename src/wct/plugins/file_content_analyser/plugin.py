@@ -3,7 +3,7 @@
 import re
 from typing import Any
 
-from typing_extensions import Self
+from typing_extensions import Self, override
 
 from wct.plugins.base import Plugin, PluginInputError
 
@@ -30,14 +30,17 @@ class FileContentAnalyser(Plugin):
         }
 
     @classmethod
+    @override
     def get_name(cls) -> str:
         return "file_content_analyser"
 
     @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
         sensitivity_level = properties.get("sensitivity_level", "medium")
         return cls(sensitivity_level=sensitivity_level)
 
+    @override
     def process(self, data: dict[str, Any]) -> dict[str, Any]:
         """Analyze file content for sensitive information."""
         content = data.get("content", "")
@@ -65,12 +68,15 @@ class FileContentAnalyser(Plugin):
             "risk_level": self._get_risk_level(risk_score),
         }
 
+    @override
     def get_input_schema(self) -> str:
         return "file_content"
 
+    @override
     def get_output_schema(self) -> str:
         return "content_analysis_result"
 
+    @override
     def validate_input(self, data: dict[str, Any]) -> bool:
         """Validate that input data contains required fields."""
         if "content" not in data:
@@ -90,7 +96,7 @@ class FileContentAnalyser(Plugin):
         }
         return severity_map.get(pattern_name, "medium")
 
-    def _calculate_risk_score(self, findings: list) -> int:
+    def _calculate_risk_score(self, findings: list[dict[str, Any]]) -> int:
         """Calculate overall risk score based on findings."""
         score = 0
         severity_scores = {"low": 1, "medium": 3, "high": 7, "critical": 10}

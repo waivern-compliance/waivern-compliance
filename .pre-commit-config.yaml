@@ -24,17 +24,15 @@ repos:
       - id: check-added-large-files
 
   # Type checking with basedpyright (focus on new WCT system only)
-  # Note: Currently disabled due to incomplete WCT implementation
-  # Re-enable when WCT architecture is more stable
-  # - repo: local
-  #   hooks:
-  #     - id: basedpyright
-  #       name: basedpyright
-  #       entry: uv run basedpyright src/wct
-  #       language: system
-  #       types: [python]
-  #       pass_filenames: false
-  #       files: ^src/wct/
+  - repo: local
+    hooks:
+      - id: basedpyright
+        name: basedpyright
+        entry: uv run basedpyright src/wct --level error
+        language: system
+        types: [python]
+        pass_filenames: false
+        files: ^src/wct/
 
   # Security checks (focus on new WCT system)
   - repo: https://github.com/PyCQA/bandit

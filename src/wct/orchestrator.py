@@ -23,11 +23,11 @@ class Orchestrator:
     """
 
     def __init__(self):
-        self.connectors: dict[str, type[Connector]] = {}
+        self.connectors: dict[str, type[Connector[Any]]] = {}
         self.plugins: dict[str, type[Plugin]] = {}
         self.logger = get_orchestrator_logger()
 
-    def register_connector(self, connector_class: type[Connector]):
+    def register_connector(self, connector_class: type[Connector[Any]]):
         """Register a connector class."""
         self.connectors[connector_class.get_name()] = connector_class
 
@@ -258,7 +258,7 @@ class Orchestrator:
         runbook = self.load_runbook(runbook_path)
         return self.run_analysis(runbook)
 
-    def list_connectors(self) -> dict[str, type[Connector]]:
+    def list_connectors(self) -> dict[str, type[Connector[Any]]]:
         """Get all registered connectors."""
         return self.connectors.copy()
 

@@ -2,24 +2,26 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
-from typing_extensions import Self
+from typing_extensions import Self, override
 
 from wct.connectors.base import Connector, ConnectorConfigError
 
 
-class WordpressConnector(Connector):
+class WordpressConnector(Connector[dict[str, Any]]):
     """Extracts data from a WordPress site and transforms it to WCF schema format.
 
     This connector reads data from a WordPress site and transforms it into the WCF schema format.
     """
 
     @classmethod
+    @override
     def get_name(cls) -> str:
         """The name of the connector."""
 
         return "wordpress"
 
     @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
         try:
             config = WordpressConnectorConfig.model_validate(properties)
@@ -49,9 +51,15 @@ class WordpressConnector(Connector):
 
         return cls()
 
+    @override
     def extract(self) -> dict[str, Any]:
         """Extract data from the WordPress site and return in WCF schema format."""
         return {}
+
+    @override
+    def get_output_schema(self) -> type[dict[str, Any]]:
+        """Return the schema this connector produces."""
+        return dict[str, Any]
 
 
 class WordpressConnectorConfig(BaseModel):
