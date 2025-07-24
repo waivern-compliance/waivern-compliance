@@ -8,7 +8,7 @@ import typer
 from wct.cli import (
     list_connectors_command,
     list_plugins_command,
-    run_analyses_command,
+    execute_runbook_command,
     validate_runbook_command,
 )
 
@@ -57,8 +57,8 @@ def run(
         ),
     ] = "INFO",
 ):
-    """Run compliance analysis using a runbook."""
-    run_analyses_command(runbook, output_dir, verbose, log_level)
+    """Execute a runbook."""
+    execute_runbook_command(runbook, output_dir, verbose, log_level)
 
 
 @app.command(name="list-connectors")

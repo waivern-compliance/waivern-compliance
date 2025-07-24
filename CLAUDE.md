@@ -78,40 +78,52 @@ Each connector and plugin is organized as an independent module with schema cont
 - **Extensibility:** Easy to add complex logic and dependencies per component
 - **Import Compatibility:** Main `__init__.py` files maintain backward-compatible imports
 
-### Schema-Aware Configuration Format
-WCT runbooks support both legacy and schema-aware execution formats:
+### Modern Execution Configuration Format
+WCT runbooks use a comprehensive execution format with explicit connector-plugin mapping:
 
-**New Schema-Aware Format (Recommended):**
+**Required Execution Format:**
 ```yaml
-execution_order:
-  - name: "plugin_name"
+execution:
+  - connector: "connector_name"
+    plugin: "plugin_name"
     input_schema: "./src/wct/schemas/schema_name.json"
-```
-
-**Legacy Format (Still Supported):**
-```yaml
-execution_order:
-  - "plugin_name"
+    output_schema: "./src/wct/schemas/output_schema.json"  # optional
+    context:  # optional metadata
+      description: "Step description"
+      priority: "high"
+      compliance_frameworks: ["GDPR", "CCPA"]
+      sensitivity_rules: ["email_detection", "password_detection"]
 ```
 
 **Core Runbook Sections:**
 - `connectors`: Define data sources and their configuration
 - `plugins`: Specify analysis plugins with metadata
-- `execution_order`: Schema-aware plugin execution with input schema specifications
+- `execution`: Comprehensive execution steps with connector-plugin mapping and context
 
-### Schema-Compliant Base Classes
-- **Connector base:** `src/wct/connectors/base.py` - Abstract connector with `WctSchema[T]` support
-- **Plugin base:** `src/wct/plugins/base.py` - Abstract plugin with input/output schema contracts
+### Schema-Compliant Base Classes with Automatic Validation
+- **Connector base:** `src/wct/connectors/base.py` - Abstract connector with `WctSchema[T]` support and transform methods
+- **Plugin base:** `src/wct/plugins/base.py` - Abstract plugin with automatic input/output validation
+  - `process_with_validation()` - Automatic end-to-end validation wrapper
+  - `validate_input()` - Dynamic JSON schema-based input validation
+  - `validate_output()` - Automatic output schema validation
+  - `_load_json_schema()` - Flexible schema file discovery and loading
 - **Ruleset base:** `src/wct/rulesets/base.py` - Schema-aware rule definitions
 - **Schema system:** `src/wct/schema.py` - `WctSchema[T]` generic container for type safety
-- All components support dynamic registration, configuration, and schema validation
+- All components support dynamic registration, configuration, and comprehensive schema validation
 
 ## Project Structure Notes
 - Uses `uv` for dependency management with optional dependency groups
+- **Core Dependencies:** `jsonschema` for comprehensive JSON schema validation
 - Type annotations are enforced with `basedpyright` (schema system is fully type-safe)
 - Main package is `wct` located in `src/wct/`
 - Schema definitions in `src/wct/schemas/` (JSON Schema format)
-- Sample configurations: `sample_runbook.yaml` (with schema-aware execution order)
+- Sample configurations: `sample_runbook.yaml` (with modern execution format)
+
+## Breaking Changes (Latest Version)
+- **Legacy execution formats removed:** String and name-based execution steps no longer supported
+- **Field rename:** `execution_order` renamed to `execution` in runbooks
+- **Required fields:** All execution steps must specify both `connector` and `plugin`
+- **Automatic validation:** Plugins now use `process_with_validation()` for comprehensive validation
 
 ## Development Setup
 
@@ -126,14 +138,22 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 ## Important Schema Implementation Notes
 
 **Schema-Driven Development Guidelines:**
-- All connectors must implement `get_output_schema()` and accept `WctSchema[T]` in `extract()`
+- All connectors must implement `get_output_schema()` and schema-specific transform methods
 - All plugins must implement `get_input_schema()`, `get_output_schema()`, and `validate_input()`
 - Use `@override` decorators for all abstract method implementations
 - Schema names must match between connector outputs and plugin inputs for automatic data flow
 - JSON schema files in `src/wct/schemas/` define the structure for runtime validation
-- The orchestrator automatically matches schemas and optimizes connector execution
+- The orchestrator automatically matches schemas and uses `process_with_validation()` for plugins
+
+**Automatic Validation System:**
+- Plugins automatically validate input data using JSON schema files
+- Output validation is performed automatically via `process_with_validation()`
+- Schema files are discovered dynamically across multiple search paths
+- Validation errors provide detailed messages about schema compliance failures
+- Use `PluginOutputError` and `PluginInputError` for schema validation exceptions
 
 **Testing Schema Components:**
-- Use `uv run wct run sample_runbook.yaml -v` to see detailed schema matching
+- Use `uv run wct run sample_runbook.yaml -v` to see detailed schema matching and validation
 - The orchestrator logs which connectors are skipped due to unneeded schemas
 - Schema validation errors provide clear messages about data structure mismatches
+- Test both valid and invalid data to verify comprehensive validation coverage

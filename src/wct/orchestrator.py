@@ -35,6 +35,14 @@ class Orchestrator:
         """Register a plugin class."""
         self.plugins[plugin_class.get_name()] = plugin_class
 
+    def list_connectors(self) -> dict[str, type[Connector[Any]]]:
+        """Get all registered connectors."""
+        return self.connectors.copy()
+
+    def list_plugins(self) -> dict[str, type[Plugin[Any, Any]]]:
+        """Get all registered plugins."""
+        return self.plugins.copy()
+
     def load_runbook(self, runbook_path: Path) -> Runbook:
         """Load and parse a runbook file."""
         try:
@@ -44,14 +52,19 @@ class Orchestrator:
                 f"Failed to load runbook {runbook_path}: {e}"
             ) from e
 
-    def run_analysis(self, runbook: Runbook) -> list[AnalysisResult]:
+    def execute_runbook(self, runbook_path: Path) -> list[AnalysisResult]:
+        """Load and execute a runbook file."""
+        runbook = self.load_runbook(runbook_path)
+        return self.run_analyses(runbook)
+
+    def run_analyses(self, runbook: Runbook) -> list[AnalysisResult]:
         """Execute analysis based on a runbook."""
         results = []
         schema_data: dict[str, dict[str, Any]] = {}
 
         # Step 1: Determine required schemas from plugins
         required_schemas = self._get_required_schemas(
-            runbook.plugins, runbook.execution_order
+            runbook.plugins, runbook.execution
         )
 
         # Step 2: Extract data from connectors with appropriate schemas
@@ -61,34 +74,34 @@ class Orchestrator:
 
         # Step 3: Execute plugins in specified order
         plugin_results = self._execute_plugins_in_order(
-            runbook.plugins, runbook.execution_order, schema_data
+            runbook.plugins, runbook.execution, schema_data
         )
         results.extend(plugin_results)
 
         return results
 
     def _get_required_schemas(
-        self, plugin_configs: list[PluginConfig], execution_order: list[ExecutionStep]
+        self, plugin_configs: list[PluginConfig], execution: list[ExecutionStep]
     ) -> set[str]:
         """Determine what schemas are needed by the plugins.
 
         Args:
             plugin_configs: List of plugin configurations
-            execution_order: Execution order with schema information
+            execution: Execution steps with schema information
 
         Returns:
             Set of schema names that need to be provided by connectors
         """
         required_schemas = set()
 
-        for step in execution_order:
+        for step in execution:
             if step.input_schema:
                 # Extract schema name from path or use as-is
                 schema_name = self._extract_schema_name_from_path(step.input_schema)
                 required_schemas.add(schema_name)
             else:
                 # Fallback: get schema from plugin directly
-                plugin_config = self._find_plugin_config(plugin_configs, step.name)
+                plugin_config = self._find_plugin_config(plugin_configs, step.plugin)
                 if plugin_config:
                     plugin_class = self.plugins.get(plugin_config.type)
                     if plugin_class:
@@ -101,7 +114,7 @@ class Orchestrator:
                         except Exception as e:
                             self.logger.warning(
                                 "Could not determine input schema for plugin %s: %s",
-                                step.name,
+                                step.plugin,
                                 e,
                             )
 
@@ -185,14 +198,14 @@ class Orchestrator:
     def _execute_plugins_in_order(
         self,
         plugin_configs: list[PluginConfig],
-        execution_order: list[ExecutionStep],
+        execution: list[ExecutionStep],
         schema_data: dict[str, dict[str, Any]],
     ) -> list[AnalysisResult]:
         """Execute plugins in the specified order.
 
         Args:
             plugin_configs: List of plugin configurations
-            execution_order: Order in which to execute plugins with schema info
+            execution: Order in which to execute plugins with schema info
             schema_data: Available schema data for plugin input
 
         Returns:
@@ -200,10 +213,10 @@ class Orchestrator:
         """
         results = []
 
-        for step in execution_order:
-            plugin_config = self._find_plugin_config(plugin_configs, step.name)
+        for step in execution:
+            plugin_config = self._find_plugin_config(plugin_configs, step.plugin)
             if not plugin_config:
-                self.logger.warning("Plugin %s not found in runbook", step.name)
+                self.logger.warning("Plugin %s not found in runbook", step.plugin)
                 continue
 
             result = self._execute_single_plugin(plugin_config, schema_data)
@@ -289,10 +302,9 @@ class Orchestrator:
                 error_message=f"Required input schema '{input_schema_info.name}' not available",
             )
 
-        # Validate and process input data
+        # Process input data with automatic validation (input + output)
         input_data = schema_data[input_schema_info.name]
-        plugin.validate_input(input_data)
-        result_data = plugin.process(input_data)
+        result_data = plugin.process_with_validation(input_data)
 
         return AnalysisResult(
             plugin_name=plugin_config.name,
@@ -330,19 +342,6 @@ class Orchestrator:
             success=False,
             error_message=error_message,
         )
-
-    def execute_runbook(self, runbook_path: Path) -> list[AnalysisResult]:
-        """Load and execute a runbook file."""
-        runbook = self.load_runbook(runbook_path)
-        return self.run_analysis(runbook)
-
-    def list_connectors(self) -> dict[str, type[Connector[Any]]]:
-        """Get all registered connectors."""
-        return self.connectors.copy()
-
-    def list_plugins(self) -> dict[str, type[Plugin[Any, Any]]]:
-        """Get all registered plugins."""
-        return self.plugins.copy()
 
 
 class OrchestratorError(WCTError):
