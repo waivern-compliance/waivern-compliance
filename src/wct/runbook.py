@@ -18,14 +18,28 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class ExecutionStep:
-    """Represents a step in the execution order with schema information.
+    """Represents a step in the execution order with detailed configuration.
 
-    Supports the new schema-aware execution format where each step can specify
-    the input schema required for that plugin.
+    Each execution step specifies:
+    - connector: Name of the connector to use for data extraction
+    - plugin: Name of the plugin to use for analysis
+    - input_schema: Path to JSON schema file for input validation
+    - output_schema: Path to JSON schema file for output validation (optional)
+    - context: Additional metadata and configuration context (optional)
     """
 
-    name: str
+    connector: str
+    plugin: str
     input_schema: str | None = None
+    output_schema: str | None = None
+    context: dict[str, Any] | None = None
+
+    def __post_init__(self):
+        """Validate required fields."""
+        if not self.connector:
+            raise ValueError("connector field is required")
+        if not self.plugin:
+            raise ValueError("plugin field is required")
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,14 +49,14 @@ class Runbook:
     Runbooks are the core configuration concept in WCT that define:
     - What data sources to connect to (connectors)
     - What analysis to perform (plugins)
-    - How to orchestrate the analysis workflow (execution order)
+    - How to orchestrate the analysis workflow (execution steps)
     """
 
     name: str
     description: str
     connectors: list[ConnectorConfig]
     plugins: list[PluginConfig]
-    execution_order: list[ExecutionStep]  # Plugin execution order with schema info
+    execution: list[ExecutionStep]  # Plugin execution steps with schema info
 
     def get_connector_by_name(self, name: str) -> ConnectorConfig | None:
         """Get connector configuration by name."""
@@ -52,8 +66,8 @@ class Runbook:
         """Get plugin configuration by name."""
         return next((plugin for plugin in self.plugins if plugin.name == name), None)
 
-    def validate_execution_order(self) -> list[str]:
-        """Validate that all plugins in execution order exist.
+    def validate_execution(self) -> list[str]:
+        """Validate that all plugins in execution steps exist.
 
         Returns:
             List of validation errors (empty if valid)
@@ -61,10 +75,10 @@ class Runbook:
         plugin_names = {plugin.name for plugin in self.plugins}
         errors = []
 
-        for step in self.execution_order:
-            if step.name not in plugin_names:
+        for step in self.execution:
+            if step.plugin not in plugin_names:
                 errors.append(
-                    f"Plugin '{step.name}' in execution_order not found in plugins list"
+                    f"Plugin '{step.plugin}' in execution not found in plugins list"
                 )
 
         return errors
@@ -80,7 +94,7 @@ class Runbook:
             "description": self.description,
             "connector_count": len(self.connectors),
             "plugin_count": len(self.plugins),
-            "execution_steps": len(self.execution_order),
+            "execution_steps": len(self.execution),
             "connector_types": list({conn.type for conn in self.connectors}),
             "plugin_types": list({plugin.type for plugin in self.plugins}),
         }
@@ -178,14 +192,14 @@ class RunbookLoader:
         try:
             connectors = self._parse_connectors(data.get("connectors", []))
             plugins = self._parse_plugins(data.get("plugins", []))
-            execution_order = self._parse_execution_order(data, plugins)
+            execution = self._parse_execution(data, plugins)
 
             return Runbook(
                 name=data.get("name", "Unnamed Runbook"),
                 description=data.get("description", ""),
                 connectors=connectors,
                 plugins=plugins,
-                execution_order=execution_order,
+                execution=execution,
             )
 
         except Exception as e:
@@ -258,10 +272,10 @@ class RunbookLoader:
 
         return plugins
 
-    def _parse_execution_order(
+    def _parse_execution(
         self, data: dict[str, Any], plugins: list[PluginConfig]
     ) -> list[ExecutionStep]:
-        """Parse and validate plugin execution order.
+        """Parse and validate plugin execution steps.
 
         Args:
             data: Raw runbook data
@@ -270,42 +284,49 @@ class RunbookLoader:
         Returns:
             List of ExecutionStep objects in execution order
         """
-        if "execution_order" in data:
-            execution_order = data["execution_order"]
-            if not isinstance(execution_order, list):
-                raise RunbookValidationError("execution_order must be a list")
+        if "execution" in data:
+            execution = data["execution"]
+            if not isinstance(execution, list):
+                raise RunbookValidationError("execution must be a list")
 
             steps = []
-            for i, step_data in enumerate(execution_order):
+            for i, step_data in enumerate(execution):
                 try:
-                    if isinstance(step_data, str):
-                        # Old format: simple string with plugin name
-                        steps.append(ExecutionStep(name=step_data))
-                    elif isinstance(step_data, dict):
-                        # New format: dictionary with name and optional input_schema
-                        if "name" not in step_data:
+                    if isinstance(step_data, dict):
+                        # New format: dictionary with connector, plugin, schemas, and context
+                        if "connector" not in step_data:
                             raise RunbookValidationError(
-                                f"Execution order step {i} missing required 'name' field"
+                                f"Execution step {i} missing required 'connector' field"
                             )
+                        if "plugin" not in step_data:
+                            raise RunbookValidationError(
+                                f"Execution step {i} missing required 'plugin' field"
+                            )
+
                         steps.append(
                             ExecutionStep(
-                                name=step_data["name"],
+                                connector=step_data["connector"],
+                                plugin=step_data["plugin"],
                                 input_schema=step_data.get("input_schema"),
+                                output_schema=step_data.get("output_schema"),
+                                context=step_data.get("context"),
                             )
                         )
                     else:
                         raise RunbookValidationError(
-                            f"Execution order step {i} must be a string or dict, got {type(step_data)}"
+                            f"Execution step {i} must be a dict with 'connector' and 'plugin' fields, got {type(step_data)}"
                         )
                 except Exception as e:
                     raise RunbookValidationError(
-                        f"Invalid execution order step at index {i}: {e}"
+                        f"Invalid execution step at index {i}: {e}"
                     ) from e
 
             return steps
         else:
-            # Default to plugin order if no execution order specified
-            return [ExecutionStep(name=plugin.name) for plugin in plugins]
+            # Execution is now required - cannot create default steps without connector specification
+            raise RunbookValidationError(
+                "execution is required and must specify both 'connector' and 'plugin' for each step"
+            )
 
     def _validate_runbook(self, runbook: Runbook) -> None:
         """Validate runbook for consistency.
@@ -316,21 +337,21 @@ class RunbookLoader:
         Raises:
             RunbookValidationError: If validation fails
         """
-        self._validate_execution_order(runbook)
+        self._validate_execution(runbook)
         self._validate_unique_names(runbook)
 
-    def _validate_execution_order(self, runbook: Runbook) -> None:
-        """Validate that execution order references existing plugins.
+    def _validate_execution(self, runbook: Runbook) -> None:
+        """Validate that execution steps reference existing plugins.
 
         Args:
             runbook: Runbook to validate
         """
         plugin_names = {plugin.name for plugin in runbook.plugins}
 
-        for step in runbook.execution_order:
-            if step.name not in plugin_names:
+        for step in runbook.execution:
+            if step.plugin not in plugin_names:
                 raise RunbookValidationError(
-                    f"Plugin '{step.name}' in execution_order not found in plugins list"
+                    f"Plugin '{step.plugin}' in execution not found in plugins list"
                 )
 
     def _validate_unique_names(self, runbook: Runbook) -> None:

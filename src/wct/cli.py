@@ -218,7 +218,7 @@ class OutputFormatter:
         print(f"  Connectors: {len(runbook.connectors)}")
         print(f"  Plugins: {len(runbook.plugins)}")
         print(
-            f"  Execution order: {', '.join(step.name for step in runbook.execution_order)}"
+            f"  Execution order: {', '.join(step.plugin for step in runbook.execution)}"
         )
 
         logger.debug(
@@ -251,7 +251,7 @@ def handle_cli_error(error: Exception, message: str) -> None:
     raise typer.Exit(1) from error
 
 
-def run_analyses_command(
+def execute_runbook_command(
     runbook_path: Path, output_dir: Path, verbose: bool = False, log_level: str = "INFO"
 ) -> None:
     """CLI command implementation for running analyses.

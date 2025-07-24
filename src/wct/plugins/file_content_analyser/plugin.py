@@ -1,8 +1,11 @@
 """Content analysis plugin for detecting sensitive information."""
 
+import json
 import re
+from pathlib import Path
 from typing import Any
 
+import jsonschema
 from typing_extensions import Self, override
 
 from wct.plugins.base import Plugin, PluginInputError
@@ -102,8 +105,61 @@ class FileContentAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
 
     @override
     def validate_input(self, data: dict[str, Any]) -> bool:
-        """Validate that input data contains required fields for text schema."""
-        # Validate top-level structure (from FileConnector)
+        """Validate input data against the plugin's input schema."""
+        input_schema = self.get_input_schema()
+
+        try:
+            # Load the JSON schema file for validation
+            schema_content = self._load_json_schema(input_schema.name)
+
+            # Validate top-level structure (from FileConnector)
+            if "content" not in data:
+                raise PluginInputError("Missing required field: content")
+
+            # Validate the content against the JSON schema
+            jsonschema.validate(data["content"], schema_content)
+
+            return True
+
+        except jsonschema.ValidationError as e:
+            raise PluginInputError(f"Schema validation failed: {e.message}") from e
+        except FileNotFoundError:
+            # Fallback to basic validation if schema file not found
+            return self._fallback_validation(data)
+        except Exception as e:
+            raise PluginInputError(f"Validation error: {e}") from e
+
+    def _load_json_schema(self, schema_name: str) -> dict[str, Any]:
+        """Load JSON schema from file.
+
+        Args:
+            schema_name: Name of the schema to load
+
+        Returns:
+            The JSON schema as a dictionary
+
+        Raises:
+            FileNotFoundError: If schema file doesn't exist
+        """
+        # Try multiple potential locations for schema files
+        schema_paths = [
+            Path("src/wct/schemas") / f"{schema_name}.json",
+            Path("./src/wct/schemas") / f"{schema_name}.json",
+            Path(__file__).parent.parent.parent / "schemas" / f"{schema_name}.json",
+        ]
+
+        for schema_path in schema_paths:
+            if schema_path.exists():
+                with open(schema_path, "r") as f:
+                    return json.load(f)
+
+        raise FileNotFoundError(
+            f"Schema file for '{schema_name}' not found in any of: {schema_paths}"
+        )
+
+    def _fallback_validation(self, data: dict[str, Any]) -> bool:
+        """Fallback validation when schema file is not available."""
+        # Basic validation similar to the original hardcoded version
         if "content" not in data:
             raise PluginInputError("Missing required field: content")
 
@@ -111,7 +167,7 @@ class FileContentAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
         if not isinstance(schema_content, dict):
             raise PluginInputError("Field 'content' must be a dictionary")
 
-        # Validate text schema structure
+        # Basic text schema validation
         if schema_content.get("name") != "text":
             raise PluginInputError("Content schema name must be 'text'")
 
@@ -121,19 +177,6 @@ class FileContentAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
         content_array = schema_content["content"]
         if not isinstance(content_array, list):
             raise PluginInputError("Schema 'content' field must be an array")
-
-        # Validate each content item has text field
-        for i, item in enumerate(content_array):
-            if not isinstance(item, dict):
-                raise PluginInputError(f"Content item {i} must be a dictionary")
-            if "text" not in item:
-                raise PluginInputError(
-                    f"Content item {i} missing required 'text' field"
-                )
-            if not isinstance(item["text"], str):
-                raise PluginInputError(
-                    f"Content item {i} 'text' field must be a string"
-                )
 
         return True
 

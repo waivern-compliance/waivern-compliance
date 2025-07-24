@@ -24,6 +24,16 @@ plugins:
       priority: "high"
       compliance_frameworks: ["GDPR", "CCPA"]
 
-execution_order:
-  - name: "file_content_analyser"
+execution:
+  - connector: "file_reader"
+    plugin: "file_content_analyser"
     input_schema: "./src/wct/schemas/text.json"
+    output_schema: "./src/wct/schemas/content_analysis_result.json"
+    context:
+      description: "Analyze file content for sensitive information"
+      priority: "high"
+      compliance_frameworks: ["GDPR", "CCPA"]
+      sensitivity_rules:
+        - "email_detection"
+        - "password_detection"
+        - "api_key_detection"

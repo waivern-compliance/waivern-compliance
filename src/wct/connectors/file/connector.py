@@ -34,6 +34,7 @@ class FileConnector(Connector[dict[str, Any]]):
         chunk_size: int = 8192,
         encoding: str = "utf-8",
         errors: str = "replace",
+        active_output_schema=WctSchema(name="text", type=dict[str, Any]),
     ):
         """Initialize the file reader connector.
 
@@ -47,6 +48,7 @@ class FileConnector(Connector[dict[str, Any]]):
         self.chunk_size = chunk_size
         self.encoding = encoding
         self.errors = errors
+        self.active_output_schema = active_output_schema
 
         if not self.file_path.exists():
             raise ConnectorConfigError(f"File does not exist: {self.file_path}")
@@ -91,36 +93,31 @@ class FileConnector(Connector[dict[str, Any]]):
         try:
             logger.info(f"Reading file: {self.file_path}")
 
-            # Get file metadata
-            stat = self.file_path.stat()
-
-            # Read file content efficiently
-            file_content = self._read_file_content()
+            # Validate schema if provided
             if schema and schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
                 raise ConnectorConfigError(
                     f"Unsupported output schema: {schema.name}. Supported schemas: {SUPPORTED_OUTPUT_SCHEMAS.keys()}"
                 )
 
-            # Transform content to WCF schema format
-            if schema and schema.name == "text":
-                wct_schema_transformed_content = schema.type(
-                    name=schema.name,
-                    description=f"Content from {self.file_path.name}",
-                    contentEncoding=self.encoding,
-                    source=str(self.file_path),
-                    metadata={
-                        "modified_time": stat.st_mtime,
-                        "created_time": stat.st_ctime,
-                        "permissions": oct(stat.st_mode)[-3:],
-                    },
-                    content=[{"text": file_content}],
-                )
-            else:
-                # Default transformation if no schema provided
+            if not schema:
                 logger.warning("No schema provided, using default text schema")
                 raise ConnectorConfigError(
                     "No schema provided for data extraction. Please specify a valid WCT schema."
                 )
+
+            self.active_output_schema = schema
+
+            # Get file metadata
+            stat = self.file_path.stat()
+
+            # Read file content efficiently
+            file_content = self._read_file_content()
+            logger.debug(f"File {self.file_path} read successfully")
+
+            # Transform content based on schema type
+            wct_schema_transformed_content = self._transform_for_schema(
+                schema, file_content, stat
+            )
 
             return {
                 "file_path": str(self.file_path),
@@ -137,7 +134,53 @@ class FileConnector(Connector[dict[str, Any]]):
     @override
     def get_output_schema(self) -> WctSchema[dict[str, Any]]:
         """Return the schema this connector produces."""
-        return WctSchema(name="text", type=dict[str, Any])
+        return self.active_output_schema or WctSchema(name="text", type=dict[str, Any])
+
+    def _transform_for_schema(
+        self, schema: WctSchema[dict[str, Any]], file_content: str, stat: Any
+    ) -> dict[str, Any]:
+        """Transform file content based on the requested schema.
+
+        Args:
+            schema: The schema to transform content for
+            file_content: Raw file content
+            stat: File stat information
+
+        Returns:
+            Schema-compliant transformed content
+        """
+        if schema.name == "text":
+            return self._transform_for_text_schema(schema, file_content, stat)
+        else:
+            raise ConnectorConfigError(
+                f"Unsupported schema transformation: {schema.name}"
+            )
+
+    def _transform_for_text_schema(
+        self, schema: WctSchema[dict[str, Any]], file_content: str, stat: Any
+    ) -> dict[str, Any]:
+        """Transform file content for the 'text' schema.
+
+        Args:
+            schema: The text schema
+            file_content: Raw file content
+            stat: File stat information
+
+        Returns:
+            Text schema compliant content
+        """
+        return schema.type(
+            name=schema.name,
+            description=f"Content from {self.file_path.name}",
+            contentEncoding=self.encoding,
+            source=str(self.file_path),
+            metadata={
+                "modified_time": stat.st_mtime,
+                "created_time": stat.st_ctime,
+                "permissions": oct(stat.st_mode)[-3:],
+            },
+            content=[{"text": file_content}],
+        )
 
     def _read_file_content(self) -> str:
         """Read file content efficiently for large files."""
