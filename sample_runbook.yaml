@@ -6,6 +6,14 @@ connectors:
     type: "file_reader"
     properties:
       path: "./sample_file.txt"
+  - name: my_mysql_db
+    type: mysql
+    properties:
+      host: "localhost"
+      user: "root"
+      password: "root"
+      database: "waivern_wp"
+      port: 3306
 
 plugins:
   - name: "file_content_analyser"

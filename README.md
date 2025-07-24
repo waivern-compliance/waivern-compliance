@@ -17,15 +17,28 @@ The system is designed to be extensible and configurable through YAML runbook fi
 
 ### Installation
 
-This project uses `uv` for dependency management:
+This project uses `uv` for dependency management with optional dependency groups for specific connectors and plugins:
 
 ```bash
-# Install dependencies
+# Install core dependencies only
 uv sync
+
+# Install with specific connector/plugin dependencies
+uv sync --group mysql      # MySQL connector support
+uv sync --group dev        # Development tools
+
+# Install multiple groups
+uv sync --group mysql --group dev
 
 # Install pre-commit hooks (recommended)
 uv run pre-commit install
 ```
+
+**Available Dependency Groups**:
+- `mysql` - MySQL connector dependencies (pymysql, cryptography)
+- `dev` - Development tools (pytest, ruff, basedpyright, etc.)
+
+Some connectors and plugins require additional dependencies that are not installed by default. Check the connector/plugin documentation or error messages for specific dependency group requirements.
 
 ### Basic Usage
 
@@ -54,6 +67,14 @@ connectors:
     properties:
       file_path: "/path/to/data.txt"
 
+  mysql_db:
+    type: mysql
+    properties:
+      host: "localhost"
+      user: "dbuser"
+      password: "dbpass"
+      database: "mydb"
+
 plugins:
   personal_data_check:
     type: personal_data_analyser
@@ -64,7 +85,11 @@ plugins:
 execution_order:
   - connector: file_reader
     plugin: personal_data_check
+  - connector: mysql_db
+    plugin: personal_data_check
 ```
+
+**Note**: The MySQL connector requires the `mysql` dependency group: `uv sync --group mysql`
 
 ## Architecture
 
