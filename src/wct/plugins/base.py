@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import abc
-import json
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
-import jsonschema
 from typing_extensions import Self
 
-from wct.schema import WctSchema
+from wct.message import Message
+from wct.schema import WctSchema, SchemaValidationError
 
 _PluginInputSchema = TypeVar("_PluginInputSchema")
 _PluginOutputSchema = TypeVar("_PluginOutputSchema")
@@ -27,7 +25,7 @@ class PluginConfig:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-class Plugin(abc.ABC, Generic[_PluginInputSchema, _PluginOutputSchema]):
+class Plugin(abc.ABC):
     """Analysis processor that accepts WCF schema-compliant data and
     produces results in the WCF-defined result schema.
 
@@ -61,141 +59,46 @@ class Plugin(abc.ABC, Generic[_PluginInputSchema, _PluginOutputSchema]):
         """
 
     @abc.abstractmethod
-    def process(self, data: _PluginInputSchema) -> _PluginOutputSchema:
-        """Process input data and return analysis results.
+    def process(
+        self, _PluginInputSchema, _PluginOutputSchema, message: Message
+    ) -> Message:
+        """Plugin-specific processing logic.
 
         This is the core method where the analysis happens. The plugin
-        receives data in its expected input schema and returns results
-        in its defined output schema.
+        receives validated input data and returns results that will be
+        automatically validated against the output schema.
 
         Args:
             data: Input data conforming to the plugin's input schema
 
         Returns:
-            Analysis results conforming to the plugin's output schema
+            Analysis results that should conform to the plugin's output schema
 
         Raises:
             PluginError: If processing fails
         """
 
+    @classmethod
     @abc.abstractmethod
-    def get_input_schema(self) -> WctSchema[_PluginInputSchema]:
-        """Return the input schema information this plugin expects.
+    def get_supported_input_schemas(cls) -> list[WctSchema[Any]]:
+        """Return the input schemas supported by the plugin."""
 
-        Returns:
-            SchemaInfo containing both the schema name and type
-        """
-
+    @classmethod
     @abc.abstractmethod
-    def get_output_schema(self) -> WctSchema[_PluginOutputSchema]:
-        """Return the output schema information this plugin produces.
+    def get_supported_output_schemas(cls) -> list[WctSchema[Any]]:
+        """Return the output schemas supported by this plugin."""
 
-        Returns:
-            SchemaInfo containing both the schema name and type
-        """
+    @classmethod
+    def validate_input_message(
+        cls, message: Message, expected_schema: WctSchema[Any]
+    ) -> None:
+        """Validate the input message against the expected schema."""
+        if message.schema and message.schema != expected_schema:
+            raise SchemaValidationError(
+                f"Message schema {message.schema.name} does not match expected input schema {expected_schema.name}"
+            )
 
-    @abc.abstractmethod
-    def validate_input(self, data: _PluginInputSchema) -> bool:
-        """Validate that input data conforms to the expected schema.
-
-        Args:
-            data: Input data to validate
-
-        Returns:
-            True if data is valid
-
-        Raises:
-            PluginInputError: If input data is invalid
-        """
-
-    def process_with_validation(self, data: _PluginInputSchema) -> _PluginOutputSchema:
-        """Process input data with automatic output schema validation.
-
-        This method wraps the process() method to provide automatic
-        output validation against the plugin's declared output schema.
-
-        Args:
-            data: Input data conforming to the plugin's input schema
-
-        Returns:
-            Analysis results conforming to the plugin's output schema
-
-        Raises:
-            PluginError: If processing fails
-            PluginOutputError: If output doesn't conform to schema
-        """
-        # First validate input (plugins should handle this themselves)
-        self.validate_input(data)
-
-        # Process the data
-        result = self.process(data)
-
-        # Validate output against declared schema
-        self.validate_output(result)
-
-        return result
-
-    def validate_output(self, data: _PluginOutputSchema) -> bool:
-        """Validate that output data conforms to the plugin's output schema.
-
-        Args:
-            data: Output data to validate
-
-        Returns:
-            True if data is valid
-
-        Raises:
-            PluginOutputError: If output data doesn't conform to schema
-        """
-        output_schema = self.get_output_schema()
-
-        try:
-            # Load the JSON schema file for validation
-            schema_content = self._load_json_schema(output_schema.name)
-
-            # Validate the output against the JSON schema
-            jsonschema.validate(data, schema_content)
-
-            return True
-
-        except jsonschema.ValidationError as e:
-            raise PluginOutputError(
-                f"Output validation failed for schema '{output_schema.name}': {e.message}"
-            ) from e
-        except FileNotFoundError:
-            # Skip validation if schema file not found
-            # This allows plugins to work even if schema files are missing
-            return True
-        except Exception as e:
-            raise PluginOutputError(f"Output validation error: {e}") from e
-
-    def _load_json_schema(self, schema_name: str) -> dict[str, Any]:
-        """Load JSON schema from file.
-
-        Args:
-            schema_name: Name of the schema to load
-
-        Returns:
-            The JSON schema as a dictionary
-
-        Raises:
-            FileNotFoundError: If schema file doesn't exist
-        """
-        # Try multiple potential locations for schema files
-        schema_paths = [
-            Path("src/wct/schemas") / f"{schema_name}.json",
-            Path("./src/wct/schemas") / f"{schema_name}.json",
-            Path(__file__).parent.parent / "schemas" / f"{schema_name}.json",
-        ]
-
-        for schema_path in schema_paths:
-            if schema_path.exists():
-                with open(schema_path, "r") as f:
-                    return json.load(f)
-
-        raise FileNotFoundError(
-            f"Schema file for '{schema_name}' not found in any of: {schema_paths}"
-        )
+        message.validate()
 
 
 class PluginError(Exception):
@@ -212,11 +115,5 @@ class PluginInputError(PluginError):
 
 class PluginProcessingError(PluginError):
     """Raised when plugin processing fails."""
-
-    pass
-
-
-class PluginOutputError(PluginError):
-    """Raised when plugin output data doesn't conform to schema."""
 
     pass

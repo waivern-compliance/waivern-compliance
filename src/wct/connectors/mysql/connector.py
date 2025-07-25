@@ -10,11 +10,16 @@ from wct.connectors.base import (
     ConnectorExtractionError,
 )
 from wct.schema import WctSchema
+from wct.message import Message
 
 logger = logging.getLogger(__name__)
 
+SUPPORTED_OUTPUT_SCHEMAS = {
+    "mysql_database": WctSchema(name="mysql_database", type=dict[str, Any]),
+}
 
-class MySQLConnector(Connector[dict[str, Any]]):
+
+class MySQLConnector(Connector):
     """MySQL database connector for extracting data and metadata.
 
     This connector connects to a MySQL database and can execute queries
@@ -263,21 +268,35 @@ class MySQLConnector(Connector[dict[str, Any]]):
 
     @override
     def extract(
-        self, schema: WctSchema[dict[str, Any]] | None = None
-    ) -> dict[str, Any]:
+        self, output_schema: WctSchema[dict[str, Any]] | None = None
+    ) -> Message:
         """Extract data from MySQL database.
 
         This method extracts database metadata and can execute custom queries
         if specified in the configuration.
 
         Args:
-            schema: Optional WCT schema for data validation
+            output_schema: WCT schema for data validation
 
         Returns:
-            Dictionary containing extracted data in WCF schema format
+            Message containing extracted data in WCF schema format
         """
         try:
             logger.info(f"Extracting data from MySQL database: {self.database}")
+
+            # Check if a supported schema is provided
+            if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
+                raise ConnectorConfigError(
+                    f"Unsupported output schema: {output_schema.name}. Supported schemas: {list(SUPPORTED_OUTPUT_SCHEMAS.keys())}"
+                )
+
+            if not output_schema:
+                logger.warning(
+                    "No schema provided, using default mysql_database schema"
+                )
+                raise ConnectorConfigError(
+                    "No schema provided for data extraction. Please specify a valid WCT schema."
+                )
 
             # Test connection first
             with self.get_connection():
@@ -286,22 +305,46 @@ class MySQLConnector(Connector[dict[str, Any]]):
             # Extract database metadata
             metadata = self.get_database_metadata()
 
-            return {
-                "connection_info": {
-                    "host": self.host,
-                    "port": self.port,
-                    "database": self.database,
-                    "user": self.user,
-                },
-                "metadata": metadata,
-                "extraction_timestamp": None,  # Could add timestamp here
-            }
+            # Transform data to schema format
+            extracted_data = self._transform_for_mysql_schema(output_schema, metadata)
+
+            # Create and validate message
+            message = Message(
+                id=f"MySQL data from {self.database}@{self.host}",
+                content=extracted_data,
+                schema=output_schema,
+            )
+
+            message.validate()
+
+            return message
 
         except Exception as e:
             logger.error(f"MySQL extraction failed: {e}")
             raise ConnectorExtractionError(f"MySQL extraction failed: {e}") from e
 
-    @override
-    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
-        """Return the schema this connector produces."""
-        return WctSchema(name="mysql_database", type=dict[str, Any])
+    def _transform_for_mysql_schema(
+        self, schema: WctSchema[dict[str, Any]], metadata: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Transform MySQL data for the 'mysql_database' schema.
+
+        Args:
+            schema: The mysql_database schema
+            metadata: Raw metadata from database
+
+        Returns:
+            MySQL schema compliant content
+        """
+        return schema.type(
+            name=schema.name,
+            description=f"MySQL database: {self.database}",
+            source=f"{self.host}:{self.port}/{self.database}",
+            connection_info={
+                "host": self.host,
+                "port": self.port,
+                "database": self.database,
+                "user": self.user,
+            },
+            metadata=metadata,
+            extraction_timestamp=None,  # Could add timestamp here
+        )

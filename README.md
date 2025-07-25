@@ -9,7 +9,7 @@ WCT provides a flexible architecture for compliance analysis through:
 - **Connectors**: Extract data from various sources (files, databases, web applications)
 - **Plugins**: Perform compliance analysis on extracted data
 - **Rulesets**: Define reusable compliance rules and checks
-- **Orchestrator**: Manages the execution pipeline and data flow
+- **Executor**: Manages the execution pipeline and data flow
 
 The system is designed to be extensible and configurable through YAML runbook files with a unified schema-driven architecture that ensures type safety and component interoperability.
 
@@ -81,13 +81,6 @@ connectors:
       database: "mydb"
       port: 3306
 
-  mysql_db:
-    type: mysql
-    properties:
-      host: "localhost"
-      user: "dbuser"
-      password: "dbpass"
-      database: "mydb"
 
 plugins:
   - name: "content_analyser"
@@ -101,8 +94,8 @@ plugins:
 execution:
   - connector: "file_reader"
     plugin: "content_analyser"
-    input_schema: "./src/wct/schemas/text.json"
-    output_schema: "./src/wct/schemas/content_analysis_result.json"
+    input_schema_name: "text"
+    output_schema_name: "content_analysis_result"
     context:
       description: "Analyze file content for sensitive information"
       priority: "high"
@@ -132,7 +125,7 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 
 ### Core Components
 
-- **`src/wct/orchestrator.py`**: Schema-aware orchestration engine
+- **`src/wct/executor.py`**: Schema-aware execution engine
 - **`src/wct/schema.py`**: Unified WctSchema system for type-safe data flow
 - **`src/wct/schemas/`**: JSON schema definitions for validation
   - `text.json` - Text content schema
@@ -149,7 +142,7 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 ### Schema Pipeline Flow
 
 1. **Plugins declare input schemas** in execution order
-2. **Orchestrator determines required schemas** from plugin requirements
+2. **Executor determines required schemas** from plugin requirements
 3. **Connectors extract data** only if their output schemas are needed
 4. **Schema validation** ensures data format compliance
 5. **Plugins process validated data** and produce schema-compliant results
@@ -172,8 +165,8 @@ WCT runbooks use a **comprehensive execution format** with explicit connector-pl
 execution:
   - connector: "connector_name"
     plugin: "plugin_name"
-    input_schema: "./src/wct/schemas/schema_name.json"
-    output_schema: "./src/wct/schemas/output_schema.json"  # optional
+    input_schema_name: "schema_name"  # Schema name (not file path)
+    output_schema_name: "output_schema"  # Schema name (optional)
     context:  # optional metadata
       description: "Step description"
       priority: "high"
@@ -244,6 +237,7 @@ from typing import Any
 from typing_extensions import Self, override
 from wct.plugins.base import Plugin
 from wct.schema import WctSchema
+from wct.message import Message
 
 class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
     @classmethod
@@ -257,10 +251,23 @@ class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
         return cls(**properties)
 
     @override
-    def process(self, data: dict[str, Any]) -> dict[str, Any]:
-        # Process schema-validated input data
-        # Input validation is handled automatically by the base class
-        return {"findings": ["compliance_issue_1"]}
+    def process_data(self, message: Message) -> Message:
+        # Process schema-validated input message
+        # Extract data from the message
+        input_data = message.content
+
+        # Perform your analysis logic here
+        findings = ["compliance_issue_1"]
+
+        # Create result data
+        result_data = {"findings": findings}
+
+        # Return new Message with results
+        return Message(
+            id=f"Analysis results for {message.id}",
+            content=result_data,
+            schema=self.get_output_schema(),
+        )
 
     @override
     def get_input_schema(self) -> WctSchema[dict[str, Any]]:
@@ -270,26 +277,23 @@ class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
     def get_output_schema(self) -> WctSchema[dict[str, Any]]:
         return WctSchema(name="my_results", type=dict[str, Any])
 
-    @override
-    def validate_input(self, data: dict[str, Any]) -> bool:
-        # Dynamic validation using JSON schema files
-        # This method now automatically loads and validates against JSON schemas
-        # Custom validation logic can be added here if needed
-        return True  # Base class handles schema validation
 ```
 
 **Key Plugin Features**:
-- **Automatic Validation**: Use `process_with_validation()` for automatic input/output validation
-- **Dynamic Schema Loading**: JSON schema files are automatically discovered and loaded
-- **Type Safety**: Full type checking with generic type parameters
+- **Message-Based Architecture**: All plugins now work with `Message` objects for unified data flow
+- **Automatic Validation**: The `process()` method automatically validates both input and output Messages
+- **Schema-Aware Processing**: Input and output Messages are validated against declared schemas
+- **Type Safety**: Full type checking with generic type parameters and Message containers
 - **Error Handling**: Comprehensive error messages for validation failures
+- **Seamless Processing**: Implement `process_data()` with Message objects, validation is handled transparently
+- **No Manual Validation**: Plugins no longer need to implement validation - handled by the Message mechanism
 
 ### Project Structure
 
 ```
 src/wct/
 ├── __main__.py           # CLI entry point
-├── orchestrator.py       # Schema-aware orchestration engine
+├── executor.py           # Schema-aware execution engine
 ├── schema.py             # Unified WctSchema system
 ├── schemas/              # JSON schema definitions
 │   ├── text.json                    # Text content schema
@@ -316,7 +320,7 @@ src/wct/
 ├── rulesets/            # Schema-compliant compliance rules
 │   ├── base.py          # Base ruleset class
 │   └── personal_data.py # Personal data detection rules
-├── runbook.py           # Schema-aware runbook parsing
+├── runbook.py           # Schema-aware runbook parsing with Message support
 └── cli.py               # Command-line interface
 ```
 
