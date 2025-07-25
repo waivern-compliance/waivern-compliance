@@ -3,7 +3,6 @@ from wct.plugins.base import (
     PluginConfig,
     PluginError,
     PluginInputError,
-    PluginOutputError,
     PluginProcessingError,
 )
 from wct.schema import WctSchema
@@ -19,7 +18,6 @@ __all__ = (
     "PluginConfig",
     "PluginError",
     "PluginInputError",
-    "PluginOutputError",
     "PluginProcessingError",
     "WctSchema",
     "FileContentAnalyser",

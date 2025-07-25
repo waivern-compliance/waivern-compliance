@@ -10,38 +10,38 @@ import typer
 from wct.analysis import AnalysisResult
 from wct.connectors import BUILTIN_CONNECTORS
 from wct.logging import setup_logging
-from wct.orchestrator import Orchestrator
+from wct.executor import Executor
 from wct.plugins import BUILTIN_PLUGINS
-from wct.runbook import Runbook, load_runbook
+from wct.runbook import Runbook, load_runbook, RunbookValidator
 
 logger = logging.getLogger(__name__)
 
 
-def create_orchestrator() -> Orchestrator:
-    """Create and configure an orchestrator with built-in components.
+def create_executor() -> Executor:
+    """Create and configure an executor with built-in components.
 
     Returns:
-        Configured orchestrator with all built-in connectors and plugins registered
+        Configured executor with all built-in connectors and plugins registered
     """
-    orchestrator = Orchestrator()
+    executor = Executor()
 
     # Register built-in connectors
     for connector_class in BUILTIN_CONNECTORS:
-        orchestrator.register_connector(connector_class)
+        executor.register_connector(connector_class)
         logger.debug("Registered connector: %s", connector_class.get_name())
 
     # Register built-in plugins
     for plugin_class in BUILTIN_PLUGINS:
-        orchestrator.register_plugin(plugin_class)
+        executor.register_plugin(plugin_class)
         logger.debug("Registered plugin: %s", plugin_class.get_name())
 
     logger.info(
-        "Orchestrator initialized with %d connectors and %d plugins",
+        "Executor initialized with %d connectors and %d plugins",
         len(BUILTIN_CONNECTORS),
         len(BUILTIN_PLUGINS),
     )
 
-    return orchestrator
+    return executor
 
 
 class CLIError(Exception):
@@ -54,7 +54,7 @@ class AnalysisRunner:
     """Handles running compliance analysis from CLI."""
 
     def __init__(self):
-        self.orchestrator = create_orchestrator()
+        self.executor = create_executor()
 
     def run_analysis(
         self, runbook_path: Path, output_dir: Path, verbose: bool = False
@@ -75,7 +75,7 @@ class AnalysisRunner:
         logger.debug("Loading runbook: %s", runbook_path)
 
         try:
-            results = self.orchestrator.execute_runbook(runbook_path)
+            results = self.executor.execute_runbook(runbook_path)
             logger.info("Analysis completed with %d results", len(results))
             return results
 
@@ -88,7 +88,7 @@ class ComponentLister:
     """Handles listing available connectors and plugins."""
 
     def __init__(self):
-        self.orchestrator = create_orchestrator()
+        self.executor = create_executor()
 
     def list_connectors(self) -> dict[str, type]:
         """List all available connectors.
@@ -97,7 +97,7 @@ class ComponentLister:
             Dictionary mapping connector names to classes
         """
         logger.debug("Getting registered connectors")
-        connectors = self.orchestrator.list_connectors()
+        connectors = self.executor.list_connectors()
         logger.info("Found %d registered connectors", len(connectors))
         return connectors
 
@@ -108,36 +108,9 @@ class ComponentLister:
             Dictionary mapping plugin names to classes
         """
         logger.debug("Getting registered plugins")
-        plugins = self.orchestrator.list_plugins()
+        plugins = self.executor.list_plugins()
         logger.info("Found %d registered plugins", len(plugins))
         return plugins
-
-
-class RunbookValidator:
-    """Handles runbook validation from CLI."""
-
-    def validate_runbook(self, runbook_path: Path) -> Runbook:
-        """Validate a runbook YAML file.
-
-        Args:
-            runbook_path: Path to the runbook YAML file
-
-        Returns:
-            Validated runbook YAML
-
-        Raises:
-            CLIError: If validation fails
-        """
-        logger.debug("Validating runbook: %s", runbook_path)
-
-        try:
-            runbook_config = load_runbook(runbook_path)
-            logger.info("Runbook validation successful: %s", runbook_config.name)
-            return runbook_config
-
-        except Exception as e:
-            logger.error("Runbook validation failed: %s", e)
-            raise CLIError(f"Runbook validation failed: {e}") from e
 
 
 class OutputFormatter:
@@ -205,7 +178,7 @@ class OutputFormatter:
             print(
                 f"No {component_type} available. Register {component_type} to see them here."
             )
-            logger.warning("No %s registered in orchestrator", component_type)
+            logger.warning("No %s registered in executor", component_type)
 
     def format_runbook_validation(self, runbook: Runbook) -> None:
         """Format and print runbook validation results.
@@ -323,11 +296,12 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
     setup_cli_logging(log_level)
 
     try:
+        runbook = load_runbook(runbook_path)
         validator = RunbookValidator()
-        runbook_config = validator.validate_runbook(runbook_path)
+        validator.validate(runbook)
 
         formatter = OutputFormatter()
-        formatter.format_runbook_validation(runbook_config)
+        formatter.format_runbook_validation(runbook)
 
     except CLIError as e:
         handle_cli_error(e, "Runbook validation failed")

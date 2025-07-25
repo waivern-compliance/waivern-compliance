@@ -6,9 +6,14 @@ from typing_extensions import Self, override
 
 from wct.connectors.base import Connector, ConnectorConfigError
 from wct.schema import WctSchema
+from wct.message import Message
+
+SUPPORTED_OUTPUT_SCHEMAS = {
+    "wordpress_site": WctSchema(name="wordpress_site", type=dict[str, Any]),
+}
 
 
-class WordpressConnector(Connector[dict[str, Any]]):
+class WordpressConnector(Connector):
     """Extracts data from a WordPress site and transforms it to WCF schema format.
 
     This connector reads data from a WordPress site and transforms it into the WCF schema format.
@@ -54,15 +59,75 @@ class WordpressConnector(Connector[dict[str, Any]]):
 
     @override
     def extract(
-        self, schema: WctSchema[dict[str, Any]] | None = None
-    ) -> dict[str, Any]:
-        """Extract data from the WordPress site and return in WCF schema format."""
-        return {}
+        self, output_schema: WctSchema[dict[str, Any]] | None = None
+    ) -> Message:
+        """Extract data from the WordPress site and return in WCF schema format.
 
-    @override
-    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
-        """Return the schema this connector produces."""
-        return WctSchema(name="wordpress_site", type=dict[str, Any])
+        Args:
+            output_schema: WCT schema for data validation
+
+        Returns:
+            Message containing extracted data in WCF schema format
+        """
+        # Check if a supported schema is provided
+        if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
+            raise ConnectorConfigError(
+                f"Unsupported output schema: {output_schema.name}. Supported schemas: {list(SUPPORTED_OUTPUT_SCHEMAS.keys())}"
+            )
+
+        if not output_schema:
+            raise ConnectorConfigError(
+                "No schema provided for data extraction. Please specify a valid WCT schema."
+            )
+
+        # Extract WordPress data (placeholder implementation)
+        extracted_data = self._transform_for_wordpress_schema(output_schema)
+
+        # Create and validate message
+        message = Message(
+            id="WordPress site data",
+            content=extracted_data,
+            schema=output_schema,
+        )
+
+        message.validate()
+
+        return message
+
+    def _transform_for_wordpress_schema(
+        self, schema: WctSchema[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Transform WordPress data for the 'wordpress_site' schema.
+
+        Args:
+            schema: The wordpress_site schema
+
+        Returns:
+            WordPress schema compliant content
+        """
+        return schema.type(
+            name=schema.name,
+            description="WordPress site data",
+            source="WordPress installation",
+            site_info={
+                "config_detected": True,
+                "core_files_present": True,
+            },
+            metadata={
+                "tables_prefix": "wp_",
+                "core_tables": [
+                    "users",
+                    "usermeta",
+                    "posts",
+                    "postmeta",
+                    "comments",
+                    "commentmeta",
+                    "options",
+                    "terms",
+                    "termmeta",
+                ],
+            },
+        )
 
 
 class WordpressConnectorConfig(BaseModel):
