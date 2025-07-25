@@ -45,7 +45,7 @@ class FileContentAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
         return cls(sensitivity_level=sensitivity_level)
 
     @override
-    def process(self, data: dict[str, Any]) -> dict[str, Any]:
+    def process_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """Analyze file content for sensitive information."""
         # Extract content from the new schema-aware structure
         schema_content = data.get("content", {})

@@ -81,7 +81,7 @@ class PersonalDataAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
         return True
 
     @override
-    def process(self, data: dict[str, Any]) -> dict[str, Any]:
+    def process_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """Process data to find personal data patterns."""
         content = data.get("content", "")
         file_path = data.get("file_path", "unknown")

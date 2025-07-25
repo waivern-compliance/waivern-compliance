@@ -103,7 +103,8 @@ execution:
 ### Schema-Compliant Base Classes with Automatic Validation
 - **Connector base:** `src/wct/connectors/base.py` - Abstract connector with `WctSchema[T]` support and transform methods
 - **Plugin base:** `src/wct/plugins/base.py` - Abstract plugin with automatic input/output validation
-  - `process_with_validation()` - Automatic end-to-end validation wrapper
+  - `process()` - Automatic end-to-end validation with processing
+  - `_process_data()` - Abstract method for plugin-specific processing logic
   - `validate_input()` - Dynamic JSON schema-based input validation
   - `validate_output()` - Automatic output schema validation
   - `_load_json_schema()` - Flexible schema file discovery and loading
@@ -123,7 +124,7 @@ execution:
 - **Legacy execution formats removed:** String and name-based execution steps no longer supported
 - **Field rename:** `execution_order` renamed to `execution` in runbooks
 - **Required fields:** All execution steps must specify both `connector` and `plugin`
-- **Automatic validation:** Plugins now use `process_with_validation()` for comprehensive validation
+- **Automatic validation:** Plugins now have built-in validation in `process()` method
 
 ## Development Setup
 
@@ -139,15 +140,15 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 
 **Schema-Driven Development Guidelines:**
 - All connectors must implement `get_output_schema()` and schema-specific transform methods
-- All plugins must implement `get_input_schema()`, `get_output_schema()`, and `validate_input()`
+- All plugins must implement `get_input_schema()`, `get_output_schema()`, `validate_input()`, and `_process_data()`
 - Use `@override` decorators for all abstract method implementations
 - Schema names must match between connector outputs and plugin inputs for automatic data flow
 - JSON schema files in `src/wct/schemas/` define the structure for runtime validation
-- The orchestrator automatically matches schemas and uses `process_with_validation()` for plugins
+- The orchestrator automatically matches schemas and uses automatic validation in `process()`
 
 **Automatic Validation System:**
-- Plugins automatically validate input data using JSON schema files
-- Output validation is performed automatically via `process_with_validation()`
+- Plugins automatically validate input data using JSON schema files via `process()`
+- Output validation is performed automatically after `_process_data()` execution
 - Schema files are discovered dynamically across multiple search paths
 - Validation errors provide detailed messages about schema compliance failures
 - Use `PluginOutputError` and `PluginInputError` for schema validation exceptions

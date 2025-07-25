@@ -304,7 +304,7 @@ class Orchestrator:
 
         # Process input data with automatic validation (input + output)
         input_data = schema_data[input_schema_info.name]
-        result_data = plugin.process_with_validation(input_data)
+        result_data = plugin.process(input_data)
 
         return AnalysisResult(
             plugin_name=plugin_config.name,

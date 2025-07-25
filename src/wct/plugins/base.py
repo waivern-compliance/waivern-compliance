@@ -60,19 +60,47 @@ class Plugin(abc.ABC, Generic[_PluginInputSchema, _PluginOutputSchema]):
         as specified in the runbook file.
         """
 
-    @abc.abstractmethod
     def process(self, data: _PluginInputSchema) -> _PluginOutputSchema:
-        """Process input data and return analysis results.
+        """Process input data with automatic validation and return analysis results.
 
-        This is the core method where the analysis happens. The plugin
-        receives data in its expected input schema and returns results
-        in its defined output schema.
+        This method automatically validates input data, processes it using the
+        plugin's analysis logic, and validates the output against the declared schema.
 
         Args:
             data: Input data conforming to the plugin's input schema
 
         Returns:
             Analysis results conforming to the plugin's output schema
+
+        Raises:
+            PluginError: If processing fails
+            PluginInputError: If input doesn't conform to schema
+            PluginOutputError: If output doesn't conform to schema
+        """
+        # Validate input data
+        self.validate_input(data)
+
+        # Process the data using plugin-specific logic
+        result = self.process_data(data)
+
+        # Validate output against declared schema
+        self.validate_output(result)
+
+        return result
+
+    @abc.abstractmethod
+    def process_data(self, data: _PluginInputSchema) -> _PluginOutputSchema:
+        """Plugin-specific processing logic.
+
+        This is the core method where the analysis happens. The plugin
+        receives validated input data and returns results that will be
+        automatically validated against the output schema.
+
+        Args:
+            data: Input data conforming to the plugin's input schema
+
+        Returns:
+            Analysis results that should conform to the plugin's output schema
 
         Raises:
             PluginError: If processing fails
@@ -107,33 +135,6 @@ class Plugin(abc.ABC, Generic[_PluginInputSchema, _PluginOutputSchema]):
         Raises:
             PluginInputError: If input data is invalid
         """
-
-    def process_with_validation(self, data: _PluginInputSchema) -> _PluginOutputSchema:
-        """Process input data with automatic output schema validation.
-
-        This method wraps the process() method to provide automatic
-        output validation against the plugin's declared output schema.
-
-        Args:
-            data: Input data conforming to the plugin's input schema
-
-        Returns:
-            Analysis results conforming to the plugin's output schema
-
-        Raises:
-            PluginError: If processing fails
-            PluginOutputError: If output doesn't conform to schema
-        """
-        # First validate input (plugins should handle this themselves)
-        self.validate_input(data)
-
-        # Process the data
-        result = self.process(data)
-
-        # Validate output against declared schema
-        self.validate_output(result)
-
-        return result
 
     def validate_output(self, data: _PluginOutputSchema) -> bool:
         """Validate that output data conforms to the plugin's output schema.

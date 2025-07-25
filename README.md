@@ -257,9 +257,9 @@ class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
         return cls(**properties)
 
     @override
-    def process(self, data: dict[str, Any]) -> dict[str, Any]:
+    def process_data(self, data: dict[str, Any]) -> dict[str, Any]:
         # Process schema-validated input data
-        # Input validation is handled automatically by the base class
+        # Input and output validation are handled automatically by the base class
         return {"findings": ["compliance_issue_1"]}
 
     @override
@@ -279,10 +279,11 @@ class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
 ```
 
 **Key Plugin Features**:
-- **Automatic Validation**: Use `process_with_validation()` for automatic input/output validation
+- **Automatic Validation**: The `process()` method automatically validates both input and output data
 - **Dynamic Schema Loading**: JSON schema files are automatically discovered and loaded
 - **Type Safety**: Full type checking with generic type parameters
 - **Error Handling**: Comprehensive error messages for validation failures
+- **Seamless Processing**: Implement `process_data()` for your core logic, validation is handled transparently
 
 ### Project Structure
 
