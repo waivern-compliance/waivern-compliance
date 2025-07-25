@@ -50,7 +50,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 
 ### WCT Schema-Driven System Architecture
 - **Entry point:** `src/wct/__main__.py`
-- **Schema-aware executor:** `src/wct/executor.py`
+- **Schema-aware orchestrator:** `src/wct/orchestrator.py`
 - **Unified schema system:** `src/wct/schema.py` - `WctSchema[T]` for type-safe data flow
 - **Schema definitions:** `src/wct/schemas/` - JSON schema files for validation
 - **Configuration:** YAML runbooks with schema-aware execution order
@@ -64,7 +64,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 - **Schema-Aware Plugins:** Process validated data with input/output schema contracts - **Modular Architecture**
   - File content analyser (`src/wct/plugins/file_content_analyser/`) - text → content_analysis_result
   - Personal data analyser (`src/wct/plugins/personal_data_analyser/`) - Schema-validated processing
-- **Schema-Aware Executor:** Matches connector output schemas to plugin input schemas automatically
+- **Schema-Aware Orchestrator:** Matches connector output schemas to plugin input schemas automatically
 - **Schema System:** `WctSchema[T]` with JSON schema validation for runtime type safety
 - **Rulesets:** Schema-compliant reusable rule definitions for compliance checks
   - Personal data ruleset (`src/wct/rulesets/personal_data.py`)
@@ -86,8 +86,8 @@ WCT runbooks use a comprehensive execution format with explicit connector-plugin
 execution:
   - connector: "connector_name"
     plugin: "plugin_name"
-    input_schema_name: "schema_name"  # Schema name (not file path)
-    output_schema_name: "output_schema"  # Schema name (optional)
+    input_schema: "./src/wct/schemas/schema_name.json"
+    output_schema: "./src/wct/schemas/output_schema.json"  # optional
     context:  # optional metadata
       description: "Step description"
       priority: "high"
@@ -102,10 +102,11 @@ execution:
 
 ### Schema-Compliant Base Classes with Automatic Validation
 - **Connector base:** `src/wct/connectors/base.py` - Abstract connector with `WctSchema[T]` support and transform methods
-- **Plugin base:** `src/wct/plugins/base.py` - Abstract plugin with Message-based architecture and automatic validation
-  - `process()` - Automatic end-to-end Message validation with processing
-  - `process_data()` - Abstract method for plugin-specific processing logic using Message objects
-  - Message validation handled automatically by base class (no manual validation needed)
+- **Plugin base:** `src/wct/plugins/base.py` - Abstract plugin with automatic input/output validation
+  - `process_with_validation()` - Automatic end-to-end validation wrapper
+  - `validate_input()` - Dynamic JSON schema-based input validation
+  - `validate_output()` - Automatic output schema validation
+  - `_load_json_schema()` - Flexible schema file discovery and loading
 - **Ruleset base:** `src/wct/rulesets/base.py` - Schema-aware rule definitions
 - **Schema system:** `src/wct/schema.py` - `WctSchema[T]` generic container for type safety
 - All components support dynamic registration, configuration, and comprehensive schema validation
@@ -121,10 +122,8 @@ execution:
 ## Breaking Changes (Latest Version)
 - **Legacy execution formats removed:** String and name-based execution steps no longer supported
 - **Field rename:** `execution_order` renamed to `execution` in runbooks
-- **Schema field naming:** `input_schema` and `output_schema` renamed to `input_schema_name` and `output_schema_name` for clarity
-- **Schema specification:** Runbooks now specify schema names directly (e.g., "text") instead of file paths
 - **Required fields:** All execution steps must specify both `connector` and `plugin`
-- **Automatic validation:** Plugins now have built-in validation in `process()` method
+- **Automatic validation:** Plugins now use `process_with_validation()` for comprehensive validation
 
 ## Development Setup
 
@@ -140,24 +139,21 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 
 **Schema-Driven Development Guidelines:**
 - All connectors must implement `get_output_schema()` and schema-specific transform methods
-- All plugins must implement `get_input_schema()`, `get_output_schema()`, and `process_data()` with Message objects
-- Plugins no longer need to implement `validate_input()` - validation is handled by the Message mechanism
+- All plugins must implement `get_input_schema()`, `get_output_schema()`, and `validate_input()`
 - Use `@override` decorators for all abstract method implementations
 - Schema names must match between connector outputs and plugin inputs for automatic data flow
 - JSON schema files in `src/wct/schemas/` define the structure for runtime validation
-- Runbooks specify schema names (e.g., `input_schema_name: "text"`) not file paths
-- The executor automatically matches schemas and uses automatic validation in `process()`
+- The orchestrator automatically matches schemas and uses `process_with_validation()` for plugins
 
-**Message-Based Validation System:**
-- All plugins now use Message objects for unified data flow between connectors and plugins
-- Input and output Messages are automatically validated against declared schemas
-- The `process()` method handles Message validation transparently
-- Plugin implementations work with Message objects in `process_data()` methods
+**Automatic Validation System:**
+- Plugins automatically validate input data using JSON schema files
+- Output validation is performed automatically via `process_with_validation()`
 - Schema files are discovered dynamically across multiple search paths
 - Validation errors provide detailed messages about schema compliance failures
+- Use `PluginOutputError` and `PluginInputError` for schema validation exceptions
 
 **Testing Schema Components:**
 - Use `uv run wct run sample_runbook.yaml -v` to see detailed schema matching and validation
-- The executor logs which connectors are skipped due to unneeded schemas
+- The orchestrator logs which connectors are skipped due to unneeded schemas
 - Schema validation errors provide clear messages about data structure mismatches
 - Test both valid and invalid data to verify comprehensive validation coverage

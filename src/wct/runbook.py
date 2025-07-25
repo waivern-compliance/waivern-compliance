@@ -23,15 +23,15 @@ class ExecutionStep:
     Each execution step specifies:
     - connector: Name of the connector to use for data extraction
     - plugin: Name of the plugin to use for analysis
-    - input_schema_name: Name of the JSON schema for input validation
-    - output_schema_name: Name of the JSON schema for output validation (optional)
+    - input_schema: Path to JSON schema file for input validation
+    - output_schema: Path to JSON schema file for output validation (optional)
     - context: Additional metadata and configuration context (optional)
     """
 
     connector: str
     plugin: str
-    input_schema_name: str | None = None
-    output_schema_name: str | None = None
+    input_schema: str | None = None
+    output_schema: str | None = None
     context: dict[str, Any] | None = None
 
     def __post_init__(self):
@@ -58,8 +58,33 @@ class Runbook:
     plugins: list[PluginConfig]
     execution: list[ExecutionStep]  # Plugin execution steps with schema info
 
+    def get_connector_by_name(self, name: str) -> ConnectorConfig | None:
+        """Get connector configuration by name."""
+        return next((conn for conn in self.connectors if conn.name == name), None)
+
+    def get_plugin_by_name(self, name: str) -> PluginConfig | None:
+        """Get plugin configuration by name."""
+        return next((plugin for plugin in self.plugins if plugin.name == name), None)
+
+    def validate_execution(self) -> list[str]:
+        """Validate that all plugins in execution steps exist.
+
+        Returns:
+            List of validation errors (empty if valid)
+        """
+        plugin_names = {plugin.name for plugin in self.plugins}
+        errors = []
+
+        for step in self.execution:
+            if step.plugin not in plugin_names:
+                errors.append(
+                    f"Plugin '{step.plugin}' in execution not found in plugins list"
+                )
+
+        return errors
+
     def get_summary(self) -> dict[str, Any]:
-        """Return a summary of the runbook.
+        """Get a summary of the runbook.
 
         Returns:
             Dictionary with runbook statistics
@@ -73,6 +98,24 @@ class Runbook:
             "connector_types": list({conn.type for conn in self.connectors}),
             "plugin_types": list({plugin.type for plugin in self.plugins}),
         }
+
+
+class RunbookError(WCTError):
+    """Base exception for runbook-related errors."""
+
+    pass
+
+
+class RunbookLoadError(RunbookError):
+    """Raised when a runbook cannot be loaded."""
+
+    pass
+
+
+class RunbookValidationError(RunbookError):
+    """Raised when a runbook has invalid configuration."""
+
+    pass
 
 
 class RunbookLoader:
@@ -95,12 +138,11 @@ class RunbookLoader:
 
         try:
             raw_data = self._load_yaml_file(runbook_path)
-            runbook = self._parse_runbook_data(raw_data)
-            validator = RunbookValidator()
-            validator.validate(runbook)
+            runbook_config = self._parse_runbook_data(raw_data)
+            self._validate_runbook(runbook_config)
 
-            logger.info("Successfully loaded runbook: %s", runbook.name)
-            return runbook
+            logger.info("Successfully loaded runbook: %s", runbook_config.name)
+            return runbook_config
 
         except Exception as e:
             if isinstance(e, (RunbookLoadError, RunbookValidationError)):
@@ -150,7 +192,7 @@ class RunbookLoader:
         try:
             connectors = self._parse_connectors(data.get("connectors", []))
             plugins = self._parse_plugins(data.get("plugins", []))
-            execution = self._parse_execution_steps(data, plugins)
+            execution = self._parse_execution(data, plugins)
 
             return Runbook(
                 name=data.get("name", "Unnamed Runbook"),
@@ -230,7 +272,7 @@ class RunbookLoader:
 
         return plugins
 
-    def _parse_execution_steps(
+    def _parse_execution(
         self, data: dict[str, Any], plugins: list[PluginConfig]
     ) -> list[ExecutionStep]:
         """Parse and validate plugin execution steps.
@@ -245,12 +287,13 @@ class RunbookLoader:
         if "execution" in data:
             execution = data["execution"]
             if not isinstance(execution, list):
-                raise RunbookValidationError("Execution steps must be a list")
+                raise RunbookValidationError("execution must be a list")
 
             steps = []
             for i, step_data in enumerate(execution):
                 try:
                     if isinstance(step_data, dict):
+                        # New format: dictionary with connector, plugin, schemas, and context
                         if "connector" not in step_data:
                             raise RunbookValidationError(
                                 f"Execution step {i} missing required 'connector' field"
@@ -264,8 +307,8 @@ class RunbookLoader:
                             ExecutionStep(
                                 connector=step_data["connector"],
                                 plugin=step_data["plugin"],
-                                input_schema_name=step_data.get("input_schema_name"),
-                                output_schema_name=step_data.get("output_schema_name"),
+                                input_schema=step_data.get("input_schema"),
+                                output_schema=step_data.get("output_schema"),
                                 context=step_data.get("context"),
                             )
                         )
@@ -285,18 +328,37 @@ class RunbookLoader:
                 "execution is required and must specify both 'connector' and 'plugin' for each step"
             )
 
-
-class RunbookValidator:
-    """Validates runbook for completeness and correctness."""
-
-    def validate(self, runbook: Runbook) -> None:
-        """Validate runbook against available components.
+    def _validate_runbook(self, runbook: Runbook) -> None:
+        """Validate runbook for consistency.
 
         Args:
             runbook: Runbook to validate
 
-        Returns:
-            List of validation warnings (empty if fully valid)
+        Raises:
+            RunbookValidationError: If validation fails
+        """
+        self._validate_execution(runbook)
+        self._validate_unique_names(runbook)
+
+    def _validate_execution(self, runbook: Runbook) -> None:
+        """Validate that execution steps reference existing plugins.
+
+        Args:
+            runbook: Runbook to validate
+        """
+        plugin_names = {plugin.name for plugin in runbook.plugins}
+
+        for step in runbook.execution:
+            if step.plugin not in plugin_names:
+                raise RunbookValidationError(
+                    f"Plugin '{step.plugin}' in execution not found in plugins list"
+                )
+
+    def _validate_unique_names(self, runbook: Runbook) -> None:
+        """Validate that connector and plugin names are unique.
+
+        Args:
+            runbook: Runbook to validate
         """
         # Check connector name uniqueness
         connector_names = [conn.name for conn in runbook.connectors]
@@ -308,18 +370,44 @@ class RunbookValidator:
         if len(plugin_names) != len(set(plugin_names)):
             raise RunbookValidationError("Plugin names must be unique")
 
+
+class RunbookValidator:
+    """Validates runbook for completeness and correctness."""
+
+    def __init__(self, available_connectors: set[str], available_plugins: set[str]):
+        """Initialize validator with available component types.
+
+        Args:
+            available_connectors: Set of available connector type names
+            available_plugins: Set of available plugin type names
+        """
+        self.available_connectors = available_connectors
+        self.available_plugins = available_plugins
+
+    def validate(self, runbook: Runbook) -> list[str]:
+        """Validate runbook against available components.
+
+        Args:
+            runbook: Runbook to validate
+
+        Returns:
+            List of validation warnings (empty if fully valid)
+        """
+        warnings = []
+
         # Validate connector types
-        for step in runbook.execution:
-            if step.connector not in [conn.name for conn in runbook.connectors]:
-                raise RunbookValidationError(f"Unknown connector: {step.connector}")
+        for connector in runbook.connectors:
+            if connector.type not in self.available_connectors:
+                warnings.append(f"Unknown connector type: {connector.type}")
 
         # Validate plugin types
-        for step in runbook.execution:
-            if step.plugin not in [plugin.name for plugin in runbook.plugins]:
-                raise RunbookValidationError(f"Unknown plugin: {step.plugin}")
+        for plugin in runbook.plugins:
+            if plugin.type not in self.available_plugins:
+                warnings.append(f"Unknown plugin type: {plugin.type}")
+
+        return warnings
 
 
-# TODO: Consider moving this to the RunbookLoader class as a static method
 def load_runbook(runbook_path: Path) -> Runbook:
     """Convenience function to load a runbook.
 
@@ -333,19 +421,21 @@ def load_runbook(runbook_path: Path) -> Runbook:
     return loader.load_from_file(runbook_path)
 
 
-class RunbookError(WCTError):
-    """Base exception for runbook-related errors."""
+def validate_runbook_file(
+    runbook_path: Path, available_connectors: set[str], available_plugins: set[str]
+) -> tuple[Runbook, list[str]]:
+    """Load and validate a runbook file.
 
-    pass
+    Args:
+        runbook_path: Path to the runbook YAML file
+        available_connectors: Set of available connector types
+        available_plugins: Set of available plugin types
 
+    Returns:
+        Tuple of (runbook_config, validation_warnings)
+    """
+    runbook = load_runbook(runbook_path)
+    validator = RunbookValidator(available_connectors, available_plugins)
+    warnings = validator.validate(runbook)
 
-class RunbookLoadError(RunbookError):
-    """Raised when a runbook cannot be loaded."""
-
-    pass
-
-
-class RunbookValidationError(RunbookError):
-    """Raised when a runbook has invalid configuration."""
-
-    pass
+    return runbook, warnings

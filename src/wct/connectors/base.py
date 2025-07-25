@@ -1,14 +1,15 @@
 import abc
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 from typing_extensions import Self
 
 from wct.errors import WCTError
 from wct.schema import WctSchema
-from wct.message import Message
+
+_ConnectorOutputSchema = TypeVar("_ConnectorOutputSchema")
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,7 +47,7 @@ class PathConnectorConfig(BaseModel):
             raise FileNotFoundError(self.path)
 
 
-class Connector(abc.ABC):
+class Connector(abc.ABC, Generic[_ConnectorOutputSchema]):
     """Extracts data from sources and transforms it to Waivern
     Compliance Framework (WCF) defined schemas.
 
@@ -76,7 +77,9 @@ class Connector(abc.ABC):
         """
 
     @abc.abstractmethod
-    def extract(self, output_schema: WctSchema[Any]) -> Message:
+    def extract(
+        self, schema: WctSchema[_ConnectorOutputSchema]
+    ) -> _ConnectorOutputSchema:
         """Extract data from the source and return in WCF schema format.
 
         This method returns data that conforms to the WCF-defined schema for this connector.
@@ -86,6 +89,14 @@ class Connector(abc.ABC):
 
         Raises:
             ConnectorExtractionError: If extraction fails
+        """
+
+    @abc.abstractmethod
+    def get_output_schema(self) -> WctSchema[_ConnectorOutputSchema]:
+        """Return the schema information this connector produces.
+
+        Returns:
+            SchemaInfo containing both the schema name and type
         """
 
 

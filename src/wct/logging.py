@@ -79,9 +79,9 @@ def get_logger(name: str) -> logging.Logger:
 
 
 # Pre-configured loggers for common WCT components
-def get_executor_logger() -> logging.Logger:
-    """Get logger for executor components."""
-    return get_logger("wct.executor")
+def get_orchestrator_logger() -> logging.Logger:
+    """Get logger for orchestrator components."""
+    return get_logger("wct.orchestrator")
 
 
 def get_connector_logger(connector_name: str) -> logging.Logger:

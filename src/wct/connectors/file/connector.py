@@ -13,7 +13,6 @@ from wct.connectors.base import (
     ConnectorExtractionError,
 )
 from wct.schema import WctSchema
-from wct.message import Message
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ SUPPORTED_OUTPUT_SCHEMAS = {
 }
 
 
-class FileConnector(Connector):
+class FileConnector(Connector[dict[str, Any]]):
     """Connector that reads file content for analysis.
 
     This connector is memory-efficient for large files by reading content
@@ -35,6 +34,7 @@ class FileConnector(Connector):
         chunk_size: int = 8192,
         encoding: str = "utf-8",
         errors: str = "replace",
+        active_output_schema=WctSchema(name="text", type=dict[str, Any]),
     ):
         """Initialize the file reader connector.
 
@@ -48,6 +48,7 @@ class FileConnector(Connector):
         self.chunk_size = chunk_size
         self.encoding = encoding
         self.errors = errors
+        self.active_output_schema = active_output_schema
 
         if not self.file_path.exists():
             raise ConnectorConfigError(f"File does not exist: {self.file_path}")
@@ -64,37 +65,7 @@ class FileConnector(Connector):
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create a file connector instance from configuration properties.
-
-        This factory method creates a FileConnector instance using configuration
-        properties typically loaded from a YAML configuration file.
-
-        Args:
-            properties (dict[str, Any]): Configuration properties dictionary containing:
-                - path (str): Required. The file path to read from.
-                - chunk_size (int, optional): Size of chunks to read at a time.
-                Defaults to 8192 bytes.
-                - encoding (str, optional): Text encoding to use when reading the file.
-                Defaults to "utf-8".
-                - errors (str, optional): How to handle encoding errors.
-                Defaults to "replace".
-
-        Returns:
-            Self: A new FileConnector instance configured with the provided properties.
-
-        Raises:
-            ConnectorConfigError: If the required 'path' property is missing from
-                the properties dictionary.
-
-        Example:
-            >>> properties = {
-            ...     "path": "/path/to/file.txt",
-            ...     "chunk_size": 4096,
-            ...     "encoding": "utf-8"
-            ... }
-            >>> connector = FileConnector.from_properties(properties)
-        """
-
+        """Create connector from configuration properties."""
         file_path = properties.get("path")
         if not file_path:
             raise ConnectorConfigError("path property is required")
@@ -109,13 +80,12 @@ class FileConnector(Connector):
 
     @override
     def extract(
-        self, output_schema: WctSchema[dict[str, Any]] | None = None
-    ) -> Message:
+        self, schema: WctSchema[dict[str, Any]] | None = None
+    ) -> dict[str, Any]:
         """Extract file content and metadata.
 
         Args:
-            schema: Optional schema to use and validate against. Use the default
-            schema of the current plugin if not provided.
+            schema: Optional schema to validate against
 
         Returns:
             Dictionary containing file content and metadata in WCF schema format
@@ -123,17 +93,19 @@ class FileConnector(Connector):
         try:
             logger.info(f"Reading file: {self.file_path}")
 
-            # Check if a supported schema is provided
-            if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
+            # Validate schema if provided
+            if schema and schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
                 raise ConnectorConfigError(
-                    f"Unsupported output schema: {output_schema.name}. Supported schemas: {SUPPORTED_OUTPUT_SCHEMAS.keys()}"
+                    f"Unsupported output schema: {schema.name}. Supported schemas: {SUPPORTED_OUTPUT_SCHEMAS.keys()}"
                 )
 
-            if not output_schema:
+            if not schema:
                 logger.warning("No schema provided, using default text schema")
                 raise ConnectorConfigError(
                     "No schema provided for data extraction. Please specify a valid WCT schema."
                 )
+
+            self.active_output_schema = schema
 
             # Get file metadata
             stat = self.file_path.stat()
@@ -144,24 +116,25 @@ class FileConnector(Connector):
 
             # Transform content based on schema type
             wct_schema_transformed_content = self._transform_for_schema(
-                output_schema, file_content, stat
+                schema, file_content, stat
             )
 
-            message = Message(
-                id=f"Content from {self.file_path.name}",
-                content=wct_schema_transformed_content,
-                schema=output_schema,
-            )
-
-            message.validate()
-
-            return message
+            return {
+                "file_path": str(self.file_path),
+                "content": wct_schema_transformed_content,
+                "size_bytes": stat.st_size,
+            }
 
         except Exception as e:
             logger.error(f"Failed to extract from file {self.file_path}: {e}")
             raise ConnectorExtractionError(
                 f"Failed to read file {self.file_path}: {e}"
             ) from e
+
+    @override
+    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
+        """Return the schema this connector produces."""
+        return self.active_output_schema or WctSchema(name="text", type=dict[str, Any])
 
     def _transform_for_schema(
         self, schema: WctSchema[dict[str, Any]], file_content: str, stat: Any
@@ -205,7 +178,6 @@ class FileConnector(Connector):
                 "modified_time": stat.st_mtime,
                 "created_time": stat.st_ctime,
                 "permissions": oct(stat.st_mode)[-3:],
-                "size_bytes": stat.st_size,
             },
             content=[{"text": file_content}],
         )

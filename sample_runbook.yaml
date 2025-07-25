@@ -1,4 +1,4 @@
-name: "Sample Runbook: File Content Analysis"
+name: "File Content Analysis"
 description: "Analyse a file for potentially sensitive information"
 
 connectors:
@@ -27,8 +27,8 @@ plugins:
 execution:
   - connector: "file_reader"
     plugin: "file_content_analyser"
-    input_schema_name: "text"
-    output_schema_name: "content_analysis_result"
+    input_schema: "./src/wct/schemas/text.json"
+    output_schema: "./src/wct/schemas/content_analysis_result.json"
     context:
       description: "Analyze file content for sensitive information"
       priority: "high"
