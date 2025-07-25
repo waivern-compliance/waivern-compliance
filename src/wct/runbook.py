@@ -23,15 +23,15 @@ class ExecutionStep:
     Each execution step specifies:
     - connector: Name of the connector to use for data extraction
     - plugin: Name of the plugin to use for analysis
-    - input_schema: Path to JSON schema file for input validation
-    - output_schema: Path to JSON schema file for output validation (optional)
+    - input_schema_name: Name of the JSON schema for input validation
+    - output_schema_name: Name of the JSON schema for output validation (optional)
     - context: Additional metadata and configuration context (optional)
     """
 
     connector: str
     plugin: str
-    input_schema: str | None = None
-    output_schema: str | None = None
+    input_schema_name: str | None = None
+    output_schema_name: str | None = None
     context: dict[str, Any] | None = None
 
     def __post_init__(self):
@@ -264,8 +264,8 @@ class RunbookLoader:
                             ExecutionStep(
                                 connector=step_data["connector"],
                                 plugin=step_data["plugin"],
-                                input_schema=step_data.get("input_schema"),
-                                output_schema=step_data.get("output_schema"),
+                                input_schema_name=step_data.get("input_schema_name"),
+                                output_schema_name=step_data.get("output_schema_name"),
                                 context=step_data.get("context"),
                             )
                         )

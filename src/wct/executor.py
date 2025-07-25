@@ -122,10 +122,10 @@ class Executor:
 
             # Load the specified input and output schemas
             input_schema = self._load_schema_from_step(
-                step.input_schema, plugin.get_supported_input_schemas()
+                step.input_schema_name, plugin.get_supported_input_schemas()
             )
             output_schema = self._load_schema_from_step(
-                step.output_schema, plugin.get_supported_output_schemas()
+                step.output_schema_name, plugin.get_supported_output_schemas()
             )
 
             # Extract data from connector
@@ -151,8 +151,8 @@ class Executor:
             return self._create_error_result(
                 step.plugin,
                 error_message=str(e),
-                input_schema=step.input_schema or "unknown",
-                output_schema=step.output_schema or "unknown",
+                input_schema=step.input_schema_name or "unknown",
+                output_schema=step.output_schema_name or "unknown",
             )
 
     def _find_plugin_config(
@@ -184,12 +184,12 @@ class Executor:
         return next((c for c in connector_configs if c.name == connector_name), None)
 
     def _load_schema_from_step(
-        self, schema_path: str | None, supported_schemas: list[WctSchema[Any]]
+        self, schema_name: str | None, supported_schemas: list[WctSchema[Any]]
     ) -> WctSchema[Any]:
         """Load schema from step configuration.
 
         Args:
-            schema_path: Path to schema file or None
+            schema_name: Name of the schema or None
             supported_schemas: List of supported schemas from plugin
 
         Returns:
@@ -199,14 +199,11 @@ class Executor:
             ExecutorError: If schema cannot be loaded or is unsupported
         """
 
-        if not schema_path:
+        if not schema_name:
             # Use first supported schema as default
             if not supported_schemas:
                 raise ExecutorError("No supported schemas available")
             return supported_schemas[0]
-
-        # Extract schema name from path (e.g., "./src/wct/schemas/text.json" -> "text")
-        schema_name = self._extract_schema_name_from_path(schema_path)
 
         # Find matching supported schema
         matching_schema = next(
@@ -219,20 +216,6 @@ class Executor:
             )
 
         return matching_schema
-
-    def _extract_schema_name_from_path(self, schema_path: str) -> str:
-        """Extract schema name from file path.
-
-        Args:
-            schema_path: Path to schema file (e.g., "./src/wct/schemas/text.json")
-
-        Returns:
-            Schema name (e.g., "text")
-        """
-        from pathlib import Path
-
-        path = Path(schema_path)
-        return path.stem
 
     def _create_error_result(
         self,

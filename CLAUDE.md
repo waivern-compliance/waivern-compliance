@@ -86,8 +86,8 @@ WCT runbooks use a comprehensive execution format with explicit connector-plugin
 execution:
   - connector: "connector_name"
     plugin: "plugin_name"
-    input_schema: "./src/wct/schemas/schema_name.json"
-    output_schema: "./src/wct/schemas/output_schema.json"  # optional
+    input_schema_name: "schema_name"  # Schema name (not file path)
+    output_schema_name: "output_schema"  # Schema name (optional)
     context:  # optional metadata
       description: "Step description"
       priority: "high"
@@ -121,6 +121,8 @@ execution:
 ## Breaking Changes (Latest Version)
 - **Legacy execution formats removed:** String and name-based execution steps no longer supported
 - **Field rename:** `execution_order` renamed to `execution` in runbooks
+- **Schema field naming:** `input_schema` and `output_schema` renamed to `input_schema_name` and `output_schema_name` for clarity
+- **Schema specification:** Runbooks now specify schema names directly (e.g., "text") instead of file paths
 - **Required fields:** All execution steps must specify both `connector` and `plugin`
 - **Automatic validation:** Plugins now have built-in validation in `process()` method
 
@@ -143,6 +145,7 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 - Use `@override` decorators for all abstract method implementations
 - Schema names must match between connector outputs and plugin inputs for automatic data flow
 - JSON schema files in `src/wct/schemas/` define the structure for runtime validation
+- Runbooks specify schema names (e.g., `input_schema_name: "text"`) not file paths
 - The executor automatically matches schemas and uses automatic validation in `process()`
 
 **Message-Based Validation System:**

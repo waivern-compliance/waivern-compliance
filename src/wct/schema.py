@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from pathlib import Path
+from typing import Any, Generic, TypeVar
 
 _SchemaType = TypeVar("_SchemaType")
 
@@ -22,7 +24,52 @@ class WctSchema(Generic[_SchemaType]):
     """Schema definition (JSON Schema) as a string, if applicable."""
 
 
+def load_json_schema(schema_name: str) -> dict[str, Any]:
+    """Load JSON schema from file.
+
+    Args:
+        schema_name: Name of the schema to load
+
+    Returns:
+        The JSON schema as a dictionary
+
+    Raises:
+        FileNotFoundError: If schema file doesn't exist
+        SchemaLoadError: If schema file cannot be parsed
+    """
+    # Try multiple potential locations for schema files
+    schema_paths = [
+        Path("src/wct/schemas") / f"{schema_name}.json",
+        Path("./src/wct/schemas") / f"{schema_name}.json",
+        Path(__file__).parent / "schemas" / f"{schema_name}.json",
+    ]
+
+    for schema_path in schema_paths:
+        if schema_path.exists():
+            try:
+                with open(schema_path, "r") as f:
+                    return json.load(f)
+            except json.JSONDecodeError as e:
+                raise SchemaLoadError(
+                    f"Invalid JSON in schema file '{schema_path}': {e}"
+                ) from e
+            except OSError as e:
+                raise SchemaLoadError(
+                    f"Cannot read schema file '{schema_path}': {e}"
+                ) from e
+
+    raise FileNotFoundError(
+        f"Schema file for '{schema_name}' not found in any of: {schema_paths}"
+    )
+
+
 class SchemaValidationError(Exception):
     """Base exception for schema validation errors."""
+
+    pass
+
+
+class SchemaLoadError(Exception):
+    """Raised when schema files cannot be loaded or parsed."""
 
     pass

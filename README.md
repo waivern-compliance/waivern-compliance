@@ -9,7 +9,7 @@ WCT provides a flexible architecture for compliance analysis through:
 - **Connectors**: Extract data from various sources (files, databases, web applications)
 - **Plugins**: Perform compliance analysis on extracted data
 - **Rulesets**: Define reusable compliance rules and checks
-- **Orchestrator**: Manages the execution pipeline and data flow
+- **Executor**: Manages the execution pipeline and data flow
 
 The system is designed to be extensible and configurable through YAML runbook files with a unified schema-driven architecture that ensures type safety and component interoperability.
 
@@ -81,13 +81,6 @@ connectors:
       database: "mydb"
       port: 3306
 
-  mysql_db:
-    type: mysql
-    properties:
-      host: "localhost"
-      user: "dbuser"
-      password: "dbpass"
-      database: "mydb"
 
 plugins:
   - name: "content_analyser"
@@ -101,8 +94,8 @@ plugins:
 execution:
   - connector: "file_reader"
     plugin: "content_analyser"
-    input_schema: "./src/wct/schemas/text.json"
-    output_schema: "./src/wct/schemas/content_analysis_result.json"
+    input_schema_name: "text"
+    output_schema_name: "content_analysis_result"
     context:
       description: "Analyze file content for sensitive information"
       priority: "high"
@@ -132,7 +125,7 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 
 ### Core Components
 
-- **`src/wct/orchestrator.py`**: Schema-aware orchestration engine
+- **`src/wct/executor.py`**: Schema-aware execution engine
 - **`src/wct/schema.py`**: Unified WctSchema system for type-safe data flow
 - **`src/wct/schemas/`**: JSON schema definitions for validation
   - `text.json` - Text content schema
@@ -149,7 +142,7 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 ### Schema Pipeline Flow
 
 1. **Plugins declare input schemas** in execution order
-2. **Orchestrator determines required schemas** from plugin requirements
+2. **Executor determines required schemas** from plugin requirements
 3. **Connectors extract data** only if their output schemas are needed
 4. **Schema validation** ensures data format compliance
 5. **Plugins process validated data** and produce schema-compliant results
@@ -172,8 +165,8 @@ WCT runbooks use a **comprehensive execution format** with explicit connector-pl
 execution:
   - connector: "connector_name"
     plugin: "plugin_name"
-    input_schema: "./src/wct/schemas/schema_name.json"
-    output_schema: "./src/wct/schemas/output_schema.json"  # optional
+    input_schema_name: "schema_name"  # Schema name (not file path)
+    output_schema_name: "output_schema"  # Schema name (optional)
     context:  # optional metadata
       description: "Step description"
       priority: "high"
@@ -300,7 +293,7 @@ class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
 ```
 src/wct/
 ├── __main__.py           # CLI entry point
-├── orchestrator.py       # Schema-aware orchestration engine
+├── executor.py           # Schema-aware execution engine
 ├── schema.py             # Unified WctSchema system
 ├── schemas/              # JSON schema definitions
 │   ├── text.json                    # Text content schema
@@ -327,7 +320,7 @@ src/wct/
 ├── rulesets/            # Schema-compliant compliance rules
 │   ├── base.py          # Base ruleset class
 │   └── personal_data.py # Personal data detection rules
-├── runbook.py           # Schema-aware runbook parsing
+├── runbook.py           # Schema-aware runbook parsing with Message support
 └── cli.py               # Command-line interface
 ```
 

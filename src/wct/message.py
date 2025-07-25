@@ -1,11 +1,9 @@
-import json
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import jsonschema
 
-from .schema import WctSchema
+from .schema import WctSchema, load_json_schema
 
 
 @dataclass(slots=True)
@@ -54,7 +52,7 @@ class Message:
 
         try:
             # Load the JSON schema file for validation
-            schema = self._load_json_schema(self.schema.name)
+            schema = load_json_schema(self.schema.name)
 
             # Validate the content against the JSON schema
             jsonschema.validate(self.content, schema)
@@ -76,34 +74,6 @@ class Message:
         except Exception as e:
             self.schema_validated = False
             raise MessageValidationError(f"Validation error: {e}") from e
-
-    def _load_json_schema(self, schema_name: str) -> dict[str, Any]:
-        """Load JSON schema from file.
-
-        Args:
-            schema_name: Name of the schema to load
-
-        Returns:
-            The JSON schema as a dictionary
-
-        Raises:
-            FileNotFoundError: If schema file doesn't exist
-        """
-        # Try multiple potential locations for schema files
-        schema_paths = [
-            Path("src/wct/schemas") / f"{schema_name}.json",
-            Path("./src/wct/schemas") / f"{schema_name}.json",
-            Path(__file__).parent / "schemas" / f"{schema_name}.json",
-        ]
-
-        for schema_path in schema_paths:
-            if schema_path.exists():
-                with open(schema_path, "r") as f:
-                    return json.load(f)
-
-        raise FileNotFoundError(
-            f"Schema file for '{schema_name}' not found in any of: {schema_paths}"
-        )
 
 
 class MessageValidationError(Exception):
