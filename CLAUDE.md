@@ -118,14 +118,6 @@ execution:
 - Schema definitions in `src/wct/schemas/` (JSON Schema format)
 - Sample configurations: `sample_runbook.yaml` (with modern execution format)
 
-## Breaking Changes (Latest Version)
-- **Legacy execution formats removed:** String and name-based execution steps no longer supported
-- **Field rename:** `execution_order` renamed to `execution` in runbooks
-- **Schema field naming:** `input_schema` and `output_schema` renamed to `input_schema_name` and `output_schema_name` for clarity
-- **Schema specification:** Runbooks now specify schema names directly (e.g., "text") instead of file paths
-- **Required fields:** All execution steps must specify both `connector` and `plugin`
-- **Automatic validation:** Plugins now have built-in validation in `process()` method
-
 ## Development Setup
 
 **Pre-commit hooks are configured** for the WCT schema-driven system:
