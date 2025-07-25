@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "source": "/path/to/config/database_config.py",
+  "encoding": "utf-8",
+  "file_metadata": {
+    "size": 2048,
+    "last_modified": "2024-01-15T10:30:00Z",
+    "file_type": "python"
+  },
+  "content_length": 1950,
+  "findings": [
+    {
+      "type": "api_key",
+      "count": 2,
+      "severity": "high",
+      "samples": [
+        "sk-proj-abc123***",
+        "AIza***"
+      ]
+    },
+    {
+      "type": "email",
+      "count": 3,
+      "severity": "low",
+      "samples": [
+        "admin@example.com",
+        "support@company.org"
+      ]
+    },
+    {
+      "type": "potential_password",
+      "count": 1,
+      "severity": "critical",
+      "samples": [
+        "password=***"
+      ]
+    }
+  ],
+  "risk_score": 85,
+  "risk_level": "high",
+  "analysis_metadata": {
+    "sensitivity_level": "high",
+    "patterns_checked": [
+      "api_keys",
+      "passwords",
+      "emails",
+      "credit_cards",
+      "social_security_numbers"
+    ]
+  }
+}

@@ -244,6 +244,7 @@ from typing import Any
 from typing_extensions import Self, override
 from wct.plugins.base import Plugin
 from wct.schema import WctSchema
+from wct.message import Message
 
 class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
     @classmethod
@@ -257,10 +258,23 @@ class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
         return cls(**properties)
 
     @override
-    def process_data(self, data: dict[str, Any]) -> dict[str, Any]:
-        # Process schema-validated input data
-        # Input and output validation are handled automatically by the base class
-        return {"findings": ["compliance_issue_1"]}
+    def process_data(self, message: Message) -> Message:
+        # Process schema-validated input message
+        # Extract data from the message
+        input_data = message.content
+
+        # Perform your analysis logic here
+        findings = ["compliance_issue_1"]
+
+        # Create result data
+        result_data = {"findings": findings}
+
+        # Return new Message with results
+        return Message(
+            id=f"Analysis results for {message.id}",
+            content=result_data,
+            schema=self.get_output_schema(),
+        )
 
     @override
     def get_input_schema(self) -> WctSchema[dict[str, Any]]:
@@ -270,20 +284,16 @@ class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
     def get_output_schema(self) -> WctSchema[dict[str, Any]]:
         return WctSchema(name="my_results", type=dict[str, Any])
 
-    @override
-    def validate_input(self, data: dict[str, Any]) -> bool:
-        # Dynamic validation using JSON schema files
-        # This method now automatically loads and validates against JSON schemas
-        # Custom validation logic can be added here if needed
-        return True  # Base class handles schema validation
 ```
 
 **Key Plugin Features**:
-- **Automatic Validation**: The `process()` method automatically validates both input and output data
-- **Dynamic Schema Loading**: JSON schema files are automatically discovered and loaded
-- **Type Safety**: Full type checking with generic type parameters
+- **Message-Based Architecture**: All plugins now work with `Message` objects for unified data flow
+- **Automatic Validation**: The `process()` method automatically validates both input and output Messages
+- **Schema-Aware Processing**: Input and output Messages are validated against declared schemas
+- **Type Safety**: Full type checking with generic type parameters and Message containers
 - **Error Handling**: Comprehensive error messages for validation failures
-- **Seamless Processing**: Implement `process_data()` for your core logic, validation is handled transparently
+- **Seamless Processing**: Implement `process_data()` with Message objects, validation is handled transparently
+- **No Manual Validation**: Plugins no longer need to implement validation - handled by the Message mechanism
 
 ### Project Structure
 

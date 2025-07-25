@@ -1,18 +1,27 @@
 """Content analysis plugin for detecting sensitive information."""
 
-import json
 import re
-from pathlib import Path
 from typing import Any
 
-import jsonschema
 from typing_extensions import Self, override
 
-from wct.plugins.base import Plugin, PluginInputError
+from wct.plugins.base import Plugin
 from wct.schema import WctSchema
+from wct.message import Message
+
+SUPPORTED_INPUT_SCHEMAS = [
+    WctSchema(name="text", type=dict[str, Any]),
+]
+
+SUPPORTED_OUTPUT_SCHEMAS = [
+    WctSchema(name="content_analysis_result", type=dict[str, Any]),
+]
+
+DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
+DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
 
 
-class FileContentAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
+class FileContentAnalyser(Plugin):
     """Analyzes file content for potentially sensitive information.
 
     This plugin looks for patterns that might indicate sensitive data
@@ -35,6 +44,18 @@ class FileContentAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
 
     @classmethod
     @override
+    def get_supported_input_schemas(cls) -> list[WctSchema[Any]]:
+        """Return the input schemas supported by this plugin."""
+        return SUPPORTED_INPUT_SCHEMAS
+
+    @classmethod
+    @override
+    def get_supported_output_schemas(cls) -> list[WctSchema[Any]]:
+        """Return the output schemas supported by this plugin."""
+        return SUPPORTED_OUTPUT_SCHEMAS
+
+    @classmethod
+    @override
     def get_name(cls) -> str:
         return "file_content_analyser"
 
@@ -45,28 +66,36 @@ class FileContentAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
         return cls(sensitivity_level=sensitivity_level)
 
     @override
-    def process_data(self, data: dict[str, Any]) -> dict[str, Any]:
+    def process(
+        self,
+        input_schema: WctSchema[Any],
+        output_schema: WctSchema[Any],
+        message: Message,
+    ) -> Message:
         """Analyze file content for sensitive information."""
-        # Extract content from the new schema-aware structure
-        schema_content = data.get("content", {})
+
+        Plugin.validate_input_message(message, input_schema)
+
+        # Extract content from the message's content structure
+        payload_content = message.content
 
         # Get the actual text content from the schema structure
-        content_array = schema_content.get("content", [])
+        content_array = payload_content.get("content", [])
         if not content_array:
-            content = ""
+            text_content = ""
         else:
             # Combine all text content from the array (usually just one item)
-            content = "\n".join(item.get("text", "") for item in content_array)
+            text_content = "\n".join(item.get("text", "") for item in content_array)
 
-        # Get metadata from both levels
-        file_path = data.get("file_path", schema_content.get("source", "unknown"))
-        encoding = schema_content.get("contentEncoding", "unknown")
-        file_metadata = schema_content.get("metadata", {})
+        # Get metadata
+        file_path = payload_content.get("source", "unknown")
+        encoding = payload_content.get("contentEncoding", "unknown")
+        file_metadata = payload_content.get("metadata", {})
 
         findings = []
 
         for pattern_name, pattern in self.patterns.items():
-            matches = pattern.findall(content)
+            matches = pattern.findall(text_content)
             if matches:
                 findings.append(
                     {
@@ -81,11 +110,12 @@ class FileContentAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
 
         risk_score = self._calculate_risk_score(findings)
 
-        return {
+        # Create result data
+        result_data = {
             "source": file_path,
             "encoding": encoding,
             "file_metadata": file_metadata,
-            "content_length": len(content),
+            "content_length": len(payload_content),
             "findings": findings,
             "risk_score": risk_score,
             "risk_level": self._get_risk_level(risk_score),
@@ -95,90 +125,17 @@ class FileContentAnalyser(Plugin[dict[str, Any], dict[str, Any]]):
             },
         }
 
-    @override
-    def get_input_schema(self) -> WctSchema[dict[str, Any]]:
-        return WctSchema(name="text", type=dict[str, Any])
-
-    @override
-    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
-        return WctSchema(name="content_analysis_result", type=dict[str, Any])
-
-    @override
-    def validate_input(self, data: dict[str, Any]) -> bool:
-        """Validate input data against the plugin's input schema."""
-        input_schema = self.get_input_schema()
-
-        try:
-            # Load the JSON schema file for validation
-            schema_content = self._load_json_schema(input_schema.name)
-
-            # Validate top-level structure (from FileConnector)
-            if "content" not in data:
-                raise PluginInputError("Missing required field: content")
-
-            # Validate the content against the JSON schema
-            jsonschema.validate(data["content"], schema_content)
-
-            return True
-
-        except jsonschema.ValidationError as e:
-            raise PluginInputError(f"Schema validation failed: {e.message}") from e
-        except FileNotFoundError:
-            # Fallback to basic validation if schema file not found
-            return self._fallback_validation(data)
-        except Exception as e:
-            raise PluginInputError(f"Validation error: {e}") from e
-
-    def _load_json_schema(self, schema_name: str) -> dict[str, Any]:
-        """Load JSON schema from file.
-
-        Args:
-            schema_name: Name of the schema to load
-
-        Returns:
-            The JSON schema as a dictionary
-
-        Raises:
-            FileNotFoundError: If schema file doesn't exist
-        """
-        # Try multiple potential locations for schema files
-        schema_paths = [
-            Path("src/wct/schemas") / f"{schema_name}.json",
-            Path("./src/wct/schemas") / f"{schema_name}.json",
-            Path(__file__).parent.parent.parent / "schemas" / f"{schema_name}.json",
-        ]
-
-        for schema_path in schema_paths:
-            if schema_path.exists():
-                with open(schema_path, "r") as f:
-                    return json.load(f)
-
-        raise FileNotFoundError(
-            f"Schema file for '{schema_name}' not found in any of: {schema_paths}"
+        output_message = Message(
+            id=f"Analysis results for {file_path}",
+            content=result_data,
+            schema=output_schema,
         )
 
-    def _fallback_validation(self, data: dict[str, Any]) -> bool:
-        """Fallback validation when schema file is not available."""
-        # Basic validation similar to the original hardcoded version
-        if "content" not in data:
-            raise PluginInputError("Missing required field: content")
+        # Validate the output message against the output schema
+        output_message.validate()
 
-        schema_content = data["content"]
-        if not isinstance(schema_content, dict):
-            raise PluginInputError("Field 'content' must be a dictionary")
-
-        # Basic text schema validation
-        if schema_content.get("name") != "text":
-            raise PluginInputError("Content schema name must be 'text'")
-
-        if "content" not in schema_content:
-            raise PluginInputError("Missing 'content' array in text schema")
-
-        content_array = schema_content["content"]
-        if not isinstance(content_array, list):
-            raise PluginInputError("Schema 'content' field must be an array")
-
-        return True
+        # Return new Message with analysis results
+        return output_message
 
     def _get_severity(self, pattern_name: str) -> str:
         """Get severity level for different pattern types."""

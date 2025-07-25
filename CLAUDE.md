@@ -50,7 +50,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 
 ### WCT Schema-Driven System Architecture
 - **Entry point:** `src/wct/__main__.py`
-- **Schema-aware orchestrator:** `src/wct/orchestrator.py`
+- **Schema-aware executor:** `src/wct/executor.py`
 - **Unified schema system:** `src/wct/schema.py` - `WctSchema[T]` for type-safe data flow
 - **Schema definitions:** `src/wct/schemas/` - JSON schema files for validation
 - **Configuration:** YAML runbooks with schema-aware execution order
@@ -64,7 +64,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 - **Schema-Aware Plugins:** Process validated data with input/output schema contracts - **Modular Architecture**
   - File content analyser (`src/wct/plugins/file_content_analyser/`) - text → content_analysis_result
   - Personal data analyser (`src/wct/plugins/personal_data_analyser/`) - Schema-validated processing
-- **Schema-Aware Orchestrator:** Matches connector output schemas to plugin input schemas automatically
+- **Schema-Aware Executor:** Matches connector output schemas to plugin input schemas automatically
 - **Schema System:** `WctSchema[T]` with JSON schema validation for runtime type safety
 - **Rulesets:** Schema-compliant reusable rule definitions for compliance checks
   - Personal data ruleset (`src/wct/rulesets/personal_data.py`)
@@ -102,12 +102,10 @@ execution:
 
 ### Schema-Compliant Base Classes with Automatic Validation
 - **Connector base:** `src/wct/connectors/base.py` - Abstract connector with `WctSchema[T]` support and transform methods
-- **Plugin base:** `src/wct/plugins/base.py` - Abstract plugin with automatic input/output validation
-  - `process()` - Automatic end-to-end validation with processing
-  - `_process_data()` - Abstract method for plugin-specific processing logic
-  - `validate_input()` - Dynamic JSON schema-based input validation
-  - `validate_output()` - Automatic output schema validation
-  - `_load_json_schema()` - Flexible schema file discovery and loading
+- **Plugin base:** `src/wct/plugins/base.py` - Abstract plugin with Message-based architecture and automatic validation
+  - `process()` - Automatic end-to-end Message validation with processing
+  - `process_data()` - Abstract method for plugin-specific processing logic using Message objects
+  - Message validation handled automatically by base class (no manual validation needed)
 - **Ruleset base:** `src/wct/rulesets/base.py` - Schema-aware rule definitions
 - **Schema system:** `src/wct/schema.py` - `WctSchema[T]` generic container for type safety
 - All components support dynamic registration, configuration, and comprehensive schema validation
@@ -140,21 +138,23 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 
 **Schema-Driven Development Guidelines:**
 - All connectors must implement `get_output_schema()` and schema-specific transform methods
-- All plugins must implement `get_input_schema()`, `get_output_schema()`, `validate_input()`, and `_process_data()`
+- All plugins must implement `get_input_schema()`, `get_output_schema()`, and `process_data()` with Message objects
+- Plugins no longer need to implement `validate_input()` - validation is handled by the Message mechanism
 - Use `@override` decorators for all abstract method implementations
 - Schema names must match between connector outputs and plugin inputs for automatic data flow
 - JSON schema files in `src/wct/schemas/` define the structure for runtime validation
-- The orchestrator automatically matches schemas and uses automatic validation in `process()`
+- The executor automatically matches schemas and uses automatic validation in `process()`
 
-**Automatic Validation System:**
-- Plugins automatically validate input data using JSON schema files via `process()`
-- Output validation is performed automatically after `_process_data()` execution
+**Message-Based Validation System:**
+- All plugins now use Message objects for unified data flow between connectors and plugins
+- Input and output Messages are automatically validated against declared schemas
+- The `process()` method handles Message validation transparently
+- Plugin implementations work with Message objects in `process_data()` methods
 - Schema files are discovered dynamically across multiple search paths
 - Validation errors provide detailed messages about schema compliance failures
-- Use `PluginOutputError` and `PluginInputError` for schema validation exceptions
 
 **Testing Schema Components:**
 - Use `uv run wct run sample_runbook.yaml -v` to see detailed schema matching and validation
-- The orchestrator logs which connectors are skipped due to unneeded schemas
+- The executor logs which connectors are skipped due to unneeded schemas
 - Schema validation errors provide clear messages about data structure mismatches
 - Test both valid and invalid data to verify comprehensive validation coverage
