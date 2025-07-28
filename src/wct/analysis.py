@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, asdict
+from datetime import datetime
 from typing import Any
+from pathlib import Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,3 +20,92 @@ class AnalysisResult:
     metadata: dict[str, Any]
     success: bool
     error_message: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert AnalysisResult to a dictionary for JSON serialization.
+
+        Returns:
+            Dictionary representation of the analysis result
+        """
+        return asdict(self)
+
+
+class AnalysisResultsExporter:
+    """Handles exporting analysis results to various formats."""
+
+    @staticmethod
+    def save_to_json(
+        results: list[AnalysisResult],
+        output_path: Path,
+        runbook_path: Path | None = None,
+    ) -> None:
+        """Save analysis results to a JSON file.
+
+        Args:
+            results: List of analysis results to save
+            output_path: Path where the JSON file should be saved
+            runbook_path: Optional path to the runbook file for metadata
+
+        Raises:
+            IOError: If the file cannot be written
+        """
+        # Create comprehensive output structure
+        output_data = {
+            "export_metadata": {
+                "timestamp": datetime.now().isoformat(),
+                "total_results": len(results),
+                "successful_results": sum(1 for r in results if r.success),
+                "failed_results": sum(1 for r in results if not r.success),
+                "runbook_path": str(runbook_path) if runbook_path else None,
+                "export_format_version": "1.0.0",
+            },
+            "results": [result.to_dict() for result in results],
+        }
+
+        # Ensure parent directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write JSON file with pretty formatting
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(output_data, f, indent=2, ensure_ascii=False)
+
+    @staticmethod
+    def get_summary_stats(results: list[AnalysisResult]) -> dict[str, Any]:
+        """Get summary statistics from analysis results.
+
+        Args:
+            results: List of analysis results
+
+        Returns:
+            Dictionary containing summary statistics
+        """
+        if not results:
+            return {
+                "total": 0,
+                "successful": 0,
+                "failed": 0,
+                "success_rate": 0.0,
+                "plugins": [],
+                "schemas": {"input": [], "output": []},
+            }
+
+        successful_results = [r for r in results if r.success]
+        failed_results = [r for r in results if not r.success]
+
+        return {
+            "total": len(results),
+            "successful": len(successful_results),
+            "failed": len(failed_results),
+            "success_rate": len(successful_results) / len(results) * 100,
+            "plugins": list(set(r.plugin_name for r in results)),
+            "schemas": {
+                "input": list(set(r.input_schema for r in results)),
+                "output": list(set(r.output_schema for r in results)),
+            },
+            "error_summary": [
+                {"plugin": r.plugin_name, "error": r.error_message}
+                for r in failed_results
+            ]
+            if failed_results
+            else [],
+        }

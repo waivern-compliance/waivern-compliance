@@ -11,7 +11,7 @@ from rich.table import Table
 from rich.tree import Tree
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from wct.analysis import AnalysisResult
+from wct.analysis import AnalysisResult, AnalysisResultsExporter
 from wct.connectors import BUILTIN_CONNECTORS
 from wct.logging import setup_logging, get_cli_logger
 from wct.executor import Executor
@@ -318,13 +318,18 @@ def handle_cli_error(error: Exception, message: str) -> None:
 
 
 def execute_runbook_command(
-    runbook_path: Path, output_dir: Path, verbose: bool = False, log_level: str = "INFO"
+    runbook_path: Path,
+    output_dir: Path,
+    output: Path | None = None,
+    verbose: bool = False,
+    log_level: str = "INFO",
 ) -> None:
     """CLI command implementation for running analyses.
 
     Args:
         runbook_path: Path to the runbook YAML file
         output_dir: Output directory (currently unused)
+        output: Optional path to save results as JSON
         verbose: Enable verbose output
         log_level: Logging level
     """
@@ -360,12 +365,49 @@ def execute_runbook_command(
         formatter = OutputFormatter()
         formatter.format_analysis_results(results, verbose)
 
+        # Save results to JSON file if requested
+        if output:
+            try:
+                # Combine output_dir with output filename
+                # If output is absolute, use it as-is; if relative, place it in output_dir
+                if output.is_absolute():
+                    final_output_path = output
+                else:
+                    final_output_path = output_dir / output
+
+                AnalysisResultsExporter.save_to_json(
+                    results, final_output_path, runbook_path
+                )
+                console.print(
+                    f"\n[green]✅ Results saved to JSON file: {final_output_path}[/green]"
+                )
+                logger.info(
+                    "Analysis results saved to JSON file: %s", final_output_path
+                )
+            except Exception as e:
+                error_msg = f"Failed to save JSON output: {e}"
+                logger.error(error_msg)
+                console.print(f"\n[red]❌ {error_msg}[/red]")
+
         # Show completion banner
+        final_output_display = None
+        if output:
+            # Calculate the final output path for display
+            if output.is_absolute():
+                final_output_display = output
+            else:
+                final_output_display = output_dir / output
+
         completion_panel = Panel(
             f"[bold green]✅ Analysis Complete[/bold green]\n\n"
             f"[bold]Total Results:[/bold] {len(results)}\n"
             f"[bold]Successful:[/bold] {sum(1 for r in results if r.success)}\n"
-            f"[bold]Failed:[/bold] {sum(1 for r in results if not r.success)}",
+            f"[bold]Failed:[/bold] {sum(1 for r in results if not r.success)}"
+            + (
+                f"\n[bold]JSON Output:[/bold] {final_output_display}"
+                if final_output_display
+                else ""
+            ),
             title="🎉 Completion Summary",
             border_style="green",
         )

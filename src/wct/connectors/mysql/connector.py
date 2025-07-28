@@ -385,17 +385,15 @@ class MySQLConnector(Connector):
         """Transform MySQL data for the 'text' schema.
 
         This method extracts database content into granular text data items for compliance analysis:
-        1. Each table name as a separate data item
-        2. Each column name as a separate data item
-        3. Each cell content as a separate data item
-        4. Detailed metadata for complete traceability
-        5. Database schema attached to top-level metadata
+        1. Each cell content as a separate data item
+        2. Detailed metadata for complete traceability
+        3. Database schema attached to top-level metadata
 
         Design Rationale:
         - Granular extraction enables precise personal data identification
         - Each data item can be traced back to exact database location
         - Supports compliance requirements for data mapping and audit trails
-        - Column and table names may contain sensitive information patterns
+        - Cell content analysis is sufficient as empty tables have no personal data
 
         Args:
             schema: The text schema
@@ -407,54 +405,9 @@ class MySQLConnector(Connector):
         data_items = []
         database_source = f"{self.host}:{self.port}/{self.database}"
 
-        # Extract table names as data items
+        # Extract actual cell data from each table
         for table_info in metadata.get("tables", []):
             table_name = table_info["name"]
-
-            # Add table name as a data item
-            data_items.append(
-                {
-                    "content": table_name,
-                    "metadata": {
-                        "source": "mysql_table_name",
-                        "description": f"Table name from database {self.database}",
-                        "data_type": "table_name",
-                        "database": self.database,
-                        "table": table_name,
-                        "host": self.host,
-                        "port": self.port,
-                        "table_type": table_info.get("type"),
-                        "table_comment": table_info.get("comment"),
-                        "estimated_rows": table_info.get("estimated_rows"),
-                    },
-                }
-            )
-
-            # Extract column names as data items
-            for column_info in table_info.get("columns", []):
-                column_name = column_info["COLUMN_NAME"]
-
-                data_items.append(
-                    {
-                        "content": column_name,
-                        "metadata": {
-                            "source": "mysql_column_name",
-                            "description": f"Column name from table {table_name} in database {self.database}",
-                            "data_type": "column_name",
-                            "database": self.database,
-                            "table": table_name,
-                            "column": column_name,
-                            "host": self.host,
-                            "port": self.port,
-                            "sql_data_type": column_info.get("DATA_TYPE"),
-                            "is_nullable": column_info.get("IS_NULLABLE"),
-                            "column_default": column_info.get("COLUMN_DEFAULT"),
-                            "column_comment": column_info.get("COLUMN_COMMENT"),
-                            "column_key": column_info.get("COLUMN_KEY"),
-                            "extra": column_info.get("EXTRA"),
-                        },
-                    }
-                )
 
             # Extract actual cell data from the table
             try:
@@ -468,7 +421,7 @@ class MySQLConnector(Connector):
                                 {
                                     "content": str(cell_value),
                                     "metadata": {
-                                        "source": "mysql_cell_data",
+                                        "source": f"mysql_cell_data_table_{table_name}_column_{column_name}",
                                         "description": f"Cell data from {table_name}.{column_name} row {row_index + 1}",
                                         "data_type": "cell_content",
                                         "database": self.database,
@@ -515,27 +468,7 @@ class MySQLConnector(Connector):
                 "total_data_items": len(data_items),
                 "extraction_summary": {
                     "tables_processed": len(metadata.get("tables", [])),
-                    "table_names_extracted": len(
-                        [
-                            item
-                            for item in data_items
-                            if item["metadata"]["data_type"] == "table_name"
-                        ]
-                    ),
-                    "column_names_extracted": len(
-                        [
-                            item
-                            for item in data_items
-                            if item["metadata"]["data_type"] == "column_name"
-                        ]
-                    ),
-                    "cell_values_extracted": len(
-                        [
-                            item
-                            for item in data_items
-                            if item["metadata"]["data_type"] == "cell_content"
-                        ]
-                    ),
+                    "cell_values_extracted": len(data_items),
                 },
             },
             data=data_items,

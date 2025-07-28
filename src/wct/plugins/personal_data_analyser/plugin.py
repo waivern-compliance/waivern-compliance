@@ -158,6 +158,9 @@ class PersonalDataAnalyser(Plugin):
                     "special_category": finding.special_category,
                     "matched_pattern": finding.matched_pattern,
                     "source": finding.source,
+                    "evidence": "; ".join(finding.evidence)
+                    if finding.evidence
+                    else None,
                 }
                 for finding in findings
             ],
@@ -193,13 +196,62 @@ class PersonalDataAnalyser(Plugin):
         for category_name, category_data in self.patterns.items():
             for pattern in category_data["patterns"]:
                 if pattern.lower() in content.lower():
+                    # Extract evidence - find all occurrences of the pattern in the content
+                    evidence_matches = self._extract_evidence(content, pattern)
+
                     finding = PersonalDataFinding(
                         type=category_name,
                         risk_level=category_data["risk_level"],
                         special_category=category_data["special_category"],
                         matched_pattern=pattern,
                         source=source,
+                        evidence=evidence_matches,
                     )
                     findings.append(finding)
 
         return findings
+
+    def _extract_evidence(self, content: str, pattern: str) -> list[str]:
+        """Extract evidence snippets where the pattern was found.
+
+        Args:
+            content: The full content to search in
+            pattern: The pattern that was matched
+
+        Returns:
+            List of evidence snippets showing context around matches
+        """
+        evidence_list = []
+        content_lower = content.lower()
+        pattern_lower = pattern.lower()
+
+        # Find all occurrences of the pattern
+        start_pos = 0
+        while True:
+            match_pos = content_lower.find(pattern_lower, start_pos)
+            if match_pos == -1:
+                break
+
+            # Extract context around the match (50 characters before and after)
+            context_start = max(0, match_pos - 50)
+            context_end = min(len(content), match_pos + len(pattern) + 50)
+
+            # Extract the evidence with context
+            evidence_snippet = content[context_start:context_end].strip()
+
+            # Add ellipsis if we truncated the context
+            if context_start > 0:
+                evidence_snippet = "..." + evidence_snippet
+            if context_end < len(content):
+                evidence_snippet = evidence_snippet + "..."
+
+            evidence_list.append(evidence_snippet)
+
+            # Move past this match for next search
+            start_pos = match_pos + 1
+
+            # Limit to maximum 3 evidence snippets to avoid overwhelming output
+            if len(evidence_list) >= 3:
+                break
+
+        return evidence_list

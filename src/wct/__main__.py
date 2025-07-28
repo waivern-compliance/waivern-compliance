@@ -30,8 +30,7 @@ def run(
     output_dir: Annotated[
         Path,
         typer.Option(
-            "--output",
-            "-o",
+            "--output-dir",
             help="The output directory (not implemented yet)",
             file_okay=False,
             dir_okay=True,
@@ -40,6 +39,18 @@ def run(
             show_default="./outputs/",
         ),
     ] = (Path.cwd() / "outputs"),
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Save analysis results to a JSON file (relative to --output-dir)",
+            file_okay=True,
+            dir_okay=False,
+            writable=True,
+            rich_help_panel="Output",
+        ),
+    ] = None,
     verbose: Annotated[
         bool,
         typer.Option(
@@ -58,7 +69,7 @@ def run(
     ] = "INFO",
 ):
     """Execute a runbook."""
-    execute_runbook_command(runbook, output_dir, verbose, log_level)
+    execute_runbook_command(runbook, output_dir, output, verbose, log_level)
 
 
 @app.command(name="list-connectors")

@@ -6,42 +6,48 @@
       "risk_level": "medium",
       "special_category": "N",
       "matched_pattern": "john.doe@company.com",
-      "source": "employee_data.csv"
+      "source": "employee_data.csv",
+      "evidence": "the actual content of the email found in the employee data file"
     },
     {
       "type": "phone_number",
       "risk_level": "low",
       "special_category": "N",
       "matched_pattern": "+1-555-123-4567",
-      "source": "employee_data.csv"
+      "source": "employee_data.csv",
+      "evidence": "the actual content of the phone number found in the employee data file"
     },
     {
       "type": "health_condition",
       "risk_level": "high",
       "special_category": "Y",
       "matched_pattern": "diabetes",
-      "source": "medical_records.txt"
+      "source": "medical_records.txt",
+      "evidence": "the actual content of the health condition found in the medical records file"
     },
     {
       "type": "ethnic_origin",
       "risk_level": "high",
       "special_category": "Y",
       "matched_pattern": "ethnicity: Hispanic",
-      "source": "hr_forms.pdf"
+      "source": "hr_forms.pdf",
+      "evidence": "the actual content of the ethnicity found in the HR forms file"
     },
     {
       "type": "ssn",
       "risk_level": "high",
       "special_category": "N",
       "matched_pattern": "123-45-6789",
-      "source": "tax_documents.xlsx"
+      "source": "tax_documents.xlsx",
+      "evidence": "the actual content of the SSN found in the tax documents file"
     },
     {
       "type": "credit_card",
       "risk_level": "medium",
       "special_category": "N",
       "matched_pattern": "4532-****-****-1234",
-      "source": "payment_logs.txt"
+      "source": "payment_logs.txt",
+      "evidence": "the actual content of the credit card number found in the payment logs file"
     }
   ],
   "summary": {
