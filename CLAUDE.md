@@ -62,7 +62,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
   - MySQL connector (`src/wct/connectors/mysql/`) - Produces "mysql_database" schema
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
 - **Schema-Aware Plugins:** Process validated data with input/output schema contracts - **Modular Architecture**
-  - File content analyser (`src/wct/plugins/file_content_analyser/`) - text → content_analysis_result
+  - File content analyser (`src/wct/plugins/file_content_analyser/`) - text → file_content_analysis_result
   - Personal data analyser (`src/wct/plugins/personal_data_analyser/`) - Schema-validated processing
 - **Schema-Aware Executor:** Matches connector output schemas to plugin input schemas automatically
 - **Schema System:** `WctSchema[T]` with JSON schema validation for runtime type safety

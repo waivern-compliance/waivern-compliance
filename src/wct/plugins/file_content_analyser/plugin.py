@@ -1,7 +1,9 @@
 """Content analysis plugin for detecting sensitive information."""
 
+import logging
 import re
 from typing import Any
+from pprint import pformat
 
 from typing_extensions import Self, override
 
@@ -14,7 +16,7 @@ SUPPORTED_INPUT_SCHEMAS = [
 ]
 
 SUPPORTED_OUTPUT_SCHEMAS = [
-    WctSchema(name="content_analysis_result", type=dict[str, Any]),
+    WctSchema(name="file_content_analysis_result", type=dict[str, Any]),
 ]
 
 DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
@@ -38,7 +40,7 @@ class FileContentAnalyser(Plugin):
                 r'(?i)(password|pwd|pass)\s*[:=]\s*[\'"]?([^\'"\s]+)[\'"]?'
             ),
             "api_key": re.compile(
-                r'(?i)(api_key|apikey|access_key)\s*[:=]\s*[\'"]?([A-Za-z0-9]{20,})[\'"]?'
+                r'(?i)(api[\s_]?key|apikey|access[\s_]?key)\s*[:=]\s*[\'"]?([A-Za-z0-9]{20,})[\'"]?'
             ),
         }
 
@@ -97,14 +99,45 @@ class FileContentAnalyser(Plugin):
         for pattern_name, pattern in self.patterns.items():
             matches = pattern.findall(text_content)
             if matches:
+                # Handle different regex patterns that may return tuples
+                if pattern_name == "email":
+                    # Email pattern returns strings directly
+                    raw_samples = (
+                        matches[:3]
+                        if self.sensitivity_level in ["medium", "high"]
+                        else []
+                    )
+                    samples = [
+                        self._mask_sensitive_value(sample) for sample in raw_samples
+                    ]
+                elif pattern_name in ["potential_password", "api_key"]:
+                    # These patterns return tuples, extract the actual value (second group)
+                    raw_samples = (
+                        [match[1] for match in matches[:3]]
+                        if self.sensitivity_level in ["medium", "high"]
+                        else []
+                    )
+                    samples = [
+                        self._mask_sensitive_value(sample) for sample in raw_samples
+                    ]
+                else:
+                    # Fallback for any other patterns
+                    raw_samples = (
+                        matches[:3]
+                        if self.sensitivity_level in ["medium", "high"]
+                        else []
+                    )
+                    samples = [
+                        self._mask_sensitive_value(str(sample))
+                        for sample in raw_samples
+                    ]
+
                 findings.append(
                     {
                         "type": pattern_name,
                         "count": len(matches),
                         "severity": self._get_severity(pattern_name),
-                        "samples": matches[:3]
-                        if self.sensitivity_level == "high"
-                        else [],
+                        "samples": samples,
                     }
                 )
 
@@ -133,6 +166,10 @@ class FileContentAnalyser(Plugin):
 
         # Validate the output message against the output schema
         output_message.validate()
+
+        logging.debug(
+            f"FileContentAnalyser processed {file_path} with findings: {pformat(findings)}"
+        )
 
         # Return new Message with analysis results
         return output_message
@@ -168,3 +205,19 @@ class FileContentAnalyser(Plugin):
             return "medium"
         else:
             return "low"
+
+    def _mask_sensitive_value(self, value: str) -> str:
+        """Mask sensitive values showing only the last 3 characters.
+
+        Args:
+            value: The sensitive value to mask
+
+        Returns:
+            Masked string with only last 3 characters visible
+        """
+        if len(value) <= 3:
+            # If value is 3 chars or less, mask all but the last char
+            return "*" * (len(value) - 1) + value[-1] if value else ""
+        else:
+            # Mask all but the last 3 characters
+            return "*" * (len(value) - 3) + value[-3:]

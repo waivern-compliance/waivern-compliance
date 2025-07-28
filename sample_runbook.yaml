@@ -28,7 +28,7 @@ execution:
   - connector: "file_reader"
     plugin: "file_content_analyser"
     input_schema_name: "text"
-    output_schema_name: "content_analysis_result"
+    output_schema_name: "file_content_analysis_result"
     context:
       description: "Analyze file content for sensitive information"
       priority: "high"

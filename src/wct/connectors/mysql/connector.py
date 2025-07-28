@@ -23,7 +23,8 @@ class MySQLConnector(Connector):
     """MySQL database connector for extracting data and metadata.
 
     This connector connects to a MySQL database and can execute queries
-    to extract data for compliance analysis.
+    to extract data and transform it into supported WctSchema formats
+    for compliance analysis.
     """
 
     def __init__(
@@ -127,7 +128,7 @@ class MySQLConnector(Connector):
                 import pymysql
             except ImportError as e:
                 raise ConnectorExtractionError(
-                    "pymysql is required for MySQL connector. Install with: uv add pymysql"
+                    "pymysql is required for MySQL connector. Install with: uv sync --group mysql"
                 ) from e
 
             logger.debug(f"Connecting to MySQL at {self.host}:{self.port}")
@@ -267,9 +268,7 @@ class MySQLConnector(Connector):
             ) from e
 
     @override
-    def extract(
-        self, output_schema: WctSchema[dict[str, Any]] | None = None
-    ) -> Message:
+    def extract(self, output_schema: WctSchema[Any]) -> Message:
         """Extract data from MySQL database.
 
         This method extracts database metadata and can execute custom queries
@@ -324,7 +323,7 @@ class MySQLConnector(Connector):
             raise ConnectorExtractionError(f"MySQL extraction failed: {e}") from e
 
     def _transform_for_mysql_schema(
-        self, schema: WctSchema[dict[str, Any]], metadata: dict[str, Any]
+        self, schema: WctSchema[Any], metadata: dict[str, Any]
     ) -> dict[str, Any]:
         """Transform MySQL data for the 'mysql_database' schema.
 

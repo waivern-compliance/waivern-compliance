@@ -23,9 +23,9 @@
             "request": "launch",
             "module": "wct",
             "args": [
-                "run-analyses",
+                "run",
                 "sample_runbook.yaml",
-                "--verbose"
+                "--log-level", "DEBUG"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",

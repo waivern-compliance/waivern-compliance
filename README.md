@@ -95,7 +95,7 @@ execution:
   - connector: "file_reader"
     plugin: "content_analyser"
     input_schema_name: "text"
-    output_schema_name: "content_analysis_result"
+    output_schema_name: "file_content_analysis_result"
     context:
       description: "Analyze file content for sensitive information"
       priority: "high"
@@ -129,13 +129,13 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 - **`src/wct/schema.py`**: Unified WctSchema system for type-safe data flow
 - **`src/wct/schemas/`**: JSON schema definitions for validation
   - `text.json` - Text content schema
-  - `content_analysis_result.json` - Analysis output schema
+  - `file_content_analysis_result.json` - Analysis output schema
 - **`src/wct/connectors/`**: Schema-compliant data source connectors
   - `file/` - File connector producing "text" schema
   - `mysql/` - MySQL connector producing "mysql_database" schema
   - `wordpress/` - WordPress connector producing "wordpress_site" schema
 - **`src/wct/plugins/`**: Schema-aware analysis plugins
-  - `file_content_analyser/` - Consumes "text" schema, produces "content_analysis_result"
+  - `file_content_analyser/` - Consumes "text" schema, produces "file_content_analysis_result"
   - `personal_data_analyser/` - Personal data detection with schema validation
 - **`src/wct/rulesets/`**: Reusable compliance rules with schema support
 
@@ -297,7 +297,7 @@ src/wct/
 ├── schema.py             # Unified WctSchema system
 ├── schemas/              # JSON schema definitions
 │   ├── text.json                    # Text content schema
-│   └── content_analysis_result.json # Analysis result schema
+│   └── file_content_analysis_result.json # Analysis result schema
 ├── connectors/           # Schema-compliant data connectors
 │   ├── base.py          # Abstract connector with schema support
 │   ├── file/            # File connector (produces "text" schema)
@@ -311,7 +311,7 @@ src/wct/
 │       └── connector.py
 ├── plugins/             # Schema-aware analysis plugins
 │   ├── base.py          # Abstract plugin with schema validation
-│   ├── file_content_analyser/    # Text analysis (text → content_analysis_result)
+│   ├── file_content_analyser/    # Text analysis (text → file_content_analysis_result)
 │   │   ├── __init__.py
 │   │   └── plugin.py
 │   └── personal_data_analyser/   # Personal data detection with schemas

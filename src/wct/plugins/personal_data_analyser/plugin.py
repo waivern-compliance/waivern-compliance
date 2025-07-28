@@ -11,12 +11,11 @@ from wct.schema import WctSchema
 from wct.message import Message
 
 SUPPORTED_INPUT_SCHEMAS = [
-    WctSchema(name="text", type=dict[str, Any]),
-    WctSchema(name="file_content", type=dict[str, Any]),
+    WctSchema(name="text", type=WctSchema[Any]),
 ]
 
 SUPPORTED_OUTPUT_SCHEMAS = [
-    WctSchema(name="personal_data_findings", type=dict[str, Any]),
+    WctSchema(name="personal_data_findings", type=WctSchema[Any]),
 ]
 
 DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
