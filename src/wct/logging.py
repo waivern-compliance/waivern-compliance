@@ -2,6 +2,8 @@
 
 import logging
 import sys
+from rich.console import Console
+from rich.logging import RichHandler
 
 
 class ColoredFormatter(logging.Formatter):
@@ -27,7 +29,10 @@ class ColoredFormatter(logging.Formatter):
 
 
 def setup_logging(
-    level: str = "INFO", format_string: str | None = None, use_colors: bool = True
+    level: str = "INFO",
+    format_string: str | None = None,
+    use_colors: bool = True,
+    use_rich: bool = True,
 ) -> None:
     """Configure logging for the WCT system.
 
@@ -35,19 +40,10 @@ def setup_logging(
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         format_string: Custom format string for log messages
         use_colors: Whether to use colored output (default: True)
+        use_rich: Whether to use Rich formatting (default: True)
     """
     # Convert string level to logging constant
     numeric_level = getattr(logging, level.upper(), logging.INFO)
-
-    # Default format string
-    if format_string is None:
-        format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
-    # Create formatter
-    if use_colors and sys.stderr.isatty():  # Only use colors if output is a terminal
-        formatter = ColoredFormatter(format_string)
-    else:
-        formatter = logging.Formatter(format_string)
 
     # Configure root logger
     root_logger = logging.getLogger()
@@ -57,10 +53,32 @@ def setup_logging(
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
 
-    # Create console handler
-    console_handler = logging.StreamHandler(sys.stderr)
-    console_handler.setLevel(numeric_level)
-    console_handler.setFormatter(formatter)
+    # Create console handler with Rich or traditional formatting
+    if use_rich and sys.stderr.isatty():
+        console = Console(stderr=True, force_terminal=True)
+        console_handler = RichHandler(
+            console=console,
+            show_time=True,
+            show_path=False,
+            markup=True,
+            rich_tracebacks=True,
+            tracebacks_show_locals=False,
+        )
+        # Rich handler uses its own formatting
+        console_handler.setLevel(numeric_level)
+    else:
+        # Fallback to traditional colored formatter
+        if format_string is None:
+            format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+        if use_colors and sys.stderr.isatty():
+            formatter = ColoredFormatter(format_string)
+        else:
+            formatter = logging.Formatter(format_string)
+
+        console_handler = logging.StreamHandler(sys.stderr)
+        console_handler.setLevel(numeric_level)
+        console_handler.setFormatter(formatter)
 
     # Add handler to root logger
     root_logger.addHandler(console_handler)

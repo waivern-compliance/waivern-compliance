@@ -5,6 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.tree import Tree
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from wct.analysis import AnalysisResult
 from wct.connectors import BUILTIN_CONNECTORS
@@ -14,6 +19,7 @@ from wct.plugins import BUILTIN_PLUGINS
 from wct.runbook import Runbook, load_runbook, RunbookValidator
 
 logger = get_cli_logger()
+console = Console()
 
 
 def create_executor() -> Executor:
@@ -124,32 +130,78 @@ class OutputFormatter:
             results: List of analysis results to format
             verbose: Show detailed information
         """
+        # Create summary table
+        table = Table(
+            title="📊 Analysis Results Summary",
+            show_header=True,
+            header_style="bold magenta",
+        )
+        table.add_column("Plugin", style="cyan", no_wrap=True)
+        table.add_column("Status", style="green")
+        table.add_column("Input Schema", style="blue")
+        table.add_column("Output Schema", style="blue")
+
+        if verbose:
+            table.add_column("Metadata", style="yellow")
+
         for result in results:
-            status = "✓" if result.success else "✗"
-            print(f"{status} {result.plugin_name}")
+            status_icon = "✅" if result.success else "❌"
+            status_text = f"{status_icon} {'Success' if result.success else 'Failed'}"
 
-            if verbose or not result.success:
-                print(f"  Input Schema: {result.input_schema}")
-                print(f"  Output Schema: {result.output_schema}")
+            row = [
+                result.plugin_name,
+                status_text,
+                result.input_schema,
+                result.output_schema,
+            ]
 
-                if result.error_message and not result.success:
-                    print(f"  Error: {result.error_message}")
-                    logger.error(
-                        "Plugin %s failed: %s", result.plugin_name, result.error_message
-                    )
-                elif result.success:
+            if verbose:
+                metadata_str = str(result.metadata) if result.metadata else "None"
+                row.append(metadata_str)
+
+            table.add_row(*row)
+
+        console.print(table)
+
+        # Show detailed error information for failed results
+        failed_results = [r for r in results if not r.success]
+        if failed_results:
+            console.print("\n[bold red]❌ Failed Analysis Details:[/bold red]")
+            for result in failed_results:
+                error_panel = Panel(
+                    f"[red]{result.error_message}[/red]",
+                    title=f"Error in {result.plugin_name}",
+                    border_style="red",
+                )
+                console.print(error_panel)
+                logger.error(
+                    "Plugin %s failed: %s", result.plugin_name, result.error_message
+                )
+
+        # Show successful results in verbose mode
+        if verbose:
+            successful_results = [r for r in results if r.success]
+            if successful_results:
+                console.print(
+                    "\n[bold green]✅ Successful Analysis Details:[/bold green]"
+                )
+                for result in successful_results:
+                    # Create a tree structure for the data
+                    tree = Tree(f"[bold green]{result.plugin_name}[/bold green]")
+                    tree.add(f"Input Schema: [blue]{result.input_schema}[/blue]")
+                    tree.add(f"Output Schema: [blue]{result.output_schema}[/blue]")
+
+                    if result.metadata:
+                        metadata_branch = tree.add("[yellow]Metadata[/yellow]")
+                        for key, value in result.metadata.items():
+                            metadata_branch.add(f"{key}: {value}")
+
+                    console.print(tree)
                     logger.debug(
                         "Plugin %s succeeded with data: %s",
                         result.plugin_name,
                         result.data,
                     )
-
-                if result.metadata:
-                    print(f"  Metadata: {result.metadata}")
-                    logger.debug(
-                        "Plugin %s metadata: %s", result.plugin_name, result.metadata
-                    )
-                print()
 
     def format_component_list(
         self, components: dict[str, type], component_type: str
@@ -161,22 +213,38 @@ class OutputFormatter:
             component_type: Type name for display (e.g., "connectors", "plugins")
         """
         if components:
-            print(f"Available {component_type}:")
+            # Create a rich table for components
+            table = Table(
+                title=f"🔧 Available {component_type.title()}",
+                show_header=True,
+                header_style="bold magenta",
+            )
+            table.add_column("Name", style="cyan", no_wrap=True)
+            table.add_column("Description", style="white")
+            table.add_column("Class", style="dim")
+
             for name, component_class in components.items():
                 doc = component_class.__doc__ or "No description available"
                 # Take first line of docstring
                 description = doc.split("\n")[0].strip()
-                print(f"  - {name}: {description}")
+                class_name = f"{component_class.__module__}.{component_class.__name__}"
+
+                table.add_row(name, description, class_name)
                 logger.debug(
                     "%s %s: %s",
                     component_type.rstrip("s").title(),
                     name,
                     component_class,
                 )
+
+            console.print(table)
         else:
-            print(
-                f"No {component_type} available. Register {component_type} to see them here."
+            warning_panel = Panel(
+                f"[yellow]No {component_type} available. Register {component_type} to see them here.[/yellow]",
+                title="⚠️  Warning",
+                border_style="yellow",
             )
+            console.print(warning_panel)
             logger.warning("No %s registered in executor", component_type)
 
     def format_runbook_validation(self, runbook: Runbook) -> None:
@@ -185,13 +253,37 @@ class OutputFormatter:
         Args:
             runbook: Validated runbook YAML file
         """
-        print(f"✓ Runbook '{runbook.name}' is valid")
-        print(f"  Description: {runbook.description}")
-        print(f"  Connectors: {len(runbook.connectors)}")
-        print(f"  Plugins: {len(runbook.plugins)}")
-        print(
-            f"  Execution order: {', '.join(step.plugin for step in runbook.execution)}"
+        # Create success panel
+        success_content = f"""
+[green]✅ Runbook validation successful![/green]
+
+[bold]Name:[/bold] {runbook.name}
+[bold]Description:[/bold] {runbook.description}
+[bold]Connectors:[/bold] {len(runbook.connectors)}
+[bold]Plugins:[/bold] {len(runbook.plugins)}
+[bold]Execution Steps:[/bold] {len(runbook.execution)}
+        """.strip()
+
+        panel = Panel(
+            success_content, title="📋 Runbook Validation Results", border_style="green"
         )
+        console.print(panel)
+
+        # Show execution order as a tree
+        if runbook.execution:
+            execution_tree = Tree("[bold blue]🔄 Execution Order[/bold blue]")
+            for i, step in enumerate(runbook.execution, 1):
+                step_branch = execution_tree.add(
+                    f"[cyan]Step {i}: {step.plugin}[/cyan]"
+                )
+                step_branch.add(f"Connector: [yellow]{step.connector}[/yellow]")
+                step_branch.add(f"Input Schema: [blue]{step.input_schema_name}[/blue]")
+                if hasattr(step, "output_schema_name") and step.output_schema_name:
+                    step_branch.add(
+                        f"Output Schema: [blue]{step.output_schema_name}[/blue]"
+                    )
+
+            console.print(execution_tree)
 
         logger.debug(
             "Runbook details: connectors=%d, plugins=%d",
@@ -219,7 +311,11 @@ def handle_cli_error(error: Exception, message: str) -> None:
         message: User-friendly error message
     """
     logger.error("%s: %s", message, error)
-    print(f"✗ {message}: {error}")
+
+    error_panel = Panel(
+        f"[red]{error}[/red]", title=f"❌ {message}", border_style="red"
+    )
+    console.print(error_panel)
     raise typer.Exit(1) from error
 
 
@@ -236,14 +332,46 @@ def execute_runbook_command(
     """
     setup_cli_logging(log_level, verbose)
 
-    logger.info("Starting WCT analysis")
+    # Show startup banner
+    startup_panel = Panel(
+        f"[bold cyan]🚀 Starting WCT Analysis[/bold cyan]\n\n"
+        f"[bold]Runbook:[/bold] {runbook_path}\n"
+        f"[bold]Output Dir:[/bold] {output_dir}\n"
+        f"[bold]Log Level:[/bold] {log_level}{'(verbose)' if verbose else ''}",
+        title="🛡️  Waivern Compliance Tool",
+        border_style="cyan",
+    )
+    console.print(startup_panel)
 
     try:
-        runner = AnalysisRunner()
-        results = runner.run_analysis(runbook_path, output_dir, verbose)
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task("Initializing analysis...", total=None)
+
+            runner = AnalysisRunner()
+
+            progress.update(task, description="Running analysis...")
+            results = runner.run_analysis(runbook_path, output_dir, verbose)
+
+            progress.update(task, description="Formatting results...", completed=True)
 
         formatter = OutputFormatter()
         formatter.format_analysis_results(results, verbose)
+
+        # Show completion banner
+        completion_panel = Panel(
+            f"[bold green]✅ Analysis Complete[/bold green]\n\n"
+            f"[bold]Total Results:[/bold] {len(results)}\n"
+            f"[bold]Successful:[/bold] {sum(1 for r in results if r.success)}\n"
+            f"[bold]Failed:[/bold] {sum(1 for r in results if not r.success)}",
+            title="🎉 Completion Summary",
+            border_style="green",
+        )
+        console.print(completion_panel)
 
     except CLIError as e:
         handle_cli_error(e, "Analysis failed")
