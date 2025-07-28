@@ -19,6 +19,10 @@ class WordpressConnector(Connector):
     This connector reads data from a WordPress site and transforms it into the WCF schema format.
     """
 
+    def __init__(self) -> None:
+        """Initialize the WordPress connector with logging support."""
+        super().__init__()  # Initialize logger from base class
+
     @classmethod
     @override
     def get_name(cls) -> str:

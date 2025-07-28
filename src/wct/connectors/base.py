@@ -9,6 +9,7 @@ from typing_extensions import Self
 from wct.errors import WCTError
 from wct.schema import WctSchema
 from wct.message import Message
+from wct.logging import get_connector_logger
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +55,16 @@ class Connector(abc.ABC):
     and services. They extract metadata and information from the source and
     transform it into the WCF-defined schema.
     """
+
+    def __init__(self) -> None:
+        """Initialize the connector with a configured logger.
+
+        The logger is automatically set up using the connector's class name
+        in lowercase, following WCT logging conventions.
+        """
+        # Get the connector name from the class and set up logger
+        connector_name = self.get_name()
+        self.logger = get_connector_logger(connector_name)
 
     @classmethod
     @abc.abstractmethod
