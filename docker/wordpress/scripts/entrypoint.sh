@@ -95,6 +95,29 @@ wait_for_mysql() {
 
 # Function to install WordPress if not already installed
 install_wordpress() {
+    # First, download WordPress core files if they don't exist
+    if [ ! -f "/var/www/html/wp-config-sample.php" ]; then
+        echo_info "Downloading WordPress core files..."
+        wp --allow-root core download --skip-content
+        echo_info "WordPress core files downloaded successfully"
+    else
+        echo_info "WordPress core files already exist"
+    fi
+    
+    # Create wp-config.php if it doesn't exist
+    if [ ! -f "/var/www/html/wp-config.php" ]; then
+        echo_info "Creating wp-config.php..."
+        wp --allow-root config create \
+            --dbname="$WORDPRESS_DB_NAME" \
+            --dbuser="$WORDPRESS_DB_USER" \
+            --dbpass="$WORDPRESS_DB_PASSWORD" \
+            --dbhost="$WORDPRESS_DB_HOST" \
+            --skip-check
+        echo_info "wp-config.php created successfully"
+    else
+        echo_info "wp-config.php already exists"
+    fi
+    
     if ! wp --allow-root core is-installed 2>/dev/null; then
         echo_info "Installing WordPress..."
         
