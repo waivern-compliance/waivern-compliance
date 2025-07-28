@@ -1,6 +1,5 @@
 """File reader connector for WCT."""
 
-import logging
 from pathlib import Path
 from collections.abc import Generator
 from typing import Any
@@ -14,8 +13,6 @@ from wct.connectors.base import (
 )
 from wct.schema import WctSchema
 from wct.message import Message
-
-logger = logging.getLogger(__name__)
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "text": WctSchema(name="text", type=dict[str, Any]),
@@ -44,6 +41,7 @@ class FileConnector(Connector):
             encoding: Text encoding to use
             errors: How to handle encoding errors
         """
+        super().__init__()  # Initialize logger from base class
         self.file_path = Path(file_path)
         self.chunk_size = chunk_size
         self.encoding = encoding
@@ -121,7 +119,7 @@ class FileConnector(Connector):
             Dictionary containing file content and metadata in WCF schema format
         """
         try:
-            logger.info(f"Reading file: {self.file_path}")
+            self.logger.info(f"Reading file: {self.file_path}")
 
             # Check if a supported schema is provided
             if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
@@ -130,7 +128,7 @@ class FileConnector(Connector):
                 )
 
             if not output_schema:
-                logger.warning("No schema provided, using default text schema")
+                self.logger.warning("No schema provided, using default text schema")
                 raise ConnectorConfigError(
                     "No schema provided for data extraction. Please specify a valid WCT schema."
                 )
@@ -140,7 +138,7 @@ class FileConnector(Connector):
 
             # Read file content efficiently
             file_content = self._read_file_content()
-            logger.debug(f"File {self.file_path} read successfully")
+            self.logger.debug(f"File {self.file_path} read successfully")
 
             # Transform content based on schema type
             wct_schema_transformed_content = self._transform_for_schema(
@@ -158,7 +156,7 @@ class FileConnector(Connector):
             return message
 
         except Exception as e:
-            logger.error(f"Failed to extract from file {self.file_path}: {e}")
+            self.logger.error(f"Failed to extract from file {self.file_path}: {e}")
             raise ConnectorExtractionError(
                 f"Failed to read file {self.file_path}: {e}"
             ) from e
@@ -220,7 +218,9 @@ class FileConnector(Connector):
                 )
 
             # For large files, read in chunks
-            logger.debug(f"Reading large file in chunks of {self.chunk_size} bytes")
+            self.logger.debug(
+                f"Reading large file in chunks of {self.chunk_size} bytes"
+            )
             content_parts = []
 
             with open(
@@ -235,13 +235,13 @@ class FileConnector(Connector):
             return "".join(content_parts)
 
         except UnicodeDecodeError as e:
-            logger.warning(f"Unicode decode error in {self.file_path}: {e}")
+            self.logger.warning(f"Unicode decode error in {self.file_path}: {e}")
             # Try reading as binary and decode with error handling
             return self._read_as_binary()
 
     def _read_as_binary(self) -> str:
         """Fallback method to read file as binary when text decoding fails."""
-        logger.debug(f"Reading {self.file_path} as binary with error handling")
+        self.logger.debug(f"Reading {self.file_path} as binary with error handling")
 
         content_parts = []
         with open(self.file_path, "rb") as f:
@@ -264,7 +264,7 @@ class FileConnector(Connector):
         Yields:
             String chunks from the file
         """
-        logger.debug(f"Streaming file content from {self.file_path}")
+        self.logger.debug(f"Streaming file content from {self.file_path}")
 
         try:
             with open(

@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 import typer
 
 from wct.analysis import AnalysisResult
 from wct.connectors import BUILTIN_CONNECTORS
-from wct.logging import setup_logging
+from wct.logging import setup_logging, get_cli_logger
 from wct.executor import Executor
 from wct.plugins import BUILTIN_PLUGINS
 from wct.runbook import Runbook, load_runbook, RunbookValidator
 
-logger = logging.getLogger(__name__)
+logger = get_cli_logger()
 
 
 def create_executor() -> Executor:
@@ -237,7 +236,7 @@ def execute_runbook_command(
     """
     setup_cli_logging(log_level, verbose)
 
-    logging.info("Starting WCT analysis")
+    logger.info("Starting WCT analysis")
 
     try:
         runner = AnalysisRunner()
@@ -256,6 +255,7 @@ def list_connectors_command(log_level: str = "INFO") -> None:
     Args:
         log_level: Logging level
     """
+    setup_cli_logging(log_level)
 
     try:
         lister = ComponentLister()
@@ -274,6 +274,7 @@ def list_plugins_command(log_level: str = "INFO") -> None:
     Args:
         log_level: Logging level
     """
+    setup_cli_logging(log_level)
 
     try:
         lister = ComponentLister()

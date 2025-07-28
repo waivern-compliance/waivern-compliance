@@ -1,4 +1,3 @@
-import logging
 from typing import Any
 from contextlib import contextmanager
 
@@ -11,8 +10,6 @@ from wct.connectors.base import (
 )
 from wct.schema import WctSchema
 from wct.message import Message
-
-logger = logging.getLogger(__name__)
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "mysql_database": WctSchema(name="mysql_database", type=dict[str, Any]),
@@ -50,6 +47,7 @@ class MySQLConnector(Connector):
             autocommit: Enable autocommit mode (default: True)
             connect_timeout: Connection timeout in seconds (default: 10)
         """
+        super().__init__()  # Initialize logger from base class
         self.host = host
         self.port = port
         self.user = user
@@ -131,7 +129,7 @@ class MySQLConnector(Connector):
                     "pymysql is required for MySQL connector. Install with: uv sync --group mysql"
                 ) from e
 
-            logger.debug(f"Connecting to MySQL at {self.host}:{self.port}")
+            self.logger.debug(f"Connecting to MySQL at {self.host}:{self.port}")
 
             connection = pymysql.connect(
                 host=self.host,
@@ -144,16 +142,16 @@ class MySQLConnector(Connector):
                 connect_timeout=self.connect_timeout,
             )
 
-            logger.debug("MySQL connection established")
+            self.logger.debug("MySQL connection established")
             yield connection
 
         except Exception as e:
-            logger.error(f"Failed to connect to MySQL: {e}")
+            self.logger.error(f"Failed to connect to MySQL: {e}")
             raise ConnectorExtractionError(f"MySQL connection failed: {e}") from e
         finally:
             if connection:
                 connection.close()
-                logger.debug("MySQL connection closed")
+                self.logger.debug("MySQL connection closed")
 
     def execute_query(
         self, query: str, params: tuple[Any, ...] | None = None
@@ -173,7 +171,7 @@ class MySQLConnector(Connector):
         try:
             with self.get_connection() as connection:
                 with connection.cursor() as cursor:
-                    logger.debug(f"Executing query: {query}")
+                    self.logger.debug(f"Executing query: {query}")
                     if params:
                         cursor.execute(query, params)
                     else:
@@ -195,11 +193,11 @@ class MySQLConnector(Connector):
                         row_dict = dict(zip(columns, row))
                         results.append(row_dict)
 
-                    logger.debug(f"Query returned {len(results)} rows")
+                    self.logger.debug(f"Query returned {len(results)} rows")
                     return results
 
         except Exception as e:
-            logger.error(f"Query execution failed: {e}")
+            self.logger.error(f"Query execution failed: {e}")
             raise ConnectorExtractionError(f"Query execution failed: {e}") from e
 
     def get_database_metadata(self) -> dict[str, Any]:
@@ -262,7 +260,7 @@ class MySQLConnector(Connector):
                 return metadata
 
         except Exception as e:
-            logger.error(f"Failed to extract database metadata: {e}")
+            self.logger.error(f"Failed to extract database metadata: {e}")
             raise ConnectorExtractionError(
                 f"Database metadata extraction failed: {e}"
             ) from e
@@ -281,7 +279,7 @@ class MySQLConnector(Connector):
             Message containing extracted data in WCF schema format
         """
         try:
-            logger.info(f"Extracting data from MySQL database: {self.database}")
+            self.logger.info(f"Extracting data from MySQL database: {self.database}")
 
             # Check if a supported schema is provided
             if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
@@ -290,7 +288,7 @@ class MySQLConnector(Connector):
                 )
 
             if not output_schema:
-                logger.warning(
+                self.logger.warning(
                     "No schema provided, using default mysql_database schema"
                 )
                 raise ConnectorConfigError(
@@ -299,7 +297,7 @@ class MySQLConnector(Connector):
 
             # Test connection first
             with self.get_connection():
-                logger.debug("MySQL connection test successful")
+                self.logger.debug("MySQL connection test successful")
 
             # Extract database metadata
             metadata = self.get_database_metadata()
@@ -319,7 +317,7 @@ class MySQLConnector(Connector):
             return message
 
         except Exception as e:
-            logger.error(f"MySQL extraction failed: {e}")
+            self.logger.error(f"MySQL extraction failed: {e}")
             raise ConnectorExtractionError(f"MySQL extraction failed: {e}") from e
 
     def _transform_for_mysql_schema(

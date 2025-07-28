@@ -94,6 +94,11 @@ def get_plugin_logger(plugin_name: str) -> logging.Logger:
     return get_logger(f"wct.plugins.{plugin_name}")
 
 
+def get_ruleset_logger(ruleset_name: str) -> logging.Logger:
+    """Get logger for ruleset components."""
+    return get_logger(f"wct.rulesets.{ruleset_name}")
+
+
 def get_cli_logger() -> logging.Logger:
     """Get logger for CLI components."""
     return get_logger("wct.cli")
