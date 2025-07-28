@@ -13,6 +13,7 @@ from wct.message import Message
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "mysql_database": WctSchema(name="mysql_database", type=dict[str, Any]),
+    "text": WctSchema(name="text", type=dict[str, Any]),
 }
 
 
@@ -265,6 +266,27 @@ class MySQLConnector(Connector):
                 f"Database metadata extraction failed: {e}"
             ) from e
 
+    def get_table_data(
+        self, table_name: str, limit: int = 1000
+    ) -> list[dict[str, Any]]:
+        """Get actual data from a specific table.
+
+        Args:
+            table_name: Name of the table to extract data from
+            limit: Maximum number of rows to fetch per table (default: 1000)
+
+        Returns:
+            List of dictionaries representing table rows
+        """
+        try:
+            # Use parameterized query to prevent SQL injection
+            # Table name is validated to be from information_schema.TABLES
+            query = "SELECT * FROM `{}` LIMIT %s".format(table_name)  # nosec B608
+            return self.execute_query(query, (limit,))
+        except Exception as e:
+            self.logger.warning(f"Failed to extract data from table {table_name}: {e}")
+            return []
+
     @override
     def extract(self, output_schema: WctSchema[Any]) -> Message:
         """Extract data from MySQL database.
@@ -302,8 +324,19 @@ class MySQLConnector(Connector):
             # Extract database metadata
             metadata = self.get_database_metadata()
 
-            # Transform data to schema format
-            extracted_data = self._transform_for_mysql_schema(output_schema, metadata)
+            # Transform data based on requested schema
+            if output_schema.name == "mysql_database":
+                extracted_data = self._transform_for_mysql_schema(
+                    output_schema, metadata
+                )
+            elif output_schema.name == "text":
+                extracted_data = self._transform_for_text_schema(
+                    output_schema, metadata
+                )
+            else:
+                raise ConnectorConfigError(
+                    f"Unsupported schema transformation: {output_schema.name}"
+                )
 
             # Create and validate message
             message = Message(
@@ -344,4 +377,166 @@ class MySQLConnector(Connector):
             },
             metadata=metadata,
             extraction_timestamp=None,  # Could add timestamp here
+        )
+
+    def _transform_for_text_schema(
+        self, schema: WctSchema[Any], metadata: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Transform MySQL data for the 'text' schema.
+
+        This method extracts database content into granular text data items for compliance analysis:
+        1. Each table name as a separate data item
+        2. Each column name as a separate data item
+        3. Each cell content as a separate data item
+        4. Detailed metadata for complete traceability
+        5. Database schema attached to top-level metadata
+
+        Design Rationale:
+        - Granular extraction enables precise personal data identification
+        - Each data item can be traced back to exact database location
+        - Supports compliance requirements for data mapping and audit trails
+        - Column and table names may contain sensitive information patterns
+
+        Args:
+            schema: The text schema
+            metadata: Database metadata including table/column structure
+
+        Returns:
+            Text schema compliant content with granular data items
+        """
+        data_items = []
+        database_source = f"{self.host}:{self.port}/{self.database}"
+
+        # Extract table names as data items
+        for table_info in metadata.get("tables", []):
+            table_name = table_info["name"]
+
+            # Add table name as a data item
+            data_items.append(
+                {
+                    "content": table_name,
+                    "metadata": {
+                        "source": "mysql_table_name",
+                        "description": f"Table name from database {self.database}",
+                        "data_type": "table_name",
+                        "database": self.database,
+                        "table": table_name,
+                        "host": self.host,
+                        "port": self.port,
+                        "table_type": table_info.get("type"),
+                        "table_comment": table_info.get("comment"),
+                        "estimated_rows": table_info.get("estimated_rows"),
+                    },
+                }
+            )
+
+            # Extract column names as data items
+            for column_info in table_info.get("columns", []):
+                column_name = column_info["COLUMN_NAME"]
+
+                data_items.append(
+                    {
+                        "content": column_name,
+                        "metadata": {
+                            "source": "mysql_column_name",
+                            "description": f"Column name from table {table_name} in database {self.database}",
+                            "data_type": "column_name",
+                            "database": self.database,
+                            "table": table_name,
+                            "column": column_name,
+                            "host": self.host,
+                            "port": self.port,
+                            "sql_data_type": column_info.get("DATA_TYPE"),
+                            "is_nullable": column_info.get("IS_NULLABLE"),
+                            "column_default": column_info.get("COLUMN_DEFAULT"),
+                            "column_comment": column_info.get("COLUMN_COMMENT"),
+                            "column_key": column_info.get("COLUMN_KEY"),
+                            "extra": column_info.get("EXTRA"),
+                        },
+                    }
+                )
+
+            # Extract actual cell data from the table
+            try:
+                table_data = self.get_table_data(table_name)
+
+                for row_index, row in enumerate(table_data):
+                    for column_name, cell_value in row.items():
+                        # Only extract non-null, non-empty values
+                        if cell_value is not None and str(cell_value).strip():
+                            data_items.append(
+                                {
+                                    "content": str(cell_value),
+                                    "metadata": {
+                                        "source": "mysql_cell_data",
+                                        "description": f"Cell data from {table_name}.{column_name} row {row_index + 1}",
+                                        "data_type": "cell_content",
+                                        "database": self.database,
+                                        "table": table_name,
+                                        "column": column_name,
+                                        "row_index": row_index + 1,
+                                        "host": self.host,
+                                        "port": self.port,
+                                        # Include column metadata for context
+                                        "sql_data_type": next(
+                                            (
+                                                col.get("DATA_TYPE")
+                                                for col in table_info.get("columns", [])
+                                                if col.get("COLUMN_NAME") == column_name
+                                            ),
+                                            "unknown",
+                                        ),
+                                    },
+                                }
+                            )
+
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to extract data from table {table_name}: {e}"
+                )
+                continue
+
+        return schema.type(
+            schemaVersion="1.0.0",
+            name=f"mysql_text_from_{self.database}",
+            description=f"Text content extracted from MySQL database: {self.database}",
+            contentEncoding="utf-8",
+            source=database_source,
+            # Top-level metadata includes complete database schema for reference
+            metadata={
+                "extraction_type": "mysql_to_text",
+                "connection_info": {
+                    "host": self.host,
+                    "port": self.port,
+                    "database": self.database,
+                    "user": self.user,
+                },
+                "database_schema": metadata,  # Complete database schema for traceability
+                "total_data_items": len(data_items),
+                "extraction_summary": {
+                    "tables_processed": len(metadata.get("tables", [])),
+                    "table_names_extracted": len(
+                        [
+                            item
+                            for item in data_items
+                            if item["metadata"]["data_type"] == "table_name"
+                        ]
+                    ),
+                    "column_names_extracted": len(
+                        [
+                            item
+                            for item in data_items
+                            if item["metadata"]["data_type"] == "column_name"
+                        ]
+                    ),
+                    "cell_values_extracted": len(
+                        [
+                            item
+                            for item in data_items
+                            if item["metadata"]["data_type"] == "cell_content"
+                        ]
+                    ),
+                },
+            },
+            data=data_items,
         )
