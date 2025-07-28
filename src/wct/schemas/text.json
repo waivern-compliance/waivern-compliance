@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "type": "object",
   "properties": {
+    "schemaVersion": {
+      "type": "string"
+    },
     "name": {
-      "type": "string",
-      "const": "text"
+      "type": "string"
     },
     "description": {
       "type": "string"
@@ -20,18 +22,22 @@
       "type": "object",
       "additionalProperties": true
     },
-    "content": {
+    "data": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "text": {
+          "content": {
             "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
           }
         },
-        "required": ["text"]
+        "required": ["content"]
       }
     }
   },
-  "required": ["name", "description", "contentEncoding", "content"]
+  "required": ["schemaVersion", "name", "data"]
 }

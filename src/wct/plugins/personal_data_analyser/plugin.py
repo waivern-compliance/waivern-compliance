@@ -107,24 +107,47 @@ class PersonalDataAnalyser(Plugin):
         # Extract content from message
         data = message.content
 
-        # For personal data analysis, we expect text content
-        # The content might be a direct string or wrapped in schema structure
+        # Extract and process content based on input format
+        # Personal data analysis requires granular tracking for compliance purposes
         if isinstance(data, dict):
-            if "content" in data and isinstance(data["content"], list):
-                # Handle text schema format from file connector
-                content_array = data["content"]
-                content = "\n".join(item.get("text", "") for item in content_array)
+            if "data" in data and isinstance(data["data"], list):
+                # DESIGN DECISION: Analyze each data array item independently
+                #
+                # For personal data compliance (GDPR, CCPA), we need granular tracking
+                # of where specific personal data types are found. This enables:
+                # - Precise data mapping for compliance documentation
+                # - Granular consent management
+                # - Targeted data deletion/modification
+                # - Detailed audit trails for regulatory requirements
+                #
+                # Each item in the data array represents a distinct content piece
+                # that should be analyzed and tracked separately for compliance.
+
+                data_array = data["data"]
                 source = data.get("source", "unknown")
+                all_findings = []
+
+                for item in data_array:
+                    content = item.get("content", "")
+                    item_metadata = item.get("metadata", {})
+                    # Use item-specific source for granular tracking
+                    item_source = item_metadata.get("source", source)
+
+                    # Analyze each content piece independently for compliance tracking
+                    item_findings = self._analyze_content(content, item_source)
+                    all_findings.extend(item_findings)
+
+                findings = all_findings
             else:
-                # Handle direct content
+                # Handle direct content format (legacy or simplified input)
                 content = data.get("content", "")
                 source = data.get("source", "unknown")
+                findings = self._analyze_content(content, source)
         else:
-            # Handle direct string content
+            # Handle direct string content (fallback case)
             content = str(data)
             source = "unknown"
-
-        findings = self._analyze_content(content, source)
+            findings = self._analyze_content(content, source)
 
         # Create result data
         result_data = {

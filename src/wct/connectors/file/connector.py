@@ -184,26 +184,56 @@ class FileConnector(Connector):
     ) -> dict[str, Any]:
         """Transform file content for the 'text' schema.
 
+        The text schema follows a structured format that supports multiple content pieces
+        for flexibility, though files typically contain a single content block.
+
+        Schema Structure:
+        - schemaVersion: Version identifier for schema compatibility
+        - name: Human-readable identifier for this content source
+        - description: Brief description of the content
+        - contentEncoding: Text encoding used (e.g., utf-8)
+        - source: Original file path for traceability
+        - metadata: File-level metadata (timestamps, permissions, size)
+        - data: Array of content pieces, each with:
+          - content: The actual text content
+          - metadata: Item-level metadata for granular tracking
+
+        Design Note: Files are treated as single content blocks in the data array,
+        but the array structure allows for future extensibility (e.g., multi-section files).
+
         Args:
-            schema: The text schema
-            file_content: Raw file content
-            stat: File stat information
+            schema: The text schema to transform content for
+            file_content: Raw file content as a single string
+            stat: File stat information from os.stat()
 
         Returns:
-            Text schema compliant content
+            Dictionary conforming to the text schema structure
         """
         return schema.type(
-            name=schema.name,
+            schemaVersion="1.0.0",
+            name=f"text_from_{self.file_path.name}",
             description=f"Content from {self.file_path.name}",
             contentEncoding=self.encoding,
             source=str(self.file_path),
+            # File-level metadata for overall file information
             metadata={
                 "modified_time": stat.st_mtime,
                 "created_time": stat.st_ctime,
                 "permissions": oct(stat.st_mode)[-3:],
                 "size_bytes": stat.st_size,
             },
-            content=[{"text": file_content}],
+            # Data array with single item for file content
+            # Note: Array structure supports future multi-section file processing
+            data=[
+                {
+                    "content": file_content,
+                    # Item-level metadata for granular source tracking
+                    "metadata": {
+                        "source": f"file_{self.file_path.name}",
+                        "description": f"Full content of {self.file_path.name}",
+                    },
+                }
+            ],
         )
 
     def _read_file_content(self) -> str:

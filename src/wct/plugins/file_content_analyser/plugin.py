@@ -81,13 +81,26 @@ class FileContentAnalyser(Plugin):
         # Extract content from the message's content structure
         payload_content = message.content
 
-        # Get the actual text content from the schema structure
-        content_array = payload_content.get("content", [])
-        if not content_array:
+        # Get the actual text content from the text schema structure
+        data_array = payload_content.get("data", [])
+        if not data_array:
             text_content = ""
         else:
-            # Combine all text content from the array (usually just one item)
-            text_content = "\n".join(item.get("text", "") for item in content_array)
+            # DESIGN DECISION: Combine all content pieces for holistic file analysis
+            #
+            # The file content analyser is designed to provide an overall security assessment
+            # of the entire file, looking for patterns and calculating risk scores across
+            # the complete document. This differs from analyzers that need granular tracking.
+            #
+            # Rationale for combining content:
+            # - Patterns may span across multiple content pieces
+            # - Risk scoring should consider the entire file context
+            # - File-level security assessment is the primary goal
+            # - Simpler analysis logic for overall file insights
+            #
+            # For new developers: If you need piece-by-piece analysis, consider creating
+            # a separate plugin or see PersonalDataAnalyser for reference implementation.
+            text_content = "\n".join(item.get("content", "") for item in data_array)
 
         # Get metadata
         file_path = payload_content.get("source", "unknown")

@@ -49,3 +49,11 @@ execution:
       description: "Analyze file content for personal data"
       priority: "high"
       compliance_frameworks: ["GDPR", "CCPA"]
+  # - connector: "my_mysql_db"
+  #   plugin: "personal_data_analyser"
+  #   input_schema_name: "text"
+  #   output_schema_name: "personal_data_analysis_findings"
+  #   context:
+  #     description: "Analyse MySQL database for personal data"
+  #     priority: "high"
+  #     compliance_frameworks: ["GDPR", "CCPA"]
