@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0.0",
+  "findings": [
+    {
+      "type": "email",
+      "risk_level": "medium",
+      "special_category": "N",
+      "matched_pattern": "john.doe@company.com",
+      "source": "employee_data.csv"
+    },
+    {
+      "type": "phone_number",
+      "risk_level": "low",
+      "special_category": "N",
+      "matched_pattern": "+1-555-123-4567",
+      "source": "employee_data.csv"
+    },
+    {
+      "type": "health_condition",
+      "risk_level": "high",
+      "special_category": "Y",
+      "matched_pattern": "diabetes",
+      "source": "medical_records.txt"
+    },
+    {
+      "type": "ethnic_origin",
+      "risk_level": "high",
+      "special_category": "Y",
+      "matched_pattern": "ethnicity: Hispanic",
+      "source": "hr_forms.pdf"
+    },
+    {
+      "type": "ssn",
+      "risk_level": "high",
+      "special_category": "N",
+      "matched_pattern": "123-45-6789",
+      "source": "tax_documents.xlsx"
+    },
+    {
+      "type": "credit_card",
+      "risk_level": "medium",
+      "special_category": "N",
+      "matched_pattern": "4532-****-****-1234",
+      "source": "payment_logs.txt"
+    }
+  ],
+  "summary": {
+    "total_findings": 6,
+    "high_risk_count": 3,
+    "special_category_count": 2
+  }
+}

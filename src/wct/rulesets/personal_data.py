@@ -14,22 +14,22 @@ PERSONAL_DATA_PATTERNS: Final = {
             "title",
             "account_id",
         ],
-        "risk_level": "normal",
+        "risk_level": "medium",
         "special_category": "N",
     },
     "account_data": {
         "patterns": ["transaction", "subscription", "purchase", "cancellation"],
-        "risk_level": "normal",
+        "risk_level": "medium",
         "special_category": "N",
     },
     "payment_data": {
         "patterns": ["payment_method", "invoice", "receipt"],
-        "risk_level": "normal",
+        "risk_level": "medium",
         "special_category": "N",
     },
     "financial_data": {
         "patterns": ["credit_rating", "payment_history"],
-        "risk_level": "normal",
+        "risk_level": "medium",
         "special_category": "N",
     },
     "behavioral_event_data": {
@@ -41,7 +41,7 @@ PERSONAL_DATA_PATTERNS: Final = {
             "timestamp",
             "app_usage",
         ],
-        "risk_level": "normal",
+        "risk_level": "medium",
         "special_category": "N",
     },
     "technical_device_and_network_data": {
@@ -53,7 +53,7 @@ PERSONAL_DATA_PATTERNS: Final = {
             "screen",
             "network",
         ],
-        "risk_level": "normal",
+        "risk_level": "medium",
         "special_category": "N",
     },
     "inferred_profile_data": {
@@ -64,22 +64,22 @@ PERSONAL_DATA_PATTERNS: Final = {
             "profiling",
             "machine_learning",
         ],
-        "risk_level": "normal",
+        "risk_level": "medium",
         "special_category": "N",
     },
     "User_enriched_profile_data": {
         "patterns": ["interests", "preferences", "declared", "user_provided"],
-        "risk_level": "normal",
+        "risk_level": "medium",
         "special_category": "N",
     },
     "location_data": {
         "patterns": ["country", "region", "city", "suburb"],
-        "risk_level": "normal",
+        "risk_level": "medium",
         "special_category": "N",
     },
     "user_generated_content": {
         "patterns": ["comment", "review", "feedback", "message"],
-        "risk_level": "normal",
+        "risk_level": "medium",
         "special_category": "N",
     },
     "accurate_location": {

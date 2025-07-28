@@ -23,6 +23,10 @@ plugins:
     metadata:
       priority: "high"
       compliance_frameworks: ["GDPR", "CCPA"]
+  - name: "personal_data_analyser"
+    type: "personal_data_analyser"
+    metadata:
+      compliance_frameworks: ["GDPR", "CCPA"]
 
 execution:
   - connector: "file_reader"
@@ -37,3 +41,11 @@ execution:
         - "email_detection"
         - "password_detection"
         - "api_key_detection"
+  - connector: "file_reader"
+    plugin: "personal_data_analyser"
+    input_schema_name: "text"
+    output_schema_name: "personal_data_analysis_findings"
+    context:
+      description: "Analyze file content for personal data"
+      priority: "high"
+      compliance_frameworks: ["GDPR", "CCPA"]

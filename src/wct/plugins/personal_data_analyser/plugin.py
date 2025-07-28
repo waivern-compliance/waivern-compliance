@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Any, Literal
+from pprint import pformat
 
 from typing_extensions import Self, override
 
@@ -11,11 +12,11 @@ from wct.schema import WctSchema
 from wct.message import Message
 
 SUPPORTED_INPUT_SCHEMAS = [
-    WctSchema(name="text", type=WctSchema[Any]),
+    WctSchema(name="text", type=dict[str, Any]),
 ]
 
 SUPPORTED_OUTPUT_SCHEMAS = [
-    WctSchema(name="personal_data_findings", type=WctSchema[Any]),
+    WctSchema(name="personal_data_analysis_findings", type=dict[str, Any]),
 ]
 
 DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
@@ -29,7 +30,8 @@ class PersonalDataPattern:
     name: str
     patterns: list[str]
     risk_level: Literal["low", "medium", "high"]
-    is_special_category: bool
+    is_special_category: bool | None = None
+    """Indicates if this pattern is a special category under GDPR."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,9 +40,12 @@ class PersonalDataFinding:
 
     type: str
     risk_level: str
-    special_category: str
+    special_category: str | None
+    """Indicates if this finding is a special category under GDPR."""
     matched_pattern: str
     source: str | None
+    evidence: list[str] | None = None
+    """Evidence found in the content that matches this finding."""
 
 
 class PersonalDataAnalyser(Plugin):
@@ -52,6 +57,7 @@ class PersonalDataAnalyser(Plugin):
         Args:
             ruleset_name: Name of the ruleset to use for analysis
         """
+        super().__init__()  # Initialize logger from base class
         self.ruleset_name = ruleset_name
         self._patterns = None
 
@@ -149,6 +155,10 @@ class PersonalDataAnalyser(Plugin):
 
         # Validate the output message against the output schema
         output_message.validate()
+
+        self.logger.debug(
+            f"PersonalDataAnalyser processed {source} with findings:\n{pformat(findings)}"
+        )
 
         # Return new Message with analysis results
         return output_message

@@ -10,6 +10,7 @@ from typing_extensions import Self
 
 from wct.message import Message
 from wct.schema import WctSchema, SchemaValidationError
+from wct.logging import get_plugin_logger
 
 _PluginInputSchema = TypeVar("_PluginInputSchema")
 _PluginOutputSchema = TypeVar("_PluginOutputSchema")
@@ -40,6 +41,16 @@ class Plugin(abc.ABC):
     in a runbook, where the output of one plugin can be used as input to another
     plugin, as long as the schemas match.
     """
+
+    def __init__(self) -> None:
+        """Initialize the plugin with a configured logger.
+
+        The logger is automatically set up using the plugin's class name
+        in lowercase, following WCT logging conventions.
+        """
+        # Get the plugin name from the class and set up logger
+        plugin_name = self.get_name()
+        self.logger = get_plugin_logger(plugin_name)
 
     @classmethod
     @abc.abstractmethod

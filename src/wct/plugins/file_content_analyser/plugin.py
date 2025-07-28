@@ -1,6 +1,5 @@
 """Content analysis plugin for detecting sensitive information."""
 
-import logging
 import re
 from typing import Any
 from pprint import pformat
@@ -31,6 +30,7 @@ class FileContentAnalyser(Plugin):
     """
 
     def __init__(self, sensitivity_level: str = "medium"):
+        super().__init__()  # Initialize logger from base class
         self.sensitivity_level = sensitivity_level
 
         # Define patterns for different types of sensitive data
@@ -167,8 +167,8 @@ class FileContentAnalyser(Plugin):
         # Validate the output message against the output schema
         output_message.validate()
 
-        logging.debug(
-            f"FileContentAnalyser processed {file_path} with findings: {pformat(findings)}"
+        self.logger.debug(
+            f"FileContentAnalyser processed {file_path} with findings:\n{pformat(findings)}"
         )
 
         # Return new Message with analysis results
