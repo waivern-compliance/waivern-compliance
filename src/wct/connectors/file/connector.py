@@ -119,8 +119,6 @@ class FileConnector(Connector):
             Dictionary containing file content and metadata in WCF schema format
         """
         try:
-            self.logger.info(f"Reading file: {self.file_path}")
-
             # Check if a supported schema is provided
             if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
                 raise ConnectorConfigError(

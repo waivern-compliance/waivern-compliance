@@ -77,8 +77,6 @@ class AnalysisRunner:
         Raises:
             CLIError: If analysis fails
         """
-        logger.debug("Loading runbook: %s", runbook_path)
-
         try:
             results = self.executor.execute_runbook(runbook_path)
             logger.info("Analysis completed with %d results", len(results))

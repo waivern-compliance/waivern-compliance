@@ -1,4 +1,4 @@
-name: "Sample Runbook: File Content Analysis"
+name: "Sample Runbook"
 description: "Analyse a file for potentially sensitive information"
 
 connectors:
