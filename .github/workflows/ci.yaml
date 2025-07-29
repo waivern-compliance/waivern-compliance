@@ -11,9 +11,19 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  setup:
-    name: Setup
+  checks:
+    name: Python check ${{ matrix.check.name }}
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        check:
+          - name: linting
+            run: uv run --dev ruff check
+          - name: formatting
+            run: uv run --dev ruff format --check
+          - name: types
+            run: uv run --dev mypy
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -23,34 +33,8 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install dependencies
-        run: uv sync --dev
-
-  format:
-    name: Check formatting
-    runs-on: ubuntu-latest
-    needs: setup
-
-    steps:
-      - name: Check formatting
-        run: uv run --dev ruff format --check
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    needs: setup
-
-    steps:
-      - name: Lint
-        run: uv run --dev ruff check
-
-  type-check:
-    name: Type check
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - name: Type check
-        run: uv run --dev mypy
+      - name: Run ${{ matrix.check.name }} checks
+        run: ${{ matrix.check.run }}
 
   test:
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.runner }}
