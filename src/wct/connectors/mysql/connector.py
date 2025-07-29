@@ -1,3 +1,4 @@
+import os
 from typing import Any
 from contextlib import contextmanager
 
@@ -49,6 +50,7 @@ class MySQLConnector(Connector):
             autocommit: Enable autocommit mode (default: True)
             connect_timeout: Connection timeout in seconds (default: 10)
             max_rows_per_table: Maximum number of rows to extract per table (default: 10)
+            max_rows_per_table: Maximum number of rows to extract per table (default: 10)
         """
         super().__init__()  # Initialize logger from base class
         self.host = host
@@ -59,6 +61,7 @@ class MySQLConnector(Connector):
         self.charset = charset
         self.autocommit = autocommit
         self.connect_timeout = connect_timeout
+        self.max_rows_per_table = max_rows_per_table
         self.max_rows_per_table = max_rows_per_table
         self._connection = None
 
@@ -80,32 +83,56 @@ class MySQLConnector(Connector):
         """Create connector from configuration properties.
 
         Required properties:
-        - host: MySQL server hostname
-        - user: Database username
+        - host: MySQL server hostname (or MYSQL_HOST env var)
+        - user: Database username (or MYSQL_USER env var)
 
         Optional properties:
-        - port: Server port (default: 3306)
-        - password: Database password (default: "")
-        - database: Database name (default: "")
+        - port: Server port (default: 3306, or MYSQL_PORT env var)
+        - password: Database password (or MYSQL_PASSWORD env var)
+        - database: Database name (or MYSQL_DATABASE env var)
         - charset: Character set (default: "utf8mb4")
         - autocommit: Enable autocommit (default: True)
         - connect_timeout: Connection timeout (default: 10)
         - max_rows_per_table: Maximum rows per table (default: 10)
-        """
-        host = properties.get("host")
-        if not host:
-            raise ConnectorConfigError("MySQL host info is required")
 
-        user = properties.get("user")
+        Environment variables take precedence over runbook properties for sensitive data.
+        - max_rows_per_table: Maximum rows per table (default: 10)
+        """
+        # Load environment variables, with runbook properties as fallback
+        host = os.getenv("MYSQL_HOST") or properties.get("host")
+        if not host:
+            raise ConnectorConfigError(
+                "MySQL host info is required (specify in runbook or MYSQL_HOST env var)"
+            )
+
+        user = os.getenv("MYSQL_USER") or properties.get("user")
         if not user:
-            raise ConnectorConfigError("MySQL user info is required")
+            raise ConnectorConfigError(
+                "MySQL user info is required (specify in runbook or MYSQL_USER env var)"
+            )
+
+        # For sensitive data, prefer environment variables
+        password = os.getenv("MYSQL_PASSWORD") or properties.get("password")
+        database = os.getenv("MYSQL_DATABASE") or properties.get("database", "")
+
+        # Port handling with environment variable support
+        port_str = os.getenv("MYSQL_PORT")
+        if port_str:
+            try:
+                port = int(port_str)
+            except ValueError:
+                raise ConnectorConfigError(
+                    f"Invalid MYSQL_PORT environment variable: {port_str}"
+                )
+        else:
+            port = properties.get("port", 3306)
 
         return cls(
             host=host,
-            port=properties.get("port", 3306),
+            port=port,
             user=user,
-            password=properties.get("password"),
-            database=properties.get("database", ""),
+            password=password,
+            database=database,
             charset=properties.get("charset", "utf8mb4"),
             autocommit=properties.get("autocommit", True),
             connect_timeout=properties.get("connect_timeout", 10),
@@ -279,6 +306,7 @@ class MySQLConnector(Connector):
         Args:
             table_name: Name of the table to extract data from
             limit: Maximum number of rows to fetch per table (uses max_rows_per_table if None)
+            limit: Maximum number of rows to fetch per table (uses max_rows_per_table if None)
 
         Returns:
             List of dictionaries representing table rows
@@ -417,7 +445,7 @@ class MySQLConnector(Connector):
         for table_info in metadata.get("tables", []):
             table_name = table_info["name"]
 
-            # Extract actual cell data from the table (limited by max_rows_per_table)
+            # Extract actual cell data from the table (limited by max_rows_per_table) (limited by max_rows_per_table)
             try:
                 table_data = self.get_table_data(table_name)
 
