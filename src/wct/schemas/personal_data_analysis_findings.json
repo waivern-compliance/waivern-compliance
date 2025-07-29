@@ -32,8 +32,11 @@
             "description": "Source file or location where the data was found"
           },
           "evidence": {
-            "type": ["string", "null"],
-            "description": "The actual content or evidence where the personal data was found"
+            "type": ["array", "null"],
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of evidence snippets where the personal data was found"
           }
         },
         "required": ["type", "risk_level", "special_category", "matched_pattern", "source"]

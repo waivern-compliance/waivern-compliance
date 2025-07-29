@@ -175,9 +175,7 @@ class PersonalDataAnalyser(Plugin):
                     "special_category": finding.special_category,
                     "matched_pattern": finding.matched_pattern,
                     "source": finding.source,
-                    "evidence": "; ".join(finding.evidence)
-                    if finding.evidence
-                    else None,
+                    "evidence": finding.evidence,
                 }
                 for finding in findings
             ],

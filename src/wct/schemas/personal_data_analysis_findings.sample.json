@@ -7,7 +7,7 @@
       "special_category": "N",
       "matched_pattern": "john.doe@company.com",
       "source": "employee_data.csv",
-      "evidence": "the actual content of the email found in the employee data file"
+      "evidence": ["the actual content of the email found in the employee data file"]
     },
     {
       "type": "phone_number",
@@ -15,7 +15,7 @@
       "special_category": "N",
       "matched_pattern": "+1-555-123-4567",
       "source": "employee_data.csv",
-      "evidence": "the actual content of the phone number found in the employee data file"
+      "evidence": ["the actual content of the phone number found in the employee data file"]
     },
     {
       "type": "health_condition",
@@ -23,7 +23,7 @@
       "special_category": "Y",
       "matched_pattern": "diabetes",
       "source": "medical_records.txt",
-      "evidence": "the actual content of the health condition found in the medical records file"
+      "evidence": ["the actual content of the health condition found in the medical records file"]
     },
     {
       "type": "ethnic_origin",
@@ -31,7 +31,7 @@
       "special_category": "Y",
       "matched_pattern": "ethnicity: Hispanic",
       "source": "hr_forms.pdf",
-      "evidence": "the actual content of the ethnicity found in the HR forms file"
+      "evidence": ["the actual content of the ethnicity found in the HR forms file"]
     },
     {
       "type": "ssn",
@@ -39,7 +39,7 @@
       "special_category": "N",
       "matched_pattern": "123-45-6789",
       "source": "tax_documents.xlsx",
-      "evidence": "the actual content of the SSN found in the tax documents file"
+      "evidence": ["the actual content of the SSN found in the tax documents file"]
     },
     {
       "type": "credit_card",
@@ -47,7 +47,7 @@
       "special_category": "N",
       "matched_pattern": "4532-****-****-1234",
       "source": "payment_logs.txt",
-      "evidence": "the actual content of the credit card number found in the payment logs file"
+      "evidence": ["the actual content of the credit card number found in the payment logs file"]
     }
   ],
   "summary": {
