@@ -31,7 +31,7 @@ def run(
         Path,
         typer.Option(
             "--output-dir",
-            help="The output directory (not implemented yet)",
+            help="The output directory for analysis results, defaults to './outputs/'",
             file_okay=False,
             dir_okay=True,
             writable=True,
@@ -56,7 +56,7 @@ def run(
         typer.Option(
             "--verbose",
             "-v",
-            help="Enable verbose output (sets log level to DEBUG)",
+            help="Enable CLI verbose output (sets log level to DEBUG)",
         ),
     ] = False,
     log_level: Annotated[
@@ -68,12 +68,16 @@ def run(
         ),
     ] = "INFO",
 ):
-    """Execute a runbook."""
+    """Execute a runbook with configurable output options and logging.
+
+    Example:
+        ct run compliance-runbook.yaml --output-dir ./results --output report.json -v
+    """
     execute_runbook_command(runbook, output_dir, output, verbose, log_level)
 
 
-@app.command(name="list-connectors")
-def list_connectors(
+@app.command(name="ls-connectors")
+def list_available_connectors(
     log_level: Annotated[
         str,
         typer.Option(
@@ -83,12 +87,12 @@ def list_connectors(
         ),
     ] = "INFO",
 ):
-    """List available connectors."""
+    """List available (built-in & registered) connectors."""
     list_connectors_command(log_level)
 
 
-@app.command(name="list-plugins")
-def list_plugins(
+@app.command(name="ls-plugins")
+def list_available_plugins(
     log_level: Annotated[
         str,
         typer.Option(
@@ -98,7 +102,7 @@ def list_plugins(
         ),
     ] = "INFO",
 ):
-    """List available plugins."""
+    """List available (built-in & registered) plugins."""
     list_plugins_command(log_level)
 
 
@@ -123,7 +127,7 @@ def validate_runbook(
         ),
     ] = "INFO",
 ):
-    """Validate a runbook YAML file."""
+    """Validate a runbook"""
     validate_runbook_command(runbook, log_level)
 
 

@@ -51,7 +51,7 @@ Examples:
     $0                  # Standard build
     $0 --clean          # Clean build
     $0 --no-pull        # Build without pulling latest images
-    
+
 EOF
 }
 
@@ -89,7 +89,7 @@ cd "$SCRIPT_DIR"
 main() {
     echo_info "🐳 Waivern WordPress Docker Build Script"
     echo_info "Working directory: $SCRIPT_DIR"
-    
+
     # Check if Docker is running
     echo_step "Checking Docker availability..."
     if ! docker info >/dev/null 2>&1; then
@@ -97,58 +97,58 @@ main() {
         exit 1
     fi
     echo_info "✅ Docker is available"
-    
+
     # Check if Docker Compose is available
     if ! command -v docker compose >/dev/null 2>&1 && ! docker compose version >/dev/null 2>&1; then
         echo_error "Docker Compose is not available"
         exit 1
     fi
     echo_info "✅ Docker Compose is available"
-    
+
     # Clean build if requested
     if [ "$CLEAN_BUILD" = true ]; then
         echo_step "Performing clean build..."
-        
+
         echo_info "Stopping and removing existing containers..."
         docker compose down --volumes --remove-orphans 2>/dev/null || true
-        
+
         echo_info "Removing WordPress and MySQL images..."
         docker image rm wordpress:6.4-php8.2-apache 2>/dev/null || true
         docker image rm mysql:8.0 2>/dev/null || true
-        
+
         echo_info "Pruning unused Docker resources..."
         docker system prune -f
-        
+
         echo_info "✅ Clean build preparation complete"
     fi
-    
+
     # Pull images if requested
     if [ "$PULL_IMAGES" = true ]; then
         echo_step "Pulling Docker images..."
-        
+
         echo_info "Pulling MySQL 8.0 image..."
         docker pull mysql:8.0
-        
+
         echo_info "Pulling WordPress 6.4-php8.2-apache image..."
         docker pull wordpress:6.4-php8.2-apache
-        
+
         echo_info "✅ Image pulling complete"
-        
+
         if [ "${PULL_ONLY:-false}" = true ]; then
             echo_info "Pull-only mode complete. Exiting."
             exit 0
         fi
     fi
-    
+
     # Validate required files
     echo_step "Validating required files..."
-    
+
     local required_files=(
         "docker-compose.yml"
         "scripts/entrypoint.sh"
         "seed-data/01-seed-data.sql"
     )
-    
+
     for file in "${required_files[@]}"; do
         if [ ! -f "$file" ]; then
             echo_error "Required file not found: $file"
@@ -156,20 +156,20 @@ main() {
         fi
         echo_info "✅ Found: $file"
     done
-    
+
     # Validate entrypoint script is executable
     if [ ! -x "scripts/entrypoint.sh" ]; then
         echo_warn "Making entrypoint script executable..."
         chmod +x "scripts/entrypoint.sh"
     fi
-    
+
     # Create plugins directory if it doesn't exist
     if [ ! -d "plugins" ]; then
         echo_info "Creating plugins directory..."
         mkdir -p plugins
         echo_info "✅ Created plugins directory"
     fi
-    
+
     # Build/validate the compose setup
     echo_step "Validating Docker Compose configuration..."
     if docker compose config >/dev/null; then
@@ -178,7 +178,7 @@ main() {
         echo_error "Docker Compose configuration is invalid"
         exit 1
     fi
-    
+
     # Create .env file with default values if it doesn't exist
     if [ ! -f ".env" ]; then
         echo_step "Creating default .env file..."
@@ -209,7 +209,7 @@ EOF
     else
         echo_info "✅ Using existing .env file"
     fi
-    
+
     echo_step "Build completed successfully! 🎉"
     echo_info ""
     echo_info "Next steps:"
@@ -224,4 +224,4 @@ EOF
 }
 
 # Run main function
-main "$@" 
+main "$@"

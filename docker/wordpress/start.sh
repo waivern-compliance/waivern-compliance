@@ -56,7 +56,7 @@ Examples:
     $0 --foreground     # Run in foreground
     $0 --logs           # Start and show logs
     $0 --rebuild        # Rebuild and start
-    
+
 EOF
 }
 
@@ -98,24 +98,24 @@ wait_for_service() {
     local service_name=$1
     local url=$2
     local max_attempts=${3:-60}
-    
+
     echo_info "Waiting for $service_name to be ready..."
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         if curl -f -s "$url" >/dev/null 2>&1; then
             echo_info "✅ $service_name is ready!"
             return 0
         fi
-        
+
         if [ $((attempt % 10)) -eq 0 ]; then
             echo_info "Still waiting for $service_name... (attempt $attempt/$max_attempts)"
         fi
-        
+
         sleep 2
         ((attempt++))
     done
-    
+
     echo_error "❌ $service_name failed to become ready after $max_attempts attempts"
     return 1
 }
@@ -123,7 +123,7 @@ wait_for_service() {
 check_port_availability() {
     local port=$1
     local service_name=$2
-    
+
     if command -v netstat >/dev/null 2>&1; then
         if netstat -ln | grep ":$port " >/dev/null 2>&1; then
             echo_warn "⚠️  Port $port is already in use (required for $service_name)"
@@ -171,7 +171,7 @@ show_service_info() {
 main() {
     echo_info "🚀 Starting Waivern WordPress Environment"
     echo_info "Working directory: $SCRIPT_DIR"
-    
+
     # Load environment variables if .env exists
     if [ -f ".env" ]; then
         echo_info "Loading environment from .env file"
@@ -181,7 +181,7 @@ main() {
     else
         echo_warn "No .env file found, using defaults"
     fi
-    
+
     # Check if Docker is running
     echo_step "Checking Docker availability..."
     if ! docker info >/dev/null 2>&1; then
@@ -189,14 +189,14 @@ main() {
         echo_info "Please start Docker and try again"
         exit 1
     fi
-    
+
     # Check if required files exist
     local required_files=(
         "docker-compose.yml"
         "scripts/entrypoint.sh"
         "seed-data/01-seed-data.sql"
     )
-    
+
     for file in "${required_files[@]}"; do
         if [ ! -f "$file" ]; then
             echo_error "Required file not found: $file"
@@ -204,24 +204,24 @@ main() {
             exit 1
         fi
     done
-    
+
     # Check port availability
     check_port_availability "${WORDPRESS_PORT:-8080}" "WordPress" || true
     check_port_availability "${MYSQL_PORT:-3306}" "MySQL" || true
-    
+
     # Rebuild if requested
     if [ "${REBUILD:-false}" = true ]; then
         echo_step "Rebuilding containers..."
         docker compose build --no-cache
     fi
-    
+
     # Stop any existing containers
     echo_step "Stopping any existing containers..."
     docker compose down 2>/dev/null || true
-    
+
     # Start services
     echo_step "Starting WordPress and MySQL containers..."
-    
+
     if [ "$DETACHED" = true ]; then
         docker compose up -d
     else
@@ -229,11 +229,11 @@ main() {
         docker compose up &
         COMPOSE_PID=$!
     fi
-    
+
     # Wait for services to be ready
     if [ "$WAIT_FOR_READY" = true ]; then
         echo_step "Waiting for services to be ready..."
-        
+
         # Wait for MySQL first
         echo_info "Waiting for MySQL to be healthy..."
         local mysql_ready=false
@@ -244,13 +244,13 @@ main() {
             fi
             sleep 2
         done
-        
+
         if [ "$mysql_ready" = false ]; then
             echo_error "MySQL failed to become healthy"
             docker compose logs mysql
             exit 1
         fi
-        
+
         # Wait for WordPress
         if ! wait_for_service "WordPress" "http://localhost:${WORDPRESS_PORT:-8080}" 120; then
             echo_error "WordPress failed to start properly"
@@ -258,11 +258,11 @@ main() {
             docker compose logs --tail=20
             exit 1
         fi
-        
+
         # Give WordPress setup a moment to complete
         echo_info "Waiting for WordPress setup to complete..."
         sleep 10
-        
+
         # Verify WordPress is properly installed
         local wp_ready=false
         for i in {1..20}; do
@@ -272,21 +272,21 @@ main() {
             fi
             sleep 3
         done
-        
+
         if [ "$wp_ready" = false ]; then
             echo_warn "WordPress may not be fully ready yet, but containers are running"
         fi
     fi
-    
+
     # Show service information
     show_service_info
-    
+
     # Show logs if requested
     if [ "$SHOW_LOGS" = true ]; then
         echo_step "Showing container logs (Ctrl+C to stop)..."
         docker compose logs -f
     fi
-    
+
     # If running in foreground, wait for compose process
     if [ "$DETACHED" = false ] && [ -n "${COMPOSE_PID:-}" ]; then
         wait $COMPOSE_PID

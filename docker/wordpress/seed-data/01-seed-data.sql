@@ -226,7 +226,7 @@ VALUES
 		2,
 		'2024-01-04 16:00:00',
 		'2024-01-04 16:00:00',
-		'Employee Directory: 
+		'Employee Directory:
 - Michael Smith, CEO: mike.smith@company.com, (555) 111-2222, SSN: 987-65-4321
 - Jennifer Davis, CTO: j.davis@company.com, mobile: +1.555.333.4444
 - Robert Wilson, HR Director: bob.wilson@company.com, home: 555-555-5555, DOB: 12/25/1975

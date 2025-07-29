@@ -32,12 +32,12 @@ def create_executor() -> Executor:
 
     # Register built-in connectors
     for connector_class in BUILTIN_CONNECTORS:
-        executor.register_connector(connector_class)
+        executor.register_available_connector(connector_class)
         logger.debug("Registered connector: %s", connector_class.get_name())
 
     # Register built-in plugins
     for plugin_class in BUILTIN_PLUGINS:
-        executor.register_plugin(plugin_class)
+        executor.register_available_plugin(plugin_class)
         logger.debug("Registered plugin: %s", plugin_class.get_name())
 
     logger.info(
@@ -100,7 +100,7 @@ class ComponentLister:
             Dictionary mapping connector names to classes
         """
         logger.debug("Getting registered connectors")
-        connectors = self.executor.list_connectors()
+        connectors = self.executor.list_available_connectors()
         logger.info("Found %d registered connectors", len(connectors))
         return connectors
 
@@ -111,7 +111,7 @@ class ComponentLister:
             Dictionary mapping plugin names to classes
         """
         logger.debug("Getting registered plugins")
-        plugins = self.executor.list_plugins()
+        plugins = self.executor.list_available_plugins()
         logger.info("Found %d registered plugins", len(plugins))
         return plugins
 

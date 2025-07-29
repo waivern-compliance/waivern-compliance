@@ -28,23 +28,23 @@ class Executor:
         self.plugins: dict[str, type[Plugin]] = {}
         self.logger = get_executor_logger()
 
-    # TODO: Understand why this is needed
-    def register_connector(self, connector_class: type[Connector]):
+    # The following four methods allow for dynamic registration of connectors and plugins.
+    # They are for system-wide registration of available connectors and plugins,
+    # not for holding the configured connectors and plugins for individual runbooks.
+
+    def register_available_connector(self, connector_class: type[Connector]):
         """Register a connector class."""
         self.connectors[connector_class.get_name()] = connector_class
 
-    # TODO: Understand why this is needed
-    def register_plugin(self, plugin_class: type[Plugin]):
+    def register_available_plugin(self, plugin_class: type[Plugin]):
         """Register a plugin class."""
         self.plugins[plugin_class.get_name()] = plugin_class
 
-    # TODO: Understand why this is needed
-    def list_connectors(self) -> dict[str, type[Connector]]:
+    def list_available_connectors(self) -> dict[str, type[Connector]]:
         """Get all registered connectors."""
         return self.connectors.copy()
 
-    # TODO: Understand why this is needed
-    def list_plugins(self) -> dict[str, type[Plugin]]:
+    def list_available_plugins(self) -> dict[str, type[Plugin]]:
         """Get all registered plugins."""
         return self.plugins.copy()
 
