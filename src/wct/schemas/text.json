@@ -32,10 +32,17 @@
           },
           "metadata": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": true,
+            "properties": {
+              "source": {
+                "type": "string",
+                "description": "Source identifier for the data item"
+              }
+            },
+            "required": ["source"]
           }
         },
-        "required": ["content"]
+        "required": ["content", "metadata"]
       }
     }
   },

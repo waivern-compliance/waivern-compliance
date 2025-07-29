@@ -43,9 +43,10 @@ class PersonalDataFinding:
     special_category: str | None
     """Indicates if this finding is a special category under GDPR."""
     matched_pattern: str
-    source: str | None
     evidence: list[str] | None = None
     """Evidence found in the content that matches this finding."""
+    metadata: dict[str, Any] | None = None
+    """Additional metadata from the original data source."""
 
 
 class PersonalDataAnalyser(Plugin):
@@ -141,30 +142,27 @@ class PersonalDataAnalyser(Plugin):
                 # that should be analyzed and tracked separately for compliance.
 
                 data_array = data["data"]
-                source = data.get("source", "unknown")
                 all_findings = []
 
                 for item in data_array:
                     content = item.get("content", "")
                     item_metadata = item.get("metadata", {})
-                    # Use item-specific source for granular tracking
-                    item_source = item_metadata.get("source", source)
 
                     # Analyze each content piece independently for compliance tracking
-                    item_findings = self._analyze_content(content, item_source)
+                    item_findings = self._analyze_content(content, item_metadata)
                     all_findings.extend(item_findings)
 
                 findings = all_findings
             else:
                 # Handle direct content format (legacy or simplified input)
                 content = data.get("content", "")
-                source = data.get("source", "unknown")
-                findings = self._analyze_content(content, source)
+                direct_metadata = data.get("metadata", {})
+                findings = self._analyze_content(content, direct_metadata)
         else:
             # Handle direct string content (fallback case)
             content = str(data)
-            source = "unknown"
-            findings = self._analyze_content(content, source)
+            fallback_metadata = {"source": "unknown"}
+            findings = self._analyze_content(content, fallback_metadata)
 
         # Create result data
         result_data = {
@@ -174,8 +172,8 @@ class PersonalDataAnalyser(Plugin):
                     "risk_level": finding.risk_level,
                     "special_category": finding.special_category,
                     "matched_pattern": finding.matched_pattern,
-                    "source": finding.source,
                     "evidence": finding.evidence,
+                    "metadata": finding.metadata,
                 }
                 for finding in findings
             ],
@@ -189,7 +187,7 @@ class PersonalDataAnalyser(Plugin):
         }
 
         output_message = Message(
-            id=f"Personal data analysis for {source}",
+            id="Personal data analysis",
             content=result_data,
             schema=output_schema,
         )
@@ -198,13 +196,15 @@ class PersonalDataAnalyser(Plugin):
         output_message.validate()
 
         self.logger.debug(
-            f"PersonalDataAnalyser processed {source} with findings:\n{pformat(findings)}"
+            f"PersonalDataAnalyser processed with findings:\n{pformat(findings)}"
         )
 
         # Return new Message with analysis results
         return output_message
 
-    def _analyze_content(self, content: str, source: str) -> list[PersonalDataFinding]:
+    def _analyze_content(
+        self, content: str, metadata: dict[str, Any]
+    ) -> list[PersonalDataFinding]:
         """Analyze content for personal data patterns."""
         findings = []
 
@@ -214,13 +214,16 @@ class PersonalDataAnalyser(Plugin):
                     # Extract evidence - find all occurrences of the pattern in the content
                     evidence_matches = self._extract_evidence(content, pattern)
 
+                    # Pass metadata as-is since source is guaranteed by schema
+                    finding_metadata = metadata.copy() if metadata else {}
+
                     finding = PersonalDataFinding(
                         type=category_name,
                         risk_level=category_data["risk_level"],
                         special_category=category_data["special_category"],
                         matched_pattern=pattern,
-                        source=source,
                         evidence=evidence_matches,
+                        metadata=finding_metadata,
                     )
                     findings.append(finding)
 

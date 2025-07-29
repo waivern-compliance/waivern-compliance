@@ -102,10 +102,15 @@ class FileContentAnalyser(Plugin):
             # a separate plugin or see PersonalDataAnalyser for reference implementation.
             text_content = "\n".join(item.get("content", "") for item in data_array)
 
-        # Get metadata
-        file_path = payload_content.get("source", "unknown")
+        # Get metadata from the guaranteed schema structure
+        file_path = "unknown"  # fallback, will be overridden by first item's metadata
         encoding = payload_content.get("contentEncoding", "unknown")
         file_metadata = payload_content.get("metadata", {})
+
+        # Extract source from first data item's metadata (guaranteed by schema)
+        if data_array:
+            first_item_metadata = data_array[0].get("metadata", {})
+            file_path = first_item_metadata.get("source", "unknown")
 
         findings = []
 
@@ -161,7 +166,7 @@ class FileContentAnalyser(Plugin):
             "source": file_path,
             "encoding": encoding,
             "file_metadata": file_metadata,
-            "content_length": len(payload_content),
+            "content_length": len(text_content),  # Use actual text content length
             "findings": findings,
             "risk_score": risk_score,
             "risk_level": self._get_risk_level(risk_score),

@@ -27,19 +27,27 @@
             "type": "string",
             "description": "The specific pattern that was matched"
           },
-          "source": {
-            "type": ["string", "null"],
-            "description": "Source file or location where the data was found"
-          },
           "evidence": {
             "type": ["array", "null"],
             "items": {
               "type": "string"
             },
             "description": "Array of evidence snippets where the personal data was found"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Metadata from the original data source including source location",
+            "properties": {
+              "source": {
+                "type": "string",
+                "description": "Source file or location where the data was found"
+              }
+            },
+            "required": ["source"]
           }
         },
-        "required": ["type", "risk_level", "special_category", "matched_pattern", "source"]
+        "required": ["type", "risk_level", "special_category", "matched_pattern", "metadata"]
       }
     },
     "summary": {

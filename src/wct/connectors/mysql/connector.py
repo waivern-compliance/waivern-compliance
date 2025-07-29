@@ -421,8 +421,8 @@ class MySQLConnector(Connector):
                                 {
                                     "content": str(cell_value),
                                     "metadata": {
-                                        "source": f"mysql_cell_data_table_{table_name}_column_{column_name}",
-                                        "description": f"Cell data from {table_name}.{column_name} row {row_index + 1}",
+                                        "source": f"mysql_cell_data_table_({table_name})_column_({column_name})",
+                                        "description": f"Cell data from `{table_name}`.`{column_name}` row {row_index + 1}",
                                         "data_type": "cell_content",
                                         "database": self.database,
                                         "table": table_name,
