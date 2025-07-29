@@ -51,14 +51,19 @@ class PersonalDataFinding:
 class PersonalDataAnalyser(Plugin):
     """Plugin for analyzing personal data patterns for GDPR compliance."""
 
-    def __init__(self, ruleset_name: str = "personal_data"):
-        """Initialize the analyser with specified ruleset.
+    def __init__(
+        self, ruleset_name: str = "personal_data", evidence_context_size: str = "small"
+    ):
+        """Initialize the analyser with specified ruleset and evidence context size.
 
         Args:
             ruleset_name: Name of the ruleset to use for analysis
+            evidence_context_size: Size of context around evidence matches
+                                  ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars)
         """
         super().__init__()  # Initialize logger from base class
         self.ruleset_name = ruleset_name
+        self.evidence_context_size = evidence_context_size
         self._patterns = None
 
     @classmethod
@@ -72,7 +77,10 @@ class PersonalDataAnalyser(Plugin):
     def from_properties(cls, properties: dict[str, Any]) -> Self:
         """Create plugin instance from properties."""
         ruleset_name = properties.get("ruleset", "personal_data")
-        return cls(ruleset_name=ruleset_name)
+        evidence_context_size = properties.get("evidence_context_size", "small")
+        return cls(
+            ruleset_name=ruleset_name, evidence_context_size=evidence_context_size
+        )
 
     @property
     def patterns(self) -> dict[str, Any]:
@@ -80,6 +88,15 @@ class PersonalDataAnalyser(Plugin):
         if self._patterns is None:
             self._patterns = get_ruleset(self.ruleset_name)
         return self._patterns
+
+    def _get_context_size(self) -> int:
+        """Get the context size in characters based on the configured level.
+
+        Returns:
+            Number of characters to include before and after each match
+        """
+        size_mapping = {"small": 50, "medium": 100, "large": 200}
+        return size_mapping.get(self.evidence_context_size.lower(), 50)
 
     @classmethod
     @override
@@ -232,9 +249,10 @@ class PersonalDataAnalyser(Plugin):
             if match_pos == -1:
                 break
 
-            # Extract context around the match (50 characters before and after)
-            context_start = max(0, match_pos - 50)
-            context_end = min(len(content), match_pos + len(pattern) + 50)
+            # Extract context around the match (configurable characters before and after)
+            context_size = self._get_context_size()
+            context_start = max(0, match_pos - context_size)
+            context_end = min(len(content), match_pos + len(pattern) + context_size)
 
             # Extract the evidence with context
             evidence_snippet = content[context_start:context_end].strip()
