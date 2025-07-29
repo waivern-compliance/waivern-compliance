@@ -2,6 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Environment Configuration
+
+WCT supports environment variables for sensitive configuration data like database credentials. This keeps sensitive information out of runbook files that are committed to version control.
+
+**Environment Variable Setup:**
+1. Copy `.env.example` to `.env`: `cp .env.example .env`
+2. Edit `.env` with your actual credentials
+3. Environment variables take precedence over runbook properties
+
+**Supported MySQL Environment Variables:**
+- `MYSQL_HOST` - Database server hostname
+- `MYSQL_PORT` - Database server port (default: 3306)
+- `MYSQL_USER` - Database username
+- `MYSQL_PASSWORD` - Database password
+- `MYSQL_DATABASE` - Database name
+
+**Example .env file:**
+```bash
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_password_here
+MYSQL_DATABASE=your_database_name
+```
+
 ## Development Commands
 
 This is a Python project using `uv` for dependency management. Key commands:

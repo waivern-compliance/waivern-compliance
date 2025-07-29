@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 
 from wct.cli import (
     list_connectors_command,
@@ -11,6 +12,9 @@ from wct.cli import (
     execute_runbook_command,
     validate_runbook_command,
 )
+
+# Load environment variables from .env file if it exists
+_ = load_dotenv()
 
 app = typer.Typer(name="waivern-compliance-tool")
 
