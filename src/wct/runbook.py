@@ -34,7 +34,7 @@ class ExecutionStep:
     output_schema_name: str | None = None
     context: dict[str, Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate required fields."""
         if not self.connector:
             raise ValueError("connector field is required")
@@ -103,7 +103,7 @@ class RunbookLoader:
             return runbook
 
         except Exception as e:
-            if isinstance(e, (RunbookLoadError, RunbookValidationError)):
+            if isinstance(e, RunbookLoadError | RunbookValidationError):
                 raise
             raise RunbookLoadError(f"Failed to load runbook {runbook_path}: {e}") from e
 
@@ -321,7 +321,7 @@ class RunbookValidator:
 
 # TODO: Consider moving this to the RunbookLoader class as a static method
 def load_runbook(runbook_path: Path) -> Runbook:
-    """Convenience function to load a runbook.
+    """Load a runbook.
 
     Args:
         runbook_path: Path to the runbook YAML file

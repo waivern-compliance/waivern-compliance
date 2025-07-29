@@ -1,3 +1,5 @@
+"""Plugins for the Waivern Compliance Tool."""
+
 from wct.plugins.base import (
     Plugin,
     PluginConfig,

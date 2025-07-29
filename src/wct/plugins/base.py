@@ -4,16 +4,13 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from typing import Any
 
 from typing_extensions import Self
 
 from wct.logging import get_plugin_logger
 from wct.message import Message
 from wct.schema import SchemaValidationError, WctSchema
-
-_PluginInputSchema = TypeVar("_PluginInputSchema")
-_PluginOutputSchema = TypeVar("_PluginOutputSchema")
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,8 +24,7 @@ class PluginConfig:
 
 
 class Plugin(abc.ABC):
-    """Analysis processor that accepts WCF schema-compliant data and
-    produces results in the WCF-defined result schema.
+    """Analysis processor that accepts WCF schema-compliant data and produces results in the WCF-defined result schema.
 
     Plugins are the workers of WCF. They accept input data in WCF-defined
     schema(s), run it against a specific analysis process (defined
@@ -71,7 +67,10 @@ class Plugin(abc.ABC):
 
     @abc.abstractmethod
     def process(
-        self, _PluginInputSchema, _PluginOutputSchema, message: Message
+        self,
+        input_schema: WctSchema[Any],
+        output_schema: WctSchema[Any],
+        message: Message,
     ) -> Message:
         """Plugin-specific processing logic.
 
@@ -80,7 +79,9 @@ class Plugin(abc.ABC):
         automatically validated against the output schema.
 
         Args:
-            data: Input data conforming to the plugin's input schema
+            input_schema: Input data conforming to the plugin's input schema
+            output_schema: Output data conforming to the plugin's output schema
+            message: The message to process
 
         Returns:
             Analysis results that should conform to the plugin's output schema

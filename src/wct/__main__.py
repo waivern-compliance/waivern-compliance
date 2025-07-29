@@ -1,3 +1,5 @@
+"""Command-line interface for the Waivern Compliance Tool."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -71,7 +73,7 @@ def run(
     """Execute a runbook with configurable output options and logging.
 
     Example:
-        ct run compliance-runbook.yaml --output-dir ./results --output report.json -v
+        wct run compliance-runbook.yaml --output-dir ./results --output report.json -v
     """
     execute_runbook_command(runbook, output_dir, output, verbose, log_level)
 
@@ -127,7 +129,7 @@ def validate_runbook(
         ),
     ] = "INFO",
 ):
-    """Validate a runbook"""
+    """Validate a runbook."""
     validate_runbook_command(runbook, log_level)
 
 

@@ -22,6 +22,8 @@ SUPPORTED_OUTPUT_SCHEMAS = [
 DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
 DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
 
+DEFAULT_MAXIMUM_EVIDENCE_COUNT = 3
+
 
 @dataclass(frozen=True, slots=True)
 class PersonalDataPattern:
@@ -53,7 +55,10 @@ class PersonalDataAnalyser(Plugin):
     """Plugin for analyzing personal data patterns for GDPR compliance."""
 
     def __init__(
-        self, ruleset_name: str = "personal_data", evidence_context_size: str = "small"
+        self,
+        ruleset_name: str = "personal_data",
+        evidence_context_size: str = "small",
+        maximum_evidence_count: int = DEFAULT_MAXIMUM_EVIDENCE_COUNT,
     ):
         """Initialize the analyser with specified ruleset and evidence context size.
 
@@ -61,16 +66,17 @@ class PersonalDataAnalyser(Plugin):
             ruleset_name: Name of the ruleset to use for analysis
             evidence_context_size: Size of context around evidence matches
                                   ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars)
+            maximum_evidence_count: Maximum number of evidence snippets to include
         """
         super().__init__()  # Initialize logger from base class
         self.ruleset_name = ruleset_name
         self.evidence_context_size = evidence_context_size
-        self._patterns = None
+        self._patterns: dict[str, Any] | None = None
+        self.maximum_evidence_count = maximum_evidence_count
 
     @classmethod
     @override
     def get_name(cls) -> str:
-        """The name of the plugin."""
         return "personal_data_analyser"
 
     @classmethod
@@ -79,8 +85,13 @@ class PersonalDataAnalyser(Plugin):
         """Create plugin instance from properties."""
         ruleset_name = properties.get("ruleset", "personal_data")
         evidence_context_size = properties.get("evidence_context_size", "small")
+        maximum_evidence_count = properties.get(
+            "maximum_evidence_count", DEFAULT_MAXIMUM_EVIDENCE_COUNT
+        )
         return cls(
-            ruleset_name=ruleset_name, evidence_context_size=evidence_context_size
+            ruleset_name=ruleset_name,
+            evidence_context_size=evidence_context_size,
+            maximum_evidence_count=maximum_evidence_count,
         )
 
     @property
@@ -269,7 +280,7 @@ class PersonalDataAnalyser(Plugin):
             start_pos = match_pos + 1
 
             # Limit to maximum 3 evidence snippets to avoid overwhelming output
-            if len(evidence_list) >= 3:
+            if len(evidence_list) >= self.maximum_evidence_count:
                 break
 
         return evidence_list

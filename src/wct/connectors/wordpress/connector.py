@@ -1,3 +1,5 @@
+"""WordPress connector for the Waivern Compliance Tool."""
+
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +28,6 @@ class WordpressConnector(Connector):
     @classmethod
     @override
     def get_name(cls) -> str:
-        """The name of the connector."""
         return "wordpress"
 
     @classmethod
@@ -134,6 +135,8 @@ class WordpressConnector(Connector):
 
 
 class WordpressConnectorConfig(BaseModel):
+    """Configuration for the WordPress connector."""
+
     root: Path
     config_file_name: str = "wp-config.php"
     core_file_names: tuple[str, ...] = (
@@ -156,10 +159,12 @@ class WordpressConnectorConfig(BaseModel):
 
     @property
     def config_file(self) -> Path:
+        """Get the path to the WordPress config file."""
         return self.root / self.config_file_name
 
     @property
     def core_files(self) -> tuple[Path, ...]:
+        """Get the paths to the WordPress core files."""
         return tuple(
             self.root / core_file_name for core_file_name in self.core_file_names
         )

@@ -1,3 +1,5 @@
+"""Base classes for connectors in the Waivern Compliance Tool."""
+
 import abc
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,9 +24,7 @@ class ConnectorConfig:
 
 
 class PathConnectorConfig(BaseModel):
-    """A shortcut configuration for `file_reader` or
-    `directory` connector, requiring only a path.
-    """
+    """A shortcut configuration for `file_reader` or `directory` connector, requiring only a path."""
 
     path: Path
 
@@ -49,8 +49,7 @@ class PathConnectorConfig(BaseModel):
 
 
 class Connector(abc.ABC):
-    """Extracts data from sources and transforms it to Waivern
-    Compliance Framework (WCF) defined schemas.
+    """Extracts data from sources and transforms it to Waivern Compliance Framework (WCF) defined schemas.
 
     Connectors are the adapters between the WCF and vendor-specific software
     and services. They extract metadata and information from the source and
@@ -70,7 +69,7 @@ class Connector(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def get_name(cls) -> str:
-        """The name of the connector."""
+        """Get the name of the connector."""
 
     @classmethod
     @abc.abstractmethod

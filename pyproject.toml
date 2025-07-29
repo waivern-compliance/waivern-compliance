@@ -49,10 +49,6 @@ addopts = [
     "--import-mode=importlib",
 ]
 
-[tool.bandit]
-exclude_dirs = ["tests"]
-skips = ["B101"]         # Skip assert_used test
-
 [tool.mypy]
 files = ["src/"]
 plugins = ['pydantic.mypy']
@@ -78,6 +74,7 @@ ignore = [
     "D213",    # multi-line-summary-second-line
     "D413",    # Missing blank line after last section
     "PLR0913", # Too many arguments in function definition
+    "PLR2004", # Magic number - let's disable for now
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -85,7 +82,8 @@ ignore = [
     "F401", # Unused imports
 ]
 "tests/**/*.py" = [
-    "D", # Documentation
+    "D",    # Documentation
+    "S101", # Bandit's assert_used
 ]
 
 [tool.ruff.lint.pydocstyle]

@@ -1,3 +1,5 @@
+"""MySQL database connector for the Waivern Compliance Tool."""
+
 from contextlib import contextmanager
 from typing import Any
 
@@ -68,7 +70,6 @@ class MySQLConnector(Connector):
     @classmethod
     @override
     def get_name(cls) -> str:
-        """The name of the connector."""
         return "mysql"
 
     @classmethod
@@ -124,7 +125,7 @@ class MySQLConnector(Connector):
         try:
             # Import pymysql here to make it an optional dependency
             try:
-                import pymysql
+                import pymysql  # noqa: PLC0415 # temporarily disabled "import-outside-toplevel"
             except ImportError as e:
                 raise ConnectorExtractionError(
                     "pymysql is required for MySQL connector. Install with: uv sync --group mysql"
@@ -281,7 +282,7 @@ class MySQLConnector(Connector):
         try:
             # Use parameterized query to prevent SQL injection
             # Table name is validated to be from information_schema.TABLES
-            query = f"SELECT * FROM `{table_name}` LIMIT %s"  # nosec B608
+            query = f"SELECT * FROM `{table_name}` LIMIT %s"  # noqa: S608 # temporarily disabled "possible SQL injection"
             return self.execute_query(query, (limit,))
         except Exception as e:
             self.logger.warning(f"Failed to extract data from table {table_name}: {e}")

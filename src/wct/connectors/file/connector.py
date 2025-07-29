@@ -56,7 +56,6 @@ class FileConnector(Connector):
     @classmethod
     @override
     def get_name(cls) -> str:
-        """The name of the connector."""
         return "file_reader"
 
     @classmethod
@@ -106,12 +105,13 @@ class FileConnector(Connector):
 
     @override
     def extract(
-        self, output_schema: WctSchema[dict[str, Any]] | None = None
+        self,
+        output_schema: WctSchema[dict[str, Any]] | None = None,
     ) -> Message:
         """Extract file content and metadata.
 
         Args:
-            schema: Optional schema to use and validate against. Use the default
+            output_schema: Optional schema to use and validate against. Use the default
             schema of the current plugin if not provided.
 
         Returns:
@@ -250,9 +250,7 @@ class FileConnector(Connector):
             )
             content_parts = []
 
-            with open(
-                self.file_path, encoding=self.encoding, errors=self.errors
-            ) as f:
+            with open(self.file_path, encoding=self.encoding, errors=self.errors) as f:
                 while True:
                     chunk = f.read(self.chunk_size)
                     if not chunk:
@@ -294,9 +292,7 @@ class FileConnector(Connector):
         self.logger.debug(f"Streaming file content from {self.file_path}")
 
         try:
-            with open(
-                self.file_path, encoding=self.encoding, errors=self.errors
-            ) as f:
+            with open(self.file_path, encoding=self.encoding, errors=self.errors) as f:
                 while True:
                     chunk = f.read(self.chunk_size)
                     if not chunk:

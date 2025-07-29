@@ -1,3 +1,5 @@
+"""Connectors for the Waivern Compliance Tool."""
+
 from wct.connectors.base import (
     Connector,
     ConnectorConfig,

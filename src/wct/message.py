@@ -1,7 +1,14 @@
+"""Message between WCT components.
+
+This module defines the Message class, which is used to pass data between
+different components of the WCT system, such as connectors and plugins.
+"""
+
 from dataclasses import dataclass
 from typing import Any
 
 import jsonschema
+from typing_extensions import Self
 
 from .schema import WctSchema, load_json_schema
 
@@ -30,7 +37,7 @@ class Message:
 
     schema_validated: bool = False
 
-    def validate(self):
+    def validate(self) -> Self:
         """Validate the message against its schema.
 
         Validates the message content against the WCT schema using JSON schema validation.

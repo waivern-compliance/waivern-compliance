@@ -1,3 +1,8 @@
+"""Executor for the Waivern Compliance Tool.
+
+The Executor follows a middleware design pattern, managing the flow of data between connectors and plugins based on a runbook configuration. It is responsible for loading runbook files, loading connectors and plugins, and executing the analysis workflow defined within the runbooks.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -71,6 +76,7 @@ class Executor:
 
     def _execute_step(self, step: ExecutionStep, runbook: Runbook) -> AnalysisResult:
         """Execute a single step in the runbook.
+
         This method handles the execution of a step, including loading
         the required plugin and connector, extracting data, and running
         the analysis plugin.
