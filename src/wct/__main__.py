@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -48,7 +49,7 @@ def run(
         typer.Option(
             "--output",
             "-o",
-            help="Save analysis results to a JSON file (relative to --output-dir)",
+            help="Save analysis results to a JSON file (relative to --output-dir). Defaults to YYYYMMDD_analysis_results.json",
             file_okay=True,
             dir_okay=False,
             writable=True,
@@ -77,6 +78,11 @@ def run(
     Example:
         ct run compliance-runbook.yaml --output-dir ./results --output report.json -v
     """
+    # Generate default output filename if not provided
+    if output is None:
+        today = datetime.now().strftime("%Y%m%d")
+        output = Path(f"{today}_analysis_results.json")
+
     execute_runbook_command(runbook, output_dir, output, verbose, log_level)
 
 
