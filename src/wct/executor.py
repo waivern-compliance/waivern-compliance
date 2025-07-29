@@ -8,8 +8,7 @@ from wct.connectors import Connector, ConnectorConfig, ConnectorError
 from wct.errors import WCTError
 from wct.logging import get_executor_logger
 from wct.plugins import Plugin, PluginConfig, PluginError
-from wct.runbook import Runbook, ExecutionStep
-from wct.runbook import load_runbook
+from wct.runbook import ExecutionStep, Runbook, load_runbook
 from wct.schema import WctSchema
 
 
@@ -83,7 +82,6 @@ class Executor:
         Returns:
             AnalysisResult containing the results of the step execution
         """
-
         # Get the required plugin and connector for the step
         plugin_config = self._find_plugin_config(runbook.plugins, step.plugin)
         if not plugin_config:
@@ -198,7 +196,6 @@ class Executor:
         Raises:
             ExecutorError: If schema cannot be loaded or is unsupported
         """
-
         if not schema_name:
             # Use first supported schema as default
             if not supported_schemas:

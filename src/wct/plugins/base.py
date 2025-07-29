@@ -8,9 +8,9 @@ from typing import Any, TypeVar
 
 from typing_extensions import Self
 
-from wct.message import Message
-from wct.schema import WctSchema, SchemaValidationError
 from wct.logging import get_plugin_logger
+from wct.message import Message
+from wct.schema import SchemaValidationError, WctSchema
 
 _PluginInputSchema = TypeVar("_PluginInputSchema")
 _PluginOutputSchema = TypeVar("_PluginOutputSchema")

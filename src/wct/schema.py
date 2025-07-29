@@ -47,7 +47,7 @@ def load_json_schema(schema_name: str) -> dict[str, Any]:
     for schema_path in schema_paths:
         if schema_path.exists():
             try:
-                with open(schema_path, "r") as f:
+                with open(schema_path) as f:
                     return json.load(f)
             except json.JSONDecodeError as e:
                 raise SchemaLoadError(

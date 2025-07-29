@@ -120,7 +120,7 @@ class RunbookLoader:
             RunbookLoadError: If file cannot be read or parsed
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             if not isinstance(data, dict):

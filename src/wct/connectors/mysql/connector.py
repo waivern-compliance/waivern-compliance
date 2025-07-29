@@ -1,5 +1,5 @@
-from typing import Any
 from contextlib import contextmanager
+from typing import Any
 
 from typing_extensions import Self, override
 
@@ -8,8 +8,8 @@ from wct.connectors.base import (
     ConnectorConfigError,
     ConnectorExtractionError,
 )
-from wct.schema import WctSchema
 from wct.message import Message
+from wct.schema import WctSchema
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "mysql_database": WctSchema(name="mysql_database", type=dict[str, Any]),
@@ -281,7 +281,7 @@ class MySQLConnector(Connector):
         try:
             # Use parameterized query to prevent SQL injection
             # Table name is validated to be from information_schema.TABLES
-            query = "SELECT * FROM `{}` LIMIT %s".format(table_name)  # nosec B608
+            query = f"SELECT * FROM `{table_name}` LIMIT %s"  # nosec B608
             return self.execute_query(query, (limit,))
         except Exception as e:
             self.logger.warning(f"Failed to extract data from table {table_name}: {e}")

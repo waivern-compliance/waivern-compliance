@@ -1,15 +1,15 @@
 """Personal data analysis plugin for GDPR compliance."""
 
 from dataclasses import dataclass
-from typing import Any, Literal
 from pprint import pformat
+from typing import Any, Literal
 
 from typing_extensions import Self, override
 
+from wct.message import Message
 from wct.plugins.base import Plugin
 from wct.rulesets import get_ruleset
 from wct.schema import WctSchema
-from wct.message import Message
 
 SUPPORTED_INPUT_SCHEMAS = [
     WctSchema(name="text", type=dict[str, Any]),
@@ -119,7 +119,6 @@ class PersonalDataAnalyser(Plugin):
         message: Message,
     ) -> Message:
         """Process data to find personal data patterns."""
-
         Plugin.validate_input_message(message, input_schema)
 
         # Extract content from message

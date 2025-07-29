@@ -1,14 +1,14 @@
 """Content analysis plugin for detecting sensitive information."""
 
 import re
-from typing import Any
 from pprint import pformat
+from typing import Any
 
 from typing_extensions import Self, override
 
+from wct.message import Message
 from wct.plugins.base import Plugin
 from wct.schema import WctSchema
-from wct.message import Message
 
 SUPPORTED_INPUT_SCHEMAS = [
     WctSchema(name="text", type=dict[str, Any]),
@@ -75,7 +75,6 @@ class FileContentAnalyser(Plugin):
         message: Message,
     ) -> Message:
         """Analyze file content for sensitive information."""
-
         Plugin.validate_input_message(message, input_schema)
 
         # Extract content from the message's content structure

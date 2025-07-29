@@ -5,13 +5,13 @@ from wct.plugins.base import (
     PluginInputError,
     PluginProcessingError,
 )
-from wct.schema import WctSchema
 from wct.plugins.file_content_analyser import FileContentAnalyser
 from wct.plugins.personal_data_analyser import (
     PersonalDataAnalyser,
     PersonalDataFinding,
     PersonalDataPattern,
 )
+from wct.schema import WctSchema
 
 __all__ = (
     "Plugin",

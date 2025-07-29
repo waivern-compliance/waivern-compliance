@@ -1,6 +1,7 @@
 """Personal data detection ruleset."""
 
 from typing import Any, Final
+
 from typing_extensions import override
 
 from wct.rulesets.base import Ruleset

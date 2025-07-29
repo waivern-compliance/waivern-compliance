@@ -6,9 +6,9 @@ from typing import Annotated
 import typer
 
 from wct.cli import (
+    execute_runbook_command,
     list_connectors_command,
     list_plugins_command,
-    execute_runbook_command,
     validate_runbook_command,
 )
 

@@ -7,16 +7,16 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 from rich.tree import Tree
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from wct.analysis import AnalysisResult, AnalysisResultsExporter
 from wct.connectors import BUILTIN_CONNECTORS
-from wct.logging import setup_logging, get_cli_logger
 from wct.executor import Executor
+from wct.logging import get_cli_logger, setup_logging
 from wct.plugins import BUILTIN_PLUGINS
-from wct.runbook import Runbook, load_runbook, RunbookValidator
+from wct.runbook import Runbook, RunbookValidator, load_runbook
 
 logger = get_cli_logger()
 console = Console()

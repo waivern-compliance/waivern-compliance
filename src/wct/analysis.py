@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)

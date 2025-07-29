@@ -5,8 +5,8 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import Self, override
 
 from wct.connectors.base import Connector, ConnectorConfigError
-from wct.schema import WctSchema
 from wct.message import Message
+from wct.schema import WctSchema
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "wordpress_site": WctSchema(name="wordpress_site", type=dict[str, Any]),
@@ -27,7 +27,6 @@ class WordpressConnector(Connector):
     @override
     def get_name(cls) -> str:
         """The name of the connector."""
-
         return "wordpress"
 
     @classmethod

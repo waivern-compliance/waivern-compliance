@@ -1,7 +1,7 @@
 """File reader connector for WCT."""
 
-from pathlib import Path
 from collections.abc import Generator
+from pathlib import Path
 from typing import Any
 
 from typing_extensions import Self, override
@@ -11,8 +11,8 @@ from wct.connectors.base import (
     ConnectorConfigError,
     ConnectorExtractionError,
 )
-from wct.schema import WctSchema
 from wct.message import Message
+from wct.schema import WctSchema
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "text": WctSchema(name="text", type=dict[str, Any]),
@@ -92,7 +92,6 @@ class FileConnector(Connector):
             ... }
             >>> connector = FileConnector.from_properties(properties)
         """
-
         file_path = properties.get("path")
         if not file_path:
             raise ConnectorConfigError("path property is required")
@@ -252,7 +251,7 @@ class FileConnector(Connector):
             content_parts = []
 
             with open(
-                self.file_path, "r", encoding=self.encoding, errors=self.errors
+                self.file_path, encoding=self.encoding, errors=self.errors
             ) as f:
                 while True:
                     chunk = f.read(self.chunk_size)
@@ -296,7 +295,7 @@ class FileConnector(Connector):
 
         try:
             with open(
-                self.file_path, "r", encoding=self.encoding, errors=self.errors
+                self.file_path, encoding=self.encoding, errors=self.errors
             ) as f:
                 while True:
                     chunk = f.read(self.chunk_size)

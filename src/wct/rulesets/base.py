@@ -2,6 +2,7 @@
 
 import abc
 from typing import Any
+
 from wct.logging import get_ruleset_logger
 
 

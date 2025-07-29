@@ -7,9 +7,9 @@ from pydantic import BaseModel
 from typing_extensions import Self
 
 from wct.errors import WCTError
-from wct.schema import WctSchema
-from wct.message import Message
 from wct.logging import get_connector_logger
+from wct.message import Message
+from wct.schema import WctSchema
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,7 +23,8 @@ class ConnectorConfig:
 
 class PathConnectorConfig(BaseModel):
     """A shortcut configuration for `file_reader` or
-    `directory` connector, requiring only a path."""
+    `directory` connector, requiring only a path.
+    """
 
     path: Path
 
