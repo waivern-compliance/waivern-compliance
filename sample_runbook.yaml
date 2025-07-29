@@ -14,6 +14,7 @@ connectors:
       password: "root"
       database: "waivern_wp"
       port: 3306
+      max_rows_per_table: 5
 
 plugins:
   - name: "file_content_analyser"
@@ -31,6 +32,8 @@ plugins:
       compliance_frameworks: ["GDPR", "CCPA"]
   - name: "personal_data_analyser_for_mysql"
     type: "personal_data_analyser"
+    properties:
+      evidence_context_size: large
     metadata:
       compliance_frameworks: ["GDPR", "CCPA"]
 
@@ -51,8 +54,6 @@ execution:
     plugin: "personal_data_analyser_for_file_content"
     input_schema_name: "text"
     output_schema_name: "personal_data_analysis_findings"
-    properties:
-      evidence_context_size: full
     context:
       description: "Analyze file content for personal data"
       priority: "high"
