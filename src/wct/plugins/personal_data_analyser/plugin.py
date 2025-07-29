@@ -60,7 +60,7 @@ class PersonalDataAnalyser(Plugin):
         Args:
             ruleset_name: Name of the ruleset to use for analysis
             evidence_context_size: Size of context around evidence matches
-                                  ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars)
+                                  ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars, 'full': entire content)
         """
         super().__init__()  # Initialize logger from base class
         self.ruleset_name = ruleset_name
@@ -90,13 +90,14 @@ class PersonalDataAnalyser(Plugin):
             self._patterns = get_ruleset(self.ruleset_name)
         return self._patterns
 
-    def _get_context_size(self) -> int:
+    def _get_context_size(self) -> int | None:
         """Get the context size in characters based on the configured level.
 
         Returns:
-            Number of characters to include before and after each match
+            Number of characters to include before and after each match,
+            or None for full content (no truncation)
         """
-        size_mapping = {"small": 50, "medium": 100, "large": 200}
+        size_mapping = {"small": 50, "medium": 100, "large": 200, "full": None}
         return size_mapping.get(self.evidence_context_size.lower(), 50)
 
     @classmethod
@@ -252,25 +253,34 @@ class PersonalDataAnalyser(Plugin):
 
             # Extract context around the match (configurable characters before and after)
             context_size = self._get_context_size()
-            context_start = max(0, match_pos - context_size)
-            context_end = min(len(content), match_pos + len(pattern) + context_size)
 
-            # Extract the evidence with context
-            evidence_snippet = content[context_start:context_end].strip()
+            if context_size is None:
+                # 'full' option: include entire content without truncation
+                evidence_snippet = content.strip()
+            else:
+                # Standard context window extraction
+                context_start = max(0, match_pos - context_size)
+                context_end = min(len(content), match_pos + len(pattern) + context_size)
 
-            # Add ellipsis if we truncated the context
-            if context_start > 0:
-                evidence_snippet = "..." + evidence_snippet
-            if context_end < len(content):
-                evidence_snippet = evidence_snippet + "..."
+                # Extract the evidence with context
+                evidence_snippet = content[context_start:context_end].strip()
+
+                # Add ellipsis if we truncated the context
+                if context_start > 0:
+                    evidence_snippet = "..." + evidence_snippet
+                if context_end < len(content):
+                    evidence_snippet = evidence_snippet + "..."
 
             evidence_list.append(evidence_snippet)
 
             # Move past this match for next search
             start_pos = match_pos + 1
 
-            # Limit to maximum 3 evidence snippets to avoid overwhelming output
-            if len(evidence_list) >= 3:
+            # For 'full' context, only include one snippet since it contains everything
+            # For other contexts, limit to maximum 3 evidence snippets to avoid overwhelming output
+            if context_size is None and len(evidence_list) >= 1:
+                break
+            elif context_size is not None and len(evidence_list) >= 3:
                 break
 
         return evidence_list
