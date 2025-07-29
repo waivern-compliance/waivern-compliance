@@ -35,6 +35,7 @@ class MySQLConnector(Connector):
         charset: str = "utf8mb4",
         autocommit: bool = True,
         connect_timeout: int = 10,
+        max_rows_per_table: int = 10,
     ):
         """Initialize MySQL connector with connection parameters.
 
@@ -47,6 +48,7 @@ class MySQLConnector(Connector):
             charset: Character set for the connection (default: utf8mb4)
             autocommit: Enable autocommit mode (default: True)
             connect_timeout: Connection timeout in seconds (default: 10)
+            max_rows_per_table: Maximum number of rows to extract per table (default: 10)
         """
         super().__init__()  # Initialize logger from base class
         self.host = host
@@ -57,6 +59,7 @@ class MySQLConnector(Connector):
         self.charset = charset
         self.autocommit = autocommit
         self.connect_timeout = connect_timeout
+        self.max_rows_per_table = max_rows_per_table
         self._connection = None
 
         # Validate required parameters
@@ -87,6 +90,7 @@ class MySQLConnector(Connector):
         - charset: Character set (default: "utf8mb4")
         - autocommit: Enable autocommit (default: True)
         - connect_timeout: Connection timeout (default: 10)
+        - max_rows_per_table: Maximum rows per table (default: 10)
         """
         host = properties.get("host")
         if not host:
@@ -105,6 +109,7 @@ class MySQLConnector(Connector):
             charset=properties.get("charset", "utf8mb4"),
             autocommit=properties.get("autocommit", True),
             connect_timeout=properties.get("connect_timeout", 10),
+            max_rows_per_table=properties.get("max_rows_per_table", 10),
         )
 
     @contextmanager
@@ -267,22 +272,25 @@ class MySQLConnector(Connector):
             ) from e
 
     def get_table_data(
-        self, table_name: str, limit: int = 1000
+        self, table_name: str, limit: int | None = None
     ) -> list[dict[str, Any]]:
         """Get actual data from a specific table.
 
         Args:
             table_name: Name of the table to extract data from
-            limit: Maximum number of rows to fetch per table (default: 1000)
+            limit: Maximum number of rows to fetch per table (uses max_rows_per_table if None)
 
         Returns:
             List of dictionaries representing table rows
         """
         try:
+            # Use configured limit if not specified
+            effective_limit = limit if limit is not None else self.max_rows_per_table
+
             # Use parameterized query to prevent SQL injection
             # Table name is validated to be from information_schema.TABLES
             query = "SELECT * FROM `{}` LIMIT %s".format(table_name)  # nosec B608
-            return self.execute_query(query, (limit,))
+            return self.execute_query(query, (effective_limit,))
         except Exception as e:
             self.logger.warning(f"Failed to extract data from table {table_name}: {e}")
             return []
@@ -409,7 +417,7 @@ class MySQLConnector(Connector):
         for table_info in metadata.get("tables", []):
             table_name = table_info["name"]
 
-            # Extract actual cell data from the table
+            # Extract actual cell data from the table (limited by max_rows_per_table)
             try:
                 table_data = self.get_table_data(table_name)
 
@@ -422,7 +430,7 @@ class MySQLConnector(Connector):
                                     "content": str(cell_value),
                                     "metadata": {
                                         "source": f"mysql_cell_data_table_({table_name})_column_({column_name})",
-                                        "description": f"Cell data from `{table_name}`.`{column_name}` row {row_index + 1}",
+                                        "description": f"Cell data from `{table_name}.{column_name}` row {row_index + 1}",
                                         "data_type": "cell_content",
                                         "database": self.database,
                                         "table": table_name,
@@ -469,6 +477,7 @@ class MySQLConnector(Connector):
                 "extraction_summary": {
                     "tables_processed": len(metadata.get("tables", [])),
                     "cell_values_extracted": len(data_items),
+                    "max_rows_per_table": self.max_rows_per_table,
                 },
             },
             data=data_items,
