@@ -26,12 +26,18 @@ plugins:
     type: "personal_data_analyser"
     properties:
       evidence_context_size: full
+      enable_llm_validation: true
+      llm_batch_size: 50
+      llm_validation_mode: standard
     metadata:
       compliance_frameworks: ["GDPR", "CCPA"]
   - name: "personal_data_analyser_for_mysql"
     type: "personal_data_analyser"
     properties:
-      evidence_context_size: large
+      evidence_context_size: full
+      enable_llm_validation: false
+      llm_batch_size: 80
+      llm_validation_mode: conservative  # More careful validation for database content
     metadata:
       compliance_frameworks: ["GDPR", "CCPA"]
 

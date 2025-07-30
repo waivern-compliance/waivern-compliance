@@ -33,6 +33,10 @@ mysql = [
     "cryptography>=45.0.5",
     "pymysql>=1.1.1",
 ]
+llm = [
+    "langchain>=0.3.0",
+    "langchain-anthropic>=0.2.0",
+]
 
 [build-system]
 requires = ["hatchling"]
