@@ -64,7 +64,7 @@ This is a Python project using `uv` for dependency management. Key commands:
 **Dependency Groups:**
 WCT uses optional dependency groups for specific features:
 - `uv sync --group mysql` - Install MySQL connector dependencies (pymysql, cryptography)
-- `uv sync --group llm` - Install LLM dependencies (langchain, langchain-anthropic)
+- `uv sync --group llm` - Install LLM dependencies (langchain, langchain-anthropic) for AI-powered analysis and validation
 - `uv sync --group dev` - Install development tools
 - `uv sync --group mysql --group llm --group dev` - Install multiple groups
 
@@ -101,7 +101,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
 - **Schema-Aware Plugins:** Process validated data with input/output schema contracts - **Modular Architecture**
   - File content analyser (`src/wct/plugins/file_content_analyser/`) - text → file_content_analysis_result
-  - Personal data analyser (`src/wct/plugins/personal_data_analyser/`) - Schema-validated processing
+  - Personal data analyser (`src/wct/plugins/personal_data_analyser/`) - Enhanced with LLM-powered false positive detection
 - **Schema-Aware Executor:** Matches connector output schemas to plugin input schemas automatically
 - **Schema System:** `WctSchema[T]` with JSON schema validation for runtime type safety
 - **Rulesets:** Schema-compliant reusable rule definitions for compliance checks

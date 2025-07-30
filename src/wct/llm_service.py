@@ -5,10 +5,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
-
 from wct.errors import WCTError
 from wct.logging import get_logger
-
 
 class LLMServiceError(WCTError):
     """Base exception for LLM service related errors."""
@@ -84,8 +82,8 @@ class AnthropicLLMService:
                     model_name=self.model_name,
                     api_key=SecretStr(self.api_key),
                     temperature=0,  # Consistent responses for compliance analysis
-                    max_tokens_to_sample=4000,  # Adjust as needed for response length
-                    timeout=30,  # Increased timeout for LLM requests
+                    max_tokens_to_sample=8000,  # Adjust as needed for response length
+                    timeout=300,  # Increased timeout for LLM requests
                     stop=None,  # Stop sequences for clean output
                 )
                 self.logger.debug("Created LangChain ChatAnthropic instance")

@@ -1,0 +1,3 @@
+We have collected the user information for our mailing list:
+- email: paul.smith@btinternet.com
+- phone: 555-123-4567
