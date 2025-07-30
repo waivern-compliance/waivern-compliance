@@ -14,6 +14,9 @@ WCT supports environment variables for sensitive configuration data like databas
 **Supported Environment Variables:**
 
 *MySQL Database:*
+**Supported Environment Variables:**
+
+*MySQL Database:*
 - `MYSQL_HOST` - Database server hostname
 - `MYSQL_PORT` - Database server port (default: 3306)
 - `MYSQL_USER` - Database username
@@ -24,14 +27,23 @@ WCT supports environment variables for sensitive configuration data like databas
 - `ANTHROPIC_API_KEY` - Anthropic API key for AI-powered compliance analysis
 - `ANTHROPIC_MODEL` - Anthropic model name (optional, defaults to claude-sonnet-4-20250514)
 
+*LLM Configuration:*
+- `ANTHROPIC_API_KEY` - Anthropic API key for AI-powered compliance analysis
+- `ANTHROPIC_MODEL` - Anthropic model name (optional, defaults to claude-sonnet-4-20250514)
+
 **Example .env file:**
 ```bash
+# MySQL Configuration
 # MySQL Configuration
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USER=root
 MYSQL_PASSWORD=your_password_here
 MYSQL_DATABASE=your_database_name
+
+# LLM Configuration
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
 # LLM Configuration
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
@@ -60,12 +72,16 @@ This is a Python project using `uv` for dependency management. Key commands:
 - `uv run wct list-plugins` - List available plugins
 - `uv run wct validate-runbook <runbook.yaml>` - Validate a runbook
 - `uv run wct test-llm` - Test LLM connectivity and configuration
+- `uv run wct test-llm` - Test LLM connectivity and configuration
 
 **Dependency Groups:**
 WCT uses optional dependency groups for specific features:
+WCT uses optional dependency groups for specific features:
 - `uv sync --group mysql` - Install MySQL connector dependencies (pymysql, cryptography)
 - `uv sync --group llm` - Install LLM dependencies (langchain, langchain-anthropic) for AI-powered analysis and validation
+- `uv sync --group llm` - Install LLM dependencies (langchain, langchain-anthropic) for AI-powered validation
 - `uv sync --group dev` - Install development tools
+- `uv sync --group mysql --group llm --group dev` - Install multiple groups
 - `uv sync --group mysql --group llm --group dev` - Install multiple groups
 
 **Logging Options:**
@@ -101,6 +117,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
 - **Schema-Aware Plugins:** Process validated data with input/output schema contracts - **Modular Architecture**
   - File content analyser (`src/wct/plugins/file_content_analyser/`) - text → file_content_analysis_result
+  - Personal data analyser (`src/wct/plugins/personal_data_analyser/`) - Enhanced with LLM-powered false positive detection
   - Personal data analyser (`src/wct/plugins/personal_data_analyser/`) - Enhanced with LLM-powered false positive detection
 - **Schema-Aware Executor:** Matches connector output schemas to plugin input schemas automatically
 - **Schema System:** `WctSchema[T]` with JSON schema validation for runtime type safety
