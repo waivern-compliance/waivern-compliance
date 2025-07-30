@@ -12,6 +12,7 @@ from wct.cli import (
     list_plugins_command,
     execute_runbook_command,
     validate_runbook_command,
+    test_llm_command,
 )
 
 # Load environment variables from .env file if it exists
@@ -139,6 +140,21 @@ def validate_runbook(
 ):
     """Validate a runbook"""
     validate_runbook_command(runbook, log_level)
+
+
+@app.command(name="test-llm")
+def test_llm(
+    log_level: Annotated[
+        str,
+        typer.Option(
+            "--log-level",
+            help="Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+            case_sensitive=False,
+        ),
+    ] = "INFO",
+):
+    """Test LLM connectivity and configuration"""
+    test_llm_command(log_level)
 
 
 if __name__ == "__main__":
