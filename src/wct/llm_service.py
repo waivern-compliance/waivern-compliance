@@ -5,13 +5,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from dotenv import load_dotenv
 from wct.errors import WCTError
 from wct.logging import get_logger
-
-# Load environment variables from .env file if it exists
-_ = load_dotenv()
-
 
 class LLMServiceError(WCTError):
     """Base exception for LLM service related errors."""

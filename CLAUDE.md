@@ -64,7 +64,7 @@ This is a Python project using `uv` for dependency management. Key commands:
 **Dependency Groups:**
 WCT uses optional dependency groups for specific features:
 - `uv sync --group mysql` - Install MySQL connector dependencies (pymysql, cryptography)
-- `uv sync --group llm` - Install LLM dependencies (langchain, langchain-anthropic) for AI-powered validation
+- `uv sync --group llm` - Install LLM dependencies (langchain, langchain-anthropic) for AI-powered analysis and validation
 - `uv sync --group dev` - Install development tools
 - `uv sync --group mysql --group llm --group dev` - Install multiple groups
 
