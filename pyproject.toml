@@ -28,6 +28,7 @@ dev = [
     "pytest-mock>=3.14.1",
     "ruff>=0.11.12",
     "pre-commit>=4.0.0",
+    "mypy>=1.17.0",
 ]
 mysql = [
     "cryptography>=45.0.5",
@@ -46,6 +47,8 @@ build-backend = "hatchling.build"
 packages = ["src/wct"]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
+xfail_strict = true
 addopts = [
     # Allow test files to have the same name in different directories.
     # This is necessary because we have multiple packages in the workspace, each
@@ -56,4 +59,42 @@ addopts = [
 
 [tool.bandit]
 exclude_dirs = ["tests"]
-skips = ["B101"]  # Skip assert_used test
+skips = ["B101"]         # Skip assert_used test
+
+[tool.mypy]
+files = ["src/"]
+plugins = ['pydantic.mypy']
+allow_redefinition = true
+enable_error_code = "possibly-undefined"
+strict = true
+warn_unreachable = true
+
+[tool.ruff.lint]
+select = [
+    "D",      # pydocstyle
+    "F",      # pyflakes
+    "I",      # isort
+    "PL",     # pylint
+    "RUF100", # unused-noqa-directive
+    "S",      # bandit
+    "UP",     # pyupgrade
+]
+ignore = [
+    "D105",    # Missing docstring in magic method
+    "D107",    # Missing docstring in __init__
+    "D203",    # incorrect-blank-line-before-class
+    "D213",    # multi-line-summary-second-line
+    "D413",    # Missing blank line after last section
+    "PLR0913", # Too many arguments in function definition
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+    "F401", # Unused imports
+]
+"tests/**/*.py" = [
+    "D", # Documentation
+]
+
+[tool.ruff.lint.pydocstyle]
+ignore-decorators = ["typing.overload"]
