@@ -1,4 +1,8 @@
-"""Connectors for the Waivern Compliance Tool."""
+"""Data connectors package.
+
+This package provides various connectors for extracting data from different sources
+including files, databases, and web services.
+"""
 
 from wct.connectors.base import (
     Connector,

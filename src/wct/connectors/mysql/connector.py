@@ -1,5 +1,13 @@
-"""MySQL database connector for the Waivern Compliance Tool."""
+"""MySQL database connector for WCT compliance data extraction.
 
+This module provides:
+- MySQLConnector: Main connector class for MySQL database integration
+- Support for extracting database metadata and content
+- Transformation capabilities for multiple output schemas (mysql_database, text)
+- Connection management with proper error handling and logging
+"""
+
+import os
 from contextlib import contextmanager
 from typing import Any
 
@@ -12,6 +20,11 @@ from wct.connectors.base import (
 )
 from wct.message import Message
 from wct.schema import WctSchema
+
+try:
+    import pymysql
+except ImportError:
+    pymysql = None  # Optional dependency, will raise error if used
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "mysql_database": WctSchema(name="mysql_database", type=dict[str, Any]),
@@ -37,6 +50,7 @@ class MySQLConnector(Connector):
         charset: str = "utf8mb4",
         autocommit: bool = True,
         connect_timeout: int = 10,
+        max_rows_per_table: int = 10,
     ):
         """Initialize MySQL connector with connection parameters.
 
@@ -49,6 +63,7 @@ class MySQLConnector(Connector):
             charset: Character set for the connection (default: utf8mb4)
             autocommit: Enable autocommit mode (default: True)
             connect_timeout: Connection timeout in seconds (default: 10)
+            max_rows_per_table: Maximum number of rows to extract per table (default: 10)
         """
         super().__init__()  # Initialize logger from base class
         self.host = host
@@ -59,6 +74,7 @@ class MySQLConnector(Connector):
         self.charset = charset
         self.autocommit = autocommit
         self.connect_timeout = connect_timeout
+        self.max_rows_per_table = max_rows_per_table
         self._connection = None
 
         # Validate required parameters
@@ -70,6 +86,7 @@ class MySQLConnector(Connector):
     @classmethod
     @override
     def get_name(cls) -> str:
+        """Return the name of the connector."""
         return "mysql"
 
     @classmethod
@@ -78,34 +95,57 @@ class MySQLConnector(Connector):
         """Create connector from configuration properties.
 
         Required properties:
-        - host: MySQL server hostname
-        - user: Database username
+        - host: MySQL server hostname (or MYSQL_HOST env var)
+        - user: Database username (or MYSQL_USER env var)
 
         Optional properties:
-        - port: Server port (default: 3306)
-        - password: Database password (default: "")
-        - database: Database name (default: "")
+        - port: Server port (default: 3306, or MYSQL_PORT env var)
+        - password: Database password (or MYSQL_PASSWORD env var)
+        - database: Database name (or MYSQL_DATABASE env var)
         - charset: Character set (default: "utf8mb4")
         - autocommit: Enable autocommit (default: True)
         - connect_timeout: Connection timeout (default: 10)
+        - max_rows_per_table: Maximum rows per table (default: 10)
         """
-        host = properties.get("host")
+        # Load environment variables, with runbook properties as fallback
+        host = os.getenv("MYSQL_HOST") or properties.get("host")
         if not host:
-            raise ConnectorConfigError("MySQL host info is required")
+            raise ConnectorConfigError(
+                "MySQL host info is required (specify in runbook or MYSQL_HOST env var)"
+            )
 
-        user = properties.get("user")
+        user = os.getenv("MYSQL_USER") or properties.get("user")
         if not user:
-            raise ConnectorConfigError("MySQL user info is required")
+            raise ConnectorConfigError(
+                "MySQL user info is required (specify in runbook or MYSQL_USER env var)"
+            )
+
+        # For sensitive data, prefer environment variables
+        password = os.getenv("MYSQL_PASSWORD") or properties.get("password")
+        database = os.getenv("MYSQL_DATABASE") or properties.get("database", "")
+
+        # Port handling with environment variable support
+        port_str = os.getenv("MYSQL_PORT")
+        if port_str:
+            try:
+                port = int(port_str)
+            except ValueError:
+                raise ConnectorConfigError(
+                    f"Invalid MYSQL_PORT environment variable: {port_str}"
+                )
+        else:
+            port = properties.get("port", 3306)
 
         return cls(
             host=host,
-            port=properties.get("port", 3306),
+            port=port,
             user=user,
-            password=properties.get("password"),
-            database=properties.get("database", ""),
+            password=password,
+            database=database,
             charset=properties.get("charset", "utf8mb4"),
             autocommit=properties.get("autocommit", True),
             connect_timeout=properties.get("connect_timeout", 10),
+            max_rows_per_table=properties.get("max_rows_per_table", 10),
         )
 
     @contextmanager
@@ -123,13 +163,10 @@ class MySQLConnector(Connector):
         """
         connection = None
         try:
-            # Import pymysql here to make it an optional dependency
-            try:
-                import pymysql  # noqa: PLC0415 # temporarily disabled "import-outside-toplevel"
-            except ImportError as e:
-                raise ConnectorExtractionError(
+            if pymysql is None:
+                raise ImportError(
                     "pymysql is required for MySQL connector. Install with: uv sync --group mysql"
-                ) from e
+                )
 
             self.logger.debug(f"Connecting to MySQL at {self.host}:{self.port}")
 
@@ -268,22 +305,25 @@ class MySQLConnector(Connector):
             ) from e
 
     def get_table_data(
-        self, table_name: str, limit: int = 1000
+        self, table_name: str, limit: int | None = None
     ) -> list[dict[str, Any]]:
         """Get actual data from a specific table.
 
         Args:
             table_name: Name of the table to extract data from
-            limit: Maximum number of rows to fetch per table (default: 1000)
+            limit: Maximum number of rows to fetch per table (uses max_rows_per_table if None)
 
         Returns:
             List of dictionaries representing table rows
         """
         try:
-            # Use parameterized query to prevent SQL injection
-            # Table name is validated to be from information_schema.TABLES
-            query = f"SELECT * FROM `{table_name}` LIMIT %s"  # noqa: S608 # temporarily disabled "possible SQL injection"
-            return self.execute_query(query, (limit,))
+            # Use configured limit if not specified
+            effective_limit = limit if limit is not None else self.max_rows_per_table
+
+            # Safe to use table name since it's verified to exist in information_schema
+            # Using backticks to handle table names with special characters
+            query = f"SELECT * FROM `{table_name}` LIMIT %s"  # noqa # nosec B608
+            return self.execute_query(query, (effective_limit,))
         except Exception as e:
             self.logger.warning(f"Failed to extract data from table {table_name}: {e}")
             return []
@@ -410,7 +450,7 @@ class MySQLConnector(Connector):
         for table_info in metadata.get("tables", []):
             table_name = table_info["name"]
 
-            # Extract actual cell data from the table
+            # Extract actual cell data from the table (limited by max_rows_per_table)
             try:
                 table_data = self.get_table_data(table_name)
 
@@ -423,7 +463,7 @@ class MySQLConnector(Connector):
                                     "content": str(cell_value),
                                     "metadata": {
                                         "source": f"mysql_cell_data_table_({table_name})_column_({column_name})",
-                                        "description": f"Cell data from `{table_name}`.`{column_name}` row {row_index + 1}",
+                                        "description": f"Cell data from `{table_name}.{column_name}` row {row_index + 1}",
                                         "data_type": "cell_content",
                                         "database": self.database,
                                         "table": table_name,
@@ -470,6 +510,7 @@ class MySQLConnector(Connector):
                 "extraction_summary": {
                     "tables_processed": len(metadata.get("tables", [])),
                     "cell_values_extracted": len(data_items),
+                    "max_rows_per_table": self.max_rows_per_table,
                 },
             },
             data=data_items,

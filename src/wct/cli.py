@@ -14,6 +14,7 @@ from rich.tree import Tree
 from wct.analysis import AnalysisResult, AnalysisResultsExporter
 from wct.connectors import BUILTIN_CONNECTORS
 from wct.executor import Executor
+from wct.llm_service import LLMServiceError, LLMServiceFactory
 from wct.logging import get_cli_logger, setup_logging
 from wct.plugins import BUILTIN_PLUGINS
 from wct.runbook import Runbook, RunbookValidator, load_runbook
@@ -320,7 +321,7 @@ def handle_cli_error(error: Exception, message: str) -> None:
 def execute_runbook_command(
     runbook_path: Path,
     output_dir: Path,
-    output: Path | None = None,
+    output: Path,
     verbose: bool = False,
     log_level: str = "INFO",
 ) -> None:
@@ -328,8 +329,8 @@ def execute_runbook_command(
 
     Args:
         runbook_path: Path to the runbook YAML file
-        output_dir: Output directory (currently unused)
-        output: Optional path to save results as JSON
+        output_dir: Output directory for analysis results
+        output: Path to save results as JSON (now required, defaults to YYYYMMDDHHMMSS_analysis_results.json)
         verbose: Enable verbose output
         log_level: Logging level
     """
@@ -365,49 +366,40 @@ def execute_runbook_command(
         formatter = OutputFormatter()
         formatter.format_analysis_results(results, verbose)
 
-        # Save results to JSON file if requested
-        if output:
-            try:
-                # Combine output_dir with output filename
-                # If output is absolute, use it as-is; if relative, place it in output_dir
-                if output.is_absolute():
-                    final_output_path = output
-                else:
-                    final_output_path = output_dir / output
+        # Save results to JSON file (always, since output is now always provided)
+        try:
+            # Combine output_dir with output filename
+            # If output is absolute, use it as-is; if relative, place it in output_dir
+            if output.is_absolute():
+                final_output_path = output
+            else:
+                final_output_path = output_dir / output
 
-                AnalysisResultsExporter.save_to_json(
-                    results, final_output_path, runbook_path
-                )
-                console.print(
-                    f"\n[green]✅ Results saved to JSON file: {final_output_path}[/green]"
-                )
-                logger.info(
-                    "Analysis results saved to JSON file: %s", final_output_path
-                )
-            except Exception as e:
-                error_msg = f"Failed to save JSON output: {e}"
-                logger.error(error_msg)
-                console.print(f"\n[red]❌ {error_msg}[/red]")
+            AnalysisResultsExporter.save_to_json(
+                results, final_output_path, runbook_path
+            )
+            console.print(
+                f"\n[green]✅ Results saved to JSON file: {final_output_path}[/green]"
+            )
+            logger.info("Analysis results saved to JSON file: %s", final_output_path)
+        except Exception as e:
+            error_msg = f"Failed to save JSON output: {e}"
+            logger.error(error_msg)
+            console.print(f"\n[red]❌ {error_msg}[/red]")
 
         # Show completion banner
-        final_output_display = None
-        if output:
-            # Calculate the final output path for display
-            if output.is_absolute():
-                final_output_display = output
-            else:
-                final_output_display = output_dir / output
+        # Calculate the final output path for display
+        if output.is_absolute():
+            final_output_display = output
+        else:
+            final_output_display = output_dir / output
 
         completion_panel = Panel(
             f"[bold green]✅ Analysis Complete[/bold green]\n\n"
             f"[bold]Total Results:[/bold] {len(results)}\n"
             f"[bold]Successful:[/bold] {sum(1 for r in results if r.success)}\n"
-            f"[bold]Failed:[/bold] {sum(1 for r in results if not r.success)}"
-            + (
-                f"\n[bold]JSON Output:[/bold] {final_output_display}"
-                if final_output_display
-                else ""
-            ),
+            f"[bold]Failed:[/bold] {sum(1 for r in results if not r.success)}\n"
+            f"[bold]JSON Output:[/bold] {final_output_display}",
             title="🎉 Completion Summary",
             border_style="green",
         )
@@ -474,3 +466,76 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
 
     except CLIError as e:
         handle_cli_error(e, "Runbook validation failed")
+
+
+def test_llm_command(log_level: str = "INFO") -> None:
+    """CLI command implementation for testing LLM connectivity.
+
+    Args:
+        log_level: Logging level
+    """
+    setup_cli_logging(log_level)
+
+    try:
+        # Show startup banner
+        startup_panel = Panel(
+            "[bold cyan]🤖 Testing LLM Connectivity[/bold cyan]\n\n"
+            "[bold]Model:[/bold] Claude 3.5 Sonnet\n"
+            "[bold]Provider:[/bold] Anthropic",
+            title="🛡️  Waivern Compliance Tool - LLM Test",
+            border_style="cyan",
+        )
+        console.print(startup_panel)
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task("Initializing LLM service...", total=None)
+
+            # Create LLM service
+            llm_service = LLMServiceFactory.create_anthropic_service()
+
+            progress.update(task, description="Testing connection to Anthropic API...")
+
+            # Test connection
+            test_result = llm_service.test_connection()
+
+            progress.update(
+                task, description="Connection test completed", completed=True
+            )
+
+        # Display results
+        if test_result["status"] == "success":
+            result_panel = Panel(
+                f"[green]✅ LLM Connection Test Successful![/green]\n\n"
+                f"[bold]Model:[/bold] {test_result['model']}\n"
+                f"[bold]Response:[/bold] {test_result['response']}\n"
+                f"[bold]Response Length:[/bold] {test_result['response_length']} characters",
+                title="🎉 Connection Test Results",
+                border_style="green",
+            )
+            console.print(result_panel)
+            logger.info("LLM connection test successful")
+        else:
+            error_panel = Panel(
+                "[red]❌ LLM connection test failed[/red]",
+                title="Connection Test Results",
+                border_style="red",
+            )
+            console.print(error_panel)
+
+    except LLMServiceError as e:
+        error_panel = Panel(
+            f"[red]{e}[/red]",
+            title="❌ LLM Service Error",
+            border_style="red",
+        )
+        console.print(error_panel)
+        logger.error("LLM service error: %s", e)
+        raise typer.Exit(1) from e
+
+    except Exception as e:
+        handle_cli_error(e, "LLM connectivity test failed")

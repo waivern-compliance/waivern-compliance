@@ -1,7 +1,8 @@
-"""Message between WCT components.
+"""Message handling for WCT components.
 
-This module defines the Message class, which is used to pass data between
-different components of the WCT system, such as connectors and plugins.
+This module provides:
+- Message: dataclass for payloads between WCT components
+- MessageValidationError: exception for message validation failures
 """
 
 from dataclasses import dataclass

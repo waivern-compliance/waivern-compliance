@@ -1,6 +1,11 @@
-"""Executor for the Waivern Compliance Tool.
+"""Executor module for the Waivern Compliance Tool.
 
-The Executor follows a middleware design pattern, managing the flow of data between connectors and plugins based on a runbook configuration. It is responsible for loading runbook files, loading connectors and plugins, and executing the analysis workflow defined within the runbooks.
+This module provides the main execution engine for WCT, including:
+- Executor: Main class that manages the execution of runbooks
+- ExecutorError: Exception class for executor-related errors
+
+The Executor follows a middleware design pattern, managing the flow of data
+between connectors and plugins based on runbook configurations.
 """
 
 from __future__ import annotations

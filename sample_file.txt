@@ -1,5 +1,3 @@
-This is a sample file for testing.
-It contains some text and maybe sensitive information.
-Email: test@example.com
-Password: secret123
-API Key: abcdef123456789012345678901234567890
+We have collected the user information for our mailing list:
+- email: paul.smith@btinternet.com
+- phone: 555-123-4567

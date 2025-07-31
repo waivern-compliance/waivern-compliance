@@ -1,4 +1,8 @@
-"""Base error definitions for the Waivern Compliance Tool."""
+"""Error classes for the WCT (Waivern Compliance Tool) module.
+
+This module provides:
+- WCTError: Base exception class for all WCT-related errors
+"""
 
 
 class WCTError(Exception):

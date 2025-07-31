@@ -1,4 +1,8 @@
-"""Plugins for the Waivern Compliance Tool."""
+"""WCT plugins.
+
+This package provides the core plugin system and built-in plugins
+for the Waivern Compliance Tool (WCT).
+"""
 
 from wct.plugins.base import (
     Plugin,

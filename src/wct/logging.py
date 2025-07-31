@@ -23,7 +23,14 @@ class ColoredFormatter(logging.Formatter):
 
     @override
     def format(self, record: logging.LogRecord) -> str:
-        """Format the log record as text."""
+        """Format the log record with colored level names.
+
+        Args:
+            record: The log record to format
+
+        Returns:
+            Formatted log message string with colored level name
+        """
         # Add color to the level name
         if record.levelname in self.COLORS:
             record.levelname = (

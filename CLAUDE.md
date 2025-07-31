@@ -2,6 +2,42 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Environment Configuration
+
+WCT supports environment variables for sensitive configuration data like database credentials. This keeps sensitive information out of runbook files that are committed to version control.
+
+**Environment Variable Setup:**
+1. Copy `.env.example` to `.env`: `cp .env.example .env`
+2. Edit `.env` with your actual credentials
+3. Environment variables take precedence over runbook properties
+
+**Supported Environment Variables:**
+
+*MySQL Database:*
+- `MYSQL_HOST` - Database server hostname
+- `MYSQL_PORT` - Database server port (default: 3306)
+- `MYSQL_USER` - Database username
+- `MYSQL_PASSWORD` - Database password
+- `MYSQL_DATABASE` - Database name
+
+*LLM Configuration:*
+- `ANTHROPIC_API_KEY` - Anthropic API key for AI-powered compliance analysis
+- `ANTHROPIC_MODEL` - Anthropic model name (optional, defaults to claude-sonnet-4-20250514)
+
+**Example .env file:**
+```bash
+# MySQL Configuration
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_password_here
+MYSQL_DATABASE=your_database_name
+
+# LLM Configuration
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
+```
+
 ## Development Commands
 
 This is a Python project using `uv` for dependency management. Key commands:
@@ -23,12 +59,16 @@ This is a Python project using `uv` for dependency management. Key commands:
 - `uv run wct list-connectors` - List available connectors
 - `uv run wct list-plugins` - List available plugins
 - `uv run wct validate-runbook <runbook.yaml>` - Validate a runbook
+- `uv run wct test-llm` - Test LLM connectivity and configuration
 
 **Dependency Groups:**
-WCT uses optional dependency groups for specific connectors:
+WCT uses optional dependency groups for specific features:
 - `uv sync --group mysql` - Install MySQL connector dependencies (pymysql, cryptography)
 - `uv sync --group dev` - Install development tools
 - `uv sync --group mysql --group dev` - Install multiple groups
+
+**Core Dependencies:**
+LLM functionality (langchain, langchain-anthropic) is now included as core dependencies and available by default for AI-powered compliance analysis and validation.
 
 **Logging Options:**
 All WCT commands support logging configuration:
@@ -63,7 +103,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
 - **Schema-Aware Plugins:** Process validated data with input/output schema contracts - **Modular Architecture**
   - File content analyser (`src/wct/plugins/file_content_analyser/`) - text → file_content_analysis_result
-  - Personal data analyser (`src/wct/plugins/personal_data_analyser/`) - Schema-validated processing
+  - Personal data analyser (`src/wct/plugins/personal_data_analyser/`) - Enhanced with LLM-powered false positive detection
 - **Schema-Aware Executor:** Matches connector output schemas to plugin input schemas automatically
 - **Schema System:** `WctSchema[T]` with JSON schema validation for runtime type safety
 - **Rulesets:** Schema-compliant reusable rule definitions for compliance checks
@@ -112,7 +152,7 @@ execution:
 
 ## Project Structure Notes
 - Uses `uv` for dependency management with optional dependency groups
-- **Core Dependencies:** `jsonschema` for comprehensive JSON schema validation
+- **Core Dependencies:** `jsonschema` for comprehensive JSON schema validation, `langchain` and `langchain-anthropic` for AI-powered compliance analysis
 - Type annotations are enforced with `basedpyright` (schema system is fully type-safe)
 - Main package is `wct` located in `src/wct/`
 - Schema definitions in `src/wct/schemas/` (JSON Schema format)

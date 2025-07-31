@@ -1,1 +1,1 @@
-"""The Waivern Compliance Tool."""
+"""Waivern Compliance Tool (WCT)."""

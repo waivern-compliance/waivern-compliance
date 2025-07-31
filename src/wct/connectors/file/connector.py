@@ -56,6 +56,7 @@ class FileConnector(Connector):
     @classmethod
     @override
     def get_name(cls) -> str:
+        """Return the name of the connector."""
         return "file_reader"
 
     @classmethod

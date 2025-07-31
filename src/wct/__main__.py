@@ -1,18 +1,32 @@
-"""Command-line interface for the Waivern Compliance Tool."""
+"""Main entry point for the Waivern Compliance Tool (WCT).
+
+This module provides the command-line interface for the Waivern Compliance Tool,
+including commands for:
+- Running compliance runbooks
+- Listing available connectors and plugins
+- Validating runbooks
+- Testing LLM connectivity
+"""
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 
 from wct.cli import (
     execute_runbook_command,
     list_connectors_command,
     list_plugins_command,
+    test_llm_command,
     validate_runbook_command,
 )
+
+# Load environment variables from .env file if it exists
+_ = load_dotenv()
 
 app = typer.Typer(name="waivern-compliance-tool")
 
@@ -46,7 +60,7 @@ def run(
         typer.Option(
             "--output",
             "-o",
-            help="Save analysis results to a JSON file (relative to --output-dir)",
+            help="Save analysis results to a JSON file (relative to --output-dir). Defaults to YYYYMMDDHHMMSS_analysis_results.json",
             file_okay=True,
             dir_okay=False,
             writable=True,
@@ -75,6 +89,11 @@ def run(
     Example:
         wct run compliance-runbook.yaml --output-dir ./results --output report.json -v
     """
+    # Generate default output filename if not provided
+    if output is None:
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        output = Path(f"{timestamp}_analysis_results.json")
+
     execute_runbook_command(runbook, output_dir, output, verbose, log_level)
 
 
@@ -131,6 +150,21 @@ def validate_runbook(
 ):
     """Validate a runbook."""
     validate_runbook_command(runbook, log_level)
+
+
+@app.command(name="test-llm")
+def test_llm(
+    log_level: Annotated[
+        str,
+        typer.Option(
+            "--log-level",
+            help="Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+            case_sensitive=False,
+        ),
+    ] = "INFO",
+):
+    """Test LLM connectivity and configuration."""
+    test_llm_command(log_level)
 
 
 if __name__ == "__main__":

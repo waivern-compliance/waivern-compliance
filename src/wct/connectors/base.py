@@ -1,4 +1,11 @@
-"""Base classes for connectors in the Waivern Compliance Tool."""
+"""Base classes and configurations for WCT connectors.
+
+This module provides:
+- ConnectorConfig: Configuration dataclass for connectors in runbooks
+- PathConnectorConfig: Shortcut configuration for file/directory connectors
+- Connector: Abstract base class for all WCT connectors
+- ConnectorError, ConnectorConfigError, ConnectorExtractionError: Exception classes
+"""
 
 import abc
 from dataclasses import dataclass
@@ -69,7 +76,7 @@ class Connector(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def get_name(cls) -> str:
-        """Get the name of the connector."""
+        """Return the name of the connector."""
 
     @classmethod
     @abc.abstractmethod

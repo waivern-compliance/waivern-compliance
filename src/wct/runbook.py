@@ -321,7 +321,7 @@ class RunbookValidator:
 
 # TODO: Consider moving this to the RunbookLoader class as a static method
 def load_runbook(runbook_path: Path) -> Runbook:
-    """Load a runbook.
+    """Load a runbook from the specified path.
 
     Args:
         runbook_path: Path to the runbook YAML file
