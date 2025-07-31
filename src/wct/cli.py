@@ -330,7 +330,7 @@ def execute_runbook_command(
     Args:
         runbook_path: Path to the runbook YAML file
         output_dir: Output directory for analysis results
-        output: Path to save results as JSON (now required, defaults to YYYYMMDD_analysis_results.json)
+        output: Path to save results as JSON (now required, defaults to YYYYMMDDHHMMSS_analysis_results.json)
         verbose: Enable verbose output
         log_level: Logging level
     """

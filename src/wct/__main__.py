@@ -50,7 +50,7 @@ def run(
         typer.Option(
             "--output",
             "-o",
-            help="Save analysis results to a JSON file (relative to --output-dir). Defaults to YYYYMMDD_analysis_results.json",
+            help="Save analysis results to a JSON file (relative to --output-dir). Defaults to YYYYMMDDHHMMSS_analysis_results.json",
             file_okay=True,
             dir_okay=False,
             writable=True,
@@ -81,8 +81,8 @@ def run(
     """
     # Generate default output filename if not provided
     if output is None:
-        today = datetime.now().strftime("%Y%m%d")
-        output = Path(f"{today}_analysis_results.json")
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        output = Path(f"{timestamp}_analysis_results.json")
 
     execute_runbook_command(runbook, output_dir, output, verbose, log_level)
 
