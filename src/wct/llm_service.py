@@ -5,6 +5,9 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from langchain_anthropic import ChatAnthropic
+from pydantic import SecretStr
+
 from wct.errors import WCTError
 from wct.logging import get_logger
 
@@ -69,31 +72,21 @@ class AnthropicLLMService:
             LangChain ChatAnthropic instance
 
         Raises:
-            LLMConnectionError: If LangChain dependencies are not available
+            LLMConnectionError: If API key is not available
         """
         if self._llm is None:
-            try:
-                from langchain_anthropic import ChatAnthropic
-                from pydantic import SecretStr
+            if not self.api_key:
+                raise LLMConnectionError("API key is required but not available")
 
-                if not self.api_key:
-                    raise LLMConnectionError("API key is required but not available")
-
-                self._llm = ChatAnthropic(
-                    model_name=self.model_name,
-                    api_key=SecretStr(self.api_key),
-                    temperature=0,  # Consistent responses for compliance analysis
-                    max_tokens_to_sample=8000,  # Adjust as needed for response length
-                    timeout=300,  # Increased timeout for LLM requests
-                    stop=None,  # Stop sequences for clean output
-                )
-                self.logger.debug("Created LangChain ChatAnthropic instance")
-
-            except ImportError as e:
-                raise LLMConnectionError(
-                    "LangChain Anthropic dependencies not available. "
-                    "Install with: uv sync --group llm"
-                ) from e
+            self._llm = ChatAnthropic(
+                model_name=self.model_name,
+                api_key=SecretStr(self.api_key),
+                temperature=0,  # Consistent responses for compliance analysis
+                max_tokens_to_sample=8000,  # Adjust as needed for response length
+                timeout=300,  # Increased timeout for LLM requests
+                stop=None,  # Stop sequences for clean output
+            )
+            self.logger.debug("Created LangChain ChatAnthropic instance")
 
         return self._llm
 

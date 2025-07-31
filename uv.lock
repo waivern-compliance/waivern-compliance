@@ -1451,6 +1451,8 @@ source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
     { name = "jsonschema" },
+    { name = "langchain" },
+    { name = "langchain-anthropic" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -1468,10 +1470,6 @@ dev = [
     { name = "pytest-mock" },
     { name = "ruff" },
 ]
-llm = [
-    { name = "langchain" },
-    { name = "langchain-anthropic" },
-]
 mysql = [
     { name = "cryptography" },
     { name = "pymysql" },
@@ -1481,6 +1479,8 @@ mysql = [
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.7.0" },
     { name = "jsonschema", specifier = ">=4.25.0" },
+    { name = "langchain", specifier = ">=0.3.0" },
+    { name = "langchain-anthropic", specifier = ">=0.2.0" },
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0.2" },
@@ -1497,10 +1497,6 @@ dev = [
     { name = "pytest", specifier = ">=8.4.0" },
     { name = "pytest-mock", specifier = ">=3.14.1" },
     { name = "ruff", specifier = ">=0.11.12" },
-]
-llm = [
-    { name = "langchain", specifier = ">=0.3.0" },
-    { name = "langchain-anthropic", specifier = ">=0.2.0" },
 ]
 mysql = [
     { name = "cryptography", specifier = ">=45.0.5" },
