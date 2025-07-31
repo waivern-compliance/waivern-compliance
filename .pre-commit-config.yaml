@@ -1,17 +1,17 @@
 repos:
-  # Ruff - Python linting and formatting (focus on new WCT system)
+  # Ruff - Python linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.12
+    rev: v0.12.7
     hooks:
       # Run the linter
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
       # Run the formatter
       - id: ruff-format
 
   # Basic file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: check-yaml
       - id: check-toml
@@ -26,11 +26,9 @@ repos:
     hooks:
       - id: basedpyright
         name: basedpyright
-        entry: uv run --group dev basedpyright src/wct --level error
+        entry: uv run --group dev basedpyright --level error
         language: system
         types: [python]
-        pass_filenames: false
-        files: ^src/wct/
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.10
