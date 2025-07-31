@@ -40,6 +40,7 @@ uv run pre-commit install
 
 **Core Dependencies**:
 - `jsonschema` - JSON schema validation for comprehensive data validation
+- `langchain` and `langchain-anthropic` - AI-powered compliance analysis and validation
 
 Some connectors and plugins require additional dependencies that are not installed by default. Check the connector/plugin documentation or error messages for specific dependency group requirements.
 
@@ -341,7 +342,19 @@ src/wct/
 
 ## License
 
-[Add your license information here]
+This project uses a dual-license structure:
+
+### Main Codebase
+The core Waivern Compliance Tool is licensed under the **GNU Affero General Public License v3.0** with additional terms. See the [`LICENSE`](LICENSE) file for full details.
+
+### Connectors
+The connector modules (`src/wct/connectors/`) are licensed under the **GNU General Public License v3.0**. See [`src/wct/connectors/LICENSE`](src/wct/connectors/LICENSE) for full details.
+
+This licensing structure allows:
+- **Core WCT Framework**: Strong copyleft protection ensuring modifications remain open source, especially for network/SaaS usage
+- **Connectors**: Standard GPL protection for data extraction components with more permissive linking options
+
+For commercial licensing or questions about license compatibility, please contact Wainvern.
 
 ## Support
 
