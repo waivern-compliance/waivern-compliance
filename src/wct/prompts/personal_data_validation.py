@@ -1,5 +1,6 @@
 """LLM validation prompts for personal data findings validation."""
 
+import re
 from typing import Any
 
 
@@ -218,8 +219,6 @@ def extract_json_from_response(llm_response: str) -> str:
     Returns:
         Clean JSON string
     """
-    import re
-
     # Remove markdown code block wrapper if present
     json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", llm_response, re.DOTALL)
     if json_match:
