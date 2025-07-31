@@ -1,7 +1,7 @@
 """File reader connector for WCT."""
 
-from pathlib import Path
 from collections.abc import Generator
+from pathlib import Path
 from typing import Any
 
 from typing_extensions import Self, override
@@ -11,8 +11,8 @@ from wct.connectors.base import (
     ConnectorConfigError,
     ConnectorExtractionError,
 )
-from wct.schema import WctSchema
 from wct.message import Message
+from wct.schema import WctSchema
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "text": WctSchema(name="text", type=dict[str, Any]),
@@ -56,7 +56,7 @@ class FileConnector(Connector):
     @classmethod
     @override
     def get_name(cls) -> str:
-        """The name of the connector."""
+        """Return the name of the connector."""
         return "file_reader"
 
     @classmethod
@@ -92,7 +92,6 @@ class FileConnector(Connector):
             ... }
             >>> connector = FileConnector.from_properties(properties)
         """
-
         file_path = properties.get("path")
         if not file_path:
             raise ConnectorConfigError("path property is required")
@@ -112,7 +111,7 @@ class FileConnector(Connector):
         """Extract file content and metadata.
 
         Args:
-            schema: Optional schema to use and validate against. Use the default
+            output_schema: Optional schema to use and validate against. Use the default
             schema of the current plugin if not provided.
 
         Returns:
@@ -251,9 +250,7 @@ class FileConnector(Connector):
             )
             content_parts = []
 
-            with open(
-                self.file_path, "r", encoding=self.encoding, errors=self.errors
-            ) as f:
+            with open(self.file_path, encoding=self.encoding, errors=self.errors) as f:
                 while True:
                     chunk = f.read(self.chunk_size)
                     if not chunk:
@@ -295,9 +292,7 @@ class FileConnector(Connector):
         self.logger.debug(f"Streaming file content from {self.file_path}")
 
         try:
-            with open(
-                self.file_path, "r", encoding=self.encoding, errors=self.errors
-            ) as f:
+            with open(self.file_path, encoding=self.encoding, errors=self.errors) as f:
                 while True:
                     chunk = f.read(self.chunk_size)
                     if not chunk:

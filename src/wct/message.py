@@ -1,3 +1,10 @@
+"""Message handling for WCT components.
+
+This module provides:
+- Message: dataclass for payloads between WCT components
+- MessageValidationError: exception for message validation failures
+"""
+
 from dataclasses import dataclass
 from typing import Any
 

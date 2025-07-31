@@ -103,7 +103,7 @@ class RunbookLoader:
             return runbook
 
         except Exception as e:
-            if isinstance(e, (RunbookLoadError, RunbookValidationError)):
+            if isinstance(e, RunbookLoadError | RunbookValidationError):
                 raise
             raise RunbookLoadError(f"Failed to load runbook {runbook_path}: {e}") from e
 
@@ -120,7 +120,7 @@ class RunbookLoader:
             RunbookLoadError: If file cannot be read or parsed
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             if not isinstance(data, dict):
@@ -321,7 +321,7 @@ class RunbookValidator:
 
 # TODO: Consider moving this to the RunbookLoader class as a static method
 def load_runbook(runbook_path: Path) -> Runbook:
-    """Convenience function to load a runbook.
+    """Load a runbook from the specified path.
 
     Args:
         runbook_path: Path to the runbook YAML file

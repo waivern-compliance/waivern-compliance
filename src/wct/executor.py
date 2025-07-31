@@ -1,3 +1,13 @@
+"""Executor module for the Waivern Compliance Tool.
+
+This module provides the main execution engine for WCT, including:
+- Executor: Main class that manages the execution of runbooks
+- ExecutorError: Exception class for executor-related errors
+
+The Executor follows a middleware design pattern, managing the flow of data
+between connectors and plugins based on runbook configurations.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,8 +18,7 @@ from wct.connectors import Connector, ConnectorConfig, ConnectorError
 from wct.errors import WCTError
 from wct.logging import get_executor_logger
 from wct.plugins import Plugin, PluginConfig, PluginError
-from wct.runbook import Runbook, ExecutionStep
-from wct.runbook import load_runbook
+from wct.runbook import ExecutionStep, Runbook, load_runbook
 from wct.schema import WctSchema
 
 
@@ -72,6 +81,7 @@ class Executor:
 
     def _execute_step(self, step: ExecutionStep, runbook: Runbook) -> AnalysisResult:
         """Execute a single step in the runbook.
+
         This method handles the execution of a step, including loading
         the required plugin and connector, extracting data, and running
         the analysis plugin.
@@ -83,7 +93,6 @@ class Executor:
         Returns:
             AnalysisResult containing the results of the step execution
         """
-
         # Get the required plugin and connector for the step
         plugin_config = self._find_plugin_config(runbook.plugins, step.plugin)
         if not plugin_config:
@@ -198,7 +207,6 @@ class Executor:
         Raises:
             ExecutorError: If schema cannot be loaded or is unsupported
         """
-
         if not schema_name:
             # Use first supported schema as default
             if not supported_schemas:

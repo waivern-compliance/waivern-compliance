@@ -1,3 +1,9 @@
+"""Data connectors package.
+
+This package provides various connectors for extracting data from different sources
+including files, databases, and web services.
+"""
+
 from wct.connectors.base import (
     Connector,
     ConnectorConfig,
@@ -6,10 +12,10 @@ from wct.connectors.base import (
     ConnectorExtractionError,
     PathConnectorConfig,
 )
-from wct.schema import WctSchema
 from wct.connectors.file import FileConnector
 from wct.connectors.mysql import MySQLConnector
 from wct.connectors.wordpress import WordpressConnector, WordpressConnectorConfig
+from wct.schema import WctSchema
 
 __all__ = (
     "Connector",

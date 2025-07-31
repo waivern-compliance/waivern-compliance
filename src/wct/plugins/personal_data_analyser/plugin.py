@@ -2,22 +2,22 @@
 
 import json
 from dataclasses import dataclass
-from typing import Any, Literal
 from pprint import pformat
+from typing import Any, Literal
 
 from typing_extensions import Self, override
 
+from wct.llm_service import LLMServiceError, LLMServiceFactory
+from wct.message import Message
 from wct.plugins.base import Plugin
+from wct.prompts.personal_data_validation import (
+    RecommendedAction,
+    ValidationResult,
+    extract_json_from_response,
+    get_batch_validation_prompt,
+)
 from wct.rulesets import get_ruleset
 from wct.schema import WctSchema
-from wct.message import Message
-from wct.llm_service import LLMServiceFactory, LLMServiceError
-from wct.prompts.personal_data_validation import (
-    get_batch_validation_prompt,
-    extract_json_from_response,
-    ValidationResult,
-    RecommendedAction,
-)
 
 SUPPORTED_INPUT_SCHEMAS = [
     WctSchema(name="text", type=dict[str, Any]),
@@ -29,6 +29,9 @@ SUPPORTED_OUTPUT_SCHEMAS = [
 
 DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
 DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
+
+# Maximum number of evidence snippets to include per finding
+MAX_EVIDENCE_SNIPPETS = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,7 +93,7 @@ class PersonalDataAnalyser(Plugin):
     @classmethod
     @override
     def get_name(cls) -> str:
-        """The name of the plugin."""
+        """Return the name of the plugin."""
         return "personal_data_analyser"
 
     @classmethod
@@ -162,7 +165,6 @@ class PersonalDataAnalyser(Plugin):
         message: Message,
     ) -> Message:
         """Process data to find personal data patterns."""
-
         Plugin.validate_input_message(message, input_schema)
 
         # Extract content from message
@@ -339,14 +341,13 @@ class PersonalDataAnalyser(Plugin):
 
             evidence_list.append(evidence_snippet)
 
-            # Move past this match for next search
-            start_pos = match_pos + 1
-
             # For 'full' context, only include one snippet since it contains everything
-            # For other contexts, limit to maximum 3 evidence snippets to avoid overwhelming output
+            # For other contexts, limit to maximum evidence snippets to avoid overwhelming output
             if context_size is None and len(evidence_list) >= 1:
                 break
-            elif context_size is not None and len(evidence_list) >= 3:
+            elif (
+                context_size is not None and len(evidence_list) >= MAX_EVIDENCE_SNIPPETS
+            ):
                 break
 
         return evidence_list

@@ -1,3 +1,13 @@
+"""WordPress connector module for WCT framework.
+
+This module provides a connector implementation for extracting and transforming
+data from WordPress sites into WCT schema format.
+
+Classes:
+    WordpressConnector: Main connector class for WordPress data extraction
+    WordpressConnectorConfig: Configuration model for WordPress connector settings
+"""
+
 from pathlib import Path
 from typing import Any
 
@@ -5,8 +15,8 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import Self, override
 
 from wct.connectors.base import Connector, ConnectorConfigError
-from wct.schema import WctSchema
 from wct.message import Message
+from wct.schema import WctSchema
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "wordpress_site": WctSchema(name="wordpress_site", type=dict[str, Any]),
@@ -26,8 +36,7 @@ class WordpressConnector(Connector):
     @classmethod
     @override
     def get_name(cls) -> str:
-        """The name of the connector."""
-
+        """Return the name of the connector."""
         return "wordpress"
 
     @classmethod
@@ -135,6 +144,16 @@ class WordpressConnector(Connector):
 
 
 class WordpressConnectorConfig(BaseModel):
+    """Configuration model for WordPress connector settings.
+
+    Attributes:
+        root: Path to the WordPress installation directory
+        config_file_name: Name of the WordPress configuration file
+        core_file_names: Tuple of core WordPress file names to validate
+        db_table_prefix: Database table prefix for WordPress tables
+        db_core_tables: Tuple of core WordPress database table names
+    """
+
     root: Path
     config_file_name: str = "wp-config.php"
     core_file_names: tuple[str, ...] = (
@@ -157,10 +176,20 @@ class WordpressConnectorConfig(BaseModel):
 
     @property
     def config_file(self) -> Path:
+        """Return the path to the WordPress configuration file.
+
+        Returns:
+            Path to the wp-config.php file in the WordPress root directory.
+        """
         return self.root / self.config_file_name
 
     @property
     def core_files(self) -> tuple[Path, ...]:
+        """Return the paths to the WordPress core files.
+
+        Returns:
+            Tuple of Path objects pointing to the core WordPress files in the root directory.
+        """
         return tuple(
             self.root / core_file_name for core_file_name in self.core_file_names
         )

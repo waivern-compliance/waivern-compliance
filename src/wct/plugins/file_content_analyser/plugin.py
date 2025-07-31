@@ -1,14 +1,14 @@
 """Content analysis plugin for detecting sensitive information."""
 
 import re
-from typing import Any
 from pprint import pformat
+from typing import Any
 
 from typing_extensions import Self, override
 
+from wct.message import Message
 from wct.plugins.base import Plugin
 from wct.schema import WctSchema
-from wct.message import Message
 
 SUPPORTED_INPUT_SCHEMAS = [
     WctSchema(name="text", type=dict[str, Any]),
@@ -28,6 +28,14 @@ class FileContentAnalyser(Plugin):
     This plugin looks for patterns that might indicate sensitive data
     like email addresses, potential passwords, API keys, etc.
     """
+
+    # Number of characters to show at the end of masked sensitive values
+    MASK_VISIBLE_CHARS = 3
+
+    # Risk level thresholds
+    CRITICAL_RISK_THRESHOLD = 50
+    HIGH_RISK_THRESHOLD = 20
+    MEDIUM_RISK_THRESHOLD = 5
 
     def __init__(self, sensitivity_level: str = "medium"):
         super().__init__()  # Initialize logger from base class
@@ -75,7 +83,6 @@ class FileContentAnalyser(Plugin):
         message: Message,
     ) -> Message:
         """Analyze file content for sensitive information."""
-
         Plugin.validate_input_message(message, input_schema)
 
         # Extract content from the message's content structure
@@ -215,14 +222,14 @@ class FileContentAnalyser(Plugin):
 
     def _get_risk_level(self, risk_score: int) -> str:
         """Convert risk score to risk level."""
-        if risk_score >= 50:
+        if risk_score >= self.CRITICAL_RISK_THRESHOLD:
             return "critical"
-        elif risk_score >= 20:
+        elif risk_score >= self.HIGH_RISK_THRESHOLD:
             return "high"
-        elif risk_score >= 5:
+        elif risk_score >= self.MEDIUM_RISK_THRESHOLD:
             return "medium"
-        else:
-            return "low"
+
+        return "low"
 
     def _mask_sensitive_value(self, value: str) -> str:
         """Mask sensitive values showing only the last 3 characters.
@@ -233,9 +240,12 @@ class FileContentAnalyser(Plugin):
         Returns:
             Masked string with only last 3 characters visible
         """
-        if len(value) <= 3:
+        if len(value) <= self.MASK_VISIBLE_CHARS:
             # If value is 3 chars or less, mask all but the last char
             return "*" * (len(value) - 1) + value[-1] if value else ""
         else:
             # Mask all but the last 3 characters
-            return "*" * (len(value) - 3) + value[-3:]
+            return (
+                "*" * (len(value) - self.MASK_VISIBLE_CHARS)
+                + value[-self.MASK_VISIBLE_CHARS :]
+            )

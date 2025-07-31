@@ -1,6 +1,15 @@
+"""MySQL database connector for WCT compliance data extraction.
+
+This module provides:
+- MySQLConnector: Main connector class for MySQL database integration
+- Support for extracting database metadata and content
+- Transformation capabilities for multiple output schemas (mysql_database, text)
+- Connection management with proper error handling and logging
+"""
+
 import os
-from typing import Any
 from contextlib import contextmanager
+from typing import Any
 
 from typing_extensions import Self, override
 
@@ -9,8 +18,13 @@ from wct.connectors.base import (
     ConnectorConfigError,
     ConnectorExtractionError,
 )
-from wct.schema import WctSchema
 from wct.message import Message
+from wct.schema import WctSchema
+
+try:
+    import pymysql
+except ImportError:
+    pymysql = None  # Optional dependency, will raise error if used
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "mysql_database": WctSchema(name="mysql_database", type=dict[str, Any]),
@@ -50,7 +64,6 @@ class MySQLConnector(Connector):
             autocommit: Enable autocommit mode (default: True)
             connect_timeout: Connection timeout in seconds (default: 10)
             max_rows_per_table: Maximum number of rows to extract per table (default: 10)
-            max_rows_per_table: Maximum number of rows to extract per table (default: 10)
         """
         super().__init__()  # Initialize logger from base class
         self.host = host
@@ -61,7 +74,6 @@ class MySQLConnector(Connector):
         self.charset = charset
         self.autocommit = autocommit
         self.connect_timeout = connect_timeout
-        self.max_rows_per_table = max_rows_per_table
         self.max_rows_per_table = max_rows_per_table
         self._connection = None
 
@@ -74,7 +86,7 @@ class MySQLConnector(Connector):
     @classmethod
     @override
     def get_name(cls) -> str:
-        """The name of the connector."""
+        """Return the name of the connector."""
         return "mysql"
 
     @classmethod
@@ -93,9 +105,6 @@ class MySQLConnector(Connector):
         - charset: Character set (default: "utf8mb4")
         - autocommit: Enable autocommit (default: True)
         - connect_timeout: Connection timeout (default: 10)
-        - max_rows_per_table: Maximum rows per table (default: 10)
-
-        Environment variables take precedence over runbook properties for sensitive data.
         - max_rows_per_table: Maximum rows per table (default: 10)
         """
         # Load environment variables, with runbook properties as fallback
@@ -155,12 +164,10 @@ class MySQLConnector(Connector):
         connection = None
         try:
             # Import pymysql here to make it an optional dependency
-            try:
-                import pymysql
-            except ImportError as e:
-                raise ConnectorExtractionError(
+            if pymysql is None:
+                raise ImportError(
                     "pymysql is required for MySQL connector. Install with: uv sync --group mysql"
-                ) from e
+                )
 
             self.logger.debug(f"Connecting to MySQL at {self.host}:{self.port}")
 
@@ -306,7 +313,6 @@ class MySQLConnector(Connector):
         Args:
             table_name: Name of the table to extract data from
             limit: Maximum number of rows to fetch per table (uses max_rows_per_table if None)
-            limit: Maximum number of rows to fetch per table (uses max_rows_per_table if None)
 
         Returns:
             List of dictionaries representing table rows
@@ -315,9 +321,9 @@ class MySQLConnector(Connector):
             # Use configured limit if not specified
             effective_limit = limit if limit is not None else self.max_rows_per_table
 
-            # Use parameterized query to prevent SQL injection
-            # Table name is validated to be from information_schema.TABLES
-            query = "SELECT * FROM `{}` LIMIT %s".format(table_name)  # nosec B608
+            # Safe to use table name since it's verified to exist in information_schema
+            # Using backticks to handle table names with special characters
+            query = f"SELECT * FROM `{table_name}` LIMIT %s"  # noqa # nosec B608
             return self.execute_query(query, (effective_limit,))
         except Exception as e:
             self.logger.warning(f"Failed to extract data from table {table_name}: {e}")
@@ -445,7 +451,7 @@ class MySQLConnector(Connector):
         for table_info in metadata.get("tables", []):
             table_name = table_info["name"]
 
-            # Extract actual cell data from the table (limited by max_rows_per_table) (limited by max_rows_per_table)
+            # Extract actual cell data from the table (limited by max_rows_per_table)
             try:
                 table_data = self.get_table_data(table_name)
 

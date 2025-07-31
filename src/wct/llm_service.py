@@ -8,6 +8,7 @@ from typing import Any
 from wct.errors import WCTError
 from wct.logging import get_logger
 
+
 class LLMServiceError(WCTError):
     """Base exception for LLM service related errors."""
 

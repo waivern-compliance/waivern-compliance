@@ -1,3 +1,12 @@
+"""Base classes and configurations for WCT connectors.
+
+This module provides:
+- ConnectorConfig: Configuration dataclass for connectors in runbooks
+- PathConnectorConfig: Shortcut configuration for file/directory connectors
+- Connector: Abstract base class for all WCT connectors
+- ConnectorError, ConnectorConfigError, ConnectorExtractionError: Exception classes
+"""
+
 import abc
 from dataclasses import dataclass
 from pathlib import Path
@@ -7,9 +16,9 @@ from pydantic import BaseModel
 from typing_extensions import Self
 
 from wct.errors import WCTError
-from wct.schema import WctSchema
-from wct.message import Message
 from wct.logging import get_connector_logger
+from wct.message import Message
+from wct.schema import WctSchema
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,8 +31,7 @@ class ConnectorConfig:
 
 
 class PathConnectorConfig(BaseModel):
-    """A shortcut configuration for `file_reader` or
-    `directory` connector, requiring only a path."""
+    """A shortcut configuration for `file_reader` or `directory` connector, requiring only a path."""
 
     path: Path
 
@@ -48,8 +56,7 @@ class PathConnectorConfig(BaseModel):
 
 
 class Connector(abc.ABC):
-    """Extracts data from sources and transforms it to Waivern
-    Compliance Framework (WCF) defined schemas.
+    """Extracts data from sources and transforms it to Waivern Compliance Framework (WCF) defined schemas.
 
     Connectors are the adapters between the WCF and vendor-specific software
     and services. They extract metadata and information from the source and
@@ -69,7 +76,7 @@ class Connector(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def get_name(cls) -> str:
-        """The name of the connector."""
+        """Return the name of the connector."""
 
     @classmethod
     @abc.abstractmethod

@@ -8,9 +8,9 @@ from typing import Any, TypeVar
 
 from typing_extensions import Self
 
-from wct.message import Message
-from wct.schema import WctSchema, SchemaValidationError
 from wct.logging import get_plugin_logger
+from wct.message import Message
+from wct.schema import SchemaValidationError, WctSchema
 
 _PluginInputSchema = TypeVar("_PluginInputSchema")
 _PluginOutputSchema = TypeVar("_PluginOutputSchema")
@@ -27,8 +27,7 @@ class PluginConfig:
 
 
 class Plugin(abc.ABC):
-    """Analysis processor that accepts WCF schema-compliant data and
-    produces results in the WCF-defined result schema.
+    """Analysis processor that accepts WCF schema-compliant data and produces results in the WCF-defined result schema.
 
     Plugins are the workers of WCF. They accept input data in WCF-defined
     schema(s), run it against a specific analysis process (defined
@@ -81,6 +80,7 @@ class Plugin(abc.ABC):
 
         Args:
             data: Input data conforming to the plugin's input schema
+            message: Message containing the data to be processed
 
         Returns:
             Analysis results that should conform to the plugin's output schema

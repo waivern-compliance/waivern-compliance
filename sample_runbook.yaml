@@ -26,7 +26,7 @@ plugins:
     type: "personal_data_analyser"
     properties:
       evidence_context_size: full
-      enable_llm_validation: true
+      enable_llm_validation: false
       llm_batch_size: 50
       llm_validation_mode: standard
     metadata:
@@ -34,7 +34,7 @@ plugins:
   - name: "personal_data_analyser_for_mysql"
     type: "personal_data_analyser"
     properties:
-      evidence_context_size: full
+      evidence_context_size: long
       enable_llm_validation: false
       llm_batch_size: 80
       llm_validation_mode: conservative  # More careful validation for database content

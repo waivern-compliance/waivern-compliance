@@ -2,6 +2,7 @@
 
 import logging
 import sys
+
 from rich.console import Console
 from rich.logging import RichHandler
 
@@ -20,6 +21,14 @@ class ColoredFormatter(logging.Formatter):
     RESET = "\033[0m"
 
     def format(self, record: logging.LogRecord) -> str:
+        """Format the log record with colored level names.
+
+        Args:
+            record: The log record to format
+
+        Returns:
+            Formatted log message string with colored level name
+        """
         # Add color to the level name
         if record.levelname in self.COLORS:
             record.levelname = (

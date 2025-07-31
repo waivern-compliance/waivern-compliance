@@ -1,3 +1,9 @@
+"""WCT plugins package.
+
+This package provides the core plugin system and built-in plugins
+for the Waivern Compliance Tool (WCT).
+"""
+
 from wct.plugins.base import (
     Plugin,
     PluginConfig,
@@ -5,13 +11,13 @@ from wct.plugins.base import (
     PluginInputError,
     PluginProcessingError,
 )
-from wct.schema import WctSchema
 from wct.plugins.file_content_analyser import FileContentAnalyser
 from wct.plugins.personal_data_analyser import (
     PersonalDataAnalyser,
     PersonalDataFinding,
     PersonalDataPattern,
 )
+from wct.schema import WctSchema
 
 __all__ = (
     "Plugin",

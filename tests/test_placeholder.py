@@ -1,2 +1,3 @@
 def test_placeholder():
-    assert True
+    if not True:
+        raise AssertionError("Test failed")

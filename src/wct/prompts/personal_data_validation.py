@@ -1,6 +1,6 @@
 """LLM validation prompts for personal data findings validation."""
 
-from typing import Any, Dict, List
+from typing import Any
 
 
 def get_personal_data_validation_prompt(
@@ -8,7 +8,7 @@ def get_personal_data_validation_prompt(
     risk_level: str,
     special_category: str | None,
     matched_pattern: str,
-    evidence: List[str] | None,
+    evidence: list[str] | None,
     source: str,
 ) -> str:
     """Generate a validation prompt for a personal data finding.
@@ -69,7 +69,7 @@ Respond with valid JSON only (no markdown formatting):
 Provide your validation response:"""
 
 
-def get_batch_validation_prompt(findings: List[Dict[str, Any]]) -> str:
+def get_batch_validation_prompt(findings: list[dict[str, Any]]) -> str:
     """Generate a batch validation prompt for multiple findings.
 
     This is more efficient for validating multiple findings at once,
@@ -144,7 +144,7 @@ def get_conservative_validation_prompt(
     risk_level: str,
     special_category: str | None,
     matched_pattern: str,
-    evidence: List[str] | None,
+    evidence: list[str] | None,
     source: str,
 ) -> str:
     """Generate a conservative validation prompt for high-risk or special category data.

@@ -1,3 +1,13 @@
+"""Main entry point for the Waivern Compliance Tool (WCT).
+
+This module provides the command-line interface for the Waivern Compliance Tool,
+including commands for:
+- Running compliance runbooks
+- Listing available connectors and plugins
+- Validating runbooks
+- Testing LLM connectivity
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -8,11 +18,11 @@ import typer
 from dotenv import load_dotenv
 
 from wct.cli import (
+    execute_runbook_command,
     list_connectors_command,
     list_plugins_command,
-    execute_runbook_command,
-    validate_runbook_command,
     test_llm_command,
+    validate_runbook_command,
 )
 
 # Load environment variables from .env file if it exists
@@ -138,7 +148,7 @@ def validate_runbook(
         ),
     ] = "INFO",
 ):
-    """Validate a runbook"""
+    """Validate a runbook."""
     validate_runbook_command(runbook, log_level)
 
 
@@ -153,7 +163,7 @@ def test_llm(
         ),
     ] = "INFO",
 ):
-    """Test LLM connectivity and configuration"""
+    """Test LLM connectivity and configuration."""
     test_llm_command(log_level)
 
 
