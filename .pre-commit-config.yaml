@@ -28,7 +28,7 @@ repos:
     hooks:
       - id: basedpyright
         name: basedpyright
-        entry: uv run basedpyright src/wct --level error
+        entry: uv run --group dev basedpyright src/wct --level error
         language: system
         types: [python]
         pass_filenames: false
