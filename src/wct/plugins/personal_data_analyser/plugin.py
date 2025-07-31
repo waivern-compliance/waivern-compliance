@@ -178,42 +178,37 @@ class PersonalDataAnalyser(Plugin):
 
         # Extract and process content based on input format
         # Personal data analysis requires granular tracking for compliance purposes
-        if isinstance(data, dict):
-            if "data" in data and isinstance(data["data"], list):
-                # DESIGN DECISION: Analyze each data array item independently
-                #
-                # For personal data compliance (GDPR, CCPA), we need granular tracking
-                # of where specific personal data types are found. This enables:
-                # - Precise data mapping for compliance documentation
-                # - Granular consent management
-                # - Targeted data deletion/modification
-                # - Detailed audit trails for regulatory requirements
-                #
-                # Each item in the data array represents a distinct content piece
-                # that should be analyzed and tracked separately for compliance.
+        # Note: data is always dict[str, Any] from message.content
+        if "data" in data and isinstance(data["data"], list):
+            # DESIGN DECISION: Analyze each data array item independently
+            #
+            # For personal data compliance (GDPR, CCPA), we need granular tracking
+            # of where specific personal data types are found. This enables:
+            # - Precise data mapping for compliance documentation
+            # - Granular consent management
+            # - Targeted data deletion/modification
+            # - Detailed audit trails for regulatory requirements
+            #
+            # Each item in the data array represents a distinct content piece
+            # that should be analyzed and tracked separately for compliance.
 
-                data_array = data["data"]
-                all_findings = []
+            data_array = data["data"]
+            all_findings = []
 
-                for item in data_array:
-                    content = item.get("content", "")
-                    item_metadata = item.get("metadata", {})
+            for item in data_array:
+                content = item.get("content", "")
+                item_metadata = item.get("metadata", {})
 
-                    # Analyze each content piece independently for compliance tracking
-                    item_findings = self._analyze_content(content, item_metadata)
-                    all_findings.extend(item_findings)
+                # Analyze each content piece independently for compliance tracking
+                item_findings = self._analyze_content(content, item_metadata)
+                all_findings.extend(item_findings)
 
-                findings = all_findings
-            else:
-                # Handle direct content format (legacy or simplified input)
-                content = data.get("content", "")
-                direct_metadata = data.get("metadata", {})
-                findings = self._analyze_content(content, direct_metadata)
+            findings = all_findings
         else:
-            # Handle direct string content (fallback case)
-            content = str(data)
-            fallback_metadata = {"source": "unknown"}
-            findings = self._analyze_content(content, fallback_metadata)
+            # Handle direct content format (legacy or simplified input)
+            content = data.get("content", "")
+            direct_metadata = data.get("metadata", {})
+            findings = self._analyze_content(content, direct_metadata)
 
         # Apply LLM validation to filter false positives
         validated_findings = self._validate_findings_with_llm(findings)

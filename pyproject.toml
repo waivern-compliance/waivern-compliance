@@ -57,8 +57,18 @@ exclude_dirs = ["tests"]
 
 [tool.basedpyright]
 include = ["src/wct"]
-reportMissingModuleSource = "none"  # Allow optional dependencies
-reportMissingImports = "warning"     # Still warn about truly missing imports
+typeCheckingMode = "strict"
+
+# # Critical errors only
+# reportMissingModuleSource = "none"        # Allow optional dependencies
+# reportMissingImports = "error"            # Missing imports are always errors
+# reportUndefinedVariable = "error"         # Undefined variables are always errors
+# reportGeneralTypeIssues = "warning"      # Type issues as warnings, not errors
+#
+# # Allow some flexibility for external libraries and YAML parsing
+ reportUnknownMemberType = "none"          # Common with external libraries
+ reportUnknownArgumentType = "none"       # Common with YAML/JSON parsing
+reportUnknownVariableType = "none"       # Common with dynamic data
 
 [tool.mypy]
 files = ["src/"]
