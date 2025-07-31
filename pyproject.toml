@@ -55,6 +55,11 @@ addopts = [
 [tool.bandit]
 exclude_dirs = ["tests"]
 
+[tool.basedpyright]
+include = ["src/wct"]
+reportMissingModuleSource = "none"  # Allow optional dependencies
+reportMissingImports = "warning"     # Still warn about truly missing imports
+
 [tool.mypy]
 files = ["src/"]
 plugins = ['pydantic.mypy']
