@@ -77,6 +77,7 @@ class PersonalDataAnalyser(Plugin):
             ruleset_name: Name of the ruleset to use for analysis
             evidence_context_size: Size of context around evidence matches
                                   ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars, 'full': entire content)
+            maximum_evidence_count: Maximum number of evidence snippets to collect per finding
             enable_llm_validation: Whether to use LLM for false positive detection (default: True)
             llm_batch_size: Number of findings to validate in each LLM batch (default: 10)
             llm_validation_mode: LLM validation mode ('standard' or 'conservative', default: 'standard')
@@ -113,6 +114,7 @@ class PersonalDataAnalyser(Plugin):
         return cls(
             ruleset_name=ruleset_name,
             evidence_context_size=evidence_context_size,
+            maximum_evidence_count=maximum_evidence_count,
             enable_llm_validation=enable_llm_validation,
             llm_batch_size=llm_batch_size,
             llm_validation_mode=llm_validation_mode,
@@ -350,7 +352,8 @@ class PersonalDataAnalyser(Plugin):
             if context_size is None and len(evidence_list) >= 1:
                 break
             elif (
-                context_size is not None and len(evidence_list) >= self.maximum_evidence_count
+                context_size is not None
+                and len(evidence_list) >= self.maximum_evidence_count
             ):
                 break
 
