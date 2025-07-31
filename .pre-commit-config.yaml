@@ -6,10 +6,8 @@ repos:
       # Run the linter
       - id: ruff
         args: [--fix]
-        exclude: ^(src/waivern_analyser/|src/plugins/|tests/test_plugins\.py)$
       # Run the formatter
       - id: ruff-format
-        exclude: ^(src/waivern_analyser/|src/plugins/|tests/test_plugins\.py)$
 
   # Basic file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -23,7 +21,7 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
 
-  # Type checking with basedpyright (focus on new WCT system only)
+  # Type checking with basedpyright
   - repo: local
     hooks:
       - id: basedpyright
@@ -34,11 +32,9 @@ repos:
         pass_filenames: false
         files: ^src/wct/
 
-  # Security checks (focus on new WCT system)
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.10
     hooks:
       - id: bandit
         args: ["-c", "pyproject.toml"]
         additional_dependencies: ["bandit[toml]"]
-        exclude: ^(src/waivern_analyser/|src/plugins/|tests/test_plugins\.py)$
