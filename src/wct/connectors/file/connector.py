@@ -106,7 +106,8 @@ class FileConnector(Connector):
 
     @override
     def extract(
-        self, output_schema: WctSchema[dict[str, Any]] | None = None
+        self,
+        output_schema: WctSchema[dict[str, Any]] | None = None,
     ) -> Message:
         """Extract file content and metadata.
 

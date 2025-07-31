@@ -163,7 +163,6 @@ class MySQLConnector(Connector):
         """
         connection = None
         try:
-            # Import pymysql here to make it an optional dependency
             if pymysql is None:
                 raise ImportError(
                     "pymysql is required for MySQL connector. Install with: uv sync --group mysql"

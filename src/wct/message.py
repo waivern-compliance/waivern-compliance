@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import jsonschema
+from typing_extensions import Self
 
 from .schema import WctSchema, load_json_schema
 
@@ -37,7 +38,7 @@ class Message:
 
     schema_validated: bool = False
 
-    def validate(self):
+    def validate(self) -> Self:
         """Validate the message against its schema.
 
         Validates the message content against the WCT schema using JSON schema validation.

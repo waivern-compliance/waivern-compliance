@@ -34,7 +34,7 @@ class ExecutionStep:
     output_schema_name: str | None = None
     context: dict[str, Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate required fields."""
         if not self.connector:
             raise ValueError("connector field is required")

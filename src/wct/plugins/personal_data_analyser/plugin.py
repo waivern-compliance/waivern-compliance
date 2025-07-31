@@ -30,8 +30,7 @@ SUPPORTED_OUTPUT_SCHEMAS = [
 DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
 DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
 
-# Maximum number of evidence snippets to include per finding
-MAX_EVIDENCE_SNIPPETS = 3
+DEFAULT_MAXIMUM_EVIDENCE_COUNT = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +66,7 @@ class PersonalDataAnalyser(Plugin):
         self,
         ruleset_name: str = "personal_data",
         evidence_context_size: str = "small",
+        maximum_evidence_count: int = DEFAULT_MAXIMUM_EVIDENCE_COUNT,
         enable_llm_validation: bool = True,
         llm_batch_size: int = 10,
         llm_validation_mode: str = "standard",
@@ -84,6 +84,7 @@ class PersonalDataAnalyser(Plugin):
         super().__init__()  # Initialize logger from base class
         self.ruleset_name = ruleset_name
         self.evidence_context_size = evidence_context_size
+        self.maximum_evidence_count = maximum_evidence_count
         self.enable_llm_validation = enable_llm_validation
         self.llm_batch_size = llm_batch_size
         self.llm_validation_mode = llm_validation_mode
@@ -102,6 +103,9 @@ class PersonalDataAnalyser(Plugin):
         """Create plugin instance from properties."""
         ruleset_name = properties.get("ruleset", "personal_data")
         evidence_context_size = properties.get("evidence_context_size", "small")
+        maximum_evidence_count = properties.get(
+            "maximum_evidence_count", DEFAULT_MAXIMUM_EVIDENCE_COUNT
+        )
         enable_llm_validation = properties.get("enable_llm_validation", True)
         llm_batch_size = properties.get("llm_batch_size", 10)
         llm_validation_mode = properties.get("llm_validation_mode", "standard")
@@ -346,7 +350,7 @@ class PersonalDataAnalyser(Plugin):
             if context_size is None and len(evidence_list) >= 1:
                 break
             elif (
-                context_size is not None and len(evidence_list) >= MAX_EVIDENCE_SNIPPETS
+                context_size is not None and len(evidence_list) >= self.maximum_evidence_count
             ):
                 break
 
