@@ -158,8 +158,8 @@ class PersonalDataAnalyser(Plugin):
         # Note: data is always dict[str, Any] from message.content
 
         if input_schema.name == "source_code_analysis":
-            # Handle source code analysis format - analyze code patterns
-            source_code_handler = SourceCodeSchemaInputHandler(self.patterns)
+            # Handle source code analysis format - delegate completely to handler
+            source_code_handler = SourceCodeSchemaInputHandler()
             findings = source_code_handler.analyze_source_code_data(data)
         elif "data" in data and isinstance(data["data"], list):
             # DESIGN DECISION: Analyze each data array item independently
