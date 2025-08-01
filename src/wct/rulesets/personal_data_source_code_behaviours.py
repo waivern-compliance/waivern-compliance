@@ -8,7 +8,7 @@ from wct.rulesets.base import Ruleset
 
 # Source code specific patterns (function/class/SQL/third-party patterns only)
 # Field patterns are now handled directly by the enhanced personal_data ruleset
-SOURCE_CODE_SPECIFIC_PATTERNS: Final = {
+SOURCE_CODE_PERSONAL_DATA_PATTERNS: Final = {
     "function_patterns": {
         "user_management": {
             "patterns": [
@@ -212,9 +212,9 @@ class PersonalDataSourceCodeBehavioursRuleset(Ruleset):
             Field patterns are handled directly by the personal_data ruleset
         """
         self.logger.debug(
-            f"Returning {len(SOURCE_CODE_SPECIFIC_PATTERNS)} source code specific pattern categories"
+            f"Returning {len(SOURCE_CODE_PERSONAL_DATA_PATTERNS)} source code specific pattern categories"
         )
-        return SOURCE_CODE_SPECIFIC_PATTERNS
+        return SOURCE_CODE_PERSONAL_DATA_PATTERNS
 
     def get_field_patterns(self) -> dict[str, Any]:
         """Get field name patterns for personal data detection.
@@ -236,7 +236,9 @@ class PersonalDataSourceCodeBehavioursRuleset(Ruleset):
         Returns:
             Dictionary of function patterns organized by operation type
         """
-        function_patterns = SOURCE_CODE_SPECIFIC_PATTERNS.get("function_patterns", {})
+        function_patterns = SOURCE_CODE_PERSONAL_DATA_PATTERNS.get(
+            "function_patterns", {}
+        )
         self.logger.debug(f"Returning {len(function_patterns)} function patterns")
         return function_patterns
 
@@ -246,7 +248,7 @@ class PersonalDataSourceCodeBehavioursRuleset(Ruleset):
         Returns:
             Dictionary of class patterns organized by model type
         """
-        class_patterns = SOURCE_CODE_SPECIFIC_PATTERNS.get("class_patterns", {})
+        class_patterns = SOURCE_CODE_PERSONAL_DATA_PATTERNS.get("class_patterns", {})
         self.logger.debug(f"Returning {len(class_patterns)} class patterns")
         return class_patterns
 
@@ -257,8 +259,10 @@ class PersonalDataSourceCodeBehavioursRuleset(Ruleset):
             Dictionary with 'tables' and 'columns' sub-dictionaries
         """
         sql_patterns = {
-            "tables": SOURCE_CODE_SPECIFIC_PATTERNS.get("sql_table_patterns", {}),
-            "columns": SOURCE_CODE_SPECIFIC_PATTERNS.get("sql_column_patterns", {}),
+            "tables": SOURCE_CODE_PERSONAL_DATA_PATTERNS.get("sql_table_patterns", {}),
+            "columns": SOURCE_CODE_PERSONAL_DATA_PATTERNS.get(
+                "sql_column_patterns", {}
+            ),
         }
         self.logger.debug(
             f"Returning SQL patterns: {len(sql_patterns['tables'])} tables, "
@@ -272,7 +276,9 @@ class PersonalDataSourceCodeBehavioursRuleset(Ruleset):
         Returns:
             Dictionary of service patterns organized by risk level
         """
-        service_patterns = SOURCE_CODE_SPECIFIC_PATTERNS.get("third_party_services", {})
+        service_patterns = SOURCE_CODE_PERSONAL_DATA_PATTERNS.get(
+            "third_party_services", {}
+        )
         self.logger.debug(f"Returning {len(service_patterns)} service risk categories")
         return service_patterns
 
@@ -289,7 +295,7 @@ class PersonalDataSourceCodeBehavioursRuleset(Ruleset):
         # Validate source code specific patterns
         # Validate function and class patterns
         for category in ["function_patterns", "class_patterns"]:
-            patterns = SOURCE_CODE_SPECIFIC_PATTERNS.get(category, {})
+            patterns = SOURCE_CODE_PERSONAL_DATA_PATTERNS.get(category, {})
             for name, pattern in patterns.items():
                 required_fields = {
                     "patterns",
@@ -302,14 +308,16 @@ class PersonalDataSourceCodeBehavioursRuleset(Ruleset):
 
         # Validate SQL patterns
         for pattern_type in ["sql_table_patterns", "sql_column_patterns"]:
-            patterns = SOURCE_CODE_SPECIFIC_PATTERNS.get(pattern_type, {})
+            patterns = SOURCE_CODE_PERSONAL_DATA_PATTERNS.get(pattern_type, {})
             for name, pattern in patterns.items():
                 required_fields = {"data_type", "risk_level", "special_category"}
                 if not all(field in pattern for field in required_fields):
                     invalid_patterns.append(f"{pattern_type}.{name}")
 
         # Validate third-party service patterns
-        service_patterns = SOURCE_CODE_SPECIFIC_PATTERNS.get("third_party_services", {})
+        service_patterns = SOURCE_CODE_PERSONAL_DATA_PATTERNS.get(
+            "third_party_services", {}
+        )
         for risk_level, pattern in service_patterns.items():
             if "patterns" not in pattern or "risk_level" not in pattern:
                 invalid_patterns.append(f"third_party_services.{risk_level}")

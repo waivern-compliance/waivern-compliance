@@ -8,16 +8,20 @@ from .types import PersonalDataFinding
 
 
 class SourceCodeSchemaInputHandler:
-    """Handler for processing source code analysis schema input to detect personal data patterns."""
+    """Handler for processing source code analysis schema input to detect personal data patterns.
 
-    def __init__(self, patterns: dict[str, Any]):
-        """Initialize with personal data patterns from ruleset.
+    This handler is responsible for all source code analysis logic including loading
+    the appropriate rulesets for personal data detection in source code.
+    """
 
-        Args:
-            patterns: Personal data patterns from the ruleset
+    def __init__(self):
+        """Initialize the handler and load required rulesets.
+
+        The handler manages its own ruleset dependencies and is fully self-contained.
         """
-        self.patterns = patterns
-        # Load source code behaviour patterns
+        # Load personal data patterns (for field/content pattern matching)
+        self.personal_data_patterns = get_ruleset("personal_data")
+        # Load source code behaviour patterns (for function/class/SQL/third-party patterns)
         self.source_code_patterns = get_ruleset("personal_data_source_code_behaviours")
 
     def analyze_source_code_data(
@@ -367,8 +371,8 @@ class SourceCodeSchemaInputHandler:
         """
         field_lower = field_name.lower().strip("$_")
 
-        # Use personal_data patterns directly (self.patterns from the plugin)
-        for category_name, category_data in self.patterns.items():
+        # Use personal_data patterns directly
+        for category_name, category_data in self.personal_data_patterns.items():
             patterns = category_data.get("patterns", [])
             if any(pattern in field_lower for pattern in patterns):
                 return category_name  # Return the category name directly
@@ -444,8 +448,8 @@ class SourceCodeSchemaInputHandler:
         Now uses personal_data patterns directly since data_type is the category name.
         """
         # data_type is now the category name from personal_data patterns
-        if data_type in self.patterns:
-            pattern_data = self.patterns[data_type]
+        if data_type in self.personal_data_patterns:
+            pattern_data = self.personal_data_patterns[data_type]
             return {
                 "risk_level": pattern_data.get("risk_level", "medium"),
                 "special_category": pattern_data.get("special_category", "N"),
