@@ -33,6 +33,7 @@ dev = [
     "mypy>=1.17.0",
 ]
 mysql = ["cryptography>=45.0.5", "pymysql>=1.1.1"]
+source-code = ["tree-sitter>=0.21.0", "tree-sitter-php>=0.22.0"]
 
 [build-system]
 requires = ["hatchling"]
