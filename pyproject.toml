@@ -20,8 +20,6 @@ dependencies = [
 [project.scripts]
 wct = "wct.__main__:app"
 
-[tool.uv.workspace]
-members = ["src/plugins/*"]
 
 [dependency-groups]
 dev = [

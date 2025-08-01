@@ -57,7 +57,7 @@ This is a Python project using `uv` for dependency management. Key commands:
 **Running the Application:**
 - `uv run wct run runbooks/<runbook.yaml>` - Run WCT analysis with a runbook
 - `uv run wct list-connectors` - List available connectors
-- `uv run wct list-plugins` - List available plugins
+- `uv run wct ls-analysers` - List available analysers
 - `uv run wct validate-runbook runbooks/<runbook.yaml>` - Validate a runbook
 - `uv run wct test-llm` - Test LLM connectivity and configuration
 
@@ -95,7 +95,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 - **Unified schema system:** `src/wct/schema.py` - `WctSchema[T]` for type-safe data flow
 - **Schema definitions:** `src/wct/schemas/` - JSON schema files for validation
 - **Configuration:** YAML runbooks with schema-aware execution order
-- **Architecture:** Schema-compliant connectors and plugins with automatic data flow matching
+- **Architecture:** Schema-compliant connectors and analysers with automatic data flow matching
 
 ### Key Schema-Compliant Components
 - **Schema-Compliant Connectors:** Extract and transform data to WCT schemas - **Modular Architecture**
@@ -103,16 +103,16 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
   - MySQL connector (`src/wct/connectors/mysql/`) - Produces "mysql_database" schema
   - Source code connector (`src/wct/connectors/source_code/`) - Produces "source_code" schema
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
-- **Schema-Aware Plugins:** Process validated data with input/output schema contracts - **Modular Architecture**
-  - File content analyser (`src/wct/plugins/file_content_analyser/`) - text → file_content_analysis_result
-  - Personal data analyser (`src/wct/plugins/personal_data_analyser/`) - Enhanced with LLM-powered false positive detection
-- **Schema-Aware Executor:** Matches connector output schemas to plugin input schemas automatically
+- **Schema-Aware Analysers:** Process validated data with input/output schema contracts - **Modular Architecture**
+  - File content analyser (`src/wct/analysers/file_content_analyser/`) - text → file_content_analysis_result
+  - Personal data analyser (`src/wct/analysers/personal_data_analyser/`) - Enhanced with LLM-powered false positive detection
+- **Schema-Aware Executor:** Matches connector output schemas to analyser input schemas automatically
 - **Schema System:** `WctSchema[T]` with JSON schema validation for runtime type safety
 - **Rulesets:** Schema-compliant reusable rule definitions for compliance checks
   - Personal data ruleset (`src/wct/rulesets/personal_data.py`)
 
 ### Schema-Driven Modular Architecture
-Each connector and plugin is organized as an independent module with schema contracts:
+Each connector and analyser is organized as an independent module with schema contracts:
 - **Directory Structure:** Each component has its own directory with `__init__.py` and implementation files
 - **Schema Contracts:** Clear input/output schema declarations for type safety
 - **Dependency Isolation:** Optional dependencies grouped by component (e.g., `mysql` group, `source-code` group)
@@ -121,13 +121,13 @@ Each connector and plugin is organized as an independent module with schema cont
 - **Import Compatibility:** Main `__init__.py` files maintain backward-compatible imports
 
 ### Modern Execution Configuration Format
-WCT runbooks use a comprehensive execution format with explicit connector-plugin mapping:
+WCT runbooks use a comprehensive execution format with explicit connector-analyser mapping:
 
 **Required Execution Format:**
 ```yaml
 execution:
   - connector: "connector_name"
-    plugin: "plugin_name"
+    analyser: "analyser_name"
     input_schema_name: "schema_name"  # Schema name (not file path)
     output_schema_name: "output_schema"  # Schema name (optional)
     context:  # optional metadata
@@ -139,14 +139,14 @@ execution:
 
 **Core Runbook Sections:**
 - `connectors`: Define data sources and their configuration
-- `plugins`: Specify analysis plugins with metadata
-- `execution`: Comprehensive execution steps with connector-plugin mapping and context
+- `analysers`: Specify analysis analysers with metadata
+- `execution`: Comprehensive execution steps with connector-analyser mapping and context
 
 ### Schema-Compliant Base Classes with Automatic Validation
 - **Connector base:** `src/wct/connectors/base.py` - Abstract connector with `WctSchema[T]` support and transform methods
-- **Plugin base:** `src/wct/plugins/base.py` - Abstract plugin with Message-based architecture and automatic validation
+- **Analyser base:** `src/wct/analysers/base.py` - Abstract analyser with Message-based architecture and automatic validation
   - `process()` - Automatic end-to-end Message validation with processing
-  - `process_data()` - Abstract method for plugin-specific processing logic using Message objects
+  - `process_data()` - Abstract method for analyser-specific processing logic using Message objects
   - Message validation handled automatically by base class (no manual validation needed)
 - **Ruleset base:** `src/wct/rulesets/base.py` - Schema-aware rule definitions
 - **Schema system:** `src/wct/schema.py` - `WctSchema[T]` generic container for type safety
@@ -196,19 +196,19 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 
 **Schema-Driven Development Guidelines:**
 - All connectors must implement `get_output_schema()` and schema-specific transform methods
-- All plugins must implement `get_input_schema()`, `get_output_schema()`, and `process_data()` with Message objects
-- Plugins no longer need to implement `validate_input()` - validation is handled by the Message mechanism
+- All analysers must implement `get_input_schema()`, `get_output_schema()`, and `process_data()` with Message objects
+- Analysers no longer need to implement `validate_input()` - validation is handled by the Message mechanism
 - Use `@override` decorators for all abstract method implementations
-- Schema names must match between connector outputs and plugin inputs for automatic data flow
+- Schema names must match between connector outputs and analyser inputs for automatic data flow
 - JSON schema files in `src/wct/schemas/` define the structure for runtime validation
 - Runbooks specify schema names (e.g., `input_schema_name: "text"`) not file paths
 - The executor automatically matches schemas and uses automatic validation in `process()`
 
 **Message-Based Validation System:**
-- All plugins now use Message objects for unified data flow between connectors and plugins
+- All analysers now use Message objects for unified data flow between connectors and analysers
 - Input and output Messages are automatically validated against declared schemas
 - The `process()` method handles Message validation transparently
-- Plugin implementations work with Message objects in `process_data()` methods
+- Analyser implementations work with Message objects in `process_data()` methods
 - Schema files are discovered dynamically across multiple search paths
 - Validation errors provide detailed messages about schema compliance failures
 
@@ -250,11 +250,11 @@ connectors:
 
 execution:
   - connector: "php_source"
-    plugin: "compliance_analyzer"
+    analyser: "compliance_analyzer"
     input_schema_name: "source_code"
 ```
 
 **Extensible Architecture:**
 - Modular extractors in `src/wct/connectors/source_code/extractors/`
 - Easy to add new programming languages via tree-sitter grammars
-- Schema-driven output ensures compatibility with downstream analysis plugins
+- Schema-driven output ensures compatibility with downstream analysis analysers

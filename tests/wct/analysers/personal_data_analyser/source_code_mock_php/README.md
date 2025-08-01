@@ -82,7 +82,7 @@ mock_php_project/
 
 This test successfully validates the **refactored architecture** where:
 
-1. **Plugin Delegation**: PersonalDataAnalyser properly delegates to SourceCodeSchemaInputHandler
+1. **Analyser Delegation**: PersonalDataAnalyser properly delegates to SourceCodeSchemaInputHandler
 2. **Handler Self-Containment**: Handler manages its own rulesets independently
 3. **Pattern Recognition**: Successfully detects various personal data patterns in PHP code
 4. **Risk Assessment**: Correctly identifies high-risk patterns (health, financial data)
@@ -101,7 +101,7 @@ print(f'Analyzed {len(result.content[\"data\"])} files')
 
 # Run personal data analysis
 uv run python -c "
-from src.wct.plugins.personal_data_analyser.plugin import PersonalDataAnalyser
+from src.wct.analysers.personal_data_analyser.analyser import PersonalDataAnalyser
 analyser = PersonalDataAnalyser(enable_llm_validation=False)
 # ... (process source code analysis result)
 "

@@ -9,9 +9,9 @@ from typing import Any
 
 import yaml
 
+from wct.analysers.base import AnalyserConfig
 from wct.connectors.base import ConnectorConfig
 from wct.errors import WCTError
-from wct.plugins.base import PluginConfig
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +22,14 @@ class ExecutionStep:
 
     Each execution step specifies:
     - connector: Name of the connector to use for data extraction
-    - plugin: Name of the plugin to use for analysis
+    - analyser: Name of the analyser to use for analysis
     - input_schema_name: Name of the JSON schema for input validation
     - output_schema_name: Name of the JSON schema for output validation (optional)
     - context: Additional metadata and configuration context (optional)
     """
 
     connector: str
-    plugin: str
+    analyser: str
     input_schema_name: str | None = None
     output_schema_name: str | None = None
     context: dict[str, Any] | None = None
@@ -38,8 +38,8 @@ class ExecutionStep:
         """Validate required fields."""
         if not self.connector:
             raise ValueError("connector field is required")
-        if not self.plugin:
-            raise ValueError("plugin field is required")
+        if not self.analyser:
+            raise ValueError("analyser field is required")
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,15 +48,15 @@ class Runbook:
 
     Runbooks are the core configuration concept in WCT that define:
     - What data sources to connect to (connectors)
-    - What analysis to perform (plugins)
+    - What analysis to perform (analysers)
     - How to orchestrate the analysis workflow (execution steps)
     """
 
     name: str
     description: str
     connectors: list[ConnectorConfig]
-    plugins: list[PluginConfig]
-    execution: list[ExecutionStep]  # Plugin execution steps with schema info
+    analysers: list[AnalyserConfig]
+    execution: list[ExecutionStep]  # Analyser execution steps with schema info
 
     def get_summary(self) -> dict[str, Any]:
         """Return a summary of the runbook.
@@ -68,10 +68,10 @@ class Runbook:
             "name": self.name,
             "description": self.description,
             "connector_count": len(self.connectors),
-            "plugin_count": len(self.plugins),
+            "analyser_count": len(self.analysers),
             "execution_steps": len(self.execution),
             "connector_types": list({conn.type for conn in self.connectors}),
-            "plugin_types": list({plugin.type for plugin in self.plugins}),
+            "analyser_types": list({analyser.type for analyser in self.analysers}),
         }
 
 
@@ -149,14 +149,14 @@ class RunbookLoader:
         """
         try:
             connectors = self._parse_connectors(data.get("connectors", []))
-            plugins = self._parse_plugins(data.get("plugins", []))
-            execution = self._parse_execution_steps(data, plugins)
+            analysers = self._parse_analysers(data.get("analysers", []))
+            execution = self._parse_execution_steps(data, analysers)
 
             return Runbook(
                 name=data.get("name", "Unnamed Runbook"),
                 description=data.get("description", ""),
                 connectors=connectors,
-                plugins=plugins,
+                analysers=analysers,
                 execution=execution,
             )
 
@@ -197,47 +197,49 @@ class RunbookLoader:
 
         return connectors
 
-    def _parse_plugins(self, plugins_data: list[dict[str, Any]]) -> list[PluginConfig]:
-        """Parse plugin configurations from runbook data.
+    def _parse_analysers(
+        self, analysers_data: list[dict[str, Any]]
+    ) -> list[AnalyserConfig]:
+        """Parse analyser configurations from runbook data.
 
         Args:
-            plugins_data: List of plugin configuration dictionaries
+            analysers_data: List of analyser configuration dictionaries
 
         Returns:
-            List of parsed plugin configurations
+            List of parsed analyser configurations
         """
-        plugins = []
+        analysers = []
 
-        for i, plugin_data in enumerate(plugins_data):
+        for i, analyser_data in enumerate(analysers_data):
             try:
-                if "type" not in plugin_data:
+                if "type" not in analyser_data:
                     raise RunbookValidationError(
-                        f"Plugin {i} missing required 'type' field"
+                        f"Analyser {i} missing required 'type' field"
                     )
 
-                plugin = PluginConfig(
-                    name=plugin_data.get("name", plugin_data["type"]),
-                    type=plugin_data["type"],
-                    properties=plugin_data.get("properties", {}),
-                    metadata=plugin_data.get("metadata", {}),
+                analyser = AnalyserConfig(
+                    name=analyser_data.get("name", analyser_data["type"]),
+                    type=analyser_data["type"],
+                    properties=analyser_data.get("properties", {}),
+                    metadata=analyser_data.get("metadata", {}),
                 )
-                plugins.append(plugin)
+                analysers.append(analyser)
 
             except Exception as e:
                 raise RunbookValidationError(
-                    f"Invalid plugin configuration at index {i}: {e}"
+                    f"Invalid analyser configuration at index {i}: {e}"
                 ) from e
 
-        return plugins
+        return analysers
 
     def _parse_execution_steps(
-        self, data: dict[str, Any], plugins: list[PluginConfig]
+        self, data: dict[str, Any], analysers: list[AnalyserConfig]
     ) -> list[ExecutionStep]:
-        """Parse and validate plugin execution steps.
+        """Parse and validate analyser execution steps.
 
         Args:
             data: Raw runbook data
-            plugins: List of configured plugins
+            analysers: List of configured analysers
 
         Returns:
             List of ExecutionStep objects in execution order
@@ -255,15 +257,15 @@ class RunbookLoader:
                             raise RunbookValidationError(
                                 f"Execution step {i} missing required 'connector' field"
                             )
-                        if "plugin" not in step_data:
+                        if "analyser" not in step_data:
                             raise RunbookValidationError(
-                                f"Execution step {i} missing required 'plugin' field"
+                                f"Execution step {i} missing required 'analyser' field"
                             )
 
                         steps.append(
                             ExecutionStep(
                                 connector=step_data["connector"],
-                                plugin=step_data["plugin"],
+                                analyser=step_data["analyser"],
                                 input_schema_name=step_data.get("input_schema_name"),
                                 output_schema_name=step_data.get("output_schema_name"),
                                 context=step_data.get("context"),
@@ -271,7 +273,7 @@ class RunbookLoader:
                         )
                     else:
                         raise RunbookValidationError(
-                            f"Execution step {i} must be a dict with 'connector' and 'plugin' fields, got {type(step_data)}"
+                            f"Execution step {i} must be a dict with 'connector' and 'analyser' fields, got {type(step_data)}"
                         )
                 except Exception as e:
                     raise RunbookValidationError(
@@ -282,7 +284,7 @@ class RunbookLoader:
         else:
             # Execution is now required - cannot create default steps without connector specification
             raise RunbookValidationError(
-                "execution is required and must specify both 'connector' and 'plugin' for each step"
+                "execution is required and must specify both 'connector' and 'analyser' for each step"
             )
 
 
@@ -303,20 +305,20 @@ class RunbookValidator:
         if len(connector_names) != len(set(connector_names)):
             raise RunbookValidationError("Connector names must be unique")
 
-        # Check plugin name uniqueness
-        plugin_names = [plugin.name for plugin in runbook.plugins]
-        if len(plugin_names) != len(set(plugin_names)):
-            raise RunbookValidationError("Plugin names must be unique")
+        # Check analyser name uniqueness
+        analyser_names = [analyser.name for analyser in runbook.analysers]
+        if len(analyser_names) != len(set(analyser_names)):
+            raise RunbookValidationError("Analyser names must be unique")
 
         # Validate connector types
         for step in runbook.execution:
             if step.connector not in [conn.name for conn in runbook.connectors]:
                 raise RunbookValidationError(f"Unknown connector: {step.connector}")
 
-        # Validate plugin types
+        # Validate analyser types
         for step in runbook.execution:
-            if step.plugin not in [plugin.name for plugin in runbook.plugins]:
-                raise RunbookValidationError(f"Unknown plugin: {step.plugin}")
+            if step.analyser not in [analyser.name for analyser in runbook.analysers]:
+                raise RunbookValidationError(f"Unknown analyser: {step.analyser}")
 
 
 # TODO: Consider moving this to the RunbookLoader class as a static method

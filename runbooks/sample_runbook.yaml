@@ -16,14 +16,14 @@ connectors:
   - name: "php_source_code"
     type: "source_code"
     properties:
-      path: "./tests/wct/plugins/personal_data_analyser/source_code_mock_php"
+      path: "./tests/wct/analysers/personal_data_analyser/source_code_mock_php"
       language: "php"
       file_patterns: ["**/*.php"]
       max_file_size: 10485760  # 10MB
       max_files: 30  # Allow up to 30 files (we have 25)
       analysis_depth: "detailed"
 
-plugins:
+analysers:
   - name: "file_content_analyser"
     type: "file_content_analyser"
     properties:
@@ -63,7 +63,7 @@ plugins:
 
 execution:
   - connector: "file_reader"
-    plugin: "file_content_analyser"
+    analyser: "file_content_analyser"
     input_schema_name: "text"
     output_schema_name: "file_content_analysis_result"
     context:
@@ -75,7 +75,7 @@ execution:
         - "password_detection"
         - "api_key_detection"
   - connector: "file_reader"
-    plugin: "personal_data_analyser_for_file_content"
+    analyser: "personal_data_analyser_for_file_content"
     input_schema_name: "text"
     output_schema_name: "personal_data_analysis_findings"
     context:
@@ -83,7 +83,7 @@ execution:
       priority: "high"
       compliance_frameworks: ["GDPR", "CCPA"]
   - connector: "my_mysql_db"
-    plugin: "personal_data_analyser_for_mysql"
+    analyser: "personal_data_analyser_for_mysql"
     input_schema_name: "text"
     output_schema_name: "personal_data_analysis_findings"
     context:
@@ -91,7 +91,7 @@ execution:
       priority: "high"
       compliance_frameworks: ["GDPR", "CCPA"]
   - connector: "php_source_code"
-    plugin: "personal_data_analyser_for_source_code"
+    analyser: "personal_data_analyser_for_source_code"
     input_schema_name: "source_code"
     output_schema_name: "personal_data_analysis_findings"
     context:

@@ -1,5 +1,5 @@
 -- Waivern WordPress Test Data
--- This file contains realistic test data with PII patterns for testing the WordPress plugin
+-- This file contains realistic test data with PII patterns for testing the WordPress
 USE wordpress;
 
 -- Insert users with various roles
@@ -421,7 +421,7 @@ VALUES
 	(29, 'hack_file', '0', 'yes'),
 	(30, 'blog_charset', 'UTF-8', 'yes'),
 	(31, 'moderation_keys', '', 'no'),
-	(32, 'active_plugins', 'a:0:{}', 'yes'),
+	(32, 'active_analysers', 'a:0:{}', 'yes'),
 	(33, 'category_base', '', 'yes'),
 	(34, 'ping_sites', '', 'yes'),
 	(35, 'comment_max_links', '2', 'yes'),

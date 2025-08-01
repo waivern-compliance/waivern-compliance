@@ -13,7 +13,7 @@ tests/
     ├── __init__.py
     ├── connectors/                # Tests for connectors
     │   └── __init__.py
-    ├── plugins/                   # Tests for plugins
+    ├── analysers/                   # Tests for analysers
     │   └── __init__.py
     ├── prompts/                   # Tests for prompts
     │   └── __init__.py

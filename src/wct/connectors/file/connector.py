@@ -113,7 +113,7 @@ class FileConnector(Connector):
 
         Args:
             output_schema: Optional schema to use and validate against. Use the default
-            schema of the current plugin if not provided.
+            schema of the current analyser if not provided.
 
         Returns:
             Dictionary containing file content and metadata in WCF schema format

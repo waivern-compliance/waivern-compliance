@@ -118,9 +118,9 @@ def get_connector_logger(connector_name: str) -> logging.Logger:
     return get_logger(f"wct.connectors.{connector_name}")
 
 
-def get_plugin_logger(plugin_name: str) -> logging.Logger:
-    """Get logger for plugin components."""
-    return get_logger(f"wct.plugins.{plugin_name}")
+def get_analyser_logger(analyser_name: str) -> logging.Logger:
+    """Get logger for analyser components."""
+    return get_logger(f"wct.analysers.{analyser_name}")
 
 
 def get_ruleset_logger(ruleset_name: str) -> logging.Logger:

@@ -1,7 +1,7 @@
-plugins:
+analysers:
   select:
-  - wordpress
-  - another-plugin
+  - personal-data-analyser
+  - another-analyser
 
 sources:
 - name: file-for-wordpress

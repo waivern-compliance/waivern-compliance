@@ -1,4 +1,4 @@
-"""WCT Plugin base classes and exceptions."""
+"""WCT Analyser base classes and exceptions."""
 
 from __future__ import annotations
 
@@ -8,14 +8,14 @@ from typing import Any
 
 from typing_extensions import Self
 
-from wct.logging import get_plugin_logger
+from wct.logging import get_analyser_logger
 from wct.message import Message
 from wct.schema import SchemaValidationError, WctSchema
 
 
 @dataclass(frozen=True, slots=True)
-class PluginConfig:
-    """Configuration for a plugin in a runbook."""
+class AnalyserConfig:
+    """Configuration for an analyser in a runbook."""
 
     name: str
     type: str
@@ -23,45 +23,45 @@ class PluginConfig:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-class Plugin(abc.ABC):
+class Analyser(abc.ABC):
     """Analysis processor that accepts WCF schema-compliant data and produces results in the WCF-defined result schema.
 
-    Plugins are the workers of WCF. They accept input data in WCF-defined
+    Analysers are the workers of WCF. They accept input data in WCF-defined
     schema(s), run it against a specific analysis process (defined
-    by the plugin itself), and then produce the analysis results in the
+    by the analyser itself), and then produce the analysis results in the
     WCF-defined result schema.
 
-    Plugins behave like pure functions - they accept data in pre-defined
+    Analysers behave like pure functions - they accept data in pre-defined
     input schemas and return results in pre-defined result schemas, regardless
-    of the source of the data. This allows for flexible composition of plugins
-    in a runbook, where the output of one plugin can be used as input to another
-    plugin, as long as the schemas match.
+    of the source of the data. This allows for flexible composition of analysers
+    in a runbook, where the output of one analyser can be used as input to another
+    analyser, as long as the schemas match.
     """
 
     def __init__(self) -> None:
-        """Initialize the plugin with a configured logger.
+        """Initialize the analyser with a configured logger.
 
-        The logger is automatically set up using the plugin's class name
+        The logger is automatically set up using the analyser's class name
         in lowercase, following WCT logging conventions.
         """
-        # Get the plugin name from the class and set up logger
-        plugin_name = self.get_name()
-        self.logger = get_plugin_logger(plugin_name)
+        # Get the analyser name from the class and set up logger
+        analyser_name = self.get_name()
+        self.logger = get_analyser_logger(analyser_name)
 
     @classmethod
     @abc.abstractmethod
     def get_name(cls) -> str:
-        """Get the name of the plugin.
+        """Get the name of the analyser.
 
-        This is used to identify the plugin in the system.
+        This is used to identify the analyser in the system.
         """
 
     @classmethod
     @abc.abstractmethod
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Instantiate this plugin from a dictionary of properties.
+        """Instantiate this analyser from a dictionary of properties.
 
-        The `properties` dictionary is the configuration for the plugin
+        The `properties` dictionary is the configuration for the analyser
         as specified in the runbook file.
         """
 
@@ -72,33 +72,33 @@ class Plugin(abc.ABC):
         output_schema: WctSchema[Any],
         message: Message,
     ) -> Message:
-        """Plugin-specific processing logic.
+        """Analyser-specific processing logic.
 
-        This is the core method where the analysis happens. The plugin
+        This is the core method where the analysis happens. The analyser
         receives validated input data and returns results that will be
         automatically validated against the output schema.
 
         Args:
-            input_schema: Input data conforming to the plugin's input schema
-            output_schema: Output data conforming to the plugin's output schema
+            input_schema: Input data conforming to the analyser's input schema
+            output_schema: Output data conforming to the analyser's output schema
             message: The message to process
 
         Returns:
-            Analysis results that should conform to the plugin's output schema
+            Analysis results that should conform to the analyser's output schema
 
         Raises:
-            PluginError: If processing fails
+            AnalyserError: If processing fails
         """
 
     @classmethod
     @abc.abstractmethod
     def get_supported_input_schemas(cls) -> list[WctSchema[Any]]:
-        """Return the input schemas supported by the plugin."""
+        """Return the input schemas supported by the analyser."""
 
     @classmethod
     @abc.abstractmethod
     def get_supported_output_schemas(cls) -> list[WctSchema[Any]]:
-        """Return the output schemas supported by this plugin."""
+        """Return the output schemas supported by this analyser."""
 
     @classmethod
     def validate_input_message(
@@ -113,19 +113,19 @@ class Plugin(abc.ABC):
         message.validate()
 
 
-class PluginError(Exception):
-    """Base exception for plugin-related errors."""
+class AnalyserError(Exception):
+    """Base exception for analyser-related errors."""
 
     pass
 
 
-class PluginInputError(PluginError):
-    """Raised when plugin input data is invalid."""
+class AnalyserInputError(AnalyserError):
+    """Raised when analyser input data is invalid."""
 
     pass
 
 
-class PluginProcessingError(PluginError):
-    """Raised when plugin processing fails."""
+class AnalyserProcessingError(AnalyserError):
+    """Raised when analyser processing fails."""
 
     pass
