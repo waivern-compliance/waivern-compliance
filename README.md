@@ -398,4 +398,23 @@ For commercial licensing or questions about license compatibility, please contac
 
 ## Support
 
-[Add support/contact information here]
+### Community Support
+
+Join our Discord community for support, discussions, and updates:
+
+🔗 **[Discord Server](https://discord.gg/hPkvTQdS)**
+
+Our Discord server provides:
+- **General Help** - Get assistance with installation, configuration, and usage
+- **Development Discussion** - Collaborate on new features and improvements
+- **Bug Reports** - Report issues and get community support
+- **Feature Requests** - Suggest and discuss new functionality
+- **Community Showcase** - Share your WCT implementations and use cases
+
+### Other Support Channels
+
+- **GitHub Issues** - For bug reports and feature requests: [Open an Issue](https://github.com/waivern-compliance/waivern-compliance/issues)
+- **GitHub Discussions** - For general questions and community discussions
+- **Documentation** - Check the [README](README.md) and [CLAUDE.md](CLAUDE.md) for detailed guidance
+
+For commercial licensing or questions about license compatibility, please contact Waivern.
