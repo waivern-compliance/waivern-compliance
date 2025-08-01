@@ -1,4 +1,8 @@
-"""Personal data detection ruleset."""
+"""Personal data detection ruleset.
+
+This module defines a ruleset for detecting personal data patterns.
+It serves as a base for compliance with GDPR and other privacy regulations.
+"""
 
 from typing import Any, Final
 

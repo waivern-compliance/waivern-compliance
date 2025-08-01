@@ -1,4 +1,16 @@
-"""Personal data source code behaviour detection ruleset."""
+"""Personal data source code behaviour detection ruleset.
+
+This module is an extension of the personal data ruleset, providing patterns for
+detecting personal data handling in source code through function names, class names,
+SQL queries, and third-party integrations.
+
+IMPORTANT: This ruleset is designed to work WITH the 'personal_data' ruleset,
+not replace it. For complete source code analysis:
+- Use 'personal_data' ruleset for field/parameter/property name detection
+- Use this ruleset for function/class/SQL/third-party service detection
+
+The SourceCodeSchemaInputHandler automatically loads both rulesets.
+"""
 
 from typing import Any, Final
 
@@ -205,30 +217,24 @@ class PersonalDataSourceCodeBehavioursRuleset(Ruleset):
 
     @override
     def get_patterns(self) -> dict[str, Any]:
-        """Get the source code specific behaviour patterns.
+        """Get source code specific behaviour patterns.
+
+        IMPORTANT: This ruleset only provides source code analysis patterns
+        (function/class/SQL/third-party). For complete personal data detection
+        in source code, you MUST also use the 'personal_data' ruleset for
+        field pattern matching.
 
         Returns:
-            Dictionary containing source code specific patterns (function/class/SQL/third-party)
-            Field patterns are handled directly by the personal_data ruleset
+            Dictionary containing source code specific patterns only
+
+        See Also:
+            - get_ruleset('personal_data') for field patterns
+            - Use both rulesets together for complete source code analysis
         """
         self.logger.debug(
             f"Returning {len(SOURCE_CODE_PERSONAL_DATA_PATTERNS)} source code specific pattern categories"
         )
         return SOURCE_CODE_PERSONAL_DATA_PATTERNS
-
-    def get_field_patterns(self) -> dict[str, Any]:
-        """Get field name patterns for personal data detection.
-
-        Note: Field patterns are now handled directly by the personal_data ruleset.
-        This method is deprecated - use get_ruleset('personal_data') directly.
-
-        Returns:
-            Empty dictionary - field patterns are in personal_data ruleset
-        """
-        self.logger.warning(
-            "get_field_patterns() is deprecated - field patterns are now in personal_data ruleset"
-        )
-        return {}
 
     def get_function_patterns(self) -> dict[str, Any]:
         """Get function name patterns for personal data handling detection.
