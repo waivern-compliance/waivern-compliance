@@ -23,7 +23,7 @@ from .types import PersonalDataFinding
 
 SUPPORTED_INPUT_SCHEMAS = [
     WctSchema(name="text", type=dict[str, Any]),
-    WctSchema(name="source_code_analysis", type=dict[str, Any]),
+    WctSchema(name="source_code", type=dict[str, Any]),
 ]
 
 SUPPORTED_OUTPUT_SCHEMAS = [
@@ -157,8 +157,8 @@ class PersonalDataAnalyser(Plugin):
         # Personal data analysis requires granular tracking for compliance purposes
         # Note: data is always dict[str, Any] from message.content
 
-        if input_schema.name == "source_code_analysis":
-            # Handle source code analysis format - delegate completely to handler
+        if input_schema.name == "source_code":
+            # Handle source code format - delegate completely to handler
             findings = SourceCodeSchemaInputHandler().analyze_source_code_data(data)
         elif "data" in data and isinstance(data["data"], list):
             # DESIGN DECISION: Analyze each data array item independently

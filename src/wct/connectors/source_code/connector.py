@@ -22,7 +22,7 @@ from wct.message import Message
 from wct.schema import WctSchema
 
 SUPPORTED_OUTPUT_SCHEMAS = {
-    "source_code_analysis": WctSchema(name="source_code_analysis", type=dict[str, Any]),
+    "source_code": WctSchema(name="source_code", type=dict[str, Any]),
 }
 
 MAX_NODE_TEXT_LENGTH = 100  # Limit text length for AST nodes
@@ -146,9 +146,9 @@ class SourceCodeConnector(Connector):
 
             if not output_schema:
                 self.logger.warning(
-                    "No schema provided, using default source_code_analysis schema"
+                    "No schema provided, using default source_code schema"
                 )
-                output_schema = SUPPORTED_OUTPUT_SCHEMAS["source_code_analysis"]
+                output_schema = SUPPORTED_OUTPUT_SCHEMAS["source_code"]
 
             # Analyze source code
             analysis_data = self._analyze_source_code()
