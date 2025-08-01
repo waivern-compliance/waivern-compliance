@@ -42,6 +42,7 @@ class SourceCodeConnector(Connector):
         language: str | None = None,
         file_patterns: list[str] | None = None,
         max_file_size: int = 10 * 1024 * 1024,  # 10MB default
+        max_files: int = 4000,  # Maximum number of files to process
         include_syntax_tree: bool = False,
         analysis_depth: str = "detailed",
     ):
@@ -52,6 +53,7 @@ class SourceCodeConnector(Connector):
             language: Programming language (auto-detected if None)
             file_patterns: Glob patterns for file inclusion/exclusion
             max_file_size: Skip files larger than this size (bytes)
+            max_files: Maximum number of files to process (default: 4000)
             include_syntax_tree: Whether to include full AST in output
             analysis_depth: Level of analysis (basic, detailed, comprehensive)
         """
@@ -60,6 +62,7 @@ class SourceCodeConnector(Connector):
         self.language = language
         self.file_patterns = file_patterns or ["**/*"]
         self.max_file_size = max_file_size
+        self.max_files = max_files
         self.include_syntax_tree = include_syntax_tree
         self.analysis_depth = analysis_depth
 
@@ -93,6 +96,7 @@ class SourceCodeConnector(Connector):
                 - language (str, optional): Programming language.
                 - file_patterns (list[str], optional): File inclusion patterns.
                 - max_file_size (int, optional): Maximum file size to process.
+                - max_files (int, optional): Maximum number of files to process.
                 - include_syntax_tree (bool, optional): Include full AST.
                 - analysis_depth (str, optional): Analysis detail level.
 
@@ -111,6 +115,7 @@ class SourceCodeConnector(Connector):
             language=properties.get("language"),
             file_patterns=properties.get("file_patterns"),
             max_file_size=properties.get("max_file_size", 10 * 1024 * 1024),
+            max_files=properties.get("max_files", 4000),
             include_syntax_tree=properties.get("include_syntax_tree", False),
             analysis_depth=properties.get("analysis_depth", "detailed"),
         )
@@ -240,14 +245,28 @@ class SourceCodeConnector(Connector):
         files_data = []
         total_files = 0
         total_lines = 0
+        processed_files = 0
 
         for file_path in self._get_source_files(dir_path):
+            if processed_files >= self.max_files:
+                self.logger.warning(
+                    f"Reached maximum file limit ({self.max_files}). "
+                    f"Skipping remaining files in {dir_path}"
+                )
+                break
+
             file_data_list, file_count, line_count = self._analyze_single_file(
                 file_path
             )
             files_data.extend(file_data_list)
             total_files += file_count
             total_lines += line_count
+            processed_files += file_count
+
+        if processed_files >= self.max_files:
+            self.logger.info(
+                f"Processed {processed_files} files (limit: {self.max_files})"
+            )
 
         return files_data, total_files, total_lines
 
