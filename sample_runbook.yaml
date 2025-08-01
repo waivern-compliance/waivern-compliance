@@ -53,7 +53,7 @@ plugins:
     type: "personal_data_analyser"
     properties:
       evidence_context_size: medium
-      enable_llm_validation: true
+      enable_llm_validation: false
       llm_batch_size: 50
       llm_validation_mode: standard
     metadata:
@@ -92,7 +92,7 @@ execution:
       compliance_frameworks: ["GDPR", "CCPA"]
   - connector: "php_source_code"
     plugin: "personal_data_analyser_for_source_code"
-    input_schema_name: "source_code_analysis"
+    input_schema_name: "source_code"
     output_schema_name: "personal_data_analysis_findings"
     context:
       description: "Analyze PHP source code for personal data handling patterns"

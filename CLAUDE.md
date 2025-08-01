@@ -101,7 +101,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 - **Schema-Compliant Connectors:** Extract and transform data to WCT schemas - **Modular Architecture**
   - File connector (`src/wct/connectors/file/`) - Produces "text" schema
   - MySQL connector (`src/wct/connectors/mysql/`) - Produces "mysql_database" schema
-  - Source code connector (`src/wct/connectors/source_code/`) - Produces "source_code_analysis" schema
+  - Source code connector (`src/wct/connectors/source_code/`) - Produces "source_code" schema
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
 - **Schema-Aware Plugins:** Process validated data with input/output schema contracts - **Modular Architecture**
   - File content analyser (`src/wct/plugins/file_content_analyser/`) - text → file_content_analysis_result
@@ -201,7 +201,7 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 **Source Code Connector** (`src/wct/connectors/source_code/`):
 - Parses source code using Tree-sitter for accurate AST analysis
 - Supports PHP (extensible to JavaScript, Python, Java, etc.)
-- Produces comprehensive "source_code_analysis" schema with compliance-focused extractions
+- Produces comprehensive "source_code" schema with compliance-focused extractions
 - **Requires:** `uv sync --group source-code` for tree-sitter dependencies
 
 **Key Analysis Features:**
@@ -229,7 +229,7 @@ connectors:
 execution:
   - connector: "php_source"
     plugin: "compliance_analyzer"
-    input_schema_name: "source_code_analysis"
+    input_schema_name: "source_code"
 ```
 
 **Extensible Architecture:**

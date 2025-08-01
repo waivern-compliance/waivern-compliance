@@ -140,7 +140,7 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 - **`src/wct/connectors/`**: Schema-compliant data source connectors
   - `file/` - File connector producing "text" schema
   - `mysql/` - MySQL connector producing "mysql_database" schema
-  - `source_code/` - Source code connector producing "source_code_analysis" schema
+  - `source_code/` - Source code connector producing "source_code" schema
   - `wordpress/` - WordPress connector producing "wordpress_site" schema
 - **`src/wct/plugins/`**: Schema-aware analysis plugins
   - `file_content_analyser/` - Consumes "text" schema, produces "file_content_analysis_result"
@@ -305,7 +305,7 @@ src/wct/
 ├── schema.py             # Unified WctSchema system
 ├── schemas/              # JSON schema definitions
 │   ├── text.json                    # Text content schema
-│   ├── source_code_analysis.json   # Source code analysis schema
+│   ├── source_code.json            # Source code schema
 │   └── file_content_analysis_result.json # Analysis result schema
 ├── connectors/           # Schema-compliant data connectors
 │   ├── base.py          # Abstract connector with schema support
@@ -315,7 +315,7 @@ src/wct/
 │   ├── mysql/           # MySQL connector (produces "mysql_database" schema)
 │   │   ├── __init__.py
 │   │   └── connector.py
-│   ├── source_code/     # Source code connector (produces "source_code_analysis" schema)
+│   ├── source_code/     # Source code connector (produces "source_code" schema)
 │   │   ├── __init__.py
 │   │   ├── connector.py
 │   │   ├── parser.py
