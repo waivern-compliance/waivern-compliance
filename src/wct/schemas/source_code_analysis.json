@@ -173,7 +173,7 @@
                   "type": "string"
                 },
                 "alias": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "line": {
                   "type": "integer"
@@ -199,10 +199,10 @@
                   "type": "integer"
                 },
                 "method": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "sql_fragment": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "contains_user_input": {
                   "type": "boolean"
@@ -227,13 +227,13 @@
                   "type": "integer"
                 },
                 "field_name": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "method": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "context": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "potential_pii": {
                   "type": "boolean"
@@ -255,13 +255,13 @@
                   "type": "integer"
                 },
                 "library_name": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "method_call": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "context": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "involves_personal_data": {
                   "type": "boolean"
@@ -283,14 +283,14 @@
                   "type": "integer"
                 },
                 "method": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "strength": {
-                  "type": "string",
-                  "enum": ["weak", "moderate", "strong"]
+                  "type": ["string", "null"],
+                  "enum": ["weak", "moderate", "strong", null]
                 },
                 "context": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 }
               },
               "required": ["type", "line"]
@@ -312,7 +312,7 @@
                   "enum": ["api_call", "sdk_usage", "webhook", "service_config"]
                 },
                 "endpoint": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "data_shared": {
                   "type": "boolean"
