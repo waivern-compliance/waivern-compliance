@@ -159,8 +159,7 @@ class PersonalDataAnalyser(Plugin):
 
         if input_schema.name == "source_code_analysis":
             # Handle source code analysis format - delegate completely to handler
-            source_code_handler = SourceCodeSchemaInputHandler()
-            findings = source_code_handler.analyze_source_code_data(data)
+            findings = SourceCodeSchemaInputHandler().analyze_source_code_data(data)
         elif "data" in data and isinstance(data["data"], list):
             # DESIGN DECISION: Analyze each data array item independently
             #
