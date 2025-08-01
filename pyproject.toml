@@ -105,6 +105,7 @@ ignore = [
 ]
 "tests/**/*.py" = [
     "D", # Documentation
+    "S101", # Use of assert detected
 ]
 
 [tool.ruff.lint.pydocstyle]
