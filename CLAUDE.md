@@ -64,8 +64,9 @@ This is a Python project using `uv` for dependency management. Key commands:
 **Dependency Groups:**
 WCT uses optional dependency groups for specific features:
 - `uv sync --group mysql` - Install MySQL connector dependencies (pymysql, cryptography)
+- `uv sync --group source-code` - Install source code analysis dependencies (tree-sitter, tree-sitter-php)
 - `uv sync --group dev` - Install development tools
-- `uv sync --group mysql --group dev` - Install multiple groups
+- `uv sync --group mysql --group source-code --group dev` - Install multiple groups
 
 **Core Dependencies:**
 LLM functionality (langchain, langchain-anthropic) is now included as core dependencies and available by default for AI-powered compliance analysis and validation.
@@ -100,6 +101,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 - **Schema-Compliant Connectors:** Extract and transform data to WCT schemas - **Modular Architecture**
   - File connector (`src/wct/connectors/file/`) - Produces "text" schema
   - MySQL connector (`src/wct/connectors/mysql/`) - Produces "mysql_database" schema
+  - Source code connector (`src/wct/connectors/source_code/`) - Produces "source_code_analysis" schema
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
 - **Schema-Aware Plugins:** Process validated data with input/output schema contracts - **Modular Architecture**
   - File content analyser (`src/wct/plugins/file_content_analyser/`) - text → file_content_analysis_result
@@ -113,7 +115,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 Each connector and plugin is organized as an independent module with schema contracts:
 - **Directory Structure:** Each component has its own directory with `__init__.py` and implementation files
 - **Schema Contracts:** Clear input/output schema declarations for type safety
-- **Dependency Isolation:** Optional dependencies grouped by component (e.g., `mysql` group)
+- **Dependency Isolation:** Optional dependencies grouped by component (e.g., `mysql` group, `source-code` group)
 - **Encapsulation:** Components can contain supporting files, utilities, configuration, and tests
 - **Extensibility:** Easy to add complex logic and dependencies per component
 - **Import Compatibility:** Main `__init__.py` files maintain backward-compatible imports
@@ -193,3 +195,43 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 - The executor logs which connectors are skipped due to unneeded schemas
 - Schema validation errors provide clear messages about data structure mismatches
 - Test both valid and invalid data to verify comprehensive validation coverage
+
+## Source Code Analysis Capabilities
+
+**Source Code Connector** (`src/wct/connectors/source_code/`):
+- Parses source code using Tree-sitter for accurate AST analysis
+- Supports PHP (extensible to JavaScript, Python, Java, etc.)
+- Produces comprehensive "source_code_analysis" schema with compliance-focused extractions
+- **Requires:** `uv sync --group source-code` for tree-sitter dependencies
+
+**Key Analysis Features:**
+- **Function/Class Extraction:** Parameters, return types, visibility, inheritance
+- **Database Interactions:** SQL queries, parameterization status, user input detection
+- **Data Collection Patterns:** Form fields, session/cookie access, PII indicators
+- **AI/ML Usage Detection:** ML library imports, API calls, prediction code
+- **Security Patterns:** Authentication, encryption, validation, sanitization methods
+- **Third-party Integrations:** External service calls, data sharing detection
+- **Compliance Metadata:** File complexity, line counts, modification timestamps
+
+**Usage Example:**
+```yaml
+connectors:
+  - name: "php_source"
+    type: "source_code"
+    properties:
+      path: "./src"
+      language: "php"
+      file_patterns: ["**/*.php"]
+      max_file_size: 10485760  # 10MB
+      analysis_depth: "detailed"
+
+execution:
+  - connector: "php_source"
+    plugin: "compliance_analyzer"
+    input_schema_name: "source_code_analysis"
+```
+
+**Extensible Architecture:**
+- Modular extractors in `src/wct/connectors/source_code/extractors/`
+- Easy to add new programming languages via tree-sitter grammars
+- Schema-driven output ensures compatibility with downstream analysis plugins

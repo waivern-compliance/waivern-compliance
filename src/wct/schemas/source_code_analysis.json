@@ -1,0 +1,352 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string",
+      "description": "Programming language detected (php, javascript, python, etc.)"
+    },
+    "source": {
+      "type": "string",
+      "description": "Source path or identifier"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "total_files": {
+          "type": "integer"
+        },
+        "total_lines": {
+          "type": "integer"
+        },
+        "analysis_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "parser_version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "Relative path to the source file"
+          },
+          "language": {
+            "type": "string",
+            "description": "Detected programming language for this file"
+          },
+          "syntax_tree": {
+            "type": "object",
+            "description": "Simplified AST representation",
+            "additionalProperties": true
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "line_start": {
+                  "type": "integer"
+                },
+                "line_end": {
+                  "type": "integer"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": ["string", "null"]
+                      },
+                      "default_value": {
+                        "type": ["string", "null"]
+                      }
+                    },
+                    "required": ["name"]
+                  }
+                },
+                "return_type": {
+                  "type": ["string", "null"]
+                },
+                "visibility": {
+                  "type": ["string", "null"],
+                  "enum": ["public", "private", "protected", null]
+                },
+                "is_static": {
+                  "type": "boolean"
+                },
+                "docstring": {
+                  "type": ["string", "null"]
+                }
+              },
+              "required": ["name", "line_start", "line_end"]
+            }
+          },
+          "classes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "line_start": {
+                  "type": "integer"
+                },
+                "line_end": {
+                  "type": "integer"
+                },
+                "extends": {
+                  "type": ["string", "null"]
+                },
+                "implements": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "properties": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": ["string", "null"]
+                      },
+                      "visibility": {
+                        "type": "string",
+                        "enum": ["public", "private", "protected"]
+                      },
+                      "is_static": {
+                        "type": "boolean"
+                      },
+                      "default_value": {
+                        "type": ["string", "null"]
+                      }
+                    },
+                    "required": ["name"]
+                  }
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/properties/data/items/properties/functions/items"
+                  }
+                }
+              },
+              "required": ["name", "line_start", "line_end"]
+            }
+          },
+          "imports": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "module": {
+                  "type": "string"
+                },
+                "alias": {
+                  "type": "string"
+                },
+                "line": {
+                  "type": "integer"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": ["require", "require_once", "include", "include_once", "use", "import"]
+                }
+              },
+              "required": ["module", "line", "type"]
+            }
+          },
+          "database_interactions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["query", "prepared_statement", "orm_call", "raw_sql"]
+                },
+                "line": {
+                  "type": "integer"
+                },
+                "method": {
+                  "type": "string"
+                },
+                "sql_fragment": {
+                  "type": "string"
+                },
+                "contains_user_input": {
+                  "type": "boolean"
+                },
+                "is_parameterized": {
+                  "type": "boolean"
+                }
+              },
+              "required": ["type", "line"]
+            }
+          },
+          "data_collection_indicators": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["form_field", "api_endpoint", "cookie_access", "session_access", "file_upload", "user_input"]
+                },
+                "line": {
+                  "type": "integer"
+                },
+                "field_name": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                },
+                "context": {
+                  "type": "string"
+                },
+                "potential_pii": {
+                  "type": "boolean"
+                }
+              },
+              "required": ["type", "line"]
+            }
+          },
+          "ai_ml_indicators": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["ml_library", "api_call", "model_file", "training_code", "prediction_code"]
+                },
+                "line": {
+                  "type": "integer"
+                },
+                "library_name": {
+                  "type": "string"
+                },
+                "method_call": {
+                  "type": "string"
+                },
+                "context": {
+                  "type": "string"
+                },
+                "involves_personal_data": {
+                  "type": "boolean"
+                }
+              },
+              "required": ["type", "line"]
+            }
+          },
+          "security_patterns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["authentication", "authorization", "encryption", "hashing", "validation", "sanitization"]
+                },
+                "line": {
+                  "type": "integer"
+                },
+                "method": {
+                  "type": "string"
+                },
+                "strength": {
+                  "type": "string",
+                  "enum": ["weak", "moderate", "strong"]
+                },
+                "context": {
+                  "type": "string"
+                }
+              },
+              "required": ["type", "line"]
+            }
+          },
+          "third_party_integrations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "service_name": {
+                  "type": "string"
+                },
+                "line": {
+                  "type": "integer"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": ["api_call", "sdk_usage", "webhook", "service_config"]
+                },
+                "endpoint": {
+                  "type": "string"
+                },
+                "data_shared": {
+                  "type": "boolean"
+                },
+                "contains_personal_data": {
+                  "type": "boolean"
+                }
+              },
+              "required": ["service_name", "line", "type"]
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "file_size": {
+                "type": "integer"
+              },
+              "line_count": {
+                "type": "integer"
+              },
+              "complexity_score": {
+                "type": "number"
+              },
+              "last_modified": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": ["file_path", "language", "metadata"]
+      }
+    }
+  },
+  "required": ["schemaVersion", "name", "language", "data"]
+}

@@ -25,10 +25,11 @@ uv sync
 
 # Install with specific connector/plugin dependencies
 uv sync --group mysql      # MySQL connector support
+uv sync --group source-code # Source code analysis support
 uv sync --group dev        # Development tools
 
 # Install multiple groups
-uv sync --group mysql --group dev
+uv sync --group mysql --group source-code --group dev
 
 # Install pre-commit hooks (recommended)
 uv run pre-commit install
@@ -36,6 +37,7 @@ uv run pre-commit install
 
 **Available Dependency Groups**:
 - `mysql` - MySQL connector dependencies (pymysql, cryptography)
+- `source-code` - Source code analysis dependencies (tree-sitter, tree-sitter-php)
 - `dev` - Development tools (pytest, ruff, basedpyright, etc.)
 
 **Core Dependencies**:
@@ -43,6 +45,10 @@ uv run pre-commit install
 - `langchain` and `langchain-anthropic` - AI-powered compliance analysis and validation
 
 Some connectors and plugins require additional dependencies that are not installed by default. Check the connector/plugin documentation or error messages for specific dependency group requirements.
+
+**Notable Connectors**:
+- MySQL connector requires `uv sync --group mysql`
+- Source code connector requires `uv sync --group source-code`
 
 ### Basic Usage
 
@@ -108,7 +114,7 @@ execution:
 - **Explicit connector-plugin mapping**: Clear data flow specification in execution steps
 - **Dynamic schema loading**: Flexible schema file discovery with multiple search paths
 - **End-to-end validation**: Full pipeline validation from data extraction to analysis results
-- **Optional dependencies**: MySQL connector requires `uv sync --group mysql`
+- **Optional dependencies**: MySQL connector requires `uv sync --group mysql`, source code connector requires `uv sync --group source-code`
 
 
 ## Architecture
@@ -134,6 +140,7 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 - **`src/wct/connectors/`**: Schema-compliant data source connectors
   - `file/` - File connector producing "text" schema
   - `mysql/` - MySQL connector producing "mysql_database" schema
+  - `source_code/` - Source code connector producing "source_code_analysis" schema
   - `wordpress/` - WordPress connector producing "wordpress_site" schema
 - **`src/wct/plugins/`**: Schema-aware analysis plugins
   - `file_content_analyser/` - Consumes "text" schema, produces "file_content_analysis_result"
@@ -298,6 +305,7 @@ src/wct/
 ├── schema.py             # Unified WctSchema system
 ├── schemas/              # JSON schema definitions
 │   ├── text.json                    # Text content schema
+│   ├── source_code_analysis.json   # Source code analysis schema
 │   └── file_content_analysis_result.json # Analysis result schema
 ├── connectors/           # Schema-compliant data connectors
 │   ├── base.py          # Abstract connector with schema support
@@ -307,6 +315,15 @@ src/wct/
 │   ├── mysql/           # MySQL connector (produces "mysql_database" schema)
 │   │   ├── __init__.py
 │   │   └── connector.py
+│   ├── source_code/     # Source code connector (produces "source_code_analysis" schema)
+│   │   ├── __init__.py
+│   │   ├── connector.py
+│   │   ├── parser.py
+│   │   └── extractors/  # Modular code analysis extractors
+│   │       ├── __init__.py
+│   │       ├── base.py
+│   │       ├── functions.py
+│   │       └── classes.py
 │   └── wordpress/       # WordPress connector (produces "wordpress_site" schema)
 │       ├── __init__.py
 │       └── connector.py
