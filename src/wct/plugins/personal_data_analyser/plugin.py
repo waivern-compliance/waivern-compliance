@@ -1,9 +1,8 @@
 """Personal data analysis plugin for GDPR compliance."""
 
 import json
-from dataclasses import dataclass
 from pprint import pformat
-from typing import Any, Literal
+from typing import Any
 
 from typing_extensions import Self, override
 
@@ -19,8 +18,12 @@ from wct.prompts.personal_data_validation import (
 from wct.rulesets import get_ruleset
 from wct.schema import WctSchema
 
+from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
+from .types import PersonalDataFinding
+
 SUPPORTED_INPUT_SCHEMAS = [
     WctSchema(name="text", type=dict[str, Any]),
+    WctSchema(name="source_code_analysis", type=dict[str, Any]),
 ]
 
 SUPPORTED_OUTPUT_SCHEMAS = [
@@ -31,32 +34,6 @@ DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
 DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
 
 DEFAULT_MAXIMUM_EVIDENCE_COUNT = 3
-
-
-@dataclass(frozen=True, slots=True)
-class PersonalDataPattern:
-    """A pattern for a personal data type."""
-
-    name: str
-    patterns: list[str]
-    risk_level: Literal["low", "medium", "high"]
-    is_special_category: bool | None = None
-    """Indicates if this pattern is a special category under GDPR."""
-
-
-@dataclass(frozen=True, slots=True)
-class PersonalDataFinding:
-    """A finding of a personal data."""
-
-    type: str
-    risk_level: str
-    special_category: str | None
-    """Indicates if this finding is a special category under GDPR."""
-    matched_pattern: str
-    evidence: list[str] | None = None
-    """Evidence found in the content that matches this finding."""
-    metadata: dict[str, Any] | None = None
-    """Additional metadata from the original data source."""
 
 
 class PersonalDataAnalyser(Plugin):
@@ -176,10 +153,15 @@ class PersonalDataAnalyser(Plugin):
         # Extract content from message
         data = message.content
 
-        # Extract and process content based on input format
+        # Extract and process content based on input schema format
         # Personal data analysis requires granular tracking for compliance purposes
         # Note: data is always dict[str, Any] from message.content
-        if "data" in data and isinstance(data["data"], list):
+
+        if input_schema.name == "source_code_analysis":
+            # Handle source code analysis format - analyze code patterns
+            source_code_handler = SourceCodeSchemaInputHandler(self.patterns)
+            findings = source_code_handler.analyze_source_code_data(data)
+        elif "data" in data and isinstance(data["data"], list):
             # DESIGN DECISION: Analyze each data array item independently
             #
             # For personal data compliance (GDPR, CCPA), we need granular tracking
