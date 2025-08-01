@@ -223,6 +223,7 @@ connectors:
       language: "php"
       file_patterns: ["**/*.php"]
       max_file_size: 10485760  # 10MB
+      max_files: 4000  # Maximum number of files to process (default: 4000)
       analysis_depth: "detailed"
 
 execution:
