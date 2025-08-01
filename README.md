@@ -54,7 +54,7 @@ Some connectors and plugins require additional dependencies that are not install
 
 1. **Run analysis with a runbook**:
    ```bash
-   uv run wct run sample_runbook.yaml
+   uv run wct run runbooks/sample_runbook.yaml
    ```
 
 2. **List available components**:
@@ -65,8 +65,27 @@ Some connectors and plugins require additional dependencies that are not install
 
 3. **Validate a runbook**:
    ```bash
-   uv run wct validate-runbook your_runbook.yaml
+   uv run wct validate-runbook runbooks/your_runbook.yaml
    ```
+
+### Runbooks Directory
+
+WCT organizes runbook configurations in the `runbooks/` directory for better scenario management:
+
+- **`runbooks/sample_runbook.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
+- **`runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
+
+Create scenario-specific runbooks for focused testing:
+```bash
+# File-only analysis
+uv run wct run runbooks/file_analysis.yaml
+
+# Database-only analysis
+uv run wct run runbooks/database_analysis.yaml
+
+# Source code analysis
+uv run wct run runbooks/source_code_analysis.yaml
+```
 
 ### Example Runbook
 
@@ -203,8 +222,8 @@ uv run pre-commit run --all-files  # All pre-commit hooks
 **Logging Options**:
 All WCT commands support detailed logging:
 ```bash
-uv run wct run runbook.yaml --log-level DEBUG
-uv run wct run runbook.yaml -v  # Shortcut for debug
+uv run wct run runbooks/sample_runbook.yaml --log-level DEBUG
+uv run wct run runbooks/sample_runbook.yaml -v  # Shortcut for debug
 ```
 
 ### Extending WCT
@@ -299,6 +318,10 @@ class MyPlugin(Plugin[dict[str, Any], dict[str, Any]]):
 ### Project Structure
 
 ```
+runbooks/                 # Runbook configurations for different scenarios
+├── README.md            # Runbook usage and creation guidelines
+└── sample_runbook.yaml  # Comprehensive example runbook
+
 src/wct/
 ├── __main__.py           # CLI entry point
 ├── executor.py           # Schema-aware execution engine

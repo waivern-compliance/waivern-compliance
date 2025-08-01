@@ -55,10 +55,10 @@ This is a Python project using `uv` for dependency management. Key commands:
 - `uv run pre-commit install` - Install pre-commit hooks (run once after cloning)
 
 **Running the Application:**
-- `uv run wct run <runbook.yaml>` - Run WCT analysis with a runbook
+- `uv run wct run runbooks/<runbook.yaml>` - Run WCT analysis with a runbook
 - `uv run wct list-connectors` - List available connectors
 - `uv run wct list-plugins` - List available plugins
-- `uv run wct validate-runbook <runbook.yaml>` - Validate a runbook
+- `uv run wct validate-runbook runbooks/<runbook.yaml>` - Validate a runbook
 - `uv run wct test-llm` - Test LLM connectivity and configuration
 
 **Dependency Groups:**
@@ -81,8 +81,8 @@ All WCT commands support logging configuration:
 - `--verbose` or `-v` - Shortcut for `--log-level DEBUG`
 
 Examples:
-- `uv run wct run runbook.yaml --log-level DEBUG` - Detailed debugging
-- `uv run wct run runbook.yaml -v` - Verbose output
+- `uv run wct run runbooks/sample_runbook.yaml --log-level DEBUG` - Detailed debugging
+- `uv run wct run runbooks/sample_runbook.yaml -v` - Verbose output
 - `uv run wct list-connectors --log-level WARNING` - Minimal output
 
 ## Architecture Overview
@@ -152,13 +152,35 @@ execution:
 - **Schema system:** `src/wct/schema.py` - `WctSchema[T]` generic container for type safety
 - All components support dynamic registration, configuration, and comprehensive schema validation
 
+## Runbooks Directory
+
+**Runbook Organization:**
+- **`runbooks/` directory** - Centralized location for all runbook configurations
+- **`runbooks/sample_runbook.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
+- **`runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
+
+**Scenario-Based Testing:**
+Create focused runbooks for specific testing scenarios:
+- File-only analysis: `runbooks/file_analysis.yaml`
+- Database-only analysis: `runbooks/database_analysis.yaml`
+- Source code analysis: `runbooks/source_code_analysis.yaml`
+- LLM validation testing: `runbooks/llm_validation_test.yaml`
+- Performance testing: `runbooks/performance_test.yaml`
+
+**Best Practices:**
+- Use relative paths from project root (e.g., `./tests/...`)
+- Follow naming convention: `scenario_description.yaml`
+- Include appropriate metadata for compliance frameworks
+- Document purpose and expected outcomes in runbook descriptions
+
 ## Project Structure Notes
 - Uses `uv` for dependency management with optional dependency groups
 - **Core Dependencies:** `jsonschema` for comprehensive JSON schema validation, `langchain` and `langchain-anthropic` for AI-powered compliance analysis
 - Type annotations are enforced with `basedpyright` (schema system is fully type-safe)
 - Main package is `wct` located in `src/wct/`
 - Schema definitions in `src/wct/schemas/` (JSON Schema format)
-- Sample configurations: `sample_runbook.yaml` (with modern execution format)
+- Runbook configurations: `runbooks/` directory with scenario-based runbooks
+- Sample configurations: `runbooks/sample_runbook.yaml` (with modern execution format)
 
 ## Development Setup
 
@@ -191,7 +213,7 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 - Validation errors provide detailed messages about schema compliance failures
 
 **Testing Schema Components:**
-- Use `uv run wct run sample_runbook.yaml -v` to see detailed schema matching and validation
+- Use `uv run wct run runbooks/sample_runbook.yaml -v` to see detailed schema matching and validation
 - The executor logs which connectors are skipped due to unneeded schemas
 - Schema validation errors provide clear messages about data structure mismatches
 - Test both valid and invalid data to verify comprehensive validation coverage
