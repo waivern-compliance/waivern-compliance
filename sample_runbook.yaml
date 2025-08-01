@@ -1,5 +1,5 @@
 name: "Sample Runbook"
-description: "Analyse a file for potentially sensitive information"
+description: "Analyse files, database, and source code for potentially sensitive information"
 
 connectors:
   - name: "file_reader"
@@ -13,6 +13,15 @@ connectors:
       # MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT
       # You can also specify them here, but environment variables take precedence
       max_rows_per_table: 5
+  - name: "php_source_code"
+    type: "source_code"
+    properties:
+      path: "./tests/wct/plugins/personal_data_analyser/source_code_mock_php"
+      language: "php"
+      file_patterns: ["**/*.php"]
+      max_file_size: 10485760  # 10MB
+      max_files: 30  # Allow up to 30 files (we have 25)
+      analysis_depth: "detailed"
 
 plugins:
   - name: "file_content_analyser"
@@ -40,6 +49,17 @@ plugins:
       llm_validation_mode: conservative  # More careful validation for database content
     metadata:
       compliance_frameworks: ["GDPR", "CCPA"]
+  - name: "personal_data_analyser_for_source_code"
+    type: "personal_data_analyser"
+    properties:
+      evidence_context_size: medium
+      enable_llm_validation: true
+      llm_batch_size: 50
+      llm_validation_mode: standard
+    metadata:
+      priority: "high"
+      compliance_frameworks: ["GDPR", "CCPA"]
+      description: "Analyze PHP source code for personal data handling patterns"
 
 execution:
   - connector: "file_reader"
@@ -70,3 +90,17 @@ execution:
       description: "Analyse MySQL database for personal data"
       priority: "high"
       compliance_frameworks: ["GDPR", "CCPA"]
+  - connector: "php_source_code"
+    plugin: "personal_data_analyser_for_source_code"
+    input_schema_name: "source_code_analysis"
+    output_schema_name: "personal_data_analysis_findings"
+    context:
+      description: "Analyze PHP source code for personal data handling patterns"
+      priority: "high"
+      compliance_frameworks: ["GDPR", "CCPA"]
+      sensitivity_rules:
+        - "function_name_detection"
+        - "parameter_name_detection"
+        - "class_property_detection"
+        - "sql_query_detection"
+        - "third_party_integration_detection"
