@@ -416,5 +416,3 @@ Our Discord server provides:
 - **GitHub Issues** - For bug reports and feature requests: [Open an Issue](https://github.com/waivern-compliance/waivern-compliance/issues)
 - **GitHub Discussions** - For general questions and community discussions
 - **Documentation** - Check the [README](README.md) and [CLAUDE.md](CLAUDE.md) for detailed guidance
-
-For commercial licensing or questions about license compatibility, please contact Waivern.
