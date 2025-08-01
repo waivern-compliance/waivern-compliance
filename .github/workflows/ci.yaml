@@ -24,7 +24,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --group dev --group mysql
+        run: uv sync --group dev --group mysql --group source-code
 
       - name: Run pre-commit hooks
         uses: pre-commit/action@v3.0.1
@@ -58,7 +58,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --group dev --group mysql --group source-code
 
       - name: Test
         run: uv run pytest
