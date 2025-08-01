@@ -26,9 +26,10 @@ repos:
     hooks:
       - id: basedpyright
         name: basedpyright
-        entry: uv run --group dev basedpyright src/wct --level error
+        entry: uv run --group dev basedpyright --level error
         language: system
         types: [python]
+        files: ^src/wct/
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.10
