@@ -1,4 +1,4 @@
-"""Content analysis plugin for detecting sensitive information."""
+"""Content analysis analyser for detecting sensitive information."""
 
 import re
 from pprint import pformat
@@ -6,8 +6,8 @@ from typing import Any
 
 from typing_extensions import Self, override
 
+from wct.analysers.base import Analyser
 from wct.message import Message
-from wct.plugins.base import Plugin
 from wct.schema import WctSchema
 
 SUPPORTED_INPUT_SCHEMAS = [
@@ -22,10 +22,10 @@ DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
 DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
 
 
-class FileContentAnalyser(Plugin):
+class FileContentAnalyser(Analyser):
     """Analyzes file content for potentially sensitive information.
 
-    This plugin looks for patterns that might indicate sensitive data
+    This analyser looks for patterns that might indicate sensitive data
     like email addresses, potential passwords, API keys, etc.
     """
 
@@ -55,13 +55,13 @@ class FileContentAnalyser(Plugin):
     @classmethod
     @override
     def get_supported_input_schemas(cls) -> list[WctSchema[Any]]:
-        """Return the input schemas supported by this plugin."""
+        """Return the input schemas supported by this analyser."""
         return SUPPORTED_INPUT_SCHEMAS
 
     @classmethod
     @override
     def get_supported_output_schemas(cls) -> list[WctSchema[Any]]:
-        """Return the output schemas supported by this plugin."""
+        """Return the output schemas supported by this analyser."""
         return SUPPORTED_OUTPUT_SCHEMAS
 
     @classmethod
@@ -83,7 +83,7 @@ class FileContentAnalyser(Plugin):
         message: Message,
     ) -> Message:
         """Analyze file content for sensitive information."""
-        Plugin.validate_input_message(message, input_schema)
+        Analyser.validate_input_message(message, input_schema)
 
         # Extract content from the message's content structure
         payload_content = message.content
@@ -106,7 +106,7 @@ class FileContentAnalyser(Plugin):
             # - Simpler analysis logic for overall file insights
             #
             # For new developers: If you need piece-by-piece analysis, consider creating
-            # a separate plugin or see PersonalDataAnalyser for reference implementation.
+            # a separate analyser or see PersonalDataAnalyser for reference implementation.
             text_content = "\n".join(item.get("content", "") for item in data_array)
 
         # Get metadata from the guaranteed schema structure

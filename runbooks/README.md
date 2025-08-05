@@ -10,7 +10,7 @@ A comprehensive example runbook that demonstrates:
 - MySQL database analysis
 - PHP source code analysis
 - Personal data detection across multiple data sources
-- Multi-plugin execution with different configurations
+- Multi-analyser execution with different configurations
 
 ## Usage
 

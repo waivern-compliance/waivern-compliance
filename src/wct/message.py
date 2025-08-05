@@ -19,7 +19,7 @@ class Message:
     """Payload between WCT components.
 
     This class represents a message that can be passed between different
-    components of the WCT system, such as connectors and plugins.
+    components of the WCT system, such as connectors and analysers.
     """
 
     id: str
@@ -30,7 +30,7 @@ class Message:
 
     schema: WctSchema[Any] | None = None
     """Optional schema to validate the content against. If not provided, the
-    default schema of the current plugin will be used."""
+    default schema of the current analyser will be used."""
 
     context: dict[str, Any] | None = None
     """Optional context for the message, which can include additional metadata

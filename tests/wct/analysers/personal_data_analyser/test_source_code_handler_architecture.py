@@ -1,6 +1,6 @@
 """Test the architectural improvement for source code schema input handler."""
 
-from wct.plugins.personal_data_analyser.source_code_schema_input_handler import (
+from wct.analysers.personal_data_analyser.source_code_schema_input_handler import (
     SourceCodeSchemaInputHandler,
 )
 
@@ -9,7 +9,7 @@ class TestSourceCodeHandlerArchitecture:
     """Test the refactored architecture where handler manages its own rulesets."""
 
     def test_handler_initializes_without_external_patterns(self):
-        """Test that handler can initialize without receiving patterns from plugin."""
+        """Test that handler can initialize without receiving patterns from analyser."""
         # This should not raise any exceptions
         handler = SourceCodeSchemaInputHandler()
 

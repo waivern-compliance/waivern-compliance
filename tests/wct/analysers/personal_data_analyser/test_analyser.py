@@ -1,30 +1,30 @@
-"""Unit tests for PersonalDataAnalyser plugin."""
+"""Unit tests for PersonalDataAnalyser."""
 
-from wct.plugins.personal_data_analyser.plugin import PersonalDataAnalyser
+from wct.analysers.personal_data_analyser.analyser import PersonalDataAnalyser
 
 
 class TestPersonalDataAnalyser:
-    """Test suite for PersonalDataAnalyser plugin."""
+    """Test suite for PersonalDataAnalyser."""
 
     def setup_method(self):
         """Set up test fixtures before each test method."""
-        self.plugin = PersonalDataAnalyser()
+        self.analyser = PersonalDataAnalyser()
 
     def test_init_default_parameters(self):
         """Test initialization with default parameters."""
-        plugin = PersonalDataAnalyser()
-        assert plugin.ruleset_name == "personal_data"
-        assert plugin.evidence_context_size == "small"
+        analyser = PersonalDataAnalyser()
+        assert analyser.ruleset_name == "personal_data"
+        assert analyser.evidence_context_size == "small"
         default_evidence_count = 3
-        assert plugin.maximum_evidence_count == default_evidence_count
-        assert plugin.enable_llm_validation is True
+        assert analyser.maximum_evidence_count == default_evidence_count
+        assert analyser.enable_llm_validation is True
 
     def test_get_name(self):
-        """Test plugin name retrieval."""
+        """Test analyser name retrieval."""
         assert PersonalDataAnalyser.get_name() == "personal_data_analyser"
 
     def test_from_properties(self):
-        """Test plugin creation from properties dictionary."""
+        """Test analyser creation from properties dictionary."""
         properties = {
             "ruleset": "custom_personal_data",
             "evidence_context_size": "large",
@@ -32,12 +32,12 @@ class TestPersonalDataAnalyser:
             "enable_llm_validation": False,
         }
 
-        plugin = PersonalDataAnalyser.from_properties(properties)
-        assert plugin.ruleset_name == "custom_personal_data"
-        assert plugin.evidence_context_size == "large"
+        analyser = PersonalDataAnalyser.from_properties(properties)
+        assert analyser.ruleset_name == "custom_personal_data"
+        assert analyser.evidence_context_size == "large"
         expected_evidence_count = 5
-        assert plugin.maximum_evidence_count == expected_evidence_count
-        assert plugin.enable_llm_validation is False
+        assert analyser.maximum_evidence_count == expected_evidence_count
+        assert analyser.enable_llm_validation is False
 
     def test_get_supported_input_schemas(self):
         """Test that supported input schemas are returned."""

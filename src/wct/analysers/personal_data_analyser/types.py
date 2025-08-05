@@ -1,4 +1,4 @@
-"""Data types for personal data analysis plugin."""
+"""Data types for personal data analysis analyser."""
 
 from dataclasses import dataclass
 from typing import Any, Literal

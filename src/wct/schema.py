@@ -1,4 +1,4 @@
-"""Shared schema definitions for WCT connectors and plugins."""
+"""Shared schema definitions for WCT connectors and analysers."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ class WctSchema(Generic[_SchemaType]):
     """Information about a component's input or output schema.
 
     This class provides a consistent way to specify both the schema name
-    (string identifier) and the expected data type for connectors and plugins.
+    (string identifier) and the expected data type for connectors and analysers.
     """
 
     name: str

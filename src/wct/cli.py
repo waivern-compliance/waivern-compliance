@@ -11,12 +11,12 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 from rich.tree import Tree
 
+from wct.analysers import BUILTIN_ANALYSERS
 from wct.analysis import AnalysisResult, AnalysisResultsExporter
 from wct.connectors import BUILTIN_CONNECTORS
 from wct.executor import Executor
 from wct.llm_service import LLMServiceError, LLMServiceFactory
 from wct.logging import get_cli_logger, setup_logging
-from wct.plugins import BUILTIN_PLUGINS
 from wct.runbook import Runbook, RunbookValidator, load_runbook
 
 logger = get_cli_logger()
@@ -27,7 +27,7 @@ def create_executor() -> Executor:
     """Create and configure an executor with built-in components.
 
     Returns:
-        Configured executor with all built-in connectors and plugins registered
+        Configured executor with all built-in connectors and analysers registered
     """
     executor = Executor()
 
@@ -36,15 +36,15 @@ def create_executor() -> Executor:
         executor.register_available_connector(connector_class)
         logger.debug("Registered connector: %s", connector_class.get_name())
 
-    # Register built-in plugins
-    for plugin_class in BUILTIN_PLUGINS:
-        executor.register_available_plugin(plugin_class)
-        logger.debug("Registered plugin: %s", plugin_class.get_name())
+    # Register built-in analysers
+    for analyser_class in BUILTIN_ANALYSERS:
+        executor.register_available_analyser(analyser_class)
+        logger.debug("Registered analyser: %s", analyser_class.get_name())
 
     logger.info(
-        "Executor initialized with %d connectors and %d plugins",
+        "Executor initialized with %d connectors and %d analysers",
         len(BUILTIN_CONNECTORS),
-        len(BUILTIN_PLUGINS),
+        len(BUILTIN_ANALYSERS),
     )
 
     return executor
@@ -89,7 +89,7 @@ class AnalysisRunner:
 
 
 class ComponentLister:
-    """Handles listing available connectors and plugins."""
+    """Handles listing available connectors and analysers."""
 
     def __init__(self):
         self.executor = create_executor()
@@ -105,16 +105,16 @@ class ComponentLister:
         logger.info("Found %d registered connectors", len(connectors))
         return connectors
 
-    def list_plugins(self) -> dict[str, type]:
-        """List all available plugins.
+    def list_analysers(self) -> dict[str, type]:
+        """List all available analysers.
 
         Returns:
-            Dictionary mapping plugin names to classes
+            Dictionary mapping analyser names to classes
         """
-        logger.debug("Getting registered plugins")
-        plugins = self.executor.list_available_plugins()
-        logger.info("Found %d registered plugins", len(plugins))
-        return plugins
+        logger.debug("Getting registered analysers")
+        analysers = self.executor.list_available_analysers()
+        logger.info("Found %d registered analysers", len(analysers))
+        return analysers
 
 
 class OutputFormatter:
@@ -135,7 +135,7 @@ class OutputFormatter:
             show_header=True,
             header_style="bold magenta",
         )
-        table.add_column("Plugin", style="cyan", no_wrap=True)
+        table.add_column("Analyser", style="cyan", no_wrap=True)
         table.add_column("Status", style="green")
         table.add_column("Input Schema", style="blue")
         table.add_column("Output Schema", style="blue")
@@ -148,7 +148,7 @@ class OutputFormatter:
             status_text = f"{status_icon} {'Success' if result.success else 'Failed'}"
 
             row = [
-                result.plugin_name,
+                result.analyser_name,
                 status_text,
                 result.input_schema,
                 result.output_schema,
@@ -169,12 +169,12 @@ class OutputFormatter:
             for result in failed_results:
                 error_panel = Panel(
                     f"[red]{result.error_message}[/red]",
-                    title=f"Error in {result.plugin_name}",
+                    title=f"Error in {result.analyser_name}",
                     border_style="red",
                 )
                 console.print(error_panel)
                 logger.error(
-                    "Plugin %s failed: %s", result.plugin_name, result.error_message
+                    "Analyser %s failed: %s", result.analyser_name, result.error_message
                 )
 
         # Show successful results in verbose mode
@@ -186,7 +186,7 @@ class OutputFormatter:
                 )
                 for result in successful_results:
                     # Create a tree structure for the data
-                    tree = Tree(f"[bold green]{result.plugin_name}[/bold green]")
+                    tree = Tree(f"[bold green]{result.analyser_name}[/bold green]")
                     tree.add(f"Input Schema: [blue]{result.input_schema}[/blue]")
                     tree.add(f"Output Schema: [blue]{result.output_schema}[/blue]")
 
@@ -197,8 +197,8 @@ class OutputFormatter:
 
                     console.print(tree)
                     logger.debug(
-                        "Plugin %s succeeded with data: %s",
-                        result.plugin_name,
+                        "Analyser %s succeeded with data: %s",
+                        result.analyser_name,
                         result.data,
                     )
 
@@ -209,7 +209,7 @@ class OutputFormatter:
 
         Args:
             components: Dictionary of component names to classes
-            component_type: Type name for display (e.g., "connectors", "plugins")
+            component_type: Type name for display (e.g., "connectors", "analysers")
         """
         if components:
             # Create a rich table for components
@@ -259,7 +259,7 @@ class OutputFormatter:
 [bold]Name:[/bold] {runbook.name}
 [bold]Description:[/bold] {runbook.description}
 [bold]Connectors:[/bold] {len(runbook.connectors)}
-[bold]Plugins:[/bold] {len(runbook.plugins)}
+[bold]Analysers:[/bold] {len(runbook.analysers)}
 [bold]Execution Steps:[/bold] {len(runbook.execution)}
         """.strip()
 
@@ -273,7 +273,7 @@ class OutputFormatter:
             execution_tree = Tree("[bold blue]🔄 Execution Order[/bold blue]")
             for i, step in enumerate(runbook.execution, 1):
                 step_branch = execution_tree.add(
-                    f"[cyan]Step {i}: {step.plugin}[/cyan]"
+                    f"[cyan]Step {i}: {step.analyser}[/cyan]"
                 )
                 step_branch.add(f"Connector: [yellow]{step.connector}[/yellow]")
                 step_branch.add(f"Input Schema: [blue]{step.input_schema_name}[/blue]")
@@ -285,9 +285,9 @@ class OutputFormatter:
             console.print(execution_tree)
 
         logger.debug(
-            "Runbook details: connectors=%d, plugins=%d",
+            "Runbook details: connectors=%d, analysers=%d",
             len(runbook.connectors),
-            len(runbook.plugins),
+            len(runbook.analysers),
         )
 
 
@@ -428,8 +428,8 @@ def list_connectors_command(log_level: str = "INFO") -> None:
         handle_cli_error(e, "Failed to list connectors")
 
 
-def list_plugins_command(log_level: str = "INFO") -> None:
-    """CLI command implementation for listing plugins.
+def list_analysers_command(log_level: str = "INFO") -> None:
+    """CLI command implementation for listing analysers.
 
     Args:
         log_level: Logging level
@@ -438,13 +438,13 @@ def list_plugins_command(log_level: str = "INFO") -> None:
 
     try:
         lister = ComponentLister()
-        plugins = lister.list_plugins()
+        analysers = lister.list_analysers()
 
         formatter = OutputFormatter()
-        formatter.format_component_list(plugins, "plugins")
+        formatter.format_component_list(analysers, "analysers")
 
     except Exception as e:
-        handle_cli_error(e, "Failed to list plugins")
+        handle_cli_error(e, "Failed to list analysers")
 
 
 def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> None:

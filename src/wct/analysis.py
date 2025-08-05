@@ -11,9 +11,9 @@ from typing import Any
 
 @dataclass(frozen=True, slots=True)
 class AnalysisResult:
-    """Result from a plugin analysis."""
+    """Result from an analyser analysis."""
 
-    plugin_name: str
+    analyser_name: str
     input_schema: str
     output_schema: str
     data: dict[str, Any]
@@ -85,7 +85,7 @@ class AnalysisResultsExporter:
                 "successful": 0,
                 "failed": 0,
                 "success_rate": 0.0,
-                "plugins": [],
+                "analysers": [],
                 "schemas": {"input": [], "output": []},
             }
 
@@ -97,13 +97,13 @@ class AnalysisResultsExporter:
             "successful": len(successful_results),
             "failed": len(failed_results),
             "success_rate": len(successful_results) / len(results) * 100,
-            "plugins": list(set(r.plugin_name for r in results)),
+            "analysers": list(set(r.analyser_name for r in results)),
             "schemas": {
                 "input": list(set(r.input_schema for r in results)),
                 "output": list(set(r.output_schema for r in results)),
             },
             "error_summary": [
-                {"plugin": r.plugin_name, "error": r.error_message}
+                {"analyser": r.analyser_name, "error": r.error_message}
                 for r in failed_results
             ]
             if failed_results

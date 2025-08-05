@@ -1,4 +1,4 @@
-"""Personal data analysis plugin for GDPR compliance."""
+"""Personal data analysis analyser for GDPR compliance."""
 
 import json
 from pprint import pformat
@@ -6,9 +6,9 @@ from typing import Any
 
 from typing_extensions import Self, override
 
+from wct.analysers.base import Analyser
 from wct.llm_service import LLMServiceError, LLMServiceFactory
 from wct.message import Message
-from wct.plugins.base import Plugin
 from wct.prompts.personal_data_validation import (
     RecommendedAction,
     ValidationResult,
@@ -36,8 +36,8 @@ DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
 DEFAULT_MAXIMUM_EVIDENCE_COUNT = 3
 
 
-class PersonalDataAnalyser(Plugin):
-    """Plugin for analyzing personal data patterns for GDPR compliance."""
+class PersonalDataAnalyser(Analyser):
+    """Analyser for analyzing personal data patterns for GDPR compliance."""
 
     def __init__(
         self,
@@ -72,13 +72,13 @@ class PersonalDataAnalyser(Plugin):
     @classmethod
     @override
     def get_name(cls) -> str:
-        """Return the name of the plugin."""
+        """Return the name of the analyser."""
         return "personal_data_analyser"
 
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create plugin instance from properties."""
+        """Create analyser instance from properties."""
         ruleset_name = properties.get("ruleset", "personal_data")
         evidence_context_size = properties.get("evidence_context_size", "small")
         maximum_evidence_count = properties.get(
@@ -131,13 +131,13 @@ class PersonalDataAnalyser(Plugin):
     @classmethod
     @override
     def get_supported_input_schemas(cls) -> list[WctSchema[Any]]:
-        """Return the input schemas supported by this plugin."""
+        """Return the input schemas supported by this analyser."""
         return SUPPORTED_INPUT_SCHEMAS
 
     @classmethod
     @override
     def get_supported_output_schemas(cls) -> list[WctSchema[Any]]:
-        """Return the output schemas supported by this plugin."""
+        """Return the output schemas supported by this analyser."""
         return SUPPORTED_OUTPUT_SCHEMAS
 
     @override
@@ -148,7 +148,7 @@ class PersonalDataAnalyser(Plugin):
         message: Message,
     ) -> Message:
         """Process data to find personal data patterns."""
-        Plugin.validate_input_message(message, input_schema)
+        Analyser.validate_input_message(message, input_schema)
 
         # Extract content from message
         data = message.content

@@ -51,12 +51,12 @@
             }
         },
         {
-            "name": "WCT: List Plugins",
+            "name": "WCT: List Analysers",
             "type": "debugpy",
             "request": "launch",
             "module": "wct",
             "args": [
-                "list-plugins",
+                "list-analysers",
                 "--log-level", "DEBUG"
             ],
             "cwd": "${workspaceFolder}",
