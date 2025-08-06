@@ -27,7 +27,7 @@ jobs:
         run: ./scripts/init.sh
 
       - name: Run pre-commit hooks
-        run: ./scripts/precommit.sh
+        run: ./scripts/pre-commit.sh
 
   test:
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.runner }}
