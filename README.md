@@ -138,6 +138,8 @@ execution:
 
 ## Architecture
 
+For a comprehensive understanding of the core concepts and design principles that underpin WCT, see **[WCF Core Concepts](docs/wcf_core_concepts.md)**.
+
 ### Schema-Driven Design
 
 WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation:
