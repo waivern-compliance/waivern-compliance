@@ -1,14 +1,4 @@
 repos:
-  # Ruff - Python linting and formatting
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.7
-    hooks:
-      # Run the linter
-      - id: ruff-check
-        args: [--fix]
-      # Run the formatter
-      - id: ruff-format
-
   # Basic file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -21,12 +11,31 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
 
-  # Type checking with basedpyright
+  # Local script hooks
   - repo: local
     hooks:
-      - id: basedpyright
-        name: basedpyright
-        entry: uv run --group dev basedpyright --level error
+      # Format code using our format script
+      - id: format
+        name: format
+        entry: bash scripts/format.sh
         language: system
         types: [python]
-        files: ^src/wct/
+        pass_filenames: true
+
+      # Lint code using our lint script
+      - id: lint
+        name: lint
+        entry: bash scripts/lint.sh
+        language: system
+        types: [python]
+        pass_filenames: true
+
+      # Type check using our type-check script
+      - id: type-check
+        name: type-check
+        entry: bash scripts/type-check.sh
+        language: system
+        types: [python]
+        # don't run on tests
+        exclude: ^tests/
+        pass_filenames: true

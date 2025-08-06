@@ -24,10 +24,10 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --group dev --group mysql --group source-code
+        run: ./scripts/init.sh
 
       - name: Run pre-commit hooks
-        uses: pre-commit/action@v3.0.1
+        run: ./scripts/pre-commit.sh
 
   test:
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.runner }}
@@ -58,7 +58,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --group dev --group mysql --group source-code
+        run: ./scripts/init.sh
 
       - name: Test
-        run: uv run pytest
+        run: ./scripts/test.sh
