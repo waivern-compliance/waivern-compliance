@@ -7,7 +7,7 @@ from typing import Any
 from typing_extensions import Self, override
 
 from wct.analysers.base import Analyser
-from wct.llm_service import LLMServiceError, LLMServiceFactory
+from wct.analysers.base_compliance import BaseComplianceAnalyser
 from wct.message import Message
 from wct.prompts.personal_data_validation import (
     RecommendedAction,
@@ -15,7 +15,6 @@ from wct.prompts.personal_data_validation import (
     extract_json_from_response,
     get_batch_validation_prompt,
 )
-from wct.rulesets import RulesetLoader
 from wct.schema import WctSchema
 
 from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
@@ -36,8 +35,13 @@ DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
 DEFAULT_MAXIMUM_EVIDENCE_COUNT = 3
 
 
-class PersonalDataAnalyser(Analyser):
-    """Analyser for analyzing personal data patterns for GDPR compliance."""
+class PersonalDataAnalyser(BaseComplianceAnalyser):
+    """Analyser for analysing personal data patterns in content.
+
+    This analyser uses predefined rulesets to identify personal data patterns
+    in various content formats, including source code and structured data.
+    It supports LLM-based validation to filter false positives.
+    """
 
     def __init__(
         self,
@@ -59,15 +63,14 @@ class PersonalDataAnalyser(Analyser):
             llm_batch_size: Number of findings to validate in each LLM batch (default: 10)
             llm_validation_mode: LLM validation mode ('standard' or 'conservative', default: 'standard')
         """
-        super().__init__()  # Initialize logger from base class
-        self.ruleset_name = ruleset_name
-        self.evidence_context_size = evidence_context_size
+        super().__init__(
+            ruleset_name=ruleset_name,
+            evidence_context_size=evidence_context_size,
+            enable_llm_validation=enable_llm_validation,
+            llm_batch_size=llm_batch_size,
+        )
         self.maximum_evidence_count = maximum_evidence_count
-        self.enable_llm_validation = enable_llm_validation
-        self.llm_batch_size = llm_batch_size
         self.llm_validation_mode = llm_validation_mode
-        self._patterns = None
-        self._llm_service = None
 
     @classmethod
     @override
@@ -96,37 +99,6 @@ class PersonalDataAnalyser(Analyser):
             llm_batch_size=llm_batch_size,
             llm_validation_mode=llm_validation_mode,
         )
-
-    @property
-    def patterns(self) -> dict[str, Any]:
-        """Get the loaded patterns, loading them if necessary."""
-        if self._patterns is None:
-            self._patterns = RulesetLoader.load_ruleset(self.ruleset_name)
-        return self._patterns
-
-    @property
-    def llm_service(self):
-        """Get the LLM service, creating it if necessary."""
-        if self._llm_service is None and self.enable_llm_validation:
-            try:
-                self._llm_service = LLMServiceFactory.create_anthropic_service()
-                self.logger.info("LLM service initialized for personal data validation")
-            except LLMServiceError as e:
-                self.logger.warning(
-                    f"Failed to initialize LLM service: {e}. Continuing without LLM validation."
-                )
-                self.enable_llm_validation = False
-        return self._llm_service
-
-    def _get_context_size(self) -> int | None:
-        """Get the context size in characters based on the configured level.
-
-        Returns:
-            Number of characters to include before and after each match,
-            or None for full content (no truncation)
-        """
-        size_mapping = {"small": 50, "medium": 100, "large": 200, "full": None}
-        return size_mapping.get(self.evidence_context_size.lower(), 50)
 
     @classmethod
     @override
@@ -160,36 +132,21 @@ class PersonalDataAnalyser(Analyser):
         if input_schema.name == "source_code":
             # Handle source code format - delegate completely to handler
             findings = SourceCodeSchemaInputHandler().analyze_source_code_data(data)
-        elif "data" in data and isinstance(data["data"], list):
-            # DESIGN DECISION: Analyze each data array item independently
-            #
-            # For personal data compliance (GDPR, CCPA), we need granular tracking
-            # of where specific personal data types are found. This enables:
-            # - Precise data mapping for compliance documentation
-            # - Granular consent management
-            # - Targeted data deletion/modification
-            # - Detailed audit trails for regulatory requirements
-            #
-            # Each item in the data array represents a distinct content piece
-            # that should be analyzed and tracked separately for compliance.
-
-            data_array = data["data"]
-            all_findings = []
-
-            for item in data_array:
-                content = item.get("content", "")
-                item_metadata = item.get("metadata", {})
-
-                # Analyze each content piece independently for compliance tracking
-                item_findings = self._analyze_content(content, item_metadata)
-                all_findings.extend(item_findings)
-
-            findings = all_findings
         else:
-            # Handle direct content format (legacy or simplified input)
-            content = data.get("content", "")
-            direct_metadata = data.get("metadata", {})
-            findings = self._analyze_content(content, direct_metadata)
+            # Process standard_input schema data using base class method
+            raw_findings = self._process_standard_input_data(data)
+            # Convert raw findings to PersonalDataFinding objects
+            findings = []
+            for raw_finding in raw_findings:
+                finding = PersonalDataFinding(
+                    type=raw_finding["type"],
+                    risk_level=raw_finding["risk_level"],
+                    special_category=raw_finding["special_category"],
+                    matched_pattern=raw_finding["matched_pattern"],
+                    evidence=raw_finding["evidence"],
+                    metadata=raw_finding["metadata"],
+                )
+                findings.append(finding)
 
         # Apply LLM validation to filter false positives
         validated_findings = self._validate_findings_with_llm(findings)
@@ -253,92 +210,35 @@ class PersonalDataAnalyser(Analyser):
         # Return new Message with analysis results
         return output_message
 
-    def _analyze_content(
+    @override
+    def analyze_content_item(
         self, content: str, metadata: dict[str, Any]
-    ) -> list[PersonalDataFinding]:
-        """Analyze content for personal data patterns."""
+    ) -> list[dict[str, Any]]:
+        """Analyze a single content item for personal data patterns."""
         findings = []
 
         for category_name, category_data in self.patterns.items():
             for pattern in category_data["patterns"]:
                 if pattern.lower() in content.lower():
                     # Extract evidence - find all occurrences of the pattern in the content
-                    evidence_matches = self._extract_evidence(content, pattern)
+                    evidence_matches = self._extract_evidence(
+                        content, pattern, self.maximum_evidence_count
+                    )
 
                     # Pass metadata as-is since source is guaranteed by schema
                     finding_metadata = metadata.copy() if metadata else {}
 
-                    finding = PersonalDataFinding(
-                        type=category_name,
-                        risk_level=category_data["risk_level"],
-                        special_category=category_data["special_category"],
-                        matched_pattern=pattern,
-                        evidence=evidence_matches,
-                        metadata=finding_metadata,
-                    )
+                    finding = {
+                        "type": category_name,
+                        "risk_level": category_data["risk_level"],
+                        "special_category": category_data["special_category"],
+                        "matched_pattern": pattern,
+                        "evidence": evidence_matches,
+                        "metadata": finding_metadata,
+                    }
                     findings.append(finding)
 
         return findings
-
-    def _extract_evidence(self, content: str, pattern: str) -> list[str]:
-        """Extract evidence snippets where the pattern was found.
-
-        Args:
-            content: The full content to search in
-            pattern: The pattern that was matched
-
-        Returns:
-            List of unique evidence snippets showing context around matches
-        """
-        evidence_set = set()  # Use set to avoid duplicates
-        content_lower = content.lower()
-        pattern_lower = pattern.lower()
-
-        # Find all occurrences of the pattern
-        start_pos = 0
-        while True:
-            match_pos = content_lower.find(pattern_lower, start_pos)
-            if match_pos == -1:
-                break
-
-            # Extract context around the match (configurable characters before and after)
-            context_size = self._get_context_size()
-
-            if context_size is None:
-                # 'full' option: include entire content without truncation
-                evidence_snippet = content.strip()
-            else:
-                # Standard context window extraction
-                context_start = max(0, match_pos - context_size)
-                context_end = min(len(content), match_pos + len(pattern) + context_size)
-
-                # Extract the evidence with context
-                evidence_snippet = content[context_start:context_end].strip()
-
-                # Add ellipsis if we truncated the context
-                if context_start > 0:
-                    evidence_snippet = "..." + evidence_snippet
-                if context_end < len(content):
-                    evidence_snippet = evidence_snippet + "..."
-
-            # Add to set to automatically deduplicate
-            evidence_set.add(evidence_snippet)
-
-            # Move past this match to find the next occurrence
-            start_pos = match_pos + 1
-
-            # For 'full' context, only include one snippet since it contains everything
-            # For other contexts, limit to maximum evidence snippets to avoid overwhelming output
-            if context_size is None and len(evidence_set) >= 1:
-                break
-            elif (
-                context_size is not None
-                and len(evidence_set) >= self.maximum_evidence_count
-            ):
-                break
-
-        # Convert set back to list and maintain consistent ordering
-        return sorted(list(evidence_set))
 
     def _validate_findings_with_llm(
         self, findings: list[PersonalDataFinding]

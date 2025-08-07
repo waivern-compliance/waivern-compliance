@@ -16,6 +16,9 @@ from wct.analysers.personal_data_analyser import (
     PersonalDataFinding,
     PersonalDataPattern,
 )
+from wct.analysers.processing_purpose_analyser import (
+    ProcessingPurposeAnalyser,
+)
 from wct.schema import WctSchema
 
 __all__ = (
@@ -28,7 +31,8 @@ __all__ = (
     "PersonalDataAnalyser",
     "PersonalDataFinding",
     "PersonalDataPattern",
+    "ProcessingPurposeAnalyser",
     "BUILTIN_ANALYSERS",
 )
 
-BUILTIN_ANALYSERS = (PersonalDataAnalyser,)
+BUILTIN_ANALYSERS = (PersonalDataAnalyser, ProcessingPurposeAnalyser)

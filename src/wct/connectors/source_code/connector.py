@@ -47,7 +47,7 @@ COMMON_EXCLUSIONS = [
 
 
 class SourceCodeConnector(Connector):
-    """Connector that analyzes source code for compliance information.
+    """Connector that analyses source code for compliance information.
 
     This connector parses source code files using tree-sitter and extracts
     compliance-relevant information such as functions, classes, database
