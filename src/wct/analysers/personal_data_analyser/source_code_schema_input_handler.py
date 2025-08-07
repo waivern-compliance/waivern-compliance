@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from wct.rulesets import get_ruleset
+from wct.rulesets import RulesetLoader
 
 from .types import PersonalDataFinding
 
@@ -20,9 +20,11 @@ class SourceCodeSchemaInputHandler:
         The handler manages its own ruleset dependencies and is fully self-contained.
         """
         # Load personal data patterns (for field/content pattern matching)
-        self.personal_data_patterns = get_ruleset("personal_data")
+        self.personal_data_patterns = RulesetLoader.load_ruleset("personal_data")
         # Load source code behaviour patterns (for function/class/SQL/third-party patterns)
-        self.source_code_patterns = get_ruleset("personal_data_source_code_behaviours")
+        self.source_code_patterns = RulesetLoader.load_ruleset(
+            "personal_data_source_code_behaviours"
+        )
 
     def analyze_source_code_data(
         self, data: dict[str, Any]

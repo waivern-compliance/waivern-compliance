@@ -43,28 +43,11 @@ class RulesetNotFoundError(RulesetError):
     pass
 
 
-class RulesetLoader(abc.ABC):
-    """Abstract base class for loading rulesets from different sources."""
-
-    @abc.abstractmethod
-    def load_ruleset(self, ruleset_name: str) -> dict[str, Any]:
-        """Load a ruleset by name.
-
-        Args:
-            ruleset_name: Name of the ruleset to load
-
-        Returns:
-            Dictionary containing the ruleset data
-
-        Raises:
-            RulesetNotFoundError: If the ruleset cannot be found
-        """
-
-
-class ModuleRulesetLoader(RulesetLoader):
+class RulesetLoader:
     """Loads rulesets from Python modules in the rulesets package."""
 
-    def load_ruleset(self, ruleset_name: str) -> dict[str, Any]:
+    @classmethod
+    def load_ruleset(cls, ruleset_name: str) -> dict[str, Any]:
         """Load a ruleset from a Python module.
 
         Args:
@@ -77,7 +60,7 @@ class ModuleRulesetLoader(RulesetLoader):
             module_path = f"wct.rulesets.{ruleset_name}"
             module = __import__(module_path, fromlist=[ruleset_name])
 
-            # First, look for a Ruleset class implementation
+            # Look for a Ruleset class implementation
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
                 if (
@@ -89,34 +72,11 @@ class ModuleRulesetLoader(RulesetLoader):
                     ruleset_instance = attr(ruleset_name)
                     return ruleset_instance.get_patterns()
 
-            # Fallback: Look for a patterns dictionary in the module
-            for attr_name in dir(module):
-                if attr_name.endswith("_PATTERNS") and not attr_name.startswith("_"):
-                    return getattr(module, attr_name)
-
             raise RulesetNotFoundError(
-                f"No patterns found in ruleset module {ruleset_name}"
+                f"No Ruleset class found in module {ruleset_name}"
             )
 
         except ImportError as e:
             raise RulesetNotFoundError(
                 f"Ruleset module {ruleset_name} not found"
             ) from e
-
-
-def get_ruleset(
-    ruleset_name: str, loader: RulesetLoader | None = None
-) -> dict[str, Any]:
-    """Get a ruleset using the specified loader.
-
-    Args:
-        ruleset_name: Name of the ruleset to load
-        loader: RulesetLoader instance (defaults to ModuleRulesetLoader)
-
-    Returns:
-        Dictionary containing the ruleset data
-    """
-    if loader is None:
-        loader = ModuleRulesetLoader()
-
-    return loader.load_ruleset(ruleset_name)
