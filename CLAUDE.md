@@ -56,7 +56,7 @@ This is a Python project using `uv` for dependency management. Key commands:
 
 **Running the Application:**
 - `uv run wct run runbooks/<runbook.yaml>` - Run WCT analysis with a runbook
-- `uv run wct list-connectors` - List available connectors
+- `uv run wct ls-connectors` - List available connectors
 - `uv run wct ls-analysers` - List available analysers
 - `uv run wct validate-runbook runbooks/<runbook.yaml>` - Validate a runbook
 - `uv run wct test-llm` - Test LLM connectivity and configuration
@@ -83,7 +83,7 @@ All WCT commands support logging configuration:
 Examples:
 - `uv run wct run runbooks/samples/file_content_analysis.yaml --log-level DEBUG` - Detailed debugging
 - `uv run wct run runbooks/samples/LAMP_stack.yaml -v` - Verbose output
-- `uv run wct list-connectors --log-level WARNING` - Minimal output
+- `uv run wct ls-connectors --log-level WARNING` - Minimal output
 
 ## Architecture Overview
 
@@ -105,6 +105,8 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
 - **Schema-Aware Analysers:** Process validated data with input/output schema contracts - **Modular Architecture**
   - Personal data analyser (`src/wct/analysers/personal_data_analyser/`) - Enhanced with LLM-powered false positive detection
+    - Handles text content analysis, email/password/sensitive pattern detection with risk scoring
+    - Replaces deprecated file content analyser with improved capabilities
 - **Schema-Aware Executor:** Matches connector output schemas to analyser input schemas automatically
 - **Schema System:** `WctSchema[T]` with JSON schema validation for runtime type safety
 - **Rulesets:** Schema-compliant reusable rule definitions for compliance checks
@@ -225,6 +227,44 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 - Schema validation errors provide clear messages about data structure mismatches
 - Test both valid and invalid data to verify comprehensive validation coverage
 
+## Filesystem Connector Capabilities
+
+**Filesystem Connector** (`src/wct/connectors/filesystem/`):
+- Handles both single files and directories with recursive traversal
+- Produces "text" schema suitable for content analysis by personal data analyser
+- Enhanced file handling with binary detection and exclusion patterns
+
+**Key Features:**
+- **File & Directory Support:** Single files or recursive directory processing
+- **Pattern Exclusions:** Skip files matching glob patterns (e.g., `*.log`, `__pycache__`)
+- **Binary File Handling:** Automatic detection and skipping of non-text files
+- **Memory Efficiency:** Chunked reading for large files with configurable chunk sizes
+- **Safety Limits:** Maximum file count protection against excessive processing
+- **Flexible Encoding:** Configurable text encoding with error handling strategies
+
+**Usage Example:**
+```yaml
+connectors:
+  - name: "file_system"
+    type: "filesystem"
+    properties:
+      path: "./data"  # File or directory path
+      exclude_patterns: ["*.log", "__pycache__", "node_modules"]
+      max_files: 1000  # Safety limit
+      encoding: "utf-8"  # Text encoding
+      errors: "strict"  # Skip binary files
+
+execution:
+  - connector: "file_system"
+    analyser: "personal_data_analyser"
+    input_schema_name: "text"
+```
+
+**Architecture:**
+- **Replaced:** Former FileConnector with enhanced capabilities
+- **Shared Logic:** Used by SourceCodeConnector for file collection, eliminating code duplication
+- **Schema Compliant:** Produces validated text schema for downstream analysis
+
 ## Source Code Analysis Capabilities
 
 **Source Code Connector** (`src/wct/connectors/source_code/`):
@@ -234,13 +274,15 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 - **Requires:** `uv sync --group source-code` for tree-sitter dependencies
 
 **Key Analysis Features:**
-- **Function/Class Extraction:** Parameters, return types, visibility, inheritance
-- **Database Interactions:** SQL queries, parameterization status, user input detection
-- **Data Collection Patterns:** Form fields, session/cookie access, PII indicators
-- **AI/ML Usage Detection:** ML library imports, API calls, prediction code
-- **Security Patterns:** Authentication, encryption, validation, sanitization methods
-- **Third-party Integrations:** External service calls, data sharing detection
-- **Compliance Metadata:** File complexity, line counts, modification timestamps
+- **Function/Class Extraction:** Parameters, return types, visibility, inheritance (implemented)
+- **Compliance Metadata:** File size, line counts, modification timestamps (implemented)
+- **Future Compliance Features (TODO):**
+  - **Database Interactions:** SQL queries, parameterization status, user input detection
+  - **Data Collection Patterns:** Form fields, session/cookie access, PII indicators
+  - **AI/ML Usage Detection:** ML library imports, API calls, prediction code
+  - **Security Patterns:** Authentication, encryption, validation, sanitization methods
+  - **Third-party Integrations:** External service calls, data sharing detection
+  - **Import Analysis:** Library dependencies and external service usage
 
 **Usage Example:**
 ```yaml
@@ -253,7 +295,6 @@ connectors:
       file_patterns: ["**/*.php"]
       max_file_size: 10485760  # 10MB
       max_files: 4000  # Maximum number of files to process (default: 4000)
-      analysis_depth: "detailed"
 
 execution:
   - connector: "php_source"
@@ -261,7 +302,9 @@ execution:
     input_schema_name: "source_code"
 ```
 
-**Extensible Architecture:**
-- Modular extractors in `src/wct/connectors/source_code/extractors/`
-- Easy to add new programming languages via tree-sitter grammars
-- Schema-driven output ensures compatibility with downstream analysis analysers
+**Architecture Improvements:**
+- **Eliminated Code Duplication:** Uses FilesystemConnector for file collection, removing ~50 lines of duplicate traversal logic
+- **Focused on Compliance:** Removed non-compliance features (complexity analysis, AST serialization) in favor of regulatory-focused extraction
+- **Modular Design:** Separate extractors in `src/wct/connectors/source_code/extractors/` for functions, classes, and future compliance patterns
+- **Extensible Framework:** Easy to add new programming languages via tree-sitter grammars and new compliance extractors
+- **Schema-driven Output:** Ensures compatibility with downstream analysis analysers through validated data contracts
