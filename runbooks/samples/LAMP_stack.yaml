@@ -1,16 +1,15 @@
-name: "Sample Runbook"
-description: "Analyse files, database, and source code for potentially sensitive information"
+name: "Sample Runbook for LAMP Stack"
+description: >
+  Analyze database and source code for potentially sensitive information and processing purposes.
 
 connectors:
-  - name: "file_reader"
-    type: "file_reader"
-    properties:
-      path: "./tests/wct/connectors/file/sample_file.txt"
   - name: my_mysql_db
     type: mysql
     properties:
-      # MySQL credentials are first tried from environment variables: MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT
-      # You can also specify them here, but environment variables take precedence and are recommended for security reasons
+      # MySQL credentials are first tried from environment variables:
+      # MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT
+      # You can also specify them here, but environment variables
+      # take precedence and are recommended for security reasons
       max_rows_per_table: 5
   - name: "php_source_code"
     type: "source_code"
@@ -23,22 +22,6 @@ connectors:
       analysis_depth: "detailed"
 
 analysers:
-  - name: "file_content_analyser"
-    type: "file_content_analyser"
-    properties:
-      sensitivity_level: "medium"
-    metadata:
-      priority: "high"
-      compliance_frameworks: ["GDPR", "CCPA"]
-  - name: "personal_data_analyser_for_file_content"
-    type: "personal_data_analyser"
-    properties:
-      evidence_context_size: full
-      enable_llm_validation: false
-      llm_batch_size: 50
-      llm_validation_mode: standard
-    metadata:
-      compliance_frameworks: ["GDPR", "CCPA"]
   - name: "personal_data_analyser_for_mysql"
     type: "personal_data_analyser"
     properties:
@@ -46,60 +29,35 @@ analysers:
       enable_llm_validation: false
       llm_batch_size: 80
       llm_validation_mode: conservative  # More careful validation for database content
-    metadata:
-      compliance_frameworks: ["GDPR", "CCPA"]
-  - name: "personal_data_analyser_for_source_code"
-    type: "personal_data_analyser"
-    properties:
-      evidence_context_size: medium
-      enable_llm_validation: false
-      llm_batch_size: 50
-      llm_validation_mode: standard
-    metadata:
-      priority: "high"
-      compliance_frameworks: ["GDPR", "CCPA"]
-      description: "Analyze PHP source code for personal data handling patterns"
+  # - name: "personal_data_analyser_for_source_code"
+  #   type: "personal_data_analyser"
+  #   properties:
+  #     evidence_context_size: medium
+  #     enable_llm_validation: false
+  #     llm_batch_size: 50
+  #     llm_validation_mode: standard
+  #   metadata:
+  #     priority: "high"
+  #     description: "Analyze PHP source code for personal data handling patterns"
 
 execution:
-  - connector: "file_reader"
-    analyser: "file_content_analyser"
-    input_schema_name: "text"
-    output_schema_name: "file_content_analysis_result"
-    context:
-      description: "Analyze file content for sensitive information"
-      priority: "high"
-      compliance_frameworks: ["GDPR", "CCPA"]
-      sensitivity_rules:
-        - "email_detection"
-        - "password_detection"
-        - "api_key_detection"
-  - connector: "file_reader"
-    analyser: "personal_data_analyser_for_file_content"
-    input_schema_name: "text"
-    output_schema_name: "personal_data_analysis_findings"
-    context:
-      description: "Analyze file content for personal data"
-      priority: "high"
-      compliance_frameworks: ["GDPR", "CCPA"]
   - connector: "my_mysql_db"
     analyser: "personal_data_analyser_for_mysql"
     input_schema_name: "text"
     output_schema_name: "personal_data_analysis_findings"
     context:
-      description: "Analyse MySQL database for personal data"
+      description: "Analyse MySQL database for personal data collection"
       priority: "high"
-      compliance_frameworks: ["GDPR", "CCPA"]
-  - connector: "php_source_code"
-    analyser: "personal_data_analyser_for_source_code"
-    input_schema_name: "source_code"
-    output_schema_name: "personal_data_analysis_findings"
-    context:
-      description: "Analyze PHP source code for personal data handling patterns"
-      priority: "high"
-      compliance_frameworks: ["GDPR", "CCPA"]
-      sensitivity_rules:
-        - "function_name_detection"
-        - "parameter_name_detection"
-        - "class_property_detection"
-        - "sql_query_detection"
-        - "third_party_integration_detection"
+  # - connector: "php_source_code"
+  #   analyser: "personal_data_analyser_for_source_code"
+  #   input_schema_name: "source_code"
+  #   output_schema_name: "personal_data_analysis_findings"
+  #   context:
+  #     description: "Analyze PHP source code for personal data handling patterns"
+  #     priority: "high"
+  #     sensitivity_rules:
+  #       - "function_name_detection"
+  #       - "parameter_name_detection"
+  #       - "class_property_detection"
+  #       - "sql_query_detection"
+  #       - "third_party_integration_detection"
