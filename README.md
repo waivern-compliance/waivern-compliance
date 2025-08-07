@@ -124,7 +124,7 @@ execution:
   - connector: "filesystem_reader"
     analyser: "content_analyser"
     input_schema_name: "standard_input"
-    output_schema_name: "personal_data_findings"
+    output_schema_name: "personal_data_finding"
     context:
       description: "Analyze file content for personal data"
       priority: "high"
