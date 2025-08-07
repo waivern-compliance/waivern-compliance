@@ -22,7 +22,7 @@ class AnalysisResult:
     error_message: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert AnalysisResult to a dictionary for JSON serialization.
+        """Convert AnalysisResult to a dictionary for JSON serialisation.
 
         Returns:
             Dictionary representation of the analysis result

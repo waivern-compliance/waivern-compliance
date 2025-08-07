@@ -10,7 +10,7 @@ class Ruleset(abc.ABC):
     """Base class for all rulesets with logging support.
 
     This provides a common interface for rulesets and automatic
-    logger initialization following WCT logging conventions.
+    logger initialisation following WCT logging conventions.
     """
 
     def __init__(self, ruleset_name: str) -> None:

@@ -268,7 +268,7 @@ class ClassExtractor(BaseExtractor):
 
             # Get default value
             default_value = None
-            assignment_node = self.find_child_by_type(prop_node, "property_initializer")
+            assignment_node = self.find_child_by_type(prop_node, "property_initialiser")
             if assignment_node:
                 default_value = self.get_node_text(assignment_node, source_code)
 

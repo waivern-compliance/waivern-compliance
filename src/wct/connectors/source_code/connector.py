@@ -166,8 +166,8 @@ class SourceCodeConnector(Connector):
                 )
                 output_schema = SUPPORTED_OUTPUT_SCHEMAS["source_code"]
 
-            # Analyze source code
-            analysis_data = self._analyze_source_code()
+            # Analyse source code
+            analysis_data = self._analyse_source_code()
 
             message = Message(
                 id=f"Source code analysis from {self.path.name}",
@@ -181,19 +181,19 @@ class SourceCodeConnector(Connector):
         except Exception as e:
             self.logger.error(f"Failed to extract from source code {self.path}: {e}")
             raise ConnectorExtractionError(
-                f"Failed to analyze source code {self.path}: {e}"
+                f"Failed to analyse source code {self.path}: {e}"
             ) from e
 
-    def _analyze_source_code(self) -> dict[str, Any]:
-        """Analyze source code and extract compliance information.
+    def _analyse_source_code(self) -> dict[str, Any]:
+        """Analyse source code and extract compliance information.
 
         Returns:
             Dictionary containing analysis results in schema format
         """
         if self.path.is_file():
-            files_data, total_files, total_lines = self._analyze_single_file(self.path)
+            files_data, total_files, total_lines = self._analyse_single_file(self.path)
         else:
-            files_data, total_files, total_lines = self._analyze_directory(self.path)
+            files_data, total_files, total_lines = self._analyse_directory(self.path)
 
         return {
             "schemaVersion": "1.0.0",
@@ -210,13 +210,13 @@ class SourceCodeConnector(Connector):
             "data": files_data,
         }
 
-    def _analyze_single_file(
+    def _analyse_single_file(
         self, file_path: Path
     ) -> tuple[list[dict[str, Any]], int, int]:
         """Analyze a single source code file.
 
         Args:
-            file_path: Path to the file to analyze
+            file_path: Path to the file to analyse
 
         Returns:
             Tuple of (file data list, file count, total lines)
@@ -244,16 +244,16 @@ class SourceCodeConnector(Connector):
             return [file_data], 1, line_count
 
         except Exception as e:
-            self.logger.error(f"Failed to analyze file {file_path}: {e}")
+            self.logger.error(f"Failed to analyse file {file_path}: {e}")
             return [], 0, 0
 
-    def _analyze_directory(
+    def _analyse_directory(
         self, dir_path: Path
     ) -> tuple[list[dict[str, Any]], int, int]:
         """Analyze all source code files in a directory.
 
         Args:
-            dir_path: Path to the directory to analyze
+            dir_path: Path to the directory to analyse
 
         Returns:
             Tuple of (files data list, file count, total lines)
@@ -264,7 +264,7 @@ class SourceCodeConnector(Connector):
 
         # File limits are now handled by the filesystem connector
         for file_path in self._get_source_files():
-            file_data_list, file_count, line_count = self._analyze_single_file(
+            file_data_list, file_count, line_count = self._analyse_single_file(
                 file_path
             )
             files_data.extend(file_data_list)

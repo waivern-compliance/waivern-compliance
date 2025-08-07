@@ -129,7 +129,7 @@ class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
 
         # TODO: Implement actual processing purpose detection logic
         # For now, return a skeleton result
-        findings = self._analyze_content_for_purposes(data)
+        findings = self._analyse_content_for_purposes(data)
 
         # Create result data with findings
         result_data: dict[str, Any] = {
@@ -184,7 +184,7 @@ class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
         )
         return output_message
 
-    def _analyze_content_for_purposes(
+    def _analyse_content_for_purposes(
         self, data: dict[str, Any]
     ) -> list[dict[str, Any]]:
         """Analyze content for processing purposes.
@@ -193,7 +193,7 @@ class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
         against the processing_purposes ruleset.
 
         Args:
-            data: Input data to analyze (standard_input schema format)
+            data: Input data to analyse (standard_input schema format)
 
         Returns:
             List of processing purpose findings
@@ -204,13 +204,13 @@ class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
         return findings
 
     @override
-    def analyze_content_item(
+    def analyse_content_item(
         self, content: str, metadata: dict[str, Any]
     ) -> list[dict[str, Any]]:
         """Analyze a single content item for processing purposes.
 
         Args:
-            content: Text content to analyze
+            content: Text content to analyse
             metadata: Metadata about the content source
 
         Returns:

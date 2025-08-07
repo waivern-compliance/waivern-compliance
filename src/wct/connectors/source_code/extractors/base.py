@@ -9,7 +9,7 @@ from tree_sitter import Node
 class BaseExtractor(abc.ABC):
     """Base class for source code extractors.
 
-    Extractors analyze tree-sitter AST nodes to extract specific information
+    Extractors analyse tree-sitter AST nodes to extract specific information
     for compliance analysis such as functions, classes, database interactions, etc.
     """
 
@@ -26,7 +26,7 @@ class BaseExtractor(abc.ABC):
         """Extract information from an AST node.
 
         Args:
-            node: Tree-sitter AST node to analyze
+            node: Tree-sitter AST node to analyse
             source_code: Original source code (for getting text content)
 
         Returns:

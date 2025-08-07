@@ -61,10 +61,10 @@ class BaseComplianceAnalyser(Analyser):
         if self._llm_service is None and self.enable_llm_validation:
             try:
                 self._llm_service = LLMServiceFactory.create_anthropic_service()
-                self.logger.info("LLM service initialized for compliance analysis")
+                self.logger.info("LLM service initialised for compliance analysis")
             except LLMServiceError as e:
                 self.logger.warning(
-                    f"Failed to initialize LLM service: {e}. Continuing without LLM validation."
+                    f"Failed to initialise LLM service: {e}. Continuing without LLM validation."
                 )
                 self.enable_llm_validation = False
         return self._llm_service
@@ -142,13 +142,13 @@ class BaseComplianceAnalyser(Analyser):
         """Process standard_input schema data format.
 
         Handles the common pattern of iterating through data arrays
-        and analyzing each content item independently.
+        and analysing each content item independently.
 
         Args:
             data: Input data in standard_input schema format
 
         Returns:
-            List of findings from analyzing all data items
+            List of findings from analysing all data items
         """
         findings = []
 
@@ -159,18 +159,18 @@ class BaseComplianceAnalyser(Analyser):
                 item_metadata = item.get("metadata", {})
 
                 # Analyze each content piece using analyser-specific logic
-                item_findings = self.analyze_content_item(content, item_metadata)
+                item_findings = self.analyse_content_item(content, item_metadata)
                 findings.extend(item_findings)
         else:
             # Handle direct content format (fallback)
             content = data.get("content", "")
             metadata = data.get("metadata", {})
-            findings = self.analyze_content_item(content, metadata)
+            findings = self.analyse_content_item(content, metadata)
 
         return findings
 
     @abstractmethod
-    def analyze_content_item(
+    def analyse_content_item(
         self, content: str, metadata: dict[str, Any]
     ) -> list[dict[str, Any]]:
         """Analyze a single content item for compliance patterns.
@@ -179,7 +179,7 @@ class BaseComplianceAnalyser(Analyser):
         their specific analysis logic.
 
         Args:
-            content: Text content to analyze
+            content: Text content to analyse
             metadata: Metadata about the content source
 
         Returns:

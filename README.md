@@ -1,6 +1,6 @@
 # Waivern Compliance Tool (WCT)
 
-A modern, analyser-based compliance analysis framework for detecting and analyzing compliance issues across tech stacks.
+A modern, analyser-based compliance analysis framework for detecting and analysing compliance issues across tech stacks.
 
 ## Overview
 
@@ -74,7 +74,7 @@ Some connectors and analysers require additional dependencies that are not insta
 
 ### Runbooks Directory
 
-WCT organizes runbook configurations in the `runbooks/` directory with samples organized in `runbooks/samples/`:
+WCT organises runbook configurations in the `runbooks/` directory with samples organised in `runbooks/samples/`:
 
 - **`runbooks/samples/file_content_analysis.yaml`** - Simple file analysis demonstration using personal data analyser
 - **`runbooks/samples/LAMP_stack.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
@@ -179,14 +179,14 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 
 ### Modular Architecture Benefits
 
-Each connector and analyser is organized as an independent module:
+Each connector and analyser is organised as an independent module:
 
 - **Schema Contracts**: Clear input/output schema declarations
 - **Dependency Isolation**: Optional dependencies grouped by component
 - **Independent Testing**: Each module can be tested in isolation
 - **Hot-swappable Components**: Add/remove connectors and analysers without affecting others
 - **Code Reuse**: Filesystem connector is used by source code connector, eliminating duplication
-- **Compliance Focus**: Components optimized for regulatory requirements rather than general-purpose analysis
+- **Compliance Focus**: Components optimised for regulatory requirements rather than general-purpose analysis
 
 ### Configuration Format
 

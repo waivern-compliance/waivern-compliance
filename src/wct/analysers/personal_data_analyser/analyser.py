@@ -131,7 +131,7 @@ class PersonalDataAnalyser(BaseComplianceAnalyser):
 
         if input_schema.name == "source_code":
             # Handle source code format - delegate completely to handler
-            findings = SourceCodeSchemaInputHandler().analyze_source_code_data(data)
+            findings = SourceCodeSchemaInputHandler().analyse_source_code_data(data)
         else:
             # Process standard_input schema data using base class method
             raw_findings = self._process_standard_input_data(data)
@@ -211,7 +211,7 @@ class PersonalDataAnalyser(BaseComplianceAnalyser):
         return output_message
 
     @override
-    def analyze_content_item(
+    def analyse_content_item(
         self, content: str, metadata: dict[str, Any]
     ) -> list[dict[str, Any]]:
         """Analyze a single content item for personal data patterns."""

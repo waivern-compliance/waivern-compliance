@@ -152,7 +152,7 @@ WORDPRESS_PORT=0 MYSQL_PORT=0 ./start.sh --no-wait
 
 ### Environment Variables
 
-Create a `.env` file to customize configuration:
+Create a `.env` file to customise configuration:
 
 ```bash
 # Port Configuration
