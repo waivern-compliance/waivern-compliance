@@ -15,7 +15,7 @@ from wct.prompts.personal_data_validation import (
     extract_json_from_response,
     get_batch_validation_prompt,
 )
-from wct.rulesets import get_ruleset
+from wct.rulesets import RulesetLoader
 from wct.schema import WctSchema
 
 from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
@@ -101,7 +101,7 @@ class PersonalDataAnalyser(Analyser):
     def patterns(self) -> dict[str, Any]:
         """Get the loaded patterns, loading them if necessary."""
         if self._patterns is None:
-            self._patterns = get_ruleset(self.ruleset_name)
+            self._patterns = RulesetLoader.load_ruleset(self.ruleset_name)
         return self._patterns
 
     @property

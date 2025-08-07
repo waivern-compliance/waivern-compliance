@@ -10,7 +10,7 @@ from typing_extensions import override
 
 from wct.rulesets.base import Ruleset
 
-PERSONAL_DATA_PATTERNS: Final = {
+PERSONAL_DATA: Final = {
     "basic_profile": {
         "patterns": [
             "first_name",
@@ -225,61 +225,5 @@ class PersonalDataRuleset(Ruleset):
         Returns:
             Dictionary containing all GDPR-compliant personal data patterns
         """
-        self.logger.debug(
-            f"Returning {len(PERSONAL_DATA_PATTERNS)} personal data patterns"
-        )
-        return PERSONAL_DATA_PATTERNS
-
-    def get_high_risk_patterns(self) -> dict[str, Any]:
-        """Get only high-risk personal data patterns.
-
-        Returns:
-            Dictionary containing patterns with 'high' risk level
-        """
-        high_risk_patterns = {
-            name: pattern
-            for name, pattern in PERSONAL_DATA_PATTERNS.items()
-            if pattern.get("risk_level") == "high"
-        }
-
-        self.logger.debug(f"Returning {len(high_risk_patterns)} high-risk patterns")
-        return high_risk_patterns
-
-    def get_special_category_patterns(self) -> dict[str, Any]:
-        """Get only special category personal data patterns under GDPR.
-
-        Returns:
-            Dictionary containing patterns marked as special category ('Y')
-        """
-        special_patterns = {
-            name: pattern
-            for name, pattern in PERSONAL_DATA_PATTERNS.items()
-            if pattern.get("special_category") == "Y"
-        }
-
-        self.logger.debug(
-            f"Returning {len(special_patterns)} special category patterns"
-        )
-        return special_patterns
-
-    def validate_pattern_structure(self) -> bool:
-        """Validate that all patterns have required fields.
-
-        Returns:
-            True if all patterns are valid, False otherwise
-        """
-        required_fields = {"patterns", "risk_level", "special_category"}
-        invalid_patterns = []
-
-        for name, pattern in PERSONAL_DATA_PATTERNS.items():
-            if not all(field in pattern for field in required_fields):
-                invalid_patterns.append(name)
-
-        if invalid_patterns:
-            self.logger.warning(
-                f"Found {len(invalid_patterns)} invalid patterns: {invalid_patterns}"
-            )
-            return False
-
-        self.logger.info(f"All {len(PERSONAL_DATA_PATTERNS)} patterns are valid")
-        return True
+        self.logger.debug(f"Returning {len(PERSONAL_DATA)} personal data patterns")
+        return PERSONAL_DATA
