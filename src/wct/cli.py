@@ -34,12 +34,12 @@ def create_executor() -> Executor:
     # Register built-in connectors
     for connector_class in BUILTIN_CONNECTORS:
         executor.register_available_connector(connector_class)
-        logger.debug("Registered connector: %s", connector_class.get_name())
+        logger.debug("Available built-in connector: %s", connector_class.get_name())
 
     # Register built-in analysers
     for analyser_class in BUILTIN_ANALYSERS:
         executor.register_available_analyser(analyser_class)
-        logger.debug("Registered analyser: %s", analyser_class.get_name())
+        logger.debug("Available built-in analyser: %s", analyser_class.get_name())
 
     logger.info(
         "Executor initialized with %d connectors and %d analysers",
@@ -100,9 +100,9 @@ class ComponentLister:
         Returns:
             Dictionary mapping connector names to classes
         """
-        logger.debug("Getting registered connectors")
+        logger.debug("Getting available built-in connectors")
         connectors = self.executor.list_available_connectors()
-        logger.info("Found %d registered connectors", len(connectors))
+        logger.info("Found %d available built-in connectors", len(connectors))
         return connectors
 
     def list_analysers(self) -> dict[str, type]:
@@ -111,9 +111,9 @@ class ComponentLister:
         Returns:
             Dictionary mapping analyser names to classes
         """
-        logger.debug("Getting registered analysers")
+        logger.debug("Getting available built-in analysers")
         analysers = self.executor.list_available_analysers()
-        logger.info("Found %d registered analysers", len(analysers))
+        logger.info("Found %d available built-in analysers", len(analysers))
         return analysers
 
 

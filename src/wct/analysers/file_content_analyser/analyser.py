@@ -27,10 +27,14 @@ class FileContentAnalyser(Analyser):
 
     This analyser looks for patterns that might indicate sensitive data
     like email addresses, potential passwords, API keys, etc.
+
+    This analyser is designed to provide a demonstration of how to
+    implement an analysis analyser in WCT. It is not intended
+    for production use and should be adapted to specific needs.
     """
 
     # Number of characters to show at the end of masked sensitive values
-    MASK_VISIBLE_CHARS = 3
+    MASK_VISIBLE_CHARS = 6
 
     # Risk level thresholds
     CRITICAL_RISK_THRESHOLD = 50
@@ -42,13 +46,14 @@ class FileContentAnalyser(Analyser):
         self.sensitivity_level = sensitivity_level
 
         # Define patterns for different types of sensitive data
+        # Defined inline for simplicity. This acts as the 'ruleset' needed for this analyser.
         self.patterns = {
             "email": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"),
             "potential_password": re.compile(
                 r'(?i)(password|pwd|pass)\s*[:=]\s*[\'"]?([^\'"\s]+)[\'"]?'
             ),
             "api_key": re.compile(
-                r'(?i)(api[\s_]?key|apikey|access[\s_]?key)\s*[:=]\s*[\'"]?([A-Za-z0-9]{20,})[\'"]?'
+                r'(?i)(api[\s_]?key|apikey|access[\s_]?key)\s*[:=]\s*[\'"]?([A-Za-z0-9]{8,})[\'"]?'
             ),
         }
 
@@ -83,13 +88,15 @@ class FileContentAnalyser(Analyser):
         message: Message,
     ) -> Message:
         """Analyze file content for sensitive information."""
+        # Validate input message against the expected input schema
         Analyser.validate_input_message(message, input_schema)
 
-        # Extract content from the message's content structure
+        # Extract the content that needs to be analysed from the message
         payload_content = message.content
 
         # Get the actual text content from the text schema structure
         data_array = payload_content.get("data", [])
+
         if not data_array:
             text_content = ""
         else:

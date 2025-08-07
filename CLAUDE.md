@@ -81,8 +81,8 @@ All WCT commands support logging configuration:
 - `--verbose` or `-v` - Shortcut for `--log-level DEBUG`
 
 Examples:
-- `uv run wct run runbooks/sample_runbook.yaml --log-level DEBUG` - Detailed debugging
-- `uv run wct run runbooks/sample_runbook.yaml -v` - Verbose output
+- `uv run wct run runbooks/samples/file_content_analysis.yaml --log-level DEBUG` - Detailed debugging
+- `uv run wct run runbooks/samples/LAMP_stack.yaml -v` - Verbose output
 - `uv run wct list-connectors --log-level WARNING` - Minimal output
 
 ## Architecture Overview
@@ -105,6 +105,9 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
 - **Schema-Aware Analysers:** Process validated data with input/output schema contracts - **Modular Architecture**
   - File content analyser (`src/wct/analysers/file_content_analyser/`) - text → file_content_analysis_result
+    - Enhanced API key detection (8+ characters minimum for better real-world coverage)
+    - Email, password, and sensitive pattern detection with risk scoring
+    - Demonstration analyser with inline rulesets for learning purposes
   - Personal data analyser (`src/wct/analysers/personal_data_analyser/`) - Enhanced with LLM-powered false positive detection
 - **Schema-Aware Executor:** Matches connector output schemas to analyser input schemas automatically
 - **Schema System:** `WctSchema[T]` with JSON schema validation for runtime type safety
@@ -156,12 +159,18 @@ execution:
 
 **Runbook Organization:**
 - **`runbooks/` directory** - Centralized location for all runbook configurations
-- **`runbooks/sample_runbook.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
+- **`runbooks/samples/` directory** - Sample runbooks for demonstration and learning
+  - **`file_content_analysis.yaml`** - Simple file analysis demonstration with improved API key detection
+  - **`LAMP_stack.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
 - **`runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
+
+**Available Sample Runbooks:**
+- **File content analysis**: `runbooks/samples/file_content_analysis.yaml` - Demonstrates email, API key, and password detection
+- **LAMP stack analysis**: `runbooks/samples/LAMP_stack.yaml` - Multi-connector analysis for complete stack compliance
+- **Quick start**: Begin with `uv run wct run runbooks/samples/file_content_analysis.yaml -v`
 
 **Scenario-Based Testing:**
 Create focused runbooks for specific testing scenarios:
-- File-only analysis: `runbooks/file_analysis.yaml`
 - Database-only analysis: `runbooks/database_analysis.yaml`
 - Source code analysis: `runbooks/source_code_analysis.yaml`
 - LLM validation testing: `runbooks/llm_validation_test.yaml`
@@ -179,8 +188,10 @@ Create focused runbooks for specific testing scenarios:
 - Type annotations are enforced with `basedpyright` (schema system is fully type-safe)
 - Main package is `wct` located in `src/wct/`
 - Schema definitions in `src/wct/schemas/` (JSON Schema format)
-- Runbook configurations: `runbooks/` directory with scenario-based runbooks
-- Sample configurations: `runbooks/sample_runbook.yaml` (with modern execution format)
+- Runbook configurations: `runbooks/` directory with scenario-based runbooks organized in `samples/` subdirectory
+- Sample configurations:
+  - `runbooks/samples/file_content_analysis.yaml` - Simple demonstration with improved API key detection (8+ chars minimum)
+  - `runbooks/samples/LAMP_stack.yaml` - Comprehensive multi-connector analysis
 
 ## Development Setup
 

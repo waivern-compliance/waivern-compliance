@@ -1,3 +1,12 @@
-We have collected the user information for our mailing list:
+Mr Paul Smith
 - email: paul.smith@btinternet.com
 - phone: 555-123-4567
+
+Capturing customer information requires careful consideration. Y
+ou must explain and justify why you need specific data. For example,
+why do you need email addresses like nospam@example.com?
+Why do you need birthdays and gender? Are these critical for
+users to access your systems?
+
+# You'll need an anthropic api key to use the LLMs
+ANTHROPIC_API_KEY: "skxxxxxxxxxxxx"
