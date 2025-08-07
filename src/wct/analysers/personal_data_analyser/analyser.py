@@ -22,7 +22,7 @@ from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
 from .types import PersonalDataFinding
 
 SUPPORTED_INPUT_SCHEMAS = [
-    WctSchema(name="text", type=dict[str, Any]),
+    WctSchema(name="standard_input", type=dict[str, Any]),
     WctSchema(name="source_code", type=dict[str, Any]),
 ]
 

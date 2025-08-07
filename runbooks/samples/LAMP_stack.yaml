@@ -47,7 +47,7 @@ analysers:
 execution:
   - connector: "my_mysql_db"
     analyser: "personal_data_analyser_for_mysql"
-    input_schema_name: "text"
+    input_schema_name: "standard_input"
     output_schema_name: "personal_data_analysis_findings"
     context:
       description: "Analyse MySQL database for personal data collection"

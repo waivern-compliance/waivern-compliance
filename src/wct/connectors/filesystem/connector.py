@@ -15,7 +15,7 @@ from wct.message import Message
 from wct.schema import WctSchema
 
 SUPPORTED_OUTPUT_SCHEMAS = {
-    "text": WctSchema(name="text", type=dict[str, Any]),
+    "standard_input": WctSchema(name="standard_input", type=dict[str, Any]),
 }
 
 
@@ -149,7 +149,9 @@ class FilesystemConnector(Connector):
                 )
 
             if not output_schema:
-                self.logger.warning("No schema provided, using default text schema")
+                self.logger.warning(
+                    "No schema provided, using default standard_input schema"
+                )
                 raise ConnectorConfigError(
                     "No schema provided for data extraction. Please specify a valid WCT schema."
                 )
@@ -210,19 +212,19 @@ class FilesystemConnector(Connector):
         Returns:
             Schema-compliant transformed content
         """
-        if schema.name == "text":
-            return self._transform_for_text_schema(schema, all_file_data)
+        if schema.name == "standard_input":
+            return self._transform_for_standard_input_schema(schema, all_file_data)
         else:
             raise ConnectorConfigError(
                 f"Unsupported schema transformation: {schema.name}"
             )
 
-    def _transform_for_text_schema(
+    def _transform_for_standard_input_schema(
         self, schema: WctSchema[dict[str, Any]], all_file_data: list[dict[str, Any]]
     ) -> dict[str, Any]:
-        """Transform file content(s) for the 'text' schema.
+        """Transform file content(s) for the 'standard_input' schema.
 
-        The text schema supports multiple content pieces, making it perfect for
+        The standard_input schema supports multiple content pieces, making it perfect for
         aggregating multiple files from a directory into a single schema.
 
         Schema Structure:
@@ -235,11 +237,11 @@ class FilesystemConnector(Connector):
         - data: Array of content pieces, one per file
 
         Args:
-            schema: The text schema to transform content for
+            schema: The standard_input schema to transform content for
             all_file_data: List of file data with 'path', 'content', 'stat' keys
 
         Returns:
-            Dictionary conforming to the text schema structure
+            Dictionary conforming to the standard_input schema structure
         """
         # Calculate aggregate metadata
         total_size = sum(file_data["stat"].st_size for file_data in all_file_data)
@@ -278,7 +280,7 @@ class FilesystemConnector(Connector):
 
         return schema.type(
             schemaVersion="1.0.0",
-            name=f"text_from_{name_suffix}",
+            name=f"standard_input_from_{name_suffix}",
             description=source_desc,
             contentEncoding=self.encoding,
             source=str(self.path),

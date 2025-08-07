@@ -123,7 +123,7 @@ analysers:
 execution:
   - connector: "filesystem_reader"
     analyser: "content_analyser"
-    input_schema_name: "text"
+    input_schema_name: "standard_input"
     output_schema_name: "personal_data_findings"
     context:
       description: "Analyze file content for personal data"
@@ -159,9 +159,9 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 - **`src/wct/executor.py`**: Schema-aware execution engine
 - **`src/wct/schema.py`**: Unified WctSchema system for type-safe data flow
 - **`src/wct/schemas/`**: JSON schema definitions for validation
-  - `text.json` - Text content schema
+  - `standard_input.json` - Standard input content schema
 - **`src/wct/connectors/`**: Schema-compliant data source connectors
-  - `filesystem/` - Filesystem connector producing "text" schema
+  - `filesystem/` - Filesystem connector producing "standard_input" schema
   - `mysql/` - MySQL connector producing "mysql_database" schema
   - `source_code/` - Source code connector producing "source_code" schema
   - `wordpress/` - WordPress connector producing "wordpress_site" schema
@@ -332,11 +332,11 @@ src/wct/
 ├── executor.py           # Schema-aware execution engine
 ├── schema.py             # Unified WctSchema system
 ├── schemas/              # JSON schema definitions
-│   ├── text.json                    # Text content schema
+│   ├── standard_input.json          # Standard input content schema
 │   └── source_code.json            # Source code schema
 ├── connectors/           # Schema-compliant data connectors
 │   ├── base.py          # Abstract connector with schema support
-│   ├── filesystem/      # Filesystem connector (produces "text" schema)
+│   ├── filesystem/      # Filesystem connector (produces "standard_input" schema)
 │   │   ├── __init__.py
 │   │   └── connector.py
 │   ├── mysql/           # MySQL connector (produces "mysql_database" schema)
