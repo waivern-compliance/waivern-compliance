@@ -63,7 +63,9 @@ class AnthropicLLMService:
             )
 
         self._llm = None
-        self.logger.info(f"Initialized Anthropic LLM service with model: {model_name}")
+        self.logger.info(
+            f"Initialized Anthropic LLM service with model: {self.model_name}"
+        )
 
     def _get_llm(self):
         """Get or create the LangChain LLM instance.
@@ -125,7 +127,7 @@ class AnthropicLLMService:
             self.logger.error(f"Connection test failed: {e}")
             raise LLMConnectionError(f"Failed to connect to Anthropic API: {e}") from e
 
-    def analyze_text(self, text: str, analysis_prompt: str) -> str:
+    def analyse_data(self, text: str, analysis_prompt: str) -> str:
         """Analyze text using the LLM with a custom prompt.
 
         Args:
