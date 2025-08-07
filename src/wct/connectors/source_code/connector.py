@@ -1,6 +1,5 @@
 """Source code connector for WCT."""
 
-import math
 from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +12,7 @@ from wct.connectors.base import (
     ConnectorConfigError,
     ConnectorExtractionError,
 )
+from wct.connectors.filesystem import FilesystemConnector
 from wct.connectors.source_code.extractors import (
     ClassExtractor,
     FunctionExtractor,
@@ -25,7 +25,25 @@ SUPPORTED_OUTPUT_SCHEMAS = {
     "source_code": WctSchema(name="source_code", type=dict[str, Any]),
 }
 
-MAX_NODE_TEXT_LENGTH = 100  # Limit text length for AST nodes
+# Common file patterns to exclude from source code analysis
+COMMON_EXCLUSIONS = [
+    "*.pyc",
+    "__pycache__",
+    "*.class",
+    "*.o",
+    "*.so",
+    "*.dll",
+    ".git",
+    ".svn",
+    ".hg",
+    "node_modules",
+    ".DS_Store",
+    "*.log",
+    "*.tmp",
+    "*.bak",
+    "*.swp",
+    "*.swo",
+]
 
 
 class SourceCodeConnector(Connector):
@@ -43,8 +61,6 @@ class SourceCodeConnector(Connector):
         file_patterns: list[str] | None = None,
         max_file_size: int = 10 * 1024 * 1024,  # 10MB default
         max_files: int = 4000,  # Maximum number of files to process
-        include_syntax_tree: bool = False,
-        analysis_depth: str = "detailed",
     ):
         """Initialize the source code connector.
 
@@ -54,8 +70,6 @@ class SourceCodeConnector(Connector):
             file_patterns: Glob patterns for file inclusion/exclusion
             max_file_size: Skip files larger than this size (bytes)
             max_files: Maximum number of files to process (default: 4000)
-            include_syntax_tree: Whether to include full AST in output
-            analysis_depth: Level of analysis (basic, detailed, comprehensive)
         """
         super().__init__()  # Initialize logger from base class
         self.path = Path(path)
@@ -63,11 +77,17 @@ class SourceCodeConnector(Connector):
         self.file_patterns = file_patterns or ["**/*"]
         self.max_file_size = max_file_size
         self.max_files = max_files
-        self.include_syntax_tree = include_syntax_tree
-        self.analysis_depth = analysis_depth
 
         if not self.path.exists():
             raise ConnectorConfigError(f"Path does not exist: {self.path}")
+
+        # Create filesystem connector for file collection with common exclusions
+        self.file_collector = FilesystemConnector(
+            path=path,
+            exclude_patterns=COMMON_EXCLUSIONS,
+            max_files=max_files,
+            errors="strict",  # Skip binary files
+        )
 
         # Initialize parser
         if self.path.is_file():
@@ -97,8 +117,6 @@ class SourceCodeConnector(Connector):
                 - file_patterns (list[str], optional): File inclusion patterns.
                 - max_file_size (int, optional): Maximum file size to process.
                 - max_files (int, optional): Maximum number of files to process.
-                - include_syntax_tree (bool, optional): Include full AST.
-                - analysis_depth (str, optional): Analysis detail level.
 
         Returns:
             Self: A new SourceCodeConnector instance.
@@ -116,8 +134,6 @@ class SourceCodeConnector(Connector):
             file_patterns=properties.get("file_patterns"),
             max_file_size=properties.get("max_file_size", 10 * 1024 * 1024),
             max_files=properties.get("max_files", 4000),
-            include_syntax_tree=properties.get("include_syntax_tree", False),
-            analysis_depth=properties.get("analysis_depth", "detailed"),
         )
 
     @override
@@ -245,49 +261,44 @@ class SourceCodeConnector(Connector):
         files_data = []
         total_files = 0
         total_lines = 0
-        processed_files = 0
 
-        for file_path in self._get_source_files(dir_path):
-            if processed_files >= self.max_files:
-                self.logger.warning(
-                    f"Reached maximum file limit ({self.max_files}). "
-                    f"Skipping remaining files in {dir_path}"
-                )
-                break
-
+        # File limits are now handled by the filesystem connector
+        for file_path in self._get_source_files():
             file_data_list, file_count, line_count = self._analyze_single_file(
                 file_path
             )
             files_data.extend(file_data_list)
             total_files += file_count
             total_lines += line_count
-            processed_files += file_count
 
-        if processed_files >= self.max_files:
-            self.logger.info(
-                f"Processed {processed_files} files (limit: {self.max_files})"
-            )
-
+        self.logger.info(f"Processed {total_files} source code files")
         return files_data, total_files, total_lines
 
-    def _get_source_files(self, dir_path: Path) -> Generator[Path, None, None]:
-        """Get all source code files in directory matching patterns.
-
-        Args:
-            dir_path: Directory to search
+    def _get_source_files(self) -> Generator[Path, None, None]:
+        """Get all source code files using filesystem connector with additional filtering.
 
         Yields:
-            Source code file paths
+            Source code file paths that are supported by the parser
         """
+        # Use filesystem connector to collect files
+        files_to_process = self.file_collector.collect_files()
         parser = SourceCodeParser()
 
-        for pattern in self.file_patterns:
-            for file_path in dir_path.glob(pattern):
-                if (
-                    file_path.is_file()
-                    and parser.is_supported_file(file_path)
-                    and file_path.stat().st_size <= self.max_file_size
-                ):
+        for file_path in files_to_process:
+            # Apply source-code-specific filtering
+            if parser.is_supported_file(file_path):
+                # Apply file pattern matching if specified (inclusion patterns)
+                if self.file_patterns != ["**/*"]:
+                    # Check if file matches any of the inclusion patterns
+                    matches_pattern = any(
+                        file_path.match(pattern)
+                        or file_path.name.endswith(pattern.replace("*", ""))
+                        for pattern in self.file_patterns
+                    )
+                    if matches_pattern:
+                        yield file_path
+                else:
+                    # No specific patterns, include all supported files
                     yield file_path
 
     def _extract_file_data(
@@ -334,115 +345,10 @@ class SourceCodeConnector(Connector):
             "metadata": {
                 "file_size": file_path.stat().st_size,
                 "line_count": line_count,
-                "complexity_score": self._calculate_complexity_score(root_node),
                 "last_modified": datetime.fromtimestamp(
                     file_path.stat().st_mtime
                 ).isoformat(),
             },
         }
 
-        # Include syntax tree if requested
-        if self.include_syntax_tree:
-            file_data["syntax_tree"] = self._serialize_ast(root_node, source_code)
-
         return file_data
-
-    def _calculate_complexity_score(self, root_node: Any) -> float:
-        """Calculate a simple complexity score for the file.
-
-        Args:
-            root_node: AST root node
-
-        Returns:
-            Complexity score (higher = more complex)
-        """
-        # Simple complexity based on node count and depth
-        node_count = self._count_nodes(root_node)
-        max_depth = self._calculate_max_depth(root_node)
-
-        # Simple formula: log of nodes + depth factor
-        return round(math.log(max(node_count, 1)) + (max_depth * 0.5), 2)
-
-    def _count_nodes(self, node: Any) -> int:
-        """Count total nodes in AST.
-
-        Args:
-            node: AST node
-
-        Returns:
-            Total node count
-        """
-        count = 1
-        for child in getattr(node, "children", []):
-            count += self._count_nodes(child)
-        return count
-
-    def _calculate_max_depth(self, node: Any, current_depth: int = 0) -> int:
-        """Calculate maximum depth of AST.
-
-        Args:
-            node: AST node
-            current_depth: Current recursion depth
-
-        Returns:
-            Maximum depth
-        """
-        if not hasattr(node, "children") or not node.children:
-            return current_depth
-
-        max_child_depth = current_depth
-        for child in node.children:
-            child_depth = self._calculate_max_depth(child, current_depth + 1)
-            max_child_depth = max(max_child_depth, child_depth)
-
-        return max_child_depth
-
-    def _serialize_ast(
-        self, node: Any, source_code: str, max_depth: int = 3
-    ) -> dict[str, Any]:
-        """Serialize AST node to dictionary (simplified).
-
-        Args:
-            node: AST node
-            source_code: Original source code
-            max_depth: Maximum recursion depth
-
-        Returns:
-            Serialized AST dictionary
-        """
-        if max_depth <= 0:
-            return {"type": getattr(node, "type", "unknown"), "truncated": True}
-
-        ast_dict = {
-            "type": getattr(node, "type", "unknown"),
-            "start_line": getattr(node, "start_point", [0])[0] + 1,
-            "end_line": getattr(node, "end_point", [0])[0] + 1,
-        }
-
-        # Add text content for leaf nodes or small nodes
-        if (
-            not hasattr(node, "children")
-            or len(getattr(node, "children", [])) == 0
-            or (
-                hasattr(node, "end_byte")
-                and hasattr(node, "start_byte")
-                and node.end_byte - node.start_byte < MAX_NODE_TEXT_LENGTH
-            )
-        ):
-            try:
-                if hasattr(node, "start_byte") and hasattr(node, "end_byte"):
-                    text = source_code.encode("utf-8")[
-                        node.start_byte : node.end_byte
-                    ].decode("utf-8")
-                    ast_dict["text"] = text[:200]  # Limit text length
-            except Exception as e:
-                self.logger.warning(f"Failed to extract text from AST node: {e}")
-
-        # Recursively serialize children (limited depth)
-        if hasattr(node, "children") and node.children and max_depth > 1:
-            ast_dict["children"] = [
-                self._serialize_ast(child, source_code, max_depth - 1)
-                for child in node.children[:10]  # Limit children count
-            ]
-
-        return ast_dict

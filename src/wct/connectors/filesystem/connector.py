@@ -155,7 +155,7 @@ class FilesystemConnector(Connector):
                 )
 
             # Collect all files to process
-            files_to_process = self._collect_files()
+            files_to_process = self.collect_files()
             self.logger.info(f"Found {len(files_to_process)} files to process")
 
             # Read all file contents
@@ -291,7 +291,7 @@ class FilesystemConnector(Connector):
             data=data_entries,
         )
 
-    def _collect_files(self) -> list[Path]:
+    def collect_files(self) -> list[Path]:
         """Collect all files to process, handling both single files and directories.
 
         Returns:

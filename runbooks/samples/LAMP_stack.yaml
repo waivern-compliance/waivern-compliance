@@ -33,16 +33,16 @@ analysers:
       # However, you can specify a custom one if so desired.
       # The custom ruleset must follow the same structure as the default one.
       ruleset_name: "personal_data"
-  # - name: "personal_data_analyser_for_source_code"
-  #   type: "personal_data_analyser"
-  #   properties:
-  #     evidence_context_size: medium
-  #     enable_llm_validation: false
-  #     llm_batch_size: 50
-  #     llm_validation_mode: standard
-  #   metadata:
-  #     priority: "high"
-  #     description: "Analyze PHP source code for personal data handling patterns"
+  - name: "personal_data_analyser_for_source_code"
+    type: "personal_data_analyser"
+    properties:
+      evidence_context_size: medium
+      enable_llm_validation: false
+      llm_batch_size: 50
+      llm_validation_mode: standard
+    metadata:
+      priority: "high"
+      description: "Analyze PHP source code for personal data handling patterns"
 
 execution:
   - connector: "my_mysql_db"
@@ -52,16 +52,16 @@ execution:
     context:
       description: "Analyse MySQL database for personal data collection"
       priority: "high"
-  # - connector: "php_source_code"
-  #   analyser: "personal_data_analyser_for_source_code"
-  #   input_schema_name: "source_code"
-  #   output_schema_name: "personal_data_analysis_findings"
-  #   context:
-  #     description: "Analyze PHP source code for personal data handling patterns"
-  #     priority: "high"
-  #     sensitivity_rules:
-  #       - "function_name_detection"
-  #       - "parameter_name_detection"
-  #       - "class_property_detection"
-  #       - "sql_query_detection"
-  #       - "third_party_integration_detection"
+  - connector: "php_source_code"
+    analyser: "personal_data_analyser_for_source_code"
+    input_schema_name: "source_code"
+    output_schema_name: "personal_data_analysis_findings"
+    context:
+      description: "Analyze PHP source code for personal data handling patterns"
+      priority: "high"
+      sensitivity_rules:
+        - "function_name_detection"
+        - "parameter_name_detection"
+        - "class_property_detection"
+        - "sql_query_detection"
+        - "third_party_integration_detection"
