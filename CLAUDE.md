@@ -308,3 +308,21 @@ execution:
 - **Modular Design:** Separate extractors in `src/wct/connectors/source_code/extractors/` for functions, classes, and future compliance patterns
 - **Extensible Framework:** Easy to add new programming languages via tree-sitter grammars and new compliance extractors
 - **Schema-driven Output:** Ensures compatibility with downstream analysis analysers through validated data contracts
+
+# Git and PR Requirements
+
+**Branch Management:**
+- ALWAYS create a new branch before making commits if currently on main branch
+- NEVER commit directly to main branch - always use feature/fix/docs branches
+- Use descriptive branch naming conventions:
+  - `feature/feature-name` - For new features
+  - `fix/issue-description` - For bug fixes
+  - `docs/documentation-updates` - For documentation changes
+  - `refactor/component-name` - For refactoring work
+
+**Pull Request Guidelines:**
+- When creating PRs, ensure proper branch naming as described above
+- Use descriptive PR titles that clearly summarize the main change
+- Write comprehensive PR descriptions that summarize all changes made
+- Include rationale for changes and any breaking changes
+- Reference related issues or previous work when applicable
