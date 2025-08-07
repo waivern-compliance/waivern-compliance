@@ -28,7 +28,7 @@ except ImportError:
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "mysql_database": WctSchema(name="mysql_database", type=dict[str, Any]),
-    "text": WctSchema(name="text", type=dict[str, Any]),
+    "standard_input": WctSchema(name="standard_input", type=dict[str, Any]),
 }
 
 
@@ -364,8 +364,8 @@ class MySQLConnector(Connector):
                 extracted_data = self._transform_for_mysql_schema(
                     output_schema, metadata
                 )
-            elif output_schema.name == "text":
-                extracted_data = self._transform_for_text_schema(
+            elif output_schema.name == "standard_input":
+                extracted_data = self._transform_for_standard_input_schema(
                     output_schema, metadata
                 )
             else:
@@ -414,10 +414,10 @@ class MySQLConnector(Connector):
             extraction_timestamp=None,  # Could add timestamp here
         )
 
-    def _transform_for_text_schema(
+    def _transform_for_standard_input_schema(
         self, schema: WctSchema[Any], metadata: dict[str, Any]
     ) -> dict[str, Any]:
-        """Transform MySQL data for the 'text' schema.
+        """Transform MySQL data for the 'standard_input' schema.
 
         This method extracts database content into granular text data items for compliance analysis:
         1. Each cell content as a separate data item
@@ -431,11 +431,11 @@ class MySQLConnector(Connector):
         - Cell content analysis is sufficient as empty tables have no personal data
 
         Args:
-            schema: The text schema
+            schema: The standard_input schema
             metadata: Database metadata including table/column structure
 
         Returns:
-            Text schema compliant content with granular data items
+            Standard_input schema compliant content with granular data items
         """
         data_items = []
         database_source = f"{self.host}:{self.port}/{self.database}"

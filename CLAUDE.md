@@ -99,7 +99,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 
 ### Key Schema-Compliant Components
 - **Schema-Compliant Connectors:** Extract and transform data to WCT schemas - **Modular Architecture**
-  - Filesystem connector (`src/wct/connectors/filesystem/`) - Produces "text" schema
+  - Filesystem connector (`src/wct/connectors/filesystem/`) - Produces "standard_input" schema
   - MySQL connector (`src/wct/connectors/mysql/`) - Produces "mysql_database" schema
   - Source code connector (`src/wct/connectors/source_code/`) - Produces "source_code" schema
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
@@ -210,7 +210,7 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 - Use `@override` decorators for all abstract method implementations
 - Schema names must match between connector outputs and analyser inputs for automatic data flow
 - JSON schema files in `src/wct/schemas/` define the structure for runtime validation
-- Runbooks specify schema names (e.g., `input_schema_name: "text"`) not file paths
+- Runbooks specify schema names (e.g., `input_schema_name: "standard_input"`) not file paths
 - The executor automatically matches schemas and uses automatic validation in `process()`
 
 **Message-Based Validation System:**
@@ -231,7 +231,7 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 
 **Filesystem Connector** (`src/wct/connectors/filesystem/`):
 - Handles both single files and directories with recursive traversal
-- Produces "text" schema suitable for content analysis by personal data analyser
+- Produces "standard_input" schema suitable for content analysis by personal data analyser
 - Enhanced file handling with binary detection and exclusion patterns
 
 **Key Features:**
@@ -257,13 +257,13 @@ connectors:
 execution:
   - connector: "file_system"
     analyser: "personal_data_analyser"
-    input_schema_name: "text"
+    input_schema_name: "standard_input"
 ```
 
 **Architecture:**
 - **Replaced:** Former FileConnector with enhanced capabilities
 - **Shared Logic:** Used by SourceCodeConnector for file collection, eliminating code duplication
-- **Schema Compliant:** Produces validated text schema for downstream analysis
+- **Schema Compliant:** Produces validated standard_input schema for downstream analysis
 
 ## Source Code Analysis Capabilities
 
