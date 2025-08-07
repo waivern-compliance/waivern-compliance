@@ -37,7 +37,12 @@ DEFAULT_MAXIMUM_EVIDENCE_COUNT = 3
 
 
 class PersonalDataAnalyser(Analyser):
-    """Analyser for analyzing personal data patterns for GDPR compliance."""
+    """Analyser for analysing personal data patterns in content.
+
+    This analyser uses predefined rulesets to identify personal data patterns
+    in various content formats, including source code and structured data.
+    It supports LLM-based validation to filter false positives.
+    """
 
     def __init__(
         self,
