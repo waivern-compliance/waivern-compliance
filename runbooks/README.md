@@ -8,8 +8,8 @@ This directory contains various runbook configurations for different testing and
 
 #### `samples/file_content_analysis.yaml`
 A simple demonstration runbook showing:
-- Basic file content analysis using the file_content_analyser
-- Detection of sensitive information (emails, API keys, passwords)
+- Basic file content analysis using the personal_data_analyser
+- Detection of personal data and sensitive information
 - Ideal for learning WCT basics and testing file analysis functionality
 
 #### `samples/LAMP_stack.yaml`

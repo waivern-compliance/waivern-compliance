@@ -1,8 +1,7 @@
 name: "Sample Runbook - File Analysis"
 description: >
-  Analyse file content for sensitive information.
+  Analyse file content for personal data
   This is a sample runbook to demonstrate how the system works.
-  The connectors and analysers used in this runbook are also illustrative implementations.
 
 connectors:
   - name: "file_content_connector"
@@ -12,22 +11,16 @@ connectors:
 
 
 analysers:
-  - name: "file_content_analyser"
-    type: "file_content_analyser"
+  - name: "personal_data_analyser"
+    type: "personal_data_analyser"
     properties:
-      sensitivity_level: "medium"
-    metadata:
-      priority: "high"
+      evidence_context_size: long
+      enable_llm_validation: false
 
 execution:
   - connector: "file_content_connector"
-    analyser: "file_content_analyser"
+    analyser: "personal_data_analyser"
     input_schema_name: "text"
-    output_schema_name: "file_content_analysis_result"
+    output_schema_name: "personal_data_analysis_findings"
     context:
-      description: "Analyze file content for sensitive information"
-      priority: "high"
-      sensitivity_rules:
-        - "email_detection"
-        - "password_detection"
-        - "api_key_detection"
+      description: "Analyze file content for personal data"

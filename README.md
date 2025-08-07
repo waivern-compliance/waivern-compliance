@@ -76,7 +76,7 @@ Some connectors and analysers require additional dependencies that are not insta
 
 WCT organizes runbook configurations in the `runbooks/` directory with samples organized in `runbooks/samples/`:
 
-- **`runbooks/samples/file_content_analysis.yaml`** - Simple file content analysis demonstration
+- **`runbooks/samples/file_content_analysis.yaml`** - Simple file analysis demonstration using personal data analyser
 - **`runbooks/samples/LAMP_stack.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
 - **`runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
 
@@ -115,9 +115,7 @@ connectors:
 
 analysers:
   - name: "content_analyser"
-    type: "file_content_analyser"
-    properties:
-      sensitivity_level: "medium"
+    type: "personal_data_analyser"
     metadata:
       priority: "high"
       compliance_frameworks: ["GDPR", "CCPA"]
@@ -126,9 +124,9 @@ execution:
   - connector: "file_reader"
     analyser: "content_analyser"
     input_schema_name: "text"
-    output_schema_name: "file_content_analysis_result"
+    output_schema_name: "personal_data_findings"
     context:
-      description: "Analyze file content for sensitive information"
+      description: "Analyze file content for personal data"
       priority: "high"
       compliance_frameworks: ["GDPR", "CCPA"]
 ```
@@ -162,14 +160,12 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 - **`src/wct/schema.py`**: Unified WctSchema system for type-safe data flow
 - **`src/wct/schemas/`**: JSON schema definitions for validation
   - `text.json` - Text content schema
-  - `file_content_analysis_result.json` - Analysis output schema
 - **`src/wct/connectors/`**: Schema-compliant data source connectors
   - `file/` - File connector producing "text" schema
   - `mysql/` - MySQL connector producing "mysql_database" schema
   - `source_code/` - Source code connector producing "source_code" schema
   - `wordpress/` - WordPress connector producing "wordpress_site" schema
 - **`src/wct/analysers/`**: Schema-aware analysis analysers
-  - `file_content_analyser/` - Consumes "text" schema, produces "file_content_analysis_result"
   - `personal_data_analyser/` - Personal data detection with schema validation
 - **`src/wct/rulesets/`**: Reusable compliance rules with schema support
 
@@ -335,8 +331,7 @@ src/wct/
 ├── schema.py             # Unified WctSchema system
 ├── schemas/              # JSON schema definitions
 │   ├── text.json                    # Text content schema
-│   ├── source_code.json            # Source code schema
-│   └── file_content_analysis_result.json # Analysis result schema
+│   └── source_code.json            # Source code schema
 ├── connectors/           # Schema-compliant data connectors
 │   ├── base.py          # Abstract connector with schema support
 │   ├── file/            # File connector (produces "text" schema)
@@ -359,9 +354,6 @@ src/wct/
 │       └── connector.py
 ├── analysers/           # Schema-aware analysis analysers
 │   ├── base.py          # Abstract analyser with schema validation
-│   ├── file_content_analyser/    # Text analysis (text → file_content_analysis_result)
-│   │   ├── __init__.py
-│   │   └── analyser.py
 │   └── personal_data_analyser/   # Personal data detection with schemas
 │       ├── __init__.py
 │       └── analyser.py
