@@ -63,7 +63,7 @@ Some connectors and analysers require additional dependencies that are not insta
 
 2. **List available components**:
    ```bash
-   uv run wct list-connectors
+   uv run wct ls-connectors
    uv run wct ls-analysers
    ```
 
@@ -185,6 +185,8 @@ Each connector and analyser is organized as an independent module:
 - **Dependency Isolation**: Optional dependencies grouped by component
 - **Independent Testing**: Each module can be tested in isolation
 - **Hot-swappable Components**: Add/remove connectors and analysers without affecting others
+- **Code Reuse**: Filesystem connector is used by source code connector, eliminating duplication
+- **Compliance Focus**: Components optimized for regulatory requirements rather than general-purpose analysis
 
 ### Configuration Format
 
