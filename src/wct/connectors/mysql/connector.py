@@ -168,8 +168,6 @@ class MySQLConnector(Connector):
                     "pymysql is required for MySQL connector. Install with: uv sync --group mysql"
                 )
 
-            self.logger.debug(f"Connecting to MySQL at {self.host}:{self.port}")
-
             connection = pymysql.connect(
                 host=self.host,
                 port=self.port,
@@ -181,7 +179,6 @@ class MySQLConnector(Connector):
                 connect_timeout=self.connect_timeout,
             )
 
-            self.logger.debug("MySQL connection established")
             yield connection
 
         except Exception as e:
@@ -190,7 +187,6 @@ class MySQLConnector(Connector):
         finally:
             if connection:
                 connection.close()
-                self.logger.debug("MySQL connection closed")
 
     def execute_query(
         self, query: str, params: tuple[Any, ...] | None = None
@@ -210,7 +206,6 @@ class MySQLConnector(Connector):
         try:
             with self.get_connection() as connection:
                 with connection.cursor() as cursor:
-                    self.logger.debug(f"Executing query: {query}")
                     if params:
                         cursor.execute(query, params)
                     else:
@@ -232,7 +227,6 @@ class MySQLConnector(Connector):
                         row_dict = dict(zip(columns, row))
                         results.append(row_dict)
 
-                    self.logger.debug(f"Query returned {len(results)} rows")
                     return results
 
         except Exception as e:

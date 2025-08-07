@@ -288,9 +288,9 @@ class PersonalDataAnalyser(Analyser):
             pattern: The pattern that was matched
 
         Returns:
-            List of evidence snippets showing context around matches
+            List of unique evidence snippets showing context around matches
         """
-        evidence_list = []
+        evidence_set = set()  # Use set to avoid duplicates
         content_lower = content.lower()
         pattern_lower = pattern.lower()
 
@@ -321,19 +321,24 @@ class PersonalDataAnalyser(Analyser):
                 if context_end < len(content):
                     evidence_snippet = evidence_snippet + "..."
 
-            evidence_list.append(evidence_snippet)
+            # Add to set to automatically deduplicate
+            evidence_set.add(evidence_snippet)
+
+            # Move past this match to find the next occurrence
+            start_pos = match_pos + 1
 
             # For 'full' context, only include one snippet since it contains everything
             # For other contexts, limit to maximum evidence snippets to avoid overwhelming output
-            if context_size is None and len(evidence_list) >= 1:
+            if context_size is None and len(evidence_set) >= 1:
                 break
             elif (
                 context_size is not None
-                and len(evidence_list) >= self.maximum_evidence_count
+                and len(evidence_set) >= self.maximum_evidence_count
             ):
                 break
 
-        return evidence_list
+        # Convert set back to list and maintain consistent ordering
+        return sorted(list(evidence_set))
 
     def _validate_findings_with_llm(
         self, findings: list[PersonalDataFinding]
