@@ -1,0 +1,20 @@
+# CODEOWNERS file for waivern-compliance
+# This file defines who owns and reviews code in this repository
+#
+# Global ownership - all files in the repository
+* @lwkz
+
+# Core WCT framework
+/src/wct/ @lwkz
+
+# Configuration and documentation
+/.github/ @lwkz
+/runbooks/ @lwkz
+/docs/ @lwkz
+/README.md @lwkz
+/CLAUDE.md @lwkz
+
+# Build and deployment
+/pyproject.toml @lwkz
+/uv.lock @lwkz
+/.pre-commit-config.yaml @lwkz
