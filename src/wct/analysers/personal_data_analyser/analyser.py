@@ -85,7 +85,7 @@ class PersonalDataAnalyser(Analyser):
             "maximum_evidence_count", DEFAULT_MAXIMUM_EVIDENCE_COUNT
         )
         enable_llm_validation = properties.get("enable_llm_validation", True)
-        llm_batch_size = properties.get("llm_batch_size", 10)
+        llm_batch_size = properties.get("llm_batch_size", 50)
         llm_validation_mode = properties.get("llm_validation_mode", "standard")
 
         return cls(
@@ -371,6 +371,7 @@ class PersonalDataAnalyser(Analyser):
         self.logger.debug(
             f"LLM validation completed: {len(findings)} → {len(validated_findings)} findings"
         )
+
         return validated_findings
 
     def _validate_findings_batch(
@@ -409,7 +410,7 @@ class PersonalDataAnalyser(Analyser):
 
             # Get LLM validation response
             self.logger.debug(f"Validating batch of {len(findings_batch)} findings")
-            response = self.llm_service.analyze_text("", prompt)
+            response = self.llm_service.analyse_data("", prompt)
 
             # Extract and parse JSON response
             clean_json = extract_json_from_response(response)
