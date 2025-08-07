@@ -27,7 +27,7 @@ SUPPORTED_INPUT_SCHEMAS = [
 ]
 
 SUPPORTED_OUTPUT_SCHEMAS = [
-    WctSchema(name="personal_data_analysis_findings", type=dict[str, Any]),
+    WctSchema(name="personal_data_finding", type=dict[str, Any]),
 ]
 
 DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
