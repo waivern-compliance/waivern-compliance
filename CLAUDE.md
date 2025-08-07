@@ -24,20 +24,6 @@ WCT supports environment variables for sensitive configuration data like databas
 - `ANTHROPIC_API_KEY` - Anthropic API key for AI-powered compliance analysis
 - `ANTHROPIC_MODEL` - Anthropic model name (optional, defaults to claude-sonnet-4-20250514)
 
-**Example .env file:**
-```bash
-# MySQL Configuration
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=your_password_here
-MYSQL_DATABASE=your_database_name
-
-# LLM Configuration
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-ANTHROPIC_MODEL=claude-sonnet-4-20250514
-```
-
 ## Development Commands
 
 This is a Python project using `uv` for dependency management. Key commands:
@@ -97,61 +83,33 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 - **Configuration:** YAML runbooks with schema-aware execution order
 - **Architecture:** Schema-compliant connectors and analysers with automatic data flow matching
 
-### Key Schema-Compliant Components
-- **Schema-Compliant Connectors:** Extract and transform data to WCT schemas - **Modular Architecture**
-  - Filesystem connector (`src/wct/connectors/filesystem/`) - Produces "standard_input" schema
-  - MySQL connector (`src/wct/connectors/mysql/`) - Produces "mysql_database" schema
-  - Source code connector (`src/wct/connectors/source_code/`) - Produces "source_code" schema
-  - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema
-- **Schema-Aware Analysers:** Process validated data with input/output schema contracts - **Modular Architecture**
-  - Personal data analyser (`src/wct/analysers/personal_data_analyser/`) - Enhanced with LLM-powered false positive detection
-    - Handles text content analysis, email/password/sensitive pattern detection with risk scoring
-    - Replaces deprecated file content analyser with improved capabilities
-- **Schema-Aware Executor:** Matches connector output schemas to analyser input schemas automatically
-- **Schema System:** `WctSchema[T]` with JSON schema validation for runtime type safety
-- **Rulesets:** Schema-compliant reusable rule definitions for compliance checks
-  - Personal data ruleset (`src/wct/rulesets/personal_data.py`)
+### Key Components
+- **Connectors:** Extract data to WCT schemas
+  - Filesystem, MySQL, Source code, WordPress connectors
+- **Analysers:** Process data with BaseComplianceAnalyser shared functionality
+  - **Personal data analyser:** Detects personal data with LLM validation (supports `standard_input`, `source_code` schemas)
+  - **Processing purpose analyser:** Identifies GDPR processing purposes (supports `standard_input` schema)
+- **Executor:** Automatic schema matching between connectors and analysers
+- **Rulesets:** Pattern definitions for personal data and processing purposes
 
-### Schema-Driven Modular Architecture
-Each connector and analyser is organized as an independent module with schema contracts:
-- **Directory Structure:** Each component has its own directory with `__init__.py` and implementation files
-- **Schema Contracts:** Clear input/output schema declarations for type safety
-- **Dependency Isolation:** Optional dependencies grouped by component (e.g., `mysql` group, `source-code` group)
-- **Encapsulation:** Components can contain supporting files, utilities, configuration, and tests
-- **Extensibility:** Easy to add complex logic and dependencies per component
-- **Import Compatibility:** Main `__init__.py` files maintain backward-compatible imports
-
-### Modern Execution Configuration Format
-WCT runbooks use a comprehensive execution format with explicit connector-analyser mapping:
-
-**Required Execution Format:**
+### Runbook Format
 ```yaml
+connectors:
+  - name: "connector_name"
+    type: "connector_type"
+    properties: {...}
+
+analysers:
+  - name: "analyser_name"
+    type: "analyser_type"
+    properties: {...}
+
 execution:
   - connector: "connector_name"
     analyser: "analyser_name"
-    input_schema_name: "schema_name"  # Schema name (not file path)
-    output_schema_name: "output_schema"  # Schema name (optional)
-    context:  # optional metadata
-      description: "Step description"
-      priority: "high"
-      compliance_frameworks: ["GDPR", "CCPA"]
-      sensitivity_rules: ["email_detection", "password_detection"]
+    input_schema_name: "schema_name"
+    output_schema_name: "output_schema"
 ```
-
-**Core Runbook Sections:**
-- `connectors`: Define data sources and their configuration
-- `analysers`: Specify analysis analysers with metadata
-- `execution`: Comprehensive execution steps with connector-analyser mapping and context
-
-### Schema-Compliant Base Classes with Automatic Validation
-- **Connector base:** `src/wct/connectors/base.py` - Abstract connector with `WctSchema[T]` support and transform methods
-- **Analyser base:** `src/wct/analysers/base.py` - Abstract analyser with Message-based architecture and automatic validation
-  - `process()` - Automatic end-to-end Message validation with processing
-  - `process_data()` - Abstract method for analyser-specific processing logic using Message objects
-  - Message validation handled automatically by base class (no manual validation needed)
-- **Ruleset base:** `src/wct/rulesets/base.py` - Schema-aware rule definitions
-- **Schema system:** `src/wct/schema.py` - `WctSchema[T]` generic container for type safety
-- All components support dynamic registration, configuration, and comprehensive schema validation
 
 ## Runbooks Directory
 
@@ -159,26 +117,13 @@ execution:
 - **`runbooks/` directory** - Centralized location for all runbook configurations
 - **`runbooks/samples/` directory** - Sample runbooks for demonstration and learning
   - **`file_content_analysis.yaml`** - Simple file analysis demonstration using personal data analyser
-  - **`LAMP_stack.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
+  - **`LAMP_stack.yaml`** - Comprehensive example demonstrating personal data and processing purpose analysis on MySQL and PHP source code
 - **`runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
 
 **Available Sample Runbooks:**
 - **File content analysis**: `runbooks/samples/file_content_analysis.yaml` - Demonstrates personal data detection
-- **LAMP stack analysis**: `runbooks/samples/LAMP_stack.yaml` - Multi-connector analysis for complete stack compliance
+- **LAMP stack analysis**: `runbooks/samples/LAMP_stack.yaml` - Comprehensive analysis with both personal data and processing purpose detection on MySQL database and PHP source code
 - **Quick start**: Begin with `uv run wct run runbooks/samples/file_content_analysis.yaml -v`
-
-**Scenario-Based Testing:**
-Create focused runbooks for specific testing scenarios:
-- Database-only analysis: `runbooks/database_analysis.yaml`
-- Source code analysis: `runbooks/source_code_analysis.yaml`
-- LLM validation testing: `runbooks/llm_validation_test.yaml`
-- Performance testing: `runbooks/performance_test.yaml`
-
-**Best Practices:**
-- Use relative paths from project root (e.g., `./tests/...`)
-- Follow naming convention: `scenario_description.yaml`
-- Include appropriate metadata for compliance frameworks
-- Document purpose and expected outcomes in runbook descriptions
 
 ## Project Structure Notes
 - Uses `uv` for dependency management with optional dependency groups
@@ -227,88 +172,6 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 - Schema validation errors provide clear messages about data structure mismatches
 - Test both valid and invalid data to verify comprehensive validation coverage
 
-## Filesystem Connector Capabilities
-
-**Filesystem Connector** (`src/wct/connectors/filesystem/`):
-- Handles both single files and directories with recursive traversal
-- Produces "standard_input" schema suitable for content analysis by personal data analyser
-- Enhanced file handling with binary detection and exclusion patterns
-
-**Key Features:**
-- **File & Directory Support:** Single files or recursive directory processing
-- **Pattern Exclusions:** Skip files matching glob patterns (e.g., `*.log`, `__pycache__`)
-- **Binary File Handling:** Automatic detection and skipping of non-text files
-- **Memory Efficiency:** Chunked reading for large files with configurable chunk sizes
-- **Safety Limits:** Maximum file count protection against excessive processing
-- **Flexible Encoding:** Configurable text encoding with error handling strategies
-
-**Usage Example:**
-```yaml
-connectors:
-  - name: "file_system"
-    type: "filesystem"
-    properties:
-      path: "./data"  # File or directory path
-      exclude_patterns: ["*.log", "__pycache__", "node_modules"]
-      max_files: 1000  # Safety limit
-      encoding: "utf-8"  # Text encoding
-      errors: "strict"  # Skip binary files
-
-execution:
-  - connector: "file_system"
-    analyser: "personal_data_analyser"
-    input_schema_name: "standard_input"
-```
-
-**Architecture:**
-- **Replaced:** Former FileConnector with enhanced capabilities
-- **Shared Logic:** Used by SourceCodeConnector for file collection, eliminating code duplication
-- **Schema Compliant:** Produces validated standard_input schema for downstream analysis
-
-## Source Code Analysis Capabilities
-
-**Source Code Connector** (`src/wct/connectors/source_code/`):
-- Parses source code using Tree-sitter for accurate AST analysis
-- Supports PHP (extensible to JavaScript, Python, Java, etc.)
-- Produces comprehensive "source_code" schema with compliance-focused extractions
-- **Requires:** `uv sync --group source-code` for tree-sitter dependencies
-
-**Key Analysis Features:**
-- **Function/Class Extraction:** Parameters, return types, visibility, inheritance (implemented)
-- **Compliance Metadata:** File size, line counts, modification timestamps (implemented)
-- **Future Compliance Features (TODO):**
-  - **Database Interactions:** SQL queries, parameterization status, user input detection
-  - **Data Collection Patterns:** Form fields, session/cookie access, PII indicators
-  - **AI/ML Usage Detection:** ML library imports, API calls, prediction code
-  - **Security Patterns:** Authentication, encryption, validation, sanitization methods
-  - **Third-party Integrations:** External service calls, data sharing detection
-  - **Import Analysis:** Library dependencies and external service usage
-
-**Usage Example:**
-```yaml
-connectors:
-  - name: "php_source"
-    type: "source_code"
-    properties:
-      path: "./src"
-      language: "php"
-      file_patterns: ["**/*.php"]
-      max_file_size: 10485760  # 10MB
-      max_files: 4000  # Maximum number of files to process (default: 4000)
-
-execution:
-  - connector: "php_source"
-    analyser: "compliance_analyzer"
-    input_schema_name: "source_code"
-```
-
-**Architecture Improvements:**
-- **Eliminated Code Duplication:** Uses FilesystemConnector for file collection, removing ~50 lines of duplicate traversal logic
-- **Focused on Compliance:** Removed non-compliance features (complexity analysis, AST serialization) in favor of regulatory-focused extraction
-- **Modular Design:** Separate extractors in `src/wct/connectors/source_code/extractors/` for functions, classes, and future compliance patterns
-- **Extensible Framework:** Easy to add new programming languages via tree-sitter grammars and new compliance extractors
-- **Schema-driven Output:** Ensures compatibility with downstream analysis analysers through validated data contracts
-
 # Git and PR Requirements
 
 **Branch Management:**
@@ -326,3 +189,9 @@ execution:
 - Write comprehensive PR descriptions that summarize all changes made
 - Include rationale for changes and any breaking changes
 - Reference related issues or previous work when applicable
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
