@@ -11,7 +11,6 @@ from wct.analysers.base import (
     AnalyserInputError,
     AnalyserProcessingError,
 )
-from wct.analysers.file_content_analyser import FileContentAnalyser
 from wct.analysers.personal_data_analyser import (
     PersonalDataAnalyser,
     PersonalDataFinding,
@@ -26,11 +25,10 @@ __all__ = (
     "AnalyserInputError",
     "AnalyserProcessingError",
     "WctSchema",
-    "FileContentAnalyser",
     "PersonalDataAnalyser",
     "PersonalDataFinding",
     "PersonalDataPattern",
     "BUILTIN_ANALYSERS",
 )
 
-BUILTIN_ANALYSERS = (FileContentAnalyser, PersonalDataAnalyser)
+BUILTIN_ANALYSERS = (PersonalDataAnalyser,)
