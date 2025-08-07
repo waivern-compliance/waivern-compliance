@@ -5,7 +5,7 @@ This directory contains 25 PHP files designed to test the WCT personal data anal
 ## Test Results Summary
 
 **Source Code Analysis:**
-- ✅ Files analyzed: 25
+- ✅ Files analysed: 25
 - ✅ Total lines of code: 1,389
 - ✅ All files successfully parsed
 

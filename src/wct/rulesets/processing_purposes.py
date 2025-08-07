@@ -65,7 +65,7 @@ PROCESSING_PURPOSES: Final = {
             "model refinement",
             "model improvement",
             "fine-tuning",
-            "model optimization",
+            "model optimisation",
             "performance enhancement",
             "finetunedb",
             "entry point ai",
@@ -218,7 +218,7 @@ PROCESSING_PURPOSES: Final = {
     },
     "Customization of Products and Services": {
         "patterns": [
-            "customization",
+            "customisation",
             "preferences",
             "settings",
             "user choice",

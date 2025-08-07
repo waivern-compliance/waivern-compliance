@@ -41,7 +41,7 @@ SOURCE_CODE_PERSONAL_DATA_PATTERNS: Final = {
             "special_category": "N",
         },
         "authentication": {
-            "patterns": ["authenticate", "login", "signin", "authorize"],
+            "patterns": ["authenticate", "login", "signin", "authorise"],
             "data_type": "authentication_data",
             "risk_level": "medium",
             "special_category": "N",

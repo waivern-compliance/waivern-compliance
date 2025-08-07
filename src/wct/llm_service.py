@@ -128,10 +128,10 @@ class AnthropicLLMService:
             raise LLMConnectionError(f"Failed to connect to Anthropic API: {e}") from e
 
     def analyse_data(self, text: str, analysis_prompt: str) -> str:
-        """Analyze text using the LLM with a custom prompt.
+        """Analyse text using the LLM with a custom prompt.
 
         Args:
-            text: The text content to analyze
+            text: The text content to analyse
             analysis_prompt: The prompt/instructions for analysis
 
         Returns:
@@ -141,12 +141,12 @@ class AnthropicLLMService:
             LLMConnectionError: If LLM request fails
         """
         try:
-            self.logger.debug(f"Analyzing text (length: {len(text)} chars)")
+            self.logger.debug(f"Analysing text (length: {len(text)} chars)")
 
             llm = self._get_llm()
 
             # Combine the analysis prompt with the text
-            full_prompt = f"{analysis_prompt}\n\nText to analyze:\n{text}"
+            full_prompt = f"{analysis_prompt}\n\nText to analyse:\n{text}"
 
             response = llm.invoke(full_prompt)
             result = str(response.content).strip()

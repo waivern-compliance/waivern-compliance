@@ -42,7 +42,7 @@ def create_executor() -> Executor:
         logger.debug("Available built-in analyser: %s", analyser_class.get_name())
 
     logger.info(
-        "Executor initialized with %d connectors and %d analysers",
+        "Executor initialised with %d connectors and %d analysers",
         len(BUILTIN_CONNECTORS),
         len(BUILTIN_ANALYSERS),
     )

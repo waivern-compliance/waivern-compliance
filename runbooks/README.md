@@ -64,7 +64,7 @@ For new users, start with the simple file analysis:
 uv run wct run runbooks/samples/file_content_analysis.yaml -v
 ```
 
-This will analyze a sample file and demonstrate:
+This will analyse a sample file and demonstrate:
 - Email detection
 - API key detection
 - Password pattern detection

@@ -26,7 +26,7 @@ class SourceCodeSchemaInputHandler:
             "personal_data_source_code_behaviours"
         )
 
-    def analyze_source_code_data(
+    def analyse_source_code_data(
         self, data: dict[str, Any]
     ) -> list[PersonalDataFinding]:
         """Analyze source code analysis data for personal data collection patterns.
@@ -56,38 +56,38 @@ class SourceCodeSchemaInputHandler:
             }
 
             # Analyze data collection indicators
-            data_collection_findings = self._analyze_data_collection_indicators(
+            data_collection_findings = self._analyse_data_collection_indicators(
                 file_data.get("data_collection_indicators", []), file_metadata
             )
             findings.extend(data_collection_findings)
 
             # Analyze function patterns for personal data handling
-            function_findings = self._analyze_function_patterns(
+            function_findings = self._analyse_function_patterns(
                 file_data.get("functions", []), file_metadata
             )
             findings.extend(function_findings)
 
             # Analyze class patterns for personal data models
-            class_findings = self._analyze_class_patterns(
+            class_findings = self._analyse_class_patterns(
                 file_data.get("classes", []), file_metadata
             )
             findings.extend(class_findings)
 
             # Analyze database interactions for personal data queries
-            db_findings = self._analyze_database_interactions(
+            db_findings = self._analyse_database_interactions(
                 file_data.get("database_interactions", []), file_metadata
             )
             findings.extend(db_findings)
 
             # Analyze third-party integrations for data sharing
-            third_party_findings = self._analyze_third_party_integrations(
+            third_party_findings = self._analyse_third_party_integrations(
                 file_data.get("third_party_integrations", []), file_metadata
             )
             findings.extend(third_party_findings)
 
         return findings
 
-    def _analyze_data_collection_indicators(
+    def _analyse_data_collection_indicators(
         self, indicators: list[dict[str, Any]], base_metadata: dict[str, Any]
     ) -> list[PersonalDataFinding]:
         """Analyze data collection indicators for personal data patterns."""
@@ -137,7 +137,7 @@ class SourceCodeSchemaInputHandler:
 
         return findings
 
-    def _analyze_function_patterns(
+    def _analyse_function_patterns(
         self, functions: list[dict[str, Any]], base_metadata: dict[str, Any]
     ) -> list[PersonalDataFinding]:
         """Analyze function patterns for personal data handling."""
@@ -207,7 +207,7 @@ class SourceCodeSchemaInputHandler:
 
         return findings
 
-    def _analyze_class_patterns(
+    def _analyse_class_patterns(
         self, classes: list[dict[str, Any]], base_metadata: dict[str, Any]
     ) -> list[PersonalDataFinding]:
         """Analyze class patterns for personal data models."""
@@ -277,7 +277,7 @@ class SourceCodeSchemaInputHandler:
 
         return findings
 
-    def _analyze_database_interactions(
+    def _analyse_database_interactions(
         self, db_interactions: list[dict[str, Any]], base_metadata: dict[str, Any]
     ) -> list[PersonalDataFinding]:
         """Analyze database interactions for personal data queries."""
@@ -322,7 +322,7 @@ class SourceCodeSchemaInputHandler:
 
         return findings
 
-    def _analyze_third_party_integrations(
+    def _analyse_third_party_integrations(
         self, integrations: list[dict[str, Any]], base_metadata: dict[str, Any]
     ) -> list[PersonalDataFinding]:
         """Analyze third-party integrations for personal data sharing."""
