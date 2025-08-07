@@ -50,11 +50,11 @@ class Executor:
         self.analysers[analyser_class.get_name()] = analyser_class
 
     def list_available_connectors(self) -> dict[str, type[Connector]]:
-        """Get all registered connectors."""
+        """Get available built-in connectors."""
         return self.connectors.copy()
 
     def list_available_analysers(self) -> dict[str, type[Analyser]]:
-        """Get all registered analysers."""
+        """Get all available built-in analysers."""
         return self.analysers.copy()
 
     def load_runbook(self, runbook_path: Path) -> Runbook:

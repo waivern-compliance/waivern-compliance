@@ -54,7 +54,11 @@ Some connectors and analysers require additional dependencies that are not insta
 
 1. **Run analysis with a runbook**:
    ```bash
-   uv run wct run runbooks/sample_runbook.yaml
+   # Simple file analysis demonstration
+   uv run wct run runbooks/samples/file_content_analysis.yaml
+
+   # Comprehensive LAMP stack analysis
+   uv run wct run runbooks/samples/LAMP_stack.yaml
    ```
 
 2. **List available components**:
@@ -65,26 +69,27 @@ Some connectors and analysers require additional dependencies that are not insta
 
 3. **Validate a runbook**:
    ```bash
-   uv run wct validate-runbook runbooks/your_runbook.yaml
+   uv run wct validate-runbook runbooks/samples/file_content_analysis.yaml
    ```
 
 ### Runbooks Directory
 
-WCT organizes runbook configurations in the `runbooks/` directory for better scenario management:
+WCT organizes runbook configurations in the `runbooks/` directory with samples organized in `runbooks/samples/`:
 
-- **`runbooks/sample_runbook.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
+- **`runbooks/samples/file_content_analysis.yaml`** - Simple file content analysis demonstration
+- **`runbooks/samples/LAMP_stack.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
 - **`runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
 
-Create scenario-specific runbooks for focused testing:
+Run sample runbooks:
 ```bash
-# File-only analysis
-uv run wct run runbooks/file_analysis.yaml
+# Simple file content analysis
+uv run wct run runbooks/samples/file_content_analysis.yaml
 
-# Database-only analysis
-uv run wct run runbooks/database_analysis.yaml
+# Comprehensive LAMP stack analysis
+uv run wct run runbooks/samples/LAMP_stack.yaml
 
-# Source code analysis
-uv run wct run runbooks/source_code_analysis.yaml
+# Run with verbose logging
+uv run wct run runbooks/samples/file_content_analysis.yaml -v
 ```
 
 ### Example Runbook

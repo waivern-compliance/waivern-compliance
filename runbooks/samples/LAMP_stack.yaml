@@ -9,9 +9,8 @@ connectors:
   - name: my_mysql_db
     type: mysql
     properties:
-      # MySQL credentials are loaded from environment variables:
-      # MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT
-      # You can also specify them here, but environment variables take precedence
+      # MySQL credentials are first tried from environment variables: MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT
+      # You can also specify them here, but environment variables take precedence and are recommended for security reasons
       max_rows_per_table: 5
   - name: "php_source_code"
     type: "source_code"

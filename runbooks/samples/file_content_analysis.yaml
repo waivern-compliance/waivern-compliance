@@ -1,0 +1,33 @@
+name: "Sample Runbook - File Analysis"
+description: >
+  Analyse file content for sensitive information.
+  This is a sample runbook to demonstrate how the system works.
+  The connectors and analysers used in this runbook are also illustrative implementations.
+
+connectors:
+  - name: "file_content_connector"
+    type: "file_reader"
+    properties:
+      path: "./tests/wct/connectors/file/sample_file.txt"
+
+
+analysers:
+  - name: "file_content_analyser"
+    type: "file_content_analyser"
+    properties:
+      sensitivity_level: "medium"
+    metadata:
+      priority: "high"
+
+execution:
+  - connector: "file_content_connector"
+    analyser: "file_content_analyser"
+    input_schema_name: "text"
+    output_schema_name: "file_content_analysis_result"
+    context:
+      description: "Analyze file content for sensitive information"
+      priority: "high"
+      sensitivity_rules:
+        - "email_detection"
+        - "password_detection"
+        - "api_key_detection"
