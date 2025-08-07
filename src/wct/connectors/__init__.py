@@ -10,9 +10,8 @@ from wct.connectors.base import (
     ConnectorConfigError,
     ConnectorError,
     ConnectorExtractionError,
-    PathConnectorConfig,
 )
-from wct.connectors.file import FileConnector
+from wct.connectors.filesystem import FilesystemConnector
 from wct.connectors.mysql import MySQLConnector
 from wct.connectors.source_code import SourceCodeConnector
 from wct.connectors.wordpress import WordpressConnector, WordpressConnectorConfig
@@ -24,9 +23,8 @@ __all__ = (
     "ConnectorConfigError",
     "ConnectorError",
     "ConnectorExtractionError",
-    "FileConnector",
+    "FilesystemConnector",
     "MySQLConnector",
-    "PathConnectorConfig",
     "SourceCodeConnector",
     "WctSchema",
     "WordpressConnector",
@@ -35,7 +33,7 @@ __all__ = (
 )
 
 BUILTIN_CONNECTORS = (
-    FileConnector,
+    FilesystemConnector,
     MySQLConnector,
     SourceCodeConnector,
     WordpressConnector,
