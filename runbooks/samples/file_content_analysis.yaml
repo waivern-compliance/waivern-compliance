@@ -5,9 +5,11 @@ description: >
 
 connectors:
   - name: "file_content_connector"
-    type: "file_reader"
+    type: "filesystem"
     properties:
-      path: "./tests/wct/connectors/file/sample_file.txt"
+      path: "./tests/wct/connectors/filesystem"
+      exclude_patterns: ["*.pyc", "__pycache__"]
+      max_files: 50
 
 
 analysers:

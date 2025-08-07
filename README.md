@@ -99,8 +99,8 @@ name: "Compliance Analysis"
 description: "Analyze files and databases for sensitive information"
 
 connectors:
-  - name: "file_reader"
-    type: "file_reader"
+  - name: "filesystem_reader"
+    type: "filesystem"
     properties:
       path: "./sample_file.txt"
   - name: "my_database"
@@ -121,7 +121,7 @@ analysers:
       compliance_frameworks: ["GDPR", "CCPA"]
 
 execution:
-  - connector: "file_reader"
+  - connector: "filesystem_reader"
     analyser: "content_analyser"
     input_schema_name: "text"
     output_schema_name: "personal_data_findings"
@@ -161,7 +161,7 @@ WCT uses a **unified schema system** (`WctSchema`) with comprehensive validation
 - **`src/wct/schemas/`**: JSON schema definitions for validation
   - `text.json` - Text content schema
 - **`src/wct/connectors/`**: Schema-compliant data source connectors
-  - `file/` - File connector producing "text" schema
+  - `filesystem/` - Filesystem connector producing "text" schema
   - `mysql/` - MySQL connector producing "mysql_database" schema
   - `source_code/` - Source code connector producing "source_code" schema
   - `wordpress/` - WordPress connector producing "wordpress_site" schema
@@ -334,7 +334,7 @@ src/wct/
 │   └── source_code.json            # Source code schema
 ├── connectors/           # Schema-compliant data connectors
 │   ├── base.py          # Abstract connector with schema support
-│   ├── file/            # File connector (produces "text" schema)
+│   ├── filesystem/      # Filesystem connector (produces "text" schema)
 │   │   ├── __init__.py
 │   │   └── connector.py
 │   ├── mysql/           # MySQL connector (produces "mysql_database" schema)

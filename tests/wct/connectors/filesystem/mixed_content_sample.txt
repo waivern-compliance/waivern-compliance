@@ -1,0 +1,89 @@
+ACME Corporation - Development Notes
+=====================================
+
+This document contains various text patterns for testing personal data detection.
+
+REAL PERSONAL DATA:
+==================
+Customer Support Tickets:
+- Ticket #1001: john.doe@acmecorp.com reported login issues
+- Ticket #1002: Contact sarah.wilson@gmail.com about billing
+- Ticket #1003: Phone support for +1-555-867-5309 (Jenny's number)
+
+Employee Directory (CONFIDENTIAL):
+- Michael Chen, HR Manager: michael.chen@company.com, DOB: 1985-03-15
+- Lisa Rodriguez, Finance: lisa.r@company.com, SSN: 123-45-6789
+- David Park, Engineering: d.park@company.com, Phone: (555) 123-4567
+
+Customer Database Sample:
+Name: Emma Thompson
+Address: 123 Oak Street, Springfield, IL 62701
+Email: emma.thompson@email.com
+Birth Date: 1992-07-22
+Credit Card: 4532-1234-5678-9012 (Expires 05/2025)
+
+FALSE POSITIVES / NON-PERSONAL DATA:
+==================================
+Technical Documentation:
+- API endpoint: POST /api/users/email@domain.com/validate
+- Email validation regex: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+- Test email patterns: test@example.com, noreply@system.local
+- Phone number format: XXX-XXX-XXXX where X is digit
+
+Configuration Examples:
+- Database connection: user=dbadmin@localhost:3306
+- SMTP server: smtp.example.com:587 (not personal email)
+- Log entry: [2024-01-15] Error in module phone_validator.py
+- Sample data: email="placeholder@domain.tld", phone="000-000-0000"
+
+Code Snippets:
+def validate_email(email_address):
+    """Check if email_address follows RFC 5322 format"""
+    if '@' not in email_address:
+        return False
+    return True
+
+# Test cases
+emails = ['admin@company.com', 'info@website.org', 'contact@business.net']
+phone_formats = ['555-0100', '555-0199', '555-HELP']
+
+False Alarm Patterns:
+- "email us at info@company.website" (generic business email)
+- "call our helpdesk at 1-800-SUPPORT" (public toll-free number)
+- "date of birth field validation" (reference to concept, not actual DOB)
+- "social security number format" (documentation, not actual SSN)
+- "address book synchronization" (feature name, not address)
+
+File Paths & Technical References:
+- /var/log/mail.log contains email routing information
+- Database table: user_profiles (name, email, phone_number columns)
+- Config file: /etc/postfix/main.cf sets smtp_server@localhost
+- Birth certificate validation requires date_of_birth field
+
+Meeting Notes:
+- Review privacy policy for email collection
+- Update phone number validation logic
+- Test address parsing in international formats
+- Discuss birthday reminder feature requirements
+
+MIXED CONTEXT EXAMPLES:
+======================
+Customer onboarding requires:
+1. Real email: customer@domain.com (Jane Smith - j.smith@realdomain.com)
+2. Fake email for testing: test@example.invalid
+3. Real phone: (555) 234-5678 for John Adams
+4. Test phone: 000-111-2222 (system default)
+
+The system processes both legitimate customer data like mary.jones@email.com
+and test patterns such as user@test.local for development purposes.
+
+EDGE CASES:
+===========
+- Malformed email: not-an-email@
+- Invalid phone: 123-45 (too short)
+- Partial SSN: ***-**-1234 (masked)
+- Generic birth date: YYYY-MM-DD format
+- Template address: [STREET], [CITY], [STATE] [ZIP]
+
+Contact our legal team at legal@acmecorp.com for data handling questions.
+Emergency contact: security-team@acmecorp.com or call 555-SECURITY.

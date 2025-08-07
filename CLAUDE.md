@@ -99,7 +99,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 
 ### Key Schema-Compliant Components
 - **Schema-Compliant Connectors:** Extract and transform data to WCT schemas - **Modular Architecture**
-  - File connector (`src/wct/connectors/file/`) - Produces "text" schema
+  - Filesystem connector (`src/wct/connectors/filesystem/`) - Produces "text" schema
   - MySQL connector (`src/wct/connectors/mysql/`) - Produces "mysql_database" schema
   - Source code connector (`src/wct/connectors/source_code/`) - Produces "source_code" schema
   - WordPress connector (`src/wct/connectors/wordpress/`) - Produces "wordpress_site" schema

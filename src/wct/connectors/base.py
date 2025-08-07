@@ -2,17 +2,14 @@
 
 This module provides:
 - ConnectorConfig: Configuration dataclass for connectors in runbooks
-- PathConnectorConfig: Shortcut configuration for file/directory connectors
 - Connector: Abstract base class for all WCT connectors
 - ConnectorError, ConnectorConfigError, ConnectorExtractionError: Exception classes
 """
 
 import abc
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
 from typing_extensions import Self
 
 from wct.errors import WCTError
@@ -28,31 +25,6 @@ class ConnectorConfig:
     name: str
     type: str
     properties: dict[str, Any]
-
-
-class PathConnectorConfig(BaseModel):
-    """A shortcut configuration for `file_reader` or `directory` connector, requiring only a path."""
-
-    path: Path
-
-    def to_connector_config(self) -> ConnectorConfig:
-        """Convert to a full `ConnectorConfig`."""
-        if self.path.is_file():
-            connector_name = f"file_{self.path.name}"
-            return ConnectorConfig(
-                name=connector_name,
-                type="file",
-                properties={"path": self.path},
-            )
-        elif self.path.is_dir():
-            connector_name = f"dir_{self.path.name}"
-            return ConnectorConfig(
-                name=connector_name,
-                type="directory",
-                properties={"path": self.path},
-            )
-        else:
-            raise FileNotFoundError(self.path)
 
 
 class Connector(abc.ABC):
