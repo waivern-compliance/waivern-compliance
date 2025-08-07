@@ -29,6 +29,10 @@ analysers:
       enable_llm_validation: false
       llm_batch_size: 80
       llm_validation_mode: conservative  # More careful validation for database content
+      # Analysers always have a default ruleset to use.
+      # However, you can specify a custom one if so desired.
+      # The custom ruleset must follow the same structure as the default one.
+      ruleset_name: "personal_data"
   # - name: "personal_data_analyser_for_source_code"
   #   type: "personal_data_analyser"
   #   properties:
