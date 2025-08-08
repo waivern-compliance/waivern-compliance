@@ -86,7 +86,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 ### Key Components
 - **Connectors:** Extract data to WCT schemas
   - Filesystem, MySQL, Source code, WordPress connectors
-- **Analysers:** Process data with BaseComplianceAnalyser shared functionality
+- **Analysers:** Process data using modular analysis runners with dependency injection
   - **Personal data analyser:** Detects personal data with LLM validation (supports `standard_input`, `source_code` schemas)
   - **Processing purpose analyser:** Identifies GDPR processing purposes (supports `standard_input` schema)
 - **Executor:** Automatic schema matching between connectors and analysers

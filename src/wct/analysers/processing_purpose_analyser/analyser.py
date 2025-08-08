@@ -5,9 +5,11 @@ from typing import Any
 from typing_extensions import Self, override
 
 from wct.analysers.base import Analyser
-from wct.analysers.base_compliance import BaseComplianceAnalyser
+from wct.analysers.runners import PatternMatchingRunner
 from wct.message import Message
 from wct.schema import WctSchema
+
+from .pattern_matcher import processing_purpose_pattern_matcher
 
 SUPPORTED_INPUT_SCHEMAS = [
     WctSchema(name="standard_input", type=dict[str, Any]),
@@ -31,7 +33,7 @@ DEFAULT_CONFIDENCE_THRESHOLD = 0.8
 DEFAULT_FINDING_CONFIDENCE = 0.5
 
 
-class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
+class ProcessingPurposeAnalyser(Analyser):
     """Analyser for identifying data processing purposes.
 
     This analyser identifies and categorises data processing purposes from textual
@@ -45,8 +47,9 @@ class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
         enable_llm_validation: bool = DEFAULT_ENABLE_LLM_VALIDATION,
         llm_batch_size: int = DEFAULT_LLM_BATCH_SIZE,
         confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
+        pattern_runner: PatternMatchingRunner | None = None,
     ):
-        """Initialize the processing purpose analyser.
+        """Initialize the processing purpose analyser with specified configuration and runners.
 
         Args:
             ruleset_name: Name of the ruleset to use for analysis (default: "processing_purposes")
@@ -55,14 +58,26 @@ class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
             enable_llm_validation: Whether to use LLM for purpose classification (default: True)
             llm_batch_size: Number of findings to process in each LLM batch (default: 10)
             confidence_threshold: Minimum confidence score for accepting findings (default: 0.7)
+            pattern_runner: Pattern matching runner (optional, will create default if None)
         """
-        super().__init__(
-            ruleset_name=ruleset_name,
-            evidence_context_size=evidence_context_size,
-            enable_llm_validation=enable_llm_validation,
-            llm_batch_size=llm_batch_size,
+        super().__init__()  # Call Analyser.__init__ directly
+
+        # Store configuration
+        self.config = {
+            "ruleset_name": ruleset_name,
+            "evidence_context_size": evidence_context_size,
+            "enable_llm_validation": enable_llm_validation,
+            "llm_batch_size": llm_batch_size,
+            "confidence_threshold": confidence_threshold,
+            "confidence": DEFAULT_FINDING_CONFIDENCE,  # Default confidence for all findings
+            "max_evidence": 3,  # Default max evidence count
+        }
+
+        # Initialize pattern runner with processing purpose specific strategy
+        # Note: ProcessingPurpose doesn't use LLM validation in current implementation
+        self.pattern_runner = pattern_runner or PatternMatchingRunner(
+            pattern_matcher=processing_purpose_pattern_matcher
         )
-        self.confidence_threshold = confidence_threshold
 
     @classmethod
     @override
@@ -113,11 +128,7 @@ class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
         output_schema: WctSchema[Any],
         message: Message,
     ) -> Message:
-        """Process data to identify processing purposes.
-
-        This is a skeleton implementation that will be expanded with actual
-        processing purpose detection logic.
-        """
+        """Process data to identify processing purposes using runners."""
         self.logger.info("Starting processing purpose analysis")
 
         # Validate input message
@@ -127,35 +138,19 @@ class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
         data = message.content
         self.logger.debug(f"Processing data with schema: {input_schema.name}")
 
-        # TODO: Implement actual processing purpose detection logic
-        # For now, return a skeleton result
-        findings = self._analyse_content_for_purposes(data)
+        # Process standard_input schema using pattern runner
+        findings = self._process_standard_input_with_runners(data)
 
-        # Create result data with findings
+        # Create result data with findings (findings are already in correct format from pattern matcher)
         result_data: dict[str, Any] = {
-            "findings": [
-                {
-                    "purpose": finding.get("purpose", "Unknown Processing Purpose"),
-                    "purpose_category": finding.get("purpose_category", "OPERATIONAL"),
-                    "risk_level": finding.get("risk_level", "low"),
-                    "compliance_relevance": finding.get(
-                        "compliance_relevance", ["GDPR"]
-                    ),
-                    "matched_pattern": finding.get("matched_pattern", ""),
-                    # TODO: Implement confidence calculation logic (LLM-based)
-                    "confidence": finding.get("confidence", 0.5),
-                    "evidence": finding.get("evidence", []),
-                    "metadata": finding.get("metadata", {}),
-                }
-                for finding in findings
-            ],
+            "findings": findings,
             "summary": {
                 "total_findings": len(findings),
                 "high_confidence_count": len(
                     [
                         f
                         for f in findings
-                        if f.get("confidence", 0) >= self.confidence_threshold
+                        if f.get("confidence", 0) >= self.config["confidence_threshold"]
                     ]
                 ),
                 "purposes_identified": len(set(f.get("purpose") for f in findings)),
@@ -164,10 +159,10 @@ class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
 
         # Add analysis metadata
         result_data["analysis_metadata"] = {
-            "ruleset_used": self.ruleset_name,
-            "llm_validation_enabled": self.enable_llm_validation,
-            "confidence_threshold": self.confidence_threshold,
-            "evidence_context_size": self.evidence_context_size,
+            "ruleset_used": self.config["ruleset_name"],
+            "llm_validation_enabled": self.config["enable_llm_validation"],
+            "confidence_threshold": self.config["confidence_threshold"],
+            "evidence_context_size": self.config["evidence_context_size"],
         }
 
         output_message = Message(
@@ -184,80 +179,34 @@ class ProcessingPurposeAnalyser(BaseComplianceAnalyser):
         )
         return output_message
 
-    def _analyse_content_for_purposes(
+    def _process_standard_input_with_runners(
         self, data: dict[str, Any]
     ) -> list[dict[str, Any]]:
-        """Analyze content for processing purposes.
-
-        Analyzes textual content to identify processing purposes using pattern matching
-        against the processing_purposes ruleset.
+        """Process standard_input schema data using runners.
 
         Args:
-            data: Input data to analyse (standard_input schema format)
+            data: Input data in standard_input schema format
 
         Returns:
-            List of processing purpose findings
-        """
-        self.logger.debug("Analyzing content for processing purposes")
-        findings = self._process_standard_input_data(data)
-        self.logger.debug(f"Found {len(findings)} processing purpose indicators")
-        return findings
-
-    @override
-    def analyse_content_item(
-        self, content: str, metadata: dict[str, Any]
-    ) -> list[dict[str, Any]]:
-        """Analyze a single content item for processing purposes.
-
-        Args:
-            content: Text content to analyse
-            metadata: Metadata about the content source
-
-        Returns:
-            List of processing purpose findings for this content
+            List of findings from pattern matching
         """
         findings = []
 
-        if not content.strip():
-            return findings
+        if "data" in data and isinstance(data["data"], list):
+            # Process each data item in the array using the pattern runner
+            for item in data["data"]:
+                content = item.get("content", "")
+                item_metadata = item.get("metadata", {})
 
-        content_lower = content.lower()
-
-        # Iterate through all processing purposes in the ruleset
-        for purpose_name, purpose_data in self.patterns.items():
-            patterns = purpose_data.get("patterns", [])
-
-            # Check if any pattern matches in the content
-            for pattern in patterns:
-                if pattern.lower() in content_lower:
-                    # Extract evidence snippets
-                    evidence = self._extract_evidence(content, pattern)
-
-                    if evidence:  # Only create finding if we have evidence
-                        # Use default confidence for all findings
-                        confidence = DEFAULT_FINDING_CONFIDENCE
-
-                        finding = {
-                            "purpose": purpose_name,
-                            "purpose_category": purpose_data.get(
-                                "purpose_category", "OPERATIONAL"
-                            ),
-                            "risk_level": purpose_data.get("risk_level", "low"),
-                            "compliance_relevance": purpose_data.get(
-                                "compliance_relevance", ["GDPR"]
-                            ),
-                            "matched_pattern": pattern,
-                            "confidence": confidence,
-                            "evidence": evidence,
-                            "metadata": metadata.copy() if metadata else {},
-                        }
-                        findings.append(finding)
-
-                        self.logger.debug(
-                            f"Found purpose '{purpose_name}' with pattern '{pattern}' (confidence: {confidence:.2f})"
-                        )
-
-                        # Only match one pattern per purpose to avoid duplicates
-                        break
+                # Use pattern runner for analysis
+                item_findings = self.pattern_runner.run_analysis(
+                    content, item_metadata, self.config
+                )
+                findings.extend(item_findings)
+        else:
+            # Handle direct content format (fallback)
+            content = data.get("content", "")
+            metadata = data.get("metadata", {})
+            findings = self.pattern_runner.run_analysis(content, metadata, self.config)
 
         return findings
