@@ -1,24 +1,20 @@
 """Personal data analysis analyser for GDPR compliance."""
 
-import json
 from pprint import pformat
 from typing import Any
 
 from typing_extensions import Self, override
 
 from wct.analysers.base import Analyser
-from wct.analysers.base_compliance import BaseComplianceAnalyser
+from wct.analysers.runners import LLMValidationRunner, PatternMatchingRunner
 from wct.message import Message
-from wct.prompts.personal_data_validation import (
-    RecommendedAction,
-    ValidationResult,
-    extract_json_from_response,
-    get_batch_validation_prompt,
-)
 from wct.schema import WctSchema
 
+from .llm_validation_strategy import personal_data_validation_strategy
+from .pattern_matcher import personal_data_pattern_matcher
 from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
-from .types import PersonalDataFinding
+
+# from .types import PersonalDataFinding  # Only needed for LLM validation strategy
 
 SUPPORTED_INPUT_SCHEMAS = [
     WctSchema(name="standard_input", type=dict[str, Any]),
@@ -35,7 +31,7 @@ DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
 DEFAULT_MAXIMUM_EVIDENCE_COUNT = 3
 
 
-class PersonalDataAnalyser(BaseComplianceAnalyser):
+class PersonalDataAnalyser(Analyser):
     """Analyser for analysing personal data patterns in content.
 
     This analyser uses predefined rulesets to identify personal data patterns
@@ -51,8 +47,10 @@ class PersonalDataAnalyser(BaseComplianceAnalyser):
         enable_llm_validation: bool = True,
         llm_batch_size: int = 10,
         llm_validation_mode: str = "standard",
+        pattern_runner: PatternMatchingRunner | None = None,
+        llm_runner: LLMValidationRunner | None = None,
     ):
-        """Initialize the analyser with specified ruleset and LLM validation options.
+        """Initialize the analyser with specified configuration and runners.
 
         Args:
             ruleset_name: Name of the ruleset to use for analysis
@@ -62,15 +60,31 @@ class PersonalDataAnalyser(BaseComplianceAnalyser):
             enable_llm_validation: Whether to use LLM for false positive detection (default: True)
             llm_batch_size: Number of findings to validate in each LLM batch (default: 10)
             llm_validation_mode: LLM validation mode ('standard' or 'conservative', default: 'standard')
+            pattern_runner: Pattern matching runner (optional, will create default if None)
+            llm_runner: LLM validation runner (optional, will create default if None)
         """
-        super().__init__(
-            ruleset_name=ruleset_name,
-            evidence_context_size=evidence_context_size,
-            enable_llm_validation=enable_llm_validation,
-            llm_batch_size=llm_batch_size,
+        super().__init__()  # Call Analyser.__init__ directly
+
+        # Store configuration
+        self.config = {
+            "ruleset_name": ruleset_name,
+            "evidence_context_size": evidence_context_size,
+            "maximum_evidence_count": maximum_evidence_count,
+            "enable_llm_validation": enable_llm_validation,
+            "llm_batch_size": llm_batch_size,
+            "llm_validation_mode": llm_validation_mode,
+            "max_evidence": maximum_evidence_count,  # Alias for runner compatibility
+            "context_size": evidence_context_size,  # Alias for runner compatibility
+        }
+
+        # Initialize runners with personal data specific strategies
+        self.pattern_runner = pattern_runner or PatternMatchingRunner(
+            pattern_matcher=personal_data_pattern_matcher
         )
-        self.maximum_evidence_count = maximum_evidence_count
-        self.llm_validation_mode = llm_validation_mode
+        self.llm_runner = llm_runner or LLMValidationRunner(
+            validation_strategy=personal_data_validation_strategy,
+            enable_llm_validation=enable_llm_validation,
+        )
 
     @classmethod
     @override
@@ -119,64 +133,54 @@ class PersonalDataAnalyser(BaseComplianceAnalyser):
         output_schema: WctSchema[Any],
         message: Message,
     ) -> Message:
-        """Process data to find personal data patterns."""
+        """Process data to find personal data patterns using runners."""
         Analyser.validate_input_message(message, input_schema)
 
         # Extract content from message
         data = message.content
 
-        # Extract and process content based on input schema format
-        # Personal data analysis requires granular tracking for compliance purposes
-        # Note: data is always dict[str, Any] from message.content
-
+        # Process content based on input schema format using runners
         if input_schema.name == "source_code":
             # Handle source code format - delegate completely to handler
-            findings = SourceCodeSchemaInputHandler().analyse_source_code_data(data)
-        else:
-            # Process standard_input schema data using base class method
-            raw_findings = self._process_standard_input_data(data)
-            # Convert raw findings to PersonalDataFinding objects
+            # TODO: Create a SourceCodePatternRunner in the future for consistency
+            raw_findings_list = SourceCodeSchemaInputHandler().analyse_source_code_data(
+                data
+            )
+            # Convert to list of dicts for compatibility with runners
             findings = []
-            for raw_finding in raw_findings:
-                finding = PersonalDataFinding(
-                    type=raw_finding["type"],
-                    risk_level=raw_finding["risk_level"],
-                    special_category=raw_finding["special_category"],
-                    matched_pattern=raw_finding["matched_pattern"],
-                    evidence=raw_finding["evidence"],
-                    metadata=raw_finding["metadata"],
-                )
-                findings.append(finding)
+            for finding_obj in raw_findings_list:
+                finding_dict = {
+                    "type": finding_obj.type,
+                    "risk_level": finding_obj.risk_level,
+                    "special_category": finding_obj.special_category,
+                    "matched_pattern": finding_obj.matched_pattern,
+                    "evidence": finding_obj.evidence,
+                    "metadata": finding_obj.metadata,
+                }
+                findings.append(finding_dict)
+        else:
+            # Process standard_input schema using pattern runner
+            findings = self._process_standard_input_with_runners(data)
 
-        # Apply LLM validation to filter false positives
-        validated_findings = self._validate_findings_with_llm(findings)
+        # Apply LLM validation using LLM runner
+        validated_findings = self.llm_runner.run_analysis(findings, {}, self.config)
 
         # Create result data with validated findings
         result_data: dict[str, Any] = {
-            "findings": [
-                {
-                    "type": finding.type,
-                    "risk_level": finding.risk_level,
-                    "special_category": finding.special_category,
-                    "matched_pattern": finding.matched_pattern,
-                    "evidence": finding.evidence,
-                    "metadata": finding.metadata,
-                }
-                for finding in validated_findings
-            ],
+            "findings": validated_findings,
             "summary": {
                 "total_findings": len(validated_findings),
                 "high_risk_count": len(
-                    [f for f in validated_findings if f.risk_level == "high"]
+                    [f for f in validated_findings if f.get("risk_level") == "high"]
                 ),
                 "special_category_count": len(
-                    [f for f in validated_findings if f.special_category == "Y"]
+                    [f for f in validated_findings if f.get("special_category") == "Y"]
                 ),
             },
         }
 
         # Add validation statistics if LLM validation was used
-        if self.enable_llm_validation and len(findings) > 0:
+        if self.config["enable_llm_validation"] and len(findings) > 0:
             original_count = len(findings)
             validated_count = len(validated_findings)
             false_positives_removed = original_count - validated_count
@@ -186,7 +190,7 @@ class PersonalDataAnalyser(BaseComplianceAnalyser):
                 "original_findings_count": original_count,
                 "validated_findings_count": validated_count,
                 "false_positives_removed": false_positives_removed,
-                "validation_mode": self.llm_validation_mode,
+                "validation_mode": self.config["llm_validation_mode"],
             }
 
             self.logger.info(
@@ -210,156 +214,34 @@ class PersonalDataAnalyser(BaseComplianceAnalyser):
         # Return new Message with analysis results
         return output_message
 
-    @override
-    def analyse_content_item(
-        self, content: str, metadata: dict[str, Any]
+    def _process_standard_input_with_runners(
+        self, data: dict[str, Any]
     ) -> list[dict[str, Any]]:
-        """Analyze a single content item for personal data patterns."""
+        """Process standard_input schema data using runners.
+
+        Args:
+            data: Input data in standard_input schema format
+
+        Returns:
+            List of findings from pattern matching
+        """
         findings = []
 
-        for category_name, category_data in self.patterns.items():
-            for pattern in category_data["patterns"]:
-                if pattern.lower() in content.lower():
-                    # Extract evidence - find all occurrences of the pattern in the content
-                    evidence_matches = self._extract_evidence(
-                        content, pattern, self.maximum_evidence_count
-                    )
+        if "data" in data and isinstance(data["data"], list):
+            # Process each data item in the array using the pattern runner
+            for item in data["data"]:
+                content = item.get("content", "")
+                item_metadata = item.get("metadata", {})
 
-                    # Pass metadata as-is since source is guaranteed by schema
-                    finding_metadata = metadata.copy() if metadata else {}
-
-                    finding = {
-                        "type": category_name,
-                        "risk_level": category_data["risk_level"],
-                        "special_category": category_data["special_category"],
-                        "matched_pattern": pattern,
-                        "evidence": evidence_matches,
-                        "metadata": finding_metadata,
-                    }
-                    findings.append(finding)
+                # Use pattern runner for analysis
+                item_findings = self.pattern_runner.run_analysis(
+                    content, item_metadata, self.config
+                )
+                findings.extend(item_findings)
+        else:
+            # Handle direct content format (fallback)
+            content = data.get("content", "")
+            metadata = data.get("metadata", {})
+            findings = self.pattern_runner.run_analysis(content, metadata, self.config)
 
         return findings
-
-    def _validate_findings_with_llm(
-        self, findings: list[PersonalDataFinding]
-    ) -> list[PersonalDataFinding]:
-        """Validate findings using LLM to filter false positives.
-
-        Args:
-            findings: List of findings from pattern matching
-
-        Returns:
-            List of validated findings with false positives removed
-        """
-        if not self.enable_llm_validation or not findings:
-            self.logger.debug("LLM validation disabled or no findings to validate")
-            return findings
-
-        if not self.llm_service:
-            self.logger.warning("LLM service not available, skipping validation")
-            return findings
-
-        self.logger.info(f"Starting LLM validation of {len(findings)} findings")
-        validated_findings = []
-
-        # Process findings in batches for efficiency
-        for i in range(0, len(findings), self.llm_batch_size):
-            batch = findings[i : i + self.llm_batch_size]
-            batch_results = self._validate_findings_batch(batch)
-            validated_findings.extend(batch_results)
-
-        self.logger.debug(
-            f"LLM validation completed: {len(findings)} → {len(validated_findings)} findings"
-        )
-
-        return validated_findings
-
-    def _validate_findings_batch(
-        self, findings_batch: list[PersonalDataFinding]
-    ) -> list[PersonalDataFinding]:
-        """Validate a batch of findings using LLM.
-
-        Args:
-            findings_batch: Batch of findings to validate
-
-        Returns:
-            List of validated findings from this batch
-        """
-        try:
-            # Check if LLM service is available
-            if not self.llm_service:
-                self.logger.warning("LLM service not available for batch validation")
-                return findings_batch
-
-            # Convert findings to format expected by validation prompt
-            findings_for_prompt = []
-            for finding in findings_batch:
-                findings_for_prompt.append(
-                    {
-                        "type": finding.type,
-                        "risk_level": finding.risk_level,
-                        "special_category": finding.special_category,
-                        "matched_pattern": finding.matched_pattern,
-                        "evidence": finding.evidence,
-                        "metadata": finding.metadata,
-                    }
-                )
-
-            # Generate validation prompt
-            prompt = get_batch_validation_prompt(findings_for_prompt)
-
-            # Get LLM validation response
-            self.logger.debug(f"Validating batch of {len(findings_batch)} findings")
-            response = self.llm_service.analyse_data("", prompt)
-
-            # Extract and parse JSON response
-            clean_json = extract_json_from_response(response)
-            validation_results = json.loads(clean_json)
-
-            # Filter findings based on validation results
-            validated_findings = []
-            for i, result in enumerate(validation_results):
-                if i >= len(findings_batch):
-                    self.logger.warning(
-                        f"Validation result index {i} exceeds batch size {len(findings_batch)}"
-                    )
-                    continue
-
-                finding = findings_batch[i]
-                validation_result = result.get("validation_result")
-                confidence = result.get("confidence", 0.0)
-                reasoning = result.get("reasoning", "No reasoning provided")
-                action = result.get("recommended_action", "keep")
-
-                # Log validation decision
-                self.logger.debug(
-                    f"Finding '{finding.type}' ({finding.matched_pattern}): "
-                    f"{validation_result} (confidence: {confidence:.2f}) - {reasoning}"
-                )
-
-                # Keep findings that are validated as true positives
-                if (
-                    validation_result == ValidationResult.TRUE_POSITIVE
-                    and action == RecommendedAction.KEEP
-                ):
-                    validated_findings.append(finding)
-                elif validation_result == ValidationResult.FALSE_POSITIVE:
-                    self.logger.info(
-                        f"Removed false positive: {finding.type} - {finding.matched_pattern} "
-                        f"(confidence: {confidence:.2f}) - {reasoning}"
-                    )
-                else:
-                    # Handle edge cases - if uncertain, keep for safety
-                    self.logger.warning(
-                        f"Uncertain validation result for {finding.type}, keeping for safety: {reasoning}"
-                    )
-                    validated_findings.append(finding)
-
-            return validated_findings
-
-        except Exception as e:
-            self.logger.error(f"LLM validation failed for batch: {e}")
-            self.logger.warning(
-                "Returning unvalidated findings due to LLM validation error"
-            )
-            return findings_batch
