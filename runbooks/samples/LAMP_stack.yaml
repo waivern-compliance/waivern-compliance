@@ -1,6 +1,6 @@
 name: "Sample Runbook for LAMP Stack"
 description: >
-  Analyze database and source code for potentially sensitive information and processing purposes.
+  Analyse database and source code for potentially sensitive information and processing purposes.
   This runbook runs both personal data analysis and processing purpose analysis on MySQL and PHP source code.
 
 connectors:
@@ -43,7 +43,7 @@ analysers:
       llm_validation_mode: standard
     metadata:
       priority: "high"
-      description: "Analyze PHP source code for personal data handling patterns"
+      description: "Analyse PHP source code for personal data handling patterns"
   - name: "processing_purpose_analyser_for_mysql"
     type: "processing_purpose_analyser"
     properties:
@@ -69,7 +69,7 @@ execution:
     input_schema_name: "source_code"
     output_schema_name: "personal_data_finding"
     context:
-      description: "Analyze PHP source code for personal data handling patterns"
+      description: "Analyse PHP source code for personal data handling patterns"
       priority: "high"
       sensitivity_rules:
         - "function_name_detection"
