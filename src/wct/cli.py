@@ -196,11 +196,7 @@ class OutputFormatter:
                             metadata_branch.add(f"{key}: {value}")
 
                     console.print(tree)
-                    logger.debug(
-                        "Analyser %s succeeded with data: %s",
-                        result.analyser_name,
-                        result.data,
-                    )
+                    logger.debug("Analyser %s succeeded.", result.analyser_name)
 
     def format_component_list(
         self, components: dict[str, type], component_type: str
