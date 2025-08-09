@@ -12,7 +12,7 @@ class ClassExtractor(BaseExtractor):
     """Extracts class definitions from source code."""
 
     def __init__(self, language: str):
-        """Initialize class extractor.
+        """Initialise class extractor.
 
         Args:
             language: Programming language

@@ -30,8 +30,8 @@ class WordpressConnector(Connector):
     """
 
     def __init__(self) -> None:
-        """Initialize the WordPress connector with logging support."""
-        super().__init__()  # Initialize logger from base class
+        """Initialise the WordPress connector with logging support."""
+        super().__init__()  # Initialise logger from base class
 
     @classmethod
     @override

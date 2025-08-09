@@ -15,16 +15,12 @@ class SourceCodeSchemaInputHandler:
     """
 
     def __init__(self):
-        """Initialize the handler and load required rulesets.
+        """Initialise the handler and load required rulesets.
 
         The handler manages its own ruleset dependencies and is fully self-contained.
         """
-        # Load personal data patterns (for field/content pattern matching)
+        # Load personal data patterns (now includes merged SQL and code patterns)
         self.personal_data_patterns = RulesetLoader.load_ruleset("personal_data")
-        # Load personal data patterns from separate rulesets
-        self.function_rules = RulesetLoader.load_ruleset("personal_data_code_functions")
-        self.class_rules = RulesetLoader.load_ruleset("personal_data_code_models")
-        self.database_rules = RulesetLoader.load_ruleset("personal_data_sql_schemas")
 
     def analyse_source_code_data(
         self, data: dict[str, Any]
@@ -384,9 +380,10 @@ class SourceCodeSchemaInputHandler:
         """Classify a function name as handling personal data."""
         func_lower = func_name.lower()
 
-        for rule in self.function_rules:
+        # Use merged personal data patterns which now include function patterns
+        for rule in self.personal_data_patterns:
             if any(pattern in func_lower for pattern in rule.patterns):
-                return rule.metadata.get("data_type")
+                return rule.name
 
         return None
 
@@ -394,9 +391,10 @@ class SourceCodeSchemaInputHandler:
         """Classify a class name as a personal data model."""
         class_lower = class_name.lower()
 
-        for rule in self.class_rules:
+        # Use merged personal data patterns which now include model patterns
+        for rule in self.personal_data_patterns:
             if any(pattern in class_lower for pattern in rule.patterns):
-                return rule.metadata.get("data_type")
+                return rule.name
 
         return None
 
@@ -405,16 +403,11 @@ class SourceCodeSchemaInputHandler:
         matches = []
         sql_lower = sql.lower()
 
-        # Get SQL patterns from database rules
-        sql_rules = self.database_rules
-
-        # Check database patterns (tables and columns)
-        for rule in sql_rules:
+        # Use merged personal data patterns which now include SQL patterns
+        for rule in self.personal_data_patterns:
             for pattern in rule.patterns:
                 if pattern in sql_lower:
-                    matches.append(
-                        {"match": pattern, "type": rule.metadata.get("data_type")}
-                    )
+                    matches.append({"match": pattern, "type": rule.name})
 
         return matches
 
@@ -437,29 +430,8 @@ class SourceCodeSchemaInputHandler:
                     "special_category": rule.metadata.get("special_category", "N"),
                 }
 
-        # Check function rules for risk info
-        for rule in self.function_rules:
-            if rule.metadata.get("data_type") == data_type:
-                return {
-                    "risk_level": rule.risk_level,
-                    "special_category": rule.metadata.get("special_category", "N"),
-                }
-
-        # Check class rules for risk info
-        for rule in self.class_rules:
-            if rule.metadata.get("data_type") == data_type:
-                return {
-                    "risk_level": rule.risk_level,
-                    "special_category": rule.metadata.get("special_category", "N"),
-                }
-
-        # Check database rules for risk info
-        for rule in self.database_rules:
-            if rule.metadata.get("data_type") == data_type:
-                return {
-                    "risk_level": rule.risk_level,
-                    "special_category": rule.metadata.get("special_category", "N"),
-                }
+        # All patterns (SQL, functions, models) are now merged into personal_data_patterns
+        # No separate code rules to check
 
         # Default fallback
         return {"risk_level": "medium", "special_category": "N"}

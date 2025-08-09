@@ -50,7 +50,7 @@ class PersonalDataAnalyser(Analyser):
         pattern_runner: PatternMatchingRunner | None = None,
         llm_runner: LLMValidationRunner | None = None,
     ):
-        """Initialize the analyser with specified configuration and runners.
+        """Initialise the analyser with specified configuration and runners.
 
         Args:
             ruleset_name: Name of the ruleset to use for analysis
@@ -77,7 +77,7 @@ class PersonalDataAnalyser(Analyser):
             "context_size": evidence_context_size,  # Alias for runner compatibility
         }
 
-        # Initialize runners with personal data specific strategies
+        # Initialise runners with personal data specific strategies
         self.pattern_runner = pattern_runner or PatternMatchingRunner(
             pattern_matcher=personal_data_pattern_matcher
         )

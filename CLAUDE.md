@@ -195,3 +195,4 @@ DO what has been asked—nothing more, nothing less. DO NOT overcomplicate thing
 DO NOT be afraid of breaking changes. Refactoring is BETTER than 'backwards compatibility'.
 Adhere to software craftsmanship principles. Break large classes and functions into smaller ones to represent granular concepts.
 NEVER try to bypass code quality checks. Think carefully about each issue and provide multiple options where possible, allowing the user to choose the best one.
+Use British English spelling.

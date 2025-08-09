@@ -9,17 +9,11 @@ from wct.rulesets.base import (
 
 # Import and register built-in rulesets automatically
 from wct.rulesets.personal_data import PersonalDataRuleset
-from wct.rulesets.personal_data_code_functions import PersonalDataCodeFunctionsRuleset
-from wct.rulesets.personal_data_code_models import PersonalDataCodeModelsRuleset
-from wct.rulesets.personal_data_sql_schemas import PersonalDataSqlSchemasRuleset
 from wct.rulesets.processing_purposes import ProcessingPurposesRuleset
 
 # Built-in rulesets - internal use only
 _BUILTIN_RULESETS = (
     PersonalDataRuleset,
-    PersonalDataCodeFunctionsRuleset,
-    PersonalDataCodeModelsRuleset,
-    PersonalDataSqlSchemasRuleset,
     ProcessingPurposesRuleset,
 )
 

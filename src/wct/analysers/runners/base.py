@@ -57,7 +57,7 @@ class AnalysisRunnerError(Exception):
     def __init__(
         self, runner_type: str, message: str, original_error: Exception | None = None
     ):
-        """Initialize the error.
+        """Initialise the error.
 
         Args:
             runner_type: The type of runner that failed

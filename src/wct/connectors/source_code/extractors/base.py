@@ -14,7 +14,7 @@ class BaseExtractor(abc.ABC):
     """
 
     def __init__(self, language: str):
-        """Initialize the extractor.
+        """Initialise the extractor.
 
         Args:
             language: Programming language (php, javascript, python, etc.)

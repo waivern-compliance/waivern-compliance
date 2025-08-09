@@ -26,7 +26,7 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
         validation_strategy: ValidationStrategyFn | None = None,
         enable_llm_validation: bool = True,
     ):
-        """Initialize the LLM validation runner.
+        """Initialise the LLM validation runner.
 
         Args:
             validation_strategy: Function that defines how to validate findings.
