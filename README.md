@@ -13,6 +13,8 @@ WCT provides a flexible architecture for compliance analysis through:
 
 The system is designed to be extensible and configurable through YAML runbook files with a unified schema-driven architecture that ensures type safety and component interoperability.
 
+📋 **[Development Roadmap](development_roadmap.md)** - See our current progress and planned features
+
 ## Quick Start
 
 ### Installation
