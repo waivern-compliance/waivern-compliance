@@ -21,10 +21,10 @@ class SourceCodeSchemaInputHandler:
         """
         # Load personal data patterns (for field/content pattern matching)
         self.personal_data_patterns = RulesetLoader.load_ruleset("personal_data")
-        # Load source code behaviour patterns (for function/class/SQL/third-party patterns)
-        self.source_code_patterns = RulesetLoader.load_ruleset(
-            "personal_data_source_code_behaviours"
-        )
+        # Load personal data patterns from separate rulesets
+        self.function_rules = RulesetLoader.load_ruleset("personal_data_code_functions")
+        self.class_rules = RulesetLoader.load_ruleset("personal_data_code_models")
+        self.database_rules = RulesetLoader.load_ruleset("personal_data_sql_schemas")
 
     def analyse_source_code_data(
         self, data: dict[str, Any]
@@ -374,34 +374,29 @@ class SourceCodeSchemaInputHandler:
         field_lower = field_name.lower().strip("$_")
 
         # Use personal_data patterns directly
-        for category_name, category_data in self.personal_data_patterns.items():
-            patterns = category_data.get("patterns", [])
-            if any(pattern in field_lower for pattern in patterns):
-                return category_name  # Return the category name directly
+        for rule in self.personal_data_patterns:
+            if any(pattern in field_lower for pattern in rule.patterns):
+                return rule.name  # Return the rule name directly
 
         return None
 
     def _classify_function_as_personal_data(self, func_name: str) -> str | None:
         """Classify a function name as handling personal data."""
         func_lower = func_name.lower()
-        function_patterns = self.source_code_patterns.get("function_patterns", {})
 
-        for _, pattern_data in function_patterns.items():
-            patterns = pattern_data.get("patterns", [])
-            if any(pattern in func_lower for pattern in patterns):
-                return pattern_data.get("data_type")
+        for rule in self.function_rules:
+            if any(pattern in func_lower for pattern in rule.patterns):
+                return rule.metadata.get("data_type")
 
         return None
 
     def _classify_class_as_personal_data(self, class_name: str) -> str | None:
         """Classify a class name as a personal data model."""
         class_lower = class_name.lower()
-        class_patterns = self.source_code_patterns.get("class_patterns", {})
 
-        for _, pattern_data in class_patterns.items():
-            patterns = pattern_data.get("patterns", [])
-            if any(pattern in class_lower for pattern in patterns):
-                return pattern_data.get("data_type")
+        for rule in self.class_rules:
+            if any(pattern in class_lower for pattern in rule.patterns):
+                return rule.metadata.get("data_type")
 
         return None
 
@@ -410,38 +405,23 @@ class SourceCodeSchemaInputHandler:
         matches = []
         sql_lower = sql.lower()
 
-        # Get SQL patterns from ruleset
-        sql_table_patterns = self.source_code_patterns.get("sql_table_patterns", {})
-        sql_column_patterns = self.source_code_patterns.get("sql_column_patterns", {})
+        # Get SQL patterns from database rules
+        sql_rules = self.database_rules
 
-        # Check table patterns
-        for table_name, pattern_data in sql_table_patterns.items():
-            if table_name in sql_lower:
-                matches.append(
-                    {"match": table_name, "type": pattern_data.get("data_type")}
-                )
-
-        # Check column patterns
-        for column_name, pattern_data in sql_column_patterns.items():
-            if column_name in sql_lower:
-                matches.append(
-                    {"match": column_name, "type": pattern_data.get("data_type")}
-                )
+        # Check database patterns (tables and columns)
+        for rule in sql_rules:
+            for pattern in rule.patterns:
+                if pattern in sql_lower:
+                    matches.append(
+                        {"match": pattern, "type": rule.metadata.get("data_type")}
+                    )
 
         return matches
 
     def _classify_third_party_service_risk(self, service_name: str) -> dict[str, str]:
         """Classify third-party service for personal data sharing risk."""
-        service_lower = service_name.lower()
-        third_party_patterns = self.source_code_patterns.get("third_party_services", {})
-
-        # Check each risk level's patterns
-        for _, pattern_data in third_party_patterns.items():
-            patterns = pattern_data.get("patterns", [])
-            if any(pattern in service_lower for pattern in patterns):
-                return {"risk_level": pattern_data.get("risk_level", "medium")}
-
-        # Default to medium risk for unknown third-party services
+        # For now, return medium risk for all third-party services
+        # TODO: Add third-party service risk patterns to rulesets if needed
         return {"risk_level": "medium"}
 
     def _get_personal_data_risk_info(self, data_type: str) -> dict[str, str]:
@@ -450,32 +430,36 @@ class SourceCodeSchemaInputHandler:
         Now uses personal_data patterns directly since data_type is the category name.
         """
         # data_type is now the category name from personal_data patterns
-        if data_type in self.personal_data_patterns:
-            pattern_data = self.personal_data_patterns[data_type]
-            return {
-                "risk_level": pattern_data.get("risk_level", "medium"),
-                "special_category": pattern_data.get("special_category", "N"),
-            }
+        for rule in self.personal_data_patterns:
+            if rule.name == data_type:
+                return {
+                    "risk_level": rule.risk_level,
+                    "special_category": rule.metadata.get("special_category", "N"),
+                }
 
-        # Check source code patterns for risk info (for function/class/SQL patterns)
-        for category in ["function_patterns", "class_patterns"]:
-            patterns = self.source_code_patterns.get(category, {})
-            for _, pattern_data in patterns.items():
-                if pattern_data.get("data_type") == data_type:
-                    return {
-                        "risk_level": pattern_data.get("risk_level", "medium"),
-                        "special_category": pattern_data.get("special_category", "N"),
-                    }
+        # Check function rules for risk info
+        for rule in self.function_rules:
+            if rule.metadata.get("data_type") == data_type:
+                return {
+                    "risk_level": rule.risk_level,
+                    "special_category": rule.metadata.get("special_category", "N"),
+                }
 
-        # Check SQL patterns
-        for sql_type in ["sql_table_patterns", "sql_column_patterns"]:
-            patterns = self.source_code_patterns.get(sql_type, {})
-            for _, pattern_data in patterns.items():
-                if pattern_data.get("data_type") == data_type:
-                    return {
-                        "risk_level": pattern_data.get("risk_level", "medium"),
-                        "special_category": pattern_data.get("special_category", "N"),
-                    }
+        # Check class rules for risk info
+        for rule in self.class_rules:
+            if rule.metadata.get("data_type") == data_type:
+                return {
+                    "risk_level": rule.risk_level,
+                    "special_category": rule.metadata.get("special_category", "N"),
+                }
+
+        # Check database rules for risk info
+        for rule in self.database_rules:
+            if rule.metadata.get("data_type") == data_type:
+                return {
+                    "risk_level": rule.risk_level,
+                    "special_category": rule.metadata.get("special_category", "N"),
+                }
 
         # Default fallback
         return {"risk_level": "medium", "special_category": "N"}

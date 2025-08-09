@@ -4,7 +4,7 @@ from typing import Any
 
 
 def personal_data_pattern_matcher(
-    content: str, pattern: str, category_data: dict[str, Any], context: dict[str, Any]
+    content: str, pattern: str, rule_metadata: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any] | None:
     """Pattern matcher function for personal data analysis.
 
@@ -14,8 +14,8 @@ def personal_data_pattern_matcher(
     Args:
         content: The content being analyzed
         pattern: The matched pattern
-        category_data: Data about the pattern category from ruleset
-        context: Additional context including metadata, config, and utilities
+        rule_metadata: Metadata from the rule
+        context: Additional context including rule info, metadata, config, and utilities
 
     Returns:
         Personal data finding dictionary or None if no finding should be created
@@ -23,7 +23,7 @@ def personal_data_pattern_matcher(
     evidence_extractor = context["evidence_extractor"]
     metadata = context["metadata"]
     config = context["config"]
-    category_name = context["category_name"]
+    rule_name = context["rule_name"]
 
     # Get configuration specific to personal data analysis
     maximum_evidence_count = config.get("maximum_evidence_count", 3)
@@ -42,9 +42,9 @@ def personal_data_pattern_matcher(
 
     # Create personal data specific finding structure
     finding = {
-        "type": category_name,
-        "risk_level": category_data["risk_level"],
-        "special_category": category_data["special_category"],  # Personal data specific
+        "type": rule_name,
+        "risk_level": context["risk_level"],
+        "special_category": rule_metadata["special_category"],  # Personal data specific
         "matched_pattern": pattern,
         "evidence": evidence_matches,
         "metadata": finding_metadata,

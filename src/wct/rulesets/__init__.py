@@ -4,7 +4,31 @@ from wct.rulesets.base import (
     RulesetError,
     RulesetLoader,
     RulesetNotFoundError,
+    RulesetRegistry,
 )
+
+# Import and register built-in rulesets automatically
+from wct.rulesets.personal_data import PersonalDataRuleset
+from wct.rulesets.personal_data_code_functions import PersonalDataCodeFunctionsRuleset
+from wct.rulesets.personal_data_code_models import PersonalDataCodeModelsRuleset
+from wct.rulesets.personal_data_sql_schemas import PersonalDataSqlSchemasRuleset
+from wct.rulesets.processing_purposes import ProcessingPurposesRuleset
+
+# Built-in rulesets - internal use only
+_BUILTIN_RULESETS = (
+    PersonalDataRuleset,
+    PersonalDataCodeFunctionsRuleset,
+    PersonalDataCodeModelsRuleset,
+    PersonalDataSqlSchemasRuleset,
+    ProcessingPurposesRuleset,
+)
+
+# Register all built-in rulesets automatically on import
+_registry = RulesetRegistry()
+for _ruleset_class in _BUILTIN_RULESETS:
+    # Use the module name as the ruleset name (e.g., personal_data_code_functions)
+    _module_name = _ruleset_class.__module__.split(".")[-1]
+    _registry.register(_module_name, _ruleset_class)
 
 __all__ = (
     "RulesetError",

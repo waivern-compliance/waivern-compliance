@@ -350,7 +350,7 @@ def execute_runbook_command(
             console=console,
             transient=True,
         ) as progress:
-            task = progress.add_task("Initializing analysis...", total=None)
+            task = progress.add_task("Initialising analysis...", total=None)
 
             runner = AnalysisRunner()
 
@@ -359,6 +359,7 @@ def execute_runbook_command(
 
             progress.update(task, description="Formatting results...", completed=True)
 
+        console.print("\n[bold green]✅ Analysis completed![/bold green]")
         formatter = OutputFormatter()
         formatter.format_analysis_results(results, verbose)
 

@@ -1,13 +1,15 @@
 """Known processing purposes to search for during analysis."""
 
-from typing import Any, Final
+from typing import Final
 
 from typing_extensions import override
 
 from wct.rulesets.base import Ruleset
+from wct.rulesets.types import Rule, RuleData
 
-PROCESSING_PURPOSES: Final = {
+PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     "Artificial Intelligence Model Training": {
+        "description": "Training AI/ML models using personal data",
         "patterns": [
             "model training",
             "machine learning",
@@ -28,11 +30,14 @@ PROCESSING_PURPOSES: Final = {
             "kubeflow",
             "feast",
         ],
-        "purpose_category": "AI_AND_ML",
         "risk_level": "high",
-        "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+        "metadata": {
+            "purpose_category": "AI_AND_ML",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+        },
     },
     "Artificial Intelligence Bias Testing": {
+        "description": "Testing AI/ML models for bias and fairness issues",
         "patterns": [
             "bias testing",
             "fairness testing",
@@ -56,11 +61,14 @@ PROCESSING_PURPOSES: Final = {
             "aws sagemaker clarify",
             "parity ai",
         ],
-        "purpose_category": "AI_AND_ML",
         "risk_level": "high",
-        "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+        "metadata": {
+            "purpose_category": "AI_AND_ML",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+        },
     },
     "Artificial Intelligence Model Refinement": {
+        "description": "Refining and improving AI/ML models for better performance",
         "patterns": [
             "model refinement",
             "model improvement",
@@ -85,11 +93,14 @@ PROCESSING_PURPOSES: Final = {
             "scale ai",
             "labelbox",
         ],
-        "purpose_category": "AI_AND_ML",
         "risk_level": "medium",
-        "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+        "metadata": {
+            "purpose_category": "AI_AND_ML",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+        },
     },
     "Artificial Intelligence Performance Testing": {
+        "description": "Testing AI/ML model performance, accuracy, and robustness",
         "patterns": [
             "performance testing",
             "model evaluation",
@@ -108,11 +119,14 @@ PROCESSING_PURPOSES: Final = {
             "big-bench",
             "decoding trust benchmark",
         ],
-        "purpose_category": "AI_AND_ML",
         "risk_level": "medium",
-        "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+        "metadata": {
+            "purpose_category": "AI_AND_ML",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+        },
     },
     "Artificial Intelligence Security Testing": {
+        "description": "Testing AI/ML models for security vulnerabilities and threats",
         "patterns": [
             "security testing",
             "penetration testing",
@@ -135,17 +149,20 @@ PROCESSING_PURPOSES: Final = {
             "synack",
             "shellgpt",
         ],
-        "purpose_category": "AI_AND_ML",
         "risk_level": "low",
-        "compliance_relevance": [
-            "GDPR",
-            "EU_AI_ACT",
-            "NIST_AI_RMF",
-            "ISO_27001",
-            "SOC_2",
-        ],
+        "metadata": {
+            "purpose_category": "AI_AND_ML",
+            "compliance_relevance": [
+                "GDPR",
+                "EU_AI_ACT",
+                "NIST_AI_RMF",
+                "ISO_27001",
+                "SOC_2",
+            ],
+        },
     },
     "Artificial Intelligence Compliance Management": {
+        "description": "Managing AI/ML compliance, governance, and regulatory requirements",
         "patterns": [
             "compliance",
             "risk management",
@@ -170,11 +187,14 @@ PROCESSING_PURPOSES: Final = {
             "anch.ai",
             "fiddler ai",
         ],
-        "purpose_category": "AI_AND_ML",
         "risk_level": "low",
-        "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+        "metadata": {
+            "purpose_category": "AI_AND_ML",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+        },
     },
     "General Product and Service Delivery": {
+        "description": "Delivering products and services to customers and users",
         "patterns": [
             "service",
             "delivery",
@@ -191,11 +211,14 @@ PROCESSING_PURPOSES: Final = {
             "webflow",
             "wordpress",
         ],
-        "purpose_category": "OPERATIONAL",
         "risk_level": "low",
-        "compliance_relevance": ["GDPR"],
+        "metadata": {
+            "purpose_category": "OPERATIONAL",
+            "compliance_relevance": ["GDPR"],
+        },
     },
     "Customer Service and Support": {
+        "description": "Providing customer service, support, and assistance",
         "patterns": [
             "support",
             "customer",
@@ -212,11 +235,14 @@ PROCESSING_PURPOSES: Final = {
             "helpscout",
             "liveagent",
         ],
-        "purpose_category": "OPERATIONAL",
         "risk_level": "low",
-        "compliance_relevance": ["GDPR"],
+        "metadata": {
+            "purpose_category": "OPERATIONAL",
+            "compliance_relevance": ["GDPR"],
+        },
     },
     "Customization of Products and Services": {
+        "description": "Customising products and services based on user preferences",
         "patterns": [
             "customisation",
             "preferences",
@@ -226,11 +252,14 @@ PROCESSING_PURPOSES: Final = {
             "ui",
             "personalization",
         ],
-        "purpose_category": "OPERATIONAL",
         "risk_level": "low",
-        "compliance_relevance": ["GDPR"],
+        "metadata": {
+            "purpose_category": "OPERATIONAL",
+            "compliance_relevance": ["GDPR"],
+        },
     },
     "User Identity and Login Management": {
+        "description": "Managing user identity, authentication, and login processes",
         "patterns": [
             "authentication",
             "login",
@@ -247,11 +276,14 @@ PROCESSING_PURPOSES: Final = {
             "microsoft active directory",
             "forgerock",
         ],
-        "purpose_category": "OPERATIONAL",
         "risk_level": "medium",
-        "compliance_relevance": ["GDPR"],
+        "metadata": {
+            "purpose_category": "OPERATIONAL",
+            "compliance_relevance": ["GDPR"],
+        },
     },
     "Payment, Billing, and Invoicing": {
+        "description": "Processing payments, billing, and financial transactions",
         "patterns": [
             "payment",
             "transaction",
@@ -269,11 +301,14 @@ PROCESSING_PURPOSES: Final = {
             "klarna",
             "recurly",
         ],
-        "purpose_category": "OPERATIONAL",
         "risk_level": "medium",
-        "compliance_relevance": ["GDPR", "PCI_DSS", "SOX"],
+        "metadata": {
+            "purpose_category": "OPERATIONAL",
+            "compliance_relevance": ["GDPR", "PCI_DSS", "SOX"],
+        },
     },
     "Behavioral Data Analysis for Product Improvement": {
+        "description": "Analysing user behaviour and data to improve products and services",
         "patterns": [
             "analytics",
             "tracking",
@@ -290,11 +325,14 @@ PROCESSING_PURPOSES: Final = {
             "heap",
             "fullstory",
         ],
-        "purpose_category": "ANALYTICS",
         "risk_level": "high",
-        "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+        "metadata": {
+            "purpose_category": "ANALYTICS",
+            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+        },
     },
     "Dynamic Personalization of Products and Services": {
+        "description": "Dynamically personalising products and services based on user data",
         "patterns": [
             "personalization",
             "recommendation",
@@ -309,11 +347,14 @@ PROCESSING_PURPOSES: Final = {
             "adobe target",
             "coveo relevance cloud",
         ],
-        "purpose_category": "MARKETING_AND_ADVERTISING",
         "risk_level": "high",
-        "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+        "metadata": {
+            "purpose_category": "MARKETING_AND_ADVERTISING",
+            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+        },
     },
     "Consumer Marketing Within Owned Products": {
+        "description": "Marketing and promotional activities within company-owned products and platforms",
         "patterns": [
             "marketing",
             "promotion",
@@ -331,11 +372,14 @@ PROCESSING_PURPOSES: Final = {
             "mailjet",
             "onesignal",
         ],
-        "purpose_category": "MARKETING_AND_ADVERTISING",
         "risk_level": "medium",
-        "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+        "metadata": {
+            "purpose_category": "MARKETING_AND_ADVERTISING",
+            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+        },
     },
     "Targeted Marketing via Third-Party Platforms": {
+        "description": "Targeted marketing and advertising through third-party platforms and networks",
         "patterns": [
             "advertising",
             "targeting",
@@ -350,11 +394,14 @@ PROCESSING_PURPOSES: Final = {
             "twitter",
             "linkedin ads",
         ],
-        "purpose_category": "MARKETING_AND_ADVERTISING",
         "risk_level": "high",
-        "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+        "metadata": {
+            "purpose_category": "MARKETING_AND_ADVERTISING",
+            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+        },
     },
     "Third-Party Marketing via Owned Products": {
+        "description": "Third-party marketing and advertising activities conducted through company-owned products",
         "patterns": [
             "partner marketing",
             "third-party advertising",
@@ -366,11 +413,14 @@ PROCESSING_PURPOSES: Final = {
             "tiktok",
             "third-party advertisers",
         ],
-        "purpose_category": "MARKETING_AND_ADVERTISING",
         "risk_level": "high",
-        "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+        "metadata": {
+            "purpose_category": "MARKETING_AND_ADVERTISING",
+            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+        },
     },
     "Security, Fraud Prevention, and Abuse Detection": {
+        "description": "Protecting against security threats, fraud, and platform abuse",
         "patterns": [
             "security",
             "fraud",
@@ -387,9 +437,11 @@ PROCESSING_PURPOSES: Final = {
             "veriff",
             "feedzai",
         ],
-        "purpose_category": "SECURITY",
         "risk_level": "low",
-        "compliance_relevance": ["GDPR", "ISO_27001", "SOC_2"],
+        "metadata": {
+            "purpose_category": "SECURITY",
+            "compliance_relevance": ["GDPR", "ISO_27001", "SOC_2"],
+        },
     },
 }
 
@@ -415,13 +467,23 @@ class ProcessingPurposesRuleset(Ruleset):
         self.logger.debug(f"Initialized {self.__class__.__name__} ruleset")
 
     @override
-    def get_patterns(self) -> dict[str, Any]:
-        """Get the processing purposes patterns.
+    def get_rules(self) -> list[Rule]:
+        """Get the processing purposes rules.
 
         Returns:
-            Dictionary containing all processing purpose patterns with metadata
+            List of Rule objects containing all processing purpose patterns with metadata
         """
-        self.logger.debug(
-            f"Returning {len(PROCESSING_PURPOSES)} processing purpose pattern categories"
-        )
-        return PROCESSING_PURPOSES
+        rules = []
+        for rule_name, rule_data in PROCESSING_PURPOSES.items():
+            rules.append(
+                Rule(
+                    name=rule_name,
+                    description=rule_data["description"],
+                    patterns=rule_data["patterns"],
+                    risk_level=rule_data["risk_level"],
+                    metadata=rule_data["metadata"],
+                )
+            )
+
+        self.logger.debug(f"Returning {len(rules)} processing purpose rules")
+        return rules
