@@ -79,7 +79,7 @@ class PersonalDataCodeModelsRuleset(Ruleset):
         Returns:
             List of Rule objects containing personal data model patterns
         """
-        rules = []
+        rules: list[Rule] = []
         for rule_name, rule_data in PERSONAL_DATA_CODE_CLASS_PATTERNS.items():
             rules.append(
                 Rule(

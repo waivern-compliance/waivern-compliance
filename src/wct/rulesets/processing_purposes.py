@@ -482,7 +482,7 @@ class ProcessingPurposesRuleset(Ruleset):
         Returns:
             List of Rule objects containing all processing purpose patterns with metadata
         """
-        rules = []
+        rules: list[Rule] = []
         for rule_name, rule_data in PROCESSING_PURPOSES.items():
             rules.append(
                 Rule(

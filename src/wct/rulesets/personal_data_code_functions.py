@@ -85,7 +85,7 @@ class PersonalDataCodeFunctionsRuleset(Ruleset):
         Returns:
             List of Rule objects containing personal data function patterns
         """
-        rules = []
+        rules: list[Rule] = []
         for rule_name, rule_data in PERSONAL_DATA_CODE_FUNCTION_PATTERNS.items():
             rules.append(
                 Rule(
