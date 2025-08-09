@@ -14,7 +14,7 @@ from wct.rulesets.types import Rule, RuleData
 PERSONAL_DATA: Final[dict[str, RuleData]] = {
     "basic_profile": {
         "description": "Basic identifying information about individuals",
-        "patterns": [
+        "patterns": (
             "first_name",
             "last_name",
             "middle_name",
@@ -39,7 +39,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "zip",
             "postal",
             "country",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
@@ -47,7 +47,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "account_data": {
         "description": "Account and subscription related data",
-        "patterns": ["transaction", "subscription", "purchase", "cancellation"],
+        "patterns": ("transaction", "subscription", "purchase", "cancellation"),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
@@ -55,7 +55,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "payment_data": {
         "description": "Payment and billing information",
-        "patterns": [
+        "patterns": (
             "payment_method",
             "invoice",
             "receipt",
@@ -63,7 +63,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "card",
             "payment",
             "billing",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
@@ -71,7 +71,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "financial_data": {
         "description": "Financial identifiers and sensitive financial information",
-        "patterns": [
+        "patterns": (
             "credit_rating",
             "payment_history",
             "bank",
@@ -83,7 +83,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "id_number",
             "national_id",
             "credit_card",
-        ],
+        ),
         "risk_level": "high",
         "metadata": {
             "special_category": "N",
@@ -91,14 +91,14 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "behavioral_event_data": {
         "description": "User behavioral and interaction data",
-        "patterns": [
+        "patterns": (
             "page_view",
             "click",
             "scroll",
             "form_completion",
             "timestamp",
             "app_usage",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
@@ -106,14 +106,14 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "technical_device_and_network_data": {
         "description": "Technical device and network identifiers",
-        "patterns": [
+        "patterns": (
             "device_id",
             "ip_address",
             "cookie",
             "language",
             "screen",
             "network",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
@@ -121,13 +121,13 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "inferred_profile_data": {
         "description": "Algorithmically inferred or predicted user characteristics",
-        "patterns": [
+        "patterns": (
             "predicted",
             "inferred",
             "calculated",
             "profiling",
             "machine_learning",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
@@ -135,7 +135,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "User_enriched_profile_data": {
         "description": "User-declared preferences and interests",
-        "patterns": ["interests", "preferences", "declared", "user_provided"],
+        "patterns": ("interests", "preferences", "declared", "user_provided"),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
@@ -143,7 +143,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "location_data": {
         "description": "General location information",
-        "patterns": ["country", "region", "city", "suburb"],
+        "patterns": ("country", "region", "city", "suburb"),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
@@ -151,7 +151,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "user_generated_content": {
         "description": "Content created by users",
-        "patterns": ["comment", "review", "feedback", "message"],
+        "patterns": ("comment", "review", "feedback", "message"),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
@@ -159,14 +159,14 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "accurate_location": {
         "description": "Precise location data (GDPR Article 9 special category)",
-        "patterns": [
+        "patterns": (
             "precise_location",
             "exact_location",
             "gps",
             "coordinates",
             "latitude",
             "longitude",
-        ],
+        ),
         "risk_level": "high",
         "metadata": {
             "special_category": "Y",
@@ -174,7 +174,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "health_data": {
         "description": "Health and medical information (GDPR Article 9 special category)",
-        "patterns": [
+        "patterns": (
             "health",
             "medical",
             "illness",
@@ -182,7 +182,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "diagnosis",
             "treatment",
             "patient",
-        ],
+        ),
         "risk_level": "high",
         "metadata": {
             "special_category": "Y",
@@ -190,7 +190,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "political_data": {
         "description": "Political opinions and trade union membership (GDPR Article 9 special category)",
-        "patterns": ["political", "trade_union", "affiliation"],
+        "patterns": ("political", "trade_union", "affiliation"),
         "risk_level": "high",
         "metadata": {
             "special_category": "Y",
@@ -198,7 +198,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "racial_ethnic_data": {
         "description": "Racial or ethnic origin data (GDPR Article 9 special category)",
-        "patterns": ["race", "ethnic", "origin", "nationality"],
+        "patterns": ("race", "ethnic", "origin", "nationality"),
         "risk_level": "high",
         "metadata": {
             "special_category": "Y",
@@ -206,7 +206,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "religious_philosophical_data": {
         "description": "Religious or philosophical beliefs (GDPR Article 9 special category)",
-        "patterns": ["religion", "belief", "philosophy", "faith"],
+        "patterns": ("religion", "belief", "philosophy", "faith"),
         "risk_level": "high",
         "metadata": {
             "special_category": "Y",
@@ -214,7 +214,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "genetic_data": {
         "description": "Genetic information (GDPR Article 9 special category)",
-        "patterns": ["genetic", "dna", "genome", "sequence"],
+        "patterns": ("genetic", "dna", "genome", "sequence"),
         "risk_level": "high",
         "metadata": {
             "special_category": "Y",
@@ -222,14 +222,14 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "biometric_data": {
         "description": "Biometric identifiers (GDPR Article 9 special category)",
-        "patterns": [
+        "patterns": (
             "biometric",
             "fingerprint",
             "iris",
             "facial_recognition",
             "face",
             "voice",
-        ],
+        ),
         "risk_level": "high",
         "metadata": {
             "special_category": "Y",
@@ -237,7 +237,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "sexual_orientation_data": {
         "description": "Sexual orientation and sex life data (GDPR Article 9 special category)",
-        "patterns": ["sexual", "orientation", "sex_life", "gender_identity"],
+        "patterns": ("sexual", "orientation", "sex_life", "gender_identity"),
         "risk_level": "high",
         "metadata": {
             "special_category": "Y",
@@ -245,13 +245,13 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     },
     "date_of_birth": {
         "description": "Birth date and age-related information",
-        "patterns": [
+        "patterns": (
             "date_of_birth",
             "birthday",
             "birth",
             "dob",
             "age",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",

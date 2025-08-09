@@ -10,13 +10,13 @@ from wct.rulesets.types import Rule, RuleData
 PERSONAL_DATA_CODE_FUNCTION_PATTERNS: Final[dict[str, RuleData]] = {
     "user_management": {
         "description": "Functions that manage user accounts and profiles",
-        "patterns": [
+        "patterns": (
             "createuser",
             "getuser",
             "updateuser",
             "deleteuser",
             "registeruser",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "data_type": "user_data",
@@ -25,7 +25,7 @@ PERSONAL_DATA_CODE_FUNCTION_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "email_handling": {
         "description": "Functions that process email addresses",
-        "patterns": ["sendemail", "validateemail", "getemail", "setemail"],
+        "patterns": ("sendemail", "validateemail", "getemail", "setemail"),
         "risk_level": "medium",
         "metadata": {
             "data_type": "email",
@@ -34,7 +34,7 @@ PERSONAL_DATA_CODE_FUNCTION_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "authentication": {
         "description": "Functions that handle user authentication",
-        "patterns": ["authenticate", "login", "signin", "authorise"],
+        "patterns": ("authenticate", "login", "signin", "authorise"),
         "risk_level": "medium",
         "metadata": {
             "data_type": "authentication_data",
@@ -43,7 +43,7 @@ PERSONAL_DATA_CODE_FUNCTION_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "profile_management": {
         "description": "Functions that manage user profiles",
-        "patterns": ["getprofile", "updateprofile", "saveprofile"],
+        "patterns": ("getprofile", "updateprofile", "saveprofile"),
         "risk_level": "medium",
         "metadata": {
             "data_type": "profile_data",
