@@ -38,7 +38,7 @@ class AnthropicLLMService:
     """
 
     def __init__(self, model_name: str | None = None, api_key: str | None = None):
-        """Initialize the Anthropic LLM service.
+        """Initialise the Anthropic LLM service.
 
         Args:
             model_name: The Anthropic model to use (will use ANTHROPIC_MODEL env var or default to claude-sonnet-4-20250514)
@@ -64,7 +64,7 @@ class AnthropicLLMService:
 
         self._llm = None
         self.logger.info(
-            f"Initialized Anthropic LLM service with model: {self.model_name}"
+            f"Initialised Anthropic LLM service with model: {self.model_name}"
         )
 
     def _get_llm(self):

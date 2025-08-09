@@ -7,10 +7,11 @@ from typing_extensions import override
 from wct.rulesets.base import Ruleset
 from wct.rulesets.types import Rule, RuleData
 
-# Version constant for this ruleset
-VERSION: Final[str] = "1.0.0"
+# Version constant for this ruleset (private)
+_VERSION: Final[str] = "1.0.0"
+_RULESET_NAME: Final[str] = "processing_purposes"
 
-PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
+_PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     "Artificial Intelligence Model Training": {
         "description": "Training AI/ML models using personal data",
         "patterns": (
@@ -460,39 +461,44 @@ class ProcessingPurposesRuleset(Ruleset):
     consent management, and understanding data processing activities.
     """
 
-    def __init__(self, ruleset_name: str = "processing_purposes") -> None:
-        """Initialize the processing purposes ruleset.
+    def __init__(self) -> None:
+        """Initialise the processing purposes ruleset."""
+        super().__init__()
+        self.rules: tuple[Rule, ...] | None = None
+        self.logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
-        Args:
-            ruleset_name: Name of the ruleset for logging purposes
-        """
-        super().__init__(ruleset_name)
-        self.logger.debug(f"Initialized {self.__class__.__name__} ruleset")
+    @property
+    @override
+    def name(self) -> str:
+        """Get the canonical name of this ruleset."""
+        return _RULESET_NAME
 
     @property
     @override
     def version(self) -> str:
         """Get the version of this ruleset."""
-        return VERSION
+        return _VERSION
 
     @override
-    def get_rules(self) -> list[Rule]:
+    def get_rules(self) -> tuple[Rule, ...]:
         """Get the processing purposes rules.
 
         Returns:
-            List of Rule objects containing all processing purpose patterns with metadata
+            Immutable tuple of Rule objects containing all processing purpose patterns with metadata
         """
-        rules: list[Rule] = []
-        for rule_name, rule_data in PROCESSING_PURPOSES.items():
-            rules.append(
-                Rule(
-                    name=rule_name,
-                    description=rule_data["description"],
-                    patterns=rule_data["patterns"],
-                    risk_level=rule_data["risk_level"],
-                    metadata=rule_data["metadata"],
+        if self.rules is None:
+            rules_list: list[Rule] = []
+            for rule_name, rule_data in _PROCESSING_PURPOSES.items():
+                rules_list.append(
+                    Rule(
+                        name=rule_name,
+                        description=rule_data["description"],
+                        patterns=rule_data["patterns"],
+                        risk_level=rule_data["risk_level"],
+                        metadata=rule_data["metadata"],
+                    )
                 )
-            )
+            self.rules = tuple(rules_list)
+            self.logger.debug(f"Generated {len(self.rules)} processing purpose rules")
 
-        self.logger.debug(f"Returning {len(rules)} processing purpose rules")
-        return rules
+        return self.rules

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Initialize project environment
+# Initialise project environment
 # Usage: bash scripts/init.sh
 # Installs all dependencies and sets up pre-commit hooks
 

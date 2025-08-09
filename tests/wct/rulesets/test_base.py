@@ -16,20 +16,25 @@ class ConcreteRuleset(Ruleset):
     """Concrete implementation of Ruleset for testing."""
 
     @property
+    def name(self) -> str:
+        """Return test name."""
+        return "test_ruleset"
+
+    @property
     def version(self) -> str:
         """Return test version."""
         return "1.0.0"
 
-    def get_rules(self) -> list[Rule]:
+    def get_rules(self) -> tuple[Rule, ...]:
         """Return a test rule."""
-        return [
+        return (
             Rule(
                 name="test_rule",
                 description="Test rule for unit tests",
                 patterns=("test_pattern", "test_pattern_2"),
                 risk_level="low",
-            )
-        ]
+            ),
+        )
 
 
 class TestRulesetClass:
@@ -38,43 +43,43 @@ class TestRulesetClass:
     def test_ruleset_get_rules_is_abstract(self):
         """Test that Ruleset.get_rules is an abstract method."""
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            Ruleset("test")  # type: ignore[abstract]
+            Ruleset()  # type: ignore[abstract]
 
-    def test_ruleset_initialisation_with_name(self):
-        """Test Ruleset initialisation with ruleset name."""
-        ruleset = ConcreteRuleset("test_ruleset")
+    def test_ruleset_initialisation_uses_name_property(self):
+        """Test Ruleset initialisation uses name property."""
+        ruleset = ConcreteRuleset()
 
-        assert ruleset.ruleset_name == "test_ruleset"
+        assert ruleset.name == "test_ruleset"
 
     def test_concrete_ruleset_get_rules_returns_list(self):
         """Test that concrete implementation returns list of rules."""
-        ruleset = ConcreteRuleset("test_ruleset")
+        ruleset = ConcreteRuleset()
         rules = ruleset.get_rules()
 
-        assert isinstance(rules, list)
+        assert isinstance(rules, tuple)
         assert len(rules) == 1
         assert isinstance(rules[0], Rule)
         assert rules[0].name == "test_rule"
 
     def test_concrete_ruleset_has_version(self):
         """Test that concrete implementation returns version."""
-        ruleset = ConcreteRuleset("test_ruleset")
+        ruleset = ConcreteRuleset()
         version = ruleset.version
 
         assert isinstance(version, str)
         assert version == "1.0.0"
 
-    def test_ruleset_version_is_abstract(self):
-        """Test that Ruleset.version is an abstract property."""
+    def test_ruleset_name_and_version_are_abstract(self):
+        """Test that Ruleset.name and version are abstract properties."""
 
         class IncompleteRuleset(Ruleset):
-            def get_rules(self) -> list[Rule]:
-                return []
+            def get_rules(self) -> tuple[Rule, ...]:
+                return ()
 
-            # Missing version property
+            # Missing name and version properties
 
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            IncompleteRuleset("test")  # type: ignore[abstract]
+            IncompleteRuleset()  # type: ignore[abstract]
 
 
 class TestRulesetRegistry:
@@ -144,11 +149,15 @@ class TestRulesetRegistry:
 
         class AnotherRuleset(Ruleset):
             @property
+            def name(self) -> str:
+                return "another_test"
+
+            @property
             def version(self) -> str:
                 return "1.0.0"
 
-            def get_rules(self) -> list[Rule]:
-                return []
+            def get_rules(self) -> tuple[Rule, ...]:
+                return ()
 
         registry = RulesetRegistry()
         registry.register("test_name", ConcreteRuleset)
@@ -180,7 +189,7 @@ class TestRulesetLoader:
         # Load the ruleset
         rules = RulesetLoader.load_ruleset("test_ruleset")
 
-        assert isinstance(rules, list)
+        assert isinstance(rules, tuple)
         assert len(rules) == 1
         assert rules[0].name == "test_rule"
 
@@ -196,19 +205,23 @@ class TestRulesetLoader:
 
         class NameTrackingRuleset(Ruleset):
             @property
+            def name(self) -> str:
+                return "name_tracking"
+
+            @property
             def version(self) -> str:
                 return "1.0.0"
 
-            def get_rules(self) -> list[Rule]:
+            def get_rules(self) -> tuple[Rule, ...]:
                 # Return rule that includes the ruleset name for verification
-                return [
+                return (
                     Rule(
-                        name=f"rule_from_{self.ruleset_name}",
+                        name=f"rule_from_{self.name}",
                         description="Name tracking rule",
                         patterns=("test",),
                         risk_level="low",
-                    )
-                ]
+                    ),
+                )
 
         registry = RulesetRegistry()
         registry.register("name_tracking", NameTrackingRuleset)
@@ -226,7 +239,7 @@ class TestRulesetLoader:
         # Should be callable without instantiating RulesetLoader
         rules = RulesetLoader.load_ruleset("class_method_test")
 
-        assert isinstance(rules, list)
+        assert isinstance(rules, tuple)
         assert len(rules) == 1
 
 
@@ -243,11 +256,15 @@ class TestRulesetIntegration:
         # Define a custom ruleset
         class CustomRuleset(Ruleset):
             @property
+            def name(self) -> str:
+                return "custom_rules"
+
+            @property
             def version(self) -> str:
                 return "1.0.0"
 
-            def get_rules(self) -> list[Rule]:
-                return [
+            def get_rules(self) -> tuple[Rule, ...]:
+                return (
                     Rule(
                         name="custom_rule_1",
                         description="First custom rule",
@@ -261,7 +278,7 @@ class TestRulesetIntegration:
                         patterns=("custom2",),
                         risk_level="high",
                     ),
-                ]
+                )
 
         # Register the ruleset
         registry = RulesetRegistry()
@@ -291,17 +308,21 @@ class TestRulesetIntegration:
 
         class VersionedRuleset(Ruleset):
             @property
+            def name(self) -> str:
+                return "versioned_rules"
+
+            @property
             def version(self) -> str:
                 return "3.2.1"
 
-            def get_rules(self) -> list[Rule]:
-                return [Rule("versioned", "Versioned rule", ("test",), "medium")]
+            def get_rules(self) -> tuple[Rule, ...]:
+                return (Rule("versioned", "Versioned rule", ("test",), "medium"),)
 
         registry = RulesetRegistry()
         registry.register("versioned_rules", VersionedRuleset)
 
         # Create an instance to check version
         ruleset_class = registry.get_ruleset_class("versioned_rules")
-        ruleset_instance = ruleset_class("versioned_rules")
+        ruleset_instance = ruleset_class()
 
         assert ruleset_instance.version == "3.2.1"

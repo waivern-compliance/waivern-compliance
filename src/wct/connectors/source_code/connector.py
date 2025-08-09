@@ -62,7 +62,7 @@ class SourceCodeConnector(Connector):
         max_file_size: int = 10 * 1024 * 1024,  # 10MB default
         max_files: int = 4000,  # Maximum number of files to process
     ):
-        """Initialize the source code connector.
+        """Initialise the source code connector.
 
         Args:
             path: Path to source code file or directory
@@ -71,7 +71,7 @@ class SourceCodeConnector(Connector):
             max_file_size: Skip files larger than this size (bytes)
             max_files: Maximum number of files to process (default: 4000)
         """
-        super().__init__()  # Initialize logger from base class
+        super().__init__()  # Initialise logger from base class
         self.path = Path(path)
         self.language = language
         self.file_patterns = file_patterns or ["**/*"]
@@ -89,7 +89,7 @@ class SourceCodeConnector(Connector):
             errors="strict",  # Skip binary files
         )
 
-        # Initialize parser
+        # Initialise parser
         if self.path.is_file():
             detected_language = (
                 language or SourceCodeParser().detect_language_from_file(self.path)
@@ -322,7 +322,7 @@ class SourceCodeConnector(Connector):
             else SourceCodeParser().detect_language_from_file(file_path)
         )
 
-        # Initialize extractors
+        # Initialise extractors
         function_extractor = FunctionExtractor(language)
         class_extractor = ClassExtractor(language)
 

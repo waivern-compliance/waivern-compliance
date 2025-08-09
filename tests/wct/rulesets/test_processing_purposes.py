@@ -1,24 +1,24 @@
-"""Unit tests for PersonalDataRuleset class."""
+"""Unit tests for ProcessingPurposesRuleset class."""
 
 import pytest
 
 from wct.rulesets.base import RulesetLoader, RulesetRegistry
-from wct.rulesets.personal_data import PersonalDataRuleset
+from wct.rulesets.processing_purposes import ProcessingPurposesRuleset
 from wct.rulesets.types import Rule
 
 
-class TestPersonalDataRuleset:
-    """Test cases for the PersonalDataRuleset class."""
+class TestProcessingPurposesRuleset:
+    """Test cases for the ProcessingPurposesRuleset class."""
 
     def setup_method(self):
         """Set up test fixtures for each test method."""
-        self.ruleset = PersonalDataRuleset()
+        self.ruleset = ProcessingPurposesRuleset()
 
     def test_name_property_returns_canonical_name(self):
-        """Test PersonalDataRuleset returns canonical name."""
-        ruleset = PersonalDataRuleset()
+        """Test ProcessingPurposesRuleset returns canonical name."""
+        ruleset = ProcessingPurposesRuleset()
 
-        assert ruleset.name == "personal_data"
+        assert ruleset.name == "processing_purposes"
 
     def test_version_property_returns_correct_string_format(self):
         """Test that version property returns a non-empty string."""
@@ -31,7 +31,7 @@ class TestPersonalDataRuleset:
         assert len(parts) == 3  # noqa: PLR2004
         assert all(part.isdigit() for part in parts)
 
-    def test_get_rules_returns_tuple_of_rules_with_at_least_one_rule(self):
+    def test_get_rules_returns_tuple_of_rules(self):
         """Test that get_rules returns an immutable tuple of Rule objects."""
         rules = self.ruleset.get_rules()
 
@@ -95,56 +95,26 @@ class TestPersonalDataRuleset:
             assert len(rule.name) > 0
             assert len(rule.description) > 0
 
-    def test_rules_have_special_category_when_gdpr_relevant(self):
-        """Test that rules have special_category metadata when GDPR is relevant."""
+    def test_rules_have_metadata_with_purpose_category(self):
+        """Test that all rules have metadata with purpose_category."""
         rules = self.ruleset.get_rules()
 
         for rule in rules:
-            # If GDPR is listed in compliance relevance, special_category is required
-            if (
-                "compliance_relevance" in rule.metadata
-                and "GDPR" in rule.metadata["compliance_relevance"]
-            ):
-                assert "special_category" in rule.metadata
-                assert isinstance(rule.metadata["special_category"], str)
-                assert rule.metadata["special_category"] in {"Y", "N"}
+            assert "purpose_category" in rule.metadata
+            assert isinstance(rule.metadata["purpose_category"], str)
+            assert len(rule.metadata["purpose_category"]) > 0
 
-    def test_gdpr_article_9_special_categories_exist(self):
-        """Test that GDPR Article 9 special category rules exist."""
-        rules = self.ruleset.get_rules()
-        rule_names = [rule.name.lower() for rule in rules]
-
-        # Should have health, genetic, biometric data rules
-        health_terms_found = [name for name in rule_names if "health" in name]
-        genetic_terms_found = [name for name in rule_names if "genetic" in name]
-        biometric_terms_found = [name for name in rule_names if "biometric" in name]
-
-        assert len(health_terms_found) > 0
-        assert len(genetic_terms_found) > 0
-        assert len(biometric_terms_found) > 0
-
-    def test_patterns_are_tuples_not_lists(self):
-        """Test that all patterns are stored as tuples, not lists."""
+    def test_rules_have_metadata_with_compliance_relevance(self):
+        """Test that all rules have metadata with compliance_relevance."""
         rules = self.ruleset.get_rules()
 
         for rule in rules:
-            assert isinstance(rule.patterns, tuple)
-            assert not isinstance(rule.patterns, list)
-
-    def test_risk_level_distribution(self):
-        """Test that we have a reasonable distribution of risk levels."""
-        rules = self.ruleset.get_rules()
-        risk_counts = {"low": 0, "medium": 0, "high": 0}
-
-        for rule in rules:
-            risk_counts[rule.risk_level] += 1
-
-        # We should have rules at medium and high risk levels
-        assert risk_counts["medium"] > 0
-        assert risk_counts["high"] > 0
-
-        # Total should match expected
-        assert sum(risk_counts.values()) == len(rules)
+            assert "compliance_relevance" in rule.metadata
+            assert isinstance(rule.metadata["compliance_relevance"], list)
+            assert len(rule.metadata["compliance_relevance"]) > 0
+            assert all(
+                isinstance(item, str) for item in rule.metadata["compliance_relevance"]
+            )
 
     def test_get_rules_returns_same_tuple_each_time(self):
         """Test that get_rules returns the same immutable tuple instance each time."""
@@ -173,32 +143,32 @@ class TestPersonalDataRuleset:
             rules[0] = None  # type: ignore[index]
 
 
-class TestPersonalDataIntegration:
-    """Integration tests for PersonalDataRuleset with other components."""
+class TestProcessingPurposesIntegration:
+    """Integration tests for ProcessingPurposesRuleset with other components."""
 
     def test_ruleset_can_be_used_with_registry(self):
-        """Test that PersonalDataRuleset works with the registry pattern."""
+        """Test that ProcessingPurposesRuleset works with the registry pattern."""
         # Reset singleton to avoid conflicts
         RulesetRegistry._instance = None  # type: ignore[attr-defined]
 
         registry = RulesetRegistry()
-        registry.register("test_personal_data", PersonalDataRuleset)
+        registry.register("test_processing_purposes", ProcessingPurposesRuleset)
 
         # Should be able to retrieve and instantiate
-        ruleset_class = registry.get_ruleset_class("test_personal_data")
-        assert ruleset_class is PersonalDataRuleset
+        ruleset_class = registry.get_ruleset_class("test_processing_purposes")
+        assert ruleset_class is ProcessingPurposesRuleset
 
         instance = ruleset_class()
-        assert isinstance(instance, PersonalDataRuleset)
-        assert instance.name == "personal_data"
+        assert isinstance(instance, ProcessingPurposesRuleset)
+        assert instance.name == "processing_purposes"
 
     def test_ruleset_loader_integration(self):
-        """Test that PersonalDataRuleset works with RulesetLoader."""
+        """Test that ProcessingPurposesRuleset works with RulesetLoader."""
         # Reset singleton
         RulesetRegistry._instance = None  # type: ignore[attr-defined]
 
         registry = RulesetRegistry()
-        registry.register("loader_test", PersonalDataRuleset)
+        registry.register("loader_test", ProcessingPurposesRuleset)
 
         # Load via RulesetLoader
         rules = RulesetLoader.load_ruleset("loader_test")
@@ -208,5 +178,5 @@ class TestPersonalDataIntegration:
         assert all(isinstance(rule, Rule) for rule in rules)
 
         # Should have the same rules as direct instantiation
-        direct_rules = PersonalDataRuleset().get_rules()
+        direct_rules = ProcessingPurposesRuleset().get_rules()
         assert len(rules) == len(direct_rules)

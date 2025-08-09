@@ -24,7 +24,7 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
     """
 
     def __init__(self, pattern_matcher: PatternMatcherFn | None = None):
-        """Initialize the pattern matching runner.
+        """Initialise the pattern matching runner.
 
         Args:
             pattern_matcher: Function that defines how to match patterns and create findings.

@@ -39,7 +39,7 @@ class Analyser(abc.ABC):
     """
 
     def __init__(self) -> None:
-        """Initialize the analyser with a configured logger.
+        """Initialise the analyser with a configured logger.
 
         The logger is automatically set up using the analyser's class name
         in lowercase, following WCT logging conventions.

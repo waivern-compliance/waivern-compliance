@@ -36,7 +36,7 @@ class Connector(abc.ABC):
     """
 
     def __init__(self) -> None:
-        """Initialize the connector with a configured logger.
+        """Initialise the connector with a configured logger.
 
         The logger is automatically set up using the connector's class name
         in lowercase, following WCT logging conventions.

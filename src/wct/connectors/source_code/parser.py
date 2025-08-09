@@ -67,7 +67,7 @@ class SourceCodeParser:
     }
 
     def __init__(self, language: str = "php"):
-        """Initialize the parser.
+        """Initialise the parser.
 
         Args:
             language: Programming language to parse (default: php)

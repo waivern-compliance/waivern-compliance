@@ -8,7 +8,7 @@ class LLMServiceManager:
     """Utility for managing LLM service lifecycle and configuration."""
 
     def __init__(self, enable_llm_validation: bool = True):
-        """Initialize the LLM service manager.
+        """Initialise the LLM service manager.
 
         Args:
             enable_llm_validation: Whether to enable LLM validation

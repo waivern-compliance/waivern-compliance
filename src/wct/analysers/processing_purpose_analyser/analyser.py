@@ -49,7 +49,7 @@ class ProcessingPurposeAnalyser(Analyser):
         confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
         pattern_runner: PatternMatchingRunner | None = None,
     ):
-        """Initialize the processing purpose analyser with specified configuration and runners.
+        """Initialise the processing purpose analyser with specified configuration and runners.
 
         Args:
             ruleset_name: Name of the ruleset to use for analysis (default: "processing_purposes")
@@ -73,7 +73,7 @@ class ProcessingPurposeAnalyser(Analyser):
             "max_evidence": 3,  # Default max evidence count
         }
 
-        # Initialize pattern runner with processing purpose specific strategy
+        # Initialise pattern runner with processing purpose specific strategy
         # Note: ProcessingPurpose doesn't use LLM validation in current implementation
         self.pattern_runner = pattern_runner or PatternMatchingRunner(
             pattern_matcher=processing_purpose_pattern_matcher

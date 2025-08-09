@@ -52,7 +52,7 @@ class MySQLConnector(Connector):
         connect_timeout: int = 10,
         max_rows_per_table: int = 10,
     ):
-        """Initialize MySQL connector with connection parameters.
+        """Initialise MySQL connector with connection parameters.
 
         Args:
             host: MySQL server hostname or IP address
@@ -65,7 +65,7 @@ class MySQLConnector(Connector):
             connect_timeout: Connection timeout in seconds (default: 10)
             max_rows_per_table: Maximum number of rows to extract per table (default: 10)
         """
-        super().__init__()  # Initialize logger from base class
+        super().__init__()  # Initialise logger from base class
         self.host = host
         self.port = port
         self.user = user
