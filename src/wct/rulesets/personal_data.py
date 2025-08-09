@@ -292,7 +292,7 @@ class PersonalDataRuleset(Ruleset):
         Returns:
             List of Rule objects containing all GDPR-compliant personal data patterns
         """
-        rules = []
+        rules: list[Rule] = []
         for rule_name, rule_data in PERSONAL_DATA.items():
             rules.append(
                 Rule(

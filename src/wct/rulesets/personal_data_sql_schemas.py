@@ -213,7 +213,7 @@ class PersonalDataSqlSchemasRuleset(Ruleset):
         Returns:
             List of Rule objects containing SQL schema personal data patterns
         """
-        rules = []
+        rules: list[Rule] = []
         for rule_name, rule_data in PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS.items():
             rules.append(
                 Rule(
