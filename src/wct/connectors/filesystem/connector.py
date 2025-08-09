@@ -39,7 +39,7 @@ class FilesystemConnector(Connector):
         exclude_patterns: list[str] | None = None,
         max_files: int = 1000,
     ):
-        """Initialize the filesystem connector.
+        """Initialise the filesystem connector.
 
         Args:
             path: Path to the file or directory to read
@@ -49,7 +49,7 @@ class FilesystemConnector(Connector):
             exclude_patterns: List of glob patterns to exclude (e.g., ['*.log', '__pycache__'])
             max_files: Maximum number of files to process (safety limit)
         """
-        super().__init__()  # Initialize logger from base class
+        super().__init__()  # Initialise logger from base class
         self.path = Path(path)
         self.chunk_size = chunk_size
         self.encoding = encoding

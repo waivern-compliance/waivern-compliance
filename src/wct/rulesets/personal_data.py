@@ -11,74 +11,170 @@ from typing_extensions import override
 from wct.rulesets.base import Ruleset
 from wct.rulesets.types import Rule, RuleData
 
-# Version constant for this ruleset
-VERSION: Final[str] = "1.0.0"
+# Version constant for this ruleset (private)
+_VERSION: Final[str] = "1.0.0"
+_RULESET_NAME: Final[str] = "personal_data"
 
-PERSONAL_DATA: Final[dict[str, RuleData]] = {
+_PERSONAL_DATA: Final[dict[str, RuleData]] = {
     "basic_profile": {
         "description": "Basic identifying information about individuals",
         "patterns": (
             "first_name",
             "last_name",
             "middle_name",
-            "address",
-            "telephone",
+            "full_name",
+            "display_name",
             "email",
+            "email_address",
+            "phone",
+            "mobile",
+            "telephone",
+            "address",
+            "street_address",
+            "city",
+            "state",
+            "country",
+            "zip",
+            "postal_code",
             "title",
+            "username",
             "account_id",
+            "user_id",
+            "customer_id",
+            "users",
+            "customers",
+            "profiles",
+            "contacts",
             "name",
             "firstname",
             "lastname",
-            "fullname",
-            "username",
             "mail",
             "e_mail",
-            "phone",
             "tel",
-            "mobile",
             "cell",
             "street",
-            "city",
-            "zip",
             "postal",
-            "country",
+            "user_profiles",
+            "customer_profiles",
+            "personal_info",
+            "identities",
+            "contact_email",
+            "primary_email",
+            "phone_number",
+            "contact_phone",
+            "home_address",
+            "mailing_address",
+            "postcode",
+            "salutation",
+            "prefix",
+            "suffix",
+            "login",
+            "fullname",
+            "person",
+            "client",
+            "member",
+            "account",
+            "createuser",
+            "getuser",
+            "updateuser",
+            "deleteuser",
+            "registeruser",
+            "sendemail",
+            "validateemail",
+            "getemail",
+            "setemail",
+            "authenticate",
+            "signin",
+            "authorise",
+            "getprofile",
+            "updateprofile",
+            "saveprofile",
         ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
+            "compliance_relevance": [
+                "GDPR",
+                "EU_AI_ACT",
+                "NIST_AI_RMF",
+                "CCPA",
+                "UK_GDPR",
+            ],
         },
     },
     "account_data": {
         "description": "Account and subscription related data",
-        "patterns": ("transaction", "subscription", "purchase", "cancellation"),
+        "patterns": (
+            "accounts",
+            "subscriptions",
+            "memberships",
+            "transactions",
+            "purchases",
+            "orders",
+            "registrations",
+            "enrollments",
+            "transaction",
+            "subscription",
+            "purchase",
+            "cancellation",
+            "user_accounts",
+            "account_details",
+            "subscription_data",
+            "membership_info",
+            "order_history",
+            "transaction_log",
+        ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF", "CCPA"],
         },
     },
     "payment_data": {
         "description": "Payment and billing information",
         "patterns": (
+            "payments",
+            "billing",
+            "invoices",
+            "receipts",
+            "payment_methods",
             "payment_method",
             "invoice",
             "receipt",
             "credit",
             "card",
             "payment",
-            "billing",
+            "billing_info",
+            "payment_history",
+            "invoice_details",
+            "billing_addresses",
+            "billing_address",
+            "invoice_number",
+            "receipt_id",
+            "billing_email",
         ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF", "PCI_DSS"],
         },
     },
     "financial_data": {
         "description": "Financial identifiers and sensitive financial information",
         "patterns": (
-            "credit_rating",
-            "payment_history",
+            "financial_data",
+            "bank_accounts",
+            "credit_cards",
+            "payment_cards",
+            "wallets",
+            "financial_profiles",
+            "credit_info",
+            "banking_details",
+            "card_details",
             "bank",
             "account",
+            "credit_rating",
+            "payment_history",
             "ssn",
             "social",
             "passport",
@@ -86,40 +182,129 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "id_number",
             "national_id",
             "credit_card",
+            "social_security_number",
+            "tax_id",
+            "passport_number",
+            "drivers_license",
+            "government_id",
+            "identity_document",
+            "bank_account",
+            "account_number",
+            "routing_number",
+            "iban",
+            "swift_code",
+            "card_number",
+            "credit_card_number",
+            "debit_card",
+            "cvv",
+            "security_code",
+            "credit_score",
+            "financial_rating",
+            "credit_history",
         ),
         "risk_level": "high",
         "metadata": {
             "special_category": "N",
+            "compliance_relevance": [
+                "GDPR",
+                "EU_AI_ACT",
+                "NIST_AI_RMF",
+                "PCI_DSS",
+                "SOX",
+            ],
         },
     },
     "behavioral_event_data": {
         "description": "User behavioral and interaction data",
         "patterns": (
+            "user_events",
+            "activity_logs",
+            "user_sessions",
+            "interactions",
+            "analytics",
+            "page_views",
+            "click_events",
+            "user_actions",
+            "behavior_data",
+            "tracking_data",
             "page_view",
             "click",
             "scroll",
             "form_completion",
             "timestamp",
             "app_usage",
+            "event_type",
+            "action_type",
+            "click_data",
+            "session_id",
+            "duration",
+            "referrer",
+            "source",
+            "campaign",
+            "utm_source",
+            "utm_campaign",
+            "scroll_depth",
+            "conversion_event",
         ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
+            "compliance_relevance": ["GDPR", "CCPA", "ePrivacy"],
         },
     },
     "technical_device_and_network_data": {
         "description": "Technical device and network identifiers",
         "patterns": (
+            "devices",
+            "user_devices",
+            "device_info",
+            "network_data",
+            "system_info",
+            "browser_data",
+            "platform_data",
+            "technical_profiles",
+            "device_fingerprints",
             "device_id",
+            "device_uuid",
+            "hardware_id",
+            "device_fingerprint",
             "ip_address",
-            "cookie",
+            "ip_addr",
+            "remote_addr",
+            "client_ip",
+            "network_id",
+            "user_agent",
+            "browser",
+            "browser_version",
+            "operating_system",
+            "os_version",
+            "platform",
+            "device_type",
+            "device_model",
+            "screen_resolution",
             "language",
+            "locale",
+            "timezone",
+            "screen_size",
+            "viewport_size",
+            "cookie",
+            "cookie_id",
+            "session_cookie",
+            "tracking_cookie",
+            "advertisement_id",
             "screen",
             "network",
         ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
+            "compliance_relevance": [
+                "GDPR",
+                "ePrivacy",
+                "CCPA",
+                "EU_AI_ACT",
+                "NIST_AI_RMF",
+            ],
         },
     },
     "inferred_profile_data": {
@@ -134,6 +319,7 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT"],
         },
     },
     "User_enriched_profile_data": {
@@ -142,14 +328,47 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR"],
         },
     },
     "location_data": {
         "description": "General location information",
-        "patterns": ("country", "region", "city", "suburb"),
+        "patterns": (
+            "locations",
+            "addresses",
+            "geographic_data",
+            "location_history",
+            "places",
+            "regions",
+            "countries",
+            "cities",
+            "postal_codes",
+            "geographic_info",
+            "country",
+            "country_code",
+            "region",
+            "state",
+            "province",
+            "territory",
+            "city",
+            "town",
+            "suburb",
+            "district",
+            "neighborhood",
+            "locality",
+            "postal_code",
+            "zip_code",
+            "postcode",
+            "area_code",
+            "location",
+            "general_location",
+            "approximate_location",
+            "region_code",
+        ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR", "CCPA"],
         },
     },
     "user_generated_content": {
@@ -163,16 +382,39 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     "accurate_location": {
         "description": "Precise location data (GDPR Article 9 special category)",
         "patterns": (
+            "gps_data",
+            "coordinates",
+            "precise_locations",
+            "geolocation",
+            "tracking_data",
+            "location_tracking",
+            "gps_tracking",
+            "position_data",
+            "waypoints",
+            "routes",
+            "latitude",
+            "longitude",
+            "lat",
+            "lng",
+            "gps_coordinates",
             "precise_location",
             "exact_location",
             "gps",
-            "coordinates",
-            "latitude",
-            "longitude",
+            "location_accuracy",
+            "altitude",
+            "elevation",
+            "bearing",
+            "heading",
+            "speed",
+            "velocity",
+            "tracking_point",
+            "waypoint",
+            "geofence",
         ),
         "risk_level": "high",
         "metadata": {
             "special_category": "Y",
+            "compliance_relevance": ["GDPR"],
         },
     },
     "health_data": {
@@ -249,15 +491,29 @@ PERSONAL_DATA: Final[dict[str, RuleData]] = {
     "date_of_birth": {
         "description": "Birth date and age-related information",
         "patterns": (
+            "birth_data",
+            "age_data",
+            "demographic_data",
+            "personal_demographics",
             "date_of_birth",
+            "birth_date",
             "birthday",
-            "birth",
             "dob",
+            "birth_day",
             "age",
+            "birth_year",
+            "birth_month",
+            "age_group",
+            "age_range",
+            "age_category",
+            "date_born",
+            "born_on",
+            "birth",
         ),
         "risk_level": "medium",
         "metadata": {
             "special_category": "N",
+            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR", "COPPA"],
         },
     },
 }
@@ -270,39 +526,44 @@ class PersonalDataRuleset(Ruleset):
     with built-in logging capabilities for debugging and monitoring.
     """
 
-    def __init__(self, ruleset_name: str = "personal_data") -> None:
-        """Initialize the personal data ruleset.
+    def __init__(self) -> None:
+        """Initialise the personal data ruleset."""
+        super().__init__()
+        self.rules: tuple[Rule, ...] | None = None
+        self.logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
-        Args:
-            ruleset_name: Name of the ruleset for logging purposes
-        """
-        super().__init__(ruleset_name)
-        self.logger.debug(f"Initialized {self.__class__.__name__} ruleset")
+    @property
+    @override
+    def name(self) -> str:
+        """Get the canonical name of this ruleset."""
+        return _RULESET_NAME
 
     @property
     @override
     def version(self) -> str:
         """Get the version of this ruleset."""
-        return VERSION
+        return _VERSION
 
     @override
-    def get_rules(self) -> list[Rule]:
+    def get_rules(self) -> tuple[Rule, ...]:
         """Get the personal data rules.
 
         Returns:
-            List of Rule objects containing all GDPR-compliant personal data patterns
+            Immutable tuple of Rule objects containing all GDPR-compliant personal data patterns
         """
-        rules: list[Rule] = []
-        for rule_name, rule_data in PERSONAL_DATA.items():
-            rules.append(
-                Rule(
-                    name=rule_name,
-                    description=rule_data["description"],
-                    patterns=rule_data["patterns"],
-                    risk_level=rule_data["risk_level"],
-                    metadata=rule_data["metadata"],
+        if self.rules is None:
+            rules_list: list[Rule] = []
+            for rule_name, rule_data in _PERSONAL_DATA.items():
+                rules_list.append(
+                    Rule(
+                        name=rule_name,
+                        description=rule_data["description"],
+                        patterns=rule_data["patterns"],
+                        risk_level=rule_data["risk_level"],
+                        metadata=rule_data["metadata"],
+                    )
                 )
-            )
+            self.rules = tuple(rules_list)
+            self.logger.debug(f"Generated {len(self.rules)} personal data rules")
 
-        self.logger.debug(f"Returning {len(rules)} personal data rules")
-        return rules
+        return self.rules

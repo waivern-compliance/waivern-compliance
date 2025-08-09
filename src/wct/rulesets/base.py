@@ -12,16 +12,25 @@ class Ruleset(abc.ABC):
 
     This provides a common interface for rulesets and automatic
     logger initialisation following WCT logging conventions.
+
+    Each ruleset must define its canonical name via the name property.
     """
 
-    def __init__(self, ruleset_name: str) -> None:
-        """Initialize the ruleset with a configured logger.
+    def __init__(self) -> None:
+        """Initialise the ruleset.
 
-        Args:
-            ruleset_name: The name of the ruleset for logging purposes
+        Uses the ruleset's canonical name for logging purposes.
         """
-        self.ruleset_name = ruleset_name
-        self.logger = get_ruleset_logger(ruleset_name)
+        self.logger = get_ruleset_logger(self.name)
+
+    @property
+    @abc.abstractmethod
+    def name(self) -> str:
+        """Get the canonical name of this ruleset.
+
+        Returns:
+            The fixed, canonical name for this ruleset type
+        """
 
     @property
     @abc.abstractmethod
@@ -33,11 +42,11 @@ class Ruleset(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_rules(self) -> list[Rule]:
+    def get_rules(self) -> tuple[Rule, ...]:
         """Get the rules defined by this ruleset.
 
         Returns:
-            List of Rule objects
+            Immutable tuple of Rule objects
         """
 
 
@@ -106,16 +115,16 @@ class RulesetLoader:
     """Loads rulesets using singleton registry with explicit registration."""
 
     @classmethod
-    def load_ruleset(cls, ruleset_name: str) -> list[Rule]:
+    def load_ruleset(cls, ruleset_name: str) -> tuple[Rule, ...]:
         """Load a ruleset using the singleton registry.
 
         Args:
             ruleset_name: Name of the ruleset (e.g., "personal_data")
 
         Returns:
-            List of Rule objects
+            Immutable tuple of Rule objects
         """
         registry = RulesetRegistry()
         ruleset_class = registry.get_ruleset_class(ruleset_name)
-        ruleset_instance = ruleset_class(ruleset_name)
+        ruleset_instance = ruleset_class()
         return ruleset_instance.get_rules()
