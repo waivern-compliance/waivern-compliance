@@ -10,7 +10,7 @@ from wct.rulesets.types import Rule, RuleData
 PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     "users_table": {
         "description": "Database table storing user information",
-        "patterns": ["users"],
+        "patterns": ("users",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "user_data",
@@ -20,7 +20,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "customers_table": {
         "description": "Database table storing customer information",
-        "patterns": ["customers"],
+        "patterns": ("customers",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "user_data",
@@ -30,7 +30,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "profiles_table": {
         "description": "Database table storing profile information",
-        "patterns": ["profiles"],
+        "patterns": ("profiles",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "profile_data",
@@ -40,7 +40,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "contacts_table": {
         "description": "Database table storing contact information",
-        "patterns": ["contacts"],
+        "patterns": ("contacts",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "contact_data",
@@ -50,7 +50,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "addresses_table": {
         "description": "Database table storing address information",
-        "patterns": ["addresses"],
+        "patterns": ("addresses",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "address",
@@ -60,7 +60,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "emails_table": {
         "description": "Database table storing email addresses",
-        "patterns": ["emails"],
+        "patterns": ("emails",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "email",
@@ -70,7 +70,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "phones_table": {
         "description": "Database table storing phone numbers",
-        "patterns": ["phones"],
+        "patterns": ("phones",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "phone",
@@ -80,7 +80,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "payments_table": {
         "description": "Database table storing payment information",
-        "patterns": ["payments"],
+        "patterns": ("payments",),
         "risk_level": "high",
         "metadata": {
             "data_type": "financial",
@@ -90,7 +90,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "orders_table": {
         "description": "Database table storing order information",
-        "patterns": ["orders"],
+        "patterns": ("orders",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "transaction_data",
@@ -100,7 +100,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "email_column": {
         "description": "Database column storing email addresses",
-        "patterns": ["email"],
+        "patterns": ("email",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "email",
@@ -110,7 +110,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "phone_column": {
         "description": "Database column storing phone numbers",
-        "patterns": ["phone"],
+        "patterns": ("phone",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "phone",
@@ -120,7 +120,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "first_name_column": {
         "description": "Database column storing first names",
-        "patterns": ["first_name"],
+        "patterns": ("first_name",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "name",
@@ -130,7 +130,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "last_name_column": {
         "description": "Database column storing last names",
-        "patterns": ["last_name"],
+        "patterns": ("last_name",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "name",
@@ -140,7 +140,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "address_column": {
         "description": "Database column storing addresses",
-        "patterns": ["address"],
+        "patterns": ("address",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "address",
@@ -150,7 +150,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "ssn_column": {
         "description": "Database column storing social security numbers",
-        "patterns": ["ssn"],
+        "patterns": ("ssn",),
         "risk_level": "high",
         "metadata": {
             "data_type": "government_id",
@@ -160,7 +160,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "credit_card_column": {
         "description": "Database column storing credit card information",
-        "patterns": ["credit_card"],
+        "patterns": ("credit_card",),
         "risk_level": "high",
         "metadata": {
             "data_type": "financial",
@@ -170,7 +170,7 @@ PERSONAL_DATA_CODE_SQL_SCHEMA_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "date_of_birth_column": {
         "description": "Database column storing birth dates",
-        "patterns": ["date_of_birth"],
+        "patterns": ("date_of_birth",),
         "risk_level": "medium",
         "metadata": {
             "data_type": "date_of_birth",

@@ -10,7 +10,7 @@ from wct.rulesets.types import Rule, RuleData
 PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     "Artificial Intelligence Model Training": {
         "description": "Training AI/ML models using personal data",
-        "patterns": [
+        "patterns": (
             "model training",
             "machine learning",
             "ai training",
@@ -29,7 +29,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "snorkel ai",
             "kubeflow",
             "feast",
-        ],
+        ),
         "risk_level": "high",
         "metadata": {
             "purpose_category": "AI_AND_ML",
@@ -38,7 +38,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Artificial Intelligence Bias Testing": {
         "description": "Testing AI/ML models for bias and fairness issues",
-        "patterns": [
+        "patterns": (
             "bias testing",
             "fairness testing",
             "model bias",
@@ -60,7 +60,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "credo ai",
             "aws sagemaker clarify",
             "parity ai",
-        ],
+        ),
         "risk_level": "high",
         "metadata": {
             "purpose_category": "AI_AND_ML",
@@ -69,7 +69,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Artificial Intelligence Model Refinement": {
         "description": "Refining and improving AI/ML models for better performance",
-        "patterns": [
+        "patterns": (
             "model refinement",
             "model improvement",
             "fine-tuning",
@@ -92,7 +92,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "cohere",
             "scale ai",
             "labelbox",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "purpose_category": "AI_AND_ML",
@@ -101,7 +101,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Artificial Intelligence Performance Testing": {
         "description": "Testing AI/ML model performance, accuracy, and robustness",
-        "patterns": [
+        "patterns": (
             "performance testing",
             "model evaluation",
             "accuracy testing",
@@ -118,7 +118,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "helm",
             "big-bench",
             "decoding trust benchmark",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "purpose_category": "AI_AND_ML",
@@ -127,7 +127,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Artificial Intelligence Security Testing": {
         "description": "Testing AI/ML models for security vulnerabilities and threats",
-        "patterns": [
+        "patterns": (
             "security testing",
             "penetration testing",
             "adversarial testing",
@@ -148,7 +148,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "darktrace",
             "synack",
             "shellgpt",
-        ],
+        ),
         "risk_level": "low",
         "metadata": {
             "purpose_category": "AI_AND_ML",
@@ -163,7 +163,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Artificial Intelligence Compliance Management": {
         "description": "Managing AI/ML compliance, governance, and regulatory requirements",
-        "patterns": [
+        "patterns": (
             "compliance",
             "risk management",
             "governance",
@@ -186,7 +186,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "fairly.ai",
             "anch.ai",
             "fiddler ai",
-        ],
+        ),
         "risk_level": "low",
         "metadata": {
             "purpose_category": "AI_AND_ML",
@@ -195,7 +195,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "General Product and Service Delivery": {
         "description": "Delivering products and services to customers and users",
-        "patterns": [
+        "patterns": (
             "service",
             "delivery",
             "product",
@@ -210,7 +210,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "shopify",
             "webflow",
             "wordpress",
-        ],
+        ),
         "risk_level": "low",
         "metadata": {
             "purpose_category": "OPERATIONAL",
@@ -219,7 +219,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Customer Service and Support": {
         "description": "Providing customer service, support, and assistance",
-        "patterns": [
+        "patterns": (
             "support",
             "customer",
             "help",
@@ -234,7 +234,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "salesforce servicecloud",
             "helpscout",
             "liveagent",
-        ],
+        ),
         "risk_level": "low",
         "metadata": {
             "purpose_category": "OPERATIONAL",
@@ -243,7 +243,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Customization of Products and Services": {
         "description": "Customising products and services based on user preferences",
-        "patterns": [
+        "patterns": (
             "customisation",
             "preferences",
             "settings",
@@ -251,7 +251,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "theme",
             "ui",
             "personalization",
-        ],
+        ),
         "risk_level": "low",
         "metadata": {
             "purpose_category": "OPERATIONAL",
@@ -260,7 +260,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "User Identity and Login Management": {
         "description": "Managing user identity, authentication, and login processes",
-        "patterns": [
+        "patterns": (
             "authentication",
             "login",
             "account",
@@ -275,7 +275,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "okta",
             "microsoft active directory",
             "forgerock",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "purpose_category": "OPERATIONAL",
@@ -284,7 +284,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Payment, Billing, and Invoicing": {
         "description": "Processing payments, billing, and financial transactions",
-        "patterns": [
+        "patterns": (
             "payment",
             "transaction",
             "billing",
@@ -300,7 +300,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "worldpay",
             "klarna",
             "recurly",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "purpose_category": "OPERATIONAL",
@@ -309,7 +309,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Behavioral Data Analysis for Product Improvement": {
         "description": "Analysing user behaviour and data to improve products and services",
-        "patterns": [
+        "patterns": (
             "analytics",
             "tracking",
             "monitor",
@@ -324,7 +324,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "matomo",
             "heap",
             "fullstory",
-        ],
+        ),
         "risk_level": "high",
         "metadata": {
             "purpose_category": "ANALYTICS",
@@ -333,7 +333,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Dynamic Personalization of Products and Services": {
         "description": "Dynamically personalising products and services based on user data",
-        "patterns": [
+        "patterns": (
             "personalization",
             "recommendation",
             "history",
@@ -346,7 +346,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "dynamic yield",
             "adobe target",
             "coveo relevance cloud",
-        ],
+        ),
         "risk_level": "high",
         "metadata": {
             "purpose_category": "MARKETING_AND_ADVERTISING",
@@ -355,7 +355,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Consumer Marketing Within Owned Products": {
         "description": "Marketing and promotional activities within company-owned products and platforms",
-        "patterns": [
+        "patterns": (
             "marketing",
             "promotion",
             "advertising",
@@ -371,7 +371,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "sendgrid",
             "mailjet",
             "onesignal",
-        ],
+        ),
         "risk_level": "medium",
         "metadata": {
             "purpose_category": "MARKETING_AND_ADVERTISING",
@@ -380,7 +380,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Targeted Marketing via Third-Party Platforms": {
         "description": "Targeted marketing and advertising through third-party platforms and networks",
-        "patterns": [
+        "patterns": (
             "advertising",
             "targeting",
             "third-party marketing",
@@ -393,7 +393,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "tiktok",
             "twitter",
             "linkedin ads",
-        ],
+        ),
         "risk_level": "high",
         "metadata": {
             "purpose_category": "MARKETING_AND_ADVERTISING",
@@ -402,7 +402,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Third-Party Marketing via Owned Products": {
         "description": "Third-party marketing and advertising activities conducted through company-owned products",
-        "patterns": [
+        "patterns": (
             "partner marketing",
             "third-party advertising",
             "sponsored content",
@@ -412,7 +412,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "google ads 360",
             "tiktok",
             "third-party advertisers",
-        ],
+        ),
         "risk_level": "high",
         "metadata": {
             "purpose_category": "MARKETING_AND_ADVERTISING",
@@ -421,7 +421,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
     },
     "Security, Fraud Prevention, and Abuse Detection": {
         "description": "Protecting against security threats, fraud, and platform abuse",
-        "patterns": [
+        "patterns": (
             "security",
             "fraud",
             "protection",
@@ -436,7 +436,7 @@ PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "complyadvantage",
             "veriff",
             "feedzai",
-        ],
+        ),
         "risk_level": "low",
         "metadata": {
             "purpose_category": "SECURITY",

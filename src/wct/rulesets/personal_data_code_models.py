@@ -10,7 +10,7 @@ from wct.rulesets.types import Rule, RuleData
 PERSONAL_DATA_CODE_CLASS_PATTERNS: Final[dict[str, RuleData]] = {
     "user_model": {
         "description": "Classes and models representing users or persons",
-        "patterns": ["user", "person", "customer", "client", "member"],
+        "patterns": ("user", "person", "customer", "client", "member"),
         "risk_level": "medium",
         "metadata": {
             "data_type": "user_data",
@@ -19,7 +19,7 @@ PERSONAL_DATA_CODE_CLASS_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "profile_model": {
         "description": "Classes and models representing user profiles",
-        "patterns": ["profile", "account", "identity"],
+        "patterns": ("profile", "account", "identity"),
         "risk_level": "medium",
         "metadata": {
             "data_type": "profile_data",
@@ -28,7 +28,7 @@ PERSONAL_DATA_CODE_CLASS_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "contact_model": {
         "description": "Classes and models representing contact information",
-        "patterns": ["contact", "address", "phone", "email"],
+        "patterns": ("contact", "address", "phone", "email"),
         "risk_level": "medium",
         "metadata": {
             "data_type": "contact_data",
@@ -37,7 +37,7 @@ PERSONAL_DATA_CODE_CLASS_PATTERNS: Final[dict[str, RuleData]] = {
     },
     "health_model": {
         "description": "Classes and models representing health data (GDPR Article 9 special category)",
-        "patterns": ["patient", "medical", "health", "diagnosis"],
+        "patterns": ("patient", "medical", "health", "diagnosis"),
         "risk_level": "high",
         "metadata": {
             "data_type": "health_data",
