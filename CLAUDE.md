@@ -191,7 +191,7 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 - Reference related issues or previous work when applicable
 
 # important-instruction-reminders
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+DO what has been asked—nothing more, nothing less. DO NOT overcomplicate things.
+DO NOT be afraid of breaking changes. Refactoring is BETTER than 'backwards compatibility'.
+Adhere to software craftsmanship principles. Break large classes and functions into smaller ones to represent granular concepts.
+NEVER try to bypass code quality checks. Think carefully about each issue and provide multiple options where possible, allowing the user to choose the best one.

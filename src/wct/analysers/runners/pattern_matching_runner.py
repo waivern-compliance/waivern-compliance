@@ -9,7 +9,6 @@ from wct.logging import get_analyser_logger
 from wct.rulesets import RulesetLoader
 from wct.rulesets.types import Rule
 
-
 # Type alias for pattern matcher function
 PatternMatcherFn = Callable[
     [str, str, dict[str, Any], dict[str, Any]], dict[str, Any] | None
