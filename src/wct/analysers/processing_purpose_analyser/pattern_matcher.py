@@ -7,7 +7,7 @@ DEFAULT_FINDING_CONFIDENCE = 0.5
 
 
 def processing_purpose_pattern_matcher(
-    content: str, pattern: str, category_data: dict[str, Any], context: dict[str, Any]
+    content: str, pattern: str, rule_metadata: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any] | None:
     """Pattern matcher function for processing purpose analysis.
 
@@ -17,8 +17,8 @@ def processing_purpose_pattern_matcher(
     Args:
         content: The content being analyzed
         pattern: The matched pattern
-        category_data: Data about the pattern category from ruleset
-        context: Additional context including metadata, config, and utilities
+        rule_metadata: Metadata from the rule
+        context: Additional context including rule info, metadata, config, and utilities
 
     Returns:
         Processing purpose finding dictionary or None if no finding should be created
@@ -26,7 +26,7 @@ def processing_purpose_pattern_matcher(
     evidence_extractor = context["evidence_extractor"]
     metadata = context["metadata"]
     config = context["config"]
-    category_name = context["category_name"]  # This is the purpose_name
+    rule_name = context["rule_name"]  # This is the purpose_name
 
     # Check if content is empty
     if not content.strip():
@@ -49,10 +49,10 @@ def processing_purpose_pattern_matcher(
 
     # Create processing purpose specific finding structure
     finding = {
-        "purpose": category_name,  # Processing purpose name
-        "purpose_category": category_data.get("purpose_category", "OPERATIONAL"),
-        "risk_level": category_data.get("risk_level", "low"),
-        "compliance_relevance": category_data.get("compliance_relevance", ["GDPR"]),
+        "purpose": rule_name,  # Processing purpose name
+        "purpose_category": rule_metadata.get("purpose_category", "OPERATIONAL"),
+        "risk_level": context.get("risk_level", "low"),
+        "compliance_relevance": rule_metadata.get("compliance_relevance", ["GDPR"]),
         "matched_pattern": pattern,
         "confidence": confidence,
         "evidence": evidence,

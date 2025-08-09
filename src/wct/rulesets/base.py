@@ -4,6 +4,7 @@ import abc
 from typing import Any
 
 from wct.logging import get_ruleset_logger
+from wct.rulesets.types import Rule
 
 
 class Ruleset(abc.ABC):
@@ -23,11 +24,11 @@ class Ruleset(abc.ABC):
         self.logger = get_ruleset_logger(ruleset_name)
 
     @abc.abstractmethod
-    def get_patterns(self) -> dict[str, Any]:
-        """Get the patterns defined by this ruleset.
+    def get_rules(self) -> list[Rule]:
+        """Get the rules defined by this ruleset.
 
         Returns:
-            Dictionary containing the ruleset patterns
+            List of Rule objects
         """
 
 
@@ -43,40 +44,51 @@ class RulesetNotFoundError(RulesetError):
     pass
 
 
-class RulesetLoader:
-    """Loads rulesets from Python modules in the rulesets package."""
+class RulesetRegistry:
+    """Singleton registry for ruleset classes with explicit registration."""
 
-    @classmethod
-    def load_ruleset(cls, ruleset_name: str) -> dict[str, Any]:
-        """Load a ruleset from a Python module.
+    _instance: "RulesetRegistry | None" = None
+    _registry: dict[str, type[Ruleset]]
 
-        Args:
-            ruleset_name: Name of the ruleset module (e.g., "personal_data_gdpr")
+    def __new__(cls, *args: Any, **kwargs: Any) -> "RulesetRegistry":
+        """Create or return the singleton instance of RulesetRegistry.
+
+        This ensures only one instance of the registry exists throughout
+        the application lifecycle.
 
         Returns:
-            Dictionary containing the ruleset data
+            The singleton RulesetRegistry instance
         """
-        try:
-            module_path = f"wct.rulesets.{ruleset_name}"
-            module = __import__(module_path, fromlist=[ruleset_name])
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._registry = {}
+        return cls._instance
 
-            # Look for a Ruleset class implementation
-            for attr_name in dir(module):
-                attr = getattr(module, attr_name)
-                if (
-                    isinstance(attr, type)
-                    and issubclass(attr, Ruleset)
-                    and attr is not Ruleset
-                ):
-                    # Found a Ruleset subclass, instantiate it
-                    ruleset_instance = attr(ruleset_name)
-                    return ruleset_instance.get_patterns()
+    def register(self, name: str, ruleset_class: type[Ruleset]) -> None:
+        """Register a ruleset class with a name."""
+        self._registry[name] = ruleset_class
 
-            raise RulesetNotFoundError(
-                f"No Ruleset class found in module {ruleset_name}"
-            )
+    def get_ruleset_class(self, name: str) -> type[Ruleset]:
+        """Get a registered ruleset class by name."""
+        if name not in self._registry:
+            raise RulesetNotFoundError(f"Ruleset {name} not registered")
+        return self._registry[name]
 
-        except ImportError as e:
-            raise RulesetNotFoundError(
-                f"Ruleset module {ruleset_name} not found"
-            ) from e
+
+class RulesetLoader:
+    """Loads rulesets using singleton registry with explicit registration."""
+
+    @classmethod
+    def load_ruleset(cls, ruleset_name: str) -> list[Rule]:
+        """Load a ruleset using the singleton registry.
+
+        Args:
+            ruleset_name: Name of the ruleset (e.g., "personal_data")
+
+        Returns:
+            List of Rule objects
+        """
+        registry = RulesetRegistry()
+        ruleset_class = registry.get_ruleset_class(ruleset_name)
+        ruleset_instance = ruleset_class(ruleset_name)
+        return ruleset_instance.get_rules()

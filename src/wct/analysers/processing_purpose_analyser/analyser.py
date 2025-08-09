@@ -174,9 +174,10 @@ class ProcessingPurposeAnalyser(Analyser):
         # Validate the output message against the output schema
         output_message.validate()
 
-        self.logger.info(
-            f"Processing purpose analysis completed with {len(findings)} findings"
+        self.logger.debug(
+            f"Processing purpose analysis completed with data: {result_data}"
         )
+
         return output_message
 
     def _process_standard_input_with_runners(

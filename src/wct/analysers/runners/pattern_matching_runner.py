@@ -7,6 +7,8 @@ from wct.analysers.runners.base import AnalysisRunner, AnalysisRunnerError
 from wct.analysers.utilities import EvidenceExtractor
 from wct.logging import get_analyser_logger
 from wct.rulesets import RulesetLoader
+from wct.rulesets.types import Rule
+
 
 # Type alias for pattern matcher function
 PatternMatcherFn = Callable[
@@ -67,28 +69,27 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
 
             self.logger.debug(f"Running pattern analysis with ruleset: {ruleset_name}")
 
-            # Load patterns (with caching)
-            patterns = self._get_patterns(ruleset_name)
-            if not patterns:
-                self.logger.warning(f"No patterns found in ruleset: {ruleset_name}")
-                return []
+            # Load rules (with caching)
+            rules = self._get_rules(ruleset_name)
+            if not rules:
+                self.logger.warning(f"No rules found in ruleset: {ruleset_name}")
 
             # Run pattern matching using the provided strategy
             findings = []
             content_lower = input_data.lower()
 
-            for category_name, category_data in patterns.items():
-                category_patterns = category_data.get("patterns", [])
-
-                for pattern in category_patterns:
+            for rule in rules:
+                for pattern in rule.patterns:
                     if pattern.lower() in content_lower:
                         # Delegate to the analyser-specific pattern matcher
                         finding = self.pattern_matcher(
                             input_data,
                             pattern,
-                            category_data,
+                            rule.metadata,
                             {
-                                "category_name": category_name,
+                                "rule_name": rule.name,
+                                "rule_description": rule.description,
+                                "risk_level": rule.risk_level,
                                 "metadata": metadata,
                                 "config": config,
                                 "evidence_extractor": self.evidence_extractor,
@@ -98,10 +99,8 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
                         if finding:
                             findings.append(finding)
                             self.logger.debug(
-                                f"Found pattern '{pattern}' in category '{category_name}'"
+                                f"Found pattern '{pattern}' in rule '{rule.name}'"
                             )
-
-            self.logger.info(f"Pattern matching completed: {len(findings)} findings")
             return findings
 
         except Exception as e:
@@ -113,7 +112,7 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
         self,
         content: str,
         pattern: str,
-        category_data: dict[str, Any],
+        rule_metadata: dict[str, Any],
         context: dict[str, Any],
     ) -> dict[str, Any] | None:
         """Provide default pattern matching implementation.
@@ -127,8 +126,8 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
         Args:
             content: The content being analyzed
             pattern: The matched pattern
-            category_data: Data about the pattern category from ruleset
-            context: Additional context including metadata, config, and utilities
+            rule_metadata: Metadata from the rule
+            context: Additional context including rule info, metadata, config, and utilities
 
         Returns:
             Finding dictionary or None if no finding should be created
@@ -136,7 +135,7 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
         evidence_extractor = context["evidence_extractor"]
         metadata = context["metadata"]
         config = context["config"]
-        category_name = context["category_name"]
+        rule_name = context["rule_name"]
 
         max_evidence = config.get("max_evidence", 3)
         context_size = config.get("context_size", "small")
@@ -150,32 +149,27 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
             return None
 
         return {
-            "type": category_name,
-            "risk_level": category_data.get("risk_level", "medium"),
+            "type": rule_name,
+            "risk_level": context.get("risk_level", "medium"),
             "matched_pattern": pattern,
             "evidence": evidence,
             "metadata": metadata.copy() if metadata else {},
         }
 
-    def _get_patterns(self, ruleset_name: str) -> dict[str, Any]:
-        """Get patterns from ruleset, using cache when possible.
+    def _get_rules(self, ruleset_name: str) -> list[Rule]:
+        """Get rules from ruleset, using cache when possible.
 
         Args:
             ruleset_name: Name of the ruleset to load
 
         Returns:
-            Dictionary of patterns loaded from the ruleset
+            List of Rule objects loaded from the ruleset
         """
         if ruleset_name not in self._patterns_cache:
-            try:
-                self._patterns_cache[ruleset_name] = RulesetLoader.load_ruleset(
-                    ruleset_name
-                )
-                self.logger.info(f"Loaded ruleset: {ruleset_name}")
-            except Exception as e:
-                self.logger.error(f"Failed to load ruleset {ruleset_name}: {e}")
-                # Return empty dict for graceful degradation
-                self._patterns_cache[ruleset_name] = {}
+            self._patterns_cache[ruleset_name] = RulesetLoader.load_ruleset(
+                ruleset_name
+            )
+            self.logger.info(f"Loaded ruleset: {ruleset_name}")
 
         return self._patterns_cache[ruleset_name]
 
