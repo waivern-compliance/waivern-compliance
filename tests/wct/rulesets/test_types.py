@@ -119,13 +119,13 @@ class TestRuleDataTypedDict:
         # This tests the TypedDict structure by creating a valid instance
         rule_data: RuleData = {
             "description": "Test description",
-            "patterns": ["pattern1", "pattern2"],
+            "patterns": ("pattern1", "pattern2"),
             "risk_level": "medium",
             "metadata": {"data_type": "test"},
         }
 
         assert rule_data["description"] == "Test description"
-        assert rule_data["patterns"] == ["pattern1", "pattern2"]
+        assert rule_data["patterns"] == ("pattern1", "pattern2")
         assert rule_data["risk_level"] == "medium"
         assert rule_data["metadata"] == {"data_type": "test"}
 
@@ -133,7 +133,7 @@ class TestRuleDataTypedDict:
         """Test that RuleData metadata can contain different value types."""
         rule_data: RuleData = {
             "description": "Mixed metadata types",
-            "patterns": ["test"],
+            "patterns": ("test",),
             "risk_level": "medium",
             "metadata": {
                 "string_value": "test",

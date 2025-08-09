@@ -11,6 +11,9 @@ from typing_extensions import override
 from wct.rulesets.base import Ruleset
 from wct.rulesets.types import Rule, RuleData
 
+# Version constant for this ruleset
+VERSION: Final[str] = "1.0.0"
+
 PERSONAL_DATA: Final[dict[str, RuleData]] = {
     "basic_profile": {
         "description": "Basic identifying information about individuals",
@@ -275,6 +278,12 @@ class PersonalDataRuleset(Ruleset):
         """
         super().__init__(ruleset_name)
         self.logger.debug(f"Initialized {self.__class__.__name__} ruleset")
+
+    @property
+    @override
+    def version(self) -> str:
+        """Get the version of this ruleset."""
+        return VERSION
 
     @override
     def get_rules(self) -> list[Rule]:

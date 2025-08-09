@@ -23,6 +23,15 @@ class Ruleset(abc.ABC):
         self.ruleset_name = ruleset_name
         self.logger = get_ruleset_logger(ruleset_name)
 
+    @property
+    @abc.abstractmethod
+    def version(self) -> str:
+        """Get the version of this ruleset.
+
+        Returns:
+            Version string in semantic versioning format (e.g., "1.0.0")
+        """
+
     @abc.abstractmethod
     def get_rules(self) -> list[Rule]:
         """Get the rules defined by this ruleset.
@@ -40,6 +49,12 @@ class RulesetError(Exception):
 
 class RulesetNotFoundError(RulesetError):
     """Raised when a requested ruleset cannot be found."""
+
+    pass
+
+
+class RulesetAlreadyRegisteredError(RulesetError):
+    """Raised when attempting to register a ruleset that already exists."""
 
     pass
 
@@ -65,7 +80,19 @@ class RulesetRegistry:
         return cls._instance
 
     def register(self, name: str, ruleset_class: type[Ruleset]) -> None:
-        """Register a ruleset class with a name."""
+        """Register a ruleset class with a name.
+
+        Args:
+            name: The name to register the ruleset under
+            ruleset_class: The ruleset class to register
+
+        Raises:
+            RulesetAlreadyRegisteredError: If a ruleset with this name already exists
+        """
+        if name in self._registry:
+            raise RulesetAlreadyRegisteredError(
+                f"Ruleset '{name}' is already registered"
+            )
         self._registry[name] = ruleset_class
 
     def get_ruleset_class(self, name: str) -> type[Ruleset]:
