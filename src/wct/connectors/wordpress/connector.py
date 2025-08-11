@@ -16,10 +16,10 @@ from typing_extensions import Self, override
 
 from wct.connectors.base import Connector, ConnectorConfigError
 from wct.message import Message
-from wct.schema import WctSchema
+from wct.schemas import Schema
 
 SUPPORTED_OUTPUT_SCHEMAS = {
-    "wordpress_site": WctSchema(name="wordpress_site", type=dict[str, Any]),
+    "wordpress_site": "wordpress_site",  # TODO: Create WordPressSiteSchema when needed
 }
 
 
@@ -71,9 +71,7 @@ class WordpressConnector(Connector):
         return cls()
 
     @override
-    def extract(
-        self, output_schema: WctSchema[dict[str, Any]] | None = None
-    ) -> Message:
+    def extract(self, output_schema: Schema | None = None) -> Message:
         """Extract data from the WordPress site and return in WCF schema format.
 
         Args:
@@ -107,9 +105,7 @@ class WordpressConnector(Connector):
 
         return message
 
-    def _transform_for_wordpress_schema(
-        self, schema: WctSchema[dict[str, Any]]
-    ) -> dict[str, Any]:
+    def _transform_for_wordpress_schema(self, schema: Schema) -> dict[str, Any]:
         """Transform WordPress data for the 'wordpress_site' schema.
 
         Args:
@@ -118,15 +114,15 @@ class WordpressConnector(Connector):
         Returns:
             WordPress schema compliant content
         """
-        return schema.type(
-            name=schema.name,
-            description="WordPress site data",
-            source="WordPress installation",
-            site_info={
+        return {
+            "name": schema.name,
+            "description": "WordPress site data",
+            "source": "WordPress installation",
+            "site_info": {
                 "config_detected": True,
                 "core_files_present": True,
             },
-            metadata={
+            "metadata": {
                 "tables_prefix": "wp_",
                 "core_tables": [
                     "users",
@@ -140,7 +136,7 @@ class WordpressConnector(Connector):
                     "termmeta",
                 ],
             },
-        )
+        }
 
 
 class WordpressConnectorConfig(BaseModel):

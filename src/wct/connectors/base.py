@@ -15,7 +15,7 @@ from typing_extensions import Self
 from wct.errors import WCTError
 from wct.logging import get_connector_logger
 from wct.message import Message
-from wct.schema import WctSchema
+from wct.schemas import Schema
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,7 +66,7 @@ class Connector(abc.ABC):
         """
 
     @abc.abstractmethod
-    def extract(self, output_schema: WctSchema[Any]) -> Message:
+    def extract(self, output_schema: Schema) -> Message:
         """Extract data from the source and return in WCF schema format.
 
         This method returns data that conforms to the WCF-defined schema for this connector.

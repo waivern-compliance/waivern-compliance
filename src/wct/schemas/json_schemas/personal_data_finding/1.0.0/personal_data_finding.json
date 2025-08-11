@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "type": "object",
+  "properties": {
+    "findings": {
+      "type": "array",
+      "description": "List of personal data findings from GDPR compliance analysis",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Type of personal data found (e.g., email, phone, ssn, health_data)"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "description": "Risk level associated with this type of personal data"
+          },
+          "special_category": {
+            "type": ["string", "null"],
+            "enum": ["Y", "N", null],
+            "description": "Indicates if this is a special category under GDPR (Y/N/null)"
+          },
+          "matched_pattern": {
+            "type": "string",
+            "description": "The specific pattern that was matched"
+          },
+          "evidence": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of evidence snippets where the personal data was found"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Metadata from the original data source including source location",
+            "properties": {
+              "source": {
+                "type": "string",
+                "description": "Source file or location where the data was found"
+              }
+            },
+            "required": ["source"]
+          }
+        },
+        "required": ["type", "risk_level", "special_category", "matched_pattern", "metadata"]
+      }
+    },
+    "summary": {
+      "type": "object",
+      "description": "Summary statistics of the personal data analysis",
+      "properties": {
+        "total_findings": {
+          "type": "integer",
+          "description": "Total number of personal data findings",
+          "minimum": 0
+        },
+        "high_risk_count": {
+          "type": "integer",
+          "description": "Number of high-risk personal data findings",
+          "minimum": 0
+        },
+        "special_category_count": {
+          "type": "integer",
+          "description": "Number of special category personal data findings under GDPR",
+          "minimum": 0
+        }
+      },
+      "required": ["total_findings", "high_risk_count", "special_category_count"]
+    }
+  },
+  "required": ["findings", "summary"]
+}

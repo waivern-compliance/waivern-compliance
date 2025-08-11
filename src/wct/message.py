@@ -11,7 +11,7 @@ from typing import Any
 import jsonschema
 from typing_extensions import Self
 
-from .schema import WctSchema, load_json_schema
+from .schemas.base import Schema, SchemaLoadError
 
 
 @dataclass(slots=True)
@@ -28,8 +28,8 @@ class Message:
     content: dict[str, Any]
     """Content of the message, typically in WCF schema format."""
 
-    schema: WctSchema[Any] | None = None
-    """Optional schema to validate the content against. If not provided, the
+    schema: Schema | None = None
+    """Schema to validate the content against. If not provided, the
     default schema of the current analyser will be used."""
 
     context: dict[str, Any] | None = None
@@ -59,11 +59,11 @@ class Message:
             raise MessageValidationError("No content provided for validation")
 
         try:
-            # Load the JSON schema file for validation
-            schema = load_json_schema(self.schema.name)
+            # Get the JSON schema definition from the schema object
+            schema_definition = self.schema.schema
 
             # Validate the content against the JSON schema
-            jsonschema.validate(self.content, schema)
+            jsonschema.validate(self.content, schema_definition)
 
             # Mark as validated if successful
             self.schema_validated = True
@@ -74,10 +74,10 @@ class Message:
             raise MessageValidationError(
                 f"Schema validation failed for schema '{self.schema.name}': {e.message}"
             ) from e
-        except FileNotFoundError as e:
+        except (FileNotFoundError, SchemaLoadError) as e:
             self.schema_validated = False
             raise MessageValidationError(
-                f"Schema file not found for '{self.schema.name}': {e}"
+                f"Schema loading failed for '{self.schema.name}': {e}"
             ) from e
         except Exception as e:
             self.schema_validated = False

@@ -1,0 +1,456 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "source_code_analysis_ecommerce_app",
+  "description": "Source code analysis of e-commerce application",
+  "language": "php",
+  "source": "/app/src",
+  "metadata": {
+    "total_files": 15,
+    "total_lines": 2847,
+    "analysis_timestamp": "2024-08-01T14:30:45.123456",
+    "parser_version": "tree-sitter-languages-1.10.0+"
+  },
+  "data": [
+    {
+      "file_path": "controllers/UserController.php",
+      "language": "php",
+      "functions": [
+        {
+          "name": "getUserById",
+          "line_start": 25,
+          "line_end": 35,
+          "parameters": [
+            {
+              "name": "$userId",
+              "type": "int",
+              "default_value": null
+            }
+          ],
+          "return_type": "?User",
+          "visibility": "public",
+          "is_static": false,
+          "docstring": "Retrieve user by ID - handles personal data"
+        },
+        {
+          "name": "createUser",
+          "line_start": 40,
+          "line_end": 68,
+          "parameters": [
+            {
+              "name": "$userData",
+              "type": "array",
+              "default_value": null
+            },
+            {
+              "name": "$validateEmail",
+              "type": "bool",
+              "default_value": "true"
+            }
+          ],
+          "return_type": "User",
+          "visibility": "public",
+          "is_static": false,
+          "docstring": "Create new user account with validation"
+        },
+        {
+          "name": "hashPassword",
+          "line_start": 85,
+          "line_end": 90,
+          "parameters": [
+            {
+              "name": "$password",
+              "type": "string",
+              "default_value": null
+            }
+          ],
+          "return_type": "string",
+          "visibility": "private",
+          "is_static": true,
+          "docstring": null
+        }
+      ],
+      "classes": [
+        {
+          "name": "UserController",
+          "line_start": 8,
+          "line_end": 120,
+          "extends": "BaseController",
+          "implements": [
+            "AuthenticatedControllerInterface",
+            "GDPRCompliantInterface"
+          ],
+          "properties": [
+            {
+              "name": "$database",
+              "type": "DatabaseConnection",
+              "visibility": "private",
+              "is_static": false,
+              "default_value": null
+            },
+            {
+              "name": "$encryptionKey",
+              "type": "string",
+              "visibility": "private",
+              "is_static": false,
+              "default_value": null
+            },
+            {
+              "name": "$auditLogger",
+              "type": "AuditLogger",
+              "visibility": "protected",
+              "is_static": false,
+              "default_value": null
+            }
+          ],
+          "methods": [
+            {
+              "name": "__construct",
+              "line_start": 18,
+              "line_end": 23,
+              "parameters": [
+                {
+                  "name": "$db",
+                  "type": "DatabaseConnection",
+                  "default_value": null
+                }
+              ],
+              "return_type": null,
+              "visibility": "public",
+              "is_static": false,
+              "docstring": "Initialise controller with database connection"
+            },
+            {
+              "name": "getUserById",
+              "line_start": 25,
+              "line_end": 35,
+              "parameters": [
+                {
+                  "name": "$userId",
+                  "type": "int",
+                  "default_value": null
+                }
+              ],
+              "return_type": "?User",
+              "visibility": "public",
+              "is_static": false,
+              "docstring": "Retrieve user by ID - handles personal data"
+            }
+          ]
+        }
+      ],
+      "imports": [
+        {
+          "module": "App\\Models\\User",
+          "alias": null,
+          "line": 3,
+          "type": "use"
+        },
+        {
+          "module": "App\\Services\\EncryptionService",
+          "alias": "Encryption",
+          "line": 4,
+          "type": "use"
+        },
+        {
+          "module": "config/database.php",
+          "alias": null,
+          "line": 12,
+          "type": "require_once"
+        }
+      ],
+      "database_interactions": [
+        {
+          "type": "prepared_statement",
+          "line": 28,
+          "method": "prepare",
+          "sql_fragment": "SELECT * FROM users WHERE id = ?",
+          "contains_user_input": true,
+          "is_parameterized": true
+        },
+        {
+          "type": "query",
+          "line": 45,
+          "method": "query",
+          "sql_fragment": "INSERT INTO users (name, email, phone, created_at) VALUES (?, ?, ?, NOW())",
+          "contains_user_input": true,
+          "is_parameterized": true
+        },
+        {
+          "type": "raw_sql",
+          "line": 102,
+          "method": "exec",
+          "sql_fragment": "DELETE FROM user_sessions WHERE user_id = $userId",
+          "contains_user_input": true,
+          "is_parameterized": false
+        }
+      ],
+      "data_collection_indicators": [
+        {
+          "type": "form_field",
+          "line": 42,
+          "field_name": "email",
+          "method": "$_POST",
+          "context": "User registration form",
+          "potential_pii": true
+        },
+        {
+          "type": "form_field",
+          "line": 43,
+          "field_name": "name",
+          "method": "$_POST",
+          "context": "User registration form",
+          "potential_pii": true
+        },
+        {
+          "type": "form_field",
+          "line": 44,
+          "field_name": "phone",
+          "method": "$_POST",
+          "context": "User registration form",
+          "potential_pii": true
+        },
+        {
+          "type": "cookie_access",
+          "line": 78,
+          "field_name": "user_preferences",
+          "method": "$_COOKIE",
+          "context": "Personalization settings",
+          "potential_pii": false
+        },
+        {
+          "type": "session_access",
+          "line": 95,
+          "field_name": "user_id",
+          "method": "$_SESSION",
+          "context": "Authentication state",
+          "potential_pii": true
+        }
+      ],
+      "ai_ml_indicators": [
+        {
+          "type": "api_call",
+          "line": 152,
+          "library_name": null,
+          "method_call": "file_get_contents",
+          "context": "Call to ML recommendation API",
+          "involves_personal_data": true
+        },
+        {
+          "type": "ml_library",
+          "line": 5,
+          "library_name": "TensorFlow\\Lite",
+          "method_call": "use",
+          "context": "Import statement for ML inference",
+          "involves_personal_data": false
+        },
+        {
+          "type": "prediction_code",
+          "line": 165,
+          "library_name": "ML\\Recommender",
+          "method_call": "predict",
+          "context": "Product recommendation generation",
+          "involves_personal_data": true
+        }
+      ],
+      "security_patterns": [
+        {
+          "type": "hashing",
+          "line": 87,
+          "method": "password_hash",
+          "strength": "strong",
+          "context": "Password hashing with bcrypt"
+        },
+        {
+          "type": "validation",
+          "line": 47,
+          "method": "filter_var",
+          "strength": "moderate",
+          "context": "Email validation using PHP filter"
+        },
+        {
+          "type": "sanitization",
+          "line": 145,
+          "method": "htmlspecialchars",
+          "strength": "moderate",
+          "context": "Output sanitization for XSS prevention"
+        },
+        {
+          "type": "authentication",
+          "line": 115,
+          "method": "session_start",
+          "strength": "weak",
+          "context": "Basic session-based authentication"
+        },
+        {
+          "type": "encryption",
+          "line": 72,
+          "method": "openssl_encrypt",
+          "strength": "strong",
+          "context": "AES-256 encryption of sensitive data"
+        }
+      ],
+      "third_party_integrations": [
+        {
+          "service_name": "Stripe Payment API",
+          "line": 185,
+          "type": "api_call",
+          "endpoint": "https://api.stripe.com/v1/charges",
+          "data_shared": true,
+          "contains_personal_data": true
+        },
+        {
+          "service_name": "SendGrid Email Service",
+          "line": 195,
+          "type": "api_call",
+          "endpoint": "https://api.sendgrid.com/v3/mail/send",
+          "data_shared": true,
+          "contains_personal_data": true
+        },
+        {
+          "service_name": "Google Analytics",
+          "line": 220,
+          "type": "service_config",
+          "endpoint": "https://www.google-analytics.com/collect",
+          "data_shared": true,
+          "contains_personal_data": false
+        },
+        {
+          "service_name": "AWS S3",
+          "line": 235,
+          "type": "sdk_usage",
+          "endpoint": "s3.amazonaws.com",
+          "data_shared": true,
+          "contains_personal_data": false
+        }
+      ],
+      "metadata": {
+        "file_size": 8742,
+        "line_count": 245,
+        "complexity_score": 23.7,
+        "last_modified": "2024-07-28T09:15:32.456789"
+      }
+    },
+    {
+      "file_path": "models/User.php",
+      "language": "php",
+      "functions": [
+        {
+          "name": "validateEmail",
+          "line_start": 45,
+          "line_end": 52,
+          "parameters": [
+            {
+              "name": "$email",
+              "type": "string",
+              "default_value": null
+            }
+          ],
+          "return_type": "bool",
+          "visibility": "private",
+          "is_static": true,
+          "docstring": "Validate email format using GDPR-compliant rules"
+        }
+      ],
+      "classes": [
+        {
+          "name": "User",
+          "line_start": 12,
+          "line_end": 85,
+          "extends": "BaseModel",
+          "implements": [
+            "JsonSerializable",
+            "GDPRSubjectInterface"
+          ],
+          "properties": [
+            {
+              "name": "$id",
+              "type": "int",
+              "visibility": "protected",
+              "is_static": false,
+              "default_value": null
+            },
+            {
+              "name": "$email",
+              "type": "string",
+              "visibility": "protected",
+              "is_static": false,
+              "default_value": null
+            },
+            {
+              "name": "$name",
+              "type": "string",
+              "visibility": "protected",
+              "is_static": false,
+              "default_value": null
+            },
+            {
+              "name": "$gdpr_consent",
+              "type": "bool",
+              "visibility": "protected",
+              "is_static": false,
+              "default_value": "false"
+            }
+          ],
+          "methods": [
+            {
+              "name": "anonymize",
+              "line_start": 65,
+              "line_end": 72,
+              "parameters": [],
+              "return_type": "bool",
+              "visibility": "public",
+              "is_static": false,
+              "docstring": "Anonymize user data for GDPR right to be forgotten"
+            },
+            {
+              "name": "exportPersonalData",
+              "line_start": 74,
+              "line_end": 82,
+              "parameters": [],
+              "return_type": "array",
+              "visibility": "public",
+              "is_static": false,
+              "docstring": "Export all personal data for GDPR data portability"
+            }
+          ]
+        }
+      ],
+      "imports": [
+        {
+          "module": "App\\Interfaces\\GDPRSubjectInterface",
+          "alias": null,
+          "line": 4,
+          "type": "use"
+        }
+      ],
+      "database_interactions": [
+        {
+          "type": "prepared_statement",
+          "line": 68,
+          "method": "prepare",
+          "sql_fragment": "UPDATE users SET name = 'ANONYMIZED', email = 'ANONYMIZED' WHERE id = ?",
+          "contains_user_input": false,
+          "is_parameterized": true
+        }
+      ],
+      "data_collection_indicators": [],
+      "ai_ml_indicators": [],
+      "security_patterns": [
+        {
+          "type": "validation",
+          "line": 47,
+          "method": "filter_var",
+          "strength": "moderate",
+          "context": "Email format validation"
+        }
+      ],
+      "third_party_integrations": [],
+      "metadata": {
+        "file_size": 3245,
+        "line_count": 95,
+        "complexity_score": 12.3,
+        "last_modified": "2024-07-25T16:42:18.789012"
+      }
+    }
+  ]
+}

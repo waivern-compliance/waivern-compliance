@@ -7,16 +7,20 @@ from typing_extensions import Self, override
 from wct.analysers.base import Analyser
 from wct.analysers.runners import PatternMatchingRunner
 from wct.message import Message
-from wct.schema import WctSchema
+from wct.schemas import (
+    ProcessingPurposeFindingSchema,
+    Schema,
+    StandardInputSchema,
+)
 
 from .pattern_matcher import processing_purpose_pattern_matcher
 
-SUPPORTED_INPUT_SCHEMAS = [
-    WctSchema(name="standard_input", type=dict[str, Any]),
+SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
+    StandardInputSchema(),
 ]
 
-SUPPORTED_OUTPUT_SCHEMAS = [
-    WctSchema(name="processing_purpose_finding", type=dict[str, Any]),
+SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
+    ProcessingPurposeFindingSchema(),
 ]
 
 DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
@@ -111,21 +115,21 @@ class ProcessingPurposeAnalyser(Analyser):
 
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[WctSchema[Any]]:
+    def get_supported_input_schemas(cls) -> list[Schema]:
         """Return the input schemas supported by this analyser."""
         return SUPPORTED_INPUT_SCHEMAS
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> list[WctSchema[Any]]:
+    def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this analyser."""
         return SUPPORTED_OUTPUT_SCHEMAS
 
     @override
     def process(
         self,
-        input_schema: WctSchema[Any],
-        output_schema: WctSchema[Any],
+        input_schema: Schema,
+        output_schema: Schema,
         message: Message,
     ) -> Message:
         """Process data to identify processing purposes using runners."""
