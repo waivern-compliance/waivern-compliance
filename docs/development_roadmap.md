@@ -52,7 +52,7 @@ We are in the process of transforming from proof-of-concept to a production-read
 - **CLI interface**: User-friendly command-line tools with detailed logging
 - **Sample runbooks**: Ready-to-use examples for common compliance scenarios
 
-## Current Phase: Document Generation & Advanced Features (v0.1.0)
+## Current Phase: Document Generation & Advanced Features (v0.0.1)
 
 ### ✅ Priority 1: Schema System Enhancement (COMPLETED)
 
@@ -104,24 +104,17 @@ Implementation of automated compliance document generation:
 
 **Timeline:** TBC
 
-
 ## Technical Roadmap
 
 ### Architecture Evolution
 
-**Phase 1: Schema Optimisation**
-- Refactor existing analysers to use optimised schema contracts
-- Implement lazy loading for large datasets
-- Add schema versioning and migration capabilities
-- Enhance performance monitoring and profiling
-
-**Phase 2: Document Generation Framework**
+**Phase 1: Document Generation Framework**
 - Design template engine for compliance documents
 - Create document schema definitions
 - Implement PDF/Word export capabilities
 - Add multi-language support infrastructure
 
-**Phase 3: Advanced Analytics**
+**Phase 2: Advanced Analytics**
 - Implement data lineage tracking
 - Add compliance scoring and risk assessment
 
