@@ -7,7 +7,7 @@ This document outlines the development status and planned roadmap for the Waiver
 | Feature                    | PoC | WCT | Refactor* | Description                                                                                  |
 | -------------------------- | --- | --- | -------- | -------------------------------------------------------------------------------------------- |
 | Rulesets                   | N/A | ✅   | ✅        | Pattern rules for static analysis                                                            |
-| Input/Output Schema        | N/A | ✅   | ⏳        | Unified schemas for type-safe data flow                                                      |
+| Input/Output Schema        | N/A | ✅   | ✅        | Strongly typed schemas with unified interface and runtime validation                         |
 | Personal Data (MySQL)      | ✅   | ✅   | ⏳        | Personal data collection analysis in MySQL databases                                         |
 | Personal Data (PHP)        | ✅   | ✅   | ⏳        | Personal data collection in PHP source code                                                  |
 | Processing Purpose (MySQL) | ✅   | ✅   | ⏳        | GDPR processing purpose analysis for MySQL                                                   |
@@ -35,7 +35,7 @@ We are in the process of transforming from proof-of-concept to a production-read
 ### Features Implemented & Planned
 
 **Core Architecture**
-- **Schema-driven design**: Complete type-safe data flow with unified `WctSchema` system
+- **Schema-driven design**: Strongly typed schema system with unified interface, dependency injection, and runtime validation
 - **Modular connector/analyser architecture**: Hot-swappable components with clear interfaces
 - **Rulesets system**: Comprehensive rule definitions for personal data and processing purposes
 - **Message-based validation**: Automatic input/output validation using JSON schemas
@@ -52,21 +52,39 @@ We are in the process of transforming from proof-of-concept to a production-read
 - **CLI interface**: User-friendly command-line tools with detailed logging
 - **Sample runbooks**: Ready-to-use examples for common compliance scenarios
 
-## Next Phase: Schema Refactoring & Document Generation (v0.1.0)
+## Current Phase: Document Generation & Advanced Features (v0.1.0)
 
-### 🎯 Priority 1: Schema System Enhancement
+### ✅ Priority 1: Schema System Enhancement (COMPLETED)
 
-The schema refactoring phase focuses on optimising the current unified schema system:
+The schema refactoring phase focused on optimising the current unified schema system:
 
-**Goals:**
-- Streamline schema definitions and validation processes
-- Improve performance for large-scale data processing
-- Enhance error reporting and debugging capabilities
-- Standardise schema contracts across all components
+**Completed Goals:**
+- ✅ Streamlined schema definitions and validation processes with strongly typed Schema base class
+- ✅ Improved performance for large-scale data processing through schema caching and dependency injection
+- ✅ Enhanced error reporting and debugging capabilities with detailed validation messages
+- ✅ Standardised schema contracts across all components (connectors, analysers, executor)
+
+**Completed:** December 2024 - Fully implemented strongly typed schema system with unified interface
+
+### 🎯 Priority 2: Connector & Analyser Refactoring
+
+Enhanced connector and analyser implementations leveraging the new typed schema system.
+
+**Testing & Quality**
+- Comprehensive integration testing for all connectors and analysers
 
 **Timeline:** TBC
 
-### 🎯 Priority 2: Document Generation Suite
+### 🎯 Priority 3: Advanced Analysis Features
+
+**Data Export Analysis**
+- Subject access request compliance verification
+- Data portability assessment
+- Export format validation and standardisation
+
+**Timeline:** TBC
+
+### 🎯 Priority 4: Document Generation Suite
 
 Implementation of automated compliance document generation:
 
@@ -83,16 +101,6 @@ Implementation of automated compliance document generation:
 **RoPA Generation**
 - Automated draft Record of Processing Activities documentation
 - Cross-reference with detected personal data and processing purposes
-
-**Timeline:** TBC
-
-
-### 🎯 Priority 3: Advanced Analysis Features
-
-**Data Export Analysis**
-- Subject access request compliance verification
-- Data portability assessment
-- Export format validation and standardisation
 
 **Timeline:** TBC
 
