@@ -1,36 +1,36 @@
 """Tests for schema base classes and utilities."""
 
+from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
 
-from wct.schemas.base import JsonSchemaLoader, SchemaLoader
+from wct.schemas.base import JsonSchemaLoader, Schema, SchemaLoader
 
 
-class MockSchema:
-    """Mock schema for testing that follows Schema interface."""
+@dataclass(frozen=True, slots=True)
+class MockSchema(Schema):
+    """Mock schema for testing that inherits from Schema base class."""
 
-    _VERSION = "1.0.0"
-
-    def __init__(self, loader: SchemaLoader | None = None) -> None:
-        """Initialize with optional loader."""
-        self._loader = loader or JsonSchemaLoader()
+    schema_name: str = "mock_schema"
+    schema_version: str = "1.0.0"
+    loader: SchemaLoader = field(default_factory=JsonSchemaLoader)
 
     @property
     def name(self) -> str:
         """Return schema name."""
-        return "mock_schema"
+        return self.schema_name
 
     @property
     def version(self) -> str:
         """Return schema version."""
-        return self._VERSION
+        return self.schema_version
 
     @property
     def schema(self) -> dict[str, Any]:
         """Return schema definition."""
-        return self._loader.load(self.name, self.version)
+        return self.loader.load(self.name, self.version)
 
 
 class TestJsonSchemaLoader:
@@ -104,7 +104,7 @@ class TestSchemaImplementation:
         mock_loader = Mock(spec=SchemaLoader)
         mock_loader.load.return_value = {"test": "schema"}
 
-        schema = MockSchema(mock_loader)
+        schema = MockSchema(loader=mock_loader)
 
         assert schema.name == "mock_schema"
         assert schema.version == "1.0.0"
