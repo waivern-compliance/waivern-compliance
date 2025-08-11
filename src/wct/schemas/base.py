@@ -1,7 +1,6 @@
 """Base classes for WCT schemas.
 
-This module provides the foundation for strongly typed schemas that replace
-the generic WctSchema[T] pattern with concrete, type-safe schema definitions.
+This module provides the foundation for strongly typed schemas with unified interface.
 """
 
 from __future__ import annotations

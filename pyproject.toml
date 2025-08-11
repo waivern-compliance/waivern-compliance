@@ -55,18 +55,18 @@ addopts = [
 include = ["src/wct"]
 typeCheckingMode = "strict"
 
-# # Critical errors only
-# reportMissingModuleSource = "none"        # Allow optional dependencies
-# reportMissingImports = "error"            # Missing imports are always errors
-# reportUndefinedVariable = "error"         # Undefined variables are always errors
-# reportGeneralTypeIssues = "warning"       # Type issues as warnings, not errors
+# Critical errors only
+reportMissingModuleSource = "none"        # Allow optional dependencies
+reportMissingImports = "error"            # Missing imports are always errors
+reportUndefinedVariable = "error"         # Undefined variables are always errors
+reportGeneralTypeIssues = "warning"       # Type issues as warnings, not errors
 
-# # Allow some flexibility for external libraries and YAML parsing
-# # This is not ideal, but necessary for compatibility with dynamic data
-# # Perhaps we can fix these in the future (TODO)
-# reportUnknownMemberType = "none"          # Common with external libraries
-# reportUnknownArgumentType = "none"        # Common with YAML/JSON parsing
-# reportUnknownVariableType = "none"        # Common with dynamic data
+# Allow some flexibility for external libraries and YAML parsing
+# This is not ideal, but necessary for compatibility with dynamic data
+# Perhaps we can fix these in the future (TODO)
+reportUnknownMemberType = "none"          # Common with external libraries
+reportUnknownArgumentType = "none"        # Common with YAML/JSON parsing
+reportUnknownVariableType = "none"        # Common with dynamic data
 
 [tool.mypy]
 files = ["src/"]

@@ -8,7 +8,12 @@ from typing_extensions import Self, override
 from wct.analysers.base import Analyser
 from wct.analysers.runners import LLMValidationRunner, PatternMatchingRunner
 from wct.message import Message
-from wct.schema import WctSchema
+from wct.schemas import (
+    PersonalDataFindingSchema,
+    Schema,
+    SourceCodeSchema,
+    StandardInputSchema,
+)
 
 from .llm_validation_strategy import personal_data_validation_strategy
 from .pattern_matcher import personal_data_pattern_matcher
@@ -16,13 +21,13 @@ from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
 
 # from .types import PersonalDataFinding  # Only needed for LLM validation strategy
 
-SUPPORTED_INPUT_SCHEMAS = [
-    WctSchema(name="standard_input", type=dict[str, Any]),
-    WctSchema(name="source_code", type=dict[str, Any]),
+SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
+    StandardInputSchema(),
+    SourceCodeSchema(),
 ]
 
-SUPPORTED_OUTPUT_SCHEMAS = [
-    WctSchema(name="personal_data_finding", type=dict[str, Any]),
+SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
+    PersonalDataFindingSchema(),
 ]
 
 DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
@@ -116,21 +121,21 @@ class PersonalDataAnalyser(Analyser):
 
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[WctSchema[Any]]:
+    def get_supported_input_schemas(cls) -> list[Schema]:
         """Return the input schemas supported by this analyser."""
         return SUPPORTED_INPUT_SCHEMAS
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> list[WctSchema[Any]]:
+    def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this analyser."""
         return SUPPORTED_OUTPUT_SCHEMAS
 
     @override
     def process(
         self,
-        input_schema: WctSchema[Any],
-        output_schema: WctSchema[Any],
+        input_schema: Schema,
+        output_schema: Schema,
         message: Message,
     ) -> Message:
         """Process data to find personal data patterns using runners."""

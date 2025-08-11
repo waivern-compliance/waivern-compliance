@@ -12,10 +12,12 @@ from wct.connectors.base import (
     ConnectorExtractionError,
 )
 from wct.message import Message
-from wct.schema import WctSchema
+
+# Import the actual schema instances
+from wct.schemas import Schema, StandardInputSchema
 
 SUPPORTED_OUTPUT_SCHEMAS = {
-    "standard_input": WctSchema(name="standard_input", type=dict[str, Any]),
+    "standard_input": StandardInputSchema(),
 }
 
 
@@ -130,7 +132,7 @@ class FilesystemConnector(Connector):
     @override
     def extract(
         self,
-        output_schema: WctSchema[dict[str, Any]] | None = None,
+        output_schema: Schema | None = None,
     ) -> Message:
         """Extract file content and metadata.
 
@@ -201,7 +203,7 @@ class FilesystemConnector(Connector):
             ) from e
 
     def _transform_for_schema(
-        self, schema: WctSchema[dict[str, Any]], all_file_data: list[dict[str, Any]]
+        self, schema: Schema, all_file_data: list[dict[str, Any]]
     ) -> dict[str, Any]:
         """Transform file content(s) based on the requested schema.
 
@@ -220,7 +222,7 @@ class FilesystemConnector(Connector):
             )
 
     def _transform_for_standard_input_schema(
-        self, schema: WctSchema[dict[str, Any]], all_file_data: list[dict[str, Any]]
+        self, schema: Schema, all_file_data: list[dict[str, Any]]
     ) -> dict[str, Any]:
         """Transform file content(s) for the 'standard_input' schema.
 
@@ -278,20 +280,20 @@ class FilesystemConnector(Connector):
             )
             name_suffix = f"{self.path.name}_directory"
 
-        return schema.type(
-            schemaVersion="1.0.0",
-            name=f"standard_input_from_{name_suffix}",
-            description=source_desc,
-            contentEncoding=self.encoding,
-            source=str(self.path),
-            metadata={
+        return {
+            "schemaVersion": "1.0.0",
+            "name": f"standard_input_from_{name_suffix}",
+            "description": source_desc,
+            "contentEncoding": self.encoding,
+            "source": str(self.path),
+            "metadata": {
                 "file_count": file_count,
                 "total_size_bytes": total_size,
                 "exclude_patterns": self.exclude_patterns,
                 "source_type": "file" if self.path.is_file() else "directory",
             },
-            data=data_entries,
-        )
+            "data": data_entries,
+        }
 
     def collect_files(self) -> list[Path]:
         """Collect all files to process, handling both single files and directories.

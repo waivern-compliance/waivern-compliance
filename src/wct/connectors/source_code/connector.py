@@ -19,10 +19,12 @@ from wct.connectors.source_code.extractors import (
 )
 from wct.connectors.source_code.parser import SourceCodeParser
 from wct.message import Message
-from wct.schema import WctSchema
+
+# Import the actual schema instances
+from wct.schemas import Schema, SourceCodeSchema
 
 SUPPORTED_OUTPUT_SCHEMAS = {
-    "source_code": WctSchema(name="source_code", type=dict[str, Any]),
+    "source_code": SourceCodeSchema(),
 }
 
 # Common file patterns to exclude from source code analysis
@@ -139,7 +141,7 @@ class SourceCodeConnector(Connector):
     @override
     def extract(
         self,
-        output_schema: WctSchema[dict[str, Any]] | None = None,
+        output_schema: Schema | None = None,
     ) -> Message:
         """Extract source code analysis data.
 

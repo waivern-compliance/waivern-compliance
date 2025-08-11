@@ -19,16 +19,18 @@ from wct.connectors.base import (
     ConnectorExtractionError,
 )
 from wct.message import Message
-from wct.schema import WctSchema
+from wct.schemas import Schema
 
 try:
     import pymysql
 except ImportError:
     pymysql = None  # Optional dependency, will raise error if used
 
+# Import the actual schema instances
+from wct.schemas import StandardInputSchema
+
 SUPPORTED_OUTPUT_SCHEMAS = {
-    "mysql_database": WctSchema(name="mysql_database", type=dict[str, Any]),
-    "standard_input": WctSchema(name="standard_input", type=dict[str, Any]),
+    "standard_input": StandardInputSchema(),
 }
 
 
@@ -36,7 +38,7 @@ class MySQLConnector(Connector):
     """MySQL database connector for extracting data and metadata.
 
     This connector connects to a MySQL database and can execute queries
-    to extract data and transform it into supported WctSchema formats
+    to extract data and transform it into supported Schema formats
     for compliance analysis.
     """
 
@@ -323,7 +325,7 @@ class MySQLConnector(Connector):
             return []
 
     @override
-    def extract(self, output_schema: WctSchema[Any]) -> Message:
+    def extract(self, output_schema: Schema) -> Message:
         """Extract data from MySQL database.
 
         This method extracts database metadata and can execute custom queries
@@ -389,7 +391,7 @@ class MySQLConnector(Connector):
             raise ConnectorExtractionError(f"MySQL extraction failed: {e}") from e
 
     def _transform_for_mysql_schema(
-        self, schema: WctSchema[Any], metadata: dict[str, Any]
+        self, schema: Schema, metadata: dict[str, Any]
     ) -> dict[str, Any]:
         """Transform MySQL data for the 'mysql_database' schema.
 
@@ -400,22 +402,22 @@ class MySQLConnector(Connector):
         Returns:
             MySQL schema compliant content
         """
-        return schema.type(
-            name=schema.name,
-            description=f"MySQL database: {self.database}",
-            source=f"{self.host}:{self.port}/{self.database}",
-            connection_info={
+        return {
+            "name": schema.name,
+            "description": f"MySQL database: {self.database}",
+            "source": f"{self.host}:{self.port}/{self.database}",
+            "connection_info": {
                 "host": self.host,
                 "port": self.port,
                 "database": self.database,
                 "user": self.user,
             },
-            metadata=metadata,
-            extraction_timestamp=None,  # Could add timestamp here
-        )
+            "metadata": metadata,
+            "extraction_timestamp": None,  # Could add timestamp here
+        }
 
     def _transform_for_standard_input_schema(
-        self, schema: WctSchema[Any], metadata: dict[str, Any]
+        self, schema: Schema, metadata: dict[str, Any]
     ) -> dict[str, Any]:
         """Transform MySQL data for the 'standard_input' schema.
 
@@ -484,14 +486,14 @@ class MySQLConnector(Connector):
                 )
                 continue
 
-        return schema.type(
-            schemaVersion="1.0.0",
-            name=f"mysql_text_from_{self.database}",
-            description=f"Text content extracted from MySQL database: {self.database}",
-            contentEncoding="utf-8",
-            source=database_source,
+        return {
+            "schemaVersion": "1.0.0",
+            "name": f"mysql_text_from_{self.database}",
+            "description": f"Text content extracted from MySQL database: {self.database}",
+            "contentEncoding": "utf-8",
+            "source": database_source,
             # Top-level metadata includes complete database schema for reference
-            metadata={
+            "metadata": {
                 "extraction_type": "mysql_to_text",
                 "connection_info": {
                     "host": self.host,
@@ -507,5 +509,5 @@ class MySQLConnector(Connector):
                     "max_rows_per_table": self.max_rows_per_table,
                 },
             },
-            data=data_items,
-        )
+            "data": data_items,
+        }

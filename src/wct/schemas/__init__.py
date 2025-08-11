@@ -1,7 +1,7 @@
 """WCT Schemas - Strongly typed schema system.
 
 This module provides strongly typed schema classes that replace the generic
-WctSchema[T] pattern with concrete, type-safe schema definitions.
+concrete, type-safe schema definitions with unified interface.
 
 All schemas support:
 - Versioned loading from json_schemas/{name}/{version}/ directories

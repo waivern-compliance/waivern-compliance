@@ -10,7 +10,7 @@ from typing_extensions import Self
 
 from wct.logging import get_analyser_logger
 from wct.message import Message
-from wct.schema import SchemaValidationError, WctSchema
+from wct.schemas import Schema, SchemaLoadError
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,8 +68,8 @@ class Analyser(abc.ABC):
     @abc.abstractmethod
     def process(
         self,
-        input_schema: WctSchema[Any],
-        output_schema: WctSchema[Any],
+        input_schema: Schema,
+        output_schema: Schema,
         message: Message,
     ) -> Message:
         """Analyser-specific processing logic.
@@ -92,21 +92,19 @@ class Analyser(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def get_supported_input_schemas(cls) -> list[WctSchema[Any]]:
+    def get_supported_input_schemas(cls) -> list[Schema]:
         """Return the input schemas supported by the analyser."""
 
     @classmethod
     @abc.abstractmethod
-    def get_supported_output_schemas(cls) -> list[WctSchema[Any]]:
+    def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this analyser."""
 
     @classmethod
-    def validate_input_message(
-        cls, message: Message, expected_schema: WctSchema[Any]
-    ) -> None:
+    def validate_input_message(cls, message: Message, expected_schema: Schema) -> None:
         """Validate the input message against the expected schema."""
-        if message.schema and message.schema != expected_schema:
-            raise SchemaValidationError(
+        if message.schema and message.schema.name != expected_schema.name:
+            raise SchemaLoadError(
                 f"Message schema {message.schema.name} does not match expected input schema {expected_schema.name}"
             )
 

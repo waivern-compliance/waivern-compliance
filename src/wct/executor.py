@@ -19,7 +19,7 @@ from wct.connectors import Connector, ConnectorConfig, ConnectorError
 from wct.errors import WCTError
 from wct.logging import get_executor_logger
 from wct.runbook import ExecutionStep, Runbook, load_runbook
-from wct.schema import WctSchema
+from wct.schemas import Schema
 
 
 class Executor:
@@ -194,8 +194,8 @@ class Executor:
         return next((c for c in connector_configs if c.name == connector_name), None)
 
     def _load_schema_from_step(
-        self, schema_name: str | None, supported_schemas: list[WctSchema[Any]]
-    ) -> WctSchema[Any]:
+        self, schema_name: str | None, supported_schemas: list[Schema]
+    ) -> Schema:
         """Load schema from step configuration.
 
         Args:
@@ -203,7 +203,7 @@ class Executor:
             supported_schemas: List of supported schemas from analyser
 
         Returns:
-            WctSchema object for the requested schema
+            Schema object for the requested schema
 
         Raises:
             ExecutorError: If schema cannot be loaded or is unsupported

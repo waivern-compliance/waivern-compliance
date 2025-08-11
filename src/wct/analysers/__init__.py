@@ -19,7 +19,6 @@ from wct.analysers.personal_data_analyser import (
 from wct.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
 )
-from wct.schema import WctSchema
 
 __all__ = (
     "Analyser",
@@ -27,7 +26,6 @@ __all__ = (
     "AnalyserError",
     "AnalyserInputError",
     "AnalyserProcessingError",
-    "WctSchema",
     "PersonalDataAnalyser",
     "PersonalDataFinding",
     "PersonalDataPattern",
