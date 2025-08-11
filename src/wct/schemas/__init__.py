@@ -19,6 +19,7 @@ Available schemas:
 from .base import JsonSchemaLoader, Schema, SchemaLoader, SchemaLoadError
 from .personal_data_finding import PersonalDataFindingSchema
 from .processing_purpose_finding import ProcessingPurposeFindingSchema
+from .runbook import RunbookSchema
 from .source_code import SourceCodeSchema
 from .standard_input import StandardInputSchema
 
@@ -32,4 +33,5 @@ __all__ = [
     "SourceCodeSchema",
     "PersonalDataFindingSchema",
     "ProcessingPurposeFindingSchema",
+    "RunbookSchema",
 ]

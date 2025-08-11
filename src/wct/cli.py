@@ -17,7 +17,7 @@ from wct.connectors import BUILTIN_CONNECTORS
 from wct.executor import Executor
 from wct.llm_service import LLMServiceError, LLMServiceFactory
 from wct.logging import get_cli_logger, setup_logging
-from wct.runbook import Runbook, RunbookValidator, load_runbook
+from wct.runbook import Runbook, RunbookLoader
 
 logger = get_cli_logger()
 console = Console()
@@ -454,9 +454,7 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
     setup_cli_logging(log_level)
 
     try:
-        runbook = load_runbook(runbook_path)
-        validator = RunbookValidator()
-        validator.validate(runbook)
+        runbook = RunbookLoader.load(runbook_path)
 
         formatter = OutputFormatter()
         formatter.format_runbook_validation(runbook)
