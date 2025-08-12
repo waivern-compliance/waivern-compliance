@@ -57,22 +57,14 @@ class Executor:
         """Get all available built-in analysers."""
         return self.analysers.copy()
 
-    def load_runbook(self, runbook_path: Path) -> Runbook:
-        """Load and parse a runbook file."""
+    def execute_runbook(self, runbook_path: Path) -> list[AnalysisResult]:
+        """Load and execute a runbook file."""
         try:
-            return RunbookLoader.load(runbook_path)
+            runbook = RunbookLoader.load(runbook_path)
         except Exception as e:
             raise ExecutorError(f"Failed to load runbook {runbook_path}: {e}") from e
 
-    def execute_runbook(self, runbook_path: Path) -> list[AnalysisResult]:
-        """Load and execute a runbook file."""
-        runbook = self.load_runbook(runbook_path)
-        return self.run_analyses(runbook)
-
-    def run_analyses(self, runbook: Runbook) -> list[AnalysisResult]:
-        """Execute analysis based on a runbook."""
-        results = []
-
+        results: list[AnalysisResult] = []
         for step in runbook.execution:
             result = self._execute_step(step, runbook)
             results.append(result)
@@ -80,151 +72,141 @@ class Executor:
         return results
 
     def _execute_step(self, step: ExecutionStep, runbook: Runbook) -> AnalysisResult:
-        """Execute a single step in the runbook.
+        """Execute a single step in the runbook."""
+        try:
+            # Get configurations and validate types
+            analyser_config, connector_config = self._get_step_configs(step, runbook)
+            analyser_class, connector_class = self._validate_step_types(
+                step, analyser_config, connector_config
+            )
 
-        This method handles the execution of a step, including loading
-        the required analyser and connector, extracting data, and running
-        the analysis analyser.
+            # Set up components and schemas
+            analyser, connector = self._instantiate_components(
+                analyser_class, connector_class, analyser_config, connector_config
+            )
+            input_schema, output_schema = self._resolve_step_schemas(step, analyser)
 
-        Args:
-            step: The execution step to run
-            runbook: The runbook containing the step configuration
+            # Execute the analysis
+            return self._run_step_analysis(
+                step, analyser, connector, input_schema, output_schema, analyser_config
+            )
 
-        Returns:
-            AnalysisResult containing the results of the step execution
+        except (ConnectorError, AnalyserError, ExecutorError, Exception) as e:
+            return self._handle_step_error(step, e)
+
+    def _get_step_configs(
+        self, step: ExecutionStep, runbook: Runbook
+    ) -> tuple[AnalyserConfig, ConnectorConfig]:
+        """Get analyser and connector configurations for the step.
+
+        Configurations are guaranteed to exist by RunbookSchema validation.
         """
-        # Get the required analyser and connector for the step
-        analyser_config = self._find_analyser_config(runbook.analysers, step.analyser)
-        if not analyser_config:
-            return self._create_error_result(
-                step.analyser,
-                error_message=f"Analyser '{step.analyser}' not found in runbook configuration",
-            )
-
-        connector_config = self._find_connector_config(
-            runbook.connectors, step.connector
+        analyser_config = next(p for p in runbook.analysers if p.name == step.analyser)
+        connector_config = next(
+            c for c in runbook.connectors if c.name == step.connector
         )
-        if not connector_config:
-            return self._create_error_result(
-                step.analyser,
-                error_message=f"Connector '{step.connector}' not found in runbook configuration",
-            )
+        return analyser_config, connector_config
 
-        # Get analyser and connector classes
+    def _validate_step_types(
+        self,
+        step: ExecutionStep,
+        analyser_config: AnalyserConfig,
+        connector_config: ConnectorConfig,
+    ) -> tuple[type[Analyser], type[Connector]]:
+        """Validate that analyser and connector types are registered with executor."""
         analyser_class = self.analysers.get(analyser_config.type)
         if not analyser_class:
-            return self._create_error_result(
-                step.analyser,
-                error_message=f"Unknown analyser type: {analyser_config.type}",
-            )
+            raise ExecutorError(f"Unknown analyser type: {analyser_config.type}")
 
         connector_class = self.connectors.get(connector_config.type)
         if not connector_class:
-            return self._create_error_result(
-                step.analyser,
-                error_message=f"Unknown connector type: {connector_config.type}",
+            raise ExecutorError(f"Unknown connector type: {connector_config.type}")
+
+        return analyser_class, connector_class
+
+    def _instantiate_components(
+        self,
+        analyser_class: type[Analyser],
+        connector_class: type[Connector],
+        analyser_config: AnalyserConfig,
+        connector_config: ConnectorConfig,
+    ) -> tuple[Analyser, Connector]:
+        """Instantiate analyser and connector from their configurations."""
+        analyser = analyser_class.from_properties(analyser_config.properties or {})
+        connector = connector_class.from_properties(connector_config.properties)
+        return analyser, connector
+
+    def _resolve_step_schemas(
+        self, step: ExecutionStep, analyser: Analyser
+    ) -> tuple[Schema, Schema]:
+        """Resolve input and output schemas for the step."""
+        # Resolve input schema
+        supported_input_schemas = analyser.get_supported_input_schemas()
+        input_schema = next(
+            (s for s in supported_input_schemas if s.name == step.input_schema_name),
+            None,
+        )
+        if not input_schema:
+            available_schemas = [s.name for s in supported_input_schemas]
+            raise ExecutorError(
+                f"Schema '{step.input_schema_name}' not supported. "
+                f"Available schemas: {available_schemas}"
             )
 
-        try:
-            # Instantiate analyser and connector
-            analyser = analyser_class.from_properties(analyser_config.properties or {})
-            connector = connector_class.from_properties(connector_config.properties)
-
-            # Load the specified input and output schemas
-            input_schema = self._load_schema_from_step(
-                step.input_schema_name, analyser.get_supported_input_schemas()
-            )
-            output_schema = self._load_schema_from_step(
-                step.output_schema_name, analyser.get_supported_output_schemas()
-            )
-
-            # Extract data from connector
-            connector_message = connector.extract(input_schema)
-
-            # Run the analyser with the extracted data
-            result_message = analyser.process(
-                input_schema, output_schema, connector_message
+        # Resolve output schema
+        supported_output_schemas = analyser.get_supported_output_schemas()
+        output_schema = next(
+            (s for s in supported_output_schemas if s.name == step.output_schema_name),
+            None,
+        )
+        if not output_schema:
+            available_schemas = [s.name for s in supported_output_schemas]
+            raise ExecutorError(
+                f"Schema '{step.output_schema_name}' not supported. "
+                f"Available schemas: {available_schemas}"
             )
 
-            # Construct and return the analysis result
-            return AnalysisResult(
-                analyser_name=step.analyser,
-                input_schema=input_schema.name,
-                output_schema=output_schema.name,
-                data=result_message.content,
-                metadata=analyser_config.metadata,
-                success=True,
-            )
+        return input_schema, output_schema
 
-        except (ConnectorError, AnalyserError, Exception) as e:
-            self.logger.error(f"Step execution failed for {step.analyser}: {e}")
-            return self._create_error_result(
-                step.analyser,
-                error_message=str(e),
-                input_schema=step.input_schema_name or "unknown",
-                output_schema=step.output_schema_name or "unknown",
-            )
+    def _run_step_analysis(
+        self,
+        step: ExecutionStep,
+        analyser: Analyser,
+        connector: Connector,
+        input_schema: Schema,
+        output_schema: Schema,
+        analyser_config: AnalyserConfig,
+    ) -> AnalysisResult:
+        """Execute the actual analysis step."""
+        # Extract data from connector
+        connector_message = connector.extract(input_schema)
 
-    def _find_analyser_config(
-        self, analyser_configs: list[AnalyserConfig], analyser_name: str
-    ) -> AnalyserConfig | None:
-        """Find analyser configuration by name.
-
-        Args:
-            analyser_configs: List of analyser configurations
-            analyser_name: Name of analyser to find
-
-        Returns:
-            Analyser configuration if found, None otherwise
-        """
-        return next((p for p in analyser_configs if p.name == analyser_name), None)
-
-    def _find_connector_config(
-        self, connector_configs: list[ConnectorConfig], connector_name: str
-    ) -> ConnectorConfig | None:
-        """Find connector configuration by name.
-
-        Args:
-            connector_configs: List of connector configurations
-            connector_name: Name of connector to find
-
-        Returns:
-            Connector configuration if found, None otherwise
-        """
-        return next((c for c in connector_configs if c.name == connector_name), None)
-
-    def _load_schema_from_step(
-        self, schema_name: str | None, supported_schemas: list[Schema]
-    ) -> Schema:
-        """Load schema from step configuration.
-
-        Args:
-            schema_name: Name of the schema or None
-            supported_schemas: List of supported schemas from analyser
-
-        Returns:
-            Schema object for the requested schema
-
-        Raises:
-            ExecutorError: If schema cannot be loaded or is unsupported
-        """
-        if not schema_name:
-            # Use first supported schema as default
-            if not supported_schemas:
-                raise ExecutorError("No supported schemas available")
-            return supported_schemas[0]
-
-        # Find matching supported schema
-        matching_schema = next(
-            (s for s in supported_schemas if s.name == schema_name), None
+        # Run the analyser with the extracted data
+        result_message = analyser.process(
+            input_schema, output_schema, connector_message
         )
 
-        if not matching_schema:
-            raise ExecutorError(
-                f"Schema '{schema_name}' not supported. Available schemas: {[s.name for s in supported_schemas]}"
-            )
+        # Construct and return the analysis result
+        return AnalysisResult(
+            analyser_name=step.analyser,
+            input_schema=input_schema.name,
+            output_schema=output_schema.name,
+            data=result_message.content,
+            metadata=analyser_config.metadata,
+            success=True,
+        )
 
-        return matching_schema
+    def _handle_step_error(
+        self, step: ExecutionStep, error: Exception
+    ) -> AnalysisResult:
+        """Handle execution errors and return appropriate error result."""
+        self.logger.error(f"Step execution failed for {step.analyser}: {error}")
+        return self._create_error_result(
+            step.analyser,
+            error_message=str(error),
+            input_schema=step.input_schema_name,
+            output_schema=step.output_schema_name,
+        )
 
     def _create_error_result(
         self,
