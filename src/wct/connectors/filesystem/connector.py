@@ -13,13 +13,19 @@ from wct.connectors.base import (
     ConnectorExtractionError,
 )
 from wct.message import Message
-
-# Import the actual schema instances
 from wct.schemas import Schema, StandardInputSchema
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_OUTPUT_SCHEMAS = {
+# Constants
+_CONNECTOR_NAME = "filesystem"
+_DEFAULT_SCHEMA_VERSION = "1.0.0"
+_DEFAULT_CHUNK_SIZE = 8192
+_DEFAULT_MAX_FILES = 1000
+_DEFAULT_ENCODING = "utf-8"
+_DEFAULT_ERROR_HANDLING = "strict"
+
+_SUPPORTED_OUTPUT_SCHEMAS = {
     "standard_input": StandardInputSchema(),
 }
 
@@ -38,11 +44,11 @@ class FilesystemConnector(Connector):
     def __init__(
         self,
         path: str | Path,
-        chunk_size: int = 8192,
-        encoding: str = "utf-8",
-        errors: str = "strict",
+        chunk_size: int = _DEFAULT_CHUNK_SIZE,
+        encoding: str = _DEFAULT_ENCODING,
+        errors: str = _DEFAULT_ERROR_HANDLING,
         exclude_patterns: list[str] | None = None,
-        max_files: int = 1000,
+        max_files: int = _DEFAULT_MAX_FILES,
     ):
         """Initialise the filesystem connector.
 
@@ -54,7 +60,6 @@ class FilesystemConnector(Connector):
             exclude_patterns: List of glob patterns to exclude (e.g., ['*.log', '__pycache__'])
             max_files: Maximum number of files to process (safety limit)
         """
-        super().__init__()
         self.path = Path(path)
         self.chunk_size = chunk_size
         self.encoding = encoding
@@ -73,7 +78,7 @@ class FilesystemConnector(Connector):
     @override
     def get_name(cls) -> str:
         """Return the name of the connector."""
-        return "filesystem"
+        return _CONNECTOR_NAME
 
     @classmethod
     @override
@@ -117,11 +122,11 @@ class FilesystemConnector(Connector):
         if not path:
             raise ConnectorConfigError("path property is required")
 
-        chunk_size = properties.get("chunk_size", 8192)
-        encoding = properties.get("encoding", "utf-8")
-        errors = properties.get("errors", "strict")
+        chunk_size = properties.get("chunk_size", _DEFAULT_CHUNK_SIZE)
+        encoding = properties.get("encoding", _DEFAULT_ENCODING)
+        errors = properties.get("errors", _DEFAULT_ERROR_HANDLING)
         exclude_patterns = properties.get("exclude_patterns", [])
-        max_files = properties.get("max_files", 1000)
+        max_files = properties.get("max_files", _DEFAULT_MAX_FILES)
 
         return cls(
             path=path,
@@ -147,18 +152,11 @@ class FilesystemConnector(Connector):
             Dictionary containing file content and metadata in WCF schema format
         """
         try:
-            # Check if a supported schema is provided
-            if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
+            self._validate_is_supported_output_schema(output_schema)
+            # After validation, we know output_schema is not None
+            if output_schema is None:
                 raise ConnectorConfigError(
-                    f"Unsupported output schema: {output_schema.name}. Supported schemas: {SUPPORTED_OUTPUT_SCHEMAS.keys()}"
-                )
-
-            if not output_schema:
-                logger.warning(
-                    "No schema provided, using default standard_input schema"
-                )
-                raise ConnectorConfigError(
-                    "No schema provided for data extraction. Please specify a valid WCT schema."
+                    "Output schema cannot be None after validation"
                 )
 
             # Collect all files to process
@@ -166,18 +164,7 @@ class FilesystemConnector(Connector):
             logger.info(f"Found {len(files_to_process)} files to process")
 
             # Read all file contents
-            all_file_data = []
-            for file_path in files_to_process:
-                try:
-                    stat = file_path.stat()
-                    file_content = self._read_file_content(file_path)
-                    all_file_data.append(
-                        {"path": file_path, "content": file_content, "stat": stat}
-                    )
-                    logger.debug(f"File {file_path} read successfully")
-                except Exception as e:
-                    logger.warning(f"Skipping file {file_path}: {e}")
-                    continue
+            all_file_data = self._collect_file_data(files_to_process)
 
             if not all_file_data:
                 raise ConnectorExtractionError(
@@ -205,6 +192,52 @@ class FilesystemConnector(Connector):
                 f"Failed to read from path {self.path}: {e}"
             ) from e
 
+    def _validate_is_supported_output_schema(
+        self, output_schema: Schema | None
+    ) -> None:
+        """Validate that the provided schema is supported.
+
+        Args:
+            output_schema: The schema to validate
+
+        Raises:
+            ConnectorConfigError: If schema is invalid or unsupported
+        """
+        if not output_schema:
+            raise ConnectorConfigError(
+                "No schema provided for data extraction. Please specify a valid WCT schema."
+            )
+
+        if output_schema.name not in _SUPPORTED_OUTPUT_SCHEMAS:
+            raise ConnectorConfigError(
+                f"Unsupported output schema: {output_schema.name}. Supported schemas: {list(_SUPPORTED_OUTPUT_SCHEMAS.keys())}"
+            )
+
+    def _collect_file_data(self, files_to_process: list[Path]) -> list[dict[str, Any]]:
+        """Collect file content and metadata for all files.
+
+        Args:
+            files_to_process: List of file paths to process
+
+        Returns:
+            List of dictionaries containing file data with 'path', 'content', 'stat' keys
+        """
+        all_file_data: list[dict[str, Any]] = []
+
+        for file_path in files_to_process:
+            try:
+                stat = file_path.stat()
+                file_content = self._read_file_content(file_path)
+                all_file_data.append(
+                    {"path": file_path, "content": file_content, "stat": stat}
+                )
+                logger.debug(f"File {file_path} read successfully")
+            except Exception as e:
+                logger.warning(f"Skipping file {file_path}: {e}")
+                continue
+
+        return all_file_data
+
     def _transform_for_schema(
         self, schema: Schema, all_file_data: list[dict[str, Any]]
     ) -> dict[str, Any]:
@@ -219,10 +252,8 @@ class FilesystemConnector(Connector):
         """
         if schema.name == "standard_input":
             return self._transform_for_standard_input_schema(schema, all_file_data)
-        else:
-            raise ConnectorConfigError(
-                f"Unsupported schema transformation: {schema.name}"
-            )
+
+        raise ConnectorConfigError(f"Unsupported schema transformation: {schema.name}")
 
     def _transform_for_standard_input_schema(
         self, schema: Schema, all_file_data: list[dict[str, Any]]
@@ -253,7 +284,7 @@ class FilesystemConnector(Connector):
         file_count = len(all_file_data)
 
         # Build data array with one entry per file
-        data_entries = []
+        data_entries: list[dict[str, Any]] = []
         for file_data in all_file_data:
             file_path = file_data["path"]
             content = file_data["content"]
@@ -284,7 +315,7 @@ class FilesystemConnector(Connector):
             name_suffix = f"{self.path.name}_directory"
 
         return {
-            "schemaVersion": "1.0.0",
+            "schemaVersion": _DEFAULT_SCHEMA_VERSION,
             "name": f"standard_input_from_{name_suffix}",
             "description": source_desc,
             "contentEncoding": self.encoding,
@@ -311,7 +342,7 @@ class FilesystemConnector(Connector):
             return [self.path]
 
         # Directory processing with recursive traversal
-        files = []
+        files: list[Path] = []
 
         def should_exclude_path(path: Path) -> bool:
             """Check if a path should be excluded based on patterns."""
@@ -365,7 +396,7 @@ class FilesystemConnector(Connector):
 
             # For large files, read in chunks
             logger.debug(f"Reading large file in chunks of {self.chunk_size} bytes")
-            content_parts = []
+            content_parts: list[str] = []
 
             with open(target_path, encoding=self.encoding, errors=self.errors) as f:
                 while True:
