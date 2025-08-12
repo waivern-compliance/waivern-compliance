@@ -10,6 +10,7 @@ between connectors and analysers based on runbook configurations.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -17,9 +18,10 @@ from wct.analysers import Analyser, AnalyserConfig, AnalyserError
 from wct.analysis import AnalysisResult
 from wct.connectors import Connector, ConnectorConfig, ConnectorError
 from wct.errors import WCTError
-from wct.logging import get_executor_logger
 from wct.runbook import ExecutionStep, Runbook, RunbookLoader
 from wct.schemas import Schema
+
+logger = logging.getLogger(__name__)
 
 
 class Executor:
@@ -35,7 +37,6 @@ class Executor:
     def __init__(self):
         self.connectors: dict[str, type[Connector]] = {}
         self.analysers: dict[str, type[Analyser]] = {}
-        self.logger = get_executor_logger()
 
     # The following four methods allow for dynamic registration of connectors and analysers.
     # They are for system-wide registration of available connectors and analysers,
@@ -200,7 +201,7 @@ class Executor:
         self, step: ExecutionStep, error: Exception
     ) -> AnalysisResult:
         """Handle execution errors and return appropriate error result."""
-        self.logger.error(f"Step execution failed for {step.analyser}: {error}")
+        logger.error(f"Step execution failed for {step.analyser}: {error}")
         return self._create_error_result(
             step.analyser,
             error_message=str(error),

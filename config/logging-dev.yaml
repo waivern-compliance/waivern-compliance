@@ -1,0 +1,40 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  dev:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    datefmt: '%H:%M:%S'
+
+  debug:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(funcName)s:%(lineno)d - %(message)s'
+    datefmt: '%H:%M:%S'
+
+handlers:
+  dev_console:
+    class: rich.logging.RichHandler
+    level: DEBUG
+    formatter: dev
+    markup: true
+    rich_tracebacks: true
+    tracebacks_show_locals: true
+    show_time: true
+    show_path: true
+
+  debug_file:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: debug
+    filename: logs/wct-debug.log
+    mode: w
+    encoding: utf8
+
+loggers:
+  wct:
+    level: DEBUG
+    handlers: [dev_console, debug_file]
+    propagate: false
+
+root:
+  level: INFO
+  handlers: [dev_console]

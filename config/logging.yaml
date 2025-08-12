@@ -1,0 +1,72 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+  detailed:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(lineno)d - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: standard
+    stream: ext://sys.stderr
+
+  rich_console:
+    class: rich.logging.RichHandler
+    level: INFO
+    formatter: standard
+    markup: true
+    rich_tracebacks: true
+    tracebacks_show_locals: false
+    show_time: true
+    show_path: false
+
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/wct.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf8
+
+loggers:
+  wct:
+    level: INFO
+    handlers: [rich_console]
+    propagate: false
+
+  wct.executor:
+    level: INFO
+    handlers: [rich_console]
+    propagate: false
+
+  wct.connectors:
+    level: INFO
+    handlers: [rich_console]
+    propagate: false
+
+  wct.analysers:
+    level: INFO
+    handlers: [rich_console]
+    propagate: false
+
+  wct.rulesets:
+    level: INFO
+    handlers: [rich_console]
+    propagate: false
+
+  wct.cli:
+    level: INFO
+    handlers: [rich_console]
+    propagate: false
+
+root:
+  level: WARNING
+  handlers: [console]

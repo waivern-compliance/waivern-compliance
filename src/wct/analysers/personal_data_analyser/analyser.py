@@ -1,5 +1,6 @@
 """Personal data analysis analyser for GDPR compliance."""
 
+import logging
 from pprint import pformat
 from typing import Any
 
@@ -20,6 +21,8 @@ from .pattern_matcher import personal_data_pattern_matcher
 from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
 
 # from .types import PersonalDataFinding  # Only needed for LLM validation strategy
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
     StandardInputSchema(),
@@ -198,7 +201,7 @@ class PersonalDataAnalyser(Analyser):
                 "validation_mode": self.config["llm_validation_mode"],
             }
 
-            self.logger.info(
+            logger.info(
                 f"LLM validation completed: {original_count} → {validated_count} findings "
                 f"({false_positives_removed} false positives removed)"
             )
@@ -212,7 +215,7 @@ class PersonalDataAnalyser(Analyser):
         # Validate the output message against the output schema
         output_message.validate()
 
-        self.logger.debug(
+        logger.debug(
             f"PersonalDataAnalyser processed with findings:\n{pformat(findings)}"
         )
 

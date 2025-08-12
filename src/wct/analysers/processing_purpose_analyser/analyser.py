@@ -1,5 +1,6 @@
 """Processing purpose analysis analyser for GDPR compliance."""
 
+import logging
 from typing import Any
 
 from typing_extensions import Self, override
@@ -14,6 +15,8 @@ from wct.schemas import (
 )
 
 from .pattern_matcher import processing_purpose_pattern_matcher
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
     StandardInputSchema(),
@@ -133,14 +136,14 @@ class ProcessingPurposeAnalyser(Analyser):
         message: Message,
     ) -> Message:
         """Process data to identify processing purposes using runners."""
-        self.logger.info("Starting processing purpose analysis")
+        logger.info("Starting processing purpose analysis")
 
         # Validate input message
         Analyser.validate_input_message(message, input_schema)
 
         # Extract content from message
         data = message.content
-        self.logger.debug(f"Processing data with schema: {input_schema.name}")
+        logger.debug(f"Processing data with schema: {input_schema.name}")
 
         # Process standard_input schema using pattern runner
         findings = self._process_standard_input_with_runners(data)
@@ -178,9 +181,7 @@ class ProcessingPurposeAnalyser(Analyser):
         # Validate the output message against the output schema
         output_message.validate()
 
-        self.logger.debug(
-            f"Processing purpose analysis completed with data: {result_data}"
-        )
+        logger.debug(f"Processing purpose analysis completed with data: {result_data}")
 
         return output_message
 

@@ -1,6 +1,7 @@
 """Filesystem connector for WCT - handles files and directories."""
 
 import fnmatch
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,8 @@ from wct.message import Message
 
 # Import the actual schema instances
 from wct.schemas import Schema, StandardInputSchema
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "standard_input": StandardInputSchema(),
@@ -51,7 +54,7 @@ class FilesystemConnector(Connector):
             exclude_patterns: List of glob patterns to exclude (e.g., ['*.log', '__pycache__'])
             max_files: Maximum number of files to process (safety limit)
         """
-        super().__init__()  # Initialise logger from base class
+        super().__init__()
         self.path = Path(path)
         self.chunk_size = chunk_size
         self.encoding = encoding
@@ -151,7 +154,7 @@ class FilesystemConnector(Connector):
                 )
 
             if not output_schema:
-                self.logger.warning(
+                logger.warning(
                     "No schema provided, using default standard_input schema"
                 )
                 raise ConnectorConfigError(
@@ -160,7 +163,7 @@ class FilesystemConnector(Connector):
 
             # Collect all files to process
             files_to_process = self.collect_files()
-            self.logger.info(f"Found {len(files_to_process)} files to process")
+            logger.info(f"Found {len(files_to_process)} files to process")
 
             # Read all file contents
             all_file_data = []
@@ -171,9 +174,9 @@ class FilesystemConnector(Connector):
                     all_file_data.append(
                         {"path": file_path, "content": file_content, "stat": stat}
                     )
-                    self.logger.debug(f"File {file_path} read successfully")
+                    logger.debug(f"File {file_path} read successfully")
                 except Exception as e:
-                    self.logger.warning(f"Skipping file {file_path}: {e}")
+                    logger.warning(f"Skipping file {file_path}: {e}")
                     continue
 
             if not all_file_data:
@@ -197,7 +200,7 @@ class FilesystemConnector(Connector):
             return message
 
         except Exception as e:
-            self.logger.error(f"Failed to extract from path {self.path}: {e}")
+            logger.error(f"Failed to extract from path {self.path}: {e}")
             raise ConnectorExtractionError(
                 f"Failed to read from path {self.path}: {e}"
             ) from e
@@ -330,14 +333,14 @@ class FilesystemConnector(Connector):
                 continue
 
             if should_exclude_path(file_path):
-                self.logger.debug(f"Excluding file: {file_path}")
+                logger.debug(f"Excluding file: {file_path}")
                 continue
 
             files.append(file_path)
 
             # Safety check
             if len(files) >= self.max_files:
-                self.logger.warning(
+                logger.warning(
                     f"Reached maximum file limit ({self.max_files}), stopping collection"
                 )
                 break
@@ -345,7 +348,7 @@ class FilesystemConnector(Connector):
         if not files:
             raise ConnectorExtractionError(f"No files found in directory {self.path}")
 
-        self.logger.info(f"Collected {len(files)} files from {self.path}")
+        logger.info(f"Collected {len(files)} files from {self.path}")
         return files
 
     def _read_file_content(self, file_path: Path | None = None) -> str:
@@ -361,9 +364,7 @@ class FilesystemConnector(Connector):
                 return target_path.read_text(encoding=self.encoding, errors=self.errors)
 
             # For large files, read in chunks
-            self.logger.debug(
-                f"Reading large file in chunks of {self.chunk_size} bytes"
-            )
+            logger.debug(f"Reading large file in chunks of {self.chunk_size} bytes")
             content_parts = []
 
             with open(target_path, encoding=self.encoding, errors=self.errors) as f:
@@ -376,7 +377,7 @@ class FilesystemConnector(Connector):
             return "".join(content_parts)
 
         except UnicodeDecodeError as e:
-            self.logger.info(f"Skipping binary file {target_path}: {e}")
+            logger.info(f"Skipping binary file {target_path}: {e}")
             # Skip binary files as they're not suitable for text-based analysis
             raise ConnectorExtractionError(
                 f"Binary file not suitable for text analysis: {target_path}"

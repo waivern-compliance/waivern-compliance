@@ -1,13 +1,15 @@
 """Pattern matching analysis runner."""
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
 from wct.analysers.runners.base import AnalysisRunner, AnalysisRunnerError
 from wct.analysers.utilities import EvidenceExtractor
-from wct.logging import get_analyser_logger
 from wct.rulesets import RulesetLoader
 from wct.rulesets.types import Rule
+
+logger = logging.getLogger(__name__)
 
 # Type alias for pattern matcher function
 PatternMatcherFn = Callable[
@@ -32,7 +34,6 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
         """
         self.evidence_extractor = EvidenceExtractor()
         self._patterns_cache = {}  # Cache loaded rulesets
-        self.logger = get_analyser_logger("pattern_matching_runner")
         self.pattern_matcher = (
             pattern_matcher
             if pattern_matcher is not None
@@ -66,12 +67,12 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
         try:
             ruleset_name = config.get("ruleset_name", "personal_data")
 
-            self.logger.debug(f"Running pattern analysis with ruleset: {ruleset_name}")
+            logger.debug(f"Running pattern analysis with ruleset: {ruleset_name}")
 
             # Load rules (with caching)
             rules = self._get_rules(ruleset_name)
             if not rules:
-                self.logger.warning(f"No rules found in ruleset: {ruleset_name}")
+                logger.warning(f"No rules found in ruleset: {ruleset_name}")
 
             # Run pattern matching using the provided strategy
             findings = []
@@ -97,7 +98,7 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
 
                         if finding:
                             findings.append(finding)
-                            self.logger.debug(
+                            logger.debug(
                                 f"Found pattern '{pattern}' in rule '{rule.name}'"
                             )
             return findings
@@ -168,7 +169,7 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
             self._patterns_cache[ruleset_name] = RulesetLoader.load_ruleset(
                 ruleset_name
             )
-            self.logger.info(f"Loaded ruleset: {ruleset_name}")
+            logger.info(f"Loaded ruleset: {ruleset_name}")
 
         return self._patterns_cache[ruleset_name]
 
@@ -178,4 +179,4 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
         Useful for testing or when rulesets are updated.
         """
         self._patterns_cache.clear()
-        self.logger.debug("Pattern cache cleared")
+        logger.debug("Pattern cache cleared")

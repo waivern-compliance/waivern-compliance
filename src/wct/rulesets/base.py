@@ -1,10 +1,12 @@
 """Base classes and utilities for rulesets."""
 
 import abc
+import logging
 from typing import Any
 
-from wct.logging import get_ruleset_logger
 from wct.rulesets.types import Rule
+
+logger = logging.getLogger(__name__)
 
 
 class Ruleset(abc.ABC):
@@ -17,11 +19,8 @@ class Ruleset(abc.ABC):
     """
 
     def __init__(self) -> None:
-        """Initialise the ruleset.
-
-        Uses the ruleset's canonical name for logging purposes.
-        """
-        self.logger = get_ruleset_logger(self.name)
+        """Initialise the ruleset."""
+        pass
 
     @property
     @abc.abstractmethod

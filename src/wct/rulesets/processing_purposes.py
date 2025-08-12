@@ -1,11 +1,14 @@
 """Known processing purposes to search for during analysis."""
 
+import logging
 from typing import Final
 
 from typing_extensions import override
 
 from wct.rulesets.base import Ruleset
 from wct.rulesets.types import Rule, RuleData
+
+logger = logging.getLogger(__name__)
 
 # Version constant for this ruleset (private)
 _VERSION: Final[str] = "1.0.0"
@@ -465,7 +468,7 @@ class ProcessingPurposesRuleset(Ruleset):
         """Initialise the processing purposes ruleset."""
         super().__init__()
         self.rules: tuple[Rule, ...] | None = None
-        self.logger.debug(f"Initialised {self.name} ruleset version {self.version}")
+        logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
     @property
     @override
@@ -499,6 +502,6 @@ class ProcessingPurposesRuleset(Ruleset):
                     )
                 )
             self.rules = tuple(rules_list)
-            self.logger.debug(f"Generated {len(self.rules)} processing purpose rules")
+            logger.debug(f"Generated {len(self.rules)} processing purpose rules")
 
         return self.rules

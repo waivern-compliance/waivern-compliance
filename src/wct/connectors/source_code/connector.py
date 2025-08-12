@@ -1,5 +1,6 @@
 """Source code connector for WCT."""
 
+import logging
 from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +23,8 @@ from wct.message import Message
 
 # Import the actual schema instances
 from wct.schemas import Schema, SourceCodeSchema
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_OUTPUT_SCHEMAS = {
     "source_code": SourceCodeSchema(),
@@ -163,9 +166,7 @@ class SourceCodeConnector(Connector):
                 )
 
             if not output_schema:
-                self.logger.warning(
-                    "No schema provided, using default source_code schema"
-                )
+                logger.warning("No schema provided, using default source_code schema")
                 output_schema = SUPPORTED_OUTPUT_SCHEMAS["source_code"]
 
             # Analyse source code
@@ -181,7 +182,7 @@ class SourceCodeConnector(Connector):
             return message
 
         except Exception as e:
-            self.logger.error(f"Failed to extract from source code {self.path}: {e}")
+            logger.error(f"Failed to extract from source code {self.path}: {e}")
             raise ConnectorExtractionError(
                 f"Failed to analyse source code {self.path}: {e}"
             ) from e
@@ -226,7 +227,7 @@ class SourceCodeConnector(Connector):
         try:
             # Check file size
             if file_path.stat().st_size > self.max_file_size:
-                self.logger.warning(f"Skipping large file: {file_path}")
+                logger.warning(f"Skipping large file: {file_path}")
                 return [], 0, 0
 
             # Detect language if needed
@@ -246,7 +247,7 @@ class SourceCodeConnector(Connector):
             return [file_data], 1, line_count
 
         except Exception as e:
-            self.logger.error(f"Failed to analyse file {file_path}: {e}")
+            logger.error(f"Failed to analyse file {file_path}: {e}")
             return [], 0, 0
 
     def _analyse_directory(
@@ -273,7 +274,7 @@ class SourceCodeConnector(Connector):
             total_files += file_count
             total_lines += line_count
 
-        self.logger.info(f"Processed {total_files} source code files")
+        logger.info(f"Processed {total_files} source code files")
         return files_data, total_files, total_lines
 
     def _get_source_files(self) -> Generator[Path, None, None]:
