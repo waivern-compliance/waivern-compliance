@@ -1,55 +1,93 @@
-"""Runbook management and loading functionality for WCT."""
+"""Runbook management and loading functionality for WCT.
+
+This module provides classes for loading, parsing, and validating YAML-based runbook
+configurations that define WCT analysis pipelines. Runbooks specify:
+- Data source connections (connectors)
+- Analysis operations (analysers)
+- Execution orchestration with schema-aware data flow
+"""
 
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
+import jsonschema
 import yaml
 
 from wct.analysers.base import AnalyserConfig
 from wct.connectors.base import ConnectorConfig
 from wct.errors import WCTError
+from wct.schemas import RunbookSchema, SchemaLoadError
 
 logger = logging.getLogger(__name__)
+
+# No longer needed - using dict[str, Any] directly for context
+
+__all__ = [
+    "Runbook",
+    "RunbookSummary",
+    "RunbookLoader",
+    "ExecutionStep",
+    "RunbookError",
+    "RunbookLoadError",
+    "RunbookValidationError",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class RunbookSummary:
+    """Strongly typed summary of runbook configuration and statistics.
+
+    Provides comprehensive overview of runbook complexity and component breakdown
+    useful for debugging, monitoring, and reporting purposes.
+    """
+
+    name: str
+    """Display name of the runbook."""
+
+    description: str
+    """Description text explaining the runbook's purpose."""
+
+    connector_count: int
+    """Number of configured connector instances."""
+
+    analyser_count: int
+    """Number of configured analyser instances."""
+
+    execution_steps: int
+    """Number of execution pipeline steps."""
+
+    connector_types: list[str]
+    """Unique connector types used in the runbook."""
+
+    analyser_types: list[str]
+    """Unique analyser types used in the runbook."""
 
 
 @dataclass(frozen=True, slots=True)
 class ExecutionStep:
-    """Represents a step in the execution order with detailed configuration.
+    """Represents a step in the execution pipeline with schema-aware configuration.
 
-    Each execution step specifies:
-    - connector: Name of the connector to use for data extraction
-    - analyser: Name of the analyser to use for analysis
-    - input_schema_name: Name of the JSON schema for input validation
-    - output_schema_name: Name of the JSON schema for output validation (optional)
-    - context: Additional metadata and configuration context (optional)
+    All execution steps require explicit schema specification to ensure proper
+    type-safe data flow between connectors and analysers.
     """
 
     connector: str
     analyser: str
-    input_schema_name: str | None = None
-    output_schema_name: str | None = None
-    context: dict[str, Any] | None = None
-
-    def __post_init__(self) -> None:
-        """Validate required fields."""
-        if not self.connector:
-            raise ValueError("connector field is required")
-        if not self.analyser:
-            raise ValueError("analyser field is required")
+    input_schema_name: str
+    output_schema_name: str
+    context: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
 class Runbook:
-    """A runbook defining the analysis pipeline.
+    """A runbook defining the complete WCT analysis pipeline configuration.
 
-    Runbooks are the core configuration concept in WCT that define:
-    - What data sources to connect to (connectors)
-    - What analysis to perform (analysers)
-    - How to orchestrate the analysis workflow (execution steps)
+    The runbook system enables reproducible, configurable compliance analysis
+    workflows that can be version-controlled and shared across environments.
     """
 
     name: str
@@ -58,46 +96,55 @@ class Runbook:
     analysers: list[AnalyserConfig]
     execution: list[ExecutionStep]  # Analyser execution steps with schema info
 
-    def get_summary(self) -> dict[str, Any]:
-        """Return a summary of the runbook.
+    def get_summary(self) -> RunbookSummary:
+        """Generate a comprehensive summary of the runbook configuration.
+
+        Provides statistical overview and component breakdown useful for
+        debugging, monitoring, and reporting on runbook complexity.
 
         Returns:
-            Dictionary with runbook statistics
+            RunbookSummary instance with strongly typed configuration statistics
         """
-        return {
-            "name": self.name,
-            "description": self.description,
-            "connector_count": len(self.connectors),
-            "analyser_count": len(self.analysers),
-            "execution_steps": len(self.execution),
-            "connector_types": list({conn.type for conn in self.connectors}),
-            "analyser_types": list({analyser.type for analyser in self.analysers}),
-        }
+        return RunbookSummary(
+            name=self.name,
+            description=self.description,
+            connector_count=len(self.connectors),
+            analyser_count=len(self.analysers),
+            execution_steps=len(self.execution),
+            connector_types=list({conn.type for conn in self.connectors}),
+            analyser_types=list({analyser.type for analyser in self.analysers}),
+        )
 
 
 class RunbookLoader:
-    """Handles loading and parsing of runbook files."""
+    """Loads and parses YAML runbook files into validated configuration objects."""
 
-    def load_from_file(self, runbook_path: Path) -> Runbook:
-        """Load and parse a runbook file.
+    def __init__(self) -> None:
+        """Initialize with runbook schema for validation."""
+        self.runbook_schema = RunbookSchema()
+
+    @classmethod
+    def load(cls, runbook_path: Path) -> Runbook:
+        """Load and validate a runbook from a YAML file.
 
         Args:
             runbook_path: Path to the runbook YAML file
 
         Returns:
-            Parsed runbook
+            Fully loaded and validated Runbook instance
 
         Raises:
-            RunbookLoadError: If the file cannot be loaded
-            RunbookValidationError: If the runbook format is invalid
+            RunbookLoadError: If the file cannot be read or parsed
+            RunbookValidationError: If the runbook configuration is invalid
         """
+        loader = cls()
         logger.debug("Loading runbook from: %s", runbook_path)
 
         try:
-            raw_data = self._load_yaml_file(runbook_path)
-            runbook = self._parse_runbook_data(raw_data)
-            validator = RunbookValidator()
-            validator.validate(runbook)
+            raw_data = loader._load_runbook_file(runbook_path)
+            loader._validate_runbook_schema(raw_data)
+            runbook = loader._parse_runbook_data(raw_data)
+            loader._validate_cross_references(runbook)
 
             logger.info("Successfully loaded runbook: %s", runbook.name)
             return runbook
@@ -107,7 +154,7 @@ class RunbookLoader:
                 raise
             raise RunbookLoadError(f"Failed to load runbook {runbook_path}: {e}") from e
 
-    def _load_yaml_file(self, file_path: Path) -> dict[str, Any]:
+    def _load_runbook_file(self, file_path: Path) -> dict[str, Any]:
         """Load YAML data from file.
 
         Args:
@@ -121,19 +168,95 @@ class RunbookLoader:
         """
         try:
             with open(file_path, encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-
-            if not isinstance(data, dict):
-                raise RunbookLoadError(
-                    f"Runbook must be a YAML object, got {type(data)}"
-                )
-
-            return data
-
+                return yaml.safe_load(f)
         except yaml.YAMLError as e:
             raise RunbookLoadError(f"Invalid YAML in {file_path}: {e}") from e
         except OSError as e:
             raise RunbookLoadError(f"Cannot read file {file_path}: {e}") from e
+
+    def _validate_runbook_schema(self, data: dict[str, Any]) -> None:
+        """Validate runbook data against JSON schema.
+
+        Args:
+            data: Raw runbook data from YAML
+
+        Raises:
+            RunbookValidationError: If the runbook doesn't match the schema
+        """
+        try:
+            # Validate the runbook data against the schema
+            jsonschema.validate(data, self.runbook_schema.schema)
+
+            logger.debug("Runbook schema validation passed")
+
+        except SchemaLoadError as e:
+            raise RunbookValidationError(f"Could not load runbook schema: {e}") from e
+        except jsonschema.ValidationError as e:
+            # Create user-friendly error message
+            path = (
+                " -> ".join(str(p) for p in e.absolute_path)
+                if e.absolute_path
+                else "root"
+            )
+            raise RunbookValidationError(
+                f"Invalid runbook structure at '{path}': {e.message}"
+            ) from e
+        except jsonschema.SchemaError as e:
+            raise RunbookValidationError(
+                f"Invalid runbook schema definition: {e}"
+            ) from e
+
+    def _validate_cross_references(self, runbook: Runbook) -> None:
+        """Validate cross-references between execution steps and their components.
+
+        This handles validation logic that cannot be expressed in JSON Schema:
+        - Name uniqueness within connector and analyser arrays
+        - Cross-references from execution steps to defined connectors/analysers
+
+        Args:
+            runbook: Parsed runbook to validate
+
+        Raises:
+            RunbookValidationError: If cross-reference validation fails
+        """
+        # Validate name uniqueness for connectors
+        connector_names = [conn.name for conn in runbook.connectors]
+        duplicates = [
+            name for name in set(connector_names) if connector_names.count(name) > 1
+        ]
+        if duplicates:
+            raise RunbookValidationError(
+                f"Duplicate connector names found: {duplicates}"
+            )
+
+        # Validate name uniqueness for analysers
+        analyser_names = [analyser.name for analyser in runbook.analysers]
+        duplicates = [
+            name for name in set(analyser_names) if analyser_names.count(name) > 1
+        ]
+        if duplicates:
+            raise RunbookValidationError(
+                f"Duplicate analyser names found: {duplicates}"
+            )
+
+        # Validate execution step references
+        connector_names_set = set(connector_names)
+        analyser_names_set = set(analyser_names)
+
+        for i, step in enumerate(runbook.execution):
+            if step.connector not in connector_names_set:
+                raise RunbookValidationError(
+                    f"Execution step {i + 1} references unknown connector '{step.connector}'. "
+                    f"Available connectors: {sorted(connector_names_set)}"
+                )
+
+            if step.analyser not in analyser_names_set:
+                raise RunbookValidationError(
+                    f"Execution step {i + 1} references unknown analyser '{step.analyser}'. "
+                    f"Available analysers: {sorted(analyser_names_set)}"
+                )
+
+        logger.debug("Cross-reference validation passed")
 
     def _parse_runbook_data(self, data: dict[str, Any]) -> Runbook:
         """Parse raw runbook data into configuration objects.
@@ -166,23 +289,26 @@ class RunbookLoader:
     def _parse_connectors(
         self, connectors_data: list[dict[str, Any]]
     ) -> list[ConnectorConfig]:
-        """Parse connector configurations from runbook data.
+        """Parse and validate connector configurations from runbook YAML.
+
+        Processes the 'connectors' section to create ConnectorConfig instances
+        with proper validation and error handling. Each connector requires
+        a type field and may have optional name and properties.
 
         Args:
-            connectors_data: List of connector configuration dictionaries
+            connectors_data: List of connector configuration dictionaries from YAML
 
         Returns:
-            List of parsed connector configurations
+            List of validated ConnectorConfig instances
+
+        Raises:
+            RunbookValidationError: If connector configurations are invalid or missing required fields
         """
-        connectors = []
+        connectors: list[ConnectorConfig] = []
 
         for i, conn_data in enumerate(connectors_data):
             try:
-                if "type" not in conn_data:
-                    raise RunbookValidationError(
-                        f"Connector {i} missing required 'type' field"
-                    )
-
+                # JSON Schema ensures required fields are present
                 connector = ConnectorConfig(
                     name=conn_data.get("name", conn_data["type"]),
                     type=conn_data["type"],
@@ -200,23 +326,26 @@ class RunbookLoader:
     def _parse_analysers(
         self, analysers_data: list[dict[str, Any]]
     ) -> list[AnalyserConfig]:
-        """Parse analyser configurations from runbook data.
+        """Parse and validate analyser configurations from runbook YAML.
+
+        Processes the 'analysers' section to create AnalyserConfig instances
+        with comprehensive validation. Each analyser requires a type field
+        and supports optional name, properties, and metadata fields.
 
         Args:
-            analysers_data: List of analyser configuration dictionaries
+            analysers_data: List of analyser configuration dictionaries from YAML
 
         Returns:
-            List of parsed analyser configurations
+            List of validated AnalyserConfig instances
+
+        Raises:
+            RunbookValidationError: If analyser configurations are invalid or missing required fields
         """
-        analysers = []
+        analysers: list[AnalyserConfig] = []
 
         for i, analyser_data in enumerate(analysers_data):
             try:
-                if "type" not in analyser_data:
-                    raise RunbookValidationError(
-                        f"Analyser {i} missing required 'type' field"
-                    )
-
+                # JSON Schema ensures required fields are present
                 analyser = AnalyserConfig(
                     name=analyser_data.get("name", analyser_data["type"]),
                     type=analyser_data["type"],
@@ -235,46 +364,39 @@ class RunbookLoader:
     def _parse_execution_steps(
         self, data: dict[str, Any], analysers: list[AnalyserConfig]
     ) -> list[ExecutionStep]:
-        """Parse and validate analyser execution steps.
+        """Parse and validate the execution pipeline configuration.
+
+        Processes the 'execution' section of the runbook to create ordered
+        execution steps that define the data flow from connectors to analysers.
+        Each step specifies connector-analyser pairing with optional schema names.
 
         Args:
-            data: Raw runbook data
-            analysers: List of configured analysers
+            data: Raw runbook data dictionary from YAML
+            analysers: List of configured analyser instances for validation
 
         Returns:
-            List of ExecutionStep objects in execution order
+            List of ExecutionStep objects in the specified execution order
+
+        Raises:
+            RunbookValidationError: If execution steps are malformed or missing required fields
         """
         if "execution" in data:
-            execution = data["execution"]
-            if not isinstance(execution, list):
-                raise RunbookValidationError("Execution steps must be a list")
+            # It is safe to use cast here because we validated the schema earlier with JSON Schema definitions
+            execution = cast(list[dict[str, Any]], data["execution"])
 
-            steps = []
+            steps: list[ExecutionStep] = []
             for i, step_data in enumerate(execution):
                 try:
-                    if isinstance(step_data, dict):
-                        if "connector" not in step_data:
-                            raise RunbookValidationError(
-                                f"Execution step {i} missing required 'connector' field"
-                            )
-                        if "analyser" not in step_data:
-                            raise RunbookValidationError(
-                                f"Execution step {i} missing required 'analyser' field"
-                            )
-
-                        steps.append(
-                            ExecutionStep(
-                                connector=step_data["connector"],
-                                analyser=step_data["analyser"],
-                                input_schema_name=step_data.get("input_schema_name"),
-                                output_schema_name=step_data.get("output_schema_name"),
-                                context=step_data.get("context"),
-                            )
+                    # JSON Schema ensures step_data is a dict with required fields
+                    steps.append(
+                        ExecutionStep(
+                            connector=step_data["connector"],
+                            analyser=step_data["analyser"],
+                            input_schema_name=step_data["input_schema_name"],
+                            output_schema_name=step_data["output_schema_name"],
+                            context=step_data.get("context", {}),
                         )
-                    else:
-                        raise RunbookValidationError(
-                            f"Execution step {i} must be a dict with 'connector' and 'analyser' fields, got {type(step_data)}"
-                        )
+                    )
                 except Exception as e:
                     raise RunbookValidationError(
                         f"Invalid execution step at index {i}: {e}"
@@ -282,72 +404,26 @@ class RunbookLoader:
 
             return steps
         else:
-            # Execution is now required - cannot create default steps without connector specification
+            # Explicit execution steps are required for schema-aware data flow
+            # Cannot auto-generate steps without knowing intended connector-analyser pairing
             raise RunbookValidationError(
-                "execution is required and must specify both 'connector' and 'analyser' for each step"
+                "'execution' section is required and must specify both 'connector' and 'analyser' for each pipeline step"
             )
 
 
-class RunbookValidator:
-    """Validates runbook for completeness and correctness."""
-
-    def validate(self, runbook: Runbook) -> None:
-        """Validate runbook against available components.
-
-        Args:
-            runbook: Runbook to validate
-
-        Returns:
-            List of validation warnings (empty if fully valid)
-        """
-        # Check connector name uniqueness
-        connector_names = [conn.name for conn in runbook.connectors]
-        if len(connector_names) != len(set(connector_names)):
-            raise RunbookValidationError("Connector names must be unique")
-
-        # Check analyser name uniqueness
-        analyser_names = [analyser.name for analyser in runbook.analysers]
-        if len(analyser_names) != len(set(analyser_names)):
-            raise RunbookValidationError("Analyser names must be unique")
-
-        # Validate connector types
-        for step in runbook.execution:
-            if step.connector not in [conn.name for conn in runbook.connectors]:
-                raise RunbookValidationError(f"Unknown connector: {step.connector}")
-
-        # Validate analyser types
-        for step in runbook.execution:
-            if step.analyser not in [analyser.name for analyser in runbook.analysers]:
-                raise RunbookValidationError(f"Unknown analyser: {step.analyser}")
-
-
-# TODO: Consider moving this to the RunbookLoader class as a static method
-def load_runbook(runbook_path: Path) -> Runbook:
-    """Load a runbook from the specified path.
-
-    Args:
-        runbook_path: Path to the runbook YAML file
-
-    Returns:
-        Loaded runbook
-    """
-    loader = RunbookLoader()
-    return loader.load_from_file(runbook_path)
-
-
 class RunbookError(WCTError):
-    """Base exception for runbook-related errors."""
+    """Base exception for generic runbook-related errors."""
 
     pass
 
 
 class RunbookLoadError(RunbookError):
-    """Raised when a runbook cannot be loaded."""
+    """Raised when a runbook file cannot be loaded or parsed."""
 
     pass
 
 
 class RunbookValidationError(RunbookError):
-    """Raised when a runbook has invalid configuration."""
+    """Raised when runbook configuration is structurally invalid."""
 
     pass

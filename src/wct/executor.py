@@ -18,7 +18,7 @@ from wct.analysis import AnalysisResult
 from wct.connectors import Connector, ConnectorConfig, ConnectorError
 from wct.errors import WCTError
 from wct.logging import get_executor_logger
-from wct.runbook import ExecutionStep, Runbook, load_runbook
+from wct.runbook import ExecutionStep, Runbook, RunbookLoader
 from wct.schemas import Schema
 
 
@@ -60,7 +60,7 @@ class Executor:
     def load_runbook(self, runbook_path: Path) -> Runbook:
         """Load and parse a runbook file."""
         try:
-            return load_runbook(runbook_path)
+            return RunbookLoader.load(runbook_path)
         except Exception as e:
             raise ExecutorError(f"Failed to load runbook {runbook_path}: {e}") from e
 
