@@ -3,7 +3,7 @@
 This module provides:
 - MySQLConnector: Main connector class for MySQL database integration
 - Support for extracting database metadata and content
-- Transformation capabilities for multiple output schemas (mysql_database, text)
+- Transformation capabilities for standard_input schema
 - Connection management with proper error handling and logging
 """
 
@@ -12,6 +12,7 @@ import os
 from contextlib import contextmanager
 from typing import Any
 
+import pymysql
 from typing_extensions import Self, override
 
 from wct.connectors.base import (
@@ -20,19 +21,36 @@ from wct.connectors.base import (
     ConnectorExtractionError,
 )
 from wct.message import Message
-from wct.schemas import Schema
+from wct.schemas import Schema, StandardInputSchema
 
 logger = logging.getLogger(__name__)
 
-try:
-    import pymysql
-except ImportError:
-    pymysql = None  # Optional dependency, will raise error if used
+# Constants
+_CONNECTOR_NAME = "mysql"
+_DEFAULT_PORT = 3306
+_DEFAULT_CHARSET = "utf8mb4"
+_DEFAULT_AUTOCOMMIT = True
+_DEFAULT_CONNECT_TIMEOUT = 10
+_DEFAULT_MAX_ROWS = 10
+_DEFAULT_SCHEMA_VERSION = "1.0.0"
 
-# Import the actual schema instances
-from wct.schemas import StandardInputSchema
+# SQL Queries
+_TABLES_QUERY = """
+SELECT TABLE_NAME, TABLE_TYPE, TABLE_COMMENT, TABLE_ROWS
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA = %s
+ORDER BY TABLE_NAME
+"""
 
-SUPPORTED_OUTPUT_SCHEMAS = {
+_COLUMNS_QUERY = """
+SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT,
+       COLUMN_COMMENT, COLUMN_KEY, EXTRA
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+ORDER BY ORDINAL_POSITION
+"""
+
+_SUPPORTED_OUTPUT_SCHEMAS = {
     "standard_input": StandardInputSchema(),
 }
 
@@ -48,14 +66,14 @@ class MySQLConnector(Connector):
     def __init__(
         self,
         host: str,
-        port: int = 3306,
+        port: int = _DEFAULT_PORT,
         user: str = "",
         password: str | None = None,
         database: str = "",
-        charset: str = "utf8mb4",
-        autocommit: bool = True,
-        connect_timeout: int = 10,
-        max_rows_per_table: int = 10,
+        charset: str = _DEFAULT_CHARSET,
+        autocommit: bool = _DEFAULT_AUTOCOMMIT,
+        connect_timeout: int = _DEFAULT_CONNECT_TIMEOUT,
+        max_rows_per_table: int = _DEFAULT_MAX_ROWS,
     ):
         """Initialise MySQL connector with connection parameters.
 
@@ -70,7 +88,6 @@ class MySQLConnector(Connector):
             connect_timeout: Connection timeout in seconds (default: 10)
             max_rows_per_table: Maximum number of rows to extract per table (default: 10)
         """
-        super().__init__()  # Initialise logger from base class
         self.host = host
         self.port = port
         self.user = user
@@ -80,19 +97,14 @@ class MySQLConnector(Connector):
         self.autocommit = autocommit
         self.connect_timeout = connect_timeout
         self.max_rows_per_table = max_rows_per_table
-        self._connection = None
 
-        # Validate required parameters
-        if not host:
-            raise ConnectorConfigError("MySQL host is required")
-        if not user:
-            raise ConnectorConfigError("MySQL user is required")
+        self._validate_required_connection_parameters(host, user)
 
     @classmethod
     @override
     def get_name(cls) -> str:
         """Return the name of the connector."""
-        return "mysql"
+        return _CONNECTOR_NAME
 
     @classmethod
     @override
@@ -113,33 +125,10 @@ class MySQLConnector(Connector):
         - max_rows_per_table: Maximum rows per table (default: 10)
         """
         # Load environment variables, with runbook properties as fallback
-        host = os.getenv("MYSQL_HOST") or properties.get("host")
-        if not host:
-            raise ConnectorConfigError(
-                "MySQL host info is required (specify in runbook or MYSQL_HOST env var)"
-            )
-
-        user = os.getenv("MYSQL_USER") or properties.get("user")
-        if not user:
-            raise ConnectorConfigError(
-                "MySQL user info is required (specify in runbook or MYSQL_USER env var)"
-            )
-
-        # For sensitive data, prefer environment variables
+        host, user = cls._validate_required_properties(properties)
         password = os.getenv("MYSQL_PASSWORD") or properties.get("password")
         database = os.getenv("MYSQL_DATABASE") or properties.get("database", "")
-
-        # Port handling with environment variable support
-        port_str = os.getenv("MYSQL_PORT")
-        if port_str:
-            try:
-                port = int(port_str)
-            except ValueError:
-                raise ConnectorConfigError(
-                    f"Invalid MYSQL_PORT environment variable: {port_str}"
-                )
-        else:
-            port = properties.get("port", 3306)
+        port = cls._parse_port_from_env_or_properties(properties)
 
         return cls(
             host=host,
@@ -147,14 +136,14 @@ class MySQLConnector(Connector):
             user=user,
             password=password,
             database=database,
-            charset=properties.get("charset", "utf8mb4"),
-            autocommit=properties.get("autocommit", True),
-            connect_timeout=properties.get("connect_timeout", 10),
-            max_rows_per_table=properties.get("max_rows_per_table", 10),
+            charset=properties.get("charset", _DEFAULT_CHARSET),
+            autocommit=properties.get("autocommit", _DEFAULT_AUTOCOMMIT),
+            connect_timeout=properties.get("connect_timeout", _DEFAULT_CONNECT_TIMEOUT),
+            max_rows_per_table=properties.get("max_rows_per_table", _DEFAULT_MAX_ROWS),
         )
 
     @contextmanager
-    def get_connection(self):
+    def _get_connection(self):
         """Get a database connection context manager.
 
         This method creates a new connection each time it's called to ensure
@@ -168,11 +157,6 @@ class MySQLConnector(Connector):
         """
         connection = None
         try:
-            if pymysql is None:
-                raise ImportError(
-                    "pymysql is required for MySQL connector. Install with: uv sync --group mysql"
-                )
-
             connection = pymysql.connect(
                 host=self.host,
                 port=self.port,
@@ -193,7 +177,7 @@ class MySQLConnector(Connector):
             if connection:
                 connection.close()
 
-    def execute_query(
+    def _execute_query(
         self, query: str, params: tuple[Any, ...] | None = None
     ) -> list[dict[str, Any]]:
         """Execute a SQL query and return results.
@@ -209,7 +193,7 @@ class MySQLConnector(Connector):
             ConnectorExtractionError: If query execution fails
         """
         try:
-            with self.get_connection() as connection:
+            with self._get_connection() as connection:
                 with connection.cursor() as cursor:
                     if params:
                         cursor.execute(query, params)
@@ -227,7 +211,7 @@ class MySQLConnector(Connector):
                     rows = cursor.fetchall()
 
                     # Convert to list of dictionaries
-                    results = []
+                    results: list[dict[str, Any]] = []
                     for row in rows:
                         row_dict = dict(zip(columns, row))
                         results.append(row_dict)
@@ -238,7 +222,7 @@ class MySQLConnector(Connector):
             logger.error(f"Query execution failed: {e}")
             raise ConnectorExtractionError(f"Query execution failed: {e}") from e
 
-    def get_database_metadata(self) -> dict[str, Any]:
+    def _get_database_metadata(self) -> dict[str, Any]:
         """Extract database metadata including tables, columns, and constraints.
 
         Returns:
@@ -251,9 +235,10 @@ class MySQLConnector(Connector):
                 "server_info": {},
             }
 
-            with self.get_connection() as connection:
+            with self._get_connection() as connection:
                 # Get server information
-                server_info = connection.get_server_info()
+                # Type ignore: it is a pymysql issue.
+                server_info = connection.get_server_info()  # type: ignore
                 metadata["server_info"] = {
                     "version": server_info,
                     "host": self.host,
@@ -261,17 +246,12 @@ class MySQLConnector(Connector):
                 }
 
                 # Get table information
-                tables_query = """
-                SELECT TABLE_NAME, TABLE_TYPE, TABLE_COMMENT, TABLE_ROWS
-                FROM information_schema.TABLES
-                WHERE TABLE_SCHEMA = %s
-                ORDER BY TABLE_NAME
-                """
-
-                tables = self.execute_query(tables_query, (self.database,))
+                tables: list[dict[str, Any]] = self._execute_query(
+                    _TABLES_QUERY, (self.database,)
+                )
 
                 for table in tables:
-                    table_info = {
+                    table_info: dict[str, Any] = {
                         "name": table["TABLE_NAME"],
                         "type": table["TABLE_TYPE"],
                         "comment": table["TABLE_COMMENT"],
@@ -280,16 +260,8 @@ class MySQLConnector(Connector):
                     }
 
                     # Get column information for each table
-                    columns_query = """
-                    SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT,
-                           COLUMN_COMMENT, COLUMN_KEY, EXTRA
-                    FROM information_schema.COLUMNS
-                    WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
-                    ORDER BY ORDINAL_POSITION
-                    """
-
-                    columns = self.execute_query(
-                        columns_query, (self.database, table["TABLE_NAME"])
+                    columns = self._execute_query(
+                        _COLUMNS_QUERY, (self.database, table["TABLE_NAME"])
                     )
                     table_info["columns"] = columns
 
@@ -303,7 +275,7 @@ class MySQLConnector(Connector):
                 f"Database metadata extraction failed: {e}"
             ) from e
 
-    def get_table_data(
+    def _get_table_data(
         self, table_name: str, limit: int | None = None
     ) -> list[dict[str, Any]]:
         """Get actual data from a specific table.
@@ -322,7 +294,7 @@ class MySQLConnector(Connector):
             # Safe to use table name since it's verified to exist in information_schema
             # Using backticks to handle table names with special characters
             query = f"SELECT * FROM `{table_name}` LIMIT %s"  # noqa # nosec B608
-            return self.execute_query(query, (effective_limit,))
+            return self._execute_query(query, (effective_limit,))
         except Exception as e:
             logger.warning(f"Failed to extract data from table {table_name}: {e}")
             return []
@@ -343,40 +315,15 @@ class MySQLConnector(Connector):
         try:
             logger.info(f"Extracting data from MySQL database: {self.database}")
 
-            # Check if a supported schema is provided
-            if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
-                raise ConnectorConfigError(
-                    f"Unsupported output schema: {output_schema.name}. Supported schemas: {list(SUPPORTED_OUTPUT_SCHEMAS.keys())}"
-                )
+            self._validate_output_schema(output_schema)
 
-            if not output_schema:
-                logger.warning(
-                    "No schema provided, using default mysql_database schema"
-                )
-                raise ConnectorConfigError(
-                    "No schema provided for data extraction. Please specify a valid WCT schema."
-                )
+            # Extract database metadata (connection test included)
+            metadata = self._get_database_metadata()
 
-            # Test connection first
-            with self.get_connection():
-                logger.debug("MySQL connection test successful")
-
-            # Extract database metadata
-            metadata = self.get_database_metadata()
-
-            # Transform data based on requested schema
-            if output_schema.name == "mysql_database":
-                extracted_data = self._transform_for_mysql_schema(
-                    output_schema, metadata
-                )
-            elif output_schema.name == "standard_input":
-                extracted_data = self._transform_for_standard_input_schema(
-                    output_schema, metadata
-                )
-            else:
-                raise ConnectorConfigError(
-                    f"Unsupported schema transformation: {output_schema.name}"
-                )
+            # Transform data for standard_input schema
+            extracted_data = self._transform_for_standard_input_schema(
+                output_schema, metadata
+            )
 
             # Create and validate message
             message = Message(
@@ -392,32 +339,6 @@ class MySQLConnector(Connector):
         except Exception as e:
             logger.error(f"MySQL extraction failed: {e}")
             raise ConnectorExtractionError(f"MySQL extraction failed: {e}") from e
-
-    def _transform_for_mysql_schema(
-        self, schema: Schema, metadata: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Transform MySQL data for the 'mysql_database' schema.
-
-        Args:
-            schema: The mysql_database schema
-            metadata: Raw metadata from database
-
-        Returns:
-            MySQL schema compliant content
-        """
-        return {
-            "name": schema.name,
-            "description": f"MySQL database: {self.database}",
-            "source": f"{self.host}:{self.port}/{self.database}",
-            "connection_info": {
-                "host": self.host,
-                "port": self.port,
-                "database": self.database,
-                "user": self.user,
-            },
-            "metadata": metadata,
-            "extraction_timestamp": None,  # Could add timestamp here
-        }
 
     def _transform_for_standard_input_schema(
         self, schema: Schema, metadata: dict[str, Any]
@@ -442,53 +363,16 @@ class MySQLConnector(Connector):
         Returns:
             Standard_input schema compliant content with granular data items
         """
-        data_items = []
+        data_items: list[dict[str, Any]] = []
         database_source = f"{self.host}:{self.port}/{self.database}"
 
         # Extract actual cell data from each table
         for table_info in metadata.get("tables", []):
-            table_name = table_info["name"]
-
-            # Extract actual cell data from the table (limited by max_rows_per_table)
-            try:
-                table_data = self.get_table_data(table_name)
-
-                for row_index, row in enumerate(table_data):
-                    for column_name, cell_value in row.items():
-                        # Only extract non-null, non-empty values
-                        if cell_value is not None and str(cell_value).strip():
-                            data_items.append(
-                                {
-                                    "content": str(cell_value),
-                                    "metadata": {
-                                        "source": f"mysql_cell_data_table_({table_name})_column_({column_name})",
-                                        "description": f"Cell data from `{table_name}.{column_name}` row {row_index + 1}",
-                                        "data_type": "cell_content",
-                                        "database": self.database,
-                                        "table": table_name,
-                                        "column": column_name,
-                                        "row_index": row_index + 1,
-                                        "host": self.host,
-                                        "port": self.port,
-                                        # Include column metadata for context
-                                        "sql_data_type": next(
-                                            (
-                                                col.get("DATA_TYPE")
-                                                for col in table_info.get("columns", [])
-                                                if col.get("COLUMN_NAME") == column_name
-                                            ),
-                                            "unknown",
-                                        ),
-                                    },
-                                }
-                            )
-
-            except Exception as e:
-                logger.warning(f"Failed to extract data from table {table_name}: {e}")
-                continue
+            table_data_items = self._extract_table_cell_data(table_info)
+            data_items.extend(table_data_items)
 
         return {
-            "schemaVersion": "1.0.0",
+            "schemaVersion": _DEFAULT_SCHEMA_VERSION,
             "name": f"mysql_text_from_{self.database}",
             "description": f"Text content extracted from MySQL database: {self.database}",
             "contentEncoding": "utf-8",
@@ -512,3 +396,186 @@ class MySQLConnector(Connector):
             },
             "data": data_items,
         }
+
+    @classmethod
+    def _validate_required_properties(
+        cls, properties: dict[str, Any]
+    ) -> tuple[str, str]:
+        """Validate and extract required properties from configuration.
+
+        Args:
+            properties: Configuration properties dictionary
+
+        Returns:
+            Tuple of (host, user)
+
+        Raises:
+            ConnectorConfigError: If required properties are missing
+        """
+        host = os.getenv("MYSQL_HOST") or properties.get("host")
+        user = os.getenv("MYSQL_USER") or properties.get("user")
+
+        # Use specific error messages for configuration context
+        if not host:
+            raise ConnectorConfigError(
+                "MySQL host info is required (specify in runbook or MYSQL_HOST env var)"
+            )
+        if not user:
+            raise ConnectorConfigError(
+                "MySQL user info is required (specify in runbook or MYSQL_USER env var)"
+            )
+
+        return host, user
+
+    def _validate_required_connection_parameters(self, host: str, user: str) -> None:
+        """Validate required connection parameters.
+
+        Args:
+            host: MySQL server hostname
+            user: Database username
+
+        Raises:
+            ConnectorConfigError: If required parameters are missing
+        """
+        if not host:
+            raise ConnectorConfigError("MySQL host is required")
+        if not user:
+            raise ConnectorConfigError("MySQL user is required")
+
+    @classmethod
+    def _parse_port_from_env_or_properties(cls, properties: dict[str, Any]) -> int:
+        """Parse port from environment variable or properties.
+
+        Args:
+            properties: Configuration properties dictionary
+
+        Returns:
+            Port number
+
+        Raises:
+            ConnectorConfigError: If port value is invalid
+        """
+        port_str = os.getenv("MYSQL_PORT")
+        if port_str:
+            try:
+                return int(port_str)
+            except ValueError:
+                raise ConnectorConfigError(
+                    f"Invalid MYSQL_PORT environment variable: {port_str}"
+                )
+        return properties.get("port", _DEFAULT_PORT)
+
+    def _validate_output_schema(self, output_schema: Schema | None) -> None:
+        """Validate the output schema.
+
+        Args:
+            output_schema: Schema to validate
+
+        Raises:
+            ConnectorConfigError: If schema is invalid or unsupported
+        """
+        if not output_schema:
+            raise ConnectorConfigError(
+                "No schema provided for data extraction. Please specify a valid WCT schema."
+            )
+
+        if output_schema.name not in _SUPPORTED_OUTPUT_SCHEMAS:
+            raise ConnectorConfigError(
+                f"Unsupported output schema: {output_schema.name}. "
+                f"Supported schemas: {list(_SUPPORTED_OUTPUT_SCHEMAS.keys())}"
+            )
+
+    def _extract_table_cell_data(
+        self, table_info: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """Extract cell data from a single table.
+
+        Args:
+            table_info: Table metadata including name and columns
+
+        Returns:
+            List of data items with cell content and metadata
+        """
+        data_items: list[dict[str, Any]] = []
+        table_name = table_info["name"]
+
+        # Extract actual cell data from the table (limited by max_rows_per_table)
+        try:
+            table_data = self._get_table_data(table_name)
+
+            for row_index, row in enumerate(table_data):
+                for column_name, cell_value in row.items():
+                    # Only extract non-null, non-empty values
+                    if cell_value is not None and str(cell_value).strip():
+                        data_items.append(
+                            self._create_cell_data_item(
+                                table_info,
+                                table_name,
+                                column_name,
+                                cell_value,
+                                row_index,
+                            )
+                        )
+
+        except Exception as e:
+            logger.warning(f"Failed to extract data from table {table_name}: {e}")
+
+        return data_items
+
+    def _create_cell_data_item(
+        self,
+        table_info: dict[str, Any],
+        table_name: str,
+        column_name: str,
+        cell_value: Any,
+        row_index: int,
+    ) -> dict[str, Any]:
+        """Create a single cell data item with metadata.
+
+        Args:
+            table_info: Table metadata
+            table_name: Name of the table
+            column_name: Name of the column
+            cell_value: The cell value
+            row_index: Zero-based row index
+
+        Returns:
+            Data item dictionary with content and metadata
+        """
+        return {
+            "content": str(cell_value),
+            "metadata": {
+                "source": f"mysql_cell_data_table_({table_name})_column_({column_name})",
+                "description": f"Cell data from `{table_name}.{column_name}` row {row_index + 1}",
+                "data_type": "cell_content",
+                "database": self.database,
+                "table": table_name,
+                "column": column_name,
+                "row_index": row_index + 1,
+                "host": self.host,
+                "port": self.port,
+                # Include column metadata for context
+                "sql_data_type": self._get_column_data_type(table_info, column_name),
+            },
+        }
+
+    def _get_column_data_type(
+        self, table_info: dict[str, Any], column_name: str
+    ) -> str:
+        """Get the SQL data type for a specific column.
+
+        Args:
+            table_info: Table metadata including columns
+            column_name: Name of the column
+
+        Returns:
+            SQL data type or "unknown" if not found
+        """
+        return next(
+            (
+                col.get("DATA_TYPE")
+                for col in table_info.get("columns", [])
+                if col.get("COLUMN_NAME") == column_name
+            ),
+            "unknown",
+        )
