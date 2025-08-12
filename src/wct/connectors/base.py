@@ -37,10 +37,6 @@ class Connector(abc.ABC):
     transform it into the WCF-defined schema.
     """
 
-    def __init__(self) -> None:
-        """Initialise the connector."""
-        pass
-
     @classmethod
     @abc.abstractmethod
     def get_name(cls) -> str:
