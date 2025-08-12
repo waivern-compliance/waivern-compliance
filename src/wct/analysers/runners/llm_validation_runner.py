@@ -34,6 +34,7 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
             validation_strategy: Function that defines how to validate findings.
                                If None, findings are returned unchanged.
             enable_llm_validation: Whether LLM validation is enabled
+
         """
         self.llm_service_manager = LLMServiceManager(enable_llm_validation)
         self.validation_strategy = (
@@ -67,6 +68,7 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
 
         Raises:
             AnalysisRunnerError: If LLM validation fails
+
         """
         try:
             if not config.get("enable_llm_validation", True) or not input_data:
@@ -108,6 +110,7 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
 
         Returns:
             Original findings list unchanged
+
         """
         logger.debug("Using passthrough validation strategy (no filtering)")
         return findings
@@ -128,6 +131,7 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
 
         Returns:
             A validation strategy function that can be used with this runner
+
         """
 
         def batch_validation_strategy(

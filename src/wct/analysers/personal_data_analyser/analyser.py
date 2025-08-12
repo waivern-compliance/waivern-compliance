@@ -1,6 +1,7 @@
 """Personal data analysis analyser for GDPR compliance."""
 
 import logging
+from dataclasses import dataclass
 from pprint import pformat
 from typing import Any
 
@@ -39,6 +40,21 @@ DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
 DEFAULT_MAXIMUM_EVIDENCE_COUNT = 3
 
 
+@dataclass
+class PersonalDataAnalyserConfig:
+    """Configuration for PersonalDataAnalyser.
+
+    Groups related configuration parameters to reduce constructor complexity.
+    """
+
+    ruleset_name: str = "personal_data"
+    evidence_context_size: str = "small"
+    maximum_evidence_count: int = DEFAULT_MAXIMUM_EVIDENCE_COUNT
+    enable_llm_validation: bool = True
+    llm_batch_size: int = 10
+    llm_validation_mode: str = "standard"
+
+
 class PersonalDataAnalyser(Analyser):
     """Analyser for analysing personal data patterns in content.
 
@@ -49,40 +65,31 @@ class PersonalDataAnalyser(Analyser):
 
     def __init__(
         self,
-        ruleset_name: str = "personal_data",
-        evidence_context_size: str = "small",
-        maximum_evidence_count: int = DEFAULT_MAXIMUM_EVIDENCE_COUNT,
-        enable_llm_validation: bool = True,
-        llm_batch_size: int = 10,
-        llm_validation_mode: str = "standard",
+        config: PersonalDataAnalyserConfig | None = None,
         pattern_runner: PatternMatchingRunner | None = None,
         llm_runner: LLMValidationRunner | None = None,
     ):
         """Initialise the analyser with specified configuration and runners.
 
         Args:
-            ruleset_name: Name of the ruleset to use for analysis
-            evidence_context_size: Size of context around evidence matches
-                                  ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars, 'full': entire content)
-            maximum_evidence_count: Maximum number of evidence snippets to collect per finding
-            enable_llm_validation: Whether to use LLM for false positive detection (default: True)
-            llm_batch_size: Number of findings to validate in each LLM batch (default: 10)
-            llm_validation_mode: LLM validation mode ('standard' or 'conservative', default: 'standard')
+            config: Configuration object with analysis settings (uses defaults if None)
             pattern_runner: Pattern matching runner (optional, will create default if None)
             llm_runner: LLM validation runner (optional, will create default if None)
+
         """
         super().__init__()  # Call Analyser.__init__ directly
 
         # Store configuration
+        analysis_config = config or PersonalDataAnalyserConfig()
         self.config = {
-            "ruleset_name": ruleset_name,
-            "evidence_context_size": evidence_context_size,
-            "maximum_evidence_count": maximum_evidence_count,
-            "enable_llm_validation": enable_llm_validation,
-            "llm_batch_size": llm_batch_size,
-            "llm_validation_mode": llm_validation_mode,
-            "max_evidence": maximum_evidence_count,  # Alias for runner compatibility
-            "context_size": evidence_context_size,  # Alias for runner compatibility
+            "ruleset_name": analysis_config.ruleset_name,
+            "evidence_context_size": analysis_config.evidence_context_size,
+            "maximum_evidence_count": analysis_config.maximum_evidence_count,
+            "enable_llm_validation": analysis_config.enable_llm_validation,
+            "llm_batch_size": analysis_config.llm_batch_size,
+            "llm_validation_mode": analysis_config.llm_validation_mode,
+            "max_evidence": analysis_config.maximum_evidence_count,  # Alias for runner compatibility
+            "context_size": analysis_config.evidence_context_size,  # Alias for runner compatibility
         }
 
         # Initialise runners with personal data specific strategies
@@ -91,7 +98,7 @@ class PersonalDataAnalyser(Analyser):
         )
         self.llm_runner = llm_runner or LLMValidationRunner(
             validation_strategy=personal_data_validation_strategy,
-            enable_llm_validation=enable_llm_validation,
+            enable_llm_validation=analysis_config.enable_llm_validation,
         )
 
     @classmethod
@@ -113,7 +120,7 @@ class PersonalDataAnalyser(Analyser):
         llm_batch_size = properties.get("llm_batch_size", 50)
         llm_validation_mode = properties.get("llm_validation_mode", "standard")
 
-        return cls(
+        config = PersonalDataAnalyserConfig(
             ruleset_name=ruleset_name,
             evidence_context_size=evidence_context_size,
             maximum_evidence_count=maximum_evidence_count,
@@ -121,6 +128,8 @@ class PersonalDataAnalyser(Analyser):
             llm_batch_size=llm_batch_size,
             llm_validation_mode=llm_validation_mode,
         )
+
+        return cls(config=config)
 
     @classmethod
     @override
@@ -232,6 +241,7 @@ class PersonalDataAnalyser(Analyser):
 
         Returns:
             List of findings from pattern matching
+
         """
         findings = []
 

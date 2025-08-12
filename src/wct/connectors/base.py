@@ -55,6 +55,7 @@ class Connector(abc.ABC):
 
         Raises:
             ConnectorConfigError: If the configured properties are invalid
+
         """
 
     @abc.abstractmethod
@@ -68,6 +69,7 @@ class Connector(abc.ABC):
 
         Raises:
             ConnectorExtractionError: If extraction fails
+
         """
 
 

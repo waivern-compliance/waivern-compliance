@@ -19,6 +19,7 @@ class FunctionExtractor(BaseExtractor):
 
         Returns:
             List of function information dictionaries
+
         """
         functions = []
 
@@ -40,6 +41,7 @@ class FunctionExtractor(BaseExtractor):
 
         Returns:
             List of node types that represent functions
+
         """
         function_types_by_language = {
             "php": ["function_definition", "method_declaration"],
@@ -77,6 +79,7 @@ class FunctionExtractor(BaseExtractor):
 
         Returns:
             Function information dictionary or None if extraction fails
+
         """
         try:
             func_info = {
@@ -106,6 +109,7 @@ class FunctionExtractor(BaseExtractor):
 
         Returns:
             Function name
+
         """
         if self.language == "php":
             name_node = self.find_child_by_type(func_node, "name")
@@ -132,6 +136,7 @@ class FunctionExtractor(BaseExtractor):
 
         Returns:
             List of parameter information
+
         """
         parameters = []
 
@@ -176,6 +181,7 @@ class FunctionExtractor(BaseExtractor):
 
         Returns:
             Parameter information dictionary
+
         """
         try:
             if self.language == "php":
@@ -225,6 +231,7 @@ class FunctionExtractor(BaseExtractor):
 
         Returns:
             Return type string or None
+
         """
         if self.language == "php":
             return_type_node = self.find_child_by_type(func_node, "return_type")
@@ -242,6 +249,7 @@ class FunctionExtractor(BaseExtractor):
 
         Returns:
             Visibility string or None
+
         """
         if self.language == "php":
             # Look for visibility modifiers in parent or siblings
@@ -261,6 +269,7 @@ class FunctionExtractor(BaseExtractor):
 
         Returns:
             True if function is static
+
         """
         if self.language == "php":
             # Look for static modifier
@@ -281,6 +290,7 @@ class FunctionExtractor(BaseExtractor):
 
         Returns:
             Docstring content or None
+
         """
         # Look for comment nodes before the function
         # This is language-specific and would need more sophisticated logic

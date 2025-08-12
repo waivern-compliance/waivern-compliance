@@ -32,6 +32,7 @@ def personal_data_validation_strategy(
 
     Returns:
         List of validated findings with false positives removed
+
     """
     # Use module-level logger
 
@@ -97,6 +98,7 @@ def _validate_findings_batch(
 
     Returns:
         List of validated findings from this batch
+
     """
     try:
         # Convert findings to format expected by validation prompt

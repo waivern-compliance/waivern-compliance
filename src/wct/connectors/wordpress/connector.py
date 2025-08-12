@@ -79,6 +79,7 @@ class WordpressConnector(Connector):
 
         Returns:
             Message containing extracted data in WCF schema format
+
         """
         # Check if a supported schema is provided
         if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
@@ -113,6 +114,7 @@ class WordpressConnector(Connector):
 
         Returns:
             WordPress schema compliant content
+
         """
         return {
             "name": schema.name,
@@ -148,6 +150,7 @@ class WordpressConnectorConfig(BaseModel):
         core_file_names: Tuple of core WordPress file names to validate
         db_table_prefix: Database table prefix for WordPress tables
         db_core_tables: Tuple of core WordPress database table names
+
     """
 
     root: Path
@@ -176,6 +179,7 @@ class WordpressConnectorConfig(BaseModel):
 
         Returns:
             Path to the wp-config.php file in the WordPress root directory.
+
         """
         return self.root / self.config_file_name
 
@@ -185,6 +189,7 @@ class WordpressConnectorConfig(BaseModel):
 
         Returns:
             Tuple of Path objects pointing to the core WordPress files in the root directory.
+
         """
         return tuple(
             self.root / core_file_name for core_file_name in self.core_file_names

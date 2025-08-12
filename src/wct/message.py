@@ -49,6 +49,7 @@ class Message:
 
         Raises:
             MessageValidationError: If validation fails with detailed error information
+
         """
         if not self.schema:
             self.schema_validated = False

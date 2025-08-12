@@ -28,6 +28,7 @@ class SchemaLoader(Protocol):
 
         Raises:
             SchemaLoadError: If schema cannot be loaded
+
         """
         ...
 
@@ -52,6 +53,7 @@ class JsonSchemaLoader:
         Raises:
             FileNotFoundError: If schema file doesn't exist
             SchemaLoadError: If schema file cannot be parsed
+
         """
         # Create cache key with version
         cache_key = f"{schema_name}:{version}"

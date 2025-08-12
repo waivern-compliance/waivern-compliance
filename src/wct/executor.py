@@ -35,6 +35,7 @@ class Executor:
     """
 
     def __init__(self):
+        """Initialise the executor with empty connector and analyser registries."""
         self.connectors: dict[str, type[Connector]] = {}
         self.analysers: dict[str, type[Analyser]] = {}
 
@@ -228,6 +229,7 @@ class Executor:
 
         Returns:
             Analysis result indicating failure
+
         """
         return AnalysisResult(
             analyser_name=analyser_name,

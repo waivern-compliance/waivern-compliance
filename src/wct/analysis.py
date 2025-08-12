@@ -26,6 +26,7 @@ class AnalysisResult:
 
         Returns:
             Dictionary representation of the analysis result
+
         """
         return asdict(self)
 
@@ -48,6 +49,7 @@ class AnalysisResultsExporter:
 
         Raises:
             IOError: If the file cannot be written
+
         """
         # Create comprehensive output structure
         output_data = {
@@ -78,6 +80,7 @@ class AnalysisResultsExporter:
 
         Returns:
             Dictionary containing summary statistics
+
         """
         if not results:
             return {

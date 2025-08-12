@@ -59,6 +59,7 @@ class FilesystemConnector(Connector):
             errors: How to handle encoding errors (strict=skip binary files, replace=convert to garbled text)
             exclude_patterns: List of glob patterns to exclude (e.g., ['*.log', '__pycache__'])
             max_files: Maximum number of files to process (safety limit)
+
         """
         self.path = Path(path)
         self.chunk_size = chunk_size
@@ -117,6 +118,7 @@ class FilesystemConnector(Connector):
             ...     "exclude_patterns": ["*.log", "__pycache__"]
             ... }
             >>> connector = FilesystemConnector.from_properties(properties)
+
         """
         path = properties.get("path")
         if not path:
@@ -150,6 +152,7 @@ class FilesystemConnector(Connector):
 
         Returns:
             Dictionary containing file content and metadata in WCF schema format
+
         """
         try:
             self._validate_is_supported_output_schema(output_schema)
@@ -202,6 +205,7 @@ class FilesystemConnector(Connector):
 
         Raises:
             ConnectorConfigError: If schema is invalid or unsupported
+
         """
         if not output_schema:
             raise ConnectorConfigError(
@@ -221,6 +225,7 @@ class FilesystemConnector(Connector):
 
         Returns:
             List of dictionaries containing file data with 'path', 'content', 'stat' keys
+
         """
         all_file_data: list[dict[str, Any]] = []
 
@@ -249,6 +254,7 @@ class FilesystemConnector(Connector):
 
         Returns:
             Schema-compliant transformed content
+
         """
         if schema.name == "standard_input":
             return self._transform_for_standard_input_schema(schema, all_file_data)
@@ -278,6 +284,7 @@ class FilesystemConnector(Connector):
 
         Returns:
             Dictionary conforming to the standard_input schema structure
+
         """
         # Calculate aggregate metadata
         total_size = sum(file_data["stat"].st_size for file_data in all_file_data)
@@ -337,6 +344,7 @@ class FilesystemConnector(Connector):
 
         Raises:
             ConnectorExtractionError: If too many files are found or no files are found
+
         """
         if self.path.is_file():
             return [self.path]
@@ -387,6 +395,7 @@ class FilesystemConnector(Connector):
 
         Args:
             file_path: Path to file to read. If None, uses self.path (for backward compatibility)
+
         """
         target_path = file_path or self.path
         try:

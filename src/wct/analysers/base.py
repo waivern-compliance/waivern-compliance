@@ -84,6 +84,7 @@ class Analyser(abc.ABC):
 
         Raises:
             AnalyserError: If processing fails
+
         """
 
     @classmethod

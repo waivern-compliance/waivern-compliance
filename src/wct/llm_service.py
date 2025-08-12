@@ -48,6 +48,7 @@ class AnthropicLLMService:
 
         Raises:
             LLMConfigurationError: If API key is not provided or found in environment
+
         """
         # Logger is available at module level
 
@@ -75,6 +76,7 @@ class AnthropicLLMService:
 
         Raises:
             LLMConnectionError: If API key is not available
+
         """
         if self._llm is None:
             if not self.api_key:
@@ -100,6 +102,7 @@ class AnthropicLLMService:
 
         Raises:
             LLMConnectionError: If connection test fails
+
         """
         try:
             logger.info("Testing connection to Anthropic API...")
@@ -139,6 +142,7 @@ class AnthropicLLMService:
 
         Raises:
             LLMConnectionError: If LLM request fails
+
         """
         try:
             logger.debug(f"Analysing text (length: {len(text)} chars)")
@@ -177,5 +181,6 @@ class LLMServiceFactory:
 
         Returns:
             Configured AnthropicLLMService instance
+
         """
         return AnthropicLLMService(model_name=model_name, api_key=api_key)

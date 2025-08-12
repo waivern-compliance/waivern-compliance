@@ -22,6 +22,7 @@ def processing_purpose_pattern_matcher(
 
     Returns:
         Processing purpose finding dictionary or None if no finding should be created
+
     """
     evidence_extractor = context["evidence_extractor"]
     metadata = context["metadata"]

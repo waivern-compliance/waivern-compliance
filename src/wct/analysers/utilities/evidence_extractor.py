@@ -22,6 +22,7 @@ class EvidenceExtractor:
 
         Returns:
             List of unique evidence snippets showing context around matches
+
         """
         evidence_set = set()  # Use set to avoid duplicates
         content_lower = content.lower()
@@ -75,6 +76,7 @@ class EvidenceExtractor:
         Returns:
             Number of characters to include before and after each match,
             or None for full content (no truncation)
+
         """
         size_mapping = {"small": 50, "medium": 100, "large": 200, "full": None}
         return size_mapping.get(context_size.lower(), 50)

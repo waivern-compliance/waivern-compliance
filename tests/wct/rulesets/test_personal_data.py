@@ -28,7 +28,7 @@ class TestPersonalDataRuleset:
         assert len(version) > 0
         # Version should follow semantic versioning pattern (x.y.z)
         parts = version.split(".")
-        assert len(parts) == 3  # noqa: PLR2004
+        assert len(parts) == 3
         assert all(part.isdigit() for part in parts)
 
     def test_get_rules_returns_tuple_of_rules_with_at_least_one_rule(self):

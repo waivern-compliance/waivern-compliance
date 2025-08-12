@@ -27,6 +27,7 @@ def get_personal_data_validation_prompt(
 
     Returns:
         Formatted validation prompt for the LLM
+
     """
     evidence_text = (
         "\n".join(f"- {e}" for e in evidence) if evidence else "No evidence provided"
@@ -81,6 +82,7 @@ def get_batch_validation_prompt(findings: list[dict[str, Any]]) -> str:
 
     Returns:
         Formatted batch validation prompt
+
     """
     findings_text = []
     for i, finding in enumerate(findings):
@@ -163,6 +165,7 @@ def get_conservative_validation_prompt(
 
     Returns:
         Conservative validation prompt for sensitive data
+
     """
     evidence_text = (
         "\n".join(f"- {e}" for e in evidence) if evidence else "No evidence provided"
@@ -218,6 +221,7 @@ def extract_json_from_response(llm_response: str) -> str:
 
     Returns:
         Clean JSON string
+
     """
     # Remove markdown code block wrapper if present
     json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", llm_response, re.DOTALL)

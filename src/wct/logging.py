@@ -36,6 +36,7 @@ def get_project_root() -> Path:
 
     Raises:
         LoggingError: If project root cannot be determined
+
     """
     # Method 1: Use package location if installed (preferred)
     try:
@@ -99,6 +100,7 @@ def get_config_path(
 
     Raises:
         LoggingError: If no suitable configuration file is found
+
     """
     project_root = get_project_root()
     config_dir = project_root / "config"
@@ -146,6 +148,7 @@ def load_config(config_path: Path) -> dict[str, Any]:
 
     Raises:
         LoggingError: If configuration cannot be loaded or parsed
+
     """
     try:
         with open(config_path, encoding="utf-8") as f:
@@ -168,6 +171,7 @@ def create_log_directories(config: dict[str, Any]) -> None:
 
     Args:
         config: Logging configuration dictionary
+
     """
     handlers = config.get("handlers", {})
     project_root = get_project_root()
@@ -200,6 +204,7 @@ def setup_logging(
 
     Raises:
         LoggingError: If logging setup fails
+
     """
     if force_basic:
         _setup_basic_logging(level or "INFO")
@@ -272,6 +277,7 @@ def _setup_basic_logging(level: str) -> None:
 
     Args:
         level: Logging level string
+
     """
     numeric_level = getattr(logging, level.upper(), logging.INFO)
 

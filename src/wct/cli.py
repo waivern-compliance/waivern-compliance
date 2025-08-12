@@ -29,6 +29,7 @@ def create_executor() -> Executor:
 
     Returns:
         Configured executor with all built-in connectors and analysers registered
+
     """
     executor = Executor()
 
@@ -61,6 +62,7 @@ class AnalysisRunner:
     """Handles running compliance analysis from CLI."""
 
     def __init__(self):
+        """Initialise the compliance runner with a configured executor."""
         self.executor = create_executor()
 
     def run_analysis(
@@ -78,6 +80,7 @@ class AnalysisRunner:
 
         Raises:
             CLIError: If analysis fails
+
         """
         try:
             results = self.executor.execute_runbook(runbook_path)
@@ -93,6 +96,7 @@ class ComponentLister:
     """Handles listing available connectors and analysers."""
 
     def __init__(self):
+        """Initialise the component lister with a configured executor."""
         self.executor = create_executor()
 
     def list_connectors(self) -> dict[str, type]:
@@ -100,6 +104,7 @@ class ComponentLister:
 
         Returns:
             Dictionary mapping connector names to classes
+
         """
         logger.debug("Getting available built-in connectors")
         connectors = self.executor.list_available_connectors()
@@ -111,6 +116,7 @@ class ComponentLister:
 
         Returns:
             Dictionary mapping analyser names to classes
+
         """
         logger.debug("Getting available built-in analysers")
         analysers = self.executor.list_available_analysers()
@@ -129,6 +135,7 @@ class OutputFormatter:
         Args:
             results: List of analysis results to format
             verbose: Show detailed information
+
         """
         # Create summary table
         table = Table(
@@ -207,6 +214,7 @@ class OutputFormatter:
         Args:
             components: Dictionary of component names to classes
             component_type: Type name for display (e.g., "connectors", "analysers")
+
         """
         if components:
             # Create a rich table for components
@@ -248,6 +256,7 @@ class OutputFormatter:
 
         Args:
             runbook: Validated runbook YAML file
+
         """
         # Create success panel
         success_content = f"""
@@ -294,6 +303,7 @@ def setup_cli_logging(log_level: str, verbose: bool = False) -> None:
     Args:
         log_level: Logging level string
         verbose: Override with DEBUG level if True
+
     """
     effective_log_level = "DEBUG" if verbose else log_level
     setup_logging(level=effective_log_level)
@@ -305,6 +315,7 @@ def handle_cli_error(error: Exception, message: str) -> None:
     Args:
         error: The exception that occurred
         message: User-friendly error message
+
     """
     logger.error("%s: %s", message, error)
 
@@ -330,6 +341,7 @@ def execute_runbook_command(
         output: Path to save results as JSON (now required, defaults to YYYYMMDDHHMMSS_analysis_results.json)
         verbose: Enable verbose output
         log_level: Logging level
+
     """
     setup_cli_logging(log_level, verbose)
 
@@ -412,6 +424,7 @@ def list_connectors_command(log_level: str = "INFO") -> None:
 
     Args:
         log_level: Logging level
+
     """
     setup_cli_logging(log_level)
 
@@ -431,6 +444,7 @@ def list_analysers_command(log_level: str = "INFO") -> None:
 
     Args:
         log_level: Logging level
+
     """
     setup_cli_logging(log_level)
 
@@ -451,6 +465,7 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
     Args:
         runbook_path: Path to the runbook YAML file
         log_level: Logging level
+
     """
     setup_cli_logging(log_level)
 
@@ -469,6 +484,7 @@ def test_llm_command(log_level: str = "INFO") -> None:
 
     Args:
         log_level: Logging level
+
     """
     setup_cli_logging(log_level)
 

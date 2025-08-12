@@ -32,9 +32,9 @@ class TestRunbookSummary:
 
         assert summary.name == "Test Runbook"
         assert summary.description == "Test description"
-        assert summary.connector_count == 2  # noqa: PLR2004
-        assert summary.analyser_count == 3.0  # noqa: PLR2004
-        assert summary.execution_steps == 4  # noqa: PLR2004
+        assert summary.connector_count == 2
+        assert summary.analyser_count == 3.0
+        assert summary.execution_steps == 4
         assert summary.connector_types == ["mysql", "filesystem"]
         assert summary.analyser_types == ["personal_data", "processing_purpose"]
 
@@ -144,9 +144,9 @@ class TestRunbook:
 
         assert runbook.name == "Test Runbook"
         assert runbook.description == "Test runbook for validation"
-        assert len(runbook.connectors) == 2  # noqa: PLR2004
-        assert len(runbook.analysers) == 2  # noqa: PLR2004
-        assert len(runbook.execution) == 2  # noqa: PLR2004
+        assert len(runbook.connectors) == 2
+        assert len(runbook.analysers) == 2
+        assert len(runbook.execution) == 2
 
     def test_runbook_immutability(self) -> None:
         """Test Runbook is frozen (immutable).
@@ -225,9 +225,9 @@ class TestRunbook:
         assert summary.description == "A comprehensive test runbook"
 
         # Test counts
-        assert summary.connector_count == 2  # noqa: PLR2004
-        assert summary.analyser_count == 3  # noqa: PLR2004
-        assert summary.execution_steps == 2  # noqa: PLR2004
+        assert summary.connector_count == 2
+        assert summary.analyser_count == 3
+        assert summary.execution_steps == 2
 
     def test_get_summary_type_deduplication(self) -> None:
         """Test get_summary correctly deduplicates connector and analyser types."""
@@ -275,11 +275,9 @@ class TestRunbook:
         analyser_types = summary.analyser_types
 
         # Check that duplicates are removed
+        assert len(connector_types) == 2  # mysql, filesystem (deduplicated)
         assert (
-            len(connector_types) == 2  # noqa: PLR2004
-        )  # mysql, filesystem (deduplicated)
-        assert (
-            len(analyser_types) == 2  # noqa: PLR2004
+            len(analyser_types) == 2
         )  # personal_data, processing_purpose (deduplicated)
 
         # Check that all unique types are present

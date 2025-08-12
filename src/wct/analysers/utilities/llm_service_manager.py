@@ -15,6 +15,7 @@ class LLMServiceManager:
 
         Args:
             enable_llm_validation: Whether to enable LLM validation
+
         """
         self.enable_llm_validation = enable_llm_validation
         self._llm_service = None

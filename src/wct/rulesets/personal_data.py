@@ -535,6 +535,7 @@ class PersonalDataRuleset(Ruleset):
 
         Returns:
             Immutable tuple of Rule objects containing all GDPR-compliant personal data patterns
+
         """
         if self.rules is None:
             rules_list: list[Rule] = []
