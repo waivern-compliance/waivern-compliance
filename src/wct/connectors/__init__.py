@@ -14,7 +14,6 @@ from wct.connectors.base import (
 from wct.connectors.filesystem import FilesystemConnector
 from wct.connectors.mysql import MySQLConnector
 from wct.connectors.source_code import SourceCodeConnector
-from wct.connectors.wordpress import WordpressConnector, WordpressConnectorConfig
 
 __all__ = (
     "Connector",
@@ -25,8 +24,6 @@ __all__ = (
     "FilesystemConnector",
     "MySQLConnector",
     "SourceCodeConnector",
-    "WordpressConnector",
-    "WordpressConnectorConfig",
     "BUILTIN_CONNECTORS",
 )
 
@@ -34,5 +31,4 @@ BUILTIN_CONNECTORS = (
     FilesystemConnector,
     MySQLConnector,
     SourceCodeConnector,
-    WordpressConnector,
 )
