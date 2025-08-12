@@ -88,6 +88,7 @@ def run(
 
     Example:
         wct run compliance-runbook.yaml --output-dir ./results --output report.json -v
+
     """
     # Generate default output filename if not provided
     if output is None:

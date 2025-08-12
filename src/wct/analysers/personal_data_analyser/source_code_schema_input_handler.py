@@ -35,6 +35,7 @@ class SourceCodeSchemaInputHandler:
 
         Returns:
             List of personal data findings from source code analysis
+
         """
         findings = []
 

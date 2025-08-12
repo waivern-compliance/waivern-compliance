@@ -1,6 +1,7 @@
 """Processing purpose analysis analyser for GDPR compliance."""
 
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 from typing_extensions import Self, override
@@ -40,6 +41,20 @@ DEFAULT_CONFIDENCE_THRESHOLD = 0.8
 DEFAULT_FINDING_CONFIDENCE = 0.5
 
 
+@dataclass
+class ProcessingPurposeAnalyserConfig:
+    """Configuration for ProcessingPurposeAnalyser.
+
+    Groups related configuration parameters to reduce constructor complexity.
+    """
+
+    ruleset_name: str = DEFAULT_RULESET_NAME
+    evidence_context_size: str = DEFAULT_EVIDENCE_CONTEXT_SIZE
+    enable_llm_validation: bool = DEFAULT_ENABLE_LLM_VALIDATION
+    llm_batch_size: int = DEFAULT_LLM_BATCH_SIZE
+    confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD
+
+
 class ProcessingPurposeAnalyser(Analyser):
     """Analyser for identifying data processing purposes.
 
@@ -49,33 +64,26 @@ class ProcessingPurposeAnalyser(Analyser):
 
     def __init__(
         self,
-        ruleset_name: str = DEFAULT_RULESET_NAME,
-        evidence_context_size: str = DEFAULT_EVIDENCE_CONTEXT_SIZE,
-        enable_llm_validation: bool = DEFAULT_ENABLE_LLM_VALIDATION,
-        llm_batch_size: int = DEFAULT_LLM_BATCH_SIZE,
-        confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
+        config: ProcessingPurposeAnalyserConfig | None = None,
         pattern_runner: PatternMatchingRunner | None = None,
     ):
         """Initialise the processing purpose analyser with specified configuration and runners.
 
         Args:
-            ruleset_name: Name of the ruleset to use for analysis (default: "processing_purposes")
-            evidence_context_size: Size of context around evidence matches
-                                  ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars, 'full': entire content)
-            enable_llm_validation: Whether to use LLM for purpose classification (default: True)
-            llm_batch_size: Number of findings to process in each LLM batch (default: 10)
-            confidence_threshold: Minimum confidence score for accepting findings (default: 0.7)
+            config: Configuration object with analysis settings (uses defaults if None)
             pattern_runner: Pattern matching runner (optional, will create default if None)
+
         """
         super().__init__()  # Call Analyser.__init__ directly
 
         # Store configuration
+        analysis_config = config or ProcessingPurposeAnalyserConfig()
         self.config = {
-            "ruleset_name": ruleset_name,
-            "evidence_context_size": evidence_context_size,
-            "enable_llm_validation": enable_llm_validation,
-            "llm_batch_size": llm_batch_size,
-            "confidence_threshold": confidence_threshold,
+            "ruleset_name": analysis_config.ruleset_name,
+            "evidence_context_size": analysis_config.evidence_context_size,
+            "enable_llm_validation": analysis_config.enable_llm_validation,
+            "llm_batch_size": analysis_config.llm_batch_size,
+            "confidence_threshold": analysis_config.confidence_threshold,
             "confidence": DEFAULT_FINDING_CONFIDENCE,  # Default confidence for all findings
             "max_evidence": 3,  # Default max evidence count
         }
@@ -108,13 +116,15 @@ class ProcessingPurposeAnalyser(Analyser):
             "confidence_threshold", DEFAULT_CONFIDENCE_THRESHOLD
         )
 
-        return cls(
+        config = ProcessingPurposeAnalyserConfig(
             ruleset_name=ruleset_name,
             evidence_context_size=evidence_context_size,
             enable_llm_validation=enable_llm_validation,
             llm_batch_size=llm_batch_size,
             confidence_threshold=confidence_threshold,
         )
+
+        return cls(config=config)
 
     @classmethod
     @override
@@ -195,6 +205,7 @@ class ProcessingPurposeAnalyser(Analyser):
 
         Returns:
             List of findings from pattern matching
+
         """
         findings = []
 

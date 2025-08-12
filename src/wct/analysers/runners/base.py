@@ -28,6 +28,7 @@ class AnalysisRunner(ABC, Generic[T]):
 
         Returns:
             String identifier for this analysis type (e.g., "pattern_matching", "llm_validation")
+
         """
         pass
 
@@ -47,6 +48,7 @@ class AnalysisRunner(ABC, Generic[T]):
 
         Raises:
             AnalysisRunnerError: If the analysis process fails
+
         """
         pass
 
@@ -63,6 +65,7 @@ class AnalysisRunnerError(Exception):
             runner_type: The type of runner that failed
             message: Error message
             original_error: The original exception that caused this error
+
         """
         self.runner_type = runner_type
         self.original_error = original_error

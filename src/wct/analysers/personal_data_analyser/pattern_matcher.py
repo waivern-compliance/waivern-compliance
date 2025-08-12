@@ -19,6 +19,7 @@ def personal_data_pattern_matcher(
 
     Returns:
         Personal data finding dictionary or None if no finding should be created
+
     """
     evidence_extractor = context["evidence_extractor"]
     metadata = context["metadata"]

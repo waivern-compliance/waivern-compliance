@@ -497,7 +497,7 @@ execution:
 
         results = self._execute_runbook_yaml(executor, runbook_content)
 
-        assert len(results) == 2  # noqa: PLR2004
+        assert len(results) == 2
 
         # Check first result
         result1 = results[0]
@@ -563,7 +563,7 @@ execution:
         try:
             results = executor.execute_runbook(runbook_path)
 
-            assert len(results) == 2  # noqa: PLR2004
+            assert len(results) == 2
 
             # First step should succeed
             result1 = results[0]

@@ -24,6 +24,7 @@ def get_language(name: str) -> Language:
 
     Raises:
         ConnectorConfigError: If the language is not supported
+
     """
     if name not in LANGUAGE_REGISTRY:
         raise ConnectorConfigError(
@@ -43,6 +44,7 @@ def get_parser(name: str) -> Parser:
 
     Raises:
         ConnectorConfigError: If the language is not supported
+
     """
     parser = Parser()
     parser.language = get_language(name)
@@ -74,6 +76,7 @@ class SourceCodeParser:
 
         Raises:
             ConnectorConfigError: If language is not supported or tree-sitter unavailable
+
         """
         if language not in self.SUPPORTED_LANGUAGES:
             raise ConnectorConfigError(
@@ -96,6 +99,7 @@ class SourceCodeParser:
 
         Raises:
             ConnectorConfigError: If language cannot be detected
+
         """
         extension = file_path.suffix.lower()
 
@@ -118,6 +122,7 @@ class SourceCodeParser:
 
         Raises:
             ConnectorConfigError: If file cannot be parsed
+
         """
         try:
             source_code = file_path.read_text(encoding="utf-8")
@@ -135,6 +140,7 @@ class SourceCodeParser:
 
         Returns:
             AST root node
+
         """
         tree = self.parser.parse(bytes(source_code, "utf-8"))
         return tree.root_node
@@ -147,6 +153,7 @@ class SourceCodeParser:
 
         Returns:
             True if file extension is supported
+
         """
         extension = file_path.suffix.lower()
         return any(
@@ -159,6 +166,7 @@ class SourceCodeParser:
 
         Returns:
             List of supported file extensions
+
         """
         extensions = []
         for exts in cls.SUPPORTED_LANGUAGES.values():

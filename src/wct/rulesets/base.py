@@ -29,6 +29,7 @@ class Ruleset(abc.ABC):
 
         Returns:
             The fixed, canonical name for this ruleset type
+
         """
 
     @property
@@ -38,6 +39,7 @@ class Ruleset(abc.ABC):
 
         Returns:
             Version string in semantic versioning format (e.g., "1.0.0")
+
         """
 
     @abc.abstractmethod
@@ -46,6 +48,7 @@ class Ruleset(abc.ABC):
 
         Returns:
             Immutable tuple of Rule objects
+
         """
 
 
@@ -81,6 +84,7 @@ class RulesetRegistry:
 
         Returns:
             The singleton RulesetRegistry instance
+
         """
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -96,6 +100,7 @@ class RulesetRegistry:
 
         Raises:
             RulesetAlreadyRegisteredError: If a ruleset with this name already exists
+
         """
         if name in self._registry:
             raise RulesetAlreadyRegisteredError(
@@ -122,6 +127,7 @@ class RulesetLoader:
 
         Returns:
             Immutable tuple of Rule objects
+
         """
         registry = RulesetRegistry()
         ruleset_class = registry.get_ruleset_class(ruleset_name)

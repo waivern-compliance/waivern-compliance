@@ -18,6 +18,7 @@ class BaseExtractor(abc.ABC):
 
         Args:
             language: Programming language (php, javascript, python, etc.)
+
         """
         self.language = language
 
@@ -31,6 +32,7 @@ class BaseExtractor(abc.ABC):
 
         Returns:
             List of extracted information dictionaries
+
         """
 
     def get_node_text(self, node: Node, source_code: str) -> str:
@@ -42,6 +44,7 @@ class BaseExtractor(abc.ABC):
 
         Returns:
             Text content of the node
+
         """
         source_bytes = source_code.encode("utf-8")
         return source_bytes[node.start_byte : node.end_byte].decode("utf-8")
@@ -55,6 +58,7 @@ class BaseExtractor(abc.ABC):
 
         Returns:
             List of matching nodes
+
         """
         results = []
 
@@ -75,6 +79,7 @@ class BaseExtractor(abc.ABC):
 
         Returns:
             First matching child node or None
+
         """
         for child in node.children:
             if child.type == child_type:
@@ -89,5 +94,6 @@ class BaseExtractor(abc.ABC):
 
         Returns:
             Tuple of (start_line, end_line) (1-indexed)
+
         """
         return (node.start_point[0] + 1, node.end_point[0] + 1)

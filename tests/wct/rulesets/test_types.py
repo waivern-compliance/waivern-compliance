@@ -146,7 +146,7 @@ class TestRuleDataTypedDict:
 
         metadata = rule_data["metadata"]
         assert metadata["string_value"] == "test"
-        assert metadata["int_value"] == 42  # noqa: PLR2004
+        assert metadata["int_value"] == 42
         assert metadata["bool_value"] is True
         assert metadata["list_value"] == [1, 2, 3]
         assert metadata["dict_value"] == {"nested": "value"}

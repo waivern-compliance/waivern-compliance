@@ -488,6 +488,7 @@ class ProcessingPurposesRuleset(Ruleset):
 
         Returns:
             Immutable tuple of Rule objects containing all processing purpose patterns with metadata
+
         """
         if self.rules is None:
             rules_list: list[Rule] = []

@@ -16,6 +16,7 @@ class ClassExtractor(BaseExtractor):
 
         Args:
             language: Programming language
+
         """
         super().__init__(language)
         self.function_extractor = FunctionExtractor(language)
@@ -29,6 +30,7 @@ class ClassExtractor(BaseExtractor):
 
         Returns:
             List of class information dictionaries
+
         """
         classes = []
 
@@ -50,6 +52,7 @@ class ClassExtractor(BaseExtractor):
 
         Returns:
             List of node types that represent classes
+
         """
         class_types_by_language = {
             "php": ["class_declaration"],
@@ -77,6 +80,7 @@ class ClassExtractor(BaseExtractor):
 
         Returns:
             Class information dictionary or None if extraction fails
+
         """
         try:
             class_info = {
@@ -105,6 +109,7 @@ class ClassExtractor(BaseExtractor):
 
         Returns:
             Class name
+
         """
         if self.language == "php":
             name_node = self.find_child_by_type(class_node, "name")
@@ -129,6 +134,7 @@ class ClassExtractor(BaseExtractor):
 
         Returns:
             Parent class name or None
+
         """
         if self.language == "php":
             extends_node = self.find_child_by_type(class_node, "base_clause")
@@ -171,6 +177,7 @@ class ClassExtractor(BaseExtractor):
 
         Returns:
             List of interface names
+
         """
         interfaces = []
 
@@ -207,6 +214,7 @@ class ClassExtractor(BaseExtractor):
 
         Returns:
             List of property information
+
         """
         properties = []
 
@@ -239,6 +247,7 @@ class ClassExtractor(BaseExtractor):
 
         Returns:
             Property information dictionary
+
         """
         try:
             # Get property name
@@ -294,6 +303,7 @@ class ClassExtractor(BaseExtractor):
 
         Returns:
             Property information dictionary
+
         """
         try:
             # Get property name
@@ -331,6 +341,7 @@ class ClassExtractor(BaseExtractor):
 
         Returns:
             List of method information
+
         """
         methods = []
 

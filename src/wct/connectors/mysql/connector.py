@@ -87,6 +87,7 @@ class MySQLConnector(Connector):
             autocommit: Enable autocommit mode (default: True)
             connect_timeout: Connection timeout in seconds (default: 10)
             max_rows_per_table: Maximum number of rows to extract per table (default: 10)
+
         """
         self.host = host
         self.port = port
@@ -154,6 +155,7 @@ class MySQLConnector(Connector):
 
         Raises:
             ConnectorExtractionError: If connection fails
+
         """
         connection = None
         try:
@@ -191,6 +193,7 @@ class MySQLConnector(Connector):
 
         Raises:
             ConnectorExtractionError: If query execution fails
+
         """
         try:
             with self._get_connection() as connection:
@@ -227,6 +230,7 @@ class MySQLConnector(Connector):
 
         Returns:
             Dictionary containing database metadata
+
         """
         try:
             metadata: dict[str, Any] = {
@@ -286,6 +290,7 @@ class MySQLConnector(Connector):
 
         Returns:
             List of dictionaries representing table rows
+
         """
         try:
             # Use configured limit if not specified
@@ -311,6 +316,7 @@ class MySQLConnector(Connector):
 
         Returns:
             Message containing extracted data in WCF schema format
+
         """
         try:
             logger.info(f"Extracting data from MySQL database: {self.database}")
@@ -362,6 +368,7 @@ class MySQLConnector(Connector):
 
         Returns:
             Standard_input schema compliant content with granular data items
+
         """
         data_items: list[dict[str, Any]] = []
         database_source = f"{self.host}:{self.port}/{self.database}"
@@ -411,6 +418,7 @@ class MySQLConnector(Connector):
 
         Raises:
             ConnectorConfigError: If required properties are missing
+
         """
         host = os.getenv("MYSQL_HOST") or properties.get("host")
         user = os.getenv("MYSQL_USER") or properties.get("user")
@@ -436,6 +444,7 @@ class MySQLConnector(Connector):
 
         Raises:
             ConnectorConfigError: If required parameters are missing
+
         """
         if not host:
             raise ConnectorConfigError("MySQL host is required")
@@ -454,6 +463,7 @@ class MySQLConnector(Connector):
 
         Raises:
             ConnectorConfigError: If port value is invalid
+
         """
         port_str = os.getenv("MYSQL_PORT")
         if port_str:
@@ -473,6 +483,7 @@ class MySQLConnector(Connector):
 
         Raises:
             ConnectorConfigError: If schema is invalid or unsupported
+
         """
         if not output_schema:
             raise ConnectorConfigError(
@@ -495,6 +506,7 @@ class MySQLConnector(Connector):
 
         Returns:
             List of data items with cell content and metadata
+
         """
         data_items: list[dict[str, Any]] = []
         table_name = table_info["name"]
@@ -541,6 +553,7 @@ class MySQLConnector(Connector):
 
         Returns:
             Data item dictionary with content and metadata
+
         """
         return {
             "content": str(cell_value),
@@ -570,6 +583,7 @@ class MySQLConnector(Connector):
 
         Returns:
             SQL data type or "unknown" if not found
+
         """
         return next(
             (

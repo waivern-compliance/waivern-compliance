@@ -75,6 +75,7 @@ class SourceCodeConnector(Connector):
             file_patterns: Glob patterns for file inclusion/exclusion
             max_file_size: Skip files larger than this size (bytes)
             max_files: Maximum number of files to process (default: 4000)
+
         """
         super().__init__()  # Initialise logger from base class
         self.path = Path(path)
@@ -128,6 +129,7 @@ class SourceCodeConnector(Connector):
 
         Raises:
             ConnectorConfigError: If required properties are missing.
+
         """
         path = properties.get("path")
         if not path:
@@ -156,6 +158,7 @@ class SourceCodeConnector(Connector):
 
         Raises:
             ConnectorExtractionError: If extraction fails
+
         """
         try:
             # Validate schema
@@ -192,6 +195,7 @@ class SourceCodeConnector(Connector):
 
         Returns:
             Dictionary containing analysis results in schema format
+
         """
         if self.path.is_file():
             files_data, total_files, total_lines = self._analyse_single_file(self.path)
@@ -223,6 +227,7 @@ class SourceCodeConnector(Connector):
 
         Returns:
             Tuple of (file data list, file count, total lines)
+
         """
         try:
             # Check file size
@@ -260,6 +265,7 @@ class SourceCodeConnector(Connector):
 
         Returns:
             Tuple of (files data list, file count, total lines)
+
         """
         files_data = []
         total_files = 0
@@ -282,6 +288,7 @@ class SourceCodeConnector(Connector):
 
         Yields:
             Source code file paths that are supported by the parser
+
         """
         # Use filesystem connector to collect files
         files_to_process = self.file_collector.collect_files()
@@ -317,6 +324,7 @@ class SourceCodeConnector(Connector):
 
         Returns:
             File analysis data dictionary
+
         """
         # Detect language for this file
         language = (

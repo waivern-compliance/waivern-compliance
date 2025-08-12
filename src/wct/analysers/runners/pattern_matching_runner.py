@@ -31,6 +31,7 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
         Args:
             pattern_matcher: Function that defines how to match patterns and create findings.
                            If None, a default implementation will be used.
+
         """
         self.evidence_extractor = EvidenceExtractor()
         self._patterns_cache = {}  # Cache loaded rulesets
@@ -63,6 +64,7 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
 
         Raises:
             AnalysisRunnerError: If pattern matching fails
+
         """
         try:
             ruleset_name = config.get("ruleset_name", "personal_data")
@@ -131,6 +133,7 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
 
         Returns:
             Finding dictionary or None if no finding should be created
+
         """
         evidence_extractor = context["evidence_extractor"]
         metadata = context["metadata"]
@@ -164,6 +167,7 @@ class PatternMatchingRunner(AnalysisRunner[dict[str, Any]]):
 
         Returns:
             List of Rule objects loaded from the ruleset
+
         """
         if ruleset_name not in self._patterns_cache:
             self._patterns_cache[ruleset_name] = RulesetLoader.load_ruleset(
