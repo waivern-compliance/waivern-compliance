@@ -7,7 +7,8 @@ This document outlines the development status and planned roadmap for the Waiver
 | Feature                    | PoC | WCT | Refactor* | Description                                                                                  |
 | -------------------------- | --- | --- | -------- | -------------------------------------------------------------------------------------------- |
 | Rulesets                   | N/A | ✅   | ✅        | Pattern rules for static analysis                                                            |
-| Input/Output Schema        | N/A | ✅   | ✅        | Strongly typed schemas with unified interface and runtime validation                         |
+| Input/Output Schema        | N/A | ✅   | ✅        | JSON Schema-based validation system with data flow schemas                |
+| Runbook.                   | N/A | ✅   | ✅        | JSON Schema-based runbook configuration spec with validation utility                |
 | Personal Data (MySQL)      | ✅   | ✅   | ⏳        | Personal data collection analysis in MySQL databases                                         |
 | Personal Data (PHP)        | ✅   | ✅   | ⏳        | Personal data collection in PHP source code                                                  |
 | Processing Purpose (MySQL) | ✅   | ✅   | ⏳        | GDPR processing purpose analysis for MySQL                                                   |
@@ -35,10 +36,11 @@ We are in the process of transforming from proof-of-concept to a production-read
 ### Features Implemented & Planned
 
 **Core Architecture**
-- **Schema-driven design**: Strongly typed schema system with unified interface, dependency injection, and runtime validation
-- **Modular connector/analyser architecture**: Hot-swappable components with clear interfaces
+- **JSON Schema-based validation**: Comprehensive validation system with data flow schemas (runtime) and configuration schemas (setup)
+- **Declarative configuration**: YAML runbooks with structural validation and cross-reference checking
+- **Modular connector/analyser architecture**: Hot-swappable components with clear schema contracts
 - **Rulesets system**: Comprehensive rule definitions for personal data and processing purposes
-- **Message-based validation**: Automatic input/output validation using JSON schemas
+- **Message-based validation**: Automatic input/output validation with detailed error reporting
 
 **Data Analysis Capabilities**
 - **Personal data detection**: Multi-source personal data identification (MySQL, PHP, files)
@@ -54,24 +56,29 @@ We are in the process of transforming from proof-of-concept to a production-read
 
 ## Current Phase: Document Generation & Advanced Features (v0.0.1)
 
-### ✅ Priority 1: Schema System Enhancement (COMPLETED)
+### ✅ Priority 1: Schema-Based Validation System (COMPLETED)
 
-The schema refactoring phase focused on optimising the current unified schema system:
+Complete migration from manual validation to a comprehensive JSON Schema-based validation architecture:
 
 **Completed Goals:**
-- ✅ Streamlined schema definitions and validation processes with strongly typed Schema base class
-- ✅ Improved performance for large-scale data processing through schema caching and dependency injection
-- ✅ Enhanced error reporting and debugging capabilities with detailed validation messages
-- ✅ Standardised schema contracts across all components (connectors, analysers, executor)
+- ✅ **JSON Schema validation**: Replace ~150+ lines of scattered manual validation with declarative schema definitions
+- ✅ **Two-tier schema architecture**: Separate data flow schemas (runtime) from configuration schemas (setup validation)
+- ✅ **RunbookSchema implementation**: YAML runbook validation with structural requirements and cross-reference checking
+- ✅ **Strongly typed interfaces**: RunbookSummary dataclass and mandatory schema specifications
+- ✅ **Enhanced error reporting**: Field path reporting with clear validation failure details
+- ✅ **Comprehensive testing**: 119 total tests with 23 new tests for schema validation and runbook implementation
 
-**Completed:** December 2024 - Fully implemented strongly typed schema system with unified interface
+**Completed:** January 2025 - Full JSON Schema-based validation system with declarative configuration validation
 
 ### 🎯 Priority 2: Connector & Analyser Refactoring
 
-Enhanced connector and analyser implementations leveraging the new typed schema system.
+Enhanced connector and analyser implementations leveraging the JSON Schema-based validation system:
 
-**Testing & Quality**
-- Comprehensive integration testing for all connectors and analysers
+**Goals:**
+- Comprehensive integration testing for all connectors and analysers with schema validation
+- Performance optimisation for large-scale data processing
+- Enhanced connector implementations using schema contracts
+- Analyser improvements with Message-based validation
 
 **Timeline:** TBC
 
@@ -172,9 +179,9 @@ Implementation of automated compliance document generation:
 
 ### Current Focus Areas
 
-1. **Schema System Refactoring**: Help optimise the current schema system for better performance and usability
+1. **Connector & Analyser Enhancement**: Leverage the new JSON Schema-based validation system for improved performance and usability
 2. **Document Generation**: Contribute to the implementation of automated compliance document generation
-3. **Testing & Quality**: Improve test coverage and add integration tests for new features
+3. **Testing & Quality**: Expand integration tests for schema validation and add performance benchmarks
 4. **Community Building**: Help establish best practices and contribution guidelines
 
 ### How to Contribute
