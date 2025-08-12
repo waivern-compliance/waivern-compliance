@@ -1,11 +1,13 @@
 """LLM validation analysis runner."""
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
 from wct.analysers.runners.base import AnalysisRunner
 from wct.analysers.utilities import LLMServiceManager
-from wct.logging import get_analyser_logger
+
+logger = logging.getLogger(__name__)
 
 # Type alias for validation strategy function
 ValidationStrategyFn = Callable[
@@ -39,7 +41,6 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
             if validation_strategy is not None
             else self._passthrough_strategy
         )
-        self.logger = get_analyser_logger("llm_validation_runner")
 
     def get_analysis_type(self) -> str:
         """Return the analysis type identifier."""
@@ -69,21 +70,21 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
         """
         try:
             if not config.get("enable_llm_validation", True) or not input_data:
-                self.logger.debug("LLM validation disabled or no findings to validate")
+                logger.debug("LLM validation disabled or no findings to validate")
                 return input_data
 
             if not self.llm_service_manager.is_available():
-                self.logger.warning("LLM service not available, skipping validation")
+                logger.warning("LLM service not available, skipping validation")
                 return input_data
 
-            self.logger.info(f"Starting LLM validation of {len(input_data)} findings")
+            logger.info(f"Starting LLM validation of {len(input_data)} findings")
 
             # Delegate to the analyser-specific validation strategy
             validated_findings = self.validation_strategy(
                 input_data, config, self.llm_service_manager.llm_service
             )
 
-            self.logger.info(
+            logger.info(
                 f"LLM validation completed: {len(input_data)} → {len(validated_findings)} findings"
             )
 
@@ -91,10 +92,8 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
 
         except Exception as e:
             # Log the error but don't fail the entire analysis
-            self.logger.error(f"LLM validation failed: {e}")
-            self.logger.warning(
-                "Returning unvalidated findings due to LLM validation error"
-            )
+            logger.error(f"LLM validation failed: {e}")
+            logger.warning("Returning unvalidated findings due to LLM validation error")
             return input_data
 
     def _passthrough_strategy(
@@ -110,7 +109,7 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
         Returns:
             Original findings list unchanged
         """
-        self.logger.debug("Using passthrough validation strategy (no filtering)")
+        logger.debug("Using passthrough validation strategy (no filtering)")
         return findings
 
     def create_batch_validation_strategy(
@@ -147,7 +146,7 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
                     prompt = prompt_generator(batch)
 
                     # Get LLM response
-                    self.logger.debug(f"Validating batch of {len(batch)} findings")
+                    logger.debug(f"Validating batch of {len(batch)} findings")
                     response = llm_service.analyse_data("", prompt)
 
                     # Parse response and get validated findings
@@ -155,9 +154,9 @@ class LLMValidationRunner(AnalysisRunner[dict[str, Any]]):
                     validated_findings.extend(batch_results)
 
                 except Exception as e:
-                    self.logger.error(f"Batch validation failed: {e}")
+                    logger.error(f"Batch validation failed: {e}")
                     # On batch failure, include original findings for safety
-                    self.logger.warning("Including unvalidated batch due to error")
+                    logger.warning("Including unvalidated batch due to error")
                     validated_findings.extend(batch)
 
             return validated_findings

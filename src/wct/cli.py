@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import typer
@@ -16,10 +17,10 @@ from wct.analysis import AnalysisResult, AnalysisResultsExporter
 from wct.connectors import BUILTIN_CONNECTORS
 from wct.executor import Executor
 from wct.llm_service import LLMServiceError, LLMServiceFactory
-from wct.logging import get_cli_logger, setup_logging
+from wct.logging import setup_logging
 from wct.runbook import Runbook, RunbookLoader
 
-logger = get_cli_logger()
+logger = logging.getLogger(__name__)
 console = Console()
 
 

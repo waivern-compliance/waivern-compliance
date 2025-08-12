@@ -1,10 +1,10 @@
 """LLM validation strategy for personal data analysis."""
 
 import json
+import logging
 from logging import Logger
 from typing import Any
 
-from wct.logging import get_analyser_logger
 from wct.prompts.personal_data_validation import (
     RecommendedAction,
     ValidationResult,
@@ -13,6 +13,8 @@ from wct.prompts.personal_data_validation import (
 )
 
 from .types import PersonalDataFinding
+
+logger = logging.getLogger(__name__)
 
 
 def personal_data_validation_strategy(
@@ -31,7 +33,7 @@ def personal_data_validation_strategy(
     Returns:
         List of validated findings with false positives removed
     """
-    logger = get_analyser_logger("personal_data_validation")
+    # Use module-level logger
 
     if not findings:
         logger.debug("No findings to validate")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
@@ -9,7 +10,8 @@ from langchain_anthropic import ChatAnthropic
 from pydantic import SecretStr
 
 from wct.errors import WCTError
-from wct.logging import get_logger
+
+logger = logging.getLogger(__name__)
 
 
 class LLMServiceError(WCTError):
@@ -47,7 +49,7 @@ class AnthropicLLMService:
         Raises:
             LLMConfigurationError: If API key is not provided or found in environment
         """
-        self.logger = get_logger(__name__)
+        # Logger is available at module level
 
         # Get model name from parameter, environment, or default
         self.model_name = (
@@ -63,9 +65,7 @@ class AnthropicLLMService:
             )
 
         self._llm = None
-        self.logger.info(
-            f"Initialised Anthropic LLM service with model: {self.model_name}"
-        )
+        logger.info(f"Initialised Anthropic LLM service with model: {self.model_name}")
 
     def _get_llm(self):
         """Get or create the LangChain LLM instance.
@@ -88,7 +88,7 @@ class AnthropicLLMService:
                 timeout=300,  # Increased timeout for LLM requests
                 stop=None,  # Stop sequences for clean output
             )
-            self.logger.debug("Created LangChain ChatAnthropic instance")
+            logger.debug("Created LangChain ChatAnthropic instance")
 
         return self._llm
 
@@ -102,7 +102,7 @@ class AnthropicLLMService:
             LLMConnectionError: If connection test fails
         """
         try:
-            self.logger.info("Testing connection to Anthropic API...")
+            logger.info("Testing connection to Anthropic API...")
 
             llm = self._get_llm()
 
@@ -114,7 +114,7 @@ class AnthropicLLMService:
             response = llm.invoke(test_prompt)
             response_text = str(response.content).strip()
 
-            self.logger.info("Connection test successful")
+            logger.info("Connection test successful")
 
             return {
                 "status": "success",
@@ -124,7 +124,7 @@ class AnthropicLLMService:
             }
 
         except Exception as e:
-            self.logger.error(f"Connection test failed: {e}")
+            logger.error(f"Connection test failed: {e}")
             raise LLMConnectionError(f"Failed to connect to Anthropic API: {e}") from e
 
     def analyse_data(self, text: str, analysis_prompt: str) -> str:
@@ -141,7 +141,7 @@ class AnthropicLLMService:
             LLMConnectionError: If LLM request fails
         """
         try:
-            self.logger.debug(f"Analysing text (length: {len(text)} chars)")
+            logger.debug(f"Analysing text (length: {len(text)} chars)")
 
             llm = self._get_llm()
 
@@ -151,14 +151,14 @@ class AnthropicLLMService:
             response = llm.invoke(full_prompt)
             result = str(response.content).strip()
 
-            self.logger.debug(
+            logger.debug(
                 f"LLM analysis completed (response length: {len(result)} chars)"
             )
 
             return result
 
         except Exception as e:
-            self.logger.error(f"Text analysis failed: {e}")
+            logger.error(f"Text analysis failed: {e}")
             raise LLMConnectionError(f"LLM text analysis failed: {e}") from e
 
 

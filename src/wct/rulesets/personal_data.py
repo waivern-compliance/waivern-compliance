@@ -4,12 +4,15 @@ This module defines a ruleset for detecting personal data patterns.
 It serves as a base for compliance with GDPR and other privacy regulations.
 """
 
+import logging
 from typing import Final
 
 from typing_extensions import override
 
 from wct.rulesets.base import Ruleset
 from wct.rulesets.types import Rule, RuleData
+
+logger = logging.getLogger(__name__)
 
 # Version constant for this ruleset (private)
 _VERSION: Final[str] = "1.0.0"
@@ -512,7 +515,7 @@ class PersonalDataRuleset(Ruleset):
         """Initialise the personal data ruleset."""
         super().__init__()
         self.rules: tuple[Rule, ...] | None = None
-        self.logger.debug(f"Initialised {self.name} ruleset version {self.version}")
+        logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
     @property
     @override
@@ -546,6 +549,6 @@ class PersonalDataRuleset(Ruleset):
                     )
                 )
             self.rules = tuple(rules_list)
-            self.logger.debug(f"Generated {len(self.rules)} personal data rules")
+            logger.debug(f"Generated {len(self.rules)} personal data rules")
 
         return self.rules

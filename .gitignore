@@ -13,3 +13,7 @@ outputs/
 
 # Environment variables
 .env
+
+# Logs
+logs/*.log
+logs/*.log.*

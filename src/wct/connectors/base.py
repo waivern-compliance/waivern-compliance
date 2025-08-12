@@ -7,15 +7,17 @@ This module provides:
 """
 
 import abc
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 from typing_extensions import Self
 
 from wct.errors import WCTError
-from wct.logging import get_connector_logger
 from wct.message import Message
 from wct.schemas import Schema
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,14 +38,8 @@ class Connector(abc.ABC):
     """
 
     def __init__(self) -> None:
-        """Initialise the connector with a configured logger.
-
-        The logger is automatically set up using the connector's class name
-        in lowercase, following WCT logging conventions.
-        """
-        # Get the connector name from the class and set up logger
-        connector_name = self.get_name()
-        self.logger = get_connector_logger(connector_name)
+        """Initialise the connector."""
+        pass
 
     @classmethod
     @abc.abstractmethod

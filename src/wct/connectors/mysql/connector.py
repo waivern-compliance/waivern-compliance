@@ -7,6 +7,7 @@ This module provides:
 - Connection management with proper error handling and logging
 """
 
+import logging
 import os
 from contextlib import contextmanager
 from typing import Any
@@ -20,6 +21,8 @@ from wct.connectors.base import (
 )
 from wct.message import Message
 from wct.schemas import Schema
+
+logger = logging.getLogger(__name__)
 
 try:
     import pymysql
@@ -184,7 +187,7 @@ class MySQLConnector(Connector):
             yield connection
 
         except Exception as e:
-            self.logger.error(f"Failed to connect to MySQL: {e}")
+            logger.error(f"Failed to connect to MySQL: {e}")
             raise ConnectorExtractionError(f"MySQL connection failed: {e}") from e
         finally:
             if connection:
@@ -232,7 +235,7 @@ class MySQLConnector(Connector):
                     return results
 
         except Exception as e:
-            self.logger.error(f"Query execution failed: {e}")
+            logger.error(f"Query execution failed: {e}")
             raise ConnectorExtractionError(f"Query execution failed: {e}") from e
 
     def get_database_metadata(self) -> dict[str, Any]:
@@ -295,7 +298,7 @@ class MySQLConnector(Connector):
                 return metadata
 
         except Exception as e:
-            self.logger.error(f"Failed to extract database metadata: {e}")
+            logger.error(f"Failed to extract database metadata: {e}")
             raise ConnectorExtractionError(
                 f"Database metadata extraction failed: {e}"
             ) from e
@@ -321,7 +324,7 @@ class MySQLConnector(Connector):
             query = f"SELECT * FROM `{table_name}` LIMIT %s"  # noqa # nosec B608
             return self.execute_query(query, (effective_limit,))
         except Exception as e:
-            self.logger.warning(f"Failed to extract data from table {table_name}: {e}")
+            logger.warning(f"Failed to extract data from table {table_name}: {e}")
             return []
 
     @override
@@ -338,7 +341,7 @@ class MySQLConnector(Connector):
             Message containing extracted data in WCF schema format
         """
         try:
-            self.logger.info(f"Extracting data from MySQL database: {self.database}")
+            logger.info(f"Extracting data from MySQL database: {self.database}")
 
             # Check if a supported schema is provided
             if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
@@ -347,7 +350,7 @@ class MySQLConnector(Connector):
                 )
 
             if not output_schema:
-                self.logger.warning(
+                logger.warning(
                     "No schema provided, using default mysql_database schema"
                 )
                 raise ConnectorConfigError(
@@ -356,7 +359,7 @@ class MySQLConnector(Connector):
 
             # Test connection first
             with self.get_connection():
-                self.logger.debug("MySQL connection test successful")
+                logger.debug("MySQL connection test successful")
 
             # Extract database metadata
             metadata = self.get_database_metadata()
@@ -387,7 +390,7 @@ class MySQLConnector(Connector):
             return message
 
         except Exception as e:
-            self.logger.error(f"MySQL extraction failed: {e}")
+            logger.error(f"MySQL extraction failed: {e}")
             raise ConnectorExtractionError(f"MySQL extraction failed: {e}") from e
 
     def _transform_for_mysql_schema(
@@ -481,9 +484,7 @@ class MySQLConnector(Connector):
                             )
 
             except Exception as e:
-                self.logger.warning(
-                    f"Failed to extract data from table {table_name}: {e}"
-                )
+                logger.warning(f"Failed to extract data from table {table_name}: {e}")
                 continue
 
         return {

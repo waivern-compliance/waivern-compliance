@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import abc
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 from typing_extensions import Self
 
-from wct.logging import get_analyser_logger
 from wct.message import Message
 from wct.schemas import Schema, SchemaLoadError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,14 +41,8 @@ class Analyser(abc.ABC):
     """
 
     def __init__(self) -> None:
-        """Initialise the analyser with a configured logger.
-
-        The logger is automatically set up using the analyser's class name
-        in lowercase, following WCT logging conventions.
-        """
-        # Get the analyser name from the class and set up logger
-        analyser_name = self.get_name()
-        self.logger = get_analyser_logger(analyser_name)
+        """Initialise the analyser."""
+        pass
 
     @classmethod
     @abc.abstractmethod

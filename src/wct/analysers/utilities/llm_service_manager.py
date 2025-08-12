@@ -1,7 +1,10 @@
 """Utility for managing LLM service lifecycle."""
 
+import logging
+
 from wct.llm_service import LLMServiceError, LLMServiceFactory
-from wct.logging import get_analyser_logger
+
+logger = logging.getLogger(__name__)
 
 
 class LLMServiceManager:
@@ -15,7 +18,6 @@ class LLMServiceManager:
         """
         self.enable_llm_validation = enable_llm_validation
         self._llm_service = None
-        self.logger = get_analyser_logger("llm_service_manager")
 
     @property
     def llm_service(self):
@@ -23,9 +25,9 @@ class LLMServiceManager:
         if self._llm_service is None and self.enable_llm_validation:
             try:
                 self._llm_service = LLMServiceFactory.create_anthropic_service()
-                self.logger.info("LLM service initialised for compliance analysis")
+                logger.info("LLM service initialised for compliance analysis")
             except LLMServiceError as e:
-                self.logger.warning(
+                logger.warning(
                     f"Failed to initialise LLM service: {e}. Continuing without LLM validation."
                 )
                 self.enable_llm_validation = False
