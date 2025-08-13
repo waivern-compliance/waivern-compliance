@@ -6,6 +6,10 @@ from tree_sitter import Node
 
 from wct.connectors.source_code.extractors.base import BaseExtractor
 
+# Constants
+_ANONYMOUS_FUNCTION_NAME = "<anonymous>"
+_LINE_INDEX_OFFSET = 1
+
 
 class FunctionExtractor(BaseExtractor):
     """Extracts function definitions from source code."""
@@ -21,7 +25,7 @@ class FunctionExtractor(BaseExtractor):
             List of function information dictionaries
 
         """
-        functions = []
+        functions: list[dict[str, Any]] = []
 
         # Language-specific function node types
         function_types = self._get_function_node_types()
@@ -84,17 +88,14 @@ class FunctionExtractor(BaseExtractor):
         try:
             func_info = {
                 "name": self._get_function_name(func_node, source_code),
-                "line_start": func_node.start_point[0] + 1,
-                "line_end": func_node.end_point[0] + 1,
+                "line_start": func_node.start_point[0] + _LINE_INDEX_OFFSET,
+                "line_end": func_node.end_point[0] + _LINE_INDEX_OFFSET,
                 "parameters": self._get_function_parameters(func_node, source_code),
-                "return_type": self._get_return_type(func_node, source_code),
-                "visibility": self._get_visibility(func_node, source_code),
-                "is_static": self._is_static(func_node),
                 "docstring": self._get_docstring(func_node, source_code),
             }
 
             # Remove None values
-            return {k: v for k, v in func_info.items() if v is not None}
+            return self._filter_none_values(func_info)
 
         except Exception:
             # Skip functions that can't be parsed
@@ -123,7 +124,7 @@ class FunctionExtractor(BaseExtractor):
             return self.get_node_text(name_node, source_code)
 
         # Fallback - anonymous function
-        return "<anonymous>"
+        return _ANONYMOUS_FUNCTION_NAME
 
     def _get_function_parameters(
         self, func_node: Node, source_code: str
@@ -138,7 +139,7 @@ class FunctionExtractor(BaseExtractor):
             List of parameter information
 
         """
-        parameters = []
+        parameters: list[dict[str, Any]] = []
 
         if self.language == "php":
             params_node = self.find_child_by_type(func_node, "formal_parameters")
@@ -198,91 +199,21 @@ class FunctionExtractor(BaseExtractor):
                     self.get_node_text(type_node, source_code) if type_node else None
                 )
 
-                default_node = self.find_child_by_type(
-                    param_node, "assignment_expression"
-                )
-                default_value = (
-                    self.get_node_text(default_node, source_code)
-                    if default_node
-                    else None
-                )
-
             else:
                 # Generic approach
                 name = self.get_node_text(param_node, source_code)
                 param_type = None
-                default_value = None
 
             return {
                 "name": name,
                 "type": param_type,
-                "default_value": default_value,
             }
 
         except Exception:
             return None
 
-    def _get_return_type(self, func_node: Node, source_code: str) -> str | None:
-        """Extract function return type.
-
-        Args:
-            func_node: Function AST node
-            source_code: Original source code
-
-        Returns:
-            Return type string or None
-
-        """
-        if self.language == "php":
-            return_type_node = self.find_child_by_type(func_node, "return_type")
-            if return_type_node:
-                return self.get_node_text(return_type_node, source_code)
-
-        return None
-
-    def _get_visibility(self, func_node: Node, source_code: str) -> str | None:
-        """Extract function visibility (public, private, protected).
-
-        Args:
-            func_node: Function AST node
-            source_code: Original source code
-
-        Returns:
-            Visibility string or None
-
-        """
-        if self.language == "php":
-            # Look for visibility modifiers in parent or siblings
-            parent = func_node.parent
-            if parent:
-                for child in parent.children:
-                    if child.type == "visibility_modifier":
-                        return self.get_node_text(child, source_code)
-
-        return None
-
-    def _is_static(self, func_node: Node) -> bool:
-        """Check if function is static.
-
-        Args:
-            func_node: Function AST node
-
-        Returns:
-            True if function is static
-
-        """
-        if self.language == "php":
-            # Look for static modifier
-            parent = func_node.parent
-            if parent:
-                for child in parent.children:
-                    if child.type == "static_modifier":
-                        return True
-
-        return False
-
     def _get_docstring(self, func_node: Node, source_code: str) -> str | None:
-        """Extract function docstring/comment.
+        """Extract function docstring/comment using tree-sitter comment nodes.
 
         Args:
             func_node: Function AST node
@@ -292,6 +223,40 @@ class FunctionExtractor(BaseExtractor):
             Docstring content or None
 
         """
-        # Look for comment nodes before the function
-        # This is language-specific and would need more sophisticated logic
+        # Look for comment node immediately preceding the function
+        parent = func_node.parent
+        if not parent:
+            return None
+
+        # Find function's position in parent's children
+        func_index = None
+        for i, child in enumerate(parent.children):
+            if child == func_node:
+                func_index = i
+                break
+
+        if func_index is None or func_index == 0:
+            return None
+
+        # Look backwards for the nearest comment node
+        for i in range(func_index - 1, -1, -1):
+            child = parent.children[i]
+            if child.type == "comment":
+                return self.get_node_text(child, source_code).strip()
+            elif not self._is_whitespace_or_trivial(child):
+                # Stop if we encounter non-trivial content
+                break
+
         return None
+
+    def _filter_none_values(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Remove None values from a dictionary.
+
+        Args:
+            data: Dictionary to filter
+
+        Returns:
+            Dictionary with None values removed
+
+        """
+        return {k: v for k, v in data.items() if v is not None}

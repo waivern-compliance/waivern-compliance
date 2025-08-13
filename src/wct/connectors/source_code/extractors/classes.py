@@ -7,6 +7,10 @@ from tree_sitter import Node
 from wct.connectors.source_code.extractors.base import BaseExtractor
 from wct.connectors.source_code.extractors.functions import FunctionExtractor
 
+# Constants
+_ANONYMOUS_CLASS_NAME = "<anonymous>"
+_LINE_INDEX_OFFSET = 1
+
 
 class ClassExtractor(BaseExtractor):
     """Extracts class definitions from source code."""
@@ -32,7 +36,7 @@ class ClassExtractor(BaseExtractor):
             List of class information dictionaries
 
         """
-        classes = []
+        classes: list[dict[str, Any]] = []
 
         # Language-specific class node types
         class_types = self._get_class_node_types()
@@ -85,11 +89,9 @@ class ClassExtractor(BaseExtractor):
         try:
             class_info = {
                 "name": self._get_class_name(class_node, source_code),
-                "line_start": class_node.start_point[0] + 1,
-                "line_end": class_node.end_point[0] + 1,
-                "extends": self._get_parent_class(class_node, source_code),
-                "implements": self._get_implemented_interfaces(class_node, source_code),
-                "properties": self._get_class_properties(class_node, source_code),
+                "line_start": class_node.start_point[0] + _LINE_INDEX_OFFSET,
+                "line_end": class_node.end_point[0] + _LINE_INDEX_OFFSET,
+                "docstring": self._get_class_docstring(class_node, source_code),
                 "methods": self._get_class_methods(class_node, source_code),
             }
 
@@ -123,212 +125,44 @@ class ClassExtractor(BaseExtractor):
         if name_node:
             return self.get_node_text(name_node, source_code)
 
-        return "<anonymous>"
+        return _ANONYMOUS_CLASS_NAME
 
-    def _get_parent_class(self, class_node: Node, source_code: str) -> str | None:
-        """Extract parent class (inheritance).
+    def _get_class_docstring(self, class_node: Node, source_code: str) -> str | None:
+        """Extract class docstring/comment using tree-sitter comment nodes.
 
         Args:
             class_node: Class AST node
             source_code: Original source code
 
         Returns:
-            Parent class name or None
+            Docstring content or None
 
         """
-        if self.language == "php":
-            extends_node = self.find_child_by_type(class_node, "base_clause")
-            if extends_node:
-                name_node = self.find_child_by_type(extends_node, "name")
-                if name_node:
-                    return self.get_node_text(name_node, source_code)
+        # Look for comment node immediately preceding the class
+        parent = class_node.parent
+        if not parent:
+            return None
 
-        elif self.language in ["javascript", "typescript"]:
-            heritage_node = self.find_child_by_type(class_node, "class_heritage")
-            if heritage_node:
-                extends_node = self.find_child_by_type(heritage_node, "extends_clause")
-                if extends_node:
-                    name_node = self.find_child_by_type(extends_node, "identifier")
-                    if name_node:
-                        return self.get_node_text(name_node, source_code)
+        # Find class's position in parent's children
+        class_index = None
+        for i, child in enumerate(parent.children):
+            if child == class_node:
+                class_index = i
+                break
 
-        elif self.language == "python":
-            argument_list = self.find_child_by_type(class_node, "argument_list")
-            if argument_list and argument_list.children:
-                # First argument is typically the parent class
-                first_arg = (
-                    argument_list.children[1]
-                    if len(argument_list.children) > 1
-                    else None
-                )
-                if first_arg and first_arg.type == "identifier":
-                    return self.get_node_text(first_arg, source_code)
+        if class_index is None or class_index == 0:
+            return None
+
+        # Look backwards for the nearest comment node
+        for i in range(class_index - 1, -1, -1):
+            child = parent.children[i]
+            if child.type == "comment":
+                return self.get_node_text(child, source_code).strip()
+            elif not self._is_whitespace_or_trivial(child):
+                # Stop if we encounter non-trivial content
+                break
 
         return None
-
-    def _get_implemented_interfaces(
-        self, class_node: Node, source_code: str
-    ) -> list[str]:
-        """Extract implemented interfaces.
-
-        Args:
-            class_node: Class AST node
-            source_code: Original source code
-
-        Returns:
-            List of interface names
-
-        """
-        interfaces = []
-
-        if self.language == "php":
-            implements_node = self.find_child_by_type(
-                class_node, "class_interface_clause"
-            )
-            if implements_node:
-                name_nodes = self.find_nodes_by_type(implements_node, "name")
-                for name_node in name_nodes:
-                    interfaces.append(self.get_node_text(name_node, source_code))
-
-        elif self.language in ["javascript", "typescript"]:
-            heritage_node = self.find_child_by_type(class_node, "class_heritage")
-            if heritage_node:
-                implements_node = self.find_child_by_type(
-                    heritage_node, "implements_clause"
-                )
-                if implements_node:
-                    name_nodes = self.find_nodes_by_type(implements_node, "identifier")
-                    for name_node in name_nodes:
-                        interfaces.append(self.get_node_text(name_node, source_code))
-
-        return interfaces
-
-    def _get_class_properties(
-        self, class_node: Node, source_code: str
-    ) -> list[dict[str, Any]]:
-        """Extract class properties/fields.
-
-        Args:
-            class_node: Class AST node
-            source_code: Original source code
-
-        Returns:
-            List of property information
-
-        """
-        properties = []
-
-        if self.language == "php":
-            # Look for property declarations
-            prop_nodes = self.find_nodes_by_type(class_node, "property_declaration")
-            for prop_node in prop_nodes:
-                prop_info = self._extract_php_property_info(prop_node, source_code)
-                if prop_info:
-                    properties.append(prop_info)
-
-        elif self.language in ["javascript", "typescript"]:
-            # Look for field definitions
-            field_nodes = self.find_nodes_by_type(class_node, "field_definition")
-            for field_node in field_nodes:
-                prop_info = self._extract_js_property_info(field_node, source_code)
-                if prop_info:
-                    properties.append(prop_info)
-
-        return properties
-
-    def _extract_php_property_info(
-        self, prop_node: Node, source_code: str
-    ) -> dict[str, Any] | None:
-        """Extract PHP property information.
-
-        Args:
-            prop_node: Property AST node
-            source_code: Original source code
-
-        Returns:
-            Property information dictionary
-
-        """
-        try:
-            # Get property name
-            var_node = self.find_child_by_type(prop_node, "variable_name")
-            if not var_node:
-                return None
-
-            name = self.get_node_text(var_node, source_code)
-
-            # Get type
-            type_node = self.find_child_by_type(prop_node, "named_type")
-            prop_type = (
-                self.get_node_text(type_node, source_code) if type_node else None
-            )
-
-            # Get visibility
-            visibility = None
-            for child in prop_node.children:
-                if child.type == "visibility_modifier":
-                    visibility = self.get_node_text(child, source_code)
-                    break
-
-            # Check if static
-            is_static = any(
-                child.type == "static_modifier" for child in prop_node.children
-            )
-
-            # Get default value
-            default_value = None
-            assignment_node = self.find_child_by_type(prop_node, "property_initialiser")
-            if assignment_node:
-                default_value = self.get_node_text(assignment_node, source_code)
-
-            return {
-                "name": name,
-                "type": prop_type,
-                "visibility": visibility,
-                "is_static": is_static,
-                "default_value": default_value,
-            }
-
-        except Exception:
-            return None
-
-    def _extract_js_property_info(
-        self, field_node: Node, source_code: str
-    ) -> dict[str, Any] | None:
-        """Extract JavaScript/TypeScript property information.
-
-        Args:
-            field_node: Field AST node
-            source_code: Original source code
-
-        Returns:
-            Property information dictionary
-
-        """
-        try:
-            # Get property name
-            name_node = self.find_child_by_type(field_node, "property_identifier")
-            if not name_node:
-                return None
-
-            name = self.get_node_text(name_node, source_code)
-
-            # For TypeScript, get type annotation
-            prop_type = None
-            type_node = self.find_child_by_type(field_node, "type_annotation")
-            if type_node:
-                prop_type = self.get_node_text(type_node, source_code)
-
-            return {
-                "name": name,
-                "type": prop_type,
-                "visibility": "public",  # Default in JS/TS
-                "is_static": False,
-                "default_value": None,
-            }
-
-        except Exception:
-            return None
 
     def _get_class_methods(
         self, class_node: Node, source_code: str
@@ -343,7 +177,7 @@ class ClassExtractor(BaseExtractor):
             List of method information
 
         """
-        methods = []
+        methods: list[dict[str, Any]] = []
 
         # Use function extractor to get methods within the class
         method_nodes = []
