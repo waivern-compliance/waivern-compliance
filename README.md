@@ -15,6 +15,8 @@ The system is designed to be extensible and configurable through YAML runbook fi
 
 📋 **[Development Roadmap](docs/development_roadmap.md)** - See our current progress and planned features
 
+🚀 **Ready to contribute?** Check out our [contribution opportunities](docs/development_roadmap.md#contribution-opportunities) and browse [good first issues](https://github.com/waivern-compliance/waivern-compliance/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) to get started!
+
 ## Quick Start
 
 ### Installation
