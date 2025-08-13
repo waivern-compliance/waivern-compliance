@@ -5,6 +5,9 @@ from typing import Any
 
 from tree_sitter import Node
 
+# Constants
+_DEFAULT_ENCODING = "utf-8"
+
 
 class BaseExtractor(abc.ABC):
     """Base class for source code extractors.
@@ -46,8 +49,8 @@ class BaseExtractor(abc.ABC):
             Text content of the node
 
         """
-        source_bytes = source_code.encode("utf-8")
-        return source_bytes[node.start_byte : node.end_byte].decode("utf-8")
+        source_bytes = source_code.encode(_DEFAULT_ENCODING)
+        return source_bytes[node.start_byte : node.end_byte].decode(_DEFAULT_ENCODING)
 
     def find_nodes_by_type(self, node: Node, node_type: str) -> list[Node]:
         """Find all nodes of a specific type in the tree.
@@ -60,14 +63,8 @@ class BaseExtractor(abc.ABC):
             List of matching nodes
 
         """
-        results = []
-
-        if node.type == node_type:
-            results.append(node)
-
-        for child in node.children:
-            results.extend(self.find_nodes_by_type(child, node_type))
-
+        results: list[Node] = []
+        self._collect_nodes_by_type(node, node_type, results)
         return results
 
     def find_child_by_type(self, node: Node, child_type: str) -> Node | None:
@@ -86,14 +83,42 @@ class BaseExtractor(abc.ABC):
                 return child
         return None
 
-    def get_node_line_range(self, node: Node) -> tuple[int, int]:
-        """Get the line range (start, end) for a node.
+    def _collect_nodes_by_type(
+        self, node: Node, node_type: str, results: list[Node]
+    ) -> None:
+        """Recursively collect nodes of a specific type.
 
         Args:
-            node: Tree-sitter node
-
-        Returns:
-            Tuple of (start_line, end_line) (1-indexed)
+            node: Current node to examine
+            node_type: Type of nodes to collect
+            results: List to append matching nodes to
 
         """
-        return (node.start_point[0] + 1, node.end_point[0] + 1)
+        if node.type == node_type:
+            results.append(node)
+
+        for child in node.children:
+            self._collect_nodes_by_type(child, node_type, results)
+
+    def _is_whitespace_or_trivial(self, node: Node) -> bool:
+        """Check if a node represents whitespace or trivial content.
+
+        Args:
+            node: Tree-sitter node to check
+
+        Returns:
+            True if node is whitespace or trivial
+
+        """
+        trivial_types = {
+            "text",
+            "whitespace",
+            "\n",
+            " ",
+            "\t",
+            "newline",
+            "indent",
+            "dedent",
+            ";",
+        }
+        return node.type in trivial_types

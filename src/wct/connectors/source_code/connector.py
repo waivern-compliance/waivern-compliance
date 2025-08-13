@@ -26,12 +26,20 @@ from wct.schemas import Schema, SourceCodeSchema
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_OUTPUT_SCHEMAS = {
+# Constants
+_CONNECTOR_NAME = "source_code"
+_DEFAULT_SCHEMA_VERSION = "1.0.0"
+_DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+_DEFAULT_MAX_FILES = 4000
+_DEFAULT_FILE_PATTERNS = ["**/*"]
+_PARSER_VERSION = "tree-sitter-languages-1.15.0+"
+
+_SUPPORTED_OUTPUT_SCHEMAS = {
     "source_code": SourceCodeSchema(),
 }
 
 # Common file patterns to exclude from source code analysis
-COMMON_EXCLUSIONS = [
+_COMMON_EXCLUSIONS = [
     "*.pyc",
     "__pycache__",
     "*.class",
@@ -64,8 +72,8 @@ class SourceCodeConnector(Connector):
         path: str | Path,
         language: str | None = None,
         file_patterns: list[str] | None = None,
-        max_file_size: int = 10 * 1024 * 1024,  # 10MB default
-        max_files: int = 4000,  # Maximum number of files to process
+        max_file_size: int = _DEFAULT_MAX_FILE_SIZE,
+        max_files: int = _DEFAULT_MAX_FILES,
     ):
         """Initialise the source code connector.
 
@@ -77,10 +85,9 @@ class SourceCodeConnector(Connector):
             max_files: Maximum number of files to process (default: 4000)
 
         """
-        super().__init__()  # Initialise logger from base class
         self.path = Path(path)
         self.language = language
-        self.file_patterns = file_patterns or ["**/*"]
+        self.file_patterns = file_patterns or _DEFAULT_FILE_PATTERNS
         self.max_file_size = max_file_size
         self.max_files = max_files
 
@@ -90,7 +97,7 @@ class SourceCodeConnector(Connector):
         # Create filesystem connector for file collection with common exclusions
         self.file_collector = FilesystemConnector(
             path=path,
-            exclude_patterns=COMMON_EXCLUSIONS,
+            exclude_patterns=_COMMON_EXCLUSIONS,
             max_files=max_files,
             errors="strict",  # Skip binary files
         )
@@ -109,7 +116,7 @@ class SourceCodeConnector(Connector):
     @override
     def get_name(cls) -> str:
         """Return the name of the connector."""
-        return "source_code"
+        return _CONNECTOR_NAME
 
     @classmethod
     @override
@@ -139,8 +146,8 @@ class SourceCodeConnector(Connector):
             path=path,
             language=properties.get("language"),
             file_patterns=properties.get("file_patterns"),
-            max_file_size=properties.get("max_file_size", 10 * 1024 * 1024),
-            max_files=properties.get("max_files", 4000),
+            max_file_size=properties.get("max_file_size", _DEFAULT_MAX_FILE_SIZE),
+            max_files=properties.get("max_files", _DEFAULT_MAX_FILES),
         )
 
     @override
@@ -161,18 +168,7 @@ class SourceCodeConnector(Connector):
 
         """
         try:
-            # Validate schema
-            if output_schema and output_schema.name not in SUPPORTED_OUTPUT_SCHEMAS:
-                raise ConnectorConfigError(
-                    f"Unsupported output schema: {output_schema.name}. "
-                    f"Supported schemas: {list(SUPPORTED_OUTPUT_SCHEMAS.keys())}"
-                )
-
-            if not output_schema:
-                logger.warning("No schema provided, using default source_code schema")
-                output_schema = SUPPORTED_OUTPUT_SCHEMAS["source_code"]
-
-            # Analyse source code
+            output_schema = self._validate_and_get_schema(output_schema)
             analysis_data = self._analyse_source_code()
 
             message = Message(
@@ -190,6 +186,31 @@ class SourceCodeConnector(Connector):
                 f"Failed to analyse source code {self.path}: {e}"
             ) from e
 
+    def _validate_and_get_schema(self, output_schema: Schema | None) -> Schema:
+        """Validate and return the appropriate output schema.
+
+        Args:
+            output_schema: Schema to validate, or None for default
+
+        Returns:
+            Validated output schema
+
+        Raises:
+            ConnectorConfigError: If schema is unsupported
+
+        """
+        if output_schema and output_schema.name not in _SUPPORTED_OUTPUT_SCHEMAS:
+            raise ConnectorConfigError(
+                f"Unsupported output schema: {output_schema.name}. "
+                f"Supported schemas: {list(_SUPPORTED_OUTPUT_SCHEMAS.keys())}"
+            )
+
+        if not output_schema:
+            logger.warning("No schema provided, using default source_code schema")
+            return _SUPPORTED_OUTPUT_SCHEMAS["source_code"]
+
+        return output_schema
+
     def _analyse_source_code(self) -> dict[str, Any]:
         """Analyse source code and extract compliance information.
 
@@ -203,7 +224,7 @@ class SourceCodeConnector(Connector):
             files_data, total_files, total_lines = self._analyse_directory(self.path)
 
         return {
-            "schemaVersion": "1.0.0",
+            "schemaVersion": _DEFAULT_SCHEMA_VERSION,
             "name": f"source_code_analysis_{self.path.name}",
             "description": f"Source code analysis of {self.path}",
             "language": self.language or "auto-detected",
@@ -212,7 +233,7 @@ class SourceCodeConnector(Connector):
                 "total_files": total_files,
                 "total_lines": total_lines,
                 "analysis_timestamp": datetime.now().isoformat(),
-                "parser_version": "tree-sitter-languages-1.15.0+",
+                "parser_version": _PARSER_VERSION,
             },
             "data": files_data,
         }
@@ -267,7 +288,7 @@ class SourceCodeConnector(Connector):
             Tuple of (files data list, file count, total lines)
 
         """
-        files_data = []
+        files_data: list[dict[str, Any]] = []
         total_files = 0
         total_lines = 0
 
@@ -295,21 +316,46 @@ class SourceCodeConnector(Connector):
         parser = SourceCodeParser()
 
         for file_path in files_to_process:
-            # Apply source-code-specific filtering
-            if parser.is_supported_file(file_path):
-                # Apply file pattern matching if specified (inclusion patterns)
-                if self.file_patterns != ["**/*"]:
-                    # Check if file matches any of the inclusion patterns
-                    matches_pattern = any(
-                        file_path.match(pattern)
-                        or file_path.name.endswith(pattern.replace("*", ""))
-                        for pattern in self.file_patterns
-                    )
-                    if matches_pattern:
-                        yield file_path
-                else:
-                    # No specific patterns, include all supported files
-                    yield file_path
+            if self._should_process_file(file_path, parser):
+                yield file_path
+
+    def _should_process_file(self, file_path: Path, parser: SourceCodeParser) -> bool:
+        """Determine if a file should be processed based on language support and patterns.
+
+        Args:
+            file_path: Path to the file to check
+            parser: Parser instance to check file support
+
+        Returns:
+            True if file should be processed, False otherwise
+
+        """
+        # Check if file is supported by parser
+        if not parser.is_supported_file(file_path):
+            return False
+
+        # Apply file pattern matching if specified (inclusion patterns)
+        if self.file_patterns != _DEFAULT_FILE_PATTERNS:
+            return self._matches_inclusion_patterns(file_path)
+
+        # No specific patterns, include all supported files
+        return True
+
+    def _matches_inclusion_patterns(self, file_path: Path) -> bool:
+        """Check if file matches any of the inclusion patterns.
+
+        Args:
+            file_path: Path to check against patterns
+
+        Returns:
+            True if file matches any inclusion pattern
+
+        """
+        return any(
+            file_path.match(pattern)
+            or file_path.name.endswith(pattern.replace("*", ""))
+            for pattern in self.file_patterns
+        )
 
     def _extract_file_data(
         self, file_path: Path, root_node: Any, source_code: str, line_count: int
@@ -339,11 +385,7 @@ class SourceCodeConnector(Connector):
 
         # Extract basic information
         file_data = {
-            "file_path": str(
-                file_path.relative_to(
-                    self.path.parent if self.path.is_file() else self.path
-                )
-            ),
+            "file_path": self._get_relative_path(file_path),
             "language": language,
             "functions": function_extractor.extract(root_node, source_code),
             "classes": class_extractor.extract(root_node, source_code),
@@ -363,3 +405,16 @@ class SourceCodeConnector(Connector):
         }
 
         return file_data
+
+    def _get_relative_path(self, file_path: Path) -> str:
+        """Get relative path for a file from the connector's base path.
+
+        Args:
+            file_path: Absolute path to the file
+
+        Returns:
+            String representation of relative path
+
+        """
+        base_path = self.path.parent if self.path.is_file() else self.path
+        return str(file_path.relative_to(base_path))
