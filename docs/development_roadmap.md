@@ -97,7 +97,26 @@ Enhanced analyser implementations leveraging the JSON Schema-based validation sy
 
 **Timeline:** TBC
 
-### 🎯 Priority 4: Advanced Analysis Features
+### 🎯 Priority 4: End-to-End Testing & CI/CD Infrastructure
+
+**End-to-End Testing Framework**
+- Comprehensive testing framework with realistic datasets for analyser output validation
+- LLM validation testing with standardised compliance scenarios
+- Performance benchmarking with large-scale data processing
+- Integration testing across multiple connector and analyser combinations
+
+**CI/CD Pipeline Enhancement**
+- Migration from GitHub Actions to CircleCI for enhanced testing capabilities
+- Automated testing pipeline for end-to-end validation workflows
+- Performance regression testing and reporting
+- Automated compliance validation against known datasets
+
+**Community Collaboration Needed:**
+These initiatives require architectural decisions and community input on testing strategies, dataset creation, and CI/CD infrastructure choices. Contributors interested in testing infrastructure and DevOps are encouraged to start discussions.
+
+**Timeline:** Community-driven - requires discussion and planning
+
+### 🎯 Priority 5: Advanced Analysis Features
 
 **Data Export Analysis**
 - Subject access request compliance verification
@@ -106,7 +125,7 @@ Enhanced analyser implementations leveraging the JSON Schema-based validation sy
 
 **Timeline:** TBC
 
-### 🎯 Priority 5: Document Generation Suite
+### 🎯 Priority 6: Document Generation Suite
 
 Implementation of automated compliance document generation:
 
@@ -173,22 +192,29 @@ Implementation of automated compliance document generation:
 ### Contribution Opportunities
 
 **For Developers**
-- Connector development for new data sources (databases, APIs, cloud services)
-- Analyser implementation for additional compliance frameworks
-- Performance optimisation and schema refactoring
-- Test coverage improvement and bug fixes
+- **Connector Development**: MongoDB, PostgreSQL, Redis, Elasticsearch connectors for diverse data sources
+- **Source Code Analysis**: JavaScript, Python, Java, Go language support for SourceCodeConnector
+- **Testing Infrastructure**: End-to-end testing frameworks, CI/CD pipeline improvements
+- **Performance Optimisation**: Schema refactoring, large-scale data processing improvements
+- **Core Features**: Test coverage enhancement, bug fixes, code quality improvements
+
+**For DevOps & Infrastructure**
+- **CI/CD Enhancement**: CircleCI pipeline design and implementation
+- **Testing Frameworks**: End-to-end testing infrastructure with realistic datasets
+- **Performance Testing**: Benchmarking and regression testing systems
+- **Deployment**: Docker improvements, cloud deployment automation
 
 **For Compliance Experts**
-- Ruleset definitions for specific industries or regulations
-- Document template creation and localisation
-- Compliance framework mapping and validation
-- Legal requirement specification and testing
+- **Ruleset Development**: Industry-specific compliance patterns and validation rules
+- **Document Generation**: Template creation for GDPR, CCPA, and other frameworks
+- **Compliance Validation**: Legal requirement specification and testing scenarios
+- **Framework Mapping**: Cross-jurisdiction compliance requirement analysis
 
-**For Documentation**
-- Tutorial and guide creation
-- Use case documentation and examples
-- API reference and technical documentation
-- Translation and localisation support
+**For Documentation & Community**
+- **Tutorial Creation**: Getting started guides, use case documentation
+- **Best Practices**: Contributor guidelines, coding standards documentation
+- **Integration Examples**: Sample runbooks for different technology stacks
+- **Translation**: Localisation support for international compliance frameworks
 
 ## Getting Involved
 

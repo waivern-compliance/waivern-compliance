@@ -2,7 +2,7 @@
 
 This directory contains the **rulesets** that power WCT's compliance analysis capabilities.
 
-Rulesets define patterns and metadata for static analysese.
+Rulesets define patterns and metadata for static analyses.
 
 ## Architecture Overview
 
