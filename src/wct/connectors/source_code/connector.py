@@ -387,18 +387,14 @@ class SourceCodeConnector(Connector):
         function_extractor = FunctionExtractor(language)
         class_extractor = ClassExtractor(language)
 
-        # Extract basic information
+        # Extract pure structural information (no analysis)
         file_data = {
             "file_path": self._get_relative_path(file_path),
             "language": language,
+            "raw_content": source_code,  # Full source code for analyser pattern matching
             "functions": function_extractor.extract(root_node, source_code),
             "classes": class_extractor.extract(root_node, source_code),
-            "imports": [],  # TODO: Implement import extractor
-            "database_interactions": [],  # TODO: Implement database extractor
-            "data_collection_indicators": [],  # TODO: Implement data collection extractor
-            "ai_ml_indicators": [],  # TODO: Implement AI/ML extractor
-            "security_patterns": [],  # TODO: Implement security extractor
-            "third_party_integrations": [],  # TODO: Implement third-party extractor
+            "imports": [],  # TODO: Implement import extractor for structured import data
             "metadata": {
                 "file_size": file_path.stat().st_size,
                 "line_count": line_count,
