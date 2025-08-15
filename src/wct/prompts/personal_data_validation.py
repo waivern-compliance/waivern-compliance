@@ -84,7 +84,7 @@ def get_batch_validation_prompt(findings: list[dict[str, Any]]) -> str:
         Formatted batch validation prompt
 
     """
-    findings_text = []
+    findings_text: list[str] = []
     for i, finding in enumerate(findings):
         evidence_list = finding.get("evidence", [])
         evidence_text = (
