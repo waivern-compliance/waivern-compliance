@@ -2,12 +2,17 @@
 
 from typing import Any
 
+from wct.analysers.runners.types import PatternMatcherContext
+
 # Default confidence for all findings (from original analyser)
 DEFAULT_FINDING_CONFIDENCE = 0.5
 
 
 def processing_purpose_pattern_matcher(
-    content: str, pattern: str, rule_metadata: dict[str, Any], context: dict[str, Any]
+    content: str,
+    pattern: str,
+    rule_metadata: dict[str, Any],
+    context: PatternMatcherContext,
 ) -> dict[str, Any] | None:
     """Pattern matcher function for processing purpose analysis.
 
@@ -18,24 +23,25 @@ def processing_purpose_pattern_matcher(
         content: The content being analyzed
         pattern: The matched pattern
         rule_metadata: Metadata from the rule
-        context: Additional context including rule info, metadata, config, and utilities
+        context: Strongly typed context with rule info, metadata, config, and utilities
 
     Returns:
         Processing purpose finding dictionary or None if no finding should be created
 
     """
-    evidence_extractor = context["evidence_extractor"]
-    metadata = context["metadata"]
-    config = context["config"]
-    rule_name = context["rule_name"]  # This is the purpose_name
+    # Access typed context fields directly
+    evidence_extractor = context.evidence_extractor
+    metadata = context.metadata
+    config = context.config
+    rule_name = context.rule_name  # This is the purpose_name
 
     # Check if content is empty
     if not content.strip():
         return None
 
     # Get configuration specific to processing purpose analysis
-    max_evidence = config.get("max_evidence", 3)
-    evidence_context_size = config.get("evidence_context_size", "medium")
+    max_evidence = config.max_evidence
+    evidence_context_size = config.evidence_context_size
 
     # Extract evidence snippets
     evidence = evidence_extractor.extract_evidence(
@@ -46,13 +52,14 @@ def processing_purpose_pattern_matcher(
         return None
 
     # Use default confidence for all findings (from original implementation)
-    confidence = config.get("confidence", DEFAULT_FINDING_CONFIDENCE)
+    # Note: This is processing purpose specific and not in PatternMatchingRunnerConfig
+    confidence = DEFAULT_FINDING_CONFIDENCE
 
     # Create processing purpose specific finding structure
     finding = {
         "purpose": rule_name,  # Processing purpose name
         "purpose_category": rule_metadata.get("purpose_category", "OPERATIONAL"),
-        "risk_level": context.get("risk_level", "low"),
+        "risk_level": context.risk_level,
         "compliance_relevance": rule_metadata.get("compliance_relevance", ["GDPR"]),
         "matched_pattern": pattern,
         "confidence": confidence,

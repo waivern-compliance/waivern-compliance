@@ -74,7 +74,7 @@ class SourceCodeParser:
         # "ruby": [".rb"],
     }
 
-    def __init__(self, language: str = _DEFAULT_LANGUAGE):
+    def __init__(self, language: str = _DEFAULT_LANGUAGE) -> None:
         """Initialise the parser.
 
         Args:

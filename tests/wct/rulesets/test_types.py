@@ -89,19 +89,19 @@ class TestRuleClass:
 
         # Attempt to modify attributes should raise AttributeError
         with pytest.raises(AttributeError):
-            setattr(rule, "name", "modified_rule")
+            rule.name = "modified_rule"
 
         with pytest.raises(AttributeError):
-            setattr(rule, "description", "Modified description")
+            rule.description = "Modified description"
 
         with pytest.raises(AttributeError):
-            setattr(rule, "patterns", ("modified", "pattern"))
+            rule.patterns = "modified", "pattern"
 
         with pytest.raises(AttributeError):
-            setattr(rule, "risk_level", "high")
+            rule.risk_level = "high"
 
         with pytest.raises(AttributeError):
-            setattr(rule, "metadata", {"modified": True})
+            rule.metadata = {"modified": True}
 
         # Original values should remain unchanged
         assert rule.name == "immutable_rule"

@@ -2,7 +2,7 @@
 
 import logging
 
-from wct.llm_service import LLMServiceError, LLMServiceFactory
+from wct.llm_service import AnthropicLLMService, LLMServiceError, LLMServiceFactory
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class LLMServiceManager:
     """Utility for managing LLM service lifecycle and configuration."""
 
-    def __init__(self, enable_llm_validation: bool = True):
+    def __init__(self, enable_llm_validation: bool = True) -> None:
         """Initialise the LLM service manager.
 
         Args:
@@ -21,7 +21,7 @@ class LLMServiceManager:
         self._llm_service = None
 
     @property
-    def llm_service(self):
+    def llm_service(self) -> AnthropicLLMService | None:
         """Get the LLM service, creating it if necessary."""
         if self._llm_service is None and self.enable_llm_validation:
             try:

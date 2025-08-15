@@ -74,7 +74,7 @@ class SourceCodeConnector(Connector):
         file_patterns: list[str] | None = None,
         max_file_size: int = _DEFAULT_MAX_FILE_SIZE,
         max_files: int = _DEFAULT_MAX_FILES,
-    ):
+    ) -> None:
         """Initialise the source code connector.
 
         Args:
@@ -358,7 +358,11 @@ class SourceCodeConnector(Connector):
         )
 
     def _extract_file_data(
-        self, file_path: Path, root_node: Any, source_code: str, line_count: int
+        self,
+        file_path: Path,
+        root_node: Any,  # noqa: ANN401  # Tree-sitter AST nodes are C bindings without specific Python types
+        source_code: str,
+        line_count: int,
     ) -> dict[str, Any]:
         """Extract analysis data from a parsed file.
 

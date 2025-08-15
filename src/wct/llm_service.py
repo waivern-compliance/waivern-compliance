@@ -39,7 +39,9 @@ class AnthropicLLMService:
     using Anthropic's Claude models through the LangChain framework.
     """
 
-    def __init__(self, model_name: str | None = None, api_key: str | None = None):
+    def __init__(
+        self, model_name: str | None = None, api_key: str | None = None
+    ) -> None:
         """Initialise the Anthropic LLM service.
 
         Args:
@@ -68,7 +70,7 @@ class AnthropicLLMService:
         self._llm = None
         logger.info(f"Initialised Anthropic LLM service with model: {self.model_name}")
 
-    def _get_llm(self):
+    def _get_llm(self) -> ChatAnthropic:
         """Get or create the LangChain LLM instance.
 
         Returns:

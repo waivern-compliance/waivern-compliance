@@ -9,6 +9,7 @@ This module provides:
 
 import logging
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
 
@@ -74,7 +75,7 @@ class MySQLConnector(Connector):
         autocommit: bool = _DEFAULT_AUTOCOMMIT,
         connect_timeout: int = _DEFAULT_CONNECT_TIMEOUT,
         max_rows_per_table: int = _DEFAULT_MAX_ROWS,
-    ):
+    ) -> None:
         """Initialise MySQL connector with connection parameters.
 
         Args:
@@ -144,7 +145,7 @@ class MySQLConnector(Connector):
         )
 
     @contextmanager
-    def _get_connection(self):
+    def _get_connection(self) -> Generator[Any, None, None]:
         """Get a database connection context manager.
 
         This method creates a new connection each time it's called to ensure
@@ -216,7 +217,7 @@ class MySQLConnector(Connector):
                     # Convert to list of dictionaries
                     results: list[dict[str, Any]] = []
                     for row in rows:
-                        row_dict = dict(zip(columns, row))
+                        row_dict = dict(zip(columns, row, strict=True))
                         results.append(row_dict)
 
                     return results
@@ -469,10 +470,10 @@ class MySQLConnector(Connector):
         if port_str:
             try:
                 return int(port_str)
-            except ValueError:
+            except ValueError as e:
                 raise ConnectorConfigError(
                     f"Invalid MYSQL_PORT environment variable: {port_str}"
-                )
+                ) from e
         return properties.get("port", _DEFAULT_PORT)
 
     def _validate_output_schema(self, output_schema: Schema | None) -> None:
@@ -539,7 +540,7 @@ class MySQLConnector(Connector):
         table_info: dict[str, Any],
         table_name: str,
         column_name: str,
-        cell_value: Any,
+        cell_value: Any,  # noqa: ANN401  # Database cell values can be any type (str, int, float, date, None, etc.)
         row_index: int,
     ) -> dict[str, Any]:
         """Create a single cell data item with metadata.

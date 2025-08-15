@@ -18,10 +18,6 @@ class Ruleset(abc.ABC):
     Each ruleset must define its canonical name via the name property.
     """
 
-    def __init__(self) -> None:
-        """Initialise the ruleset."""
-        pass
-
     @property
     @abc.abstractmethod
     def name(self) -> str:
@@ -76,7 +72,7 @@ class RulesetRegistry:
     _instance: "RulesetRegistry | None" = None
     _registry: dict[str, type[Ruleset]]
 
-    def __new__(cls, *args: Any, **kwargs: Any) -> "RulesetRegistry":
+    def __new__(cls, *args: Any, **kwargs: Any) -> "RulesetRegistry":  # noqa: ANN401  # Singleton pattern requires flexible constructor arguments
         """Create or return the singleton instance of RulesetRegistry.
 
         This ensures only one instance of the registry exists throughout

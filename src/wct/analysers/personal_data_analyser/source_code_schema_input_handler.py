@@ -14,7 +14,7 @@ class SourceCodeSchemaInputHandler:
     the appropriate rulesets for personal data detection in source code.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialise the handler and load required rulesets.
 
         The handler manages its own ruleset dependencies and is fully self-contained.

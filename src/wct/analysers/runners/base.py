@@ -3,10 +3,11 @@
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
-T = TypeVar("T")
+ResultT = TypeVar("ResultT")  # Type variable for analysis results
+ConfigT = TypeVar("ConfigT")  # Type variable for runner configuration
 
 
-class AnalysisRunner(ABC, Generic[T]):
+class AnalysisRunner(ABC, Generic[ResultT, ConfigT]):
     """Base interface for analysis runners that perform specific analysis processes.
 
     Analysis runners are responsible for executing complete analysis processes,
@@ -34,8 +35,11 @@ class AnalysisRunner(ABC, Generic[T]):
 
     @abstractmethod
     def run_analysis(
-        self, input_data: Any, metadata: dict[str, Any], config: dict[str, Any]
-    ) -> list[T]:
+        self,
+        input_data: Any,  # noqa: ANN401  # Abstract method must accept any input type for different analysers
+        metadata: dict[str, Any],
+        config: ConfigT,
+    ) -> list[ResultT]:
         """Run the complete analysis process.
 
         Args:
@@ -58,7 +62,7 @@ class AnalysisRunnerError(Exception):
 
     def __init__(
         self, runner_type: str, message: str, original_error: Exception | None = None
-    ):
+    ) -> None:
         """Initialise the error.
 
         Args:

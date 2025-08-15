@@ -21,7 +21,12 @@ from .personal_data_finding import PersonalDataFindingSchema
 from .processing_purpose_finding import ProcessingPurposeFindingSchema
 from .runbook import RunbookSchema
 from .source_code import SourceCodeSchema
-from .standard_input import StandardInputSchema
+from .standard_input import (
+    StandardInputData,
+    StandardInputDataItem,
+    StandardInputDataItemMetadata,
+    StandardInputSchema,
+)
 
 __all__ = [
     # Base classes and utilities
@@ -29,9 +34,14 @@ __all__ = [
     "SchemaLoader",
     "JsonSchemaLoader",
     "SchemaLoadError",
+    # Schema classes
     "StandardInputSchema",
     "SourceCodeSchema",
     "PersonalDataFindingSchema",
     "ProcessingPurposeFindingSchema",
     "RunbookSchema",
+    # Type definitions
+    "StandardInputData",
+    "StandardInputDataItem",
+    "StandardInputDataItemMetadata",
 ]

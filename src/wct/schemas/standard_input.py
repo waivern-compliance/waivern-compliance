@@ -7,9 +7,38 @@ the standard input format used by most WCT connectors.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypedDict
+
+from typing_extensions import NotRequired
 
 from .base import JsonSchemaLoader, Schema, SchemaLoader
+
+
+# Type definitions for standard_input schema data structures
+class StandardInputDataItemMetadata(TypedDict):
+    """Metadata for a data item in standard_input schema."""
+
+    source: str  # Required by schema
+    # Additional properties allowed but not typed
+
+
+class StandardInputDataItem(TypedDict):
+    """Individual data item in standard_input schema."""
+
+    content: str
+    metadata: StandardInputDataItemMetadata
+
+
+class StandardInputData(TypedDict):
+    """Complete structure of standard_input schema data."""
+
+    schemaVersion: str
+    name: str
+    data: list[StandardInputDataItem]
+    description: NotRequired[str]
+    contentEncoding: NotRequired[str]
+    source: NotRequired[str]
+    metadata: NotRequired[dict[str, Any]]
 
 
 @dataclass(frozen=True, slots=True)

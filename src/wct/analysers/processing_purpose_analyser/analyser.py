@@ -2,16 +2,20 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from typing_extensions import Self, override
 
 from wct.analysers.base import Analyser
-from wct.analysers.runners import PatternMatchingRunner
+from wct.analysers.runners import (
+    PatternMatchingAnalysisRunner,
+    PatternMatchingRunnerConfig,
+)
 from wct.message import Message
 from wct.schemas import (
     ProcessingPurposeFindingSchema,
     Schema,
+    StandardInputData,
     StandardInputSchema,
 )
 
@@ -65,8 +69,8 @@ class ProcessingPurposeAnalyser(Analyser):
     def __init__(
         self,
         config: ProcessingPurposeAnalyserConfig | None = None,
-        pattern_runner: PatternMatchingRunner | None = None,
-    ):
+        pattern_runner: PatternMatchingAnalysisRunner[dict[str, Any]] | None = None,
+    ) -> None:
         """Initialise the processing purpose analyser with specified configuration and runners.
 
         Args:
@@ -90,9 +94,9 @@ class ProcessingPurposeAnalyser(Analyser):
 
         # Initialise pattern runner with processing purpose specific strategy
         # Note: ProcessingPurpose doesn't use LLM validation in current implementation
-        self.pattern_runner = pattern_runner or PatternMatchingRunner(
-            pattern_matcher=processing_purpose_pattern_matcher
-        )
+        self.pattern_runner = pattern_runner or PatternMatchingAnalysisRunner[
+            dict[str, Any]
+        ](pattern_matcher=processing_purpose_pattern_matcher)
 
     @classmethod
     @override
@@ -149,7 +153,7 @@ class ProcessingPurposeAnalyser(Analyser):
         logger.info("Starting processing purpose analysis")
 
         # Validate input message
-        Analyser.validate_input_message(message, input_schema)
+        Analyser._validate_input_message(message, input_schema)
 
         # Extract content from message
         data = message.content
@@ -207,23 +211,41 @@ class ProcessingPurposeAnalyser(Analyser):
             List of findings from pattern matching
 
         """
-        findings = []
+        findings: list[dict[str, Any]] = []
 
         if "data" in data and isinstance(data["data"], list):
+            # Type narrowing: we know this is StandardInputData structure
+            standard_input_data = cast(StandardInputData, data)
+
             # Process each data item in the array using the pattern runner
-            for item in data["data"]:
-                content = item.get("content", "")
-                item_metadata = item.get("metadata", {})
+            for data_item in standard_input_data["data"]:
+                # Get content and metadata (types guaranteed by StandardInputDataItem)
+                content = data_item["content"]
+                item_metadata = cast(dict[str, Any], data_item["metadata"])
 
                 # Use pattern runner for analysis
                 item_findings = self.pattern_runner.run_analysis(
-                    content, item_metadata, self.config
+                    content, item_metadata, self._get_pattern_matching_config()
                 )
                 findings.extend(item_findings)
         else:
             # Handle direct content format (fallback)
             content = data.get("content", "")
             metadata = data.get("metadata", {})
-            findings = self.pattern_runner.run_analysis(content, metadata, self.config)
+            findings = self.pattern_runner.run_analysis(
+                content, metadata, self._get_pattern_matching_config()
+            )
 
         return findings
+
+    def _get_pattern_matching_config(self) -> PatternMatchingRunnerConfig:
+        """Extract pattern matching configuration from the full config."""
+        return PatternMatchingRunnerConfig(
+            ruleset_name=str(self.config.get("ruleset_name", "processing_purposes")),
+            max_evidence=int(self.config.get("max_evidence", 3)),
+            maximum_evidence_count=int(self.config.get("maximum_evidence_count", 3)),
+            context_size=str(self.config.get("context_size", "medium")),
+            evidence_context_size=str(
+                self.config.get("evidence_context_size", "medium")
+            ),
+        )

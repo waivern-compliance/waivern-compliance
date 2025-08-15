@@ -16,7 +16,7 @@ class BaseExtractor(abc.ABC):
     for compliance analysis such as functions, classes, database interactions, etc.
     """
 
-    def __init__(self, language: str):
+    def __init__(self, language: str) -> None:
         """Initialise the extractor.
 
         Args:

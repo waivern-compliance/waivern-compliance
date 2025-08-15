@@ -5,6 +5,8 @@ import logging
 from logging import Logger
 from typing import Any
 
+from wct.analysers.runners.types import LLMAnalysisRunnerConfig
+from wct.llm_service import AnthropicLLMService
 from wct.prompts.personal_data_validation import (
     RecommendedAction,
     ValidationResult,
@@ -18,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 def personal_data_validation_strategy(
-    findings: list[dict[str, Any]], config: dict[str, Any], llm_service: Any
+    findings: list[dict[str, Any]],
+    config: LLMAnalysisRunnerConfig,
+    llm_service: AnthropicLLMService,
 ) -> list[dict[str, Any]]:
     """LLM validation strategy for personal data findings.
 
@@ -54,7 +58,7 @@ def personal_data_validation_strategy(
         finding_objects.append(finding_obj)
 
     # Process findings in batches
-    batch_size = config.get("llm_batch_size", 10)
+    batch_size = config.llm_batch_size
     validated_finding_objects = []
 
     for i in range(0, len(finding_objects), batch_size):
@@ -84,15 +88,15 @@ def personal_data_validation_strategy(
 
 def _validate_findings_batch(
     findings_batch: list[PersonalDataFinding],
-    config: dict[str, Any],
-    llm_service: Any,
+    config: LLMAnalysisRunnerConfig,
+    llm_service: AnthropicLLMService,
     logger: Logger,
 ) -> list[PersonalDataFinding]:
     """Validate a batch of personal data findings using LLM.
 
     Args:
         findings_batch: Batch of findings to validate
-        config: Configuration parameters
+        config: LLM analysis runner configuration
         llm_service: LLM service instance
         logger: Logger instance
 
