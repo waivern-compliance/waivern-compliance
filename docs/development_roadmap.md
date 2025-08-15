@@ -227,7 +227,7 @@ Implementation of automated compliance document generation:
 
 ### How to Contribute
 
-1. **Join our Discord**: [Discord Server](https://discord.gg/hPkvTQdS) for real-time discussion
+1. **Join our Discord**: [Discord Server](https://discord.com/invite/gcU7py4X) for real-time discussion
 2. **Check GitHub Issues**: Look for "good first issue" and "help wanted" labels
 3. **Review Documentation**: Help improve and expand our documentation
 4. **Test Early Features**: Provide feedback on pre-release features and improvements

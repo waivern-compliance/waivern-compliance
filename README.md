@@ -406,7 +406,7 @@ For commercial licensing or questions about license compatibility, please contac
 
 Join our Discord community for support, discussions, and updates:
 
-🔗 **[Discord Server](https://discord.gg/hPkvTQdS)**
+🔗 **[Discord Server](https://discord.com/invite/gcU7py4X)**
 
 Our Discord server provides:
 - **General Help** - Get assistance with installation, configuration, and usage
