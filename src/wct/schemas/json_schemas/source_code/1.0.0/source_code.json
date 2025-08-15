@@ -186,143 +186,9 @@
               "required": ["module", "line", "type"]
             }
           },
-          "database_interactions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "enum": ["query", "prepared_statement", "orm_call", "raw_sql"]
-                },
-                "line": {
-                  "type": "integer"
-                },
-                "method": {
-                  "type": ["string", "null"]
-                },
-                "sql_fragment": {
-                  "type": ["string", "null"]
-                },
-                "contains_user_input": {
-                  "type": "boolean"
-                },
-                "is_parameterized": {
-                  "type": "boolean"
-                }
-              },
-              "required": ["type", "line"]
-            }
-          },
-          "data_collection_indicators": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "enum": ["form_field", "api_endpoint", "cookie_access", "session_access", "file_upload", "user_input"]
-                },
-                "line": {
-                  "type": "integer"
-                },
-                "field_name": {
-                  "type": ["string", "null"]
-                },
-                "method": {
-                  "type": ["string", "null"]
-                },
-                "context": {
-                  "type": ["string", "null"]
-                },
-                "potential_pii": {
-                  "type": "boolean"
-                }
-              },
-              "required": ["type", "line"]
-            }
-          },
-          "ai_ml_indicators": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "enum": ["ml_library", "api_call", "model_file", "training_code", "prediction_code"]
-                },
-                "line": {
-                  "type": "integer"
-                },
-                "library_name": {
-                  "type": ["string", "null"]
-                },
-                "method_call": {
-                  "type": ["string", "null"]
-                },
-                "context": {
-                  "type": ["string", "null"]
-                },
-                "involves_personal_data": {
-                  "type": "boolean"
-                }
-              },
-              "required": ["type", "line"]
-            }
-          },
-          "security_patterns": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "enum": ["authentication", "authorization", "encryption", "hashing", "validation", "sanitization"]
-                },
-                "line": {
-                  "type": "integer"
-                },
-                "method": {
-                  "type": ["string", "null"]
-                },
-                "strength": {
-                  "type": ["string", "null"],
-                  "enum": ["weak", "moderate", "strong", null]
-                },
-                "context": {
-                  "type": ["string", "null"]
-                }
-              },
-              "required": ["type", "line"]
-            }
-          },
-          "third_party_integrations": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "service_name": {
-                  "type": "string"
-                },
-                "line": {
-                  "type": "integer"
-                },
-                "type": {
-                  "type": "string",
-                  "enum": ["api_call", "sdk_usage", "webhook", "service_config"]
-                },
-                "endpoint": {
-                  "type": ["string", "null"]
-                },
-                "data_shared": {
-                  "type": "boolean"
-                },
-                "contains_personal_data": {
-                  "type": "boolean"
-                }
-              },
-              "required": ["service_name", "line", "type"]
-            }
+          "raw_content": {
+            "type": "string",
+            "description": "Full source code content for pattern analysis in analysers"
           },
           "metadata": {
             "type": "object",
@@ -344,7 +210,7 @@
             "additionalProperties": true
           }
         },
-        "required": ["file_path", "language", "metadata"]
+        "required": ["file_path", "language", "raw_content", "metadata"]
       }
     }
   },

@@ -1,16 +1,14 @@
 """Source code schema input handler for personal data detection in source code analysis results."""
 
+import re
 from typing import Any
 
 from wct.rulesets import RulesetLoader
 from wct.schemas import (
     SourceCodeClassModel,
-    SourceCodeDatabaseInteractionModel,
-    SourceCodeDataCollectionIndicatorModel,
     SourceCodeDataModel,
     SourceCodeFileDataModel,
     SourceCodeFunctionModel,
-    SourceCodeThirdPartyIntegrationModel,
 )
 
 from .types import PersonalDataFinding
@@ -25,11 +23,10 @@ class SourceCodeSchemaInputHandler:
 
     # Private constants for configuration values
     _RULESET_NAME = "personal_data"
-    _UNKNOWN_VALUE = "unknown"
-    _DEFAULT_LINE_NUMBER = 0
     _DEFAULT_SPECIAL_CATEGORY = "N"
     _DEFAULT_RISK_LEVEL = "medium"
     _SQL_FRAGMENT_MAX_LENGTH = 200
+    _SQL_EVIDENCE_DISPLAY_MAX_LENGTH = 100
 
     # Analysis pattern types
     _ANALYSIS_TYPE_SOURCE_CODE = "source_code_pattern_matching_analysis"
@@ -57,8 +54,18 @@ class SourceCodeSchemaInputHandler:
 
         The handler manages its own ruleset dependencies and is fully self-contained.
         """
-        # Load personal data patterns (now includes merged SQL and code patterns)
+        # Load personal data patterns for field name classification
         self.personal_data_patterns = RulesetLoader.load_ruleset(self._RULESET_NAME)
+
+        # Load data collection patterns for raw content analysis
+        self.data_collection_patterns = RulesetLoader.load_ruleset(
+            "data_collection_patterns"
+        )
+
+        # Load third-party service patterns for service detection
+        self.third_party_service_patterns = RulesetLoader.load_ruleset(
+            "third_party_services"
+        )
 
     def analyse_source_code_data(
         self, data: SourceCodeDataModel
@@ -103,31 +110,31 @@ class SourceCodeSchemaInputHandler:
             file_data.file_path, file_data.language
         )
 
-        # Analyse data collection indicators
-        data_collection_findings = self._analyse_data_collection_indicators(
-            file_data.data_collection_indicators, file_metadata
+        # Analyse raw content for data collection patterns (NEW: pattern matching approach)
+        raw_content_findings = self._analyse_raw_content_data_collection_patterns(
+            file_data.raw_content, file_metadata
         )
-        findings.extend(data_collection_findings)
+        findings.extend(raw_content_findings)
 
-        # Analyse function patterns for personal data handling
+        # Analyse function patterns for personal data handling (EXISTING: keep as-is)
         function_findings = self._analyse_function_patterns(
             file_data.functions, file_metadata
         )
         findings.extend(function_findings)
 
-        # Analyse class patterns for personal data models
+        # Analyse class patterns for personal data models (EXISTING: keep as-is)
         class_findings = self._analyse_class_patterns(file_data.classes, file_metadata)
         findings.extend(class_findings)
 
-        # Analyse database interactions for personal data queries
-        db_findings = self._analyse_database_interactions(
-            file_data.database_interactions, file_metadata
+        # Analyse raw content for database/SQL patterns (NEW: pattern matching approach)
+        sql_findings = self._analyse_raw_content_sql_patterns(
+            file_data.raw_content, file_metadata
         )
-        findings.extend(db_findings)
+        findings.extend(sql_findings)
 
-        # Analyse third-party integrations for data sharing
-        third_party_findings = self._analyse_third_party_integrations(
-            file_data.third_party_integrations, file_metadata
+        # Analyse raw content for third-party service patterns (NEW: pattern matching approach)
+        third_party_findings = self._analyse_raw_content_third_party_patterns(
+            file_data.raw_content, file_metadata
         )
         findings.extend(third_party_findings)
 
@@ -205,50 +212,102 @@ class SourceCodeSchemaInputHandler:
             metadata=metadata,
         )
 
-    def _analyse_data_collection_indicators(
+    def _analyse_raw_content_data_collection_patterns(
         self,
-        indicators: list[SourceCodeDataCollectionIndicatorModel],
+        raw_content: str,
         base_metadata: dict[str, Any],
     ) -> list[PersonalDataFinding]:
-        """Analyse data collection indicators for personal data patterns."""
+        """Analyse raw content for data collection patterns using data_collection_patterns ruleset."""
         findings: list[PersonalDataFinding] = []
+        lines = raw_content.split("\n")
 
-        for indicator in indicators:
-            indicator_type = indicator.type
-            field_name = indicator.field_name or ""
-            line = indicator.line
-            potential_pii = indicator.potential_pii
+        # Use data collection patterns from ruleset
+        for rule in self.data_collection_patterns:
+            for line_num, line in enumerate(lines, 1):
+                line_lower = line.lower()
 
-            if not potential_pii:
-                continue
+                # Check if any patterns from this rule match the line
+                for pattern in rule.patterns:
+                    if pattern.lower() in line_lower:
+                        # Try to extract field name from common patterns
+                        field_name = self._extract_field_name_from_line(line, pattern)
 
-            # Map field names to personal data types
-            personal_data_type = self._classify_field_as_personal_data(field_name)
-            if not personal_data_type:
-                continue
+                        # Skip if we can't extract a meaningful field name
+                        if not field_name:
+                            continue
 
-            # Create metadata for this finding
-            finding_metadata = self._create_finding_metadata(
-                base_metadata,
-                line,
-                collection_type=indicator_type,
-                field_name=field_name,
-                context=indicator.context or "",
-            )
+                        # Check if field name suggests personal data
+                        personal_data_type = self._classify_field_as_personal_data(
+                            field_name
+                        )
+                        if not personal_data_type:
+                            continue
 
-            evidence = [f"Line {line}: {indicator_type} field '{field_name}'"]
-            if indicator.context:
-                evidence.append(f"Context: {indicator.context}")
+                        finding_metadata = self._create_finding_metadata(
+                            base_metadata,
+                            line_num,
+                            collection_type=rule.metadata.get(
+                                "collection_type", "unknown"
+                            ),
+                            field_name=field_name,
+                            pattern_matched=pattern,
+                            rule_name=rule.name,
+                            data_source=rule.metadata.get("data_source", "unknown"),
+                        )
 
-            finding = self._create_personal_data_finding(
-                personal_data_type,
-                f"{self._PREFIX_SOURCE_CODE_FIELD}:{field_name}",
-                evidence,
-                finding_metadata,
-            )
-            findings.append(finding)
+                        evidence = [
+                            f"Line {line_num}: {rule.description} - field '{field_name}'",
+                            f"Pattern matched: {pattern}",
+                            f"Code: {line.strip()}",
+                        ]
+
+                        finding = self._create_personal_data_finding(
+                            personal_data_type,
+                            f"{self._PREFIX_SOURCE_CODE_FIELD}:{field_name}",
+                            evidence,
+                            finding_metadata,
+                        )
+                        findings.append(finding)
+
+                        # Avoid duplicate matches for the same line
+                        break
 
         return findings
+
+    def _extract_field_name_from_line(self, line: str, pattern: str) -> str | None:
+        """Extract field name from a line where data collection was detected.
+
+        This is a generic extractor that looks for common field naming patterns
+        regardless of the specific collection mechanism detected by the ruleset.
+
+        Args:
+            line: Line of code containing data collection
+            pattern: The ruleset pattern that was matched (for context)
+
+        Returns:
+            Extracted field name or None if no field name can be extracted
+
+        """
+        # Generic approach: look for quoted strings that could be field names
+        # This works across PHP superglobals, HTML attributes, JS, etc.
+        quoted_strings = re.findall(r"[\'\"]([\w_-]+)[\'\"]", line)
+
+        for field_name in quoted_strings:
+            # Return first reasonable field name (letters, numbers, underscores, hyphens)
+            if (
+                re.match(r"^[a-zA-Z][a-zA-Z0-9_-]*$", field_name)
+                and len(field_name) > 1
+            ):
+                return field_name
+
+        # Fallback: look for unquoted identifiers after common patterns
+        # This catches cases like: obj.fieldName or input.value
+        identifier_matches = re.findall(r"[\.\[]\s*([a-zA-Z_][a-zA-Z0-9_]*)", line)
+        for field_name in identifier_matches:
+            if len(field_name) > 1:
+                return field_name
+
+        return None
 
     def _analyse_function_patterns(
         self, functions: list[SourceCodeFunctionModel], base_metadata: dict[str, Any]
@@ -370,91 +429,139 @@ class SourceCodeSchemaInputHandler:
 
         return findings
 
-    def _analyse_database_interactions(
+    def _analyse_raw_content_sql_patterns(
         self,
-        db_interactions: list[SourceCodeDatabaseInteractionModel],
+        raw_content: str,
         base_metadata: dict[str, Any],
     ) -> list[PersonalDataFinding]:
-        """Analyse database interactions for personal data queries."""
+        """Analyse raw content for SQL queries with personal data patterns."""
         findings: list[PersonalDataFinding] = []
+        lines = raw_content.split("\n")
 
-        for interaction in db_interactions:
-            line = interaction.line
-            sql_fragment = interaction.sql_fragment or ""
-            contains_user_input = interaction.contains_user_input
+        # SQL patterns to detect queries
+        sql_patterns = [
+            r'(SELECT\s+.*?FROM\s+\w+.*?)[\s;"\']',
+            r'(INSERT\s+INTO\s+\w+.*?)[\s;"\']',
+            r'(UPDATE\s+\w+\s+SET.*?)[\s;"\']',
+            r'(DELETE\s+FROM\s+\w+.*?)[\s;"\']',
+        ]
 
-            if not sql_fragment:
-                continue
+        for line_num, line in enumerate(lines, 1):
+            for sql_pattern in sql_patterns:
+                matches = re.finditer(sql_pattern, line, re.IGNORECASE | re.DOTALL)
+                for match in matches:
+                    sql_fragment = match.group(1)
 
-            # Look for personal data table/column patterns in SQL
-            personal_data_patterns = self._find_personal_data_in_sql(sql_fragment)
+                    # Look for personal data patterns in the SQL
+                    personal_data_patterns = self._find_personal_data_in_sql(
+                        sql_fragment
+                    )
 
-            for pattern_match in personal_data_patterns:
-                finding_metadata = self._create_finding_metadata(
-                    base_metadata,
-                    line,
-                    sql_fragment=sql_fragment[: self._SQL_FRAGMENT_MAX_LENGTH],
-                    contains_user_input=contains_user_input,
-                    analysis_pattern=self._PATTERN_SQL_QUERY,
-                )
+                    for pattern_match in personal_data_patterns:
+                        finding_metadata = self._create_finding_metadata(
+                            base_metadata,
+                            line_num,
+                            sql_fragment=sql_fragment[: self._SQL_FRAGMENT_MAX_LENGTH],
+                            analysis_pattern=self._PATTERN_SQL_QUERY,
+                            sql_type=sql_fragment.split()[
+                                0
+                            ].upper(),  # SELECT, INSERT, etc.
+                        )
 
-                evidence = [
-                    f"Line {line}: SQL query with {pattern_match['type']} pattern: {pattern_match['match']}"
-                ]
+                        evidence = [
+                            f"Line {line_num}: SQL query with {pattern_match['type']} pattern",
+                            f"SQL: {sql_fragment[: self._SQL_EVIDENCE_DISPLAY_MAX_LENGTH]}..."
+                            if len(sql_fragment) > self._SQL_EVIDENCE_DISPLAY_MAX_LENGTH
+                            else f"SQL: {sql_fragment}",
+                            f"Pattern match: {pattern_match['match']}",
+                        ]
 
-                finding = self._create_personal_data_finding(
-                    pattern_match["type"],
-                    f"{self._PREFIX_SOURCE_CODE_SQL}:{pattern_match['match']}",
-                    evidence,
-                    finding_metadata,
-                )
-                findings.append(finding)
+                        finding = self._create_personal_data_finding(
+                            pattern_match["type"],
+                            f"{self._PREFIX_SOURCE_CODE_SQL}:{pattern_match['match']}",
+                            evidence,
+                            finding_metadata,
+                        )
+                        findings.append(finding)
 
         return findings
 
-    def _analyse_third_party_integrations(
+    def _analyse_raw_content_third_party_patterns(
         self,
-        integrations: list[SourceCodeThirdPartyIntegrationModel],
+        raw_content: str,
         base_metadata: dict[str, Any],
     ) -> list[PersonalDataFinding]:
-        """Analyse third-party integrations for personal data sharing."""
+        """Analyse raw content for third-party service integrations using third_party_services ruleset."""
         findings: list[PersonalDataFinding] = []
+        lines = raw_content.split("\n")
 
-        for integration in integrations:
-            service_name = integration.service_name
-            line = integration.line
-            contains_personal_data = integration.contains_personal_data
+        # Use third-party service patterns from ruleset
+        for rule in self.third_party_service_patterns:
+            for line_num, line in enumerate(lines, 1):
+                line_lower = line.lower()
 
-            if not contains_personal_data:
-                continue
+                # Check if any patterns from this rule match the line
+                for pattern in rule.patterns:
+                    if pattern.lower() in line_lower:
+                        # Look for context suggesting personal data usage
+                        personal_data_context = (
+                            self._detect_personal_data_context_in_line(line_lower)
+                        )
 
-            # Classify third-party service for personal data risk
-            service_risk = self._classify_third_party_service_risk(service_name)
+                        # Only report if there's evidence of personal data involvement
+                        if not personal_data_context:
+                            continue
 
-            finding_metadata = self._create_finding_metadata(
-                base_metadata,
-                line,
-                service_name=service_name,
-                integration_type=integration.type,
-                endpoint=integration.endpoint or "",
-                analysis_pattern=self._PATTERN_THIRD_PARTY,
-            )
+                        finding_metadata = self._create_finding_metadata(
+                            base_metadata,
+                            line_num,
+                            service_name=pattern,
+                            service_category=rule.metadata.get(
+                                "service_category", "unknown"
+                            ),
+                            analysis_pattern=self._PATTERN_THIRD_PARTY,
+                            detected_context=personal_data_context,
+                            rule_name=rule.name,
+                        )
 
-            evidence = [
-                f"Line {line}: Third-party integration with {service_name} containing personal data"
-            ]
+                        evidence = [
+                            f"Line {line_num}: {rule.description} - {pattern}",
+                            f"Personal data context: {personal_data_context}",
+                            f"Code: {line.strip()}",
+                        ]
 
-            finding = PersonalDataFinding(
-                type=self._TYPE_THIRD_PARTY_SHARING,
-                risk_level=service_risk["risk_level"],
-                special_category=self._DEFAULT_SPECIAL_CATEGORY,
-                matched_pattern=f"{self._PREFIX_SOURCE_CODE_INTEGRATION}:{service_name}",
-                evidence=evidence,
-                metadata=finding_metadata,
-            )
-            findings.append(finding)
+                        finding = PersonalDataFinding(
+                            type=self._TYPE_THIRD_PARTY_SHARING,
+                            risk_level=rule.risk_level,
+                            special_category=self._DEFAULT_SPECIAL_CATEGORY,
+                            matched_pattern=f"{self._PREFIX_SOURCE_CODE_INTEGRATION}:{pattern}",
+                            evidence=evidence,
+                            metadata=finding_metadata,
+                        )
+                        findings.append(finding)
+
+                        # Avoid duplicate matches for the same line/rule
+                        break
 
         return findings
+
+    def _detect_personal_data_context_in_line(self, line: str) -> str | None:
+        """Detect if a line contains context suggesting personal data usage using personal_data ruleset.
+
+        Args:
+            line: Line of code to analyze (should be lowercase)
+
+        Returns:
+            Description of personal data context found, or None if no context detected
+
+        """
+        # Use personal data patterns to detect context
+        for rule in self.personal_data_patterns:
+            for pattern in rule.patterns:
+                if pattern.lower() in line:
+                    return f"{rule.name} ({pattern})"
+
+        return None
 
     def _classify_field_as_personal_data(self, field_name: str) -> str | None:
         """Classify a field name as a personal data category.
@@ -506,20 +613,6 @@ class SourceCodeSchemaInputHandler:
                     matches.append({"match": pattern, "type": rule.name})
 
         return matches
-
-    def _classify_third_party_service_risk(self, service_name: str) -> dict[str, str]:
-        """Classify third-party service for personal data sharing risk.
-
-        Args:
-            service_name: Name of the third-party service
-
-        Returns:
-            Dictionary containing risk level for the service
-
-        """
-        # For now, return medium risk for all third-party services
-        # TODO: Add third-party service risk patterns to rulesets if needed
-        return {"risk_level": self._DEFAULT_RISK_LEVEL}
 
     def _get_personal_data_risk_info(self, data_type: str) -> dict[str, str]:
         """Get risk information for a personal data type/category.

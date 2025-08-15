@@ -21,12 +21,9 @@ from .personal_data_finding import PersonalDataFindingSchema
 from .processing_purpose_finding import ProcessingPurposeFindingSchema
 from .runbook import RunbookSchema
 from .source_code import (
-    SourceCodeAIMLIndicatorModel,
     SourceCodeAnalysisMetadataModel,
     SourceCodeClassModel,
     SourceCodeClassPropertyModel,
-    SourceCodeDatabaseInteractionModel,
-    SourceCodeDataCollectionIndicatorModel,
     SourceCodeDataModel,
     SourceCodeFileDataModel,
     SourceCodeFileMetadataModel,
@@ -34,8 +31,6 @@ from .source_code import (
     SourceCodeFunctionParameterModel,
     SourceCodeImportModel,
     SourceCodeSchema,
-    SourceCodeSecurityPatternModel,
-    SourceCodeThirdPartyIntegrationModel,
 )
 from .standard_input import (
     StandardInputData,
@@ -76,9 +71,4 @@ __all__ = [
     "SourceCodeClassModel",
     "SourceCodeClassPropertyModel",
     "SourceCodeImportModel",
-    "SourceCodeDatabaseInteractionModel",
-    "SourceCodeDataCollectionIndicatorModel",
-    "SourceCodeAIMLIndicatorModel",
-    "SourceCodeSecurityPatternModel",
-    "SourceCodeThirdPartyIntegrationModel",
 ]

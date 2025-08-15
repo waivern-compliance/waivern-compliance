@@ -68,58 +68,9 @@ class SourceCodeImportModel(BaseModel):
     alias: str | None = None
 
 
-class SourceCodeDatabaseInteractionModel(BaseModel):
-    """Pydantic model for source code database interactions."""
-
-    type: str  # query, prepared_statement, orm_call, raw_sql
-    line: int
-    method: str | None = None
-    sql_fragment: str | None = None
-    contains_user_input: bool = False
-    is_parameterized: bool = False
-
-
-class SourceCodeDataCollectionIndicatorModel(BaseModel):
-    """Pydantic model for source code data collection indicators."""
-
-    type: str  # form_field, api_endpoint, cookie_access, session_access, file_upload, user_input
-    line: int
-    field_name: str | None = None
-    method: str | None = None
-    context: str | None = None
-    potential_pii: bool = False
-
-
-class SourceCodeAIMLIndicatorModel(BaseModel):
-    """Pydantic model for source code AI/ML indicators."""
-
-    type: str  # ml_library, api_call, model_file, training_code, prediction_code
-    line: int
-    library_name: str | None = None
-    method_call: str | None = None
-    context: str | None = None
-    involves_personal_data: bool = False
-
-
-class SourceCodeSecurityPatternModel(BaseModel):
-    """Pydantic model for source code security patterns."""
-
-    type: str  # authentication, authorization, encryption, hashing, validation, sanitization
-    line: int
-    method: str | None = None
-    strength: str | None = None  # weak, moderate, strong
-    context: str | None = None
-
-
-class SourceCodeThirdPartyIntegrationModel(BaseModel):
-    """Pydantic model for source code third-party integrations."""
-
-    service_name: str
-    line: int
-    type: str  # api_call, sdk_usage, webhook, service_config
-    endpoint: str | None = None
-    data_shared: bool = False
-    contains_personal_data: bool = False
+# Analysis-related models removed - analysis now happens in analysers using rulesets
+# Database interactions, data collection, AI/ML, security, and third-party patterns
+# are now detected by analysers using pattern matching on raw_content
 
 
 class SourceCodeFileMetadataModel(BaseModel):
@@ -132,27 +83,15 @@ class SourceCodeFileMetadataModel(BaseModel):
 
 
 class SourceCodeFileDataModel(BaseModel):
-    """Pydantic model for source code file data."""
+    """Pydantic model for source code file data (structural extraction only)."""
 
     file_path: str
     language: str
+    raw_content: str  # Full source code for pattern analysis in analysers
     metadata: SourceCodeFileMetadataModel
     functions: list[SourceCodeFunctionModel] = Field(default_factory=list)
     classes: list[SourceCodeClassModel] = Field(default_factory=list)
     imports: list[SourceCodeImportModel] = Field(default_factory=list)
-    database_interactions: list[SourceCodeDatabaseInteractionModel] = Field(
-        default_factory=list
-    )
-    data_collection_indicators: list[SourceCodeDataCollectionIndicatorModel] = Field(
-        default_factory=list
-    )
-    ai_ml_indicators: list[SourceCodeAIMLIndicatorModel] = Field(default_factory=list)
-    security_patterns: list[SourceCodeSecurityPatternModel] = Field(
-        default_factory=list
-    )
-    third_party_integrations: list[SourceCodeThirdPartyIntegrationModel] = Field(
-        default_factory=list
-    )
 
 
 class SourceCodeAnalysisMetadataModel(BaseModel):
