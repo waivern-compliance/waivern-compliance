@@ -20,13 +20,30 @@ from .base import JsonSchemaLoader, Schema, SchemaLoader, SchemaLoadError
 from .personal_data_finding import PersonalDataFindingSchema
 from .processing_purpose_finding import ProcessingPurposeFindingSchema
 from .runbook import RunbookSchema
-from .source_code import SourceCodeSchema
+from .source_code import (
+    SourceCodeAIMLIndicatorModel,
+    SourceCodeAnalysisMetadataModel,
+    SourceCodeClassModel,
+    SourceCodeClassPropertyModel,
+    SourceCodeDatabaseInteractionModel,
+    SourceCodeDataCollectionIndicatorModel,
+    SourceCodeDataModel,
+    SourceCodeFileDataModel,
+    SourceCodeFileMetadataModel,
+    SourceCodeFunctionModel,
+    SourceCodeFunctionParameterModel,
+    SourceCodeImportModel,
+    SourceCodeSchema,
+    SourceCodeSecurityPatternModel,
+    SourceCodeThirdPartyIntegrationModel,
+)
 from .standard_input import (
     StandardInputData,
     StandardInputDataItem,
     StandardInputDataItemMetadata,
     StandardInputSchema,
 )
+from .validation import DataParsingError, parse_data_model
 
 __all__ = [
     # Base classes and utilities
@@ -34,14 +51,34 @@ __all__ = [
     "SchemaLoader",
     "JsonSchemaLoader",
     "SchemaLoadError",
+    # Data parsing utilities
+    "parse_data_model",
+    "DataParsingError",
     # Schema classes
     "StandardInputSchema",
     "SourceCodeSchema",
     "PersonalDataFindingSchema",
     "ProcessingPurposeFindingSchema",
     "RunbookSchema",
-    # Type definitions
+    # Standard input type definitions
     "StandardInputData",
     "StandardInputDataItem",
     "StandardInputDataItemMetadata",
+    # Source code schema
+    "SourceCodeSchema",
+    # Source code Pydantic models
+    "SourceCodeDataModel",
+    "SourceCodeFileDataModel",
+    "SourceCodeAnalysisMetadataModel",
+    "SourceCodeFileMetadataModel",
+    "SourceCodeFunctionModel",
+    "SourceCodeFunctionParameterModel",
+    "SourceCodeClassModel",
+    "SourceCodeClassPropertyModel",
+    "SourceCodeImportModel",
+    "SourceCodeDatabaseInteractionModel",
+    "SourceCodeDataCollectionIndicatorModel",
+    "SourceCodeAIMLIndicatorModel",
+    "SourceCodeSecurityPatternModel",
+    "SourceCodeThirdPartyIntegrationModel",
 ]
