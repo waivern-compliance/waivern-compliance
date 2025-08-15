@@ -18,9 +18,11 @@ from wct.message import Message
 from wct.schemas import (
     PersonalDataFindingSchema,
     Schema,
+    SourceCodeDataModel,
     SourceCodeSchema,
     StandardInputData,
     StandardInputSchema,
+    parse_data_model,
 )
 
 from .llm_validation_strategy import personal_data_validation_strategy
@@ -89,7 +91,7 @@ class PersonalDataAnalyser(Analyser):
         config: PersonalDataAnalyserConfig | None = None,
         pattern_runner: PatternMatchingAnalysisRunner[PersonalDataFinding]
         | None = None,
-        llm_runner: LLMAnalysisRunner[dict[str, Any]] | None = None,
+        llm_runner: LLMAnalysisRunner[PersonalDataFinding] | None = None,
     ) -> None:
         """Initialise the analyser with specified configuration and runners.
 
@@ -99,26 +101,17 @@ class PersonalDataAnalyser(Analyser):
             llm_runner: LLM validation runner (optional, will create default if None)
 
         """
-        # Store configuration
-        analysis_config = config or PersonalDataAnalyserConfig()
-        self.config = {
-            "ruleset_name": analysis_config.ruleset_name,
-            "evidence_context_size": analysis_config.evidence_context_size,
-            "maximum_evidence_count": analysis_config.maximum_evidence_count,
-            "enable_llm_validation": analysis_config.enable_llm_validation,
-            "llm_batch_size": analysis_config.llm_batch_size,
-            "llm_validation_mode": analysis_config.llm_validation_mode,
-            "max_evidence": analysis_config.maximum_evidence_count,  # Alias for runner compatibility
-            "context_size": analysis_config.evidence_context_size,  # Alias for runner compatibility
-        }
+        # Store strongly-typed configuration
+        self.config: PersonalDataAnalyserConfig = config or PersonalDataAnalyserConfig()
 
         # Initialise runners with personal data specific strategies
         self.pattern_runner = pattern_runner or PatternMatchingAnalysisRunner[
             PersonalDataFinding
         ](pattern_matcher=personal_data_pattern_matcher)
-        self.llm_runner = llm_runner or LLMAnalysisRunner[dict[str, Any]](
+
+        self.llm_runner = llm_runner or LLMAnalysisRunner[PersonalDataFinding](
             validation_strategy=personal_data_validation_strategy,
-            enable_llm_validation=analysis_config.enable_llm_validation,
+            enable_llm_validation=self.config.enable_llm_validation,
         )
 
     @classmethod
@@ -177,8 +170,19 @@ class PersonalDataAnalyser(Analyser):
         """Process data to find personal data patterns using runners."""
         Analyser._validate_input_message(message, input_schema)
 
-        data = message.content
-        findings = self._extract_findings_by_schema(input_schema, data)
+        # Data model validation at entry point - proper runtime validation
+        if input_schema.name == _SOURCE_CODE_SCHEMA_NAME:
+            # Ensure JSON schema validation has passed before data model validation
+            if not message.schema_validated:
+                message.validate()
+            # Parse dictionary content into strongly typed data model
+            typed_data = parse_data_model(message.content, SourceCodeDataModel)
+            findings = self._process_source_code_findings(typed_data)
+        else:
+            # Type narrowing: we know this is StandardInputData structure
+            typed_data = cast(StandardInputData, message.content)
+            findings = self._process_standard_input_with_runners(typed_data)
+
         validated_findings = self.llm_runner.run_analysis(
             findings, {}, self._get_llm_config()
         )
@@ -202,39 +206,19 @@ class PersonalDataAnalyser(Analyser):
 
         return output_message
 
-    def _extract_findings_by_schema(
-        self, input_schema: Schema, data: dict[str, Any]
-    ) -> list[dict[str, Any]]:
-        """Extract findings based on input schema type.
-
-        Args:
-            input_schema: Input schema determining processing approach
-            data: Input data to process
-
-        Returns:
-            List of findings converted to dict format for downstream processing
-
-        """
-        if input_schema.name == _SOURCE_CODE_SCHEMA_NAME:
-            return self._process_source_code_findings(data)
-        else:
-            # Type narrowing: we know this is StandardInputData structure
-            standard_input_data = cast(StandardInputData, data)
-            return self._process_standard_input_with_runners(standard_input_data)
-
     def _process_standard_input_with_runners(
         self, data: StandardInputData
-    ) -> list[dict[str, Any]]:
+    ) -> list[PersonalDataFinding]:
         """Process standard_input schema data using runners.
 
         Args:
             data: Input data in StandardInputData format
 
         Returns:
-            List of findings converted to dict format for downstream processing
+            List of typed PersonalDataFinding objects
 
         """
-        typed_findings: list[PersonalDataFinding] = []
+        findings: list[PersonalDataFinding] = []
 
         # Process each data item in the array using the pattern runner
         for data_item in data["data"]:
@@ -242,45 +226,30 @@ class PersonalDataAnalyser(Analyser):
             content = data_item["content"]
             item_metadata = cast(dict[str, Any], data_item["metadata"])
 
-            # Use pattern runner for analysis - now returns PersonalDataFinding objects
+            # Use pattern runner for analysis - returns PersonalDataFinding objects
             item_findings = self.pattern_runner.run_analysis(
                 content, item_metadata, self._get_pattern_matching_config()
             )
-            typed_findings.extend(item_findings)
+            findings.extend(item_findings)
 
-        # Convert typed findings to dict format for downstream processing
-        return self._convert_findings_to_dicts(typed_findings)
+        return findings
 
     def _process_source_code_findings(
-        self, data: dict[str, Any]
-    ) -> list[dict[str, Any]]:
-        """Process source code data and convert findings to dict format.
+        self, data: SourceCodeDataModel
+    ) -> list[PersonalDataFinding]:
+        """Process source code data and return typed findings.
 
         Args:
-            data: Source code data to process
+            data: Pydantic validated source code data to process
 
         Returns:
-            List of findings converted to dictionary format
+            List of typed PersonalDataFinding objects
 
         """
         # Handle source code format - delegate completely to handler
         # TODO: Create a SourceCodePatternRunner in the future for consistency
-        raw_findings_list = SourceCodeSchemaInputHandler().analyse_source_code_data(
-            data
-        )
+        findings = SourceCodeSchemaInputHandler().analyse_source_code_data(data)
 
-        # Convert to list of dicts for compatibility with runners
-        findings: list[dict[str, Any]] = []
-        for finding_obj in raw_findings_list:
-            finding_dict = {
-                "type": finding_obj.type,
-                "risk_level": finding_obj.risk_level,
-                "special_category": finding_obj.special_category,
-                "matched_pattern": finding_obj.matched_pattern,
-                "evidence": finding_obj.evidence,
-                "metadata": finding_obj.metadata,
-            }
-            findings.append(finding_dict)
         return findings
 
     def _convert_findings_to_dicts(
@@ -311,27 +280,25 @@ class PersonalDataAnalyser(Analyser):
     def _get_pattern_matching_config(self) -> PatternMatchingRunnerConfig:
         """Extract pattern matching configuration from the full config."""
         return PatternMatchingRunnerConfig(
-            ruleset_name=str(self.config.get("ruleset_name", "personal_data")),
-            max_evidence=int(self.config.get("max_evidence", 3)),
-            maximum_evidence_count=int(self.config.get("maximum_evidence_count", 3)),
-            context_size=str(self.config.get("context_size", "small")),
-            evidence_context_size=str(
-                self.config.get("evidence_context_size", "small")
-            ),
+            ruleset_name=self.config.ruleset_name,
+            max_evidence=self.config.maximum_evidence_count,
+            maximum_evidence_count=self.config.maximum_evidence_count,
+            context_size=self.config.evidence_context_size,
+            evidence_context_size=self.config.evidence_context_size,
         )
 
     def _get_llm_config(self) -> LLMAnalysisRunnerConfig:
         """Extract LLM analysis configuration from the full config."""
         return LLMAnalysisRunnerConfig(
-            enable_llm_validation=bool(self.config.get("enable_llm_validation", True)),
-            llm_batch_size=int(self.config.get("llm_batch_size", 10)),
-            llm_validation_mode=str(self.config.get("llm_validation_mode", "standard")),
+            enable_llm_validation=self.config.enable_llm_validation,
+            llm_batch_size=self.config.llm_batch_size,
+            llm_validation_mode=self.config.llm_validation_mode,
         )
 
     def _build_result_data(
         self,
-        original_findings: list[dict[str, Any]],
-        validated_findings: list[dict[str, Any]],
+        original_findings: list[PersonalDataFinding],
+        validated_findings: list[PersonalDataFinding],
     ) -> dict[str, Any]:
         """Build the final result data structure.
 
@@ -343,19 +310,24 @@ class PersonalDataAnalyser(Analyser):
             Complete result data dictionary
 
         """
+        # Convert typed findings to dicts for final output
+        validated_findings_dicts = self._convert_findings_to_dicts(validated_findings)
+
         result_data: dict[str, Any] = {
-            "findings": validated_findings,
+            "findings": validated_findings_dicts,
             "summary": self._build_findings_summary(validated_findings),
         }
 
-        if self.config["enable_llm_validation"] and len(original_findings) > 0:
+        if self.config.enable_llm_validation and len(original_findings) > 0:
             result_data["validation_summary"] = self._build_validation_summary(
                 original_findings, validated_findings
             )
 
         return result_data
 
-    def _build_findings_summary(self, findings: list[dict[str, Any]]) -> dict[str, Any]:
+    def _build_findings_summary(
+        self, findings: list[PersonalDataFinding]
+    ) -> dict[str, Any]:
         """Build summary statistics for findings.
 
         Args:
@@ -368,21 +340,17 @@ class PersonalDataAnalyser(Analyser):
         return {
             "total_findings": len(findings),
             "high_risk_count": len(
-                [f for f in findings if f.get("risk_level") == _HIGH_RISK_LEVEL]
+                [f for f in findings if f.risk_level == _HIGH_RISK_LEVEL]
             ),
             "special_category_count": len(
-                [
-                    f
-                    for f in findings
-                    if f.get("special_category") == _SPECIAL_CATEGORY_YES
-                ]
+                [f for f in findings if f.special_category == _SPECIAL_CATEGORY_YES]
             ),
         }
 
     def _build_validation_summary(
         self,
-        original_findings: list[dict[str, Any]],
-        validated_findings: list[dict[str, Any]],
+        original_findings: list[PersonalDataFinding],
+        validated_findings: list[PersonalDataFinding],
     ) -> dict[str, Any]:
         """Build LLM validation summary statistics.
 
@@ -408,5 +376,5 @@ class PersonalDataAnalyser(Analyser):
             "original_findings_count": original_count,
             "validated_findings_count": validated_count,
             "false_positives_removed": false_positives_removed,
-            "validation_mode": self.config["llm_validation_mode"],
+            "validation_mode": self.config.llm_validation_mode,
         }

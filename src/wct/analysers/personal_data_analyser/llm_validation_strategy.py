@@ -2,7 +2,6 @@
 
 import json
 import logging
-from logging import Logger
 from typing import Any
 
 from wct.analysers.runners.types import LLMAnalysisRunnerConfig
@@ -18,79 +17,148 @@ from .types import PersonalDataFinding
 
 logger = logging.getLogger(__name__)
 
+# Private constants for validation logic
+_DEFAULT_CONFIDENCE = 0.0
+_DEFAULT_REASONING = "No reasoning provided"
+_DEFAULT_ACTION = "keep"
+_EMPTY_PROMPT_CONTENT = ""
+
 
 def personal_data_validation_strategy(
-    findings: list[dict[str, Any]],
+    findings: list[PersonalDataFinding],
     config: LLMAnalysisRunnerConfig,
     llm_service: AnthropicLLMService,
-) -> list[dict[str, Any]]:
+) -> list[PersonalDataFinding]:
     """LLM validation strategy for personal data findings.
 
     This strategy validates personal data findings using LLM to filter false positives.
     It processes findings in batches and uses specialized prompts for personal data validation.
 
     Args:
-        findings: List of personal data findings to validate
+        findings: List of typed PersonalDataFinding objects to validate
         config: Configuration including batch_size, validation_mode, etc.
         llm_service: LLM service instance
 
     Returns:
-        List of validated findings with false positives removed
+        List of validated PersonalDataFinding objects with false positives removed
 
     """
-    # Use module-level logger
-
     if not findings:
         logger.debug("No findings to validate")
         return findings
 
-    # Convert dict findings to PersonalDataFinding objects for validation
-    finding_objects = []
-    for finding_dict in findings:
-        finding_obj = PersonalDataFinding(
-            type=finding_dict["type"],
-            risk_level=finding_dict["risk_level"],
-            special_category=finding_dict["special_category"],
-            matched_pattern=finding_dict["matched_pattern"],
-            evidence=finding_dict["evidence"],
-            metadata=finding_dict["metadata"],
-        )
-        finding_objects.append(finding_obj)
+    # Process findings in batches - now working directly with typed objects
+    validated_finding_objects = _process_findings_in_batches(
+        findings, config, llm_service
+    )
 
-    # Process findings in batches
+    logger.debug(
+        f"Personal data validation completed: {len(findings)} → {len(validated_finding_objects)} findings"
+    )
+
+    return validated_finding_objects
+
+
+def _process_findings_in_batches(
+    finding_objects: list[PersonalDataFinding],
+    config: LLMAnalysisRunnerConfig,
+    llm_service: AnthropicLLMService,
+) -> list[PersonalDataFinding]:
+    """Process findings in batches for LLM validation.
+
+    Args:
+        finding_objects: List of PersonalDataFinding objects to validate
+        config: LLM analysis runner configuration
+        llm_service: LLM service instance
+
+    Returns:
+        List of validated PersonalDataFinding objects
+
+    """
     batch_size = config.llm_batch_size
-    validated_finding_objects = []
+    validated_finding_objects: list[PersonalDataFinding] = []
 
     for i in range(0, len(finding_objects), batch_size):
         batch = finding_objects[i : i + batch_size]
-        batch_results = _validate_findings_batch(batch, config, llm_service, logger)
+        batch_results = _validate_findings_batch(batch, config, llm_service)
         validated_finding_objects.extend(batch_results)
 
-    # Convert back to dictionaries for the runner
-    validated_findings = []
-    for finding_obj in validated_finding_objects:
-        validated_dict = {
-            "type": finding_obj.type,
-            "risk_level": finding_obj.risk_level,
-            "special_category": finding_obj.special_category,
-            "matched_pattern": finding_obj.matched_pattern,
-            "evidence": finding_obj.evidence,
-            "metadata": finding_obj.metadata,
-        }
-        validated_findings.append(validated_dict)
+    return validated_finding_objects
 
-    logger.debug(
-        f"Personal data validation completed: {len(findings)} → {len(validated_findings)} findings"
+
+def _convert_findings_for_prompt(
+    findings_batch: list[PersonalDataFinding],
+) -> list[dict[str, Any]]:
+    """Convert PersonalDataFinding objects to format expected by validation prompt.
+
+    Args:
+        findings_batch: Batch of findings to convert
+
+    Returns:
+        List of finding dictionaries formatted for prompt
+
+    """
+    findings_for_prompt: list[dict[str, Any]] = []
+    for finding in findings_batch:
+        findings_for_prompt.append(
+            {
+                "type": finding.type,
+                "risk_level": finding.risk_level,
+                "special_category": finding.special_category,
+                "matched_pattern": finding.matched_pattern,
+                "evidence": finding.evidence,
+                "metadata": finding.metadata,
+            }
+        )
+    return findings_for_prompt
+
+
+def _should_keep_finding(
+    validation_result: str | None,
+    action: str,
+    finding: PersonalDataFinding,
+    confidence: float,
+    reasoning: str,
+) -> bool:
+    """Determine whether a finding should be kept based on validation results.
+
+    Args:
+        validation_result: LLM validation result
+        action: Recommended action from LLM
+        finding: The finding being evaluated
+        confidence: Confidence score from LLM
+        reasoning: Reasoning from LLM
+
+    Returns:
+        True if finding should be kept, False otherwise
+
+    """
+    # Keep findings that are validated as true positives
+    if (
+        validation_result == ValidationResult.TRUE_POSITIVE
+        and action == RecommendedAction.KEEP
+    ):
+        return True
+
+    # Remove false positives
+    if validation_result == ValidationResult.FALSE_POSITIVE:
+        logger.info(
+            f"Removed false positive: {finding.type} - {finding.matched_pattern} "
+            f"(confidence: {confidence:.2f}) - {reasoning}"
+        )
+        return False
+
+    # Handle edge cases - if uncertain, keep for safety
+    logger.warning(
+        f"Uncertain validation result for {finding.type}, keeping for safety: {reasoning}"
     )
-
-    return validated_findings
+    return True
 
 
 def _validate_findings_batch(
     findings_batch: list[PersonalDataFinding],
     config: LLMAnalysisRunnerConfig,
     llm_service: AnthropicLLMService,
-    logger: Logger,
 ) -> list[PersonalDataFinding]:
     """Validate a batch of personal data findings using LLM.
 
@@ -98,7 +166,6 @@ def _validate_findings_batch(
         findings_batch: Batch of findings to validate
         config: LLM analysis runner configuration
         llm_service: LLM service instance
-        logger: Logger instance
 
     Returns:
         List of validated findings from this batch
@@ -106,72 +173,69 @@ def _validate_findings_batch(
     """
     try:
         # Convert findings to format expected by validation prompt
-        findings_for_prompt = []
-        for finding in findings_batch:
-            findings_for_prompt.append(
-                {
-                    "type": finding.type,
-                    "risk_level": finding.risk_level,
-                    "special_category": finding.special_category,
-                    "matched_pattern": finding.matched_pattern,
-                    "evidence": finding.evidence,
-                    "metadata": finding.metadata,
-                }
-            )
+        findings_for_prompt = _convert_findings_for_prompt(findings_batch)
 
         # Generate validation prompt
         prompt = get_batch_validation_prompt(findings_for_prompt)
 
         # Get LLM validation response
         logger.debug(f"Validating batch of {len(findings_batch)} findings")
-        response = llm_service.analyse_data("", prompt)
+        response = llm_service.analyse_data(_EMPTY_PROMPT_CONTENT, prompt)
 
         # Extract and parse JSON response
         clean_json = extract_json_from_response(response)
         validation_results = json.loads(clean_json)
 
         # Filter findings based on validation results
-        validated_findings = []
-        for i, result in enumerate(validation_results):
-            if i >= len(findings_batch):
-                logger.warning(
-                    f"Validation result index {i} exceeds batch size {len(findings_batch)}"
-                )
-                continue
-
-            finding = findings_batch[i]
-            validation_result = result.get("validation_result")
-            confidence = result.get("confidence", 0.0)
-            reasoning = result.get("reasoning", "No reasoning provided")
-            action = result.get("recommended_action", "keep")
-
-            # Log validation decision
-            logger.debug(
-                f"Finding '{finding.type}' ({finding.matched_pattern}): "
-                f"{validation_result} (confidence: {confidence:.2f}) - {reasoning}"
-            )
-
-            # Keep findings that are validated as true positives
-            if (
-                validation_result == ValidationResult.TRUE_POSITIVE
-                and action == RecommendedAction.KEEP
-            ):
-                validated_findings.append(finding)
-            elif validation_result == ValidationResult.FALSE_POSITIVE:
-                logger.info(
-                    f"Removed false positive: {finding.type} - {finding.matched_pattern} "
-                    f"(confidence: {confidence:.2f}) - {reasoning}"
-                )
-            else:
-                # Handle edge cases - if uncertain, keep for safety
-                logger.warning(
-                    f"Uncertain validation result for {finding.type}, keeping for safety: {reasoning}"
-                )
-                validated_findings.append(finding)
-
-        return validated_findings
+        return _filter_findings_by_validation_results(
+            findings_batch, validation_results
+        )
 
     except Exception as e:
         logger.error(f"LLM validation failed for batch: {e}")
         logger.warning("Returning unvalidated findings due to LLM validation error")
         return findings_batch
+
+
+def _filter_findings_by_validation_results(
+    findings_batch: list[PersonalDataFinding],
+    validation_results: list[dict[str, Any]],
+) -> list[PersonalDataFinding]:
+    """Filter findings based on LLM validation results.
+
+    Args:
+        findings_batch: Original batch of findings
+        validation_results: Validation results from LLM
+
+    Returns:
+        List of validated findings that should be kept
+
+    """
+    validated_findings: list[PersonalDataFinding] = []
+
+    for i, result in enumerate(validation_results):
+        if i >= len(findings_batch):
+            logger.warning(
+                f"Validation result index {i} exceeds batch size {len(findings_batch)}"
+            )
+            continue
+
+        finding = findings_batch[i]
+        validation_result = result.get("validation_result")
+        confidence = result.get("confidence", _DEFAULT_CONFIDENCE)
+        reasoning = result.get("reasoning", _DEFAULT_REASONING)
+        action = result.get("recommended_action", _DEFAULT_ACTION)
+
+        # Log validation decision
+        logger.debug(
+            f"Finding '{finding.type}' ({finding.matched_pattern}): "
+            f"{validation_result} (confidence: {confidence:.2f}) - {reasoning}"
+        )
+
+        # Determine if finding should be kept
+        if _should_keep_finding(
+            validation_result, action, finding, confidence, reasoning
+        ):
+            validated_findings.append(finding)
+
+    return validated_findings
