@@ -44,7 +44,7 @@ def run(
         ),
     ],
     output_dir: Annotated[
-        Path,
+        Path | None,
         typer.Option(
             "--output-dir",
             help="The output directory for analysis results, defaults to './outputs/'",
@@ -54,7 +54,7 @@ def run(
             rich_help_panel="Output",
             show_default="./outputs/",
         ),
-    ] = (Path.cwd() / "outputs"),
+    ] = None,
     output: Annotated[
         Path | None,
         typer.Option(
@@ -83,13 +83,17 @@ def run(
             case_sensitive=False,
         ),
     ] = "INFO",
-):
+) -> None:
     """Execute a runbook with configurable output options and logging.
 
     Example:
         wct run compliance-runbook.yaml --output-dir ./results --output report.json -v
 
     """
+    # Set default output directory if not provided
+    if output_dir is None:
+        output_dir = Path.cwd() / "outputs"
+
     # Generate default output filename if not provided
     if output is None:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -108,7 +112,7 @@ def list_available_connectors(
             case_sensitive=False,
         ),
     ] = "INFO",
-):
+) -> None:
     """List available (built-in & registered) connectors."""
     list_connectors_command(log_level)
 
@@ -123,7 +127,7 @@ def list_available_analysers(
             case_sensitive=False,
         ),
     ] = "INFO",
-):
+) -> None:
     """List available (built-in & registered) analysers."""
     list_analysers_command(log_level)
 
@@ -148,7 +152,7 @@ def validate_runbook(
             case_sensitive=False,
         ),
     ] = "INFO",
-):
+) -> None:
     """Validate a runbook."""
     validate_runbook_command(runbook, log_level)
 
@@ -163,7 +167,7 @@ def test_llm(
             case_sensitive=False,
         ),
     ] = "INFO",
-):
+) -> None:
     """Test LLM connectivity and configuration."""
     test_llm_command(log_level)
 

@@ -1,6 +1,7 @@
 """Tests for MySQLConnector - Public API Only."""
 
 import os
+from contextlib import contextmanager
 from typing import cast
 from unittest.mock import Mock, patch
 
@@ -31,6 +32,26 @@ TEST_CONNECT_TIMEOUT = 20
 TEST_MAX_ROWS = 5
 
 
+@contextmanager
+def clear_mysql_env_vars():
+    """Context manager to temporarily clear MySQL environment variables for test isolation."""
+    mysql_env_vars = [
+        "MYSQL_HOST",
+        "MYSQL_PORT",
+        "MYSQL_USER",
+        "MYSQL_PASSWORD",
+        "MYSQL_DATABASE",
+    ]
+    saved_env = {var: os.environ.pop(var, None) for var in mysql_env_vars}
+    try:
+        yield
+    finally:
+        # Restore environment variables
+        for var, value in saved_env.items():
+            if value is not None:
+                os.environ[var] = value
+
+
 class TestMySQLConnectorPublicAPI:
     """Tests for MySQLConnector focusing only on public API."""
 
@@ -49,7 +70,8 @@ class TestMySQLConnectorPublicAPI:
             "host": TEST_HOST,
             "user": TEST_USER,
         }
-        connector = MySQLConnector.from_properties(properties)
+        with clear_mysql_env_vars():
+            connector = MySQLConnector.from_properties(properties)
 
         assert connector.host == TEST_HOST
         assert connector.port == EXPECTED_DEFAULT_PORT
@@ -74,7 +96,8 @@ class TestMySQLConnectorPublicAPI:
             "connect_timeout": TEST_CONNECT_TIMEOUT,
             "max_rows_per_table": TEST_MAX_ROWS,
         }
-        connector = MySQLConnector.from_properties(properties)
+        with clear_mysql_env_vars():
+            connector = MySQLConnector.from_properties(properties)
 
         assert connector.host == TEST_HOST
         assert connector.port == TEST_PORT
@@ -90,15 +113,21 @@ class TestMySQLConnectorPublicAPI:
         """Test from_properties raises error when host is missing."""
         properties = {"user": TEST_USER}
 
-        with pytest.raises(ConnectorConfigError, match="MySQL host info is required"):
-            MySQLConnector.from_properties(properties)
+        with clear_mysql_env_vars():
+            with pytest.raises(
+                ConnectorConfigError, match="MySQL host info is required"
+            ):
+                MySQLConnector.from_properties(properties)
 
     def test_from_properties_raises_error_without_user(self):
         """Test from_properties raises error when user is missing."""
         properties = {"host": TEST_HOST}
 
-        with pytest.raises(ConnectorConfigError, match="MySQL user info is required"):
-            MySQLConnector.from_properties(properties)
+        with clear_mysql_env_vars():
+            with pytest.raises(
+                ConnectorConfigError, match="MySQL user info is required"
+            ):
+                MySQLConnector.from_properties(properties)
 
     def test_from_properties_uses_environment_variables(self):
         """Test from_properties uses environment variables with priority."""

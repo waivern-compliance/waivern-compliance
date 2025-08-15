@@ -34,7 +34,7 @@ class Executor:
     workflow defined within the runbooks.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialise the executor with empty connector and analyser registries."""
         self.connectors: dict[str, type[Connector]] = {}
         self.analysers: dict[str, type[Analyser]] = {}
@@ -43,11 +43,11 @@ class Executor:
     # They are for system-wide registration of available connectors and analysers,
     # not for holding the configured connectors and analysers for individual runbooks.
 
-    def register_available_connector(self, connector_class: type[Connector]):
+    def register_available_connector(self, connector_class: type[Connector]) -> None:
         """Register a connector class."""
         self.connectors[connector_class.get_name()] = connector_class
 
-    def register_available_analyser(self, analyser_class: type[Analyser]):
+    def register_available_analyser(self, analyser_class: type[Analyser]) -> None:
         """Register an analyser class."""
         self.analysers[analyser_class.get_name()] = analyser_class
 

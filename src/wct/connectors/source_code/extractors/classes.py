@@ -15,7 +15,7 @@ _LINE_INDEX_OFFSET = 1
 class ClassExtractor(BaseExtractor):
     """Extracts class definitions from source code."""
 
-    def __init__(self, language: str):
+    def __init__(self, language: str) -> None:
         """Initialise class extractor.
 
         Args:

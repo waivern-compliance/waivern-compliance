@@ -14,6 +14,9 @@ from wct.schemas import Schema, SchemaLoadError
 
 logger = logging.getLogger(__name__)
 
+# Error message constants
+_SCHEMA_MISMATCH_ERROR = "Message schema {message_schema} does not match expected input schema {expected_schema}"
+
 
 @dataclass(frozen=True, slots=True)
 class AnalyserConfig:
@@ -26,12 +29,12 @@ class AnalyserConfig:
 
 
 class Analyser(abc.ABC):
-    """Analysis processor that accepts WCF schema-compliant data and produces results in the WCF-defined result schema.
+    """Analysis processor that accepts WCT schema-compliant data and produces results in the WCT-defined result schema.
 
-    Analysers are the workers of WCF. They accept input data in WCF-defined
+    Analysers are the workers of WCT. They accept input data in WCT-defined
     schema(s), run it against a specific analysis process (defined
     by the analyser itself), and then produce the analysis results in the
-    WCF-defined result schema.
+    WCT-defined result schema.
 
     Analysers behave like pure functions - they accept data in pre-defined
     input schemas and return results in pre-defined result schemas, regardless
@@ -39,10 +42,6 @@ class Analyser(abc.ABC):
     in a runbook, where the output of one analyser can be used as input to another
     analyser, as long as the schemas match.
     """
-
-    def __init__(self) -> None:
-        """Initialise the analyser."""
-        pass
 
     @classmethod
     @abc.abstractmethod
@@ -75,15 +74,16 @@ class Analyser(abc.ABC):
         automatically validated against the output schema.
 
         Args:
-            input_schema: Input data conforming to the analyser's input schema
-            output_schema: Output data conforming to the analyser's output schema
+            input_schema: Input schema for data validation
+            output_schema: Output schema for result validation
             message: The message to process
 
         Returns:
-            Analysis results that should conform to the analyser's output schema
+            Analysis results that conform to the analyser's output schema
 
         Raises:
             AnalyserError: If processing fails
+            SchemaLoadError: If schema validation fails
 
         """
 
@@ -98,13 +98,24 @@ class Analyser(abc.ABC):
         """Return the output schemas supported by this analyser."""
 
     @classmethod
-    def validate_input_message(cls, message: Message, expected_schema: Schema) -> None:
-        """Validate the input message against the expected schema."""
+    def _validate_input_message(cls, message: Message, expected_schema: Schema) -> None:
+        """Validate the input message against the expected schema.
+
+        Args:
+            message: Message to validate
+            expected_schema: Schema the message should conform to
+
+        Raises:
+            SchemaLoadError: If schema validation fails
+
+        """
         if message.schema and message.schema.name != expected_schema.name:
             raise SchemaLoadError(
-                f"Message schema {message.schema.name} does not match expected input schema {expected_schema.name}"
+                _SCHEMA_MISMATCH_ERROR.format(
+                    message_schema=message.schema.name,
+                    expected_schema=expected_schema.name,
+                )
             )
-
         message.validate()
 
 

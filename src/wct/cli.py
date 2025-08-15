@@ -61,7 +61,7 @@ class CLIError(Exception):
 class AnalysisRunner:
     """Handles running compliance analysis from CLI."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialise the compliance runner with a configured executor."""
         self.executor = create_executor()
 
@@ -95,7 +95,7 @@ class AnalysisRunner:
 class ComponentLister:
     """Handles listing available connectors and analysers."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialise the component lister with a configured executor."""
         self.executor = create_executor()
 

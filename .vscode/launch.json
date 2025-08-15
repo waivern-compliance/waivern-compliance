@@ -2,110 +2,21 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "WCT: Validate Runbook",
+            "name": "Tests: Run All",
             "type": "debugpy",
             "request": "launch",
-            "module": "wct",
+            "module": "pytest",
             "args": [
-                "validate-runbook",
-                "sample_runbook.yaml"
+                "tests/",
+                "-v"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"
-            }
-        },
-        {
-            "name": "WCT: Run Analysis",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "wct",
-            "args": [
-                "run",
-                "sample_runbook.yaml",
-                "--log-level", "DEBUG"
-            ],
-            "cwd": "${workspaceFolder}",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/src"
-            }
-        },
-        {
-            "name": "WCT: List Connectors",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "wct",
-            "args": [
-                "list-connectors",
-                "--log-level", "DEBUG"
-            ],
-            "cwd": "${workspaceFolder}",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/src"
-            }
-        },
-        {
-            "name": "WCT: List Analysers",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "wct",
-            "args": [
-                "list-analysers",
-                "--log-level", "DEBUG"
-            ],
-            "cwd": "${workspaceFolder}",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/src"
-            }
-        },
-        {
-            "name": "WCT: Validate Custom Runbook",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "wct",
-            "args": [
-                "validate-runbook",
-                "${input:runbookPath}"
-            ],
-            "cwd": "${workspaceFolder}",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/src"
-            }
-        },
-        {
-            "name": "WCT: Debug with UV",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/src/wct/__main__.py",
-            "args": [
-                "validate-runbook",
-                "sample_runbook.yaml",
-                "--log-level", "DEBUG"
-            ],
-            "cwd": "${workspaceFolder}",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/src"
-            }
-        }
-    ],
-    "inputs": [
-        {
-            "id": "runbookPath",
-            "description": "Path to runbook YAML file",
-            "default": "sample_runbook.yaml",
-            "type": "promptString"
+            },
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }

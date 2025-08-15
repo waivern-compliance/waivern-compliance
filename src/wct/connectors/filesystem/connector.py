@@ -49,7 +49,7 @@ class FilesystemConnector(Connector):
         errors: str = _DEFAULT_ERROR_HANDLING,
         exclude_patterns: list[str] | None = None,
         max_files: int = _DEFAULT_MAX_FILES,
-    ):
+    ) -> None:
         """Initialise the filesystem connector.
 
         Args:
