@@ -18,16 +18,12 @@ from wct.message import Message
 from wct.schemas import (
     PersonalDataFindingSchema,
     Schema,
-    SourceCodeDataModel,
-    SourceCodeSchema,
     StandardInputData,
     StandardInputSchema,
-    parse_data_model,
 )
 
 from .llm_validation_strategy import personal_data_validation_strategy
 from .pattern_matcher import personal_data_pattern_matcher
-from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
 from .types import PersonalDataFinding
 
 logger = logging.getLogger(__name__)
@@ -35,7 +31,6 @@ logger = logging.getLogger(__name__)
 # Schema constants
 _SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
     StandardInputSchema(),
-    SourceCodeSchema(),
 ]
 
 _SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
@@ -50,7 +45,6 @@ _DEFAULT_LLM_BATCH_SIZE = 50
 _DEFAULT_LLM_VALIDATION_MODE = "standard"
 
 # Schema names
-_SOURCE_CODE_SCHEMA_NAME = "source_code"
 
 # Risk level constants
 _HIGH_RISK_LEVEL = "high"
@@ -170,18 +164,10 @@ class PersonalDataAnalyser(Analyser):
         """Process data to find personal data patterns using runners."""
         Analyser._validate_input_message(message, input_schema)
 
-        # Data model validation at entry point - proper runtime validation
-        if input_schema.name == _SOURCE_CODE_SCHEMA_NAME:
-            # Ensure JSON schema validation has passed before data model validation
-            if not message.schema_validated:
-                message.validate()
-            # Parse dictionary content into strongly typed data model
-            typed_data = parse_data_model(message.content, SourceCodeDataModel)
-            findings = self._process_source_code_findings(typed_data)
-        else:
-            # Type narrowing: we know this is StandardInputData structure
-            typed_data = cast(StandardInputData, message.content)
-            findings = self._process_standard_input_with_runners(typed_data)
+        # Process standard_input schema only
+        # Type narrowing: we know this is StandardInputData structure
+        typed_data = cast(StandardInputData, message.content)
+        findings = self._process_standard_input_with_runners(typed_data)
 
         validated_findings = self.llm_runner.run_analysis(
             findings, {}, self._get_llm_config()
@@ -231,24 +217,6 @@ class PersonalDataAnalyser(Analyser):
                 content, item_metadata, self._get_pattern_matching_config()
             )
             findings.extend(item_findings)
-
-        return findings
-
-    def _process_source_code_findings(
-        self, data: SourceCodeDataModel
-    ) -> list[PersonalDataFinding]:
-        """Process source code data and return typed findings.
-
-        Args:
-            data: Pydantic validated source code data to process
-
-        Returns:
-            List of typed PersonalDataFinding objects
-
-        """
-        # Handle source code format - delegate completely to handler
-        # TODO: Create a SourceCodePatternRunner in the future for consistency
-        findings = SourceCodeSchemaInputHandler().analyse_source_code_data(data)
 
         return findings
 

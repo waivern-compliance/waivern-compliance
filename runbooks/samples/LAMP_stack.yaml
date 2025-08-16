@@ -15,7 +15,7 @@ connectors:
   - name: "php_source_code"
     type: "source_code"
     properties:
-      path: "./tests/wct/analysers/personal_data_analyser/source_code_mock_php"
+      path: "./tests/wct/analysers/processing_purpose_analyser/source_code_mock_php"
       language: "php"
       file_patterns: ["**/*.php"]
       max_file_size: 10485760  # 10MB
@@ -34,16 +34,15 @@ analysers:
       # However, you can specify a custom one if so desired.
       # The custom ruleset must follow the same structure as the default one.
       ruleset_name: "personal_data"
-  - name: "personal_data_analyser_for_source_code"
-    type: "personal_data_analyser"
+  - name: "processing_purpose_analyser_for_source_code"
+    type: "processing_purpose_analyser"
     properties:
       evidence_context_size: medium
       enable_llm_validation: false
       llm_batch_size: 50
-      llm_validation_mode: standard
     metadata:
       priority: "high"
-      description: "Analyse PHP source code for personal data handling patterns"
+      description: "Analyse PHP source code for processing purposes and service integrations"
   - name: "processing_purpose_analyser_for_mysql"
     type: "processing_purpose_analyser"
     properties:
@@ -64,19 +63,6 @@ execution:
     context:
       description: "Analyse MySQL database for personal data collection"
       priority: "high"
-  - connector: "php_source_code"
-    analyser: "personal_data_analyser_for_source_code"
-    input_schema_name: "source_code"
-    output_schema_name: "personal_data_finding"
-    context:
-      description: "Analyse PHP source code for personal data handling patterns"
-      priority: "high"
-      sensitivity_rules:
-        - "function_name_detection"
-        - "parameter_name_detection"
-        - "class_property_detection"
-        - "sql_query_detection"
-        - "third_party_integration_detection"
   - connector: "my_mysql_db"
     analyser: "processing_purpose_analyser_for_mysql"
     input_schema_name: "standard_input"
@@ -86,3 +72,14 @@ execution:
       priority: "medium"
       compliance_frameworks: ["GDPR", "CCPA"]
       analysis_type: "database_content_analysis"
+  - connector: "php_source_code"
+    analyser: "processing_purpose_analyser_for_source_code"
+    input_schema_name: "source_code"
+    output_schema_name: "processing_purpose_finding"
+    context:
+      description: "Analyse PHP source code for processing purposes and service integrations"
+      priority: "high"
+      analysis_focus:
+        - "processing_purpose_detection"
+        - "service_integration_detection"
+        - "business_logic_analysis"
