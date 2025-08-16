@@ -1,7 +1,8 @@
 """Source code schema input handler for personal data detection in source code analysis results."""
 
 import re
-from typing import Any
+
+from pydantic import BaseModel
 
 from wct.rulesets import RulesetLoader
 from wct.schemas import (
@@ -12,6 +13,42 @@ from wct.schemas import (
 )
 
 from .types import PersonalDataFinding
+
+
+class SourceCodeFileMetadata(BaseModel):
+    """Metadata for a source code file being analyzed."""
+
+    source: str
+    file_path: str
+    language: str
+    analysis_type: str
+
+
+class SourceCodeFindingMetadata(BaseModel):
+    """Metadata for a personal data finding in source code."""
+
+    source: str
+    file_path: str
+    language: str
+    analysis_type: str
+    line_number: int
+
+    # Optional fields that can be present depending on the finding type
+    collection_type: str | None = None
+    field_name: str | None = None
+    pattern_matched: str | None = None
+    rule_name: str | None = None
+    data_source: str | None = None
+    function_name: str | None = None
+    parameter_name: str | None = None
+    analysis_pattern: str | None = None
+    class_name: str | None = None
+    property_name: str | None = None
+    sql_fragment: str | None = None
+    sql_type: str | None = None
+    service_name: str | None = None
+    service_category: str | None = None
+    detected_context: str | None = None
 
 
 class SourceCodeSchemaInputHandler:
@@ -142,7 +179,7 @@ class SourceCodeSchemaInputHandler:
 
     def _create_base_file_metadata(
         self, file_path: str, language: str
-    ) -> dict[str, Any]:
+    ) -> SourceCodeFileMetadata:
         """Create base metadata for a source code file.
 
         Args:
@@ -150,45 +187,46 @@ class SourceCodeSchemaInputHandler:
             language: Programming language of the file
 
         Returns:
-            Dictionary containing base metadata for the file
+            Strongly-typed metadata for the file
 
         """
-        return {
-            "source": f"source_code:{file_path}",
-            "file_path": file_path,
-            "language": language,
-            # For information/debugging purposes, not really used anywhere
-            "analysis_type": self._ANALYSIS_TYPE_SOURCE_CODE,
-        }
+        return SourceCodeFileMetadata(
+            source=f"source_code:{file_path}",
+            file_path=file_path,
+            language=language,
+            analysis_type=self._ANALYSIS_TYPE_SOURCE_CODE,
+        )
 
     def _create_finding_metadata(
         self,
-        base_metadata: dict[str, Any],
+        file_metadata: SourceCodeFileMetadata,
         line_number: int,
-        **additional_fields: str | int | bool,
-    ) -> dict[str, Any]:
+        **additional_fields: str | int | bool | None,
+    ) -> SourceCodeFindingMetadata:
         """Create metadata for a personal data finding.
 
         Args:
-            base_metadata: Base metadata to extend
+            file_metadata: File metadata to extend
             line_number: Line number where the finding was detected
             **additional_fields: Additional metadata fields to include
 
         Returns:
-            Complete metadata dictionary for the finding
+            Strongly-typed metadata for the finding
 
         """
-        finding_metadata = base_metadata.copy()
-        finding_metadata["line_number"] = line_number
-        finding_metadata.update(additional_fields)
-        return finding_metadata
+        # Convert file metadata to dict and add line number and additional fields
+        metadata_dict = file_metadata.model_dump()
+        metadata_dict["line_number"] = line_number
+        metadata_dict.update(additional_fields)
+
+        return SourceCodeFindingMetadata(**metadata_dict)
 
     def _create_personal_data_finding(
         self,
         data_type: str,
         matched_pattern: str,
         evidence: list[str],
-        metadata: dict[str, Any],
+        metadata: SourceCodeFindingMetadata,
     ) -> PersonalDataFinding:
         """Create a PersonalDataFinding with risk information.
 
@@ -196,7 +234,7 @@ class SourceCodeSchemaInputHandler:
             data_type: Type of personal data detected
             matched_pattern: Pattern that was matched
             evidence: Evidence snippets for the finding
-            metadata: Metadata for the finding
+            metadata: Strongly-typed metadata for the finding
 
         Returns:
             Configured PersonalDataFinding object
@@ -209,13 +247,13 @@ class SourceCodeSchemaInputHandler:
             special_category=risk_info["special_category"],
             matched_pattern=matched_pattern,
             evidence=evidence,
-            metadata=metadata,
+            metadata=metadata.model_dump(),  # Convert to dict for PersonalDataFinding
         )
 
     def _analyse_raw_content_data_collection_patterns(
         self,
         raw_content: str,
-        base_metadata: dict[str, Any],
+        file_metadata: SourceCodeFileMetadata,
     ) -> list[PersonalDataFinding]:
         """Analyse raw content for data collection patterns using data_collection_patterns ruleset."""
         findings: list[PersonalDataFinding] = []
@@ -244,7 +282,7 @@ class SourceCodeSchemaInputHandler:
                             continue
 
                         finding_metadata = self._create_finding_metadata(
-                            base_metadata,
+                            file_metadata,
                             line_num,
                             collection_type=rule.metadata.get(
                                 "collection_type", "unknown"
@@ -310,7 +348,9 @@ class SourceCodeSchemaInputHandler:
         return None
 
     def _analyse_function_patterns(
-        self, functions: list[SourceCodeFunctionModel], base_metadata: dict[str, Any]
+        self,
+        functions: list[SourceCodeFunctionModel],
+        file_metadata: SourceCodeFileMetadata,
     ) -> list[PersonalDataFinding]:
         """Analyse function patterns for personal data handling."""
         findings: list[PersonalDataFinding] = []
@@ -324,7 +364,7 @@ class SourceCodeSchemaInputHandler:
             personal_data_type = self._classify_function_as_personal_data(func_name)
             if personal_data_type:
                 finding_metadata = self._create_finding_metadata(
-                    base_metadata,
+                    file_metadata,
                     line_start,
                     function_name=func_name,
                     analysis_pattern=self._PATTERN_FUNCTION_NAME,
@@ -348,7 +388,7 @@ class SourceCodeSchemaInputHandler:
                 personal_data_type = self._classify_field_as_personal_data(param_name)
                 if personal_data_type:
                     finding_metadata = self._create_finding_metadata(
-                        base_metadata,
+                        file_metadata,
                         line_start,
                         function_name=func_name,
                         parameter_name=param_name,
@@ -370,7 +410,7 @@ class SourceCodeSchemaInputHandler:
         return findings
 
     def _analyse_class_patterns(
-        self, classes: list[SourceCodeClassModel], base_metadata: dict[str, Any]
+        self, classes: list[SourceCodeClassModel], file_metadata: SourceCodeFileMetadata
     ) -> list[PersonalDataFinding]:
         """Analyse class patterns for personal data models."""
         findings: list[PersonalDataFinding] = []
@@ -384,7 +424,7 @@ class SourceCodeSchemaInputHandler:
             personal_data_type = self._classify_class_as_personal_data(class_name)
             if personal_data_type:
                 finding_metadata = self._create_finding_metadata(
-                    base_metadata,
+                    file_metadata,
                     line_start,
                     class_name=class_name,
                     analysis_pattern=self._PATTERN_CLASS_NAME,
@@ -408,7 +448,7 @@ class SourceCodeSchemaInputHandler:
                 personal_data_type = self._classify_field_as_personal_data(prop_name)
                 if personal_data_type:
                     finding_metadata = self._create_finding_metadata(
-                        base_metadata,
+                        file_metadata,
                         line_start,
                         class_name=class_name,
                         property_name=prop_name,
@@ -432,7 +472,7 @@ class SourceCodeSchemaInputHandler:
     def _analyse_raw_content_sql_patterns(
         self,
         raw_content: str,
-        base_metadata: dict[str, Any],
+        file_metadata: SourceCodeFileMetadata,
     ) -> list[PersonalDataFinding]:
         """Analyse raw content for SQL queries with personal data patterns."""
         findings: list[PersonalDataFinding] = []
@@ -459,7 +499,7 @@ class SourceCodeSchemaInputHandler:
 
                     for pattern_match in personal_data_patterns:
                         finding_metadata = self._create_finding_metadata(
-                            base_metadata,
+                            file_metadata,
                             line_num,
                             sql_fragment=sql_fragment[: self._SQL_FRAGMENT_MAX_LENGTH],
                             analysis_pattern=self._PATTERN_SQL_QUERY,
@@ -489,7 +529,7 @@ class SourceCodeSchemaInputHandler:
     def _analyse_raw_content_third_party_patterns(
         self,
         raw_content: str,
-        base_metadata: dict[str, Any],
+        file_metadata: SourceCodeFileMetadata,
     ) -> list[PersonalDataFinding]:
         """Analyse raw content for third-party service integrations using third_party_services ruleset."""
         findings: list[PersonalDataFinding] = []
@@ -513,7 +553,7 @@ class SourceCodeSchemaInputHandler:
                             continue
 
                         finding_metadata = self._create_finding_metadata(
-                            base_metadata,
+                            file_metadata,
                             line_num,
                             service_name=pattern,
                             service_category=rule.metadata.get(
@@ -536,7 +576,7 @@ class SourceCodeSchemaInputHandler:
                             special_category=self._DEFAULT_SPECIAL_CATEGORY,
                             matched_pattern=f"{self._PREFIX_SOURCE_CODE_INTEGRATION}:{pattern}",
                             evidence=evidence,
-                            metadata=finding_metadata,
+                            metadata=finding_metadata.model_dump(),
                         )
                         findings.append(finding)
 

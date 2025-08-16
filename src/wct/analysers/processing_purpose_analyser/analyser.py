@@ -15,16 +15,21 @@ from wct.message import Message
 from wct.schemas import (
     ProcessingPurposeFindingSchema,
     Schema,
+    SourceCodeDataModel,
+    SourceCodeSchema,
     StandardInputData,
     StandardInputSchema,
+    parse_data_model,
 )
 
 from .pattern_matcher import processing_purpose_pattern_matcher
+from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
 
 logger = logging.getLogger(__name__)
 
 SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
     StandardInputSchema(),
+    SourceCodeSchema(),
 ]
 
 SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
@@ -98,6 +103,9 @@ class ProcessingPurposeAnalyser(Analyser):
             dict[str, Any]
         ](pattern_matcher=processing_purpose_pattern_matcher)
 
+        # Initialise source code handler for SourceCodeSchema processing
+        self.source_code_handler = SourceCodeSchemaInputHandler()
+
     @classmethod
     @override
     def get_name(cls) -> str:
@@ -159,8 +167,13 @@ class ProcessingPurposeAnalyser(Analyser):
         data = message.content
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
-        # Process standard_input schema using pattern runner
-        findings = self._process_standard_input_with_runners(data)
+        # Process based on input schema type
+        if input_schema.name == "standard_input":
+            findings = self._process_standard_input_with_runners(data)
+        elif input_schema.name == "source_code":
+            findings = self._process_source_code_with_handler(data)
+        else:
+            raise ValueError(f"Unsupported input schema: {input_schema.name}")
 
         # Create result data with findings (findings are already in correct format from pattern matcher)
         result_data: dict[str, Any] = {
@@ -235,6 +248,26 @@ class ProcessingPurposeAnalyser(Analyser):
             findings = self.pattern_runner.run_analysis(
                 content, metadata, self._get_pattern_matching_config()
             )
+
+        return findings
+
+    def _process_source_code_with_handler(
+        self, data: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """Process source_code schema data using the source code handler.
+
+        Args:
+            data: Input data in source_code schema format
+
+        Returns:
+            List of processing purpose findings from source code analysis
+
+        """
+        # Parse and validate source code data
+        source_code_data = parse_data_model(data, SourceCodeDataModel)
+
+        # Use source code handler for analysis
+        findings = self.source_code_handler.analyse_source_code_data(source_code_data)
 
         return findings
 

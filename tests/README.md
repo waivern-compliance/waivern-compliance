@@ -30,10 +30,11 @@ tests/
     │           ├── test_functions.py  # FunctionExtractor tests (16 tests)
     │           └── test_classes.py   # ClassExtractor tests (19 tests)
     ├── analysers/                 # Analyser functionality tests
-    │   └── personal_data_analyser/
-    │       ├── test_analyser.py   # Core analyser tests
-    │       ├── test_source_code_handler_architecture.py
-    │       └── source_code_mock_php/  # Realistic PHP test data (25 files)
+    │   ├── personal_data_analyser/
+    │   │   ├── test_analyser.py   # Core analyser tests
+    │   │   └── test_source_code_handler_architecture.py
+    │   └── processing_purpose_analyser/
+    │       └── source_code_mock_php/  # Realistic PHP test data (25 files) - moved from personal_data_analyser
     ├── schemas/                   # Schema validation tests
     │   ├── test_base.py          # Base schema functionality
     │   ├── test_standard_input.py
