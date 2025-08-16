@@ -16,8 +16,17 @@ analysers:
   - name: "personal_data_analyser"
     type: "personal_data_analyser"
     properties:
-      evidence_context_size: long
-      enable_llm_validation: false
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "personal_data"
+        evidence_context_size: "long"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 50
+        llm_validation_mode: "standard"
 
 execution:
   - connector: "file_content_connector"

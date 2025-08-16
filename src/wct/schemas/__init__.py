@@ -19,7 +19,6 @@ Available schemas:
 from .base import JsonSchemaLoader, Schema, SchemaLoader, SchemaLoadError
 from .personal_data_finding import PersonalDataFindingSchema
 from .processing_purpose_finding import ProcessingPurposeFindingSchema
-from .runbook import RunbookSchema
 from .source_code import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeClassModel,
@@ -33,9 +32,9 @@ from .source_code import (
     SourceCodeSchema,
 )
 from .standard_input import (
-    StandardInputData,
-    StandardInputDataItem,
-    StandardInputDataItemMetadata,
+    StandardInputDataItemMetadataModel,
+    StandardInputDataItemModel,
+    StandardInputDataModel,
     StandardInputSchema,
 )
 from .validation import DataParsingError, parse_data_model
@@ -54,11 +53,11 @@ __all__ = [
     "SourceCodeSchema",
     "PersonalDataFindingSchema",
     "ProcessingPurposeFindingSchema",
-    "RunbookSchema",
-    # Standard input type definitions
-    "StandardInputData",
-    "StandardInputDataItem",
-    "StandardInputDataItemMetadata",
+    # Note: Runbook validation uses Pydantic models in the runbook module
+    # Standard input Pydantic models
+    "StandardInputDataModel",
+    "StandardInputDataItemModel",
+    "StandardInputDataItemMetadataModel",
     # Source code schema
     "SourceCodeSchema",
     # Source code Pydantic models

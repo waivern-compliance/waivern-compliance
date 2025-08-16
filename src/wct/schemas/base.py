@@ -78,7 +78,7 @@ class JsonSchemaLoader:
             / schema_name
             / version
             / f"{schema_name}.json",
-            # Fallback to old locations for backward compatibility
+            # Additional fallback locations
             Path("src/wct/schemas") / f"{schema_name}.json",
             Path("./src/wct/schemas") / f"{schema_name}.json",
             Path(__file__).parent / f"{schema_name}.json",

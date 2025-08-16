@@ -14,11 +14,17 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from wct.analysers import Analyser, AnalyserConfig, AnalyserError
+from wct.analysers import Analyser, AnalyserError
 from wct.analysis import AnalysisResult
-from wct.connectors import Connector, ConnectorConfig, ConnectorError
+from wct.connectors import Connector, ConnectorError
 from wct.errors import WCTError
-from wct.runbook import ExecutionStep, Runbook, RunbookLoader
+from wct.runbook import (
+    AnalyserConfigModel,
+    ConnectorConfigModel,
+    ExecutionStepModel,
+    RunbookLoader,
+    RunbookModel,
+)
 from wct.schemas import Schema
 
 logger = logging.getLogger(__name__)
@@ -73,7 +79,9 @@ class Executor:
 
         return results
 
-    def _execute_step(self, step: ExecutionStep, runbook: Runbook) -> AnalysisResult:
+    def _execute_step(
+        self, step: ExecutionStepModel, runbook: RunbookModel
+    ) -> AnalysisResult:
         """Execute a single step in the runbook."""
         try:
             # Get configurations and validate types
@@ -97,11 +105,11 @@ class Executor:
             return self._handle_step_error(step, e)
 
     def _get_step_configs(
-        self, step: ExecutionStep, runbook: Runbook
-    ) -> tuple[AnalyserConfig, ConnectorConfig]:
+        self, step: ExecutionStepModel, runbook: RunbookModel
+    ) -> tuple[AnalyserConfigModel, ConnectorConfigModel]:
         """Get analyser and connector configurations for the step.
 
-        Configurations are guaranteed to exist by RunbookSchema validation.
+        Configurations are guaranteed to exist by Pydantic model validation.
         """
         analyser_config = next(p for p in runbook.analysers if p.name == step.analyser)
         connector_config = next(
@@ -111,9 +119,9 @@ class Executor:
 
     def _validate_step_types(
         self,
-        step: ExecutionStep,
-        analyser_config: AnalyserConfig,
-        connector_config: ConnectorConfig,
+        step: ExecutionStepModel,
+        analyser_config: AnalyserConfigModel,
+        connector_config: ConnectorConfigModel,
     ) -> tuple[type[Analyser], type[Connector]]:
         """Validate that analyser and connector types are registered with executor."""
         analyser_class = self.analysers.get(analyser_config.type)
@@ -130,8 +138,8 @@ class Executor:
         self,
         analyser_class: type[Analyser],
         connector_class: type[Connector],
-        analyser_config: AnalyserConfig,
-        connector_config: ConnectorConfig,
+        analyser_config: AnalyserConfigModel,
+        connector_config: ConnectorConfigModel,
     ) -> tuple[Analyser, Connector]:
         """Instantiate analyser and connector from their configurations."""
         analyser = analyser_class.from_properties(analyser_config.properties or {})
@@ -139,7 +147,7 @@ class Executor:
         return analyser, connector
 
     def _resolve_step_schemas(
-        self, step: ExecutionStep, analyser: Analyser
+        self, step: ExecutionStepModel, analyser: Analyser
     ) -> tuple[Schema, Schema]:
         """Resolve input and output schemas for the step."""
         # Resolve input schema
@@ -172,12 +180,12 @@ class Executor:
 
     def _run_step_analysis(
         self,
-        step: ExecutionStep,
+        step: ExecutionStepModel,
         analyser: Analyser,
         connector: Connector,
         input_schema: Schema,
         output_schema: Schema,
-        analyser_config: AnalyserConfig,
+        analyser_config: AnalyserConfigModel,
     ) -> AnalysisResult:
         """Execute the actual analysis step."""
         # Extract data from connector
@@ -199,7 +207,7 @@ class Executor:
         )
 
     def _handle_step_error(
-        self, step: ExecutionStep, error: Exception
+        self, step: ExecutionStepModel, error: Exception
     ) -> AnalysisResult:
         """Handle execution errors and return appropriate error result."""
         logger.error(f"Step execution failed for {step.analyser}: {error}")

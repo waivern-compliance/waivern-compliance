@@ -9,7 +9,7 @@ from typing_extensions import override
 from wct.analysers.runners.base import AnalysisRunner, AnalysisRunnerError
 from wct.analysers.runners.types import (
     PatternMatcherContext,
-    PatternMatchingRunnerConfig,
+    PatternMatchingConfig,
 )
 from wct.analysers.utilities import EvidenceExtractor
 from wct.rulesets import RulesetLoader
@@ -22,7 +22,7 @@ ResultT = TypeVar("ResultT")
 
 
 # Analysis runner identifier
-_ANALYSIS_RUNNER_TYPE = "pattern_matching"
+_ANALYSIS_RUNNER_TYPE = "pattern_matching_runner"
 
 # Type alias for pattern matcher function
 PatternMatcherFn = Callable[
@@ -30,9 +30,7 @@ PatternMatcherFn = Callable[
 ]
 
 
-class PatternMatchingAnalysisRunner(
-    AnalysisRunner[ResultT, PatternMatchingRunnerConfig]
-):
+class PatternMatchingAnalysisRunner(AnalysisRunner[ResultT, PatternMatchingConfig]):
     """Generic pattern-matching analysis runner that delegates specific matching logic to analysers.
 
     This runner provides the infrastructure for pattern matching (ruleset loading,
@@ -61,7 +59,7 @@ class PatternMatchingAnalysisRunner(
         self,
         input_data: str,
         metadata: dict[str, Any],
-        config: PatternMatchingRunnerConfig,
+        config: PatternMatchingConfig,
     ) -> list[ResultT]:
         """Run pattern matching analysis on content.
 
@@ -78,7 +76,7 @@ class PatternMatchingAnalysisRunner(
 
         """
         try:
-            ruleset_name = config.ruleset_name
+            ruleset_name = config.ruleset
 
             logger.debug(f"Running pattern analysis with ruleset: {ruleset_name}")
 
@@ -99,7 +97,7 @@ class PatternMatchingAnalysisRunner(
         content: str,
         rules: tuple[Rule, ...],
         metadata: dict[str, Any],
-        config: PatternMatchingRunnerConfig,
+        config: PatternMatchingConfig,
     ) -> list[ResultT]:
         """Find all pattern matches in content using the provided rules.
 
@@ -134,7 +132,7 @@ class PatternMatchingAnalysisRunner(
         pattern: str,
         rule: Rule,
         metadata: dict[str, Any],
-        config: PatternMatchingRunnerConfig,
+        config: PatternMatchingConfig,
     ) -> ResultT | None:
         """Create a finding using the pattern matcher function.
 
@@ -153,7 +151,7 @@ class PatternMatchingAnalysisRunner(
         return self.pattern_matcher(content, pattern, rule.metadata, context)
 
     def _build_pattern_context(
-        self, rule: Rule, metadata: dict[str, Any], config: PatternMatchingRunnerConfig
+        self, rule: Rule, metadata: dict[str, Any], config: PatternMatchingConfig
     ) -> PatternMatcherContext:
         """Build typed context object for pattern matcher function.
 

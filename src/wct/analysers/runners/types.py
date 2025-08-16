@@ -1,59 +1,61 @@
 """Type definitions for analysis runners."""
 
-from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, field_validator
 
 from wct.analysers.utilities import EvidenceExtractor
 
 
-@dataclass
-class PatternMatchingRunnerConfig:
-    """Configuration for PatternMatchingAnalysisRunner.
+class PatternMatchingConfig(BaseModel):
+    """Strongly typed configuration for pattern matching runners."""
 
-    This defines the configuration that the pattern matching runner
-    recognizes and uses. Pattern matchers may access additional keys through
-    the context dictionary.
-    """
+    ruleset: str = Field(
+        default="personal_data",
+        description="Name of the ruleset to use for pattern matching",
+    )
 
-    # Required field
-    ruleset_name: str
-    """Name of the ruleset to use for pattern matching."""
+    evidence_context_size: str = Field(
+        default="small", description="Context size for evidence extraction"
+    )
 
-    # Optional fields with defaults
-    max_evidence: int = 3
-    """Maximum number of evidence snippets per finding (alias for maximum_evidence_count)."""
+    @field_validator("evidence_context_size")
+    @classmethod
+    def validate_evidence_context_size(cls, v: str) -> str:
+        """Validate evidence context size values."""
+        allowed = ["small", "medium", "long"]
+        if v not in allowed:
+            raise ValueError(
+                f"evidence_context_size must be one of {allowed}, got: {v}"
+            )
+        return v
 
-    maximum_evidence_count: int = 3
-    """Maximum number of evidence snippets per finding."""
-
-    context_size: str = "small"
-    """Context size for evidence extraction ('small', 'medium', 'large') (alias for evidence_context_size)."""
-
-    evidence_context_size: str = "small"
-    """Context size for evidence extraction ('small', 'medium', 'large')."""
-
-
-@dataclass
-class LLMAnalysisRunnerConfig:
-    """Configuration for LLMAnalysisRunner.
-
-    This defines the configuration that the LLM analysis runner
-    recognizes and uses for validation and processing.
-    """
-
-    # LLM validation configuration with defaults
-    enable_llm_validation: bool = True
-    """Whether to enable LLM validation of findings."""
-
-    llm_batch_size: int = 10
-    """Batch size for processing findings through the LLM."""
-
-    llm_validation_mode: str = "standard"
-    """Mode for LLM validation ('standard', 'conservative', etc.)."""
+    maximum_evidence_count: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        description="Maximum number of evidence items to collect per finding",
+    )
 
 
-@dataclass
-class PatternMatcherContext:
+class LLMValidationConfig(BaseModel):
+    """Strongly typed configuration for LLM validation runners."""
+
+    enable_llm_validation: bool = Field(
+        default=True,
+        description="Whether to enable LLM-based validation to filter false positives",
+    )
+
+    llm_batch_size: int = Field(
+        default=50, ge=1, le=200, description="Batch size for LLM processing"
+    )
+
+    llm_validation_mode: Literal["standard", "conservative", "aggressive"] = Field(
+        default="standard", description="LLM validation mode"
+    )
+
+
+class PatternMatcherContext(BaseModel):
     """Strongly typed context object passed to pattern matcher functions.
 
     This provides a typed interface for all the context information
@@ -61,22 +63,21 @@ class PatternMatcherContext:
     """
 
     # Rule information
-    rule_name: str
-    """Name of the rule being matched."""
-
-    rule_description: str
-    """Description of the rule being matched."""
-
-    risk_level: str
-    """Risk level from the rule (e.g., 'low', 'medium', 'high')."""
+    rule_name: str = Field(description="Name of the rule being matched")
+    rule_description: str = Field(description="Description of the rule being matched")
+    risk_level: str = Field(description="Risk level from the rule")
 
     # Analysis context
-    metadata: dict[str, Any]
-    """Metadata about the content being analyzed."""
-
-    config: PatternMatchingRunnerConfig
-    """Configuration for the pattern matching analysis."""
+    metadata: dict[str, Any] = Field(
+        description="Metadata about the content being analyzed"
+    )
+    config: PatternMatchingConfig = Field(
+        description="Configuration for the pattern matching analysis"
+    )
 
     # Utilities
-    evidence_extractor: EvidenceExtractor
-    """Utility for extracting evidence snippets from content."""
+    evidence_extractor: EvidenceExtractor = Field(
+        description="Utility for extracting evidence snippets from content"
+    )
+
+    model_config = {"arbitrary_types_allowed": True}

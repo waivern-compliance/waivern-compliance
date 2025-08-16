@@ -4,10 +4,10 @@ import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from typing_extensions import override
+from typing_extensions import Self, override
 
 from wct.analysers.runners.base import AnalysisRunner
-from wct.analysers.runners.types import LLMAnalysisRunnerConfig
+from wct.analysers.runners.types import LLMValidationConfig
 from wct.analysers.utilities import LLMServiceManager
 from wct.llm_service import AnthropicLLMService
 
@@ -21,7 +21,7 @@ _EMPTY_PROMPT_DATA = ""
 ResultT = TypeVar("ResultT")
 
 
-class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMAnalysisRunnerConfig]):
+class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMValidationConfig]):
     """Generic LLM analysis runner that delegates specific validation logic to analysers.
 
     This runner provides the infrastructure for LLM validation (service management,
@@ -32,7 +32,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMAnalysisRunnerConfig]):
     def __init__(
         self,
         validation_strategy: Callable[
-            [list[ResultT], LLMAnalysisRunnerConfig, Any], list[ResultT]
+            [list[ResultT], LLMValidationConfig, Any], list[ResultT]
         ]
         | None = None,
         enable_llm_validation: bool = True,
@@ -52,6 +52,34 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMAnalysisRunnerConfig]):
             else self._passthrough_strategy
         )
 
+    @classmethod
+    def from_properties(
+        cls,
+        properties: dict[str, Any],
+        validation_strategy: Callable[
+            [list[ResultT], LLMValidationConfig, Any], list[ResultT]
+        ]
+        | None = None,
+    ) -> Self:
+        """Create an LLM analysis runner from runbook properties.
+
+        Args:
+            properties: Properties from runbook containing llm_validation config
+            validation_strategy: Validation strategy function to use
+
+        Returns:
+            Configured LLM analysis runner
+
+        """
+        # Extract LLM config from nested properties
+        llm_config = properties.get("llm_validation", {})
+        enable_llm_validation = llm_config.get("enable_llm_validation", True)
+
+        return cls(
+            validation_strategy=validation_strategy,
+            enable_llm_validation=enable_llm_validation,
+        )
+
     @override
     def get_analysis_type(self) -> str:
         """Return the analysis type identifier."""
@@ -62,7 +90,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMAnalysisRunnerConfig]):
         self,
         input_data: list[ResultT],
         metadata: dict[str, Any],
-        config: LLMAnalysisRunnerConfig,
+        config: LLMValidationConfig,
     ) -> list[ResultT]:
         """Run LLM validation on findings.
 
@@ -95,7 +123,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMAnalysisRunnerConfig]):
     def _passthrough_strategy(
         self,
         findings: list[ResultT],
-        config: LLMAnalysisRunnerConfig,
+        config: LLMValidationConfig,
         llm_service: AnthropicLLMService,
     ) -> list[ResultT]:
         """Return findings unchanged as a default passthrough strategy.
@@ -116,7 +144,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMAnalysisRunnerConfig]):
         self,
         prompt_generator: Callable[[list[ResultT]], str],
         response_parser: Callable[[str, list[ResultT]], list[ResultT]],
-    ) -> Callable[[list[ResultT], LLMAnalysisRunnerConfig, Any], list[ResultT]]:
+    ) -> Callable[[list[ResultT], LLMValidationConfig, Any], list[ResultT]]:
         """Create a batch validation strategy with custom prompt and response handling.
 
         This is a helper method to create validation strategies that follow the
@@ -133,7 +161,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMAnalysisRunnerConfig]):
 
         def batch_validation_strategy(
             findings: list[ResultT],
-            config: LLMAnalysisRunnerConfig,
+            config: LLMValidationConfig,
             llm_service: AnthropicLLMService,
         ) -> list[ResultT]:
             """Batch validation strategy implementation."""
@@ -153,7 +181,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMAnalysisRunnerConfig]):
         return batch_validation_strategy
 
     def _should_skip_validation(
-        self, input_data: list[ResultT], config: LLMAnalysisRunnerConfig
+        self, input_data: list[ResultT], config: LLMValidationConfig
     ) -> bool:
         """Determine if LLM validation should be skipped.
 
@@ -176,7 +204,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMAnalysisRunnerConfig]):
         return False
 
     def _execute_validation_strategy(
-        self, input_data: list[ResultT], config: LLMAnalysisRunnerConfig
+        self, input_data: list[ResultT], config: LLMValidationConfig
     ) -> list[ResultT]:
         """Execute the validation strategy on input data.
 

@@ -6,15 +6,13 @@ for the Waivern Compliance Tool (WCT).
 
 from wct.analysers.base import (
     Analyser,
-    AnalyserConfig,
     AnalyserError,
     AnalyserInputError,
     AnalyserProcessingError,
 )
 from wct.analysers.personal_data_analyser import (
     PersonalDataAnalyser,
-    PersonalDataFinding,
-    PersonalDataPattern,
+    PersonalDataFindingModel,
 )
 from wct.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
@@ -22,13 +20,11 @@ from wct.analysers.processing_purpose_analyser import (
 
 __all__ = (
     "Analyser",
-    "AnalyserConfig",
     "AnalyserError",
     "AnalyserInputError",
     "AnalyserProcessingError",
     "PersonalDataAnalyser",
-    "PersonalDataFinding",
-    "PersonalDataPattern",
+    "PersonalDataFindingModel",
     "ProcessingPurposeAnalyser",
     "BUILTIN_ANALYSERS",
 )

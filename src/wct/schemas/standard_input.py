@@ -7,38 +7,47 @@ the standard input format used by most WCT connectors.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, TypedDict
+from typing import Any
 
-from typing_extensions import NotRequired
+from pydantic import BaseModel, ConfigDict, Field
 
 from .base import JsonSchemaLoader, Schema, SchemaLoader
 
 
-# Type definitions for standard_input schema data structures
-class StandardInputDataItemMetadata(TypedDict):
+# Pydantic models for standard_input schema data structures
+class StandardInputDataItemMetadataModel(BaseModel):
     """Metadata for a data item in standard_input schema."""
 
-    source: str  # Required by schema
-    # Additional properties allowed but not typed
+    source: str = Field(description="Source identifier for the data item")
+
+    model_config = ConfigDict(
+        extra="allow"
+    )  # Allow additional properties not explicitly defined
 
 
-class StandardInputDataItem(TypedDict):
+class StandardInputDataItemModel(BaseModel):
     """Individual data item in standard_input schema."""
 
-    content: str
-    metadata: StandardInputDataItemMetadata
+    content: str = Field(description="The actual content/data")
+    metadata: StandardInputDataItemMetadataModel = Field(
+        description="Metadata about the data item"
+    )
 
 
-class StandardInputData(TypedDict):
+class StandardInputDataModel(BaseModel):
     """Complete structure of standard_input schema data."""
 
-    schemaVersion: str
-    name: str
-    data: list[StandardInputDataItem]
-    description: NotRequired[str]
-    contentEncoding: NotRequired[str]
-    source: NotRequired[str]
-    metadata: NotRequired[dict[str, Any]]
+    schemaVersion: str = Field(description="Schema version identifier")
+    name: str = Field(description="Name/identifier for this data set")
+    data: list[StandardInputDataItemModel] = Field(description="List of data items")
+    description: str | None = Field(default=None, description="Optional description")
+    contentEncoding: str | None = Field(
+        default=None, description="Content encoding if applicable"
+    )
+    source: str | None = Field(default=None, description="Source of the data")
+    metadata: dict[str, Any] | None = Field(
+        default=None, description="Additional metadata"
+    )
 
 
 @dataclass(frozen=True, slots=True)

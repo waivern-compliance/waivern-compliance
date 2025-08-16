@@ -1,6 +1,6 @@
 """Personal data analyser module."""
 
 from .analyser import PersonalDataAnalyser
-from .types import PersonalDataFinding, PersonalDataPattern
+from .types import PersonalDataFindingModel
 
-__all__ = ["PersonalDataAnalyser", "PersonalDataFinding", "PersonalDataPattern"]
+__all__ = ["PersonalDataAnalyser", "PersonalDataFindingModel"]

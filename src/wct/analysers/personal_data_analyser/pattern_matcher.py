@@ -4,7 +4,7 @@ from typing import Any
 
 from wct.analysers.runners.types import PatternMatcherContext
 
-from .types import PersonalDataFinding
+from .types import PersonalDataFindingModel
 
 
 def personal_data_pattern_matcher(
@@ -12,7 +12,7 @@ def personal_data_pattern_matcher(
     pattern: str,
     rule_metadata: dict[str, Any],
     context: PatternMatcherContext,
-) -> PersonalDataFinding | None:
+) -> PersonalDataFindingModel | None:
     """Pattern matcher function for personal data analysis.
 
     This function defines how personal data patterns are matched and how
@@ -25,7 +25,7 @@ def personal_data_pattern_matcher(
         context: Strongly typed context with rule info, metadata, config, and utilities
 
     Returns:
-        PersonalDataFinding object or None if no finding should be created
+        PersonalDataFindingModel object or None if no finding should be created
 
     """
     # Access typed context fields directly
@@ -49,8 +49,8 @@ def personal_data_pattern_matcher(
     # Pass metadata as-is since source is guaranteed by schema
     finding_metadata = metadata.copy() if metadata else {}
 
-    # Create personal data specific finding object
-    return PersonalDataFinding(
+    # Create personal data specific finding object using Pydantic model
+    return PersonalDataFindingModel(
         type=rule_name,
         risk_level=context.risk_level,
         special_category=rule_metadata.get(
