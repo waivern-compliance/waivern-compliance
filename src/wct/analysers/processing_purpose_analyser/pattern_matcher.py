@@ -40,7 +40,7 @@ def processing_purpose_pattern_matcher(
         return None
 
     # Get configuration specific to processing purpose analysis
-    max_evidence = config.max_evidence
+    max_evidence = config.maximum_evidence_count
     evidence_context_size = config.evidence_context_size
 
     # Extract evidence snippets

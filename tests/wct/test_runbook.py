@@ -1,340 +1,425 @@
-"""Tests for Runbook implementation classes (not schema validation).
+"""Tests for runbook functionality.
 
-These tests focus on the business logic and public API of Runbook dataclasses.
-They do NOT test validation logic, which is handled by RunbookSchema tests.
+These tests focus on:
+- File loading, parsing, and error handling (RunbookLoader)
+- Custom business logic validation (duplicate names, cross-references)
+- Summary generation and integration scenarios
 
-Note: Some tests use empty collections to test dataclass behavior in isolation.
-In production, the RunbookSchema JSON schema enforces minItems: 1 for all
-arrays, so empty collections cannot occur at runtime through normal loading.
+Note: Basic Pydantic field validation (required fields, patterns, etc.) is not tested
+as that would be testing third-party functionality rather than our business logic.
 """
 
-import dataclasses
+import tempfile
+from pathlib import Path
 
-from wct.analysers.base import AnalyserConfig
-from wct.connectors.base import ConnectorConfig
-from wct.runbook import ExecutionStep, Runbook, RunbookSummary
+import pytest
+from pydantic import ValidationError
+
+from wct.runbook import (
+    RunbookLoader,
+    RunbookLoadError,
+    RunbookModel,
+    RunbookSummaryModel,
+    RunbookValidationError,
+)
 
 
-class TestRunbookSummary:
-    """Tests for RunbookSummary dataclass."""
+class TestRunbookLoader:
+    """Tests for RunbookLoader class."""
+
+    def test_load_nonexistent_file(self) -> None:
+        """Test loading a non-existent file raises RunbookLoadError."""
+        with pytest.raises(RunbookLoadError, match="Cannot read file"):
+            RunbookLoader.load(Path("/nonexistent/file.yaml"))
+
+    def test_load_invalid_yaml(self) -> None:
+        """Test loading invalid YAML raises RunbookLoadError."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write("invalid: yaml: content:")
+            invalid_path = Path(f.name)
+
+        try:
+            with pytest.raises(RunbookLoadError, match="Invalid YAML"):
+                RunbookLoader.load(invalid_path)
+        finally:
+            invalid_path.unlink()
+
+    def test_load_invalid_runbook_structure(self) -> None:
+        """Test loading runbook with invalid structure raises RunbookValidationError."""
+        invalid_runbook = """
+name: Invalid Runbook
+description: Missing required fields
+connectors: []
+"""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(invalid_runbook)
+            invalid_path = Path(f.name)
+
+        try:
+            with pytest.raises(
+                RunbookValidationError, match="Runbook validation failed"
+            ):
+                RunbookLoader.load(invalid_path)
+        finally:
+            invalid_path.unlink()
+
+    def test_load_valid_runbook(self) -> None:
+        """Test loading a valid runbook succeeds."""
+        valid_runbook = """
+name: Valid Test Runbook
+description: A valid runbook for testing
+connectors:
+  - name: test_connector
+    type: filesystem
+    properties:
+      path: ./test
+analysers:
+  - name: test_analyser
+    type: personal_data_analyser
+    properties:
+      pattern_matching:
+        ruleset: personal_data
+execution:
+  - connector: test_connector
+    analyser: test_analyser
+    input_schema_name: standard_input
+    output_schema_name: personal_data_finding
+"""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(valid_runbook)
+            valid_path = Path(f.name)
+
+        try:
+            runbook = RunbookLoader.load(valid_path)
+            assert runbook.name == "Valid Test Runbook"
+            assert len(runbook.connectors) == 1
+            assert len(runbook.analysers) == 1
+            assert len(runbook.execution) == 1
+        finally:
+            valid_path.unlink()
+
+    def test_load_runbook_with_duplicate_names(self) -> None:
+        """Test loading runbook with duplicate connector/analyser names fails."""
+        duplicate_runbook = """
+name: Duplicate Names Test
+description: Test duplicate validation
+connectors:
+  - name: duplicate_name
+    type: filesystem
+    properties: {}
+  - name: duplicate_name
+    type: mysql
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: personal_data_analyser
+    properties: {}
+execution:
+  - connector: duplicate_name
+    analyser: test_analyser
+    input_schema_name: standard_input
+    output_schema_name: personal_data_finding
+"""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(duplicate_runbook)
+            duplicate_path = Path(f.name)
+
+        try:
+            with pytest.raises(
+                RunbookValidationError, match="Duplicate connector names"
+            ):
+                RunbookLoader.load(duplicate_path)
+        finally:
+            duplicate_path.unlink()
+
+
+class TestRunbookValidation:
+    """Tests for custom runbook validation logic (not basic Pydantic validation)."""
+
+    def test_runbook_duplicate_connector_names(self) -> None:
+        """Test that duplicate connector names are rejected."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "duplicate_name", "type": "filesystem", "properties": {}},
+                {"name": "duplicate_name", "type": "mysql", "properties": {}},
+            ],
+            "analysers": [
+                {
+                    "name": "test_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "connector": "duplicate_name",
+                    "analyser": "test_analyser",
+                    "input_schema_name": "standard_input",
+                    "output_schema_name": "personal_data_finding",
+                }
+            ],
+        }
+
+        with pytest.raises(ValidationError) as exc_info:
+            RunbookModel.model_validate(runbook_data)
+
+        errors = exc_info.value.errors()
+        assert any("Duplicate connector names" in error["msg"] for error in errors)
+
+    def test_runbook_duplicate_analyser_names(self) -> None:
+        """Test that duplicate analyser names are rejected."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "test_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "duplicate_name",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                },
+                {
+                    "name": "duplicate_name",
+                    "type": "processing_purpose_analyser",
+                    "properties": {},
+                },
+            ],
+            "execution": [
+                {
+                    "connector": "test_connector",
+                    "analyser": "duplicate_name",
+                    "input_schema_name": "standard_input",
+                    "output_schema_name": "personal_data_finding",
+                }
+            ],
+        }
+
+        with pytest.raises(ValidationError) as exc_info:
+            RunbookModel.model_validate(runbook_data)
+
+        errors = exc_info.value.errors()
+        assert any("Duplicate analyser names" in error["msg"] for error in errors)
+
+    def test_runbook_invalid_connector_reference(self) -> None:
+        """Test that invalid connector references in execution are rejected."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "existing_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "test_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "connector": "nonexistent_connector",
+                    "analyser": "test_analyser",
+                    "input_schema_name": "standard_input",
+                    "output_schema_name": "personal_data_finding",
+                }
+            ],
+        }
+
+        with pytest.raises(ValidationError) as exc_info:
+            RunbookModel.model_validate(runbook_data)
+
+        errors = exc_info.value.errors()
+        assert any("unknown connector" in error["msg"] for error in errors)
+
+    def test_runbook_invalid_analyser_reference(self) -> None:
+        """Test that invalid analyser references in execution are rejected."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "test_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "existing_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "connector": "test_connector",
+                    "analyser": "nonexistent_analyser",
+                    "input_schema_name": "standard_input",
+                    "output_schema_name": "personal_data_finding",
+                }
+            ],
+        }
+
+        with pytest.raises(ValidationError) as exc_info:
+            RunbookModel.model_validate(runbook_data)
+
+        errors = exc_info.value.errors()
+        assert any("unknown analyser" in error["msg"] for error in errors)
+
+
+class TestRunbookSummaryModel:
+    """Tests for RunbookSummaryModel business logic."""
 
     def test_runbook_summary_creation(self) -> None:
-        """Test RunbookSummary can be created with valid data."""
-        summary = RunbookSummary(
-            name="Test Runbook",
-            description="Test description",
-            connector_count=2,
-            analyser_count=3,
-            execution_steps=4,
-            connector_types=["mysql", "filesystem"],
-            analyser_types=["personal_data", "processing_purpose"],
-        )
+        """Test creating runbook summary from runbook model."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A comprehensive test runbook",
+            "connectors": [
+                {"name": "conn1", "type": "filesystem", "properties": {}},
+                {"name": "conn2", "type": "mysql", "properties": {}},
+            ],
+            "analysers": [
+                {"name": "anal1", "type": "personal_data_analyser", "properties": {}},
+                {
+                    "name": "anal2",
+                    "type": "processing_purpose_analyser",
+                    "properties": {},
+                },
+                {"name": "anal3", "type": "personal_data_analyser", "properties": {}},
+            ],
+            "execution": [
+                {
+                    "connector": "conn1",
+                    "analyser": "anal1",
+                    "input_schema_name": "input",
+                    "output_schema_name": "output1",
+                },
+                {
+                    "connector": "conn2",
+                    "analyser": "anal2",
+                    "input_schema_name": "input",
+                    "output_schema_name": "output2",
+                },
+            ],
+        }
+
+        runbook = RunbookModel.model_validate(runbook_data)
+        summary = RunbookSummaryModel.from_runbook(runbook)
 
         assert summary.name == "Test Runbook"
-        assert summary.description == "Test description"
+        assert summary.description == "A comprehensive test runbook"
         assert summary.connector_count == 2
-        assert summary.analyser_count == 3.0
-        assert summary.execution_steps == 4
-        assert summary.connector_types == ["mysql", "filesystem"]
-        assert summary.analyser_types == ["personal_data", "processing_purpose"]
-
-    def test_runbook_summary_immutability(self) -> None:
-        """Test RunbookSummary is frozen (immutable)."""
-        summary = RunbookSummary(
-            name="Test",
-            description="Test",
-            connector_count=1,
-            analyser_count=1,
-            execution_steps=1,
-            connector_types=["test"],
-            analyser_types=["test"],
-        )
-
-        # Should be frozen dataclass
-        assert dataclasses.is_dataclass(summary)
-        # Attempting to modify should raise an error (frozen=True)
-        try:
-            summary.name = "Modified"  # type: ignore
-            assert False, "Expected frozen dataclass to prevent modification"
-        except (dataclasses.FrozenInstanceError, AttributeError):
-            pass  # Expected behavior
+        assert summary.analyser_count == 3
+        assert summary.execution_steps == 2
+        assert set(summary.connector_types) == {"filesystem", "mysql"}
+        assert set(summary.analyser_types) == {
+            "personal_data_analyser",
+            "processing_purpose_analyser",
+        }
 
 
-class TestExecutionStep:
-    """Tests for ExecutionStep dataclass."""
+class TestRunbookIntegration:
+    """Integration tests with realistic runbook structures."""
 
-    def test_execution_step_creation_with_defaults(self) -> None:
-        """Test ExecutionStep creation with default context."""
-        step = ExecutionStep(
-            connector="test_connector",
-            analyser="test_analyser",
-            input_schema_name="standard_input",
-            output_schema_name="personal_data_finding",
-        )
+    def test_validation_with_sample_runbook_structure(self) -> None:
+        """Test validation with structure similar to actual sample runbooks."""
+        runbook_data = {
+            "name": "Sample Integration Test",
+            "description": "Testing Pydantic validation with realistic data",
+            "connectors": [
+                {
+                    "name": "filesystem_connector",
+                    "type": "filesystem",
+                    "properties": {
+                        "path": "./data",
+                        "exclude_patterns": ["*.pyc", "__pycache__"],
+                        "max_files": 100,
+                    },
+                },
+                {
+                    "name": "database_connector",
+                    "type": "mysql",
+                    "properties": {
+                        "max_rows_per_table": 50,
+                    },
+                },
+            ],
+            "analysers": [
+                {
+                    "name": "personal_data_detector",
+                    "type": "personal_data_analyser",
+                    "properties": {
+                        "pattern_matching": {
+                            "ruleset": "personal_data",
+                            "evidence_context_size": "medium",
+                            "maximum_evidence_count": 3,
+                        },
+                        "llm_validation": {
+                            "enable_llm_validation": False,
+                            "llm_batch_size": 50,
+                            "llm_validation_mode": "standard",
+                        },
+                    },
+                    "metadata": {
+                        "priority": "high",
+                        "description": "Detects personal data patterns",
+                    },
+                },
+                {
+                    "name": "purpose_detector",
+                    "type": "processing_purpose_analyser",
+                    "properties": {
+                        "ruleset": "processing_purposes",
+                        "enable_llm_validation": True,
+                        "confidence_threshold": 0.7,
+                    },
+                    "metadata": {
+                        "priority": "medium",
+                        "compliance_frameworks": ["GDPR", "CCPA"],
+                    },
+                },
+            ],
+            "execution": [
+                {
+                    "connector": "filesystem_connector",
+                    "analyser": "personal_data_detector",
+                    "input_schema_name": "standard_input",
+                    "output_schema_name": "personal_data_finding",
+                    "context": {
+                        "description": "Analyze filesystem for personal data",
+                        "priority": "high",
+                    },
+                },
+                {
+                    "connector": "database_connector",
+                    "analyser": "purpose_detector",
+                    "input_schema_name": "standard_input",
+                    "output_schema_name": "processing_purpose_finding",
+                    "context": {
+                        "description": "Identify processing purposes in database",
+                        "compliance_frameworks": ["GDPR"],
+                    },
+                },
+            ],
+        }
 
-        assert step.connector == "test_connector"
-        assert step.analyser == "test_analyser"
-        assert step.input_schema_name == "standard_input"
-        assert step.output_schema_name == "personal_data_finding"
-        assert step.context == {}  # Default empty dict
+        # Should validate successfully
+        runbook = RunbookModel.model_validate(runbook_data)
 
-    def test_execution_step_creation_with_custom_context(self) -> None:
-        """Test ExecutionStep creation with custom context."""
-        custom_context = {"priority": "high", "timeout": 300}
-        step = ExecutionStep(
-            connector="test_connector",
-            analyser="test_analyser",
-            input_schema_name="standard_input",
-            output_schema_name="personal_data_finding",
-            context=custom_context,
-        )
-
-        assert step.context == custom_context
-
-    def test_execution_step_immutability(self) -> None:
-        """Test ExecutionStep is frozen (immutable)."""
-        step = ExecutionStep(
-            connector="test_connector",
-            analyser="test_analyser",
-            input_schema_name="standard_input",
-            output_schema_name="personal_data_finding",
-        )
-
-        # Should be frozen dataclass
-        assert dataclasses.is_dataclass(step)
-        # Attempting to modify should raise an error (frozen=True)
-        try:
-            step.connector = "modified"  # type: ignore
-            assert False, "Expected frozen dataclass to prevent modification"
-        except (dataclasses.FrozenInstanceError, AttributeError):
-            pass  # Expected behavior
-
-
-class TestRunbook:
-    """Tests for Runbook dataclass and its business logic."""
-
-    def test_runbook_creation(self) -> None:
-        """Test Runbook can be created with valid configuration data."""
-        connectors = [
-            ConnectorConfig(name="conn1", type="mysql", properties={}),
-            ConnectorConfig(name="conn2", type="filesystem", properties={}),
-        ]
-        analysers = [
-            AnalyserConfig(
-                name="anal1", type="personal_data", properties={}, metadata={}
-            ),
-            AnalyserConfig(
-                name="anal2", type="processing_purpose", properties={}, metadata={}
-            ),
-        ]
-        execution = [
-            ExecutionStep("conn1", "anal1", "standard_input", "personal_data_finding"),
-            ExecutionStep(
-                "conn2", "anal2", "source_code", "processing_purpose_finding"
-            ),
-        ]
-
-        runbook = Runbook(
-            name="Test Runbook",
-            description="Test runbook for validation",
-            connectors=connectors,
-            analysers=analysers,
-            execution=execution,
-        )
-
-        assert runbook.name == "Test Runbook"
-        assert runbook.description == "Test runbook for validation"
+        # Verify the structure is preserved
+        assert runbook.name == "Sample Integration Test"
         assert len(runbook.connectors) == 2
         assert len(runbook.analysers) == 2
         assert len(runbook.execution) == 2
 
-    def test_runbook_immutability(self) -> None:
-        """Test Runbook is frozen (immutable).
+        # Verify nested properties are preserved
+        fs_connector = runbook.connectors[0]
+        assert fs_connector.properties["exclude_patterns"] == ["*.pyc", "__pycache__"]
 
-        Note: Uses minimal valid configuration. In production, schema validation
-        requires at least 1 connector, analyser, and execution step.
-        """
-        # Use minimal valid configuration (1 item each, as schema requires)
-        connectors = [
-            ConnectorConfig(name="test_conn", type="filesystem", properties={})
-        ]
-        analysers = [
-            AnalyserConfig(
-                name="test_anal", type="personal_data", properties={}, metadata={}
-            )
-        ]
-        execution = [
-            ExecutionStep(
-                "test_conn", "test_anal", "standard_input", "personal_data_finding"
-            )
-        ]
-
-        runbook = Runbook(
-            name="Test",
-            description="Test",
-            connectors=connectors,
-            analysers=analysers,
-            execution=execution,
-        )
-
-        # Should be frozen dataclass
-        assert dataclasses.is_dataclass(runbook)
-        # Attempting to modify should raise an error (frozen=True)
-        try:
-            runbook.name = "Modified"  # type: ignore
-            assert False, "Expected frozen dataclass to prevent modification"
-        except (dataclasses.FrozenInstanceError, AttributeError):
-            pass  # Expected behavior
-
-    def test_get_summary_basic_stats(self) -> None:
-        """Test get_summary returns correct basic statistics."""
-        connectors = [
-            ConnectorConfig(name="conn1", type="mysql", properties={}),
-            ConnectorConfig(name="conn2", type="filesystem", properties={}),
-        ]
-        analysers = [
-            AnalyserConfig(
-                name="anal1", type="personal_data", properties={}, metadata={}
-            ),
-            AnalyserConfig(
-                name="anal2", type="processing_purpose", properties={}, metadata={}
-            ),
-            AnalyserConfig(
-                name="anal3", type="personal_data", properties={}, metadata={}
-            ),
-        ]
-        execution = [
-            ExecutionStep("conn1", "anal1", "standard_input", "personal_data_finding"),
-            ExecutionStep(
-                "conn2", "anal2", "source_code", "processing_purpose_finding"
-            ),
-        ]
-
-        runbook = Runbook(
-            name="Test Runbook",
-            description="A comprehensive test runbook",
-            connectors=connectors,
-            analysers=analysers,
-            execution=execution,
-        )
-
-        summary = runbook.get_summary()
-
-        # Test basic properties
-        assert summary.name == "Test Runbook"
-        assert summary.description == "A comprehensive test runbook"
-
-        # Test counts
-        assert summary.connector_count == 2
-        assert summary.analyser_count == 3
-        assert summary.execution_steps == 2
-
-    def test_get_summary_type_deduplication(self) -> None:
-        """Test get_summary correctly deduplicates connector and analyser types."""
-        # Create multiple connectors of same types
-        connectors = [
-            ConnectorConfig(name="mysql1", type="mysql", properties={}),
-            ConnectorConfig(
-                name="mysql2", type="mysql", properties={}
-            ),  # Duplicate type
-            ConnectorConfig(name="fs1", type="filesystem", properties={}),
-            ConnectorConfig(
-                name="fs2", type="filesystem", properties={}
-            ),  # Duplicate type
-        ]
-
-        # Create multiple analysers of same types
-        analysers = [
-            AnalyserConfig(
-                name="pd1", type="personal_data", properties={}, metadata={}
-            ),
-            AnalyserConfig(
-                name="pd2", type="personal_data", properties={}, metadata={}
-            ),  # Duplicate type
-            AnalyserConfig(
-                name="pp1", type="processing_purpose", properties={}, metadata={}
-            ),
-        ]
-
-        execution = [
-            ExecutionStep("mysql1", "pd1", "standard_input", "personal_data_finding")
-        ]
-
-        runbook = Runbook(
-            name="Deduplication Test",
-            description="Test type deduplication",
-            connectors=connectors,
-            analysers=analysers,
-            execution=execution,
-        )
-
-        summary = runbook.get_summary()
-
-        # Should deduplicate types but preserve order (using list conversion from set)
-        connector_types = summary.connector_types
-        analyser_types = summary.analyser_types
-
-        # Check that duplicates are removed
-        assert len(connector_types) == 2  # mysql, filesystem (deduplicated)
+        personal_data_analyser = runbook.analysers[0]
         assert (
-            len(analyser_types) == 2
-        )  # personal_data, processing_purpose (deduplicated)
-
-        # Check that all unique types are present
-        assert set(connector_types) == {"mysql", "filesystem"}
-        assert set(analyser_types) == {"personal_data", "processing_purpose"}
-
-    def test_get_summary_empty_collections(self) -> None:
-        """Test get_summary handles empty collections (theoretical edge case).
-
-        IMPORTANT: This tests dataclass behavior in isolation. In production,
-        the RunbookSchema JSON schema enforces minItems: 1, so empty collections
-        cannot occur through normal runbook loading. This test verifies the
-        get_summary() method's robustness in pure unit testing scenarios.
-        """
-        runbook = Runbook(
-            name="Empty Runbook",
-            description="Runbook with no components",
-            connectors=[],
-            analysers=[],
-            execution=[],
+            personal_data_analyser.properties["pattern_matching"]["ruleset"]
+            == "personal_data"
         )
-
-        summary = runbook.get_summary()
-
-        assert summary.name == "Empty Runbook"
-        assert summary.description == "Runbook with no components"
-        assert summary.connector_count == 0
-        assert summary.analyser_count == 0
-        assert summary.execution_steps == 0
-        assert summary.connector_types == []
-        assert summary.analyser_types == []
-
-    def test_get_summary_returns_runbook_summary_instance(self) -> None:
-        """Test get_summary returns proper RunbookSummary instance."""
-        # Use minimal schema-compliant configuration
-        connectors = [
-            ConnectorConfig(name="test_conn", type="filesystem", properties={})
-        ]
-        analysers = [
-            AnalyserConfig(
-                name="test_anal", type="personal_data", properties={}, metadata={}
-            )
-        ]
-        execution = [
-            ExecutionStep(
-                "test_conn", "test_anal", "standard_input", "personal_data_finding"
-            )
-        ]
-
-        runbook = Runbook(
-            name="Test",
-            description="Test",
-            connectors=connectors,
-            analysers=analysers,
-            execution=execution,
-        )
-
-        summary = runbook.get_summary()
-        assert isinstance(summary, RunbookSummary)
-        assert dataclasses.is_dataclass(summary)
+        assert personal_data_analyser.metadata["priority"] == "high"

@@ -18,19 +18,19 @@ These schemas define the structure of data as it moves through the WCT analysis 
 
 **Purpose**: Ensure type-safe data exchange between system components during runtime analysis.
 
-### ⚙️ **Configuration Schemas**
+### ⚙️ **Configuration Validation**
 *Validate configuration files and system setup*
 
-These schemas define the structure of configuration files that set up and orchestrate WCT:
+Runbook configuration validation is handled by Pydantic models in the runbook module:
 
-- **`RunbookSchema`** - YAML runbook configuration files that define analysis pipelines
+- **`RunbookModel`** - YAML runbook configuration files that define analysis pipelines
 
 **Purpose**: Validate configuration files at load time to ensure proper system setup before execution.
 
 ## Key Differences
 
-| Aspect | Data Flow Schemas | Configuration Schemas |
-|--------|-------------------|----------------------|
+| Aspect | Data Flow Schemas | Configuration Validation |
+|--------|-------------------|-------------------------|
 | **Validates** | Runtime data between components | Configuration files (YAML/JSON) |
 | **Used by** | Connectors, Analysers, Message system | RunbookLoader, CLI validation |
 | **When** | During analysis execution | At system startup/configuration load |
@@ -51,17 +51,12 @@ src/wct/schemas/
 ├── personal_data_finding.py    # Personal data analysis results
 ├── processing_purpose_finding.py # Processing purpose analysis results
 ├──
-├── # Configuration Schema Classes
-├── runbook.py                  # Runbook configuration validation
-├──
 └── json_schemas/               # Versioned JSON Schema definitions
     ├── standard_input/1.0.0/
     ├── source_code/1.0.0/
     ├── personal_data_finding/1.0.0/
-    ├── processing_purpose_finding/1.0.0/
-    └── runbook/1.0.0/
-        ├── runbook.json        # JSON Schema for runbook validation
-        └── runbook.sample.yaml # Example runbook configuration
+    └── processing_purpose_finding/1.0.0/
+        # Note: Runbook validation uses Pydantic models (see runbook module)
 ```
 
 ## Schema Versioning
@@ -106,7 +101,7 @@ from wct.runbook import RunbookLoader
 
 # Load and validate runbook configuration
 runbook = RunbookLoader.load(Path("runbooks/analysis.yaml"))
-# RunbookSchema automatically validates structure, required fields,
+# RunbookModel (Pydantic) automatically validates structure, required fields,
 # connector/analyser configurations, and execution steps
 ```
 
@@ -122,8 +117,8 @@ runbook = RunbookLoader.load(Path("runbooks/analysis.yaml"))
 
 ### For Configuration Schemas:
 
-1. **Create schema class** following `RunbookSchema` pattern
-2. **Add JSON Schema file** with validation rules for the configuration format
+1. **Create schema class** following existing data flow schema patterns
+2. **Add JSON Schema file** with validation rules for the data format
 3. **Create sample file** showing proper configuration structure
 4. **Integrate with loading/parsing logic** in the relevant system component
 5. **Add tests** covering both schema validation and integration

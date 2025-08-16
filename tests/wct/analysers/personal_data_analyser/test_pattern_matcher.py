@@ -7,10 +7,10 @@ import pytest
 from wct.analysers.personal_data_analyser.pattern_matcher import (
     personal_data_pattern_matcher,
 )
-from wct.analysers.personal_data_analyser.types import PersonalDataFinding
+from wct.analysers.personal_data_analyser.types import PersonalDataFindingModel
 from wct.analysers.runners.types import (
     PatternMatcherContext,
-    PatternMatchingRunnerConfig,
+    PatternMatchingConfig,
 )
 from wct.analysers.utilities import EvidenceExtractor
 
@@ -24,9 +24,9 @@ class TestPersonalDataPatternMatcher:
         return EvidenceExtractor()
 
     @pytest.fixture
-    def pattern_config(self) -> PatternMatchingRunnerConfig:
+    def pattern_config(self) -> PatternMatchingConfig:
         """Create standard pattern matching configuration for testing."""
-        return PatternMatchingRunnerConfig(
+        return PatternMatchingConfig(
             ruleset_name="personal_data",
             maximum_evidence_count=3,
             evidence_context_size="small",
@@ -36,7 +36,7 @@ class TestPersonalDataPatternMatcher:
     def basic_context(
         self,
         evidence_extractor: EvidenceExtractor,
-        pattern_config: PatternMatchingRunnerConfig,
+        pattern_config: PatternMatchingConfig,
     ) -> PatternMatcherContext:
         """Create basic pattern matcher context for testing."""
         return PatternMatcherContext(
@@ -51,7 +51,7 @@ class TestPersonalDataPatternMatcher:
     def test_creates_finding_when_evidence_found(
         self, basic_context: PatternMatcherContext
     ) -> None:
-        """Test that a PersonalDataFinding is created when evidence is found."""
+        """Test that a PersonalDataFindingModel is created when evidence is found."""
         # Arrange
         content = "Contact us at support@example.com for assistance"
         pattern = "support@example.com"
@@ -64,7 +64,7 @@ class TestPersonalDataPatternMatcher:
 
         # Assert
         assert result is not None
-        assert isinstance(result, PersonalDataFinding)
+        assert isinstance(result, PersonalDataFindingModel)
         assert result.type == "email"
         assert result.risk_level == "medium"
         assert result.special_category == "N"
@@ -113,10 +113,10 @@ class TestPersonalDataPatternMatcher:
     ) -> None:
         """Test that configuration values are used correctly."""
         # Arrange
-        config = PatternMatchingRunnerConfig(
-            ruleset_name="test_ruleset",
+        config = PatternMatchingConfig(
+            ruleset="test_ruleset",
             maximum_evidence_count=2,  # Limit to 2 pieces of evidence
-            evidence_context_size="large",
+            evidence_context_size="long",
         )
         context = PatternMatcherContext(
             rule_name="phone",
@@ -201,7 +201,7 @@ class TestPersonalDataPatternMatcher:
     def test_handles_empty_metadata_gracefully(
         self,
         evidence_extractor: EvidenceExtractor,
-        pattern_config: PatternMatchingRunnerConfig,
+        pattern_config: PatternMatchingConfig,
     ) -> None:
         """Test that empty metadata is handled gracefully."""
         # Arrange
@@ -316,7 +316,7 @@ class TestPersonalDataPatternMatcher:
         risk_level: str,
         rule_description: str,
         evidence_extractor: EvidenceExtractor,
-        pattern_config: PatternMatchingRunnerConfig,
+        pattern_config: PatternMatchingConfig,
     ) -> None:
         """Test that different risk levels are preserved correctly."""
         # Arrange

@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any
 
-from wct.analysers.runners.types import LLMAnalysisRunnerConfig
+from wct.analysers.runners.types import LLMValidationConfig
 from wct.llm_service import AnthropicLLMService
 from wct.prompts.personal_data_validation import (
     RecommendedAction,
@@ -13,7 +13,7 @@ from wct.prompts.personal_data_validation import (
     get_batch_validation_prompt,
 )
 
-from .types import PersonalDataFinding
+from .types import PersonalDataFindingModel
 
 logger = logging.getLogger(__name__)
 
@@ -25,22 +25,22 @@ _EMPTY_PROMPT_CONTENT = ""
 
 
 def personal_data_validation_strategy(
-    findings: list[PersonalDataFinding],
-    config: LLMAnalysisRunnerConfig,
+    findings: list[PersonalDataFindingModel],
+    config: LLMValidationConfig,
     llm_service: AnthropicLLMService,
-) -> list[PersonalDataFinding]:
+) -> list[PersonalDataFindingModel]:
     """LLM validation strategy for personal data findings.
 
     This strategy validates personal data findings using LLM to filter false positives.
     It processes findings in batches and uses specialized prompts for personal data validation.
 
     Args:
-        findings: List of typed PersonalDataFinding objects to validate
+        findings: List of typed PersonalDataFindingModel objects to validate
         config: Configuration including batch_size, validation_mode, etc.
         llm_service: LLM service instance
 
     Returns:
-        List of validated PersonalDataFinding objects with false positives removed
+        List of validated PersonalDataFindingModel objects with false positives removed
 
     """
     if not findings:
@@ -60,23 +60,23 @@ def personal_data_validation_strategy(
 
 
 def _process_findings_in_batches(
-    finding_objects: list[PersonalDataFinding],
-    config: LLMAnalysisRunnerConfig,
+    finding_objects: list[PersonalDataFindingModel],
+    config: LLMValidationConfig,
     llm_service: AnthropicLLMService,
-) -> list[PersonalDataFinding]:
+) -> list[PersonalDataFindingModel]:
     """Process findings in batches for LLM validation.
 
     Args:
-        finding_objects: List of PersonalDataFinding objects to validate
+        finding_objects: List of PersonalDataFindingModel objects to validate
         config: LLM analysis runner configuration
         llm_service: LLM service instance
 
     Returns:
-        List of validated PersonalDataFinding objects
+        List of validated PersonalDataFindingModel objects
 
     """
     batch_size = config.llm_batch_size
-    validated_finding_objects: list[PersonalDataFinding] = []
+    validated_finding_objects: list[PersonalDataFindingModel] = []
 
     for i in range(0, len(finding_objects), batch_size):
         batch = finding_objects[i : i + batch_size]
@@ -87,9 +87,9 @@ def _process_findings_in_batches(
 
 
 def _convert_findings_for_prompt(
-    findings_batch: list[PersonalDataFinding],
+    findings_batch: list[PersonalDataFindingModel],
 ) -> list[dict[str, Any]]:
-    """Convert PersonalDataFinding objects to format expected by validation prompt.
+    """Convert PersonalDataFindingModel objects to format expected by validation prompt.
 
     Args:
         findings_batch: Batch of findings to convert
@@ -116,7 +116,7 @@ def _convert_findings_for_prompt(
 def _should_keep_finding(
     validation_result: str | None,
     action: str,
-    finding: PersonalDataFinding,
+    finding: PersonalDataFindingModel,
     confidence: float,
     reasoning: str,
 ) -> bool:
@@ -156,10 +156,10 @@ def _should_keep_finding(
 
 
 def _validate_findings_batch(
-    findings_batch: list[PersonalDataFinding],
-    config: LLMAnalysisRunnerConfig,
+    findings_batch: list[PersonalDataFindingModel],
+    config: LLMValidationConfig,
     llm_service: AnthropicLLMService,
-) -> list[PersonalDataFinding]:
+) -> list[PersonalDataFindingModel]:
     """Validate a batch of personal data findings using LLM.
 
     Args:
@@ -198,9 +198,9 @@ def _validate_findings_batch(
 
 
 def _filter_findings_by_validation_results(
-    findings_batch: list[PersonalDataFinding],
+    findings_batch: list[PersonalDataFindingModel],
     validation_results: list[dict[str, Any]],
-) -> list[PersonalDataFinding]:
+) -> list[PersonalDataFindingModel]:
     """Filter findings based on LLM validation results.
 
     Args:
@@ -211,7 +211,7 @@ def _filter_findings_by_validation_results(
         List of validated findings that should be kept
 
     """
-    validated_findings: list[PersonalDataFinding] = []
+    validated_findings: list[PersonalDataFindingModel] = []
 
     for i, result in enumerate(validation_results):
         if i >= len(findings_batch):

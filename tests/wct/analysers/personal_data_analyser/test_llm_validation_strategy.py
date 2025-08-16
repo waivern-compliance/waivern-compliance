@@ -8,8 +8,8 @@ import pytest
 from wct.analysers.personal_data_analyser.llm_validation_strategy import (
     personal_data_validation_strategy,
 )
-from wct.analysers.personal_data_analyser.types import PersonalDataFinding
-from wct.analysers.runners.types import LLMAnalysisRunnerConfig
+from wct.analysers.personal_data_analyser.types import PersonalDataFindingModel
+from wct.analysers.runners.types import LLMValidationConfig
 from wct.llm_service import AnthropicLLMService
 
 
@@ -17,9 +17,9 @@ class TestPersonalDataValidationStrategy:
     """Test suite for personal data validation strategy function."""
 
     @pytest.fixture
-    def llm_config(self) -> LLMAnalysisRunnerConfig:
+    def llm_config(self) -> LLMValidationConfig:
         """Create standard LLM configuration for testing."""
-        return LLMAnalysisRunnerConfig(
+        return LLMValidationConfig(
             enable_llm_validation=True,
             llm_batch_size=2,
             llm_validation_mode="standard",
@@ -31,10 +31,10 @@ class TestPersonalDataValidationStrategy:
         return Mock(spec=AnthropicLLMService)
 
     @pytest.fixture
-    def sample_findings(self) -> list[PersonalDataFinding]:
+    def sample_findings(self) -> list[PersonalDataFindingModel]:
         """Create sample findings for testing."""
         return [
-            PersonalDataFinding(
+            PersonalDataFindingModel(
                 type="email",
                 risk_level="medium",
                 special_category="N",
@@ -42,7 +42,7 @@ class TestPersonalDataValidationStrategy:
                 evidence=["Contact us at test@example.com"],
                 metadata={"source": "contact_form.php"},
             ),
-            PersonalDataFinding(
+            PersonalDataFindingModel(
                 type="phone",
                 risk_level="high",
                 special_category="N",
@@ -53,11 +53,11 @@ class TestPersonalDataValidationStrategy:
         ]
 
     def test_returns_empty_list_when_no_findings_provided(
-        self, llm_config: LLMAnalysisRunnerConfig, mock_llm_service: Mock
+        self, llm_config: LLMValidationConfig, mock_llm_service: Mock
     ) -> None:
         """Test that empty list is returned when no findings are provided."""
         # Arrange
-        findings: list[PersonalDataFinding] = []
+        findings: list[PersonalDataFindingModel] = []
 
         # Act
         result = personal_data_validation_strategy(
@@ -70,8 +70,8 @@ class TestPersonalDataValidationStrategy:
 
     def test_validates_findings_and_keeps_true_positives(
         self,
-        sample_findings: list[PersonalDataFinding],
-        llm_config: LLMAnalysisRunnerConfig,
+        sample_findings: list[PersonalDataFindingModel],
+        llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
         """Test that true positive findings are kept after validation."""
@@ -109,8 +109,8 @@ class TestPersonalDataValidationStrategy:
 
     def test_filters_out_false_positive_findings(
         self,
-        sample_findings: list[PersonalDataFinding],
-        llm_config: LLMAnalysisRunnerConfig,
+        sample_findings: list[PersonalDataFindingModel],
+        llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
         """Test that false positive findings are filtered out."""
@@ -145,12 +145,12 @@ class TestPersonalDataValidationStrategy:
         assert result[0].type == "phone"
 
     def test_handles_mixed_validation_results_correctly(
-        self, llm_config: LLMAnalysisRunnerConfig, mock_llm_service: Mock
+        self, llm_config: LLMValidationConfig, mock_llm_service: Mock
     ) -> None:
         """Test handling of mixed validation results across multiple findings."""
         # Arrange
         findings = [
-            PersonalDataFinding(
+            PersonalDataFindingModel(
                 type="email",
                 risk_level="low",
                 special_category="N",
@@ -158,7 +158,7 @@ class TestPersonalDataValidationStrategy:
                 evidence=["Email: admin@domain.com"],
                 metadata={"source": "config.txt"},
             ),
-            PersonalDataFinding(
+            PersonalDataFindingModel(
                 type="ssn",
                 risk_level="high",
                 special_category="Y",
@@ -166,7 +166,7 @@ class TestPersonalDataValidationStrategy:
                 evidence=["SSN: 123-45-6789"],
                 metadata={"source": "employee_records"},
             ),
-            PersonalDataFinding(
+            PersonalDataFindingModel(
                 type="email",
                 risk_level="medium",
                 special_category="N",
@@ -218,12 +218,12 @@ class TestPersonalDataValidationStrategy:
         assert result[1].type == "ssn"
 
     def test_processes_findings_in_configured_batches(
-        self, llm_config: LLMAnalysisRunnerConfig, mock_llm_service: Mock
+        self, llm_config: LLMValidationConfig, mock_llm_service: Mock
     ) -> None:
         """Test that findings are processed in batches according to configuration."""
         # Arrange
         findings = [
-            PersonalDataFinding(
+            PersonalDataFindingModel(
                 type="email",
                 risk_level="medium",
                 special_category="N",
@@ -301,8 +301,8 @@ class TestPersonalDataValidationStrategy:
 
     def test_handles_llm_service_errors_gracefully(
         self,
-        sample_findings: list[PersonalDataFinding],
-        llm_config: LLMAnalysisRunnerConfig,
+        sample_findings: list[PersonalDataFindingModel],
+        llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
         """Test graceful handling of LLM service errors."""
@@ -321,8 +321,8 @@ class TestPersonalDataValidationStrategy:
 
     def test_handles_malformed_llm_response_gracefully(
         self,
-        sample_findings: list[PersonalDataFinding],
-        llm_config: LLMAnalysisRunnerConfig,
+        sample_findings: list[PersonalDataFindingModel],
+        llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
         """Test graceful handling of malformed LLM responses."""
@@ -341,8 +341,8 @@ class TestPersonalDataValidationStrategy:
 
     def test_handles_incomplete_validation_results(
         self,
-        sample_findings: list[PersonalDataFinding],
-        llm_config: LLMAnalysisRunnerConfig,
+        sample_findings: list[PersonalDataFindingModel],
+        llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
         """Test handling of incomplete validation results from LLM."""
@@ -377,8 +377,8 @@ class TestPersonalDataValidationStrategy:
 
     def test_preserves_original_finding_objects(
         self,
-        sample_findings: list[PersonalDataFinding],
-        llm_config: LLMAnalysisRunnerConfig,
+        sample_findings: list[PersonalDataFindingModel],
+        llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
         """Test that original finding objects are preserved unchanged."""
@@ -421,8 +421,8 @@ class TestPersonalDataValidationStrategy:
 
     def test_handles_mismatched_result_count(
         self,
-        sample_findings: list[PersonalDataFinding],
-        llm_config: LLMAnalysisRunnerConfig,
+        sample_findings: list[PersonalDataFindingModel],
+        llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
         """Test handling when validation results count doesn't match findings count."""
@@ -452,12 +452,12 @@ class TestPersonalDataValidationStrategy:
         assert result[0].type == "email"
 
     def test_handles_various_batch_sizes(
-        self, llm_config: LLMAnalysisRunnerConfig, mock_llm_service: Mock
+        self, llm_config: LLMValidationConfig, mock_llm_service: Mock
     ) -> None:
         """Test handling of various batch sizes including edge cases."""
         # Arrange
         findings = [
-            PersonalDataFinding(
+            PersonalDataFindingModel(
                 type="email",
                 risk_level="medium",
                 special_category="N",
@@ -508,12 +508,12 @@ class TestPersonalDataValidationStrategy:
         assert mock_llm_service.analyse_data.call_count == 1  # Single batch
 
     def test_handles_single_finding_validation(
-        self, llm_config: LLMAnalysisRunnerConfig, mock_llm_service: Mock
+        self, llm_config: LLMValidationConfig, mock_llm_service: Mock
     ) -> None:
         """Test validation of a single finding."""
         # Arrange
         findings = [
-            PersonalDataFinding(
+            PersonalDataFindingModel(
                 type="credit_card",
                 risk_level="high",
                 special_category="N",
@@ -545,12 +545,12 @@ class TestPersonalDataValidationStrategy:
         assert len(result) == 0  # Discarded as false positive
 
     def test_validates_findings_with_complex_metadata(
-        self, llm_config: LLMAnalysisRunnerConfig, mock_llm_service: Mock
+        self, llm_config: LLMValidationConfig, mock_llm_service: Mock
     ) -> None:
         """Test validation of findings with complex metadata structures."""
         # Arrange
         findings = [
-            PersonalDataFinding(
+            PersonalDataFindingModel(
                 type="phone",
                 risk_level="medium",
                 special_category="N",
@@ -604,13 +604,13 @@ class TestPersonalDataValidationStrategy:
         self,
         batch_size: int,
         expected_calls: int,
-        llm_config: LLMAnalysisRunnerConfig,
+        llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
         """Test batch processing with various batch sizes."""
         # Arrange
         findings = [
-            PersonalDataFinding(
+            PersonalDataFindingModel(
                 type="email",
                 risk_level="medium",
                 special_category="N",

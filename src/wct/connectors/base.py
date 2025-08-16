@@ -1,14 +1,14 @@
-"""Base classes and configurations for WCT connectors.
+"""Base classes for WCT connectors.
 
 This module provides:
-- ConnectorConfig: Configuration dataclass for connectors in runbooks
 - Connector: Abstract base class for all WCT connectors
 - ConnectorError, ConnectorConfigError, ConnectorExtractionError: Exception classes
+
+Connector configuration is handled by ConnectorConfigModel in the runbook module.
 """
 
 import abc
 import logging
-from dataclasses import dataclass
 from typing import Any
 
 from typing_extensions import Self
@@ -18,15 +18,6 @@ from wct.message import Message
 from wct.schemas import Schema
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True, slots=True)
-class ConnectorConfig:
-    """Configuration for a connector in a runbook."""
-
-    name: str
-    type: str
-    properties: dict[str, Any]
 
 
 class Connector(abc.ABC):

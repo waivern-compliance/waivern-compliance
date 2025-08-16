@@ -2,22 +2,22 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 from typing_extensions import Self, override
 
 from wct.analysers.base import Analyser
 from wct.analysers.runners import (
     PatternMatchingAnalysisRunner,
-    PatternMatchingRunnerConfig,
 )
+from wct.analysers.runners.types import PatternMatchingConfig
 from wct.message import Message
 from wct.schemas import (
     ProcessingPurposeFindingSchema,
     Schema,
     SourceCodeDataModel,
     SourceCodeSchema,
-    StandardInputData,
+    StandardInputDataModel,
     StandardInputSchema,
     parse_data_model,
 )
@@ -83,19 +83,10 @@ class ProcessingPurposeAnalyser(Analyser):
             pattern_runner: Pattern matching runner (optional, will create default if None)
 
         """
-        super().__init__()  # Call Analyser.__init__ directly
-
-        # Store configuration
-        analysis_config = config or ProcessingPurposeAnalyserConfig()
-        self.config = {
-            "ruleset_name": analysis_config.ruleset_name,
-            "evidence_context_size": analysis_config.evidence_context_size,
-            "enable_llm_validation": analysis_config.enable_llm_validation,
-            "llm_batch_size": analysis_config.llm_batch_size,
-            "confidence_threshold": analysis_config.confidence_threshold,
-            "confidence": DEFAULT_FINDING_CONFIDENCE,  # Default confidence for all findings
-            "max_evidence": 3,  # Default max evidence count
-        }
+        # Store strongly-typed configuration (aligned with PersonalDataAnalyser)
+        self.config: ProcessingPurposeAnalyserConfig = (
+            config or ProcessingPurposeAnalyserConfig()
+        )
 
         # Initialise pattern runner with processing purpose specific strategy
         # Note: ProcessingPurpose doesn't use LLM validation in current implementation
@@ -184,7 +175,7 @@ class ProcessingPurposeAnalyser(Analyser):
                     [
                         f
                         for f in findings
-                        if f.get("confidence", 0) >= self.config["confidence_threshold"]
+                        if f.get("confidence", 0) >= self.config.confidence_threshold
                     ]
                 ),
                 "purposes_identified": len(set(f.get("purpose") for f in findings)),
@@ -193,10 +184,10 @@ class ProcessingPurposeAnalyser(Analyser):
 
         # Add analysis metadata
         result_data["analysis_metadata"] = {
-            "ruleset_used": self.config["ruleset_name"],
-            "llm_validation_enabled": self.config["enable_llm_validation"],
-            "confidence_threshold": self.config["confidence_threshold"],
-            "evidence_context_size": self.config["evidence_context_size"],
+            "ruleset_used": self.config.ruleset_name,
+            "llm_validation_enabled": self.config.enable_llm_validation,
+            "confidence_threshold": self.config.confidence_threshold,
+            "evidence_context_size": self.config.evidence_context_size,
         }
 
         output_message = Message(
@@ -227,14 +218,14 @@ class ProcessingPurposeAnalyser(Analyser):
         findings: list[dict[str, Any]] = []
 
         if "data" in data and isinstance(data["data"], list):
-            # Type narrowing: we know this is StandardInputData structure
-            standard_input_data = cast(StandardInputData, data)
+            # Validate and parse StandardInputData using Pydantic
+            standard_input_data = StandardInputDataModel.model_validate(data)
 
             # Process each data item in the array using the pattern runner
-            for data_item in standard_input_data["data"]:
-                # Get content and metadata (types guaranteed by StandardInputDataItem)
-                content = data_item["content"]
-                item_metadata = cast(dict[str, Any], data_item["metadata"])
+            for data_item in standard_input_data.data:
+                # Get content and metadata from Pydantic models
+                content = data_item.content
+                item_metadata = data_item.metadata.model_dump()
 
                 # Use pattern runner for analysis
                 item_findings = self.pattern_runner.run_analysis(
@@ -271,14 +262,10 @@ class ProcessingPurposeAnalyser(Analyser):
 
         return findings
 
-    def _get_pattern_matching_config(self) -> PatternMatchingRunnerConfig:
+    def _get_pattern_matching_config(self) -> PatternMatchingConfig:
         """Extract pattern matching configuration from the full config."""
-        return PatternMatchingRunnerConfig(
-            ruleset_name=str(self.config.get("ruleset_name", "processing_purposes")),
-            max_evidence=int(self.config.get("max_evidence", 3)),
-            maximum_evidence_count=int(self.config.get("maximum_evidence_count", 3)),
-            context_size=str(self.config.get("context_size", "medium")),
-            evidence_context_size=str(
-                self.config.get("evidence_context_size", "medium")
-            ),
+        return PatternMatchingConfig(
+            ruleset=self.config.ruleset_name,
+            maximum_evidence_count=3,  # Default max evidence count
+            evidence_context_size=self.config.evidence_context_size,
         )

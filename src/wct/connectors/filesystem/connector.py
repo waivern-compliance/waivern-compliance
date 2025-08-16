@@ -394,7 +394,7 @@ class FilesystemConnector(Connector):
         """Read file content efficiently for large files.
 
         Args:
-            file_path: Path to file to read. If None, uses self.path (for backward compatibility)
+            file_path: Path to file to read. If None, uses self.path
 
         """
         target_path = file_path or self.path

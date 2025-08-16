@@ -599,9 +599,7 @@ execution: []
 """
 
         # Should raise ExecutorError due to schema validation failure
-        with pytest.raises(
-            ExecutorError, match="Failed to load runbook.*should be non-empty"
-        ):
+        with pytest.raises(ExecutorError, match="List should have at least 1 item"):
             self._execute_runbook_yaml(executor, runbook_content)
 
     def test_execute_runbook_generic_exception_handling(self) -> None:

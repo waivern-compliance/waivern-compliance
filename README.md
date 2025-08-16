@@ -11,7 +11,7 @@ WCT provides a flexible architecture for compliance analysis through:
 - **Rulesets**: Define reusable compliance rules and checks
 - **Executor**: Manages the execution pipeline and data flow
 
-The system is designed to be extensible and configurable through YAML runbook files with a comprehensive JSON Schema-based validation system that ensures type safety and component interoperability.
+The system is designed to be extensible and configurable through YAML runbook files with comprehensive validation that ensures type safety and component interoperability.
 
 📋 **[Development Roadmap](docs/development_roadmap.md)** - See our current progress and planned features
 
@@ -45,7 +45,7 @@ uv run pre-commit install
 - `dev` - Development tools (pytest, ruff, basedpyright, etc.)
 
 **Core Dependencies**:
-- `jsonschema` - JSON schema validation for comprehensive data validation
+- `jsonschema` - Data validation for component interoperability
 - `langchain` and `langchain-anthropic` - AI-powered compliance analysis and validation
 
 Some connectors and analysers require additional dependencies that are not installed by default. Check the connector/analyser documentation or error messages for specific dependency group requirements.
@@ -136,10 +136,10 @@ execution:
 ```
 
 **Key Features**:
-- **Comprehensive schema validation**: Automatic input and output validation against JSON schemas
+- **Comprehensive validation**: Automatic input and output validation with clear error messages
 - **Explicit connector-analyser mapping**: Clear data flow specification in execution steps
 - **Dynamic schema loading**: Flexible schema file discovery with multiple search paths
-- **End-to-end validation**: Full pipeline validation from data extraction to analysis results
+- **End-to-end validation**: Full pipeline validation from runbook loading to analysis results
 - **Optional dependencies**: MySQL connector requires `uv sync --group mysql`, source code connector requires `uv sync --group source-code`
 
 
@@ -147,30 +147,32 @@ execution:
 
 For a comprehensive understanding of the core concepts and design principles that underpin WCT, see **[WCF Core Concepts](docs/wcf_core_concepts.md)**.
 
-### Schema-Based Validation System
+### Validation System
 
-WCT uses a **comprehensive JSON Schema-based validation system** with two distinct types of schemas:
+WCT uses a comprehensive validation system with two distinct validation approaches:
 
 **Data Flow Schemas** - Validate runtime data between components:
 - **StandardInputSchema**: Common input format for filesystem connectors
 - **PersonalDataFindingSchema**: Output format for personal data analysis results
+- Uses JSON Schema for cross-component data validation
 
-**Configuration Schemas** - Validate configuration files and system setup:
-- **RunbookSchema**: YAML runbook configuration validation with structural requirements
+**Configuration Validation** - Validate runbook configuration files:
+- **RunbookModel**: YAML runbook configuration validation with structural requirements
+- Uses Python type annotations for clear validation rules
 
 Key features:
-- **Declarative validation**: Replace manual validation with JSON Schema definitions
-- **Better error messages**: Field path reporting with clear validation failure details
+- **Declarative validation**: Clear validation rules with comprehensive error messages
+- **Better error messages**: Field path reporting with detailed validation failure information
 - **Type safety**: Strongly typed interfaces throughout the system
 - **Versioned architecture**: Consistent schema structure in `json_schemas/{name}/{version}/`
 
 ### Core Components
 
-- **`src/wct/runbook.py`**: Schema-based runbook loading with JSON Schema validation
+- **`src/wct/runbook.py`**: Runbook loading with comprehensive validation
 - **`src/wct/executor.py`**: Schema-aware execution engine with automatic data flow matching
 - **`src/wct/schemas/`**: Strongly typed schema system (see [schemas README](src/wct/schemas/README.md))
   - Data flow schemas: `StandardInputSchema`, `PersonalDataFindingSchema`
-  - Configuration schemas: `RunbookSchema`
+  - JSON schema validation for component data exchange
 - **`src/wct/connectors/`**: Data source connectors
   - `filesystem/` - File content extraction
   - `mysql/` - Database analysis
@@ -180,7 +182,7 @@ Key features:
 
 ### Validation Pipeline Flow
 
-1. **Runbook loading**: JSON Schema validates YAML structure, field requirements, and patterns
+1. **Runbook loading**: Validates YAML structure, field requirements, and patterns
 2. **Cross-reference validation**: Verify connector/analyser names and execution step relationships
 3. **Execution orchestration**: Automatic schema matching between connector outputs and analyser inputs
 4. **Data validation**: Runtime validation of data flowing between components using Message objects
@@ -191,16 +193,16 @@ Key features:
 - **Schema Contracts**: Clear input/output schema declarations for all components
 - **Dependency Isolation**: Optional dependencies grouped by component (`uv sync --group mysql`)
 - **Independent Testing**: Each module tested in isolation with comprehensive coverage
-- **Declarative Configuration**: YAML runbooks with JSON Schema validation eliminate manual validation
+- **Declarative Configuration**: YAML runbooks with comprehensive validation eliminate manual validation
 - **Type Safety**: Strongly typed interfaces with comprehensive error reporting
 - **Compliance Focus**: Components optimised for regulatory requirements (GDPR, CCPA)
 
 ### Configuration Format
 
-WCT runbooks use **JSON Schema-validated YAML** with mandatory schema specifications:
+WCT runbooks use **validated YAML** with mandatory schema specifications:
 
 ```yaml
-# All fields validated by RunbookSchema
+# All fields comprehensively validated
 name: "Analysis Pipeline"                    # Required
 description: "Compliance analysis setup"    # Required
 
@@ -217,8 +219,8 @@ analysers:                                  # Required, minItems: 1
 execution:                                  # Required, minItems: 1
   - connector: "filesystem_reader"          # Required, cross-referenced
     analyser: "data_analyser"              # Required, cross-referenced
-    input_schema_name: "standard_input"    # Required (was optional)
-    output_schema_name: "personal_data_finding"  # Required (was optional)
+    input_schema_name: "standard_input"    # Required
+    output_schema_name: "personal_data_finding"  # Required
 ```
 
 ## Development
@@ -341,16 +343,14 @@ class MyAnalyser(Analyser):
 ```
 src/wct/
 ├── __main__.py           # CLI entry point
-├── runbook.py           # JSON Schema-based runbook loading and validation
+├── runbook.py           # Runbook loading and validation
 ├── executor.py          # Schema-aware execution engine
 ├── schemas/             # Strongly typed schema system
 │   ├── README.md        # Schema architecture and usage documentation
-│   ├── runbook.py       # RunbookSchema (configuration validation)
 │   ├── standard_input.py # StandardInputSchema (data flow validation)
 │   └── json_schemas/    # Versioned JSON Schema definitions
-│       └── runbook/1.0.0/
-│           ├── runbook.json        # JSON Schema validation rules
-│           └── runbook.sample.yaml # Example configuration
+│       └── standard_input/1.0.0/
+│           └── standard_input.json # JSON Schema validation rules
 ├── connectors/          # Data source extractors
 │   ├── base.py         # Abstract connector interface
 │   ├── filesystem/     # File content extraction

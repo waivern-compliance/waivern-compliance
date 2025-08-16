@@ -26,14 +26,17 @@ analysers:
   - name: "personal_data_analyser_for_mysql"
     type: "personal_data_analyser"
     properties:
-      evidence_context_size: long
-      enable_llm_validation: false
-      llm_batch_size: 80
-      llm_validation_mode: conservative  # More careful validation for database content
-      # Analysers always have a default ruleset to use.
-      # However, you can specify a custom one if so desired.
-      # The custom ruleset must follow the same structure as the default one.
-      ruleset_name: "personal_data"
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "personal_data"
+        evidence_context_size: "long"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 80
+        llm_validation_mode: "conservative"  # More careful validation for database content
   - name: "processing_purpose_analyser_for_source_code"
     type: "processing_purpose_analyser"
     properties:

@@ -1,10 +1,12 @@
-"""WCT Analyser base classes and exceptions."""
+"""WCT Analyser base classes and exceptions.
+
+Analyser configuration is handled by AnalyserConfigModel in the runbook module.
+"""
 
 from __future__ import annotations
 
 import abc
 import logging
-from dataclasses import dataclass, field
 from typing import Any
 
 from typing_extensions import Self
@@ -16,16 +18,6 @@ logger = logging.getLogger(__name__)
 
 # Error message constants
 _SCHEMA_MISMATCH_ERROR = "Message schema {message_schema} does not match expected input schema {expected_schema}"
-
-
-@dataclass(frozen=True, slots=True)
-class AnalyserConfig:
-    """Configuration for an analyser in a runbook."""
-
-    name: str
-    type: str
-    properties: dict[str, Any] = field(default_factory=dict)
-    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class Analyser(abc.ABC):
