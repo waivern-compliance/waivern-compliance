@@ -282,11 +282,9 @@ class OutputFormatter:
                     f"[cyan]Step {i}: {step.analyser}[/cyan]"
                 )
                 step_branch.add(f"Connector: [yellow]{step.connector}[/yellow]")
-                step_branch.add(f"Input Schema: [blue]{step.input_schema_name}[/blue]")
-                if hasattr(step, "output_schema_name") and step.output_schema_name:
-                    step_branch.add(
-                        f"Output Schema: [blue]{step.output_schema_name}[/blue]"
-                    )
+                step_branch.add(f"Input Schema: [blue]{step.input_schema}[/blue]")
+                if hasattr(step, "output_schema") and step.output_schema:
+                    step_branch.add(f"Output Schema: [blue]{step.output_schema}[/blue]")
 
             console.print(execution_tree)
 

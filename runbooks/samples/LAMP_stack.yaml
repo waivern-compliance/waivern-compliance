@@ -61,15 +61,15 @@ analysers:
 execution:
   - connector: "my_mysql_db"
     analyser: "personal_data_analyser_for_mysql"
-    input_schema_name: "standard_input"
-    output_schema_name: "personal_data_finding"
+    input_schema: "standard_input"
+    output_schema: "personal_data_finding"
     context:
       description: "Analyse MySQL database for personal data collection"
       priority: "high"
   - connector: "my_mysql_db"
     analyser: "processing_purpose_analyser_for_mysql"
-    input_schema_name: "standard_input"
-    output_schema_name: "processing_purpose_finding"
+    input_schema: "standard_input"
+    output_schema: "processing_purpose_finding"
     context:
       description: "Identify data processing purposes from MySQL database content"
       priority: "medium"
@@ -77,8 +77,8 @@ execution:
       analysis_type: "database_content_analysis"
   - connector: "php_source_code"
     analyser: "processing_purpose_analyser_for_source_code"
-    input_schema_name: "source_code"
-    output_schema_name: "processing_purpose_finding"
+    input_schema: "source_code"
+    output_schema: "processing_purpose_finding"
     context:
       description: "Analyse PHP source code for processing purposes and service integrations"
       priority: "high"

@@ -77,10 +77,10 @@ class ExecutionStep(BaseModel):
         pattern=r"^[a-zA-Z0-9._-]+$",
         description="Name of analyser instance to use",
     )
-    input_schema_name: str = Field(
+    input_schema: str = Field(
         min_length=1, description="Schema name for connector output validation"
     )
-    output_schema_name: str = Field(
+    output_schema: str = Field(
         min_length=1, description="Schema name for analyser output validation"
     )
     context: dict[str, Any] = Field(

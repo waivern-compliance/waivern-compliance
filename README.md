@@ -127,8 +127,8 @@ analysers:
 execution:
   - connector: "filesystem_reader"
     analyser: "content_analyser"
-    input_schema_name: "standard_input"
-    output_schema_name: "personal_data_finding"
+    input_schema: "standard_input"
+    output_schema: "personal_data_finding"
     context:
       description: "Analyse file content for personal data"
       priority: "high"
@@ -219,8 +219,8 @@ analysers:                                  # Required, minItems: 1
 execution:                                  # Required, minItems: 1
   - connector: "filesystem_reader"          # Required, cross-referenced
     analyser: "data_analyser"              # Required, cross-referenced
-    input_schema_name: "standard_input"    # Required
-    output_schema_name: "personal_data_finding"  # Required
+    input_schema: "standard_input"    # Required
+    output_schema: "personal_data_finding"  # Required
 ```
 
 ## Development

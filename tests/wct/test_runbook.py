@@ -82,8 +82,8 @@ analysers:
 execution:
   - connector: test_connector
     analyser: test_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
 """
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(valid_runbook)
@@ -117,8 +117,8 @@ analysers:
 execution:
   - connector: duplicate_name
     analyser: test_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
 """
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(duplicate_runbook)
@@ -156,8 +156,8 @@ class TestRunbookValidation:
                 {
                     "connector": "duplicate_name",
                     "analyser": "test_analyser",
-                    "input_schema_name": "standard_input",
-                    "output_schema_name": "personal_data_finding",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
                 }
             ],
         }
@@ -192,8 +192,8 @@ class TestRunbookValidation:
                 {
                     "connector": "test_connector",
                     "analyser": "duplicate_name",
-                    "input_schema_name": "standard_input",
-                    "output_schema_name": "personal_data_finding",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
                 }
             ],
         }
@@ -223,8 +223,8 @@ class TestRunbookValidation:
                 {
                     "connector": "nonexistent_connector",
                     "analyser": "test_analyser",
-                    "input_schema_name": "standard_input",
-                    "output_schema_name": "personal_data_finding",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
                 }
             ],
         }
@@ -254,8 +254,8 @@ class TestRunbookValidation:
                 {
                     "connector": "test_connector",
                     "analyser": "nonexistent_analyser",
-                    "input_schema_name": "standard_input",
-                    "output_schema_name": "personal_data_finding",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
                 }
             ],
         }
@@ -292,14 +292,14 @@ class TestRunbookSummary:
                 {
                     "connector": "conn1",
                     "analyser": "anal1",
-                    "input_schema_name": "input",
-                    "output_schema_name": "output1",
+                    "input_schema": "input",
+                    "output_schema": "output1",
                 },
                 {
                     "connector": "conn2",
                     "analyser": "anal2",
-                    "input_schema_name": "input",
-                    "output_schema_name": "output2",
+                    "input_schema": "input",
+                    "output_schema": "output2",
                 },
             ],
         }
@@ -384,8 +384,8 @@ class TestRunbookIntegration:
                 {
                     "connector": "filesystem_connector",
                     "analyser": "personal_data_detector",
-                    "input_schema_name": "standard_input",
-                    "output_schema_name": "personal_data_finding",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
                     "context": {
                         "description": "Analyze filesystem for personal data",
                         "priority": "high",
@@ -394,8 +394,8 @@ class TestRunbookIntegration:
                 {
                     "connector": "database_connector",
                     "analyser": "purpose_detector",
-                    "input_schema_name": "standard_input",
-                    "output_schema_name": "processing_purpose_finding",
+                    "input_schema": "standard_input",
+                    "output_schema": "processing_purpose_finding",
                     "context": {
                         "description": "Identify processing purposes in database",
                         "compliance_frameworks": ["GDPR"],
