@@ -209,8 +209,8 @@ analysers:
 execution:
   - connector: test_connector
     analyser: test_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
 """
 
         results = self._execute_runbook_yaml(executor, runbook_content)
@@ -242,8 +242,8 @@ analysers:
 execution:
   - connector: test_connector
     analyser: test_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
 """
 
         results = self._execute_runbook_yaml(executor, runbook_content)
@@ -274,8 +274,8 @@ analysers:
 execution:
   - connector: test_connector
     analyser: test_analyser
-    input_schema_name: unsupported_schema
-    output_schema_name: personal_data_finding
+    input_schema: unsupported_schema
+    output_schema: personal_data_finding
 """
 
         results = self._execute_runbook_yaml(executor, runbook_content)
@@ -306,8 +306,8 @@ analysers:
 execution:
   - connector: test_connector
     analyser: test_analyser
-    input_schema_name: standard_input
-    output_schema_name: unsupported_output_schema
+    input_schema: standard_input
+    output_schema: unsupported_output_schema
 """
 
         results = self._execute_runbook_yaml(executor, runbook_content)
@@ -353,8 +353,8 @@ analysers:
 execution:
   - connector: test_connector
     analyser: test_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
 """
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -405,8 +405,8 @@ analysers:
 execution:
   - connector: test_connector
     analyser: test_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
 """
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -446,8 +446,8 @@ analysers:
 execution:
   - connector: test_connector
     analyser: test_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
 """
 
         results = self._execute_runbook_yaml(executor, runbook_content)
@@ -487,12 +487,12 @@ analysers:
 execution:
   - connector: connector1
     analyser: analyser1
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
   - connector: connector2
     analyser: analyser2
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
 """
 
         results = self._execute_runbook_yaml(executor, runbook_content)
@@ -548,12 +548,12 @@ analysers:
 execution:
   - connector: connector1
     analyser: working_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
   - connector: connector2
     analyser: broken_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
 """
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -635,8 +635,8 @@ analysers:
 execution:
   - connector: broken_conn
     analyser: test_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
 """
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -678,8 +678,8 @@ analysers:
 execution:
   - connector: test_connector
     analyser: test_analyser
-    input_schema_name: standard_input
-    output_schema_name: personal_data_finding
+    input_schema: standard_input
+    output_schema: personal_data_finding
     context:
       environment: "test"
       priority: "high"

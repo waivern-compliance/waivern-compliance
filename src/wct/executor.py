@@ -151,26 +151,26 @@ class Executor:
         # Resolve input schema
         supported_input_schemas = analyser.get_supported_input_schemas()
         input_schema = next(
-            (s for s in supported_input_schemas if s.name == step.input_schema_name),
+            (s for s in supported_input_schemas if s.name == step.input_schema),
             None,
         )
         if not input_schema:
             available_schemas = [s.name for s in supported_input_schemas]
             raise ExecutorError(
-                f"Schema '{step.input_schema_name}' not supported. "
+                f"Schema '{step.input_schema}' not supported. "
                 f"Available schemas: {available_schemas}"
             )
 
         # Resolve output schema
         supported_output_schemas = analyser.get_supported_output_schemas()
         output_schema = next(
-            (s for s in supported_output_schemas if s.name == step.output_schema_name),
+            (s for s in supported_output_schemas if s.name == step.output_schema),
             None,
         )
         if not output_schema:
             available_schemas = [s.name for s in supported_output_schemas]
             raise ExecutorError(
-                f"Schema '{step.output_schema_name}' not supported. "
+                f"Schema '{step.output_schema}' not supported. "
                 f"Available schemas: {available_schemas}"
             )
 
@@ -212,8 +212,8 @@ class Executor:
         return self._create_error_result(
             step.analyser,
             error_message=str(error),
-            input_schema=step.input_schema_name,
-            output_schema=step.output_schema_name,
+            input_schema=step.input_schema,
+            output_schema=step.output_schema,
         )
 
     def _create_error_result(

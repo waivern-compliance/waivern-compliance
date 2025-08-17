@@ -107,8 +107,8 @@ analysers:
 execution:
   - connector: "connector_name"
     analyser: "analyser_name"
-    input_schema_name: "schema_name"
-    output_schema_name: "output_schema"
+    input_schema: "schema_name"
+    output_schema: "output_schema"
 ```
 
 ## Runbooks Directory
@@ -155,7 +155,7 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 - Use `@override` decorators for all abstract method implementations
 - Schema names must match between connector outputs and analyser inputs for automatic data flow
 - JSON schema files in `src/wct/schemas/` define the structure for runtime validation
-- Runbooks specify schema names (e.g., `input_schema_name: "standard_input"`) not file paths
+- Runbooks specify schema names (e.g., `input_schema: "standard_input"`) not file paths
 - The executor automatically matches schemas and uses automatic validation in `process()`
 
 **Message-Based Validation System:**
