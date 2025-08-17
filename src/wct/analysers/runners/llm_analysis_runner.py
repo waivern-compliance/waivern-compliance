@@ -14,7 +14,7 @@ from wct.llm_service import AnthropicLLMService
 logger = logging.getLogger(__name__)
 
 # Constants
-_ANALYSIS_RUNNER_TYPE_IDENTIFIER = "llm_validation"
+_ANALYSIS_RUNNER_TYPE_IDENTIFIER = "llm_validation_runner"
 _EMPTY_PROMPT_DATA = ""
 
 # Type variable for LLM analysis results
@@ -52,6 +52,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMValidationConfig]):
             else self._passthrough_strategy
         )
 
+    # QUESTION: Is this used anywhere?
     @classmethod
     def from_properties(
         cls,
@@ -140,6 +141,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMValidationConfig]):
         logger.debug("Using passthrough validation strategy (no filtering)")
         return findings
 
+    # QUESTION: Where is this function used?
     def create_batch_validation_strategy(
         self,
         prompt_generator: Callable[[list[ResultT]], str],
@@ -216,6 +218,9 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMValidationConfig]):
             List of validated findings
 
         """
+        # QUESTION: Is this validation necessary? The run_analysis method already validates this
+        # before calling _execute_validation_strategy. If the validation is unnecessary, can we
+        # merge this function into run_analysis (as it will only be one line)
         llm_service = self.llm_service_manager.llm_service
         if llm_service is None:
             # This should not happen due to _should_skip_validation check,
@@ -225,6 +230,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMValidationConfig]):
 
         return self.validation_strategy(input_data, config, llm_service)
 
+    # QUESTION: Why do we have a one-line logging function?
     def _log_validation_results(
         self, original_count: int, validated_count: int
     ) -> None:
@@ -239,6 +245,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMValidationConfig]):
             f"LLM validation completed: {original_count} → {validated_count} findings"
         )
 
+    # QUESTION: Do we need a separate function for this logic?
     def _handle_validation_error(
         self, error: Exception, input_data: list[ResultT]
     ) -> list[ResultT]:
@@ -256,6 +263,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMValidationConfig]):
         logger.warning("Returning unvalidated findings due to LLM validation error")
         return input_data
 
+    # QUESTION: If create_batch_validation_strategy is not used, can we remove this too?
     def _process_validation_batch(
         self,
         batch: list[ResultT],

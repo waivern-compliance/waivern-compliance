@@ -18,7 +18,7 @@ from wct.connectors import BUILTIN_CONNECTORS
 from wct.executor import Executor
 from wct.llm_service import LLMServiceError, LLMServiceFactory
 from wct.logging import setup_logging
-from wct.runbook import RunbookLoader, RunbookModel
+from wct.runbook import Runbook, RunbookLoader
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -251,7 +251,7 @@ class OutputFormatter:
             console.print(warning_panel)
             logger.warning("No %s registered in executor", component_type)
 
-    def format_runbook_validation(self, runbook: RunbookModel) -> None:
+    def format_runbook_validation(self, runbook: Runbook) -> None:
         """Format and print runbook validation results.
 
         Args:

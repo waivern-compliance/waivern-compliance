@@ -16,10 +16,10 @@ import pytest
 from pydantic import ValidationError
 
 from wct.runbook import (
+    Runbook,
     RunbookLoader,
     RunbookLoadError,
-    RunbookModel,
-    RunbookSummaryModel,
+    RunbookSummary,
     RunbookValidationError,
 )
 
@@ -163,7 +163,7 @@ class TestRunbookValidation:
         }
 
         with pytest.raises(ValidationError) as exc_info:
-            RunbookModel.model_validate(runbook_data)
+            Runbook.model_validate(runbook_data)
 
         errors = exc_info.value.errors()
         assert any("Duplicate connector names" in error["msg"] for error in errors)
@@ -199,7 +199,7 @@ class TestRunbookValidation:
         }
 
         with pytest.raises(ValidationError) as exc_info:
-            RunbookModel.model_validate(runbook_data)
+            Runbook.model_validate(runbook_data)
 
         errors = exc_info.value.errors()
         assert any("Duplicate analyser names" in error["msg"] for error in errors)
@@ -230,7 +230,7 @@ class TestRunbookValidation:
         }
 
         with pytest.raises(ValidationError) as exc_info:
-            RunbookModel.model_validate(runbook_data)
+            Runbook.model_validate(runbook_data)
 
         errors = exc_info.value.errors()
         assert any("unknown connector" in error["msg"] for error in errors)
@@ -261,14 +261,14 @@ class TestRunbookValidation:
         }
 
         with pytest.raises(ValidationError) as exc_info:
-            RunbookModel.model_validate(runbook_data)
+            Runbook.model_validate(runbook_data)
 
         errors = exc_info.value.errors()
         assert any("unknown analyser" in error["msg"] for error in errors)
 
 
-class TestRunbookSummaryModel:
-    """Tests for RunbookSummaryModel business logic."""
+class TestRunbookSummary:
+    """Tests for RunbookSummary business logic."""
 
     def test_runbook_summary_creation(self) -> None:
         """Test creating runbook summary from runbook model."""
@@ -304,8 +304,8 @@ class TestRunbookSummaryModel:
             ],
         }
 
-        runbook = RunbookModel.model_validate(runbook_data)
-        summary = RunbookSummaryModel.from_runbook(runbook)
+        runbook = Runbook.model_validate(runbook_data)
+        summary = RunbookSummary.from_runbook(runbook)
 
         assert summary.name == "Test Runbook"
         assert summary.description == "A comprehensive test runbook"
@@ -405,7 +405,7 @@ class TestRunbookIntegration:
         }
 
         # Should validate successfully
-        runbook = RunbookModel.model_validate(runbook_data)
+        runbook = Runbook.model_validate(runbook_data)
 
         # Verify the structure is preserved
         assert runbook.name == "Sample Integration Test"

@@ -23,7 +23,7 @@ These schemas define the structure of data as it moves through the WCT analysis 
 
 Runbook configuration validation is handled by Pydantic models in the runbook module:
 
-- **`RunbookModel`** - YAML runbook configuration files that define analysis pipelines
+- **`Runbook`** - YAML runbook configuration files that define analysis pipelines
 
 **Purpose**: Validate configuration files at load time to ensure proper system setup before execution.
 
@@ -101,7 +101,7 @@ from wct.runbook import RunbookLoader
 
 # Load and validate runbook configuration
 runbook = RunbookLoader.load(Path("runbooks/analysis.yaml"))
-# RunbookModel (Pydantic) automatically validates structure, required fields,
+# Runbook (Pydantic) automatically validates structure, required fields,
 # connector/analyser configurations, and execution steps
 ```
 

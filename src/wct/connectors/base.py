@@ -4,7 +4,7 @@ This module provides:
 - Connector: Abstract base class for all WCT connectors
 - ConnectorError, ConnectorConfigError, ConnectorExtractionError: Exception classes
 
-Connector configuration is handled by ConnectorConfigModel in the runbook module.
+Connector configuration is handled by ConnectorConfig in the runbook module.
 """
 
 import abc
