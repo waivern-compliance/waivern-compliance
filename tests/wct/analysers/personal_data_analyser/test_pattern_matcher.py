@@ -3,6 +3,7 @@
 from typing import Any
 
 import pytest
+from pydantic import BaseModel
 
 from wct.analysers.personal_data_analyser.pattern_matcher import (
     personal_data_pattern_matcher,
@@ -13,6 +14,7 @@ from wct.analysers.runners.types import (
     PatternMatchingConfig,
 )
 from wct.analysers.utilities import EvidenceExtractor
+from wct.schemas import StandardInputDataItemMetadataModel
 
 
 class TestPersonalDataPatternMatcher:
@@ -43,7 +45,7 @@ class TestPersonalDataPatternMatcher:
             rule_name="email",
             rule_description="Email address pattern",
             risk_level="medium",
-            metadata={"source": "test_file.txt"},
+            metadata=StandardInputDataItemMetadataModel(source="test_file.txt"),
             config=pattern_config,
             evidence_extractor=evidence_extractor,
         )
@@ -72,7 +74,7 @@ class TestPersonalDataPatternMatcher:
         assert result.evidence is not None
         assert len(result.evidence) == 1
         assert "support@example.com" in result.evidence[0]
-        assert result.metadata == {"source": "test_file.txt"}
+        assert result.metadata.source == "test_file.txt"
 
     def test_returns_none_when_no_evidence_found(
         self, basic_context: PatternMatcherContext
@@ -122,7 +124,7 @@ class TestPersonalDataPatternMatcher:
             rule_name="phone",
             rule_description="Phone number pattern",
             risk_level="high",
-            metadata={},
+            metadata=StandardInputDataItemMetadataModel(source="test"),
             config=config,
             evidence_extractor=evidence_extractor,
         )
@@ -179,12 +181,14 @@ class TestPersonalDataPatternMatcher:
     def test_creates_copy_of_metadata(
         self, basic_context: PatternMatcherContext
     ) -> None:
-        """Test that metadata is copied, not referenced directly."""
+        """Test that metadata is converted correctly from Pydantic model."""
         # Arrange
         content = "Contact test@example.com"
         pattern = "test@example.com"
         rule_metadata: dict[str, Any] = {}
-        original_metadata = {"source": "original.txt", "mutable": "data"}
+        original_metadata = StandardInputDataItemMetadataModel(
+            source="original.txt", extra_field="data"
+        )
 
         basic_context.metadata = original_metadata
 
@@ -195,8 +199,10 @@ class TestPersonalDataPatternMatcher:
 
         # Assert
         assert result is not None
-        assert result.metadata == original_metadata
-        assert result.metadata is not original_metadata  # Ensure it's a copy
+        # The result metadata should be a BaseModel
+        assert isinstance(result.metadata, BaseModel)
+        assert result.metadata.source == "original.txt"
+        assert result.metadata.extra_field == "data"
 
     def test_handles_empty_metadata_gracefully(
         self,
@@ -209,7 +215,7 @@ class TestPersonalDataPatternMatcher:
             rule_name="ssn",
             rule_description="Social Security Number",
             risk_level="high",
-            metadata={},
+            metadata=StandardInputDataItemMetadataModel(source="test"),
             config=pattern_config,
             evidence_extractor=evidence_extractor,
         )
@@ -223,7 +229,7 @@ class TestPersonalDataPatternMatcher:
 
         # Assert
         assert result is not None
-        assert result.metadata == {}
+        assert result.metadata.source == "test"
 
     def test_preserves_all_context_information(
         self, basic_context: PatternMatcherContext
@@ -281,14 +287,15 @@ class TestPersonalDataPatternMatcher:
         content = "Phone: +44 20 1234 5678"
         pattern = "+44 20 1234 5678"
         rule_metadata: dict[str, Any] = {"special_category": "N"}
-        complex_metadata = {
-            "source": "database.sql",
-            "table": "customers",
-            "column": "phone_number",
-            "row_id": 42,
-            "extracted_at": "2024-01-15T10:30:00Z",
-            "nested": {"depth": 1, "values": [1, 2, 3]},
-        }
+        # Create complex metadata with extra fields
+        complex_metadata = StandardInputDataItemMetadataModel(
+            source="database.sql",
+            table="customers",
+            column="phone_number",
+            row_id=42,
+            extracted_at="2024-01-15T10:30:00Z",
+            nested={"depth": 1, "values": [1, 2, 3]},
+        )
 
         basic_context.metadata = complex_metadata
 
@@ -299,9 +306,14 @@ class TestPersonalDataPatternMatcher:
 
         # Assert
         assert result is not None
-        assert result.metadata == complex_metadata
-        assert result.metadata is not None
-        assert result.metadata["nested"]["values"] == [1, 2, 3]
+        # The result metadata should be a BaseModel
+        assert isinstance(result.metadata, BaseModel)
+        assert result.metadata.source == "database.sql"
+        assert result.metadata.table == "customers"
+        assert result.metadata.column == "phone_number"
+        assert result.metadata.row_id == 42
+        assert result.metadata.extracted_at == "2024-01-15T10:30:00Z"
+        assert result.metadata.nested["values"] == [1, 2, 3]
 
     @pytest.mark.parametrize(
         "risk_level,rule_description",
@@ -324,7 +336,7 @@ class TestPersonalDataPatternMatcher:
             rule_name="test_rule",
             rule_description=rule_description,
             risk_level=risk_level,
-            metadata={"test": "data"},
+            metadata=StandardInputDataItemMetadataModel(source="test", test="data"),
             config=pattern_config,
             evidence_extractor=evidence_extractor,
         )

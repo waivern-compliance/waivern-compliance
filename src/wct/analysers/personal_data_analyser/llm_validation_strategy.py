@@ -4,6 +4,8 @@ import json
 import logging
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from wct.analysers.runners.types import LLMValidationConfig
 from wct.llm_service import AnthropicLLMService
 from wct.prompts.personal_data_validation import (
@@ -22,6 +24,26 @@ _DEFAULT_CONFIDENCE = 0.0
 _DEFAULT_REASONING = "No reasoning provided"
 _DEFAULT_ACTION = "keep"
 _EMPTY_PROMPT_CONTENT = ""
+
+
+class LLMValidationResultModel(BaseModel):
+    """Strongly typed model for LLM validation results."""
+
+    validation_result: str = Field(
+        default="unknown", description="The validation result"
+    )
+    confidence: float = Field(
+        default=_DEFAULT_CONFIDENCE,
+        ge=0.0,
+        le=1.0,
+        description="Confidence score from LLM",
+    )
+    reasoning: str = Field(
+        default=_DEFAULT_REASONING, description="Reasoning provided by LLM"
+    )
+    recommended_action: str = Field(
+        default=_DEFAULT_ACTION, description="Recommended action from LLM"
+    )
 
 
 def personal_data_validation_strategy(
@@ -213,29 +235,36 @@ def _filter_findings_by_validation_results(
     """
     validated_findings: list[PersonalDataFindingModel] = []
 
-    for i, result in enumerate(validation_results):
+    for i, result_data in enumerate(validation_results):
         if i >= len(findings_batch):
             logger.warning(
                 f"Validation result index {i} exceeds batch size {len(findings_batch)}"
             )
             continue
 
-        # QUESTION: Can we strongly type the LLM validation results with Pydantic?
+        # Use strongly typed model for validation results
+        try:
+            result = LLMValidationResultModel.model_validate(result_data)
+        except Exception as e:
+            logger.warning(f"Failed to parse validation result {i}: {e}")
+            # Use defaults for malformed results
+            result = LLMValidationResultModel()
+
         finding = findings_batch[i]
-        validation_result = result.get("validation_result")
-        confidence = result.get("confidence", _DEFAULT_CONFIDENCE)
-        reasoning = result.get("reasoning", _DEFAULT_REASONING)
-        action = result.get("recommended_action", _DEFAULT_ACTION)
 
         # Log validation decision
         logger.debug(
             f"Finding '{finding.type}' ({finding.matched_pattern}): "
-            f"{validation_result} (confidence: {confidence:.2f}) - {reasoning}"
+            f"{result.validation_result} (confidence: {result.confidence:.2f}) - {result.reasoning}"
         )
 
         # Determine if finding should be kept
         if _should_keep_finding(
-            validation_result, action, finding, confidence, reasoning
+            result.validation_result,
+            result.recommended_action,
+            finding,
+            result.confidence,
+            result.reasoning,
         ):
             validated_findings.append(finding)
 

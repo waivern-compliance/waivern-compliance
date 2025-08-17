@@ -4,6 +4,7 @@ import logging
 from pprint import pformat
 from typing import Any
 
+from pydantic import BaseModel
 from typing_extensions import Self, override
 
 from wct.analysers.base import Analyser
@@ -44,6 +45,12 @@ _OUTPUT_MESSAGE_ID = "Personal data analysis"
 
 # Analyser identification
 _ANALYSER_NAME = "personal_data_analyser"
+
+
+class _EmptyMetadata(BaseModel):
+    """Empty metadata model for LLM runner when no metadata is needed."""
+
+    pass
 
 
 class PersonalDataAnalyser(Analyser):
@@ -136,32 +143,29 @@ class PersonalDataAnalyser(Analyser):
         for data_item in typed_data.data:
             content = data_item.content
 
-            # QUESTION: Isn't the metadata already strongly typed? Why do we need to convert it now?
-            # Can we use the Pydantic model directly without conversion?
-            item_metadata = data_item.metadata.model_dump()
+            # Pass strongly typed Pydantic metadata model directly
+            item_metadata = data_item.metadata
 
             item_findings = self.pattern_runner.run_analysis(
                 content, item_metadata, self.config.pattern_matching
             )
             findings.extend(item_findings)
 
-        # Run LLM validation if enabled
+        # Run LLM validation if enabled (using minimal metadata model)
+        empty_metadata = _EmptyMetadata()
         validated_findings = self.llm_runner.run_analysis(
-            findings, {}, self.config.llm_validation
+            findings, empty_metadata, self.config.llm_validation
         )
 
         # Build final result data
         result_data = self._build_result_data(findings, validated_findings)
 
+        # Create and validate output message in one step
         output_message = Message(
             id=_OUTPUT_MESSAGE_ID,
             content=result_data,
             schema=output_schema,
-        )
-
-        # QUESTION: Can we validate the output message schema with Pydantic?
-        # It would be great if the validation is done automatically without this call.
-        output_message.validate()
+        ).validate()
 
         logger.info(
             f"PersonalDataAnalyser processed with {len(result_data['findings'])} findings"
@@ -188,7 +192,7 @@ class PersonalDataAnalyser(Analyser):
             Complete result data dictionary
 
         """
-        # Convert Pydantic models to dicts for final output
+        # Convert models to dicts for final output
         validated_findings_dicts = [
             finding.model_dump() for finding in validated_findings
         ]

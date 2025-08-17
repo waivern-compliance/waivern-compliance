@@ -4,6 +4,7 @@ import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
 
+from pydantic import BaseModel
 from typing_extensions import override
 
 from wct.analysers.runners.base import AnalysisRunner, AnalysisRunnerError
@@ -58,7 +59,7 @@ class PatternMatchingAnalysisRunner(AnalysisRunner[ResultT, PatternMatchingConfi
     def run_analysis(
         self,
         input_data: str,
-        metadata: dict[str, Any],
+        metadata: BaseModel,
         config: PatternMatchingConfig,
     ) -> list[ResultT]:
         """Run pattern matching analysis on content.
@@ -96,7 +97,7 @@ class PatternMatchingAnalysisRunner(AnalysisRunner[ResultT, PatternMatchingConfi
         self,
         content: str,
         rules: tuple[Rule, ...],
-        metadata: dict[str, Any],
+        metadata: BaseModel,
         config: PatternMatchingConfig,
     ) -> list[ResultT]:
         """Find all pattern matches in content using the provided rules.
@@ -131,7 +132,7 @@ class PatternMatchingAnalysisRunner(AnalysisRunner[ResultT, PatternMatchingConfi
         content: str,
         pattern: str,
         rule: Rule,
-        metadata: dict[str, Any],
+        metadata: BaseModel,
         config: PatternMatchingConfig,
     ) -> ResultT | None:
         """Create a finding using the pattern matcher function.
@@ -151,7 +152,7 @@ class PatternMatchingAnalysisRunner(AnalysisRunner[ResultT, PatternMatchingConfi
         return self.pattern_matcher(content, pattern, rule.metadata, context)
 
     def _build_pattern_context(
-        self, rule: Rule, metadata: dict[str, Any], config: PatternMatchingConfig
+        self, rule: Rule, metadata: BaseModel, config: PatternMatchingConfig
     ) -> PatternMatcherContext:
         """Build typed context object for pattern matcher function.
 

@@ -4,6 +4,8 @@ from typing import Any
 
 from wct.analysers.runners.types import PatternMatcherContext
 
+from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
+
 # Default confidence for all findings (from original analyser)
 DEFAULT_FINDING_CONFIDENCE = 0.5
 
@@ -13,7 +15,7 @@ def processing_purpose_pattern_matcher(
     pattern: str,
     rule_metadata: dict[str, Any],
     context: PatternMatcherContext,
-) -> dict[str, Any] | None:
+) -> ProcessingPurposeFindingModel | None:
     """Pattern matcher function for processing purpose analysis.
 
     This function defines how processing purpose patterns are matched and how
@@ -55,16 +57,20 @@ def processing_purpose_pattern_matcher(
     # Note: This is processing purpose specific and not in PatternMatchingRunnerConfig
     confidence = DEFAULT_FINDING_CONFIDENCE
 
-    # Create processing purpose specific finding structure
-    finding = {
-        "purpose": rule_name,  # Processing purpose name
-        "purpose_category": rule_metadata.get("purpose_category", "OPERATIONAL"),
-        "risk_level": context.risk_level,
-        "compliance_relevance": rule_metadata.get("compliance_relevance", ["GDPR"]),
-        "matched_pattern": pattern,
-        "confidence": confidence,
-        "evidence": evidence,
-        "metadata": metadata.copy() if metadata else {},
-    }
+    # Create processing purpose specific finding structure with proper metadata
+    finding_metadata = None
+    if metadata:
+        # Convert input metadata to ProcessingPurposeFindingMetadata, preserving all fields
+        metadata_dict = metadata.model_dump()
+        finding_metadata = ProcessingPurposeFindingMetadata(**metadata_dict)
 
-    return finding
+    return ProcessingPurposeFindingModel(
+        purpose=rule_name,
+        purpose_category=rule_metadata.get("purpose_category", "OPERATIONAL"),
+        risk_level=context.risk_level,
+        compliance_relevance=rule_metadata.get("compliance_relevance", ["GDPR"]),
+        matched_pattern=pattern,
+        confidence=confidence,
+        evidence=evidence,
+        metadata=finding_metadata,
+    )

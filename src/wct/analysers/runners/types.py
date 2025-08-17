@@ -1,6 +1,6 @@
 """Type definitions for analysis runners."""
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -68,9 +68,7 @@ class PatternMatcherContext(BaseModel):
     risk_level: str = Field(description="Risk level from the rule")
 
     # Analysis context
-    metadata: dict[str, Any] = Field(
-        description="Metadata about the content being analyzed"
-    )
+    metadata: BaseModel = Field(description="Metadata about the content being analysed")
     config: PatternMatchingConfig = Field(
         description="Configuration for the pattern matching analysis"
     )

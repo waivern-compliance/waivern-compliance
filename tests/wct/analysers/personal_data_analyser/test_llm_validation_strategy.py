@@ -8,7 +8,10 @@ import pytest
 from wct.analysers.personal_data_analyser.llm_validation_strategy import (
     personal_data_validation_strategy,
 )
-from wct.analysers.personal_data_analyser.types import PersonalDataFindingModel
+from wct.analysers.personal_data_analyser.types import (
+    PersonalDataFindingMetadata,
+    PersonalDataFindingModel,
+)
 from wct.analysers.runners.types import LLMValidationConfig
 from wct.llm_service import AnthropicLLMService
 
@@ -40,7 +43,7 @@ class TestPersonalDataValidationStrategy:
                 special_category="N",
                 matched_pattern="test@example.com",
                 evidence=["Contact us at test@example.com"],
-                metadata={"source": "contact_form.php"},
+                metadata=PersonalDataFindingMetadata(source="contact_form.php"),
             ),
             PersonalDataFindingModel(
                 type="phone",
@@ -48,7 +51,7 @@ class TestPersonalDataValidationStrategy:
                 special_category="N",
                 matched_pattern="123-456-7890",
                 evidence=["Call us at 123-456-7890"],
-                metadata={"source": "customer_db"},
+                metadata=PersonalDataFindingMetadata(source="customer_db"),
             ),
         ]
 
@@ -156,7 +159,7 @@ class TestPersonalDataValidationStrategy:
                 special_category="N",
                 matched_pattern="admin@domain.com",
                 evidence=["Email: admin@domain.com"],
-                metadata={"source": "config.txt"},
+                metadata=PersonalDataFindingMetadata(source="config.txt"),
             ),
             PersonalDataFindingModel(
                 type="ssn",
@@ -164,7 +167,7 @@ class TestPersonalDataValidationStrategy:
                 special_category="Y",
                 matched_pattern="123-45-6789",
                 evidence=["SSN: 123-45-6789"],
-                metadata={"source": "employee_records"},
+                metadata=PersonalDataFindingMetadata(source="employee_records"),
             ),
             PersonalDataFindingModel(
                 type="email",
@@ -172,7 +175,7 @@ class TestPersonalDataValidationStrategy:
                 special_category="N",
                 matched_pattern="user@test.com",
                 evidence=["Example: user@test.com"],
-                metadata={"source": "documentation.md"},
+                metadata=PersonalDataFindingMetadata(source="documentation.md"),
             ),
         ]
 
@@ -229,7 +232,7 @@ class TestPersonalDataValidationStrategy:
                 special_category="N",
                 matched_pattern=f"user{i}@example.com",
                 evidence=[f"Email: user{i}@example.com"],
-                metadata={"source": "database"},
+                metadata=PersonalDataFindingMetadata(source="database"),
             )
             for i in range(5)  # Create 5 findings
         ]
@@ -417,7 +420,7 @@ class TestPersonalDataValidationStrategy:
         assert result[0].type == "email"
         assert result[0].evidence == ["Contact us at test@example.com"]
         assert result[1].type == "phone"
-        assert result[1].metadata == {"source": "customer_db"}
+        assert result[1].metadata.source == "customer_db"
 
     def test_handles_mismatched_result_count(
         self,
@@ -463,7 +466,7 @@ class TestPersonalDataValidationStrategy:
                 special_category="N",
                 matched_pattern=f"test{i}@example.com",
                 evidence=[f"Email {i}"],
-                metadata={"source": "test"},
+                metadata=PersonalDataFindingMetadata(source="test"),
             )
             for i in range(3)
         ]
@@ -519,7 +522,7 @@ class TestPersonalDataValidationStrategy:
                 special_category="N",
                 matched_pattern="4111-1111-1111-1111",
                 evidence=["Card: 4111-1111-1111-1111"],
-                metadata={"source": "payment_form"},
+                metadata=PersonalDataFindingMetadata(source="payment_form"),
             )
         ]
 
@@ -556,14 +559,7 @@ class TestPersonalDataValidationStrategy:
                 special_category="N",
                 matched_pattern="+44 20 7946 0958",
                 evidence=["Contact: +44 20 7946 0958"],
-                metadata={
-                    "source": "customer_database",
-                    "table": "contacts",
-                    "column": "phone_number",
-                    "row_count": 1500,
-                    "last_updated": "2024-01-15",
-                    "nested": {"region": "UK", "verified": True},
-                },
+                metadata=PersonalDataFindingMetadata(source="customer_database"),
             )
         ]
 
@@ -589,7 +585,7 @@ class TestPersonalDataValidationStrategy:
         assert len(result) == 1
         assert result[0].metadata == findings[0].metadata
         assert result[0].metadata is not None
-        assert result[0].metadata["nested"]["region"] == "UK"
+        assert result[0].metadata.source == "customer_database"
 
     @pytest.mark.parametrize(
         "batch_size,expected_calls",
@@ -616,7 +612,7 @@ class TestPersonalDataValidationStrategy:
                 special_category="N",
                 matched_pattern=f"user{i}@test.com",
                 evidence=[f"Email: user{i}@test.com"],
-                metadata={"source": "test"},
+                metadata=PersonalDataFindingMetadata(source="test"),
             )
             for i in range(3)
         ]
