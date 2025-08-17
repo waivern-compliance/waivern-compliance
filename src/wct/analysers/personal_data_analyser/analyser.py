@@ -128,14 +128,16 @@ class PersonalDataAnalyser(Analyser):
         """Process data to find personal data patterns using runners."""
         Analyser._validate_input_message(message, input_schema)
 
-        # Extract and validate data using Pydantic (PersonalDataAnalyser only handles standard_input)
+        # Extract and validate data using Pydantic.model_validate
         typed_data = StandardInputDataModel.model_validate(message.content)
 
         # Process each data item using the pattern runner
         findings: list[PersonalDataFindingModel] = []
         for data_item in typed_data.data:
             content = data_item.content
-            # Convert Pydantic model to dict for the pattern runner
+
+            # QUESTION: Isn't the metadata already strongly typed? Why do we need to convert it now?
+            # Can we use the Pydantic model directly without conversion?
             item_metadata = data_item.metadata.model_dump()
 
             item_findings = self.pattern_runner.run_analysis(
@@ -157,6 +159,8 @@ class PersonalDataAnalyser(Analyser):
             schema=output_schema,
         )
 
+        # QUESTION: Can we validate the output message schema with Pydantic?
+        # It would be great if the validation is done automatically without this call.
         output_message.validate()
 
         logger.info(

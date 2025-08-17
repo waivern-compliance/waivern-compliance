@@ -1,6 +1,6 @@
 """WCT Analyser base classes and exceptions.
 
-Analyser configuration is handled by AnalyserConfigModel in the runbook module.
+Analyser configuration is handled by AnalyserConfig in the runbook module.
 """
 
 from __future__ import annotations

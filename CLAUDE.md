@@ -192,8 +192,11 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 
 # important-instruction-reminders
 DO what has been asked—nothing more, nothing less. DO NOT overcomplicate things.
+NEVER create a 'backwards compatibility' branch of code unless explicitly instructed; always refactor.
+ALWAYS analyse and verify that every single variable, function and class is necessary after a refactoring task. Remove all unnecessary leftover code.
 DO NOT be afraid of breaking changes. Refactoring is BETTER than 'backwards compatibility'.
+When doing refactoring, DO NOT try to preserve the old context in code or comments. Just update them to reflect the current state.
 Adhere to software craftsmanship principles. Break large classes and functions into smaller ones to represent granular concepts.
-CRITICAL: NEVER attempt to bypass code quality checks. Carefully analyse the errors and determine the cause.
-DO NOT attempt any quick fixes for errors. If an error indicates a design flaw, advise on options to refactor the codebase.
+CRITICAL: NEVER attempt to bypass code quality checks. Carefully analyse errors and determine their cause.
+DO NOT attempt quick fixes for errors. If an error indicates a design flaw, advise on options to refactor the codebase.
 Use British English spelling.

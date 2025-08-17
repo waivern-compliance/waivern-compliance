@@ -86,33 +86,6 @@ def _process_findings_in_batches(
     return validated_finding_objects
 
 
-def _convert_findings_for_prompt(
-    findings_batch: list[PersonalDataFindingModel],
-) -> list[dict[str, Any]]:
-    """Convert PersonalDataFindingModel objects to format expected by validation prompt.
-
-    Args:
-        findings_batch: Batch of findings to convert
-
-    Returns:
-        List of finding dictionaries formatted for prompt
-
-    """
-    findings_for_prompt: list[dict[str, Any]] = []
-    for finding in findings_batch:
-        findings_for_prompt.append(
-            {
-                "type": finding.type,
-                "risk_level": finding.risk_level,
-                "special_category": finding.special_category,
-                "matched_pattern": finding.matched_pattern,
-                "evidence": finding.evidence,
-                "metadata": finding.metadata,
-            }
-        )
-    return findings_for_prompt
-
-
 def _should_keep_finding(
     validation_result: str | None,
     action: str,
@@ -197,6 +170,33 @@ def _validate_findings_batch(
         return findings_batch
 
 
+def _convert_findings_for_prompt(
+    findings_batch: list[PersonalDataFindingModel],
+) -> list[dict[str, Any]]:
+    """Convert PersonalDataFindingModel objects to format expected by validation prompt.
+
+    Args:
+        findings_batch: Batch of findings to convert
+
+    Returns:
+        List of finding dictionaries formatted for prompt
+
+    """
+    findings_for_prompt: list[dict[str, Any]] = []
+    for finding in findings_batch:
+        findings_for_prompt.append(
+            {
+                "type": finding.type,
+                "risk_level": finding.risk_level,
+                "special_category": finding.special_category,
+                "matched_pattern": finding.matched_pattern,
+                "evidence": finding.evidence,
+                "metadata": finding.metadata,
+            }
+        )
+    return findings_for_prompt
+
+
 def _filter_findings_by_validation_results(
     findings_batch: list[PersonalDataFindingModel],
     validation_results: list[dict[str, Any]],
@@ -220,6 +220,7 @@ def _filter_findings_by_validation_results(
             )
             continue
 
+        # QUESTION: Can we strongly type the LLM validation results with Pydantic?
         finding = findings_batch[i]
         validation_result = result.get("validation_result")
         confidence = result.get("confidence", _DEFAULT_CONFIDENCE)

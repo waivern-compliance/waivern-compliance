@@ -14,7 +14,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from .base import JsonSchemaLoader, Schema, SchemaLoader
 
 
-# Pydantic models for standard_input schema data structures
 class StandardInputDataItemMetadataModel(BaseModel):
     """Metadata for a data item in standard_input schema."""
 

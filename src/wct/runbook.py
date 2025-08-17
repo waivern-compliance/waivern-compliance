@@ -23,11 +23,11 @@ from wct.errors import WCTError
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "ConnectorConfigModel",
-    "AnalyserConfigModel",
-    "ExecutionStepModel",
-    "RunbookModel",
-    "RunbookSummaryModel",
+    "ConnectorConfig",
+    "AnalyserConfig",
+    "ExecutionStep",
+    "Runbook",
+    "RunbookSummary",
     "RunbookLoader",
     "RunbookError",
     "RunbookLoadError",
@@ -35,7 +35,7 @@ __all__ = [
 ]
 
 
-class ConnectorConfigModel(BaseModel):
+class ConnectorConfig(BaseModel):
     """Pydantic model for connector configuration."""
 
     name: str = Field(
@@ -49,7 +49,7 @@ class ConnectorConfigModel(BaseModel):
     )
 
 
-class AnalyserConfigModel(BaseModel):
+class AnalyserConfig(BaseModel):
     """Pydantic model for analyser configuration."""
 
     name: str = Field(
@@ -64,7 +64,7 @@ class AnalyserConfigModel(BaseModel):
     )
 
 
-class ExecutionStepModel(BaseModel):
+class ExecutionStep(BaseModel):
     """Pydantic model for execution step configuration."""
 
     connector: str = Field(
@@ -89,28 +89,28 @@ class ExecutionStepModel(BaseModel):
     )
 
 
-class RunbookModel(BaseModel):
+class Runbook(BaseModel):
     """Pydantic model for complete runbook configuration."""
 
     name: str = Field(min_length=1, description="Runbook display name")
     description: str = Field(
         min_length=1, description="Runbook description explaining its purpose"
     )
-    connectors: list[ConnectorConfigModel] = Field(
+    connectors: list[ConnectorConfig] = Field(
         min_length=1, description="List of data source connectors"
     )
-    analysers: list[AnalyserConfigModel] = Field(
+    analysers: list[AnalyserConfig] = Field(
         min_length=1, description="List of analysis processors"
     )
-    execution: list[ExecutionStepModel] = Field(
+    execution: list[ExecutionStep] = Field(
         min_length=1, description="Execution pipeline steps"
     )
 
     @field_validator("connectors")
     @classmethod
     def validate_unique_connector_names(
-        cls, connectors: list[ConnectorConfigModel]
-    ) -> list[ConnectorConfigModel]:
+        cls, connectors: list[ConnectorConfig]
+    ) -> list[ConnectorConfig]:
         """Validate that connector names are unique."""
         names = [conn.name for conn in connectors]
         duplicates = [name for name in set(names) if names.count(name) > 1]
@@ -121,8 +121,8 @@ class RunbookModel(BaseModel):
     @field_validator("analysers")
     @classmethod
     def validate_unique_analyser_names(
-        cls, analysers: list[AnalyserConfigModel]
-    ) -> list[AnalyserConfigModel]:
+        cls, analysers: list[AnalyserConfig]
+    ) -> list[AnalyserConfig]:
         """Validate that analyser names are unique."""
         names = [analyser.name for analyser in analysers]
         duplicates = [name for name in set(names) if names.count(name) > 1]
@@ -131,7 +131,7 @@ class RunbookModel(BaseModel):
         return analysers
 
     @model_validator(mode="after")
-    def validate_cross_references(self) -> RunbookModel:
+    def validate_cross_references(self) -> Runbook:
         """Validate cross-references between execution steps and components."""
         connector_names = {conn.name for conn in self.connectors}
         analyser_names = {analyser.name for analyser in self.analysers}
@@ -151,17 +151,17 @@ class RunbookModel(BaseModel):
 
         return self
 
-    def get_summary(self) -> RunbookSummaryModel:
+    def get_summary(self) -> RunbookSummary:
         """Generate a comprehensive summary of the runbook configuration.
 
         Returns:
-            RunbookSummaryModel instance with configuration statistics
+            RunbookSummary instance with configuration statistics
 
         """
-        return RunbookSummaryModel.from_runbook(self)
+        return RunbookSummary.from_runbook(self)
 
 
-class RunbookSummaryModel(BaseModel):
+class RunbookSummary(BaseModel):
     """Pydantic model for runbook summary statistics."""
 
     name: str = Field(description="Display name of the runbook")
@@ -179,7 +179,7 @@ class RunbookSummaryModel(BaseModel):
     )
 
     @classmethod
-    def from_runbook(cls, runbook: RunbookModel) -> RunbookSummaryModel:
+    def from_runbook(cls, runbook: Runbook) -> RunbookSummary:
         """Create a summary from a runbook model."""
         return cls(
             name=runbook.name,
@@ -196,14 +196,14 @@ class RunbookLoader:
     """Loads and parses YAML runbook files into validated Pydantic models."""
 
     @classmethod
-    def load(cls, runbook_path: Path) -> RunbookModel:
+    def load(cls, runbook_path: Path) -> Runbook:
         """Load and validate a runbook from a YAML file using Pydantic validation.
 
         Args:
             runbook_path: Path to the runbook YAML file
 
         Returns:
-            Fully loaded and validated RunbookModel instance
+            Fully loaded and validated Runbook instance
 
         Raises:
             RunbookLoadError: If the file cannot be read or parsed
@@ -217,7 +217,7 @@ class RunbookLoader:
             raw_data = cls._load_runbook_file(runbook_path)
 
             # Validate using Pydantic models
-            validated_model = RunbookModel.model_validate(raw_data)
+            validated_model = Runbook.model_validate(raw_data)
 
             logger.info("Successfully loaded runbook: %s", validated_model.name)
             return validated_model

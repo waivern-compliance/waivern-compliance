@@ -157,7 +157,7 @@ WCT uses a comprehensive validation system with two distinct validation approach
 - Uses JSON Schema for cross-component data validation
 
 **Configuration Validation** - Validate runbook configuration files:
-- **RunbookModel**: YAML runbook configuration validation with structural requirements
+- **Runbook**: YAML runbook configuration validation with structural requirements
 - Uses Python type annotations for clear validation rules
 
 Key features:
