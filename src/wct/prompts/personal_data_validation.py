@@ -99,7 +99,7 @@ Finding {i}:
   Risk: {finding.get("risk_level", "Unknown")}
   Special Category: {finding.get("special_category", "Not specified")}
   Pattern: {finding.get("matched_pattern", "Unknown")}
-  Source: {finding.get("metadata", {}).get("source", "Unknown")}
+  Source: {getattr(finding.get("metadata", {}), "source", "Unknown") if finding.get("metadata") else "Unknown"}
   Evidence:
   {evidence_text}""")
 

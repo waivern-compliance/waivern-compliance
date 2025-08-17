@@ -17,6 +17,7 @@ from wct.schemas import (
     Schema,
     SourceCodeDataModel,
     SourceCodeSchema,
+    StandardInputDataItemMetadataModel,
     StandardInputDataModel,
     StandardInputSchema,
     parse_data_model,
@@ -24,6 +25,7 @@ from wct.schemas import (
 
 from .pattern_matcher import processing_purpose_pattern_matcher
 from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
+from .types import ProcessingPurposeFindingModel
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +76,8 @@ class ProcessingPurposeAnalyser(Analyser):
     def __init__(
         self,
         config: ProcessingPurposeAnalyserConfig | None = None,
-        pattern_runner: PatternMatchingAnalysisRunner[dict[str, Any]] | None = None,
+        pattern_runner: PatternMatchingAnalysisRunner[ProcessingPurposeFindingModel]
+        | None = None,
     ) -> None:
         """Initialise the processing purpose analyser with specified configuration and runners.
 
@@ -91,7 +94,7 @@ class ProcessingPurposeAnalyser(Analyser):
         # Initialise pattern runner with processing purpose specific strategy
         # Note: ProcessingPurpose doesn't use LLM validation in current implementation
         self.pattern_runner = pattern_runner or PatternMatchingAnalysisRunner[
-            dict[str, Any]
+            ProcessingPurposeFindingModel
         ](pattern_matcher=processing_purpose_pattern_matcher)
 
         # Initialise source code handler for SourceCodeSchema processing
@@ -166,19 +169,22 @@ class ProcessingPurposeAnalyser(Analyser):
         else:
             raise ValueError(f"Unsupported input schema: {input_schema.name}")
 
-        # Create result data with findings (findings are already in correct format from pattern matcher)
+        # Convert models to dicts for JSON output
+        findings_dicts = [finding.model_dump() for finding in findings]
+
+        # Create result data with findings
         result_data: dict[str, Any] = {
-            "findings": findings,
+            "findings": findings_dicts,
             "summary": {
                 "total_findings": len(findings),
                 "high_confidence_count": len(
                     [
                         f
                         for f in findings
-                        if f.get("confidence", 0) >= self.config.confidence_threshold
+                        if f.confidence >= self.config.confidence_threshold
                     ]
                 ),
-                "purposes_identified": len(set(f.get("purpose") for f in findings)),
+                "purposes_identified": len(set(f.purpose for f in findings)),
             },
         }
 
@@ -205,7 +211,7 @@ class ProcessingPurposeAnalyser(Analyser):
 
     def _process_standard_input_with_runners(
         self, data: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+    ) -> list[ProcessingPurposeFindingModel]:
         """Process standard_input schema data using runners.
 
         Args:
@@ -215,7 +221,7 @@ class ProcessingPurposeAnalyser(Analyser):
             List of findings from pattern matching
 
         """
-        findings: list[dict[str, Any]] = []
+        findings: list[ProcessingPurposeFindingModel] = []
 
         if "data" in data and isinstance(data["data"], list):
             # Validate and parse StandardInputData using Pydantic
@@ -223,9 +229,9 @@ class ProcessingPurposeAnalyser(Analyser):
 
             # Process each data item in the array using the pattern runner
             for data_item in standard_input_data.data:
-                # Get content and metadata from Pydantic models
+                # Get content and metadata
                 content = data_item.content
-                item_metadata = data_item.metadata.model_dump()
+                item_metadata = data_item.metadata
 
                 # Use pattern runner for analysis
                 item_findings = self.pattern_runner.run_analysis(
@@ -235,7 +241,9 @@ class ProcessingPurposeAnalyser(Analyser):
         else:
             # Handle direct content format (fallback)
             content = data.get("content", "")
-            metadata = data.get("metadata", {})
+            metadata_dict = data.get("metadata", {})
+            # Convert dict to model for type safety
+            metadata = StandardInputDataItemMetadataModel.model_validate(metadata_dict)
             findings = self.pattern_runner.run_analysis(
                 content, metadata, self._get_pattern_matching_config()
             )
@@ -244,7 +252,7 @@ class ProcessingPurposeAnalyser(Analyser):
 
     def _process_source_code_with_handler(
         self, data: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+    ) -> list[ProcessingPurposeFindingModel]:
         """Process source_code schema data using the source code handler.
 
         Args:
@@ -258,7 +266,15 @@ class ProcessingPurposeAnalyser(Analyser):
         source_code_data = parse_data_model(data, SourceCodeDataModel)
 
         # Use source code handler for analysis
-        findings = self.source_code_handler.analyse_source_code_data(source_code_data)
+        findings_dicts = self.source_code_handler.analyse_source_code_data(
+            source_code_data
+        )
+
+        # Convert dict findings to models for type consistency
+        findings = [
+            ProcessingPurposeFindingModel.model_validate(finding_dict)
+            for finding_dict in findings_dicts
+        ]
 
         return findings
 

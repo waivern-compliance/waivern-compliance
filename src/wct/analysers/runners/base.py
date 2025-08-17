@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
+from pydantic import BaseModel
+
 ResultT = TypeVar("ResultT")  # Type variable for analysis results
 ConfigT = TypeVar("ConfigT")  # Type variable for runner configuration
 
@@ -37,7 +39,7 @@ class AnalysisRunner(ABC, Generic[ResultT, ConfigT]):
     def run_analysis(
         self,
         input_data: Any,  # noqa: ANN401  # Abstract method must accept any input type for different analysers
-        metadata: dict[str, Any],
+        metadata: BaseModel,
         config: ConfigT,
     ) -> list[ResultT]:
         """Run the complete analysis process.

@@ -4,7 +4,7 @@ from typing import Any
 
 from wct.analysers.runners.types import PatternMatcherContext
 
-from .types import PersonalDataFindingModel
+from .types import PersonalDataFindingMetadata, PersonalDataFindingModel
 
 
 def personal_data_pattern_matcher(
@@ -46,16 +46,17 @@ def personal_data_pattern_matcher(
     if not evidence_matches:
         return None
 
-    # Pass metadata as-is since source is guaranteed by schema
-    finding_metadata = metadata.copy() if metadata else {}
+    # Create personal data specific finding object with proper metadata
+    finding_metadata = None
+    if metadata:
+        # Convert input metadata to PersonalDataFindingMetadata, preserving all fields
+        metadata_dict = metadata.model_dump()
+        finding_metadata = PersonalDataFindingMetadata(**metadata_dict)
 
-    # Create personal data specific finding object using Pydantic model
     return PersonalDataFindingModel(
         type=rule_name,
         risk_level=context.risk_level,
-        special_category=rule_metadata.get(
-            "special_category"
-        ),  # Personal data specific
+        special_category=rule_metadata.get("special_category"),
         matched_pattern=pattern,
         evidence=evidence_matches,
         metadata=finding_metadata,

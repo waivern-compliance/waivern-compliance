@@ -4,6 +4,7 @@ import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
 
+from pydantic import BaseModel
 from typing_extensions import override
 
 from wct.analysers.runners.base import AnalysisRunner
@@ -56,7 +57,7 @@ class LLMAnalysisRunner(AnalysisRunner[ResultT, LLMValidationConfig]):
     def run_analysis(
         self,
         input_data: list[ResultT],
-        metadata: dict[str, Any],
+        metadata: BaseModel,
         config: LLMValidationConfig,
     ) -> list[ResultT]:
         """Run LLM validation on findings.

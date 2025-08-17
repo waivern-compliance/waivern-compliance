@@ -1,12 +1,18 @@
-"""Pydantic data models for personal data analysis analyser."""
+"""Data models for personal data analysis analyser."""
 
-from typing import Any
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from pydantic import BaseModel, Field, field_validator
+
+class PersonalDataFindingMetadata(BaseModel):
+    """Metadata for personal data findings that matches the JSON schema."""
+
+    source: str = Field(description="Source file or location where the data was found")
+
+    model_config = ConfigDict(extra="allow")
 
 
 class PersonalDataFindingModel(BaseModel):
-    """A finding of personal data with validation and type safety."""
+    """Personal data finding structure."""
 
     type: str = Field(
         description="Type of personal data found (e.g., 'email', 'phone_number')"
@@ -22,7 +28,7 @@ class PersonalDataFindingModel(BaseModel):
         default=None,
         description="Evidence snippets from content that matches this finding",
     )
-    metadata: dict[str, Any] | None = Field(
+    metadata: PersonalDataFindingMetadata | None = Field(
         default=None, description="Additional metadata from the original data source"
     )
 
