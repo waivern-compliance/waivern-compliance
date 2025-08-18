@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import Self
 
 from wct.analysers.types import LLMValidationConfig, PatternMatchingConfig
@@ -65,3 +65,12 @@ class ProcessingPurposeFindingModel(BaseModel):
     metadata: ProcessingPurposeFindingMetadata | None = Field(
         default=None, description="Additional metadata about the finding"
     )
+
+    @field_validator("risk_level")
+    @classmethod
+    def validate_risk_level(cls, v: str) -> str:
+        """Validate risk level values."""
+        allowed = ["low", "medium", "high"]
+        if v not in allowed:
+            raise ValueError(f"risk_level must be one of {allowed}, got: {v}")
+        return v
