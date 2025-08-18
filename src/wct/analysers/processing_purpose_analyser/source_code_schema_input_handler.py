@@ -28,24 +28,20 @@ class SourceCodeSchemaInputHandler:
     the appropriate rulesets for processing purpose detection in source code.
     """
 
-    # Private constants for configuration values
-    _RULESET_NAME = "processing_purposes"
-    _DEFAULT_PURPOSE_CATEGORY = "OPERATIONAL"
-    _SOURCE_TYPE = "source_code"
-    _LINE_PREFIX = "Line"
-    _CODE_PREFIX = "Code:"
-
-    # Analysis pattern types
-    _ANALYSIS_TYPE_SOURCE_CODE = "source_code_pattern_matching_analysis"
-
     def __init__(self) -> None:
         """Initialise the handler and load required rulesets.
 
         The handler manages its own ruleset dependencies and is fully self-contained.
         """
-        # Load processing purposes patterns (includes merged third-party services)
-        self.processing_purpose_patterns = RulesetLoader.load_ruleset(
-            self._RULESET_NAME
+        # Load all three rulesets for comprehensive source code analysis
+        self._processing_purposes_rules = RulesetLoader.load_ruleset(
+            "processing_purposes"
+        )
+        self._service_integrations_rules = RulesetLoader.load_ruleset(
+            "service_integrations"
+        )
+        self._data_collection_rules = RulesetLoader.load_ruleset(
+            "data_collection_patterns"
         )
 
     def analyse_source_code_data(
@@ -97,6 +93,24 @@ class SourceCodeSchemaInputHandler:
         )
         findings.extend(processing_purpose_findings)
 
+        # Structured analysis with service_integrations
+        service_integration_findings = self._analyse_structured_service_integrations(
+            file_data, file_metadata
+        )
+        findings.extend(service_integration_findings)
+
+        # Structured analysis with data_collection_patterns
+        data_collection_findings = self._analyse_structured_data_collection(
+            file_data, file_metadata
+        )
+        findings.extend(data_collection_findings)
+
+        # Structured analysis with processing_purposes (secondary)
+        structured_purpose_findings = self._analyse_structured_processing_purposes(
+            file_data, file_metadata
+        )
+        findings.extend(structured_purpose_findings)
+
         return findings
 
     def _create_base_file_metadata(
@@ -113,10 +127,10 @@ class SourceCodeSchemaInputHandler:
 
         """
         return SourceCodeFileMetadata(
-            source=self._SOURCE_TYPE,
+            source="source_code",
             file_path=file_path,
             language=language,
-            analysis_type=self._ANALYSIS_TYPE_SOURCE_CODE,
+            analysis_type="source_code_pattern_matching_analysis",
         )
 
     def _analyse_raw_content_processing_purposes(
@@ -129,7 +143,7 @@ class SourceCodeSchemaInputHandler:
         lines = raw_content.split("\n")
 
         # Use processing purpose patterns from ruleset
-        for rule in self.processing_purpose_patterns:
+        for rule in self._processing_purposes_rules:
             rule_findings = self._analyse_rule_against_lines(rule, lines, file_metadata)
             findings.extend(rule_findings)
 
@@ -193,8 +207,8 @@ class SourceCodeSchemaInputHandler:
         """
         # Create processing purpose finding evidence
         evidence = [
-            f"{self._LINE_PREFIX} {line_num}: {rule.description} - {pattern}",
-            f"{self._CODE_PREFIX} {line.strip()}",
+            f"Line {line_num}: {rule.description} - {pattern}",
+            f"Code: {line.strip()}",
         ]
 
         # Create extra metadata fields
@@ -211,11 +225,199 @@ class SourceCodeSchemaInputHandler:
         # Create strongly typed finding using Pydantic model
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
-            purpose_category=rule.metadata.get(
-                "purpose_category", self._DEFAULT_PURPOSE_CATEGORY
-            ),
+            purpose_category=rule.metadata.get("purpose_category", ""),
             risk_level=rule.risk_level,
-            compliance_relevance=rule.metadata.get("compliance_relevance", ["GDPR"]),
+            compliance_relevance=rule.metadata.get("compliance_relevance", ["GDPR"])
+            if isinstance(rule.metadata.get("compliance_relevance", ["GDPR"]), list)
+            else ["GDPR"],
+            matched_pattern=pattern,
+            evidence=evidence,
+            metadata=ProcessingPurposeFindingMetadata(
+                source=file_metadata.source,
+                **extra_metadata,
+            ),
+        )
+
+    def _analyse_structured_service_integrations(
+        self, file_data: SourceCodeFileDataModel, file_metadata: SourceCodeFileMetadata
+    ) -> list[ProcessingPurposeFindingModel]:
+        """Analyse structured code elements for service integration patterns."""
+        findings: list[ProcessingPurposeFindingModel] = []
+
+        # Analyse imports for service integrations
+        for import_item in file_data.imports:
+            findings.extend(
+                self._check_patterns_against_text(
+                    self._service_integrations_rules,
+                    import_item.module,
+                    f"Import: {import_item.module}",
+                    file_metadata,
+                    "import_analysis",
+                )
+            )
+
+        # Analyse function names
+        for function in file_data.functions:
+            findings.extend(
+                self._check_patterns_against_text(
+                    self._service_integrations_rules,
+                    function.name,
+                    f"Function: {function.name}",
+                    file_metadata,
+                    "function_name_analysis",
+                )
+            )
+
+        # Analyse class names
+        for class_item in file_data.classes:
+            findings.extend(
+                self._check_patterns_against_text(
+                    self._service_integrations_rules,
+                    class_item.name,
+                    f"Class: {class_item.name}",
+                    file_metadata,
+                    "class_name_analysis",
+                )
+            )
+
+        return findings
+
+    def _analyse_structured_data_collection(
+        self, file_data: SourceCodeFileDataModel, file_metadata: SourceCodeFileMetadata
+    ) -> list[ProcessingPurposeFindingModel]:
+        """Analyse structured code elements for data collection patterns."""
+        findings: list[ProcessingPurposeFindingModel] = []
+
+        # Analyse function names for data collection patterns
+        for function in file_data.functions:
+            findings.extend(
+                self._check_patterns_against_text(
+                    self._data_collection_rules,
+                    function.name,
+                    f"Function: {function.name}",
+                    file_metadata,
+                    "data_collection_function_analysis",
+                )
+            )
+
+        # Analyse raw content for SQL patterns (hybrid approach)
+        findings.extend(
+            self._analyse_sql_patterns_in_content(file_data.raw_content, file_metadata)
+        )
+
+        return findings
+
+    def _analyse_structured_processing_purposes(
+        self, file_data: SourceCodeFileDataModel, file_metadata: SourceCodeFileMetadata
+    ) -> list[ProcessingPurposeFindingModel]:
+        """Analyse structured code elements for processing purpose patterns."""
+        findings: list[ProcessingPurposeFindingModel] = []
+
+        # Analyse function names for business purposes
+        for function in file_data.functions:
+            findings.extend(
+                self._check_patterns_against_text(
+                    self._processing_purposes_rules,
+                    function.name,
+                    f"Function: {function.name}",
+                    file_metadata,
+                    "function_name_analysis",
+                )
+            )
+
+        # Analyse class names for business purposes
+        for class_item in file_data.classes:
+            findings.extend(
+                self._check_patterns_against_text(
+                    self._processing_purposes_rules,
+                    class_item.name,
+                    f"Class: {class_item.name}",
+                    file_metadata,
+                    "class_name_analysis",
+                )
+            )
+
+        return findings
+
+    def _check_patterns_against_text(
+        self,
+        rules: tuple[Rule, ...],
+        text: str,
+        evidence_prefix: str,
+        file_metadata: SourceCodeFileMetadata,
+        analysis_type: str,
+    ) -> list[ProcessingPurposeFindingModel]:
+        """Check ruleset patterns against a text string."""
+        findings: list[ProcessingPurposeFindingModel] = []
+        text_lower = text.lower()
+
+        for rule in rules:
+            for pattern in rule.patterns:
+                if pattern.lower() in text_lower:
+                    finding = self._create_structured_finding(
+                        rule,
+                        pattern,
+                        evidence_prefix,
+                        file_metadata,
+                        analysis_type,
+                    )
+                    findings.append(finding)
+                    break  # Avoid duplicate matches for same rule
+
+        return findings
+
+    def _analyse_sql_patterns_in_content(
+        self, raw_content: str, file_metadata: SourceCodeFileMetadata
+    ) -> list[ProcessingPurposeFindingModel]:
+        """Analyse raw content for SQL patterns from data collection ruleset."""
+        findings: list[ProcessingPurposeFindingModel] = []
+        lines = raw_content.split("\n")
+
+        # Only check SQL-related rules from data collection
+        sql_rules = [
+            rule
+            for rule in self._data_collection_rules
+            if "sql" in rule.name.lower() or "database" in rule.name.lower()
+        ]
+
+        for rule in sql_rules:
+            rule_findings = self._analyse_rule_against_lines(rule, lines, file_metadata)
+            findings.extend(rule_findings)
+
+        return findings
+
+    def _create_structured_finding(
+        self,
+        rule: Rule,
+        pattern: str,
+        evidence_prefix: str,
+        file_metadata: SourceCodeFileMetadata,
+        analysis_type: str,
+    ) -> ProcessingPurposeFindingModel:
+        """Create a structured analysis finding."""
+        # Extract matched text from evidence prefix (e.g., "Function: getUserByEmail" -> "getUserByEmail")
+        matched_text = evidence_prefix.split(": ")[-1]
+        evidence = [
+            f"{evidence_prefix}: {rule.description} - {pattern}",
+            f"Matched: {matched_text}",
+        ]
+
+        extra_metadata = {
+            "file_path": file_metadata.file_path,
+            "language": file_metadata.language,
+            "analysis_type": analysis_type,
+            "service_category": rule.metadata.get("service_category"),
+            "description": rule.description,
+            "pattern": pattern,
+        }
+
+        return ProcessingPurposeFindingModel(
+            purpose=rule.name,
+            purpose_category=rule.metadata.get("purpose_category", ""),
+            risk_level=rule.risk_level,
+            compliance_relevance=rule.metadata.get("compliance_relevance", ["GDPR"])
+            if isinstance(rule.metadata.get("compliance_relevance", ["GDPR"]), list)
+            else ["GDPR"],
             matched_pattern=pattern,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(

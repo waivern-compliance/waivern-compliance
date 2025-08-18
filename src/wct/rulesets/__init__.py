@@ -11,12 +11,14 @@ from wct.rulesets.data_collection_patterns import DataCollectionPatternsRuleset
 # Import and register built-in rulesets automatically
 from wct.rulesets.personal_data import PersonalDataRuleset
 from wct.rulesets.processing_purposes import ProcessingPurposesRuleset
+from wct.rulesets.service_integrations import ServiceIntegrationsRuleset
 
 # Built-in rulesets - internal use only
 _BUILTIN_RULESETS = (
     PersonalDataRuleset,
     ProcessingPurposesRuleset,
     DataCollectionPatternsRuleset,
+    ServiceIntegrationsRuleset,
 )
 
 # Register all built-in rulesets automatically on import

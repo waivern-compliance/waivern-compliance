@@ -110,6 +110,10 @@ class RulesetRegistry:
             raise RulesetNotFoundError(f"Ruleset {name} not registered")
         return self._registry[name]
 
+    def clear(self) -> None:
+        """Clear all registered rulesets."""
+        self._registry.clear()
+
 
 class RulesetLoader:
     """Loads rulesets using singleton registry with explicit registration."""
