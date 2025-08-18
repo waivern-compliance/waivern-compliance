@@ -4,14 +4,10 @@ import logging
 from pprint import pformat
 from typing import Any
 
-from pydantic import BaseModel
 from typing_extensions import Self, override
 
 from wct.analysers.base import Analyser
-from wct.analysers.runners import (
-    LLMAnalysisRunner,
-    PatternMatchingAnalysisRunner,
-)
+from wct.analysers.utilities import LLMServiceManager
 from wct.message import Message
 from wct.schemas import (
     PersonalDataFindingSchema,
@@ -36,12 +32,6 @@ _SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
 ]
 
 
-class _EmptyMetadata(BaseModel):
-    """Empty metadata model for LLM runner when no metadata is needed."""
-
-    pass
-
-
 class PersonalDataAnalyser(Analyser):
     """Analyser for analysing personal data patterns in content.
 
@@ -53,20 +43,20 @@ class PersonalDataAnalyser(Analyser):
     def __init__(
         self,
         config: PersonalDataAnalyserConfig,
-        pattern_runner: PatternMatchingAnalysisRunner[PersonalDataFindingModel],
-        llm_runner: LLMAnalysisRunner[PersonalDataFindingModel],
+        pattern_matcher: PersonalDataPatternMatcher,
+        llm_service_manager: LLMServiceManager,
     ) -> None:
-        """Initialise the analyser with configuration and pre-configured runners.
+        """Initialise the analyser with configuration and utilities.
 
         Args:
             config: Strongly typed configuration
-            pattern_runner: Pre-configured pattern matching runner
-            llm_runner: Pre-configured LLM validation runner
+            pattern_matcher: Pattern matcher for personal data detection
+            llm_service_manager: LLM service manager for validation
 
         """
         self.config = config
-        self.pattern_runner = pattern_runner
-        self.llm_runner = llm_runner
+        self.pattern_matcher = pattern_matcher
+        self.llm_service_manager = llm_service_manager
 
     @classmethod
     @override
@@ -82,18 +72,16 @@ class PersonalDataAnalyser(Analyser):
             # Validate and parse properties using strong typing
             config = PersonalDataAnalyserConfig.from_properties(properties)
 
-            # Create runners with their specific configurations
-            pattern_runner = PatternMatchingAnalysisRunner(
-                pattern_matcher=PersonalDataPatternMatcher(config.pattern_matching)
-            )
-
-            llm_runner = LLMAnalysisRunner(
-                validation_strategy=personal_data_validation_strategy,
-                enable_llm_validation=config.llm_validation.enable_llm_validation,
+            # Create utilities with their specific configurations
+            pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
+            llm_service_manager = LLMServiceManager(
+                config.llm_validation.enable_llm_validation
             )
 
             return cls(
-                config=config, pattern_runner=pattern_runner, llm_runner=llm_runner
+                config=config,
+                pattern_matcher=pattern_matcher,
+                llm_service_manager=llm_service_manager,
             )
         except Exception as e:
             logger.error(f"Failed to create PersonalDataAnalyser from properties: {e}")
@@ -127,24 +115,17 @@ class PersonalDataAnalyser(Analyser):
         # Extract and validate data using Pydantic.model_validate
         typed_data = StandardInputDataModel.model_validate(message.content)
 
-        # Process each data item using the pattern runner
+        # Process each data item using the pattern matcher
         findings: list[PersonalDataFindingModel] = []
         for data_item in typed_data.data:
             content = data_item.content
-
-            # Pass strongly typed Pydantic metadata model directly
             item_metadata = data_item.metadata
 
-            item_findings = self.pattern_runner.run_analysis(
-                content, item_metadata, self.config.pattern_matching
-            )
+            item_findings = self.pattern_matcher.find_patterns(content, item_metadata)
             findings.extend(item_findings)
 
         # Run LLM validation if enabled
-        empty_metadata = _EmptyMetadata()
-        validated_findings = self.llm_runner.run_analysis(
-            findings, empty_metadata, self.config.llm_validation
-        )
+        validated_findings = self._validate_findings_with_llm(findings)
 
         # Create and validate output message
         return self._create_output_message(findings, validated_findings, output_schema)
@@ -202,6 +183,50 @@ class PersonalDataAnalyser(Analyser):
         )
 
         return output_message
+
+    def _validate_findings_with_llm(
+        self, findings: list[PersonalDataFindingModel]
+    ) -> list[PersonalDataFindingModel]:
+        """Validate findings using LLM if enabled and available.
+
+        Args:
+            findings: List of findings to validate
+
+        Returns:
+            List of validated findings (filtered/modified by LLM validation)
+
+        """
+        if not self.config.llm_validation.enable_llm_validation:
+            return findings
+
+        if not findings:
+            return findings
+
+        if not self.llm_service_manager.is_available():
+            logger.warning("LLM service not available, skipping validation")
+            return findings
+
+        try:
+            logger.info(f"Starting LLM validation of {len(findings)} findings")
+
+            llm_service = self.llm_service_manager.llm_service
+            if llm_service is None:
+                logger.warning("LLM service is None, returning unvalidated findings")
+                return findings
+
+            validated_findings = personal_data_validation_strategy(
+                findings, self.config.llm_validation, llm_service
+            )
+
+            logger.info(
+                f"LLM validation completed: {len(findings)} → {len(validated_findings)} findings"
+            )
+            return validated_findings
+
+        except Exception as e:
+            logger.error(f"LLM validation failed: {e}")
+            logger.warning("Returning unvalidated findings due to LLM validation error")
+            return findings
 
     def _build_findings_summary(
         self, findings: list[PersonalDataFindingModel]

@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from wct.analysers.runners.types import LLMValidationConfig
+from wct.analysers.types import LLMValidationConfig
 from wct.llm_service import AnthropicLLMService
 from wct.prompts.personal_data_validation import (
     RecommendedAction,
