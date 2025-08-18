@@ -34,12 +34,6 @@
             "type": "string",
             "description": "The specific pattern that was matched to identify this purpose"
           },
-          "confidence": {
-            "type": "number",
-            "minimum": 0.0,
-            "maximum": 1.0,
-            "description": "Confidence score for this purpose identification (0.0 to 1.0)"
-          },
           "evidence": {
             "type": "array",
             "items": {
@@ -53,7 +47,7 @@
             "description": "Additional metadata about where and how this purpose was identified"
           }
         },
-        "required": ["purpose", "purpose_category", "risk_level", "compliance_relevance", "matched_pattern", "confidence", "evidence", "metadata"],
+        "required": ["purpose", "purpose_category", "risk_level", "compliance_relevance", "matched_pattern", "evidence", "metadata"],
         "additionalProperties": false
       }
     },
@@ -65,18 +59,13 @@
           "minimum": 0,
           "description": "Total number of processing purpose findings"
         },
-        "high_confidence_count": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Number of findings with confidence above the threshold"
-        },
         "purposes_identified": {
           "type": "integer",
           "minimum": 0,
           "description": "Number of unique processing purposes identified"
         }
       },
-      "required": ["total_findings", "high_confidence_count", "purposes_identified"],
+      "required": ["total_findings", "purposes_identified"],
       "additionalProperties": false
     },
     "analysis_metadata": {
@@ -90,18 +79,12 @@
           "type": "boolean",
           "description": "Whether LLM validation was enabled for this analysis"
         },
-        "confidence_threshold": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 1.0,
-          "description": "Confidence threshold used for filtering results"
-        },
         "evidence_context_size": {
           "type": "string",
           "description": "Size of context used for evidence extraction"
         }
       },
-      "required": ["ruleset_used", "llm_validation_enabled", "confidence_threshold", "evidence_context_size"],
+      "required": ["ruleset_used", "llm_validation_enabled", "evidence_context_size"],
       "additionalProperties": true
     }
   },

@@ -23,12 +23,6 @@ class ProcessingPurposeAnalyserConfig(BaseModel):
         default_factory=lambda: LLMValidationConfig(enable_llm_validation=False),
         description="LLM validation configuration (not yet implemented)",
     )
-    confidence_threshold: float = Field(
-        default=0.8,
-        ge=0.0,
-        le=1.0,
-        description="Minimum confidence threshold for findings",
-    )
 
     @classmethod
     def from_properties(cls, properties: dict[str, Any]) -> Self:
@@ -65,7 +59,6 @@ class ProcessingPurposeFindingModel(BaseModel):
         description="Compliance frameworks this finding relates to",
     )
     matched_pattern: str = Field(description="Pattern that was matched")
-    confidence: float = Field(description="Confidence score for the finding")
     evidence: list[str] = Field(
         description="Evidence snippets that support the finding"
     )

@@ -6,9 +6,6 @@ from wct.analysers.runners.types import PatternMatcherContext
 
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
 
-# Default confidence for all findings (from original analyser)
-_DEFAULT_FINDING_CONFIDENCE = 0.5
-
 
 def processing_purpose_pattern_matcher(
     content: str,
@@ -53,10 +50,6 @@ def processing_purpose_pattern_matcher(
     if not evidence:  # Only create finding if we have evidence
         return None
 
-    # Use default confidence for all findings (from original implementation)
-    # Note: This is processing purpose specific and not in PatternMatchingRunnerConfig
-    confidence = _DEFAULT_FINDING_CONFIDENCE
-
     # Create processing purpose specific finding structure with proper metadata
     finding_metadata = None
     if metadata:
@@ -70,7 +63,6 @@ def processing_purpose_pattern_matcher(
         risk_level=context.risk_level,
         compliance_relevance=rule_metadata.get("compliance_relevance", ["GDPR"]),
         matched_pattern=pattern,
-        confidence=confidence,
         evidence=evidence,
         metadata=finding_metadata,
     )
