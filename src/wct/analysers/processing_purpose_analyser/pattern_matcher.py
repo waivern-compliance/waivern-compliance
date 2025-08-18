@@ -7,7 +7,7 @@ from wct.analysers.runners.types import PatternMatcherContext
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
 
 # Default confidence for all findings (from original analyser)
-DEFAULT_FINDING_CONFIDENCE = 0.5
+_DEFAULT_FINDING_CONFIDENCE = 0.5
 
 
 def processing_purpose_pattern_matcher(
@@ -55,7 +55,7 @@ def processing_purpose_pattern_matcher(
 
     # Use default confidence for all findings (from original implementation)
     # Note: This is processing purpose specific and not in PatternMatchingRunnerConfig
-    confidence = DEFAULT_FINDING_CONFIDENCE
+    confidence = _DEFAULT_FINDING_CONFIDENCE
 
     # Create processing purpose specific finding structure with proper metadata
     finding_metadata = None

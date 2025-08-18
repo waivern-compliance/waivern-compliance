@@ -1,6 +1,62 @@
 """Types for processing purpose analyser."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing_extensions import Self
+
+
+class ProcessingPurposeAnalyserConfig(BaseModel):
+    """Configuration for ProcessingPurposeAnalyser.
+
+    Groups related configuration parameters to reduce constructor complexity.
+    Uses Pydantic for validation and default values.
+    """
+
+    ruleset_name: str = Field(
+        default="processing_purposes",
+        description="Name of the ruleset to use for pattern matching",
+    )
+    evidence_context_size: str = Field(
+        default="medium", description="Size of evidence context for analysis"
+    )
+
+    @field_validator("evidence_context_size")
+    @classmethod
+    def validate_evidence_context_size(cls, v: str) -> str:
+        """Validate evidence context size values."""
+        allowed = ["small", "medium", "large"]
+        if v not in allowed:
+            raise ValueError(
+                f"evidence_context_size must be one of {allowed}, got: {v}"
+            )
+        return v
+
+    enable_llm_validation: bool = Field(
+        default=True, description="Whether to enable LLM validation"
+    )
+    llm_batch_size: int = Field(
+        default=30, ge=1, le=200, description="Batch size for LLM processing"
+    )
+    confidence_threshold: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence threshold for findings",
+    )
+
+    @classmethod
+    def from_properties(cls, properties: dict[str, Any]) -> Self:
+        """Create configuration from runbook properties.
+
+        Args:
+            properties: Raw properties from runbook configuration
+
+        Returns:
+            Validated configuration object
+
+        """
+        return cls.model_validate(properties)
 
 
 class ProcessingPurposeFindingMetadata(BaseModel):
