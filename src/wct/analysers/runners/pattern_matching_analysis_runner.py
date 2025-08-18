@@ -1,18 +1,13 @@
 """Pattern analysis runner."""
 
 import logging
-from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Protocol, TypeVar
 
 from pydantic import BaseModel
 from typing_extensions import override
 
 from wct.analysers.runners.base import AnalysisRunner, AnalysisRunnerError
-from wct.analysers.runners.types import (
-    PatternMatcherContext,
-    PatternMatchingConfig,
-)
-from wct.analysers.utilities import EvidenceExtractor
+from wct.analysers.runners.types import PatternMatchingConfig
 from wct.rulesets import RulesetLoader
 from wct.rulesets.types import Rule
 
@@ -25,10 +20,18 @@ ResultT = TypeVar("ResultT")
 # Analysis runner identifier
 _ANALYSIS_RUNNER_TYPE = "pattern_matching_runner"
 
-# Type alias for pattern matcher function
-PatternMatcherFn = Callable[
-    [str, str, dict[str, Any], PatternMatcherContext], ResultT | None
-]
+
+class PatternMatcher(Protocol[ResultT]):
+    """Protocol for pattern matcher classes."""
+
+    def match_patterns(
+        self,
+        rule: Rule,
+        content: str,
+        content_metadata: BaseModel,
+    ) -> list[ResultT]:
+        """Match patterns in content and return findings."""
+        ...
 
 
 class PatternMatchingAnalysisRunner(AnalysisRunner[ResultT, PatternMatchingConfig]):
@@ -39,14 +42,13 @@ class PatternMatchingAnalysisRunner(AnalysisRunner[ResultT, PatternMatchingConfi
     that defines how patterns are matched and how findings are structured.
     """
 
-    def __init__(self, pattern_matcher: PatternMatcherFn[ResultT]) -> None:
+    def __init__(self, pattern_matcher: PatternMatcher[ResultT]) -> None:
         """Initialise the pattern matching runner.
 
         Args:
-            pattern_matcher: Function that defines how to match patterns and create findings.
+            pattern_matcher: Pattern matcher object that defines how to match patterns and create findings.
 
         """
-        self.evidence_extractor = EvidenceExtractor()
         self._patterns_cache: dict[str, tuple[Rule, ...]] = {}  # Cache loaded rulesets
         self.pattern_matcher = pattern_matcher
 
@@ -113,66 +115,21 @@ class PatternMatchingAnalysisRunner(AnalysisRunner[ResultT, PatternMatchingConfi
 
         """
         findings: list[ResultT] = []
-        content_lower = content.lower()
 
         for rule in rules:
-            for pattern in rule.patterns:
-                if pattern.lower() in content_lower:
-                    finding = self._create_finding(
-                        content, pattern, rule, metadata, config
-                    )
-                    if finding is not None:
-                        findings.append(finding)
-                        logger.debug(f"Found pattern '{pattern}' in rule '{rule.name}'")
+            rule_findings = self.pattern_matcher.match_patterns(
+                rule,
+                content,
+                metadata,
+            )
+
+            if rule_findings:
+                findings.extend(rule_findings)
+                logger.debug(
+                    f"Found {len(rule_findings)} findings for rule '{rule.name}'"
+                )
 
         return findings
-
-    def _create_finding(
-        self,
-        content: str,
-        pattern: str,
-        rule: Rule,
-        metadata: BaseModel,
-        config: PatternMatchingConfig,
-    ) -> ResultT | None:
-        """Create a finding using the pattern matcher function.
-
-        Args:
-            content: Original content
-            pattern: Matched pattern
-            rule: Rule that matched
-            metadata: Content metadata
-            config: Analysis configuration
-
-        Returns:
-            Typed finding or None if no finding should be created
-
-        """
-        context = self._build_pattern_context(rule, metadata, config)
-        return self.pattern_matcher(content, pattern, rule.metadata, context)
-
-    def _build_pattern_context(
-        self, rule: Rule, metadata: BaseModel, config: PatternMatchingConfig
-    ) -> PatternMatcherContext:
-        """Build typed context object for pattern matcher function.
-
-        Args:
-            rule: Rule being processed
-            metadata: Content metadata
-            config: Analysis configuration
-
-        Returns:
-            Strongly typed context object with rule info and utilities
-
-        """
-        return PatternMatcherContext(
-            rule_name=rule.name,
-            rule_description=rule.description,
-            risk_level=rule.risk_level,
-            metadata=metadata,
-            config=config,
-            evidence_extractor=self.evidence_extractor,
-        )
 
     def _get_rules(self, ruleset_name: str) -> tuple[Rule, ...]:
         """Get rules from ruleset, using cache when possible.

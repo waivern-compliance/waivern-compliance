@@ -21,7 +21,7 @@ from wct.schemas import (
 )
 
 from .llm_validation_strategy import personal_data_validation_strategy
-from .pattern_matcher import personal_data_pattern_matcher
+from .pattern_matcher import PersonalDataPatternMatcher
 from .types import PersonalDataAnalyserConfig, PersonalDataFindingModel
 
 logger = logging.getLogger(__name__)
@@ -92,9 +92,12 @@ class PersonalDataAnalyser(Analyser):
             # Validate and parse properties using strong typing
             config = PersonalDataAnalyserConfig.from_properties(properties)
 
+            # Create pattern matcher with configuration
+            pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
+
             # Create runners with their specific configurations
             pattern_runner = PatternMatchingAnalysisRunner(
-                pattern_matcher=personal_data_pattern_matcher
+                pattern_matcher=pattern_matcher
             )
 
             llm_runner = LLMAnalysisRunner(
@@ -156,39 +159,24 @@ class PersonalDataAnalyser(Analyser):
             findings, empty_metadata, self.config.llm_validation
         )
 
-        # Build final result data
-        result_data = self._build_result_data(findings, validated_findings)
+        # Create and validate output message
+        return self._create_output_message(findings, validated_findings, output_schema)
 
-        # Create and validate output message in one step
-        output_message = Message(
-            id=_OUTPUT_MESSAGE_ID,
-            content=result_data,
-            schema=output_schema,
-        ).validate()
-
-        logger.info(
-            f"PersonalDataAnalyser processed with {len(result_data['findings'])} findings"
-        )
-
-        logger.debug(
-            f"PersonalDataAnalyser processed with findings:\n{pformat(result_data)}"
-        )
-
-        return output_message
-
-    def _build_result_data(
+    def _create_output_message(
         self,
         original_findings: list[PersonalDataFindingModel],
         validated_findings: list[PersonalDataFindingModel],
-    ) -> dict[str, Any]:
-        """Build the final result data structure.
+        output_schema: Schema,
+    ) -> Message:
+        """Create and validate output message.
 
         Args:
             original_findings: Original findings before LLM validation
             validated_findings: Findings after LLM validation
+            output_schema: Schema for output validation
 
         Returns:
-            Complete result data dictionary
+            Validated output message
 
         """
         # Convert models to dicts for final output
@@ -209,7 +197,24 @@ class PersonalDataAnalyser(Analyser):
                 original_findings, validated_findings
             )
 
-        return result_data
+        output_message = Message(
+            id=_OUTPUT_MESSAGE_ID,
+            content=result_data,
+            schema=output_schema,
+        )
+
+        # Validate the output message against the output schema
+        output_message.validate()
+
+        logger.info(
+            f"PersonalDataAnalyser processed with {len(result_data['findings'])} findings"
+        )
+
+        logger.debug(
+            f"PersonalDataAnalyser processed with findings:\n{pformat(result_data)}"
+        )
+
+        return output_message
 
     def _build_findings_summary(
         self, findings: list[PersonalDataFindingModel]

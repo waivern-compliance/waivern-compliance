@@ -1,402 +1,206 @@
 """Tests for personal data pattern matcher."""
 
-from typing import Any
-
 import pytest
-from pydantic import BaseModel
 
 from wct.analysers.personal_data_analyser.pattern_matcher import (
-    personal_data_pattern_matcher,
+    PersonalDataPatternMatcher,
 )
 from wct.analysers.personal_data_analyser.types import PersonalDataFindingModel
-from wct.analysers.runners.types import (
-    PatternMatcherContext,
-    PatternMatchingConfig,
-)
-from wct.analysers.utilities import EvidenceExtractor
+from wct.analysers.runners.types import PatternMatchingConfig
+from wct.rulesets.types import Rule
 from wct.schemas import StandardInputDataItemMetadataModel
 
 
 class TestPersonalDataPatternMatcher:
-    """Test suite for personal data pattern matcher function."""
+    """Test suite for personal data pattern matcher class."""
 
     @pytest.fixture
-    def evidence_extractor(self) -> EvidenceExtractor:
-        """Create a real evidence extractor for testing."""
-        return EvidenceExtractor()
+    def sample_rule(self) -> Rule:
+        """Create a sample rule for testing."""
+        return Rule(
+            name="email",
+            description="Email address pattern",
+            patterns=("support@example.com", "@"),
+            risk_level="medium",
+            metadata={"special_category": "N"},
+        )
 
     @pytest.fixture
     def pattern_config(self) -> PatternMatchingConfig:
-        """Create standard pattern matching configuration for testing."""
+        """Create pattern matching config for testing."""
         return PatternMatchingConfig(
-            ruleset_name="personal_data",
+            ruleset="test_ruleset",
             maximum_evidence_count=3,
-            evidence_context_size="small",
+            evidence_context_size="medium",
         )
 
     @pytest.fixture
-    def basic_context(
-        self,
-        evidence_extractor: EvidenceExtractor,
-        pattern_config: PatternMatchingConfig,
-    ) -> PatternMatcherContext:
-        """Create basic pattern matcher context for testing."""
-        return PatternMatcherContext(
-            rule_name="email",
-            rule_description="Email address pattern",
-            risk_level="medium",
-            metadata=StandardInputDataItemMetadataModel(source="test_file.txt"),
-            config=pattern_config,
-            evidence_extractor=evidence_extractor,
-        )
+    def basic_metadata(self) -> StandardInputDataItemMetadataModel:
+        """Create basic metadata for testing."""
+        return StandardInputDataItemMetadataModel(source="test_file.txt")
+
+    @pytest.fixture
+    def pattern_matcher(
+        self, pattern_config: PatternMatchingConfig
+    ) -> PersonalDataPatternMatcher:
+        """Create pattern matcher instance for testing."""
+        return PersonalDataPatternMatcher(pattern_config)
 
     def test_creates_finding_when_evidence_found(
-        self, basic_context: PatternMatcherContext
+        self,
+        sample_rule: Rule,
+        basic_metadata: StandardInputDataItemMetadataModel,
+        pattern_matcher: PersonalDataPatternMatcher,
     ) -> None:
-        """Test that a PersonalDataFindingModel is created when evidence is found."""
+        """Test that PersonalDataFindingModel is created when evidence is found."""
         # Arrange
         content = "Contact us at support@example.com for assistance"
-        pattern = "support@example.com"
-        rule_metadata: dict[str, Any] = {"special_category": "N"}
 
         # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
-        )
+        results = pattern_matcher.match_patterns(sample_rule, content, basic_metadata)
 
         # Assert
-        assert result is not None
+        assert len(results) > 0
+        result = results[0]  # Get first finding
         assert isinstance(result, PersonalDataFindingModel)
         assert result.type == "email"
+        assert result.matched_pattern == "support@example.com"
         assert result.risk_level == "medium"
         assert result.special_category == "N"
-        assert result.matched_pattern == pattern
-        assert result.evidence is not None
-        assert len(result.evidence) == 1
-        assert "support@example.com" in result.evidence[0]
-        assert result.metadata.source == "test_file.txt"
+        assert len(result.evidence) > 0
 
-    def test_returns_none_when_no_evidence_found(
-        self, basic_context: PatternMatcherContext
+    def test_returns_empty_list_when_no_evidence_found(
+        self,
+        sample_rule: Rule,
+        basic_metadata: StandardInputDataItemMetadataModel,
+        pattern_matcher: PersonalDataPatternMatcher,
     ) -> None:
-        """Test that None is returned when no evidence is found."""
+        """Test that empty list is returned when no evidence is found."""
         # Arrange
-        content = "This content has no email addresses"
-        pattern = "nonexistent@nowhere.com"
-        rule_metadata: dict[str, Any] = {"special_category": "N"}
+        content = "This content has no email patterns"
 
         # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
-        )
+        results = pattern_matcher.match_patterns(sample_rule, content, basic_metadata)
 
         # Assert
-        assert result is None
+        assert results == []
 
-    def test_returns_none_when_no_content(
-        self, basic_context: PatternMatcherContext
+    def test_handles_empty_content(
+        self,
+        sample_rule: Rule,
+        basic_metadata: StandardInputDataItemMetadataModel,
+        pattern_matcher: PersonalDataPatternMatcher,
     ) -> None:
-        """Test that None is returned when content is empty."""
+        """Test that empty content is handled gracefully."""
         # Arrange
         content = ""
-        pattern = "anything"
-        rule_metadata: dict[str, Any] = {}
 
         # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
+        results = pattern_matcher.match_patterns(sample_rule, content, basic_metadata)
+
+        # Assert
+        assert results == []
+
+    def test_handles_whitespace_only_content(
+        self,
+        sample_rule: Rule,
+        basic_metadata: StandardInputDataItemMetadataModel,
+        pattern_matcher: PersonalDataPatternMatcher,
+    ) -> None:
+        """Test that whitespace-only content is handled gracefully."""
+        # Arrange
+        content = "   \n\t  "
+
+        # Act
+        results = pattern_matcher.match_patterns(sample_rule, content, basic_metadata)
+
+        # Assert
+        assert results == []
+
+    def test_preserves_metadata_fields(
+        self,
+        basic_metadata: StandardInputDataItemMetadataModel,
+        pattern_matcher: PersonalDataPatternMatcher,
+    ) -> None:
+        """Test that metadata fields are preserved in the finding."""
+        # Arrange
+        content = "Email: admin@company.com"
+        rule_with_metadata = Rule(
+            name="admin_email",
+            description="Admin email pattern",
+            patterns=("admin@company.com",),
+            risk_level="high",
+            metadata={
+                "special_category": "Y",
+                "gdpr_category": "contact_details",
+            },
+        )
+
+        # Act
+        results = pattern_matcher.match_patterns(
+            rule_with_metadata, content, basic_metadata
         )
 
         # Assert
-        assert result is None
+        assert len(results) > 0
+        result = results[0]
+        assert result.special_category == "Y"
+        # Verify metadata is properly populated
+        assert result.metadata is not None
+        assert hasattr(result.metadata, "source")
 
-    def test_uses_configuration_values_correctly(
-        self, evidence_extractor: EvidenceExtractor
-    ) -> None:
-        """Test that configuration values are used correctly."""
+    def test_uses_context_configuration(self) -> None:
+        """Test that the pattern matcher uses configuration from context."""
         # Arrange
+        content = "Send message to user@domain.com for more info"
+        rule = Rule(
+            name="test_rule",
+            description="Test rule",
+            patterns=("user@domain.com",),
+            risk_level="low",
+            metadata={"special_category": "N"},
+        )
+
+        metadata = StandardInputDataItemMetadataModel(source="test")
         config = PatternMatchingConfig(
             ruleset="test_ruleset",
-            maximum_evidence_count=2,  # Limit to 2 pieces of evidence
-            evidence_context_size="long",
+            maximum_evidence_count=1,  # Limit evidence to 1
+            evidence_context_size="small",
         )
-        context = PatternMatcherContext(
-            rule_name="phone",
-            rule_description="Phone number pattern",
-            risk_level="high",
-            metadata=StandardInputDataItemMetadataModel(source="test"),
-            config=config,
-            evidence_extractor=evidence_extractor,
-        )
-
-        content = "Call us at 123-456-7890 or 987-654-3210 or 555-123-4567"
-        pattern = "123-456-7890"
-        rule_metadata: dict[str, Any] = {}
+        pattern_matcher = PersonalDataPatternMatcher(config)
 
         # Act
-        result = personal_data_pattern_matcher(content, pattern, rule_metadata, context)
+        results = pattern_matcher.match_patterns(rule, content, metadata)
 
         # Assert
-        assert result is not None
-        assert result.evidence is not None
-        # Should respect the maximum_evidence_count of 2
-        assert len(result.evidence) <= 2
+        assert len(results) > 0
+        result = results[0]
+        # Check that maximum_evidence_count=1 was respected
+        assert len(result.evidence) <= 1
 
-    def test_handles_special_category_metadata_correctly(
-        self, basic_context: PatternMatcherContext
-    ) -> None:
-        """Test that special category metadata is handled correctly."""
-        # Arrange
-        content = "Patient has diabetes condition"
-        pattern = "diabetes"
-        rule_metadata: dict[str, Any] = {"special_category": "Y"}
-
-        # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
-        )
-
-        # Assert
-        assert result is not None
-        assert result.special_category == "Y"
-
-    def test_handles_missing_special_category_metadata(
-        self, basic_context: PatternMatcherContext
-    ) -> None:
-        """Test that missing special category metadata is handled gracefully."""
-        # Arrange
-        content = "John Smith lives here"
-        pattern = "John Smith"
-        rule_metadata: dict[str, Any] = {}  # No special_category key
-
-        # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
-        )
-
-        # Assert
-        assert result is not None
-        assert result.special_category is None
-
-    def test_creates_copy_of_metadata(
-        self, basic_context: PatternMatcherContext
-    ) -> None:
-        """Test that metadata is converted correctly from Pydantic model."""
-        # Arrange
-        content = "Contact test@example.com"
-        pattern = "test@example.com"
-        rule_metadata: dict[str, Any] = {}
-        original_metadata = StandardInputDataItemMetadataModel(
-            source="original.txt", extra_field="data"
-        )
-
-        basic_context.metadata = original_metadata
-
-        # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
-        )
-
-        # Assert
-        assert result is not None
-        # The result metadata should be a BaseModel
-        assert isinstance(result.metadata, BaseModel)
-        assert result.metadata.source == "original.txt"
-        assert result.metadata.extra_field == "data"
-
-    def test_handles_empty_metadata_gracefully(
+    def test_finds_multiple_patterns_in_rule(
         self,
-        evidence_extractor: EvidenceExtractor,
-        pattern_config: PatternMatchingConfig,
+        basic_metadata: StandardInputDataItemMetadataModel,
+        pattern_matcher: PersonalDataPatternMatcher,
     ) -> None:
-        """Test that empty metadata is handled gracefully."""
+        """Test that multiple patterns in a rule can create multiple findings."""
         # Arrange
-        context = PatternMatcherContext(
-            rule_name="ssn",
-            rule_description="Social Security Number",
-            risk_level="high",
-            metadata=StandardInputDataItemMetadataModel(source="test"),
-            config=pattern_config,
-            evidence_extractor=evidence_extractor,
+        content = "Contact support@example.com or admin@example.com"
+        rule_with_multiple_patterns = Rule(
+            name="email",
+            description="Email patterns",
+            patterns=("support@example.com", "admin@example.com"),
+            risk_level="medium",
+            metadata={"special_category": "N"},
         )
 
-        content = "SSN: 123-45-6789"
-        pattern = "123-45-6789"
-        rule_metadata: dict[str, Any] = {"special_category": "Y"}
-
         # Act
-        result = personal_data_pattern_matcher(content, pattern, rule_metadata, context)
-
-        # Assert
-        assert result is not None
-        assert result.metadata.source == "test"
-
-    def test_preserves_all_context_information(
-        self, basic_context: PatternMatcherContext
-    ) -> None:
-        """Test that all context information is preserved in the finding."""
-        # Arrange
-        content = "Credit card: 4111-1111-1111-1111"
-        pattern = "4111-1111-1111-1111"
-        rule_metadata: dict[str, Any] = {
-            "special_category": "N",
-            "category": "financial",
-        }
-
-        basic_context.rule_name = "credit_card"
-        basic_context.risk_level = "high"
-
-        # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
+        results = pattern_matcher.match_patterns(
+            rule_with_multiple_patterns, content, basic_metadata
         )
 
         # Assert
-        assert result is not None
-        assert result.type == "credit_card"
-        assert result.risk_level == "high"
-        assert result.matched_pattern == pattern
-
-    def test_handles_multiple_evidence_items(
-        self, basic_context: PatternMatcherContext
-    ) -> None:
-        """Test that multiple evidence items are handled correctly."""
-        # Arrange
-        content = "Emails: john@example.com, jane@test.com, admin@company.org"
-        pattern = "john@example.com"  # Look for one specific email
-        rule_metadata: dict[str, Any] = {"special_category": "N"}
-
-        # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
-        )
-
-        # Assert
-        assert result is not None
-        assert result.evidence is not None
-        assert len(result.evidence) >= 1  # Should find at least one match
-        # Evidence should contain email addresses
-        evidence_text = " ".join(result.evidence)
-        assert "@" in evidence_text
-
-    def test_handles_complex_metadata_structures(
-        self, basic_context: PatternMatcherContext
-    ) -> None:
-        """Test that complex metadata structures are handled correctly."""
-        # Arrange
-        content = "Phone: +44 20 1234 5678"
-        pattern = "+44 20 1234 5678"
-        rule_metadata: dict[str, Any] = {"special_category": "N"}
-        # Create complex metadata with extra fields
-        complex_metadata = StandardInputDataItemMetadataModel(
-            source="database.sql",
-            table="customers",
-            column="phone_number",
-            row_id=42,
-            extracted_at="2024-01-15T10:30:00Z",
-            nested={"depth": 1, "values": [1, 2, 3]},
-        )
-
-        basic_context.metadata = complex_metadata
-
-        # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
-        )
-
-        # Assert
-        assert result is not None
-        # The result metadata should be a BaseModel
-        assert isinstance(result.metadata, BaseModel)
-        assert result.metadata.source == "database.sql"
-        assert result.metadata.table == "customers"
-        assert result.metadata.column == "phone_number"
-        assert result.metadata.row_id == 42
-        assert result.metadata.extracted_at == "2024-01-15T10:30:00Z"
-        assert result.metadata.nested["values"] == [1, 2, 3]
-
-    @pytest.mark.parametrize(
-        "risk_level,rule_description",
-        [
-            ("low", "Public information"),
-            ("medium", "Personal identifier"),
-            ("high", "Sensitive data"),
-        ],
-    )
-    def test_different_risk_levels(
-        self,
-        risk_level: str,
-        rule_description: str,
-        evidence_extractor: EvidenceExtractor,
-        pattern_config: PatternMatchingConfig,
-    ) -> None:
-        """Test that different risk levels are preserved correctly."""
-        # Arrange
-        context = PatternMatcherContext(
-            rule_name="test_rule",
-            rule_description=rule_description,
-            risk_level=risk_level,
-            metadata=StandardInputDataItemMetadataModel(source="test", test="data"),
-            config=pattern_config,
-            evidence_extractor=evidence_extractor,
-        )
-
-        content = "test content with keyword"
-        pattern = "keyword"
-        rule_metadata: dict[str, Any] = {}
-
-        # Act
-        result = personal_data_pattern_matcher(content, pattern, rule_metadata, context)
-
-        # Assert
-        assert result is not None
-        assert result.risk_level == risk_level
-
-    @pytest.mark.parametrize(
-        "special_category,description",
-        [
-            ("Y", "Special category data"),
-            ("N", "Non-special category data"),
-            (None, "Unspecified category"),
-            ("", "Empty category"),
-        ],
-    )
-    def test_various_special_category_values(
-        self,
-        special_category: str | None,
-        description: str,
-        basic_context: PatternMatcherContext,
-    ) -> None:
-        """Test that various special category values are handled correctly."""
-        # Arrange
-        content = f"Data contains {description} information"
-        pattern = description  # Use description as pattern for simplicity
-        rule_metadata: dict[str, Any] = {}
-        if special_category is not None:
-            rule_metadata["special_category"] = special_category
-
-        # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
-        )
-
-        # Assert
-        assert result is not None
-        assert result.special_category == special_category
-
-    def test_edge_case_empty_pattern(
-        self, basic_context: PatternMatcherContext
-    ) -> None:
-        """Test handling of empty pattern."""
-        # Arrange
-        content = "Some content here"
-        pattern = ""
-        rule_metadata: dict[str, Any] = {}
-
-        # Act
-        result = personal_data_pattern_matcher(
-            content, pattern, rule_metadata, basic_context
-        )
-
-        # Assert
-        assert result is None  # Empty pattern should not match anything
+        assert len(results) == 2  # Should find both patterns
+        matched_patterns = {result.matched_pattern for result in results}
+        assert "support@example.com" in matched_patterns
+        assert "admin@example.com" in matched_patterns

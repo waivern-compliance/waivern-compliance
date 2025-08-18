@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from wct.rulesets import RulesetLoader
+from wct.rulesets.types import Rule
 from wct.schemas import (
     SourceCodeDataModel,
     SourceCodeFileDataModel,
@@ -29,7 +30,10 @@ class SourceCodeSchemaInputHandler:
 
     # Private constants for configuration values
     _RULESET_NAME = "processing_purposes"
-    _DEFAULT_RISK_LEVEL = "medium"
+    _DEFAULT_PURPOSE_CATEGORY = "OPERATIONAL"
+    _SOURCE_TYPE = "source_code"
+    _LINE_PREFIX = "Line"
+    _CODE_PREFIX = "Code:"
 
     # Analysis pattern types
     _ANALYSIS_TYPE_SOURCE_CODE = "source_code_pattern_matching_analysis"
@@ -109,7 +113,7 @@ class SourceCodeSchemaInputHandler:
 
         """
         return SourceCodeFileMetadata(
-            source="source_code",
+            source=self._SOURCE_TYPE,
             file_path=file_path,
             language=language,
             analysis_type=self._ANALYSIS_TYPE_SOURCE_CODE,
@@ -126,46 +130,91 @@ class SourceCodeSchemaInputHandler:
 
         # Use processing purpose patterns from ruleset
         for rule in self.processing_purpose_patterns:
-            for line_num, line in enumerate(lines, 1):
-                line_lower = line.lower()
-
-                # Check if any patterns from this rule match the line
-                for pattern in rule.patterns:
-                    if pattern.lower() in line_lower:
-                        # Create processing purpose finding (no personal data context needed)
-                        evidence = [
-                            f"Line {line_num}: {rule.description} - {pattern}",
-                            f"Code: {line.strip()}",
-                        ]
-
-                        # Create finding as dict[str, Any] for processing purposes
-                        finding = {
-                            "purpose": rule.name,
-                            "purpose_category": rule.metadata.get(
-                                "purpose_category", "OPERATIONAL"
-                            ),
-                            "risk_level": rule.risk_level,
-                            "compliance_relevance": rule.metadata.get(
-                                "compliance_relevance", []
-                            ),
-                            "matched_pattern": pattern,
-                            "evidence": evidence,
-                            "metadata": {
-                                "source": file_metadata.source,
-                                "file_path": file_metadata.file_path,
-                                "line_number": line_num,
-                                "language": file_metadata.language,
-                                "analysis_type": file_metadata.analysis_type,
-                                "service_category": rule.metadata.get(
-                                    "service_category"
-                                ),
-                                "description": rule.description,
-                                "pattern": pattern,
-                            },
-                        }
-                        findings.append(finding)
-
-                        # Avoid duplicate matches for the same line/rule
-                        break
+            rule_findings = self._analyse_rule_against_lines(rule, lines, file_metadata)
+            findings.extend(rule_findings)
 
         return findings
+
+    def _analyse_rule_against_lines(
+        self,
+        rule: Rule,
+        lines: list[str],
+        file_metadata: SourceCodeFileMetadata,
+    ) -> list[dict[str, Any]]:
+        """Analyse a single rule against all lines in the content.
+
+        Args:
+            rule: Processing purpose rule to match
+            lines: Lines of source code to analyse
+            file_metadata: Metadata about the source code file
+
+        Returns:
+            List of findings for this rule
+
+        """
+        findings: list[dict[str, Any]] = []
+
+        for line_num, line in enumerate(lines, 1):
+            line_lower = line.lower()
+
+            # Check if any patterns from this rule match the line
+            for pattern in rule.patterns:
+                if pattern.lower() in line_lower:
+                    finding = self._create_processing_purpose_finding(
+                        rule, pattern, line, line_num, file_metadata
+                    )
+                    findings.append(finding)
+
+                    # Avoid duplicate matches for the same line/rule
+                    break
+
+        return findings
+
+    def _create_processing_purpose_finding(
+        self,
+        rule: Rule,
+        pattern: str,
+        line: str,
+        line_num: int,
+        file_metadata: SourceCodeFileMetadata,
+    ) -> dict[str, Any]:
+        """Create a processing purpose finding dictionary.
+
+        Args:
+            rule: Processing purpose rule that matched
+            pattern: Specific pattern that matched
+            line: Source code line that matched
+            line_num: Line number in the file
+            file_metadata: Metadata about the source code file
+
+        Returns:
+            Processing purpose finding as dictionary
+
+        """
+        # Create processing purpose finding (no personal data context needed)
+        evidence = [
+            f"{self._LINE_PREFIX} {line_num}: {rule.description} - {pattern}",
+            f"{self._CODE_PREFIX} {line.strip()}",
+        ]
+
+        # Create finding as dict[str, Any] for processing purposes
+        return {
+            "purpose": rule.name,
+            "purpose_category": rule.metadata.get(
+                "purpose_category", self._DEFAULT_PURPOSE_CATEGORY
+            ),
+            "risk_level": rule.risk_level,
+            "compliance_relevance": rule.metadata.get("compliance_relevance", []),
+            "matched_pattern": pattern,
+            "evidence": evidence,
+            "metadata": {
+                "source": file_metadata.source,
+                "file_path": file_metadata.file_path,
+                "line_number": line_num,
+                "language": file_metadata.language,
+                "analysis_type": file_metadata.analysis_type,
+                "service_category": rule.metadata.get("service_category"),
+                "description": rule.description,
+                "pattern": pattern,
+            },
+        }

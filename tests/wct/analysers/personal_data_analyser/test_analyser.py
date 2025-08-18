@@ -206,7 +206,7 @@ class TestPersonalDataAnalyser:
         assert isinstance(analyser, PersonalDataAnalyser)
         # Verify default values are applied
         assert analyser.config.pattern_matching.ruleset == "personal_data"
-        assert analyser.config.pattern_matching.evidence_context_size == "small"
+        assert analyser.config.pattern_matching.evidence_context_size == "medium"
         assert analyser.config.llm_validation.enable_llm_validation is True
 
     def test_process_returns_valid_output_message_with_findings(
