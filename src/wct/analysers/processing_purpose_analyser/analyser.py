@@ -1,7 +1,6 @@
 """Processing purpose analysis analyser for GDPR compliance."""
 
 import logging
-from dataclasses import dataclass
 from typing import Any
 
 from typing_extensions import Self, override
@@ -25,45 +24,18 @@ from wct.schemas import (
 
 from .pattern_matcher import processing_purpose_pattern_matcher
 from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
-from .types import ProcessingPurposeFindingModel
+from .types import ProcessingPurposeAnalyserConfig, ProcessingPurposeFindingModel
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
+_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
     StandardInputSchema(),
     SourceCodeSchema(),
 ]
 
-SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
     ProcessingPurposeFindingSchema(),
 ]
-
-DEFAULT_INPUT_SCHEMA = SUPPORTED_INPUT_SCHEMAS[0]
-DEFAULT_OUTPUT_SCHEMA = SUPPORTED_OUTPUT_SCHEMAS[0]
-
-# Default configuration values
-DEFAULT_RULESET_NAME = "processing_purposes"
-DEFAULT_EVIDENCE_CONTEXT_SIZE = "medium"
-DEFAULT_ENABLE_LLM_VALIDATION = True
-DEFAULT_LLM_BATCH_SIZE = 30
-DEFAULT_CONFIDENCE_THRESHOLD = 0.8
-
-# Default confidence for all findings
-DEFAULT_FINDING_CONFIDENCE = 0.5
-
-
-@dataclass
-class ProcessingPurposeAnalyserConfig:
-    """Configuration for ProcessingPurposeAnalyser.
-
-    Groups related configuration parameters to reduce constructor complexity.
-    """
-
-    ruleset_name: str = DEFAULT_RULESET_NAME
-    evidence_context_size: str = DEFAULT_EVIDENCE_CONTEXT_SIZE
-    enable_llm_validation: bool = DEFAULT_ENABLE_LLM_VALIDATION
-    llm_batch_size: int = DEFAULT_LLM_BATCH_SIZE
-    confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD
 
 
 class ProcessingPurposeAnalyser(Analyser):
@@ -110,25 +82,8 @@ class ProcessingPurposeAnalyser(Analyser):
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
         """Create analyser instance from properties."""
-        ruleset_name = properties.get("ruleset", DEFAULT_RULESET_NAME)
-        evidence_context_size = properties.get(
-            "evidence_context_size", DEFAULT_EVIDENCE_CONTEXT_SIZE
-        )
-        enable_llm_validation = properties.get(
-            "enable_llm_validation", DEFAULT_ENABLE_LLM_VALIDATION
-        )
-        llm_batch_size = properties.get("llm_batch_size", DEFAULT_LLM_BATCH_SIZE)
-        confidence_threshold = properties.get(
-            "confidence_threshold", DEFAULT_CONFIDENCE_THRESHOLD
-        )
-
-        config = ProcessingPurposeAnalyserConfig(
-            ruleset_name=ruleset_name,
-            evidence_context_size=evidence_context_size,
-            enable_llm_validation=enable_llm_validation,
-            llm_batch_size=llm_batch_size,
-            confidence_threshold=confidence_threshold,
-        )
+        # Create and validate config using ProcessingPurposeAnalyserConfig
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
 
         return cls(config=config)
 
@@ -136,13 +91,13 @@ class ProcessingPurposeAnalyser(Analyser):
     @override
     def get_supported_input_schemas(cls) -> list[Schema]:
         """Return the input schemas supported by this analyser."""
-        return SUPPORTED_INPUT_SCHEMAS
+        return _SUPPORTED_INPUT_SCHEMAS
 
     @classmethod
     @override
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this analyser."""
-        return SUPPORTED_OUTPUT_SCHEMAS
+        return _SUPPORTED_OUTPUT_SCHEMAS
 
     @override
     def process(
