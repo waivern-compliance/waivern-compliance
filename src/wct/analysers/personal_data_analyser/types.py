@@ -18,8 +18,14 @@ class PersonalDataAnalyserConfig(BaseModel):
     configuration section in the runbook properties.
     """
 
-    pattern_matching: PatternMatchingConfig = PatternMatchingConfig()
-    llm_validation: LLMValidationConfig = LLMValidationConfig()
+    pattern_matching: PatternMatchingConfig = Field(
+        default_factory=lambda: PatternMatchingConfig(ruleset="personal_data"),
+        description="Pattern matching configuration for personal data detection",
+    )
+    llm_validation: LLMValidationConfig = Field(
+        default_factory=lambda: LLMValidationConfig(enable_llm_validation=True),
+        description="LLM validation configuration for filtering false positives",
+    )
 
     @classmethod
     def from_properties(cls, properties: dict[str, Any]) -> Self:

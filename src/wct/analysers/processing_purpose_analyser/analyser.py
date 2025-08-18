@@ -9,7 +9,6 @@ from wct.analysers.base import Analyser
 from wct.analysers.runners import (
     PatternMatchingAnalysisRunner,
 )
-from wct.analysers.runners.types import PatternMatchingConfig
 from wct.message import Message
 from wct.schemas import (
     ProcessingPurposeFindingSchema,
@@ -58,7 +57,7 @@ class ProcessingPurposeAnalyser(Analyser):
             pattern_runner: Pattern matching runner (optional, will create default if None)
 
         """
-        # Store strongly-typed configuration (aligned with PersonalDataAnalyser)
+        # Store strongly-typed configuration
         self.config: ProcessingPurposeAnalyserConfig = (
             config or ProcessingPurposeAnalyserConfig()
         )
@@ -145,10 +144,10 @@ class ProcessingPurposeAnalyser(Analyser):
 
         # Add analysis metadata
         result_data["analysis_metadata"] = {
-            "ruleset_used": self.config.ruleset_name,
-            "llm_validation_enabled": self.config.enable_llm_validation,
+            "ruleset_used": self.config.pattern_matching.ruleset,
+            "llm_validation_enabled": self.config.llm_validation.enable_llm_validation,
             "confidence_threshold": self.config.confidence_threshold,
-            "evidence_context_size": self.config.evidence_context_size,
+            "evidence_context_size": self.config.pattern_matching.evidence_context_size,
         }
 
         output_message = Message(
@@ -190,7 +189,7 @@ class ProcessingPurposeAnalyser(Analyser):
 
                 # Use pattern runner for analysis
                 item_findings = self.pattern_runner.run_analysis(
-                    content, item_metadata, self._get_pattern_matching_config()
+                    content, item_metadata, self.config.pattern_matching
                 )
                 findings.extend(item_findings)
         else:
@@ -200,7 +199,7 @@ class ProcessingPurposeAnalyser(Analyser):
             # Convert dict to model for type safety
             metadata = StandardInputDataItemMetadataModel.model_validate(metadata_dict)
             findings = self.pattern_runner.run_analysis(
-                content, metadata, self._get_pattern_matching_config()
+                content, metadata, self.config.pattern_matching
             )
 
         return findings
@@ -232,11 +231,3 @@ class ProcessingPurposeAnalyser(Analyser):
         ]
 
         return findings
-
-    def _get_pattern_matching_config(self) -> PatternMatchingConfig:
-        """Extract pattern matching configuration from the full config."""
-        return PatternMatchingConfig(
-            ruleset=self.config.ruleset_name,
-            maximum_evidence_count=3,  # Default max evidence count
-            evidence_context_size=self.config.evidence_context_size,
-        )

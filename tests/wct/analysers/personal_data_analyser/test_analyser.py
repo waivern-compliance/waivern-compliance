@@ -49,7 +49,7 @@ class TestPersonalDataAnalyser:
 
     @pytest.fixture
     def valid_config(self) -> PersonalDataAnalyserConfig:
-        """Create a valid configuration for testing."""
+        """Create a valid configuration for testing using direct instantiation."""
         return PersonalDataAnalyserConfig(
             pattern_matching=PatternMatchingConfig(
                 ruleset="personal_data",
@@ -192,7 +192,10 @@ class TestPersonalDataAnalyser:
             PersonalDataAnalyser.from_properties(invalid_properties)
 
     def test_from_properties_creates_analyser_with_default_values(self) -> None:
-        """Test creating analyser with minimal properties uses defaults."""
+        """Test creating analyser with minimal properties uses defaults.
+
+        This demonstrates the from_properties pattern with empty configuration.
+        """
         # Arrange
         minimal_properties: dict[str, Any] = {}
 
@@ -305,10 +308,12 @@ class TestPersonalDataAnalyser:
         sample_findings: list[PersonalDataFindingModel],
     ) -> None:
         """Test that validation summary is excluded when LLM validation is disabled."""
-        # Arrange
-        config_with_llm_disabled = PersonalDataAnalyserConfig(
-            pattern_matching=PatternMatchingConfig(),
-            llm_validation=LLMValidationConfig(enable_llm_validation=False),
+        # Arrange - using from_properties to demonstrate the flexibility
+        config_with_llm_disabled = PersonalDataAnalyserConfig.from_properties(
+            {
+                "llm_validation": {"enable_llm_validation": False}
+                # pattern_matching will use defaults
+            }
         )
         analyser = PersonalDataAnalyser(
             config_with_llm_disabled, mock_pattern_runner, mock_llm_runner
