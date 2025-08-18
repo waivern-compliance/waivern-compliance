@@ -20,10 +20,9 @@ from wct.schemas import (
     StandardInputSchema,
 )
 
-from .config import PersonalDataAnalyserProperties
 from .llm_validation_strategy import personal_data_validation_strategy
 from .pattern_matcher import personal_data_pattern_matcher
-from .types import PersonalDataFindingModel
+from .types import PersonalDataAnalyserConfig, PersonalDataFindingModel
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +62,7 @@ class PersonalDataAnalyser(Analyser):
 
     def __init__(
         self,
-        config: PersonalDataAnalyserProperties,
+        config: PersonalDataAnalyserConfig,
         pattern_runner: PatternMatchingAnalysisRunner[PersonalDataFindingModel],
         llm_runner: LLMAnalysisRunner[PersonalDataFindingModel],
     ) -> None:
@@ -91,7 +90,7 @@ class PersonalDataAnalyser(Analyser):
         """Create analyser instance from properties with self-configuring runners."""
         try:
             # Validate and parse properties using strong typing
-            config = PersonalDataAnalyserProperties.from_properties(properties)
+            config = PersonalDataAnalyserConfig.from_properties(properties)
 
             # Create runners with their specific configurations
             pattern_runner = PatternMatchingAnalysisRunner(
