@@ -149,7 +149,6 @@ class SourceCodeSchemaInputHandler:
                                 "compliance_relevance", []
                             ),
                             "matched_pattern": pattern,
-                            "confidence": 0.8,  # Default confidence for pattern matches
                             "evidence": evidence,
                             "metadata": {
                                 "source": file_metadata.source,

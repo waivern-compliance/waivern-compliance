@@ -6,7 +6,6 @@
       "risk_level": "low",
       "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
       "matched_pattern": "compliance",
-      "confidence": 0.9,
       "evidence": [
         "AI compliance framework implementation",
         "regulatory compliance dashboard",
@@ -25,7 +24,6 @@
       "risk_level": "medium",
       "compliance_relevance": ["GDPR"],
       "matched_pattern": "authentication",
-      "confidence": 0.95,
       "evidence": [
         "login credentials validation",
         "password hash storage",
@@ -44,7 +42,6 @@
       "risk_level": "high",
       "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
       "matched_pattern": "analytics",
-      "confidence": 0.8,
       "evidence": [
         "adobe analytics integration",
         "user behavior tracking",
@@ -63,7 +60,6 @@
       "risk_level": "high",
       "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
       "matched_pattern": "personalization",
-      "confidence": 0.87,
       "evidence": [
         "recommendation engine",
         "user preferences tracking",
@@ -82,7 +78,6 @@
       "risk_level": "low",
       "compliance_relevance": ["GDPR", "ISO_27001", "SOC_2"],
       "matched_pattern": "fraud",
-      "confidence": 0.92,
       "evidence": [
         "transaction monitoring",
         "scamalytics integration",
@@ -97,13 +92,11 @@
   ],
   "summary": {
     "total_findings": 4,
-    "high_confidence_count": 3,
     "purposes_identified": 4
   },
   "analysis_metadata": {
     "ruleset_used": "processing_purpose",
     "llm_validation_enabled": true,
-    "confidence_threshold": 0.7,
     "evidence_context_size": "medium"
   }
 }

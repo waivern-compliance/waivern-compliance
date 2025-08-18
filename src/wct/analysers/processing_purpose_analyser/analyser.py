@@ -131,13 +131,6 @@ class ProcessingPurposeAnalyser(Analyser):
             "findings": findings_dicts,
             "summary": {
                 "total_findings": len(findings),
-                "high_confidence_count": len(
-                    [
-                        f
-                        for f in findings
-                        if f.confidence >= self.config.confidence_threshold
-                    ]
-                ),
                 "purposes_identified": len(set(f.purpose for f in findings)),
             },
         }
@@ -146,7 +139,6 @@ class ProcessingPurposeAnalyser(Analyser):
         result_data["analysis_metadata"] = {
             "ruleset_used": self.config.pattern_matching.ruleset,
             "llm_validation_enabled": self.config.llm_validation.enable_llm_validation,
-            "confidence_threshold": self.config.confidence_threshold,
             "evidence_context_size": self.config.pattern_matching.evidence_context_size,
         }
 
