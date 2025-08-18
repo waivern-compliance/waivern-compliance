@@ -40,19 +40,34 @@ analysers:
   - name: "processing_purpose_analyser_for_source_code"
     type: "processing_purpose_analyser"
     properties:
-      evidence_context_size: medium
-      enable_llm_validation: false
-      llm_batch_size: 50
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "processing_purposes"
+        evidence_context_size: "medium"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 50
     metadata:
       priority: "high"
       description: "Analyse PHP source code for processing purposes and service integrations"
   - name: "processing_purpose_analyser_for_mysql"
     type: "processing_purpose_analyser"
     properties:
-      evidence_context_size: "medium"
-      enable_llm_validation: false
-      llm_batch_size: 20
-      confidence_threshold: 0.5
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "processing_purposes"
+        evidence_context_size: "medium"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 20
+        llm_validation_mode: "conservative"
+        confidence_threshold: 0.5
     metadata:
       priority: "medium"
       description: "Identify data processing purposes from MySQL database content"
