@@ -1,7 +1,5 @@
 """Source code schema input handler for processing purpose detection in source code analysis results."""
 
-from typing import Any
-
 from pydantic import BaseModel
 
 from wct.rulesets import RulesetLoader
@@ -10,6 +8,8 @@ from wct.schemas import (
     SourceCodeDataModel,
     SourceCodeFileDataModel,
 )
+
+from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
 
 
 class SourceCodeFileMetadata(BaseModel):
@@ -50,7 +50,7 @@ class SourceCodeSchemaInputHandler:
 
     def analyse_source_code_data(
         self, data: SourceCodeDataModel
-    ) -> list[dict[str, Any]]:
+    ) -> list[ProcessingPurposeFindingModel]:
         """Analyse source code analysis data for processing purpose patterns.
 
         This method examines source code analysis results to identify patterns that
@@ -60,10 +60,10 @@ class SourceCodeSchemaInputHandler:
             data: Pydantic validated source code analysis data from SourceCodeConnector
 
         Returns:
-            List of processing purpose findings from source code analysis
+            List of strongly typed processing purpose findings from source code analysis
 
         """
-        findings: list[dict[str, Any]] = []
+        findings: list[ProcessingPurposeFindingModel] = []
 
         # Analyse each file in the source code analysis
         for file_data in data.data:
@@ -74,17 +74,17 @@ class SourceCodeSchemaInputHandler:
 
     def _analyse_single_file(
         self, file_data: SourceCodeFileDataModel
-    ) -> list[dict[str, Any]]:
+    ) -> list[ProcessingPurposeFindingModel]:
         """Analyse a single source code file and return all processing purpose findings.
 
         Args:
             file_data: Typed source code file data to analyse
 
         Returns:
-            List of processing purpose findings from this file
+            List of strongly typed processing purpose findings from this file
 
         """
-        findings: list[dict[str, Any]] = []
+        findings: list[ProcessingPurposeFindingModel] = []
 
         # Create base metadata for this file
         file_metadata = self._create_base_file_metadata(
@@ -123,9 +123,9 @@ class SourceCodeSchemaInputHandler:
         self,
         raw_content: str,
         file_metadata: SourceCodeFileMetadata,
-    ) -> list[dict[str, Any]]:
+    ) -> list[ProcessingPurposeFindingModel]:
         """Analyse raw content for processing purpose patterns using processing_purposes ruleset."""
-        findings: list[dict[str, Any]] = []
+        findings: list[ProcessingPurposeFindingModel] = []
         lines = raw_content.split("\n")
 
         # Use processing purpose patterns from ruleset
@@ -140,7 +140,7 @@ class SourceCodeSchemaInputHandler:
         rule: Rule,
         lines: list[str],
         file_metadata: SourceCodeFileMetadata,
-    ) -> list[dict[str, Any]]:
+    ) -> list[ProcessingPurposeFindingModel]:
         """Analyse a single rule against all lines in the content.
 
         Args:
@@ -149,10 +149,10 @@ class SourceCodeSchemaInputHandler:
             file_metadata: Metadata about the source code file
 
         Returns:
-            List of findings for this rule
+            List of strongly typed findings for this rule
 
         """
-        findings: list[dict[str, Any]] = []
+        findings: list[ProcessingPurposeFindingModel] = []
 
         for line_num, line in enumerate(lines, 1):
             line_lower = line.lower()
@@ -177,8 +177,8 @@ class SourceCodeSchemaInputHandler:
         line: str,
         line_num: int,
         file_metadata: SourceCodeFileMetadata,
-    ) -> dict[str, Any]:
-        """Create a processing purpose finding dictionary.
+    ) -> ProcessingPurposeFindingModel:
+        """Create a strongly typed processing purpose finding.
 
         Args:
             rule: Processing purpose rule that matched
@@ -188,33 +188,38 @@ class SourceCodeSchemaInputHandler:
             file_metadata: Metadata about the source code file
 
         Returns:
-            Processing purpose finding as dictionary
+            Strongly typed ProcessingPurposeFindingModel
 
         """
-        # Create processing purpose finding (no personal data context needed)
+        # Create processing purpose finding evidence
         evidence = [
             f"{self._LINE_PREFIX} {line_num}: {rule.description} - {pattern}",
             f"{self._CODE_PREFIX} {line.strip()}",
         ]
 
-        # Create finding as dict[str, Any] for processing purposes
-        return {
-            "purpose": rule.name,
-            "purpose_category": rule.metadata.get(
+        # Create extra metadata fields
+        extra_metadata = {
+            "file_path": file_metadata.file_path,
+            "line_number": line_num,
+            "language": file_metadata.language,
+            "analysis_type": file_metadata.analysis_type,
+            "service_category": rule.metadata.get("service_category"),
+            "description": rule.description,
+            "pattern": pattern,
+        }
+
+        # Create strongly typed finding using Pydantic model
+        return ProcessingPurposeFindingModel(
+            purpose=rule.name,
+            purpose_category=rule.metadata.get(
                 "purpose_category", self._DEFAULT_PURPOSE_CATEGORY
             ),
-            "risk_level": rule.risk_level,
-            "compliance_relevance": rule.metadata.get("compliance_relevance", []),
-            "matched_pattern": pattern,
-            "evidence": evidence,
-            "metadata": {
-                "source": file_metadata.source,
-                "file_path": file_metadata.file_path,
-                "line_number": line_num,
-                "language": file_metadata.language,
-                "analysis_type": file_metadata.analysis_type,
-                "service_category": rule.metadata.get("service_category"),
-                "description": rule.description,
-                "pattern": pattern,
-            },
-        }
+            risk_level=rule.risk_level,
+            compliance_relevance=rule.metadata.get("compliance_relevance", ["GDPR"]),
+            matched_pattern=pattern,
+            evidence=evidence,
+            metadata=ProcessingPurposeFindingMetadata(
+                source=file_metadata.source,
+                **extra_metadata,
+            ),
+        )

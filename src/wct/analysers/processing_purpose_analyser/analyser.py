@@ -155,14 +155,8 @@ class ProcessingPurposeAnalyser(Analyser):
             List of processing purpose findings from source code analysis
 
         """
-        # Use source code handler for analysis
-        findings_dicts = self.source_code_handler.analyse_source_code_data(typed_data)
-
-        # Convert dict findings to models for type consistency
-        findings = [
-            ProcessingPurposeFindingModel.model_validate(finding_dict)
-            for finding_dict in findings_dicts
-        ]
+        # Use source code handler for analysis - returns strongly typed models
+        findings = self.source_code_handler.analyse_source_code_data(typed_data)
 
         return findings
 
