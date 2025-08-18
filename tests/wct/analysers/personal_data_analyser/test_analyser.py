@@ -10,8 +10,8 @@ from unittest.mock import Mock, patch
 import pytest
 
 from wct.analysers.personal_data_analyser.analyser import PersonalDataAnalyser
-from wct.analysers.personal_data_analyser.config import PersonalDataAnalyserProperties
 from wct.analysers.personal_data_analyser.types import (
+    PersonalDataAnalyserConfig,
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
 )
@@ -48,9 +48,9 @@ class TestPersonalDataAnalyser:
         return Mock(spec=LLMAnalysisRunner)
 
     @pytest.fixture
-    def valid_config(self) -> PersonalDataAnalyserProperties:
+    def valid_config(self) -> PersonalDataAnalyserConfig:
         """Create a valid configuration for testing."""
-        return PersonalDataAnalyserProperties(
+        return PersonalDataAnalyserConfig(
             pattern_matching=PatternMatchingConfig(
                 ruleset="personal_data",
                 evidence_context_size="medium",
@@ -208,7 +208,7 @@ class TestPersonalDataAnalyser:
 
     def test_process_returns_valid_output_message_with_findings(
         self,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
         sample_input_message: Message,
@@ -256,7 +256,7 @@ class TestPersonalDataAnalyser:
 
     def test_process_includes_validation_summary_when_llm_validation_enabled(
         self,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
         sample_input_message: Message,
@@ -306,7 +306,7 @@ class TestPersonalDataAnalyser:
     ) -> None:
         """Test that validation summary is excluded when LLM validation is disabled."""
         # Arrange
-        config_with_llm_disabled = PersonalDataAnalyserProperties(
+        config_with_llm_disabled = PersonalDataAnalyserConfig(
             pattern_matching=PatternMatchingConfig(),
             llm_validation=LLMValidationConfig(enable_llm_validation=False),
         )
@@ -331,7 +331,7 @@ class TestPersonalDataAnalyser:
 
     def test_process_excludes_validation_summary_when_no_findings(
         self,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
         sample_input_message: Message,
@@ -361,7 +361,7 @@ class TestPersonalDataAnalyser:
 
     def test_process_handles_empty_data_gracefully(
         self,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
     ) -> None:
@@ -407,7 +407,7 @@ class TestPersonalDataAnalyser:
 
     def test_process_correctly_counts_high_risk_findings(
         self,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
         sample_input_message: Message,
@@ -465,7 +465,7 @@ class TestPersonalDataAnalyser:
 
     def test_process_calls_runners_with_correct_parameters(
         self,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
         sample_input_message: Message,
@@ -502,7 +502,7 @@ class TestPersonalDataAnalyser:
 
     def test_process_passes_metadata_correctly_to_pattern_runner(
         self,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
         sample_findings: list[PersonalDataFindingModel],
@@ -558,7 +558,7 @@ class TestPersonalDataAnalyser:
     def test_process_validates_input_message(
         self,
         mock_validate: Mock,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
         sample_input_message: Message,
@@ -583,7 +583,7 @@ class TestPersonalDataAnalyser:
 
     def test_constructor_stores_configuration_and_runners(
         self,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
     ) -> None:
@@ -600,7 +600,7 @@ class TestPersonalDataAnalyser:
 
     def test_process_returns_message_with_correct_structure(
         self,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
         sample_input_message: Message,
@@ -662,7 +662,7 @@ class TestPersonalDataAnalyser:
 
     def test_process_with_mixed_risk_levels_and_special_categories(
         self,
-        valid_config: PersonalDataAnalyserProperties,
+        valid_config: PersonalDataAnalyserConfig,
         mock_pattern_runner: Mock,
         mock_llm_runner: Mock,
         sample_input_message: Message,
