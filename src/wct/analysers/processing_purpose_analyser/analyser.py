@@ -81,12 +81,9 @@ class ProcessingPurposeAnalyser(Analyser):
         # Create and validate config using ProcessingPurposeAnalyserConfig
         config = ProcessingPurposeAnalyserConfig.from_properties(properties)
 
-        # Create pattern matcher with configuration
-        pattern_matcher = ProcessingPurposePatternMatcher(config.pattern_matching)
-
         # Create pattern runner with processing purpose specific strategy
         pattern_runner = PatternMatchingAnalysisRunner[ProcessingPurposeFindingModel](
-            pattern_matcher=pattern_matcher
+            pattern_matcher=ProcessingPurposePatternMatcher(config.pattern_matching)
         )
 
         return cls(config=config, pattern_runner=pattern_runner)
@@ -116,55 +113,37 @@ class ProcessingPurposeAnalyser(Analyser):
         # Validate input message
         Analyser._validate_input_message(message, input_schema)
 
-        # Extract content from message
-        data = message.content
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
-        # Process data based on schema type
-        findings = self._process_data_by_schema(data, input_schema)
+        # Validate and parse data based on schema type
+        if input_schema.name == _STANDARD_INPUT_SCHEMA_NAME:
+            typed_data = StandardInputDataModel.model_validate(message.content)
+            findings = self._process_standard_input_data(typed_data)
+        elif input_schema.name == _SOURCE_CODE_SCHEMA_NAME:
+            typed_data = parse_data_model(message.content, SourceCodeDataModel)
+            findings = self._process_source_code_data(typed_data)
+        else:
+            raise ValueError(f"Unsupported input schema: {input_schema.name}")
 
         # Create and validate output message
         return self._create_output_message(findings, output_schema)
 
-    def _process_data_by_schema(
-        self, data: dict[str, Any], input_schema: Schema
-    ) -> list[ProcessingPurposeFindingModel]:
-        """Process data based on input schema type.
-
-        Args:
-            data: Input data to process
-            input_schema: Schema that determines processing method
-
-        Returns:
-            List of processing purpose findings
-
-        """
-        if input_schema.name == _STANDARD_INPUT_SCHEMA_NAME:
-            return self._process_standard_input_with_runners(data)
-        elif input_schema.name == _SOURCE_CODE_SCHEMA_NAME:
-            return self._process_source_code_with_handler(data)
-        else:
-            raise ValueError(f"Unsupported input schema: {input_schema.name}")
-
-    def _process_standard_input_with_runners(
-        self, data: dict[str, Any]
+    def _process_standard_input_data(
+        self, typed_data: StandardInputDataModel
     ) -> list[ProcessingPurposeFindingModel]:
         """Process standard_input schema data using runners.
 
         Args:
-            data: Input data in standard_input schema format
+            typed_data: Validated standard input data
 
         Returns:
             List of findings from pattern matching
 
         """
-        # Validate and parse StandardInputData using Pydantic
-        standard_input_data = StandardInputDataModel.model_validate(data)
-
         findings: list[ProcessingPurposeFindingModel] = []
 
         # Process each data item in the array using the pattern runner
-        for data_item in standard_input_data.data:
+        for data_item in typed_data.data:
             # Get content and metadata
             content = data_item.content
             item_metadata = data_item.metadata
@@ -177,25 +156,20 @@ class ProcessingPurposeAnalyser(Analyser):
 
         return findings
 
-    def _process_source_code_with_handler(
-        self, data: dict[str, Any]
+    def _process_source_code_data(
+        self, typed_data: SourceCodeDataModel
     ) -> list[ProcessingPurposeFindingModel]:
         """Process source_code schema data using the source code handler.
 
         Args:
-            data: Input data in source_code schema format
+            typed_data: Validated source code data
 
         Returns:
             List of processing purpose findings from source code analysis
 
         """
-        # Parse and validate source code data
-        source_code_data = parse_data_model(data, SourceCodeDataModel)
-
         # Use source code handler for analysis
-        findings_dicts = self.source_code_handler.analyse_source_code_data(
-            source_code_data
-        )
+        findings_dicts = self.source_code_handler.analyse_source_code_data(typed_data)
 
         # Convert dict findings to models for type consistency
         findings = [

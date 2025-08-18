@@ -92,12 +92,9 @@ class PersonalDataAnalyser(Analyser):
             # Validate and parse properties using strong typing
             config = PersonalDataAnalyserConfig.from_properties(properties)
 
-            # Create pattern matcher with configuration
-            pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
-
             # Create runners with their specific configurations
             pattern_runner = PatternMatchingAnalysisRunner(
-                pattern_matcher=pattern_matcher
+                pattern_matcher=PersonalDataPatternMatcher(config.pattern_matching)
             )
 
             llm_runner = LLMAnalysisRunner(
