@@ -16,6 +16,7 @@ from wct.analysers.personal_data_analyser import (
 )
 from wct.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
+    ProcessingPurposeFindingModel,
 )
 from wct.analysers.types import LLMValidationConfig, PatternMatchingConfig
 
@@ -27,6 +28,7 @@ __all__ = (
     "PersonalDataAnalyser",
     "PersonalDataFindingModel",
     "ProcessingPurposeAnalyser",
+    "ProcessingPurposeFindingModel",
     "LLMValidationConfig",
     "PatternMatchingConfig",
     "BUILTIN_ANALYSERS",
