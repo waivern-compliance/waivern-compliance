@@ -1,4 +1,4 @@
-"""Type definitions for analysis runners."""
+"""Type definitions for analysers."""
 
 from typing import Literal
 
@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class PatternMatchingConfig(BaseModel):
-    """Strongly typed configuration for pattern matching runners."""
+    """Strongly typed configuration for pattern matching analysis."""
 
     ruleset: str = Field(description="Name of the ruleset to use for pattern matching")
 
@@ -34,7 +34,7 @@ class PatternMatchingConfig(BaseModel):
 
 
 class LLMValidationConfig(BaseModel):
-    """Strongly typed configuration for LLM validation runners."""
+    """Strongly typed configuration for LLM validation analysis."""
 
     enable_llm_validation: bool = Field(
         default=True,

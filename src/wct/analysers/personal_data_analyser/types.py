@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import Self
 
-from wct.analysers.runners.types import (
+from wct.analysers.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )

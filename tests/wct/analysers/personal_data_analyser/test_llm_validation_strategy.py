@@ -12,7 +12,7 @@ from wct.analysers.personal_data_analyser.types import (
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
 )
-from wct.analysers.runners.types import LLMValidationConfig
+from wct.analysers.types import LLMValidationConfig
 from wct.llm_service import AnthropicLLMService
 
 

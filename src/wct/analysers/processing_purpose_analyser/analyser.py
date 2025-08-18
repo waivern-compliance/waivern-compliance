@@ -6,9 +6,6 @@ from typing import Any
 from typing_extensions import Self, override
 
 from wct.analysers.base import Analyser
-from wct.analysers.runners import (
-    PatternMatchingAnalysisRunner,
-)
 from wct.message import Message
 from wct.schemas import (
     ProcessingPurposeFindingSchema,
@@ -46,18 +43,18 @@ class ProcessingPurposeAnalyser(Analyser):
     def __init__(
         self,
         config: ProcessingPurposeAnalyserConfig,
-        pattern_runner: PatternMatchingAnalysisRunner[ProcessingPurposeFindingModel],
+        pattern_matcher: ProcessingPurposePatternMatcher,
     ) -> None:
-        """Initialise the processing purpose analyser with specified configuration and runners.
+        """Initialise the processing purpose analyser with specified configuration and pattern matcher.
 
         Args:
             config: Configuration object with analysis settings
-            pattern_runner: Pattern matching runner for processing purpose detection
+            pattern_matcher: Pattern matcher for processing purpose detection
 
         """
         # Store strongly-typed configuration
         self.config: ProcessingPurposeAnalyserConfig = config
-        self.pattern_runner = pattern_runner
+        self.pattern_matcher = pattern_matcher
 
         # Initialise source code handler for SourceCodeSchema processing
         self.source_code_handler = SourceCodeSchemaInputHandler()
@@ -75,12 +72,10 @@ class ProcessingPurposeAnalyser(Analyser):
         # Create and validate config using ProcessingPurposeAnalyserConfig
         config = ProcessingPurposeAnalyserConfig.from_properties(properties)
 
-        # Create pattern runner with processing purpose specific strategy
-        pattern_runner = PatternMatchingAnalysisRunner[ProcessingPurposeFindingModel](
-            pattern_matcher=ProcessingPurposePatternMatcher(config.pattern_matching)
-        )
+        # Create pattern matcher with processing purpose specific strategy
+        pattern_matcher = ProcessingPurposePatternMatcher(config.pattern_matching)
 
-        return cls(config=config, pattern_runner=pattern_runner)
+        return cls(config=config, pattern_matcher=pattern_matcher)
 
     @classmethod
     @override
@@ -142,10 +137,8 @@ class ProcessingPurposeAnalyser(Analyser):
             content = data_item.content
             item_metadata = data_item.metadata
 
-            # Use pattern runner for analysis
-            item_findings = self.pattern_runner.run_analysis(
-                content, item_metadata, self.config.pattern_matching
-            )
+            # Use pattern matcher for analysis
+            item_findings = self.pattern_matcher.find_patterns(content, item_metadata)
             findings.extend(item_findings)
 
         return findings
