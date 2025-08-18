@@ -16,7 +16,7 @@ class ProcessingPurposeAnalyserConfig(BaseModel):
     """
 
     pattern_matching: PatternMatchingConfig = Field(
-        default_factory=lambda: PatternMatchingConfig(ruleset="processing_purposes"),
+        default_factory=lambda: PatternMatchingConfig(ruleset="processing_purpose"),
         description="Pattern matching configuration",
     )
     llm_validation: LLMValidationConfig = Field(

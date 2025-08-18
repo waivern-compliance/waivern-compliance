@@ -1,68 +1,94 @@
-"""Pattern matcher function for processing purpose analysis."""
+"""Pattern matcher class for processing purpose analysis."""
 
-from typing import Any
+from pydantic import BaseModel
 
-from wct.analysers.runners.types import PatternMatcherContext
+from wct.analysers.runners.types import PatternMatchingConfig
+from wct.analysers.utilities import EvidenceExtractor
+from wct.rulesets.types import Rule
 
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
 
 
-def processing_purpose_pattern_matcher(
-    content: str,
-    pattern: str,
-    rule_metadata: dict[str, Any],
-    context: PatternMatcherContext,
-) -> ProcessingPurposeFindingModel | None:
-    """Pattern matcher function for processing purpose analysis.
+class ProcessingPurposePatternMatcher:
+    """Pattern matcher for processing purpose analysis.
 
-    This function defines how processing purpose patterns are matched and how
-    findings are structured for the ProcessingPurposeAnalyser.
-
-    Args:
-        content: The content being analyzed
-        pattern: The matched pattern
-        rule_metadata: Metadata from the rule
-        context: Strongly typed context with rule info, metadata, config, and utilities
-
-    Returns:
-        Processing purpose finding dictionary or None if no finding should be created
-
+    This class provides pattern matching functionality specifically for processing purpose
+    detection, creating structured findings for the ProcessingPurposeAnalyser.
     """
-    # Access typed context fields directly
-    evidence_extractor = context.evidence_extractor
-    metadata = context.metadata
-    config = context.config
-    rule_name = context.rule_name  # This is the purpose_name
 
-    # Check if content is empty
-    if not content.strip():
-        return None
+    # Private constants
+    _DEFAULT_PURPOSE_CATEGORY = "OPERATIONAL"
+    _DEFAULT_COMPLIANCE_RELEVANCE = ["GDPR"]
 
-    # Get configuration specific to processing purpose analysis
-    max_evidence = config.maximum_evidence_count
-    evidence_context_size = config.evidence_context_size
+    def __init__(self, config: PatternMatchingConfig) -> None:
+        """Initialise the pattern matcher with configuration.
 
-    # Extract evidence snippets
-    evidence = evidence_extractor.extract_evidence(
-        content, pattern, max_evidence, evidence_context_size
-    )
+        Args:
+            config: Pattern matching configuration
 
-    if not evidence:  # Only create finding if we have evidence
-        return None
+        """
+        self.config = config
+        self.evidence_extractor = EvidenceExtractor()
 
-    # Create processing purpose specific finding structure with proper metadata
-    finding_metadata = None
-    if metadata:
-        # Convert input metadata to ProcessingPurposeFindingMetadata, preserving all fields
-        metadata_dict = metadata.model_dump()
-        finding_metadata = ProcessingPurposeFindingMetadata(**metadata_dict)
+    def match_patterns(
+        self,
+        rule: Rule,
+        content: str,
+        content_metadata: BaseModel,
+    ) -> list[ProcessingPurposeFindingModel]:
+        """Perform pattern matching for processing purpose analysis.
 
-    return ProcessingPurposeFindingModel(
-        purpose=rule_name,
-        purpose_category=rule_metadata.get("purpose_category", "OPERATIONAL"),
-        risk_level=context.risk_level,
-        compliance_relevance=rule_metadata.get("compliance_relevance", ["GDPR"]),
-        matched_pattern=pattern,
-        evidence=evidence,
-        metadata=finding_metadata,
-    )
+        Args:
+            rule: The rule containing patterns to match against
+            content: The content being analyzed
+            content_metadata: Metadata about the content being analyzed
+
+        Returns:
+            List of processing purpose findings
+
+        """
+        # Check if content is empty
+        if not content.strip():
+            return []
+
+        findings: list[ProcessingPurposeFindingModel] = []
+        content_lower = content.lower()
+
+        # Perform pattern matching for all patterns in the rule
+        for pattern in rule.patterns:
+            if pattern.lower() in content_lower:
+                # Extract evidence for this matched pattern
+                evidence = self.evidence_extractor.extract_evidence(
+                    content,
+                    pattern,
+                    self.config.maximum_evidence_count,
+                    self.config.evidence_context_size,
+                )
+
+                if evidence:  # Only create finding if we have evidence
+                    # Create processing purpose specific finding
+                    finding_metadata = None
+                    if content_metadata:
+                        metadata_dict = content_metadata.model_dump()
+                        finding_metadata = ProcessingPurposeFindingMetadata(
+                            **metadata_dict
+                        )
+
+                    finding = ProcessingPurposeFindingModel(
+                        purpose=rule.name,
+                        purpose_category=rule.metadata.get(
+                            "purpose_category",
+                            ProcessingPurposePatternMatcher._DEFAULT_PURPOSE_CATEGORY,
+                        ),
+                        risk_level=rule.risk_level,
+                        compliance_relevance=rule.metadata.get(
+                            "compliance_relevance",
+                            ProcessingPurposePatternMatcher._DEFAULT_COMPLIANCE_RELEVANCE,
+                        ),
+                        matched_pattern=pattern,
+                        evidence=evidence,
+                        metadata=finding_metadata,
+                    )
+                    findings.append(finding)
+
+        return findings
