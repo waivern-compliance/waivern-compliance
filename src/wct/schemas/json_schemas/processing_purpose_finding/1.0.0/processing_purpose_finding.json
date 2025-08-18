@@ -14,7 +14,6 @@
           },
           "purpose_category": {
             "type": "string",
-            "enum": ["AI_AND_ML", "OPERATIONAL", "ANALYTICS", "MARKETING_AND_ADVERTISING", "SECURITY"],
             "description": "The broad category of the processing purpose"
           },
           "risk_level": {

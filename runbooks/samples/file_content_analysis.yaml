@@ -19,7 +19,7 @@ analysers:
       # Pattern matching configuration
       pattern_matching:
         ruleset: "personal_data"
-        evidence_context_size: "long"
+        evidence_context_size: "large"
         maximum_evidence_count: 3
 
       # LLM validation configuration

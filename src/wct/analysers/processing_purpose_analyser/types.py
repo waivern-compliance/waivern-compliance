@@ -16,7 +16,7 @@ class ProcessingPurposeAnalyserConfig(BaseModel):
     """
 
     pattern_matching: PatternMatchingConfig = Field(
-        default_factory=lambda: PatternMatchingConfig(ruleset="processing_purpose"),
+        default_factory=lambda: PatternMatchingConfig(ruleset="processing_purposes"),
         description="Pattern matching configuration",
     )
     llm_validation: LLMValidationConfig = Field(
@@ -51,7 +51,7 @@ class ProcessingPurposeFindingModel(BaseModel):
 
     purpose: str = Field(description="Processing purpose name")
     purpose_category: str = Field(
-        default="OPERATIONAL", description="Category of the processing purpose"
+        default="", description="Category of the processing purpose"
     )
     risk_level: str = Field(description="Risk level of the finding")
     compliance_relevance: list[str] = Field(

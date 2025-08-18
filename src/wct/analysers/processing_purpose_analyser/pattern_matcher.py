@@ -26,9 +26,9 @@ class ProcessingPurposePatternMatcher:
             config: Pattern matching configuration
 
         """
-        self.config = config
-        self.evidence_extractor = EvidenceExtractor()
-        self.ruleset_manager = RulesetManager()
+        self._config = config
+        self._evidence_extractor = EvidenceExtractor()
+        self._ruleset_manager = RulesetManager()
 
     def find_patterns(
         self,
@@ -49,7 +49,7 @@ class ProcessingPurposePatternMatcher:
         if not content.strip():
             return []
 
-        rules = self.ruleset_manager.get_rules(self.config.ruleset)
+        rules = self._ruleset_manager.get_rules(self._config.ruleset)
         findings: list[ProcessingPurposeFindingModel] = []
         content_lower = content.lower()
 
@@ -59,11 +59,11 @@ class ProcessingPurposePatternMatcher:
             for pattern in rule.patterns:
                 if pattern.lower() in content_lower:
                     # Extract evidence for this matched pattern
-                    evidence = self.evidence_extractor.extract_evidence(
+                    evidence = self._evidence_extractor.extract_evidence(
                         content,
                         pattern,
-                        self.config.maximum_evidence_count,
-                        self.config.evidence_context_size,
+                        self._config.maximum_evidence_count,
+                        self._config.evidence_context_size,
                     )
 
                     if evidence:  # Only create finding if we have evidence

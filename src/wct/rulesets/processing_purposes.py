@@ -1,7 +1,7 @@
 """Known processing purposes to search for during analysis.
 
 This ruleset contains processing purpose patterns for GDPR compliance analysis.
-Version 2.0.0 includes merged third_party_services patterns as separate "Service Integrations" categories.
+Version 3.0.0 has separated service integration patterns into dedicated service_integrations ruleset.
 """
 
 import logging
@@ -15,7 +15,7 @@ from wct.rulesets.types import Rule, RuleData
 logger = logging.getLogger(__name__)
 
 # Version constant for this ruleset (private)
-_VERSION: Final[str] = "2.0.0"  # Incremented due to merger
+_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "processing_purposes"
 
 _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
@@ -227,29 +227,6 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "compliance_relevance": ["GDPR"],
         },
     },
-    "General Product and Service Delivery - Service Integrations": {
-        "description": "Cloud storage and platform service integrations for product and service delivery",
-        "patterns": (
-            "aws",
-            "amazon",
-            "s3.amazonaws",
-            "firebase",
-            "gcp",
-            "google.cloud",
-            "azure",
-            "microsoft",
-            "dropbox",
-            "storage",
-            "upload",
-        ),
-        "risk_level": "medium",
-        "metadata": {
-            "purpose_category": "OPERATIONAL",
-            "service_category": "cloud_infrastructure",
-            "compliance_relevance": ["GDPR"],
-            "regulatory_impact": "GDPR Article 28, Data Localisation Requirements",
-        },
-    },
     "Customer Service and Support": {
         "description": "Providing customer service, support, and assistance",
         "patterns": (
@@ -272,29 +249,6 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
         "metadata": {
             "purpose_category": "OPERATIONAL",
             "compliance_relevance": ["GDPR"],
-        },
-    },
-    "Customer Service and Support - Service Integrations": {
-        "description": "Email and communication service integrations for customer support",
-        "patterns": (
-            "sendgrid",
-            "mailchimp",
-            "mailgun",
-            "postmark",
-            "twilio",
-            "slack",
-            "discord",
-            "intercom",
-            "zendesk",
-            "sms",
-            "notification",
-        ),
-        "risk_level": "medium",
-        "metadata": {
-            "purpose_category": "OPERATIONAL",
-            "service_category": "communication",
-            "compliance_relevance": ["GDPR"],
-            "regulatory_impact": "GDPR Article 28 (Data Processors)",
         },
     },
     "Customization of Products and Services": {
@@ -337,28 +291,6 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "compliance_relevance": ["GDPR"],
         },
     },
-    "User Identity and Login Management - Service Integrations": {
-        "description": "Third-party authentication and identity service integrations",
-        "patterns": (
-            "auth0",
-            "okta",
-            "onelogin",
-            "oauth",
-            "openid",
-            "saml",
-            "azure.ad",
-            "authenticate",
-            "authorization",
-            "identity",
-        ),
-        "risk_level": "high",
-        "metadata": {
-            "purpose_category": "OPERATIONAL",
-            "service_category": "identity_management",
-            "compliance_relevance": ["GDPR"],
-            "regulatory_impact": "GDPR Article 25 (Data Protection by Design)",
-        },
-    },
     "Payment, Billing, and Invoicing": {
         "description": "Processing payments, billing, and financial transactions",
         "patterns": (
@@ -376,26 +308,6 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
         "metadata": {
             "purpose_category": "OPERATIONAL",
             "compliance_relevance": ["GDPR", "PCI_DSS", "SOX"],
-        },
-    },
-    "Payment, Billing, and Invoicing - Service Integrations": {
-        "description": "Payment processing service integrations",
-        "patterns": (
-            "stripe",
-            "paypal",
-            "square",
-            "braintree",
-            "authorize.net",
-            "worldpay",
-            "adyen",
-            "charge",
-        ),
-        "risk_level": "high",
-        "metadata": {
-            "purpose_category": "OPERATIONAL",
-            "service_category": "payment_processing",
-            "compliance_relevance": ["GDPR", "PCI_DSS", "SOX"],
-            "regulatory_impact": "PCI DSS, GDPR Article 25",
         },
     },
     # ===== ANALYTICS PURPOSES =====
@@ -419,27 +331,6 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
         "metadata": {
             "purpose_category": "ANALYTICS",
             "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
-        },
-    },
-    "Behavioral Data Analysis for Product Improvement - Service Integrations": {
-        "description": "User analytics and tracking service integrations",
-        "patterns": (
-            "google-analytics",
-            "googleanalytics",
-            "gtag",
-            "mixpanel",
-            "amplitude",
-            "segment",
-            "hotjar",
-            "fullstory",
-            "logrocket",
-        ),
-        "risk_level": "medium",
-        "metadata": {
-            "purpose_category": "ANALYTICS",
-            "service_category": "user_analytics",
-            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
-            "regulatory_impact": "GDPR Article 6, Cookie Directive",
         },
     },
     # ===== MARKETING AND ADVERTISING PURPOSES =====
@@ -512,27 +403,6 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
         },
     },
-    "Targeted Marketing via Third-Party Platforms - Service Integrations": {
-        "description": "Social media platform integrations for targeted marketing",
-        "patterns": (
-            "facebook",
-            "fb.com",
-            "twitter",
-            "linkedin",
-            "instagram",
-            "tiktok",
-            "youtube",
-            "pinterest",
-            "social",
-        ),
-        "risk_level": "medium",
-        "metadata": {
-            "purpose_category": "MARKETING_AND_ADVERTISING",
-            "service_category": "social_media",
-            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
-            "regulatory_impact": "GDPR Article 26 (Joint Controllers)",
-        },
-    },
     "Third-Party Marketing via Owned Products": {
         "description": "Third-party marketing and advertising activities conducted through company-owned products",
         "patterns": (
@@ -590,10 +460,8 @@ class ProcessingPurposesRuleset(Ruleset):
     are mentioned in content, which is crucial for privacy compliance,
     consent management, and understanding data processing activities.
 
-    Version 2.0.0: Merged with third_party_services ruleset patterns for
-    comprehensive service integration and processing purpose detection.
-    Service integrations are now separate flat categories with the suffix
-    "- Service Integrations" for clear distinction.
+    Processing purposes are business activities or intentions for data use,
+    complementary to technical data collection patterns and service integrations.
     """
 
     def __init__(self) -> None:

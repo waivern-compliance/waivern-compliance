@@ -53,11 +53,11 @@ class ProcessingPurposeAnalyser(Analyser):
 
         """
         # Store strongly-typed configuration
-        self.config: ProcessingPurposeAnalyserConfig = config
-        self.pattern_matcher = pattern_matcher
+        self._config: ProcessingPurposeAnalyserConfig = config
+        self._pattern_matcher = pattern_matcher
 
         # Initialise source code handler for SourceCodeSchema processing
-        self.source_code_handler = SourceCodeSchemaInputHandler()
+        self._source_code_handler = SourceCodeSchemaInputHandler()
 
     @classmethod
     @override
@@ -138,7 +138,7 @@ class ProcessingPurposeAnalyser(Analyser):
             item_metadata = data_item.metadata
 
             # Use pattern matcher for analysis
-            item_findings = self.pattern_matcher.find_patterns(content, item_metadata)
+            item_findings = self._pattern_matcher.find_patterns(content, item_metadata)
             findings.extend(item_findings)
 
         return findings
@@ -156,7 +156,7 @@ class ProcessingPurposeAnalyser(Analyser):
 
         """
         # Use source code handler for analysis - returns strongly typed models
-        findings = self.source_code_handler.analyse_source_code_data(typed_data)
+        findings = self._source_code_handler.analyse_source_code_data(typed_data)
 
         return findings
 
@@ -187,9 +187,9 @@ class ProcessingPurposeAnalyser(Analyser):
 
         # Add analysis metadata
         result_data["analysis_metadata"] = {
-            "ruleset_used": self.config.pattern_matching.ruleset,
-            "llm_validation_enabled": self.config.llm_validation.enable_llm_validation,
-            "evidence_context_size": self.config.pattern_matching.evidence_context_size,
+            "ruleset_used": self._config.pattern_matching.ruleset,
+            "llm_validation_enabled": self._config.llm_validation.enable_llm_validation,
+            "evidence_context_size": self._config.pattern_matching.evidence_context_size,
         }
 
         output_message = Message(
