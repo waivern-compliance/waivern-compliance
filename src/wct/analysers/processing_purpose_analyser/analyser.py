@@ -26,12 +26,6 @@ from .types import ProcessingPurposeAnalyserConfig, ProcessingPurposeFindingMode
 
 logger = logging.getLogger(__name__)
 
-# Private constants
-_ANALYSER_NAME = "processing_purpose_analyser"
-_ANALYSIS_MESSAGE_ID = "Processing purpose analysis"
-_STANDARD_INPUT_SCHEMA_NAME = "standard_input"
-_SOURCE_CODE_SCHEMA_NAME = "source_code"
-
 _SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
     StandardInputSchema(),
     SourceCodeSchema(),
@@ -72,7 +66,7 @@ class ProcessingPurposeAnalyser(Analyser):
     @override
     def get_name(cls) -> str:
         """Return the name of the analyser."""
-        return _ANALYSER_NAME
+        return "processing_purpose_analyser"
 
     @classmethod
     @override
@@ -116,10 +110,10 @@ class ProcessingPurposeAnalyser(Analyser):
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
         # Validate and parse data based on schema type
-        if input_schema.name == _STANDARD_INPUT_SCHEMA_NAME:
+        if input_schema.name == "standard_input":
             typed_data = StandardInputDataModel.model_validate(message.content)
             findings = self._process_standard_input_data(typed_data)
-        elif input_schema.name == _SOURCE_CODE_SCHEMA_NAME:
+        elif input_schema.name == "source_code":
             typed_data = parse_data_model(message.content, SourceCodeDataModel)
             findings = self._process_source_code_data(typed_data)
         else:
@@ -212,7 +206,7 @@ class ProcessingPurposeAnalyser(Analyser):
         }
 
         output_message = Message(
-            id=_ANALYSIS_MESSAGE_ID,
+            id="Processing_purpose_analysis",
             content=result_data,
             schema=output_schema,
         )

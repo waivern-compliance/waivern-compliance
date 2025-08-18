@@ -35,16 +35,6 @@ _SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
     PersonalDataFindingSchema(),
 ]
 
-# Risk level constants
-_HIGH_RISK_LEVEL = "high"
-_SPECIAL_CATEGORY_YES = "Y"
-
-# Message constants
-_OUTPUT_MESSAGE_ID = "Personal data analysis"
-
-# Analyser identification
-_ANALYSER_NAME = "personal_data_analyser"
-
 
 class _EmptyMetadata(BaseModel):
     """Empty metadata model for LLM runner when no metadata is needed."""
@@ -82,7 +72,7 @@ class PersonalDataAnalyser(Analyser):
     @override
     def get_name(cls) -> str:
         """Return the name of the analyser."""
-        return _ANALYSER_NAME
+        return "personal_data_analyser"
 
     @classmethod
     @override
@@ -150,7 +140,7 @@ class PersonalDataAnalyser(Analyser):
             )
             findings.extend(item_findings)
 
-        # Run LLM validation if enabled (using minimal metadata model)
+        # Run LLM validation if enabled
         empty_metadata = _EmptyMetadata()
         validated_findings = self.llm_runner.run_analysis(
             findings, empty_metadata, self.config.llm_validation
@@ -195,7 +185,7 @@ class PersonalDataAnalyser(Analyser):
             )
 
         output_message = Message(
-            id=_OUTPUT_MESSAGE_ID,
+            id="Personal_data_analysis",
             content=result_data,
             schema=output_schema,
         )
@@ -227,11 +217,9 @@ class PersonalDataAnalyser(Analyser):
         """
         return {
             "total_findings": len(findings),
-            "high_risk_count": len(
-                [f for f in findings if f.risk_level == _HIGH_RISK_LEVEL]
-            ),
+            "high_risk_count": len([f for f in findings if f.risk_level == "high"]),
             "special_category_count": len(
-                [f for f in findings if f.special_category == _SPECIAL_CATEGORY_YES]
+                [f for f in findings if f.special_category == "Y"]
             ),
         }
 
