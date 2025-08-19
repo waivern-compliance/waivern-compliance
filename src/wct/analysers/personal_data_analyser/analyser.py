@@ -202,7 +202,7 @@ class PersonalDataAnalyser(Analyser):
         if not findings:
             return findings
 
-        if not self.llm_service_manager.is_available():
+        if self.llm_service_manager.llm_service is None:
             logger.warning("LLM service not available, skipping validation")
             return findings
 
@@ -210,10 +210,6 @@ class PersonalDataAnalyser(Analyser):
             logger.info(f"Starting LLM validation of {len(findings)} findings")
 
             llm_service = self.llm_service_manager.llm_service
-            if llm_service is None:
-                logger.warning("LLM service is None, returning unvalidated findings")
-                return findings
-
             validated_findings = personal_data_validation_strategy(
                 findings, self.config.llm_validation, llm_service
             )

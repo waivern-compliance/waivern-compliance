@@ -33,7 +33,3 @@ class LLMServiceManager:
                 )
                 self._enable_llm_validation = False
         return self._llm_service
-
-    def is_available(self) -> bool:
-        """Check if LLM service is available and enabled."""
-        return self._enable_llm_validation and self.llm_service is not None
