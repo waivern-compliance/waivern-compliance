@@ -25,7 +25,7 @@ from wct.cli import (
 )
 
 # Load environment variables from .env file if it exists
-_ = load_dotenv()
+load_dotenv()
 
 app = typer.Typer(name="waivern-compliance-tool")
 

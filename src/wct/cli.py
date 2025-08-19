@@ -8,13 +8,10 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 from rich.tree import Tree
 
-from wct.analysers import BUILTIN_ANALYSERS
 from wct.analysis import AnalysisResult, AnalysisResultsExporter
-from wct.connectors import BUILTIN_CONNECTORS
 from wct.executor import Executor
 from wct.logging import setup_logging
 from wct.runbook import Runbook, RunbookLoader
@@ -23,104 +20,10 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 
-def create_executor() -> Executor:
-    """Create and configure an executor with built-in components.
-
-    Returns:
-        Configured executor with all built-in connectors and analysers registered
-
-    """
-    executor = Executor()
-
-    # Register built-in connectors
-    for connector_class in BUILTIN_CONNECTORS:
-        executor.register_available_connector(connector_class)
-        logger.debug("Available built-in connector: %s", connector_class.get_name())
-
-    # Register built-in analysers
-    for analyser_class in BUILTIN_ANALYSERS:
-        executor.register_available_analyser(analyser_class)
-        logger.debug("Available built-in analyser: %s", analyser_class.get_name())
-
-    logger.info(
-        "Executor initialised with %d connectors and %d analysers",
-        len(BUILTIN_CONNECTORS),
-        len(BUILTIN_ANALYSERS),
-    )
-
-    return executor
-
-
 class CLIError(Exception):
     """Base exception for CLI-related errors."""
 
     pass
-
-
-class AnalysisRunner:
-    """Handles running compliance analysis from CLI."""
-
-    def __init__(self) -> None:
-        """Initialise the compliance runner with a configured executor."""
-        self.executor = create_executor()
-
-    def run_analysis(
-        self, runbook_path: Path, output_dir: Path, verbose: bool = False
-    ) -> list[AnalysisResult]:
-        """Run analysis using a runbook.
-
-        Args:
-            runbook_path: Path to the runbook YAML file
-            output_dir: Directory for output files (currently unused)
-            verbose: Enable verbose output
-
-        Returns:
-            List of analysis results
-
-        Raises:
-            CLIError: If analysis fails
-
-        """
-        try:
-            results = self.executor.execute_runbook(runbook_path)
-            logger.info("Analysis completed with %d results", len(results))
-            return results
-
-        except Exception as e:
-            logger.error("Analysis failed: %s", e)
-            raise CLIError(f"Analysis failed: {e}") from e
-
-
-class ComponentLister:
-    """Handles listing available connectors and analysers."""
-
-    def __init__(self) -> None:
-        """Initialise the component lister with a configured executor."""
-        self.executor = create_executor()
-
-    def list_connectors(self) -> dict[str, type]:
-        """List all available connectors.
-
-        Returns:
-            Dictionary mapping connector names to classes
-
-        """
-        logger.debug("Getting available built-in connectors")
-        connectors = self.executor.list_available_connectors()
-        logger.info("Found %d available built-in connectors", len(connectors))
-        return connectors
-
-    def list_analysers(self) -> dict[str, type]:
-        """List all available analysers.
-
-        Returns:
-            Dictionary mapping analyser names to classes
-
-        """
-        logger.debug("Getting available built-in analysers")
-        analysers = self.executor.list_available_analysers()
-        logger.info("Found %d available built-in analysers", len(analysers))
-        return analysers
 
 
 class OutputFormatter:
@@ -293,34 +196,74 @@ class OutputFormatter:
             len(runbook.analysers),
         )
 
+    def show_startup_banner(
+        self,
+        runbook_path: Path,
+        output_dir: Path,
+        log_level: str,
+        verbose: bool = False,
+    ) -> None:
+        """Show startup banner for analysis command.
 
-def setup_cli_logging(log_level: str, verbose: bool = False) -> None:
-    """Set up logging for CLI commands.
+        Args:
+            runbook_path: Path to the runbook file
+            output_dir: Output directory for results
+            log_level: Current log level
+            verbose: Whether verbose mode is enabled
 
-    Args:
-        log_level: Logging level string
-        verbose: Override with DEBUG level if True
+        """
+        startup_panel = Panel(
+            f"[bold cyan]🚀 Starting WCT Analysis[/bold cyan]\n\n"
+            f"[bold]Runbook:[/bold] {runbook_path}\n"
+            f"[bold]Output Dir:[/bold] {output_dir}\n"
+            f"[bold]Log Level:[/bold] {log_level}{'(verbose)' if verbose else ''}",
+            title="🛡️  Waivern Compliance Tool",
+            border_style="cyan",
+        )
+        console.print(startup_panel)
 
-    """
-    effective_log_level = "DEBUG" if verbose else log_level
-    setup_logging(level=effective_log_level)
+    def show_analysis_completion(self) -> None:
+        """Show analysis completion message."""
+        console.print("\n[bold green]✅ Analysis completed![/bold green]")
 
+    def show_file_save_success(self, file_path: Path) -> None:
+        """Show successful file save message.
 
-def handle_cli_error(error: Exception, message: str) -> None:
-    """Handle CLI errors with consistent formatting.
+        Args:
+            file_path: Path where file was saved
 
-    Args:
-        error: The exception that occurred
-        message: User-friendly error message
+        """
+        console.print(f"\n[green]✅ Results saved to JSON file: {file_path}[/green]")
 
-    """
-    logger.error("%s: %s", message, error)
+    def show_file_save_error(self, error_msg: str) -> None:
+        """Show file save error message.
 
-    error_panel = Panel(
-        f"[red]{error}[/red]", title=f"❌ {message}", border_style="red"
-    )
-    console.print(error_panel)
-    raise typer.Exit(1) from error
+        Args:
+            error_msg: Error message to display
+
+        """
+        console.print(f"\n[red]❌ {error_msg}[/red]")
+
+    def show_completion_summary(
+        self, results: list[AnalysisResult], output_path: Path
+    ) -> None:
+        """Show completion summary banner.
+
+        Args:
+            results: Analysis results for summary statistics
+            output_path: Final output file path
+
+        """
+        completion_panel = Panel(
+            f"[bold green]✅ Analysis Complete[/bold green]\n\n"
+            f"[bold]Total Results:[/bold] {len(results)}\n"
+            f"[bold]Successful:[/bold] {sum(1 for r in results if r.success)}\n"
+            f"[bold]Failed:[/bold] {sum(1 for r in results if not r.success)}\n"
+            f"[bold]JSON Output:[/bold] {output_path}",
+            title="🎉 Completion Summary",
+            border_style="green",
+        )
+        console.print(completion_panel)
 
 
 def execute_runbook_command(
@@ -340,80 +283,52 @@ def execute_runbook_command(
         log_level: Logging level
 
     """
-    setup_cli_logging(log_level, verbose)
+    effective_log_level = "DEBUG" if verbose else log_level
+    setup_logging(level=effective_log_level)
 
-    # Show startup banner
-    startup_panel = Panel(
-        f"[bold cyan]🚀 Starting WCT Analysis[/bold cyan]\n\n"
-        f"[bold]Runbook:[/bold] {runbook_path}\n"
-        f"[bold]Output Dir:[/bold] {output_dir}\n"
-        f"[bold]Log Level:[/bold] {log_level}{'(verbose)' if verbose else ''}",
-        title="🛡️  Waivern Compliance Tool",
-        border_style="cyan",
-    )
-    console.print(startup_panel)
+    formatter = OutputFormatter()
+    formatter.show_startup_banner(runbook_path, output_dir, log_level, verbose)
 
     try:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-            transient=True,
-        ) as progress:
-            task = progress.add_task("Initialising analysis...", total=None)
+        # Run analysis
+        executor = Executor.create_with_built_ins()
 
-            runner = AnalysisRunner()
+        try:
+            results = executor.execute_runbook(runbook_path)
+            logger.info("Analysis completed with %d results", len(results))
+        except Exception as e:
+            logger.error("Analysis failed: %s", e)
+            raise CLIError(f"Analysis failed: {e}") from e
 
-            progress.update(task, description="Running analysis...")
-            results = runner.run_analysis(runbook_path, output_dir, verbose)
-
-            progress.update(task, description="Formatting results...", completed=True)
-
-        console.print("\n[bold green]✅ Analysis completed![/bold green]")
-        formatter = OutputFormatter()
+        formatter.show_analysis_completion()
         formatter.format_analysis_results(results, verbose)
 
-        # Save results to JSON file (always, since output is now always provided)
-        try:
-            # Combine output_dir with output filename
-            # If output is absolute, use it as-is; if relative, place it in output_dir
-            if output.is_absolute():
-                final_output_path = output
-            else:
-                final_output_path = output_dir / output
+        # Save results to JSON file
+        if output.is_absolute():
+            final_output_path = output
+        else:
+            final_output_path = output_dir / output
 
+        try:
             AnalysisResultsExporter.save_to_json(
                 results, final_output_path, runbook_path
             )
-            console.print(
-                f"\n[green]✅ Results saved to JSON file: {final_output_path}[/green]"
-            )
+            formatter.show_file_save_success(final_output_path)
             logger.info("Analysis results saved to JSON file: %s", final_output_path)
         except Exception as e:
             error_msg = f"Failed to save JSON output: {e}"
             logger.error(error_msg)
-            console.print(f"\n[red]❌ {error_msg}[/red]")
+            formatter.show_file_save_error(error_msg)
 
-        # Show completion banner
-        # Calculate the final output path for display
-        if output.is_absolute():
-            final_output_display = output
-        else:
-            final_output_display = output_dir / output
-
-        completion_panel = Panel(
-            f"[bold green]✅ Analysis Complete[/bold green]\n\n"
-            f"[bold]Total Results:[/bold] {len(results)}\n"
-            f"[bold]Successful:[/bold] {sum(1 for r in results if r.success)}\n"
-            f"[bold]Failed:[/bold] {sum(1 for r in results if not r.success)}\n"
-            f"[bold]JSON Output:[/bold] {final_output_display}",
-            title="🎉 Completion Summary",
-            border_style="green",
-        )
-        console.print(completion_panel)
+        formatter.show_completion_summary(results, final_output_path)
 
     except CLIError as e:
-        handle_cli_error(e, "Analysis failed")
+        logger.error("Analysis failed: %s", e)
+        error_panel = Panel(
+            f"[red]{e}[/red]", title="❌ Analysis failed", border_style="red"
+        )
+        console.print(error_panel)
+        raise typer.Exit(1) from e
 
 
 def list_connectors_command(log_level: str = "INFO") -> None:
@@ -423,17 +338,25 @@ def list_connectors_command(log_level: str = "INFO") -> None:
         log_level: Logging level
 
     """
-    setup_cli_logging(log_level)
+    setup_logging(level=log_level)
 
     try:
-        lister = ComponentLister()
-        connectors = lister.list_connectors()
+        executor = Executor.create_with_built_ins()
+
+        logger.debug("Getting available built-in connectors")
+        connectors = executor.list_available_connectors()
+        logger.info("Found %d available built-in connectors", len(connectors))
 
         formatter = OutputFormatter()
         formatter.format_component_list(connectors, "connectors")
 
     except Exception as e:
-        handle_cli_error(e, "Failed to list connectors")
+        logger.error("Failed to list connectors: %s", e)
+        error_panel = Panel(
+            f"[red]{e}[/red]", title="❌ Failed to list connectors", border_style="red"
+        )
+        console.print(error_panel)
+        raise typer.Exit(1) from e
 
 
 def list_analysers_command(log_level: str = "INFO") -> None:
@@ -443,17 +366,25 @@ def list_analysers_command(log_level: str = "INFO") -> None:
         log_level: Logging level
 
     """
-    setup_cli_logging(log_level)
+    setup_logging(level=log_level)
 
     try:
-        lister = ComponentLister()
-        analysers = lister.list_analysers()
+        executor = Executor.create_with_built_ins()
+
+        logger.debug("Getting available built-in analysers")
+        analysers = executor.list_available_analysers()
+        logger.info("Found %d available built-in analysers", len(analysers))
 
         formatter = OutputFormatter()
         formatter.format_component_list(analysers, "analysers")
 
     except Exception as e:
-        handle_cli_error(e, "Failed to list analysers")
+        logger.error("Failed to list analysers: %s", e)
+        error_panel = Panel(
+            f"[red]{e}[/red]", title="❌ Failed to list analysers", border_style="red"
+        )
+        console.print(error_panel)
+        raise typer.Exit(1) from e
 
 
 def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> None:
@@ -464,7 +395,7 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
         log_level: Logging level
 
     """
-    setup_cli_logging(log_level)
+    setup_logging(level=log_level)
 
     try:
         runbook = RunbookLoader.load(runbook_path)
@@ -473,4 +404,9 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
         formatter.format_runbook_validation(runbook)
 
     except CLIError as e:
-        handle_cli_error(e, "Runbook validation failed")
+        logger.error("Runbook validation failed: %s", e)
+        error_panel = Panel(
+            f"[red]{e}[/red]", title="❌ Runbook validation failed", border_style="red"
+        )
+        console.print(error_panel)
+        raise typer.Exit(1) from e
