@@ -53,16 +53,14 @@ class AnthropicLLMService:
             LLMConfigurationError: If API key is not provided or found in environment
 
         """
-        # Logger is available at module level
-
         # Get model name from parameter, environment, or default
         self.model_name = (
             model_name or os.getenv("ANTHROPIC_MODEL") or "claude-sonnet-4-20250514"
         )
 
         # Get API key from parameter or environment
-        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
-        if not self.api_key:
+        self._api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        if not self._api_key:
             raise LLMConfigurationError(
                 "Anthropic API key is required. Set ANTHROPIC_API_KEY environment variable "
                 "or provide api_key parameter."
@@ -70,6 +68,76 @@ class AnthropicLLMService:
 
         self._llm = None
         logger.info(f"Initialised Anthropic LLM service with model: {self.model_name}")
+
+    def test_connection(self) -> dict[str, Any]:
+        """Test connection to Anthropic API.
+
+        Returns:
+            Dictionary with connection test results
+
+        Raises:
+            LLMConnectionError: If connection test fails
+
+        """
+        try:
+            logger.info("Testing connection to Anthropic API...")
+
+            llm = self._get_llm()
+
+            # Simple test message
+            test_prompt = (
+                "Respond with 'Hello from Claude' to confirm the connection is working."
+            )
+
+            response = llm.invoke(test_prompt)
+            response_text = self._extract_content(response).strip()
+
+            logger.info("Connection test successful")
+
+            return {
+                "status": "success",
+                "model": self.model_name,
+                "response": response_text,
+                "response_length": len(response_text),
+            }
+
+        except Exception as e:
+            raise LLMConnectionError(f"Failed to connect to Anthropic API: {e}") from e
+
+    def analyse_data(self, text: str, analysis_prompt: str) -> str:
+        """Analyse text using the LLM with a custom prompt.
+
+        Args:
+            text: The text content to analyse
+            analysis_prompt: The prompt/instructions for analysis
+
+        Returns:
+            LLM analysis response as string
+
+        Raises:
+            LLMConnectionError: If LLM request fails
+
+        """
+        try:
+            logger.debug(f"Analysing text (length: {len(text)} chars)")
+
+            llm = self._get_llm()
+
+            # Combine the analysis prompt with the text
+            full_prompt = f"{analysis_prompt}\n\nText to analyse:\n{text}"
+
+            response = llm.invoke(full_prompt)
+            result = self._extract_content(response).strip()
+
+            logger.debug(
+                f"LLM analysis completed (response length: {len(result)} chars)"
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Text analysis failed: {e}")
+            raise LLMConnectionError(f"LLM text analysis failed: {e}") from e
 
     def _get_llm(self) -> ChatAnthropic:
         """Get or create the LangChain LLM instance.
@@ -82,12 +150,12 @@ class AnthropicLLMService:
 
         """
         if self._llm is None:
-            if not self.api_key:
+            if not self._api_key:
                 raise LLMConnectionError("API key is required but not available")
 
             self._llm = ChatAnthropic(
                 model_name=self.model_name,
-                api_key=SecretStr(self.api_key),
+                api_key=SecretStr(self._api_key),
                 temperature=0,  # Consistent responses for compliance analysis
                 max_tokens_to_sample=8000,  # Adjust as needed for response length
                 timeout=300,  # Increased timeout for LLM requests
@@ -149,77 +217,6 @@ class AnthropicLLMService:
 
         # Final fallback for any other type
         return str(content).strip()
-
-    def test_connection(self) -> dict[str, Any]:
-        """Test connection to Anthropic API.
-
-        Returns:
-            Dictionary with connection test results
-
-        Raises:
-            LLMConnectionError: If connection test fails
-
-        """
-        try:
-            logger.info("Testing connection to Anthropic API...")
-
-            llm = self._get_llm()
-
-            # Simple test message
-            test_prompt = (
-                "Respond with 'Hello from Claude' to confirm the connection is working."
-            )
-
-            response = llm.invoke(test_prompt)
-            response_text = self._extract_content(response).strip()
-
-            logger.info("Connection test successful")
-
-            return {
-                "status": "success",
-                "model": self.model_name,
-                "response": response_text,
-                "response_length": len(response_text),
-            }
-
-        except Exception as e:
-            logger.error(f"Connection test failed: {e}")
-            raise LLMConnectionError(f"Failed to connect to Anthropic API: {e}") from e
-
-    def analyse_data(self, text: str, analysis_prompt: str) -> str:
-        """Analyse text using the LLM with a custom prompt.
-
-        Args:
-            text: The text content to analyse
-            analysis_prompt: The prompt/instructions for analysis
-
-        Returns:
-            LLM analysis response as string
-
-        Raises:
-            LLMConnectionError: If LLM request fails
-
-        """
-        try:
-            logger.debug(f"Analysing text (length: {len(text)} chars)")
-
-            llm = self._get_llm()
-
-            # Combine the analysis prompt with the text
-            full_prompt = f"{analysis_prompt}\n\nText to analyse:\n{text}"
-
-            response = llm.invoke(full_prompt)
-            result = self._extract_content(response).strip()
-
-            logger.debug(
-                f"LLM analysis completed (response length: {len(result)} chars)"
-            )
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Text analysis failed: {e}")
-            raise LLMConnectionError(f"LLM text analysis failed: {e}") from e
 
 
 class LLMServiceFactory:
