@@ -27,7 +27,6 @@ from wct.schemas import Schema, SourceCodeSchema
 logger = logging.getLogger(__name__)
 
 # Constants
-_CONNECTOR_NAME = "source_code"
 _DEFAULT_SCHEMA_VERSION = "1.0.0"
 _DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 _DEFAULT_MAX_FILES = 4000
@@ -116,7 +115,7 @@ class SourceCodeConnector(Connector):
     @override
     def get_name(cls) -> str:
         """Return the name of the connector."""
-        return _CONNECTOR_NAME
+        return "source_code"
 
     @classmethod
     @override
