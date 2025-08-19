@@ -4,7 +4,7 @@ This module tests the public API of LLMServiceManager, focusing on:
 - Service lifecycle management
 - Availability checking
 - Error handling scenarios
-- Configuration-based behaviour
+- Configuration-based behaviour ✔️
 """
 
 from unittest.mock import Mock, patch
@@ -27,7 +27,7 @@ class TestLLMServiceManagerInitialisation:
         manager = LLMServiceManager()
 
         # Test behaviour: should attempt to create service when enabled
-        result = manager.is_available()
+        result = manager.llm_service is not None
         assert result is True
 
     @patch(
@@ -41,7 +41,7 @@ class TestLLMServiceManagerInitialisation:
         manager = LLMServiceManager(enable_llm_validation=True)
 
         # Test behaviour: should attempt to create service when enabled
-        result = manager.is_available()
+        result = manager.llm_service is not None
         assert result is True
 
     def test_initialise_with_validation_disabled(self):
@@ -49,7 +49,7 @@ class TestLLMServiceManagerInitialisation:
         manager = LLMServiceManager(enable_llm_validation=False)
 
         # Test behaviour: should not attempt to create service when disabled
-        result = manager.is_available()
+        result = manager.llm_service is not None
         assert result is False
 
 
@@ -111,7 +111,7 @@ class TestLLMServiceProperty:
 
         assert result is None
         # Test behaviour: service should become unavailable after failure
-        assert manager.is_available() is False
+        assert manager.llm_service is None
         mock_factory.assert_called_once()
 
     @patch(
@@ -130,7 +130,7 @@ class TestLLMServiceProperty:
         assert first_result is None
         assert second_result is None
         # Test behaviour: service should remain unavailable after failure
-        assert manager.is_available() is False
+        assert manager.llm_service is None
         mock_factory.assert_called_once()
 
     @patch(
@@ -167,82 +167,6 @@ class TestLLMServiceProperty:
         assert "Continuing without LLM validation" in caplog.text
 
 
-class TestIsAvailableMethod:
-    """Test the is_available method behaviour."""
-
-    @patch(
-        "wct.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
-    )
-    def test_is_available_returns_true_when_service_available_and_enabled(
-        self, mock_factory
-    ):
-        """Test that is_available returns True when service is available and validation enabled."""
-        expected_service = Mock(spec=AnthropicLLMService)
-        mock_factory.return_value = expected_service
-
-        manager = LLMServiceManager(enable_llm_validation=True)
-
-        result = manager.is_available()
-
-        assert result is True
-
-    def test_is_available_returns_false_when_validation_disabled(self):
-        """Test that is_available returns False when validation is disabled."""
-        manager = LLMServiceManager(enable_llm_validation=False)
-
-        result = manager.is_available()
-
-        assert result is False
-
-    @patch(
-        "wct.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
-    )
-    def test_is_available_returns_false_when_service_creation_fails(self, mock_factory):
-        """Test that is_available returns False when service creation fails."""
-        expected_error = LLMServiceError("Mock service creation failed")
-        mock_factory.side_effect = expected_error
-
-        manager = LLMServiceManager(enable_llm_validation=True)
-
-        result = manager.is_available()
-
-        assert result is False
-
-    @patch(
-        "wct.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
-    )
-    def test_is_available_maintains_consistency_with_llm_service_property(
-        self, mock_factory
-    ):
-        """Test that is_available method maintains consistency with llm_service property."""
-        expected_service = Mock(spec=AnthropicLLMService)
-        mock_factory.return_value = expected_service
-
-        manager = LLMServiceManager(enable_llm_validation=True)
-
-        service = manager.llm_service
-        is_available = manager.is_available()
-
-        assert (service is not None) == is_available
-
-    @patch(
-        "wct.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
-    )
-    def test_is_available_consistency_after_service_failure(self, mock_factory):
-        """Test is_available consistency when service creation fails."""
-        expected_error = LLMServiceError("Mock service creation failed")
-        mock_factory.side_effect = expected_error
-
-        manager = LLMServiceManager(enable_llm_validation=True)
-
-        service = manager.llm_service
-        is_available = manager.is_available()
-
-        assert service is None
-        assert is_available is False
-        assert (service is not None) == is_available
-
-
 class TestLLMServiceManagerEdgeCases:
     """Test edge cases and error scenarios."""
 
@@ -258,11 +182,11 @@ class TestLLMServiceManagerEdgeCases:
 
         # Trigger service creation failure
         first_service = manager.llm_service
-        first_available = manager.is_available()
+        first_available = first_service is not None
 
         # Verify state is consistent
         second_service = manager.llm_service
-        second_available = manager.is_available()
+        second_available = second_service is not None
 
         assert first_service is None
         assert first_available is False
@@ -281,8 +205,8 @@ class TestLLMServiceManagerEdgeCases:
         enabled_manager = LLMServiceManager(enable_llm_validation=True)
         disabled_manager = LLMServiceManager(enable_llm_validation=False)
 
-        enabled_result = enabled_manager.is_available()
-        disabled_result = disabled_manager.is_available()
+        enabled_result = enabled_manager.llm_service is not None
+        disabled_result = disabled_manager.llm_service is not None
 
         assert enabled_result is True
         assert disabled_result is False
@@ -300,7 +224,7 @@ class TestLLMServiceManagerEdgeCases:
         # Manager with validation disabled should not call factory
         disabled_manager = LLMServiceManager(enable_llm_validation=False)
         disabled_manager.llm_service
-        disabled_manager.is_available()
+        disabled_manager.llm_service is not None
 
         # Manager with validation enabled should call factory
         enabled_manager = LLMServiceManager(enable_llm_validation=True)

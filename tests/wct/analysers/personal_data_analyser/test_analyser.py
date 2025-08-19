@@ -232,7 +232,7 @@ class TestPersonalDataAnalyser:
         ]
 
         # Mock LLM service manager
-        mock_llm_service_manager.is_available.return_value = True
+        mock_llm_service_manager.llm_service = Mock()
         with patch(
             "wct.analysers.personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=sample_findings,
@@ -285,7 +285,7 @@ class TestPersonalDataAnalyser:
         ]
 
         # Mock LLM service manager
-        mock_llm_service_manager.is_available.return_value = True
+        mock_llm_service_manager.llm_service = Mock()
         filtered_findings = [sample_findings[0]]  # Remove one finding
         with patch(
             "wct.analysers.personal_data_analyser.analyser.personal_data_validation_strategy",
@@ -330,7 +330,7 @@ class TestPersonalDataAnalyser:
         )
 
         mock_pattern_matcher.find_patterns.return_value = sample_findings
-        mock_llm_service_manager.is_available.return_value = False
+        mock_llm_service_manager.llm_service = None
 
         input_schema = StandardInputSchema()
         output_schema = PersonalDataFindingSchema()
@@ -359,7 +359,7 @@ class TestPersonalDataAnalyser:
 
         # Mock pattern matcher to return no findings
         mock_pattern_matcher.find_patterns.return_value = []
-        mock_llm_service_manager.is_available.return_value = True
+        mock_llm_service_manager.llm_service = Mock()
 
         input_schema = StandardInputSchema()
         output_schema = PersonalDataFindingSchema()
@@ -399,7 +399,7 @@ class TestPersonalDataAnalyser:
 
         # Mock pattern matcher to not be called for empty data
         mock_pattern_matcher.find_patterns.return_value = []
-        mock_llm_service_manager.is_available.return_value = True
+        mock_llm_service_manager.llm_service = Mock()
 
         input_schema = StandardInputSchema()
         output_schema = PersonalDataFindingSchema()
@@ -434,7 +434,7 @@ class TestPersonalDataAnalyser:
         )
 
         mock_pattern_matcher.find_patterns.return_value = []
-        mock_llm_service_manager.is_available.return_value = False
+        mock_llm_service_manager.llm_service = None
 
         input_schema = StandardInputSchema()
         output_schema = PersonalDataFindingSchema()
