@@ -731,3 +731,68 @@ execution:
         executor.register_available_analyser(AlternateMockAnalyser)
         assert executor.analysers["mock_analyser"] == AlternateMockAnalyser
         assert executor.analysers["mock_analyser"] != MockAnalyser
+
+
+class TestExecutorCreateWithBuiltIns:
+    """Tests for Executor.create_with_built_ins() class method ✔️."""
+
+    def test_creates_executor_with_all_built_in_connectors(self) -> None:
+        """Test that create_with_built_ins registers all built-in connectors."""
+        executor = Executor.create_with_built_ins()
+
+        # Verify all built-in connectors are registered
+        registered_connectors = executor.list_available_connectors()
+
+        # Check that all built-in connector names are present
+        built_in_names = {
+            connector_cls.get_name() for connector_cls in BUILTIN_CONNECTORS
+        }
+        registered_names = set(registered_connectors.keys())
+
+        assert built_in_names == registered_names
+        assert len(registered_connectors) == len(BUILTIN_CONNECTORS)
+
+    def test_creates_executor_with_all_built_in_analysers(self) -> None:
+        """Test that create_with_built_ins registers all built-in analysers."""
+        executor = Executor.create_with_built_ins()
+
+        # Verify all built-in analysers are registered
+        registered_analysers = executor.list_available_analysers()
+
+        # Check that all built-in analyser names are present
+        built_in_names = {analyser_cls.get_name() for analyser_cls in BUILTIN_ANALYSERS}
+        registered_names = set(registered_analysers.keys())
+
+        assert built_in_names == registered_names
+        assert len(registered_analysers) == len(BUILTIN_ANALYSERS)
+
+    def test_creates_independent_executor_instances(self) -> None:
+        """Test that multiple calls create independent executor instances."""
+        executor1 = Executor.create_with_built_ins()
+        executor2 = Executor.create_with_built_ins()
+
+        # Verify they are different instances
+        assert executor1 is not executor2
+
+        # Verify they have the same registrations initially
+        assert (
+            executor1.list_available_connectors()
+            == executor2.list_available_connectors()
+        )
+        assert (
+            executor1.list_available_analysers() == executor2.list_available_analysers()
+        )
+
+        # Verify changes to one don't affect the other
+        executor1.register_available_connector(MockConnector)
+
+        # executor1 should have the mock connector, executor2 should not
+        assert "mock_connector" in executor1.list_available_connectors()
+        assert "mock_connector" not in executor2.list_available_connectors()
+
+    def test_returns_executor_instance(self) -> None:
+        """Test that create_with_built_ins returns an Executor instance."""
+        executor = Executor.create_with_built_ins()
+
+        assert isinstance(executor, Executor)
+        assert type(executor) is Executor

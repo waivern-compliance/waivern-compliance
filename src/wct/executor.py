@@ -14,9 +14,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from wct.analysers import Analyser, AnalyserError
+from wct.analysers import BUILTIN_ANALYSERS, Analyser, AnalyserError
 from wct.analysis import AnalysisResult
-from wct.connectors import Connector, ConnectorError
+from wct.connectors import BUILTIN_CONNECTORS, Connector, ConnectorError
 from wct.errors import WCTError
 from wct.runbook import (
     AnalyserConfig,
@@ -44,6 +44,34 @@ class Executor:
         """Initialise the executor with empty connector and analyser registries."""
         self.connectors: dict[str, type[Connector]] = {}
         self.analysers: dict[str, type[Analyser]] = {}
+
+    @classmethod
+    def create_with_built_ins(cls) -> Executor:
+        """Create an executor pre-configured with all built-in connectors and analysers.
+
+        Returns:
+            Configured executor with all built-in components registered
+
+        """
+        executor = cls()
+
+        # Register built-in connectors
+        for connector_class in BUILTIN_CONNECTORS:
+            executor.register_available_connector(connector_class)
+            logger.debug("Available built-in connector: %s", connector_class.get_name())
+
+        # Register built-in analysers
+        for analyser_class in BUILTIN_ANALYSERS:
+            executor.register_available_analyser(analyser_class)
+            logger.debug("Available built-in analyser: %s", analyser_class.get_name())
+
+        logger.info(
+            "Executor initialised with %d connectors and %d analysers",
+            len(BUILTIN_CONNECTORS),
+            len(BUILTIN_ANALYSERS),
+        )
+
+        return executor
 
     # The following four methods allow for dynamic registration of connectors and analysers.
     # They are for system-wide registration of available connectors and analysers,
