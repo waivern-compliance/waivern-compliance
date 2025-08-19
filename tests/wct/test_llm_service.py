@@ -16,7 +16,6 @@ from langchain_core.messages import AIMessage
 from wct.llm_service import (
     AnthropicLLMService,
     LLMConfigurationError,
-    LLMConnectionError,
 )
 
 
@@ -84,49 +83,6 @@ class TestAnthropicLLMServiceInitialisation:
                 AnthropicLLMService()
 
             assert "Anthropic API key is required" in str(exc_info.value)
-
-
-class TestAnthropicLLMServiceConnectionTesting:
-    """Test AnthropicLLMService connection testing functionality."""
-
-    @pytest.fixture
-    def service_with_mock_api(self) -> AnthropicLLMService:
-        """Create service instance with mocked API for testing."""
-        return AnthropicLLMService(
-            model_name="claude-3-sonnet-20240229", api_key="test-api-key"
-        )
-
-    def test_successful_connection_test(
-        self, service_with_mock_api: AnthropicLLMService
-    ) -> None:
-        """Test successful connection test returns expected result structure."""
-        mock_response = AIMessage(content="Hello from Claude")
-
-        with patch("wct.llm_service.ChatAnthropic") as mock_chat:
-            mock_llm = Mock()
-            mock_llm.invoke.return_value = mock_response
-            mock_chat.return_value = mock_llm
-
-            result = service_with_mock_api.test_connection()
-
-            assert result["status"] == "success"
-            assert result["model"] == "claude-3-sonnet-20240229"
-            assert result["response"] == "Hello from Claude"
-            assert result["response_length"] == len("Hello from Claude")
-            assert isinstance(result, dict)
-
-    def test_connection_test_failure_raises_error(
-        self, service_with_mock_api: AnthropicLLMService
-    ) -> None:
-        """Test that connection test failure raises appropriate error."""
-        with patch("wct.llm_service.ChatAnthropic") as mock_chat:
-            mock_chat.side_effect = Exception("API connection failed")
-
-            with pytest.raises(LLMConnectionError) as exc_info:
-                service_with_mock_api.test_connection()
-
-            assert "Failed to connect to Anthropic API" in str(exc_info.value)
-            assert "API connection failed" in str(exc_info.value)
 
 
 class TestAnthropicLLMServiceDataAnalysis:

@@ -21,7 +21,6 @@ from wct.cli import (
     execute_runbook_command,
     list_analysers_command,
     list_connectors_command,
-    test_llm_command,
     validate_runbook_command,
 )
 
@@ -155,21 +154,6 @@ def validate_runbook(
 ) -> None:
     """Validate a runbook."""
     validate_runbook_command(runbook, log_level)
-
-
-@app.command(name="test-llm")
-def test_llm(
-    log_level: Annotated[
-        str,
-        typer.Option(
-            "--log-level",
-            help="Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
-            case_sensitive=False,
-        ),
-    ] = "INFO",
-) -> None:
-    """Test LLM connectivity and configuration."""
-    test_llm_command(log_level)
 
 
 if __name__ == "__main__":
