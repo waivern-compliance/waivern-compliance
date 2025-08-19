@@ -21,9 +21,36 @@ console = Console()
 
 
 class CLIError(Exception):
-    """Base exception for CLI-related errors."""
+    """Exception for CLI-related errors with enhanced context.
 
-    pass
+    This exception serves as the CLI layer's unified error handling mechanism,
+    providing meaningful context about what CLI operation failed and why.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        command: str | None = None,
+        original_error: Exception | None = None,
+    ) -> None:
+        """Initialise CLI error with context.
+
+        Args:
+            message: Human-readable error message describing what went wrong
+            command: Name of the CLI command that failed (e.g., "run", "validate")
+            original_error: The underlying exception that caused this CLI error
+
+        """
+        super().__init__(message)
+        self.command = command
+        self.original_error = original_error
+
+    def __str__(self) -> str:
+        """Return formatted error message with CLI context."""
+        base_message = super().__str__()
+        if self.command:
+            return f"CLI command '{self.command}' failed: {base_message}"
+        return base_message
 
 
 class OutputFormatter:
@@ -298,7 +325,11 @@ def execute_runbook_command(
             logger.info("Analysis completed with %d results", len(results))
         except Exception as e:
             logger.error("Analysis failed: %s", e)
-            raise CLIError(f"Analysis failed: {e}") from e
+            raise CLIError(
+                f"Failed to execute runbook analysis: {e}",
+                command="run",
+                original_error=e,
+            ) from e
 
         formatter.show_analysis_completion()
         formatter.format_analysis_results(results, verbose)
@@ -316,9 +347,10 @@ def execute_runbook_command(
             formatter.show_file_save_success(final_output_path)
             logger.info("Analysis results saved to JSON file: %s", final_output_path)
         except Exception as e:
-            error_msg = f"Failed to save JSON output: {e}"
+            error_msg = f"Failed to save analysis results to {final_output_path}: {e}"
             logger.error(error_msg)
             formatter.show_file_save_error(error_msg)
+            raise CLIError(error_msg, command="run", original_error=e) from e
 
         formatter.show_completion_summary(results, final_output_path)
 
@@ -352,11 +384,18 @@ def list_connectors_command(log_level: str = "INFO") -> None:
 
     except Exception as e:
         logger.error("Failed to list connectors: %s", e)
+        cli_error = CLIError(
+            f"Unable to retrieve available connectors: {e}",
+            command="ls-connectors",
+            original_error=e,
+        )
         error_panel = Panel(
-            f"[red]{e}[/red]", title="❌ Failed to list connectors", border_style="red"
+            f"[red]{cli_error}[/red]",
+            title="❌ Failed to list connectors",
+            border_style="red",
         )
         console.print(error_panel)
-        raise typer.Exit(1) from e
+        raise typer.Exit(1) from cli_error
 
 
 def list_analysers_command(log_level: str = "INFO") -> None:
@@ -380,11 +419,18 @@ def list_analysers_command(log_level: str = "INFO") -> None:
 
     except Exception as e:
         logger.error("Failed to list analysers: %s", e)
+        cli_error = CLIError(
+            f"Unable to retrieve available analysers: {e}",
+            command="ls-analysers",
+            original_error=e,
+        )
         error_panel = Panel(
-            f"[red]{e}[/red]", title="❌ Failed to list analysers", border_style="red"
+            f"[red]{cli_error}[/red]",
+            title="❌ Failed to list analysers",
+            border_style="red",
         )
         console.print(error_panel)
-        raise typer.Exit(1) from e
+        raise typer.Exit(1) from cli_error
 
 
 def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> None:
@@ -398,15 +444,27 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
     setup_logging(level=log_level)
 
     try:
+        # Load and validate runbook - this performs comprehensive validation including:
+        # - YAML syntax validation
+        # - Pydantic schema validation (required fields, types, constraints)
+        # - Business logic validation (unique names, cross-references)
+        # If validation fails, exceptions are raised and caught below
         runbook = RunbookLoader.load(runbook_path)
 
         formatter = OutputFormatter()
         formatter.format_runbook_validation(runbook)
 
-    except CLIError as e:
+    except Exception as e:
         logger.error("Runbook validation failed: %s", e)
+        cli_error = CLIError(
+            f"Runbook validation failed: {e}",
+            command="validate-runbook",
+            original_error=e,
+        )
         error_panel = Panel(
-            f"[red]{e}[/red]", title="❌ Runbook validation failed", border_style="red"
+            f"[red]{cli_error}[/red]",
+            title="❌ Runbook validation failed",
+            border_style="red",
         )
         console.print(error_panel)
-        raise typer.Exit(1) from e
+        raise typer.Exit(1) from cli_error
