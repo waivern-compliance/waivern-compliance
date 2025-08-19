@@ -16,7 +16,6 @@ from wct.analysers import BUILTIN_ANALYSERS
 from wct.analysis import AnalysisResult, AnalysisResultsExporter
 from wct.connectors import BUILTIN_CONNECTORS
 from wct.executor import Executor
-from wct.llm_service import LLMServiceError, LLMServiceFactory
 from wct.logging import setup_logging
 from wct.runbook import Runbook, RunbookLoader
 
@@ -475,77 +474,3 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
 
     except CLIError as e:
         handle_cli_error(e, "Runbook validation failed")
-
-
-def test_llm_command(log_level: str = "INFO") -> None:
-    """CLI command implementation for testing LLM connectivity.
-
-    Args:
-        log_level: Logging level
-
-    """
-    setup_cli_logging(log_level)
-
-    try:
-        # Show startup banner
-        startup_panel = Panel(
-            "[bold cyan]🤖 Testing LLM Connectivity[/bold cyan]\n\n"
-            "[bold]Model:[/bold] Claude 3.5 Sonnet\n"
-            "[bold]Provider:[/bold] Anthropic",
-            title="🛡️  Waivern Compliance Tool - LLM Test",
-            border_style="cyan",
-        )
-        console.print(startup_panel)
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-            transient=True,
-        ) as progress:
-            task = progress.add_task("Initializing LLM service...", total=None)
-
-            # Create LLM service
-            llm_service = LLMServiceFactory.create_anthropic_service()
-
-            progress.update(task, description="Testing connection to Anthropic API...")
-
-            # Test connection
-            test_result = llm_service.test_connection()
-
-            progress.update(
-                task, description="Connection test completed", completed=True
-            )
-
-        # Display results
-        if test_result["status"] == "success":
-            result_panel = Panel(
-                f"[green]✅ LLM Connection Test Successful![/green]\n\n"
-                f"[bold]Model:[/bold] {test_result['model']}\n"
-                f"[bold]Response:[/bold] {test_result['response']}\n"
-                f"[bold]Response Length:[/bold] {test_result['response_length']} characters",
-                title="🎉 Connection Test Results",
-                border_style="green",
-            )
-            console.print(result_panel)
-            logger.info("LLM connection test successful")
-        else:
-            error_panel = Panel(
-                "[red]❌ LLM connection test failed[/red]",
-                title="Connection Test Results",
-                border_style="red",
-            )
-            console.print(error_panel)
-
-    except LLMServiceError as e:
-        error_panel = Panel(
-            f"[red]{e}[/red]",
-            title="❌ LLM Service Error",
-            border_style="red",
-        )
-        console.print(error_panel)
-        logger.error("LLM service error: %s", e)
-        raise typer.Exit(1) from e
-
-    except Exception as e:
-        handle_cli_error(e, "LLM connectivity test failed")

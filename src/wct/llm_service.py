@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import BaseMessage
@@ -68,41 +67,6 @@ class AnthropicLLMService:
 
         self._llm = None
         logger.info(f"Initialised Anthropic LLM service with model: {self.model_name}")
-
-    def test_connection(self) -> dict[str, Any]:
-        """Test connection to Anthropic API.
-
-        Returns:
-            Dictionary with connection test results
-
-        Raises:
-            LLMConnectionError: If connection test fails
-
-        """
-        try:
-            logger.info("Testing connection to Anthropic API...")
-
-            llm = self._get_llm()
-
-            # Simple test message
-            test_prompt = (
-                "Respond with 'Hello from Claude' to confirm the connection is working."
-            )
-
-            response = llm.invoke(test_prompt)
-            response_text = self._extract_content(response).strip()
-
-            logger.info("Connection test successful")
-
-            return {
-                "status": "success",
-                "model": self.model_name,
-                "response": response_text,
-                "response_length": len(response_text),
-            }
-
-        except Exception as e:
-            raise LLMConnectionError(f"Failed to connect to Anthropic API: {e}") from e
 
     def analyse_data(self, text: str, analysis_prompt: str) -> str:
         """Analyse text using the LLM with a custom prompt.
