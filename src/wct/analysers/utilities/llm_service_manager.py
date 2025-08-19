@@ -17,13 +17,13 @@ class LLMServiceManager:
             enable_llm_validation: Whether to enable LLM validation
 
         """
-        self.enable_llm_validation = enable_llm_validation
+        self._enable_llm_validation = enable_llm_validation
         self._llm_service = None
 
     @property
     def llm_service(self) -> AnthropicLLMService | None:
         """Get the LLM service, creating it if necessary."""
-        if self._llm_service is None and self.enable_llm_validation:
+        if self._llm_service is None and self._enable_llm_validation:
             try:
                 self._llm_service = LLMServiceFactory.create_anthropic_service()
                 logger.info("LLM service initialised for compliance analysis")
@@ -31,9 +31,9 @@ class LLMServiceManager:
                 logger.warning(
                     f"Failed to initialise LLM service: {e}. Continuing without LLM validation."
                 )
-                self.enable_llm_validation = False
+                self._enable_llm_validation = False
         return self._llm_service
 
     def is_available(self) -> bool:
         """Check if LLM service is available and enabled."""
-        return self.enable_llm_validation and self.llm_service is not None
+        return self._enable_llm_validation and self.llm_service is not None

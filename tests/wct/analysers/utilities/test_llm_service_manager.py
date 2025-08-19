@@ -16,23 +16,41 @@ from wct.llm_service import AnthropicLLMService, LLMServiceError
 class TestLLMServiceManagerInitialisation:
     """Test LLMServiceManager initialisation behaviour."""
 
-    def test_initialise_with_validation_enabled_by_default(self):
+    @patch(
+        "wct.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+    )
+    def test_initialise_with_validation_enabled_by_default(self, mock_factory):
         """Test that LLMServiceManager initialises with validation enabled by default."""
+        service_mock = Mock(spec=AnthropicLLMService)
+        mock_factory.return_value = service_mock
+
         manager = LLMServiceManager()
 
-        assert manager.enable_llm_validation is True
+        # Test behaviour: should attempt to create service when enabled
+        result = manager.is_available()
+        assert result is True
 
-    def test_initialise_with_validation_explicitly_enabled(self):
+    @patch(
+        "wct.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+    )
+    def test_initialise_with_validation_explicitly_enabled(self, mock_factory):
         """Test that LLMServiceManager initialises with validation explicitly enabled."""
+        service_mock = Mock(spec=AnthropicLLMService)
+        mock_factory.return_value = service_mock
+
         manager = LLMServiceManager(enable_llm_validation=True)
 
-        assert manager.enable_llm_validation is True
+        # Test behaviour: should attempt to create service when enabled
+        result = manager.is_available()
+        assert result is True
 
     def test_initialise_with_validation_disabled(self):
         """Test that LLMServiceManager initialises with validation disabled."""
         manager = LLMServiceManager(enable_llm_validation=False)
 
-        assert manager.enable_llm_validation is False
+        # Test behaviour: should not attempt to create service when disabled
+        result = manager.is_available()
+        assert result is False
 
 
 class TestLLMServiceProperty:
@@ -92,7 +110,8 @@ class TestLLMServiceProperty:
         result = manager.llm_service
 
         assert result is None
-        assert manager.enable_llm_validation is False
+        # Test behaviour: service should become unavailable after failure
+        assert manager.is_available() is False
         mock_factory.assert_called_once()
 
     @patch(
@@ -110,7 +129,8 @@ class TestLLMServiceProperty:
 
         assert first_result is None
         assert second_result is None
-        assert manager.enable_llm_validation is False
+        # Test behaviour: service should remain unavailable after failure
+        assert manager.is_available() is False
         mock_factory.assert_called_once()
 
     @patch(
@@ -248,7 +268,7 @@ class TestLLMServiceManagerEdgeCases:
         assert first_available is False
         assert second_service is None
         assert second_available is False
-        assert manager.enable_llm_validation is False
+        # Test behaviour consistency: both calls should give same result
 
     @patch(
         "wct.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
