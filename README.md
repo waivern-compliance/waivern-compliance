@@ -8,7 +8,7 @@ WCT provides a flexible architecture for compliance analysis through:
 
 - **Connectors**: Extract data from various sources (files, databases, web applications)
 - **Analysers**: Perform compliance analysis on extracted data
-- **Rulesets**: Define reusable compliance rules and checks
+- **Rulesets**: Rule patterns for compliance static analysis
 - **Executor**: Manages the execution pipeline and data flow
 
 The system is designed to be extensible and configurable through YAML runbook files with comprehensive validation that ensures type safety and component interoperability.
@@ -178,7 +178,7 @@ Key features:
   - `mysql/` - Database analysis
 - **`src/wct/analysers/`**: Compliance analysis engines
   - `personal_data_analyser/` - Personal data detection with LLM validation
-- **`src/wct/rulesets/`**: Reusable compliance pattern definitions
+- **`src/wct/rulesets/`**: Versioned rule patterns for compliance static analysis
 
 ### Validation Pipeline Flow
 
@@ -358,9 +358,10 @@ src/wct/
 ├── analysers/          # Compliance analysis engines
 │   ├── base.py         # Abstract analyser interface
 │   └── personal_data_analyser/ # Personal data detection with LLM
-└── rulesets/           # Reusable compliance pattern definitions
+└── rulesets/           # Rule patterns for compliance static analysis
+    ├── data/           # Versioned rule pattern configurations
     ├── base.py         # Ruleset framework
-    └── personal_data.py # GDPR personal data patterns
+    └── {ruleset}.py    # Rule pattern loaders
 
 runbooks/               # YAML configuration files
 ├── README.md          # Usage guidelines and examples

@@ -90,7 +90,7 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
   - **Personal data analyser:** Detects personal data with LLM validation (supports `standard_input`, `source_code` schemas)
   - **Processing purpose analyser:** Identifies GDPR processing purposes (supports `standard_input` schema)
 - **Executor:** Automatic schema matching between connectors and analysers
-- **Rulesets:** Pattern definitions for personal data and processing purposes
+- **Rulesets:** Versioned YAML-based pattern definitions with Pydantic validation for compliance analysis
 
 ### Runbook Format
 ```yaml
@@ -131,6 +131,7 @@ execution:
 - Type annotations are enforced with `basedpyright` (schema system is fully type-safe)
 - Main package is `wct` located in `src/wct/`
 - Schema definitions in `src/wct/schemas/` (JSON Schema format)
+- **Ruleset architecture**: `src/wct/rulesets/data/{ruleset}/{version}/{ruleset}.yaml` - Versioned YAML configuration with Pydantic validation
 - Runbook configurations: `runbooks/` directory with scenario-based runbooks organized in `samples/` subdirectory
 - Sample configurations:
   - `runbooks/samples/file_content_analysis.yaml` - Simple demonstration using personal data analyser
