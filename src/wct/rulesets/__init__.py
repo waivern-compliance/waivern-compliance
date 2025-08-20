@@ -6,7 +6,7 @@ from wct.rulesets.base import (
     RulesetNotFoundError,
     RulesetRegistry,
 )
-from wct.rulesets.data_collection_patterns import DataCollectionPatternsRuleset
+from wct.rulesets.data_collection import DataCollectionRuleset
 
 # Import and register built-in rulesets automatically
 from wct.rulesets.personal_data import PersonalDataRuleset
@@ -17,7 +17,7 @@ from wct.rulesets.service_integrations import ServiceIntegrationsRuleset
 _BUILTIN_RULESETS = (
     PersonalDataRuleset,
     ProcessingPurposesRuleset,
-    DataCollectionPatternsRuleset,
+    DataCollectionRuleset,
     ServiceIntegrationsRuleset,
 )
 

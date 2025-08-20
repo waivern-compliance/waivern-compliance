@@ -1,6 +1,7 @@
 """Unit tests for ruleset types."""
 
 import pytest
+from pydantic import ValidationError
 
 from wct.rulesets.types import Rule, RuleData
 
@@ -24,8 +25,8 @@ class TestRuleClass:
         assert rule.metadata == {}
 
     def test_rule_must_contain_at_least_one_pattern(self):
-        """Test Rule initialisation with empty patterns list raises ValueError."""
-        with pytest.raises(ValueError, match="Rule must contain at least one pattern"):
+        """Test Rule initialisation with empty patterns list raises ValidationError."""
+        with pytest.raises(ValidationError, match="Tuple should have at least 1 item"):
             Rule(
                 name="empty_rule",
                 description="Rule with no patterns",
@@ -87,20 +88,20 @@ class TestRuleClass:
             risk_level="low",
         )
 
-        # Attempt to modify attributes should raise AttributeError
-        with pytest.raises(AttributeError):
+        # Attempt to modify attributes should raise ValidationError (Pydantic frozen)
+        with pytest.raises(ValidationError, match="Instance is frozen"):
             rule.name = "modified_rule"
 
-        with pytest.raises(AttributeError):
+        with pytest.raises(ValidationError, match="Instance is frozen"):
             rule.description = "Modified description"
 
-        with pytest.raises(AttributeError):
+        with pytest.raises(ValidationError, match="Instance is frozen"):
             rule.patterns = "modified", "pattern"
 
-        with pytest.raises(AttributeError):
+        with pytest.raises(ValidationError, match="Instance is frozen"):
             rule.risk_level = "high"
 
-        with pytest.raises(AttributeError):
+        with pytest.raises(ValidationError, match="Instance is frozen"):
             rule.metadata = {"modified": True}
 
         # Original values should remain unchanged

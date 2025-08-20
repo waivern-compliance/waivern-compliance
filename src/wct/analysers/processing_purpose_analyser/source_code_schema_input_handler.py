@@ -40,9 +40,7 @@ class SourceCodeSchemaInputHandler:
         self._service_integrations_rules = RulesetLoader.load_ruleset(
             "service_integrations"
         )
-        self._data_collection_rules = RulesetLoader.load_ruleset(
-            "data_collection_patterns"
-        )
+        self._data_collection_rules = RulesetLoader.load_ruleset("data_collection")
 
     def analyse_source_code_data(
         self, data: SourceCodeDataModel

@@ -7,157 +7,20 @@ of imports, class names, and function names.
 """
 
 import logging
+from pathlib import Path
 from typing import Final
 
+import yaml
 from typing_extensions import override
 
 from wct.rulesets.base import Ruleset
-from wct.rulesets.types import Rule, RuleData
+from wct.rulesets.types import Rule, RulesetData
 
 logger = logging.getLogger(__name__)
 
-# Version constant for this ruleset (private)
-_VERSION: Final[str] = "1.0.0"
+# Version constant for this ruleset and its data (private)
+_RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "service_integrations"
-
-_SERVICE_INTEGRATIONS: Final[dict[str, RuleData]] = {
-    # ===== CLOUD INFRASTRUCTURE SERVICES =====
-    "cloud_infrastructure": {
-        "description": "Cloud storage and platform service integrations",
-        "patterns": (
-            "aws",
-            "amazon",
-            "s3.amazonaws",
-            "firebase",
-            "gcp",
-            "google.cloud",
-            "azure",
-            "microsoft",
-            "dropbox",
-            "storage",
-            "upload",
-        ),
-        "risk_level": "medium",
-        "metadata": {
-            "service_category": "cloud_infrastructure",
-            "purpose_category": "OPERATIONAL",
-            "compliance_relevance": ["GDPR"],
-            "regulatory_impact": "GDPR Article 28, Data Localisation Requirements",
-        },
-    },
-    # ===== COMMUNICATION SERVICES =====
-    "communication_services": {
-        "description": "Email and communication service integrations",
-        "patterns": (
-            "sendgrid",
-            "mailchimp",
-            "mailgun",
-            "postmark",
-            "twilio",
-            "slack",
-            "discord",
-            "intercom",
-            "zendesk",
-            "sms",
-            "notification",
-        ),
-        "risk_level": "medium",
-        "metadata": {
-            "service_category": "communication",
-            "purpose_category": "OPERATIONAL",
-            "compliance_relevance": ["GDPR"],
-            "regulatory_impact": "GDPR Article 28 (Data Processors)",
-        },
-    },
-    # ===== IDENTITY MANAGEMENT SERVICES =====
-    "identity_management": {
-        "description": "Third-party authentication and identity service integrations",
-        "patterns": (
-            "auth0",
-            "okta",
-            "onelogin",
-            "oauth",
-            "openid",
-            "saml",
-            "azure.ad",
-            "authenticate",
-            "authorization",
-            "identity",
-        ),
-        "risk_level": "high",
-        "metadata": {
-            "service_category": "identity_management",
-            "purpose_category": "OPERATIONAL",
-            "compliance_relevance": ["GDPR"],
-            "regulatory_impact": "GDPR Article 25 (Data Protection by Design)",
-        },
-    },
-    # ===== PAYMENT PROCESSING SERVICES =====
-    "payment_processing": {
-        "description": "Payment processing service integrations",
-        "patterns": (
-            "stripe",
-            "paypal",
-            "square",
-            "braintree",
-            "authorize.net",
-            "worldpay",
-            "adyen",
-            "charge",
-        ),
-        "risk_level": "high",
-        "metadata": {
-            "service_category": "payment_processing",
-            "purpose_category": "OPERATIONAL",
-            "compliance_relevance": ["GDPR", "PCI_DSS", "SOX"],
-            "regulatory_impact": "PCI DSS, GDPR Article 25",
-        },
-    },
-    # ===== USER ANALYTICS SERVICES =====
-    "user_analytics": {
-        "description": "User analytics and tracking service integrations",
-        "patterns": (
-            "google-analytics",
-            "googleanalytics",
-            "gtag",
-            "mixpanel",
-            "amplitude",
-            "segment",
-            "hotjar",
-            "fullstory",
-            "logrocket",
-        ),
-        "risk_level": "medium",
-        "metadata": {
-            "service_category": "user_analytics",
-            "purpose_category": "ANALYTICS",
-            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
-            "regulatory_impact": "GDPR Article 6, Cookie Directive",
-        },
-    },
-    # ===== SOCIAL MEDIA SERVICES =====
-    "social_media": {
-        "description": "Social media platform integrations for marketing",
-        "patterns": (
-            "facebook",
-            "fb.com",
-            "twitter",
-            "linkedin",
-            "instagram",
-            "tiktok",
-            "youtube",
-            "pinterest",
-            "social",
-        ),
-        "risk_level": "medium",
-        "metadata": {
-            "service_category": "social_media",
-            "purpose_category": "MARKETING_AND_ADVERTISING",
-            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
-            "regulatory_impact": "GDPR Article 26 (Joint Controllers)",
-        },
-    },
-}
 
 
 class ServiceIntegrationsRuleset(Ruleset):
@@ -189,7 +52,7 @@ class ServiceIntegrationsRuleset(Ruleset):
     @override
     def version(self) -> str:
         """Get the version of this ruleset."""
-        return _VERSION
+        return _RULESET_DATA_VERSION
 
     @override
     def get_rules(self) -> tuple[Rule, ...]:
@@ -200,18 +63,19 @@ class ServiceIntegrationsRuleset(Ruleset):
 
         """
         if self.rules is None:
-            rules_list: list[Rule] = []
-            for rule_name, rule_data in _SERVICE_INTEGRATIONS.items():
-                rules_list.append(
-                    Rule(
-                        name=rule_name,
-                        description=rule_data["description"],
-                        patterns=rule_data["patterns"],
-                        risk_level=rule_data["risk_level"],
-                        metadata=rule_data["metadata"],
-                    )
-                )
-            self.rules = tuple(rules_list)
-            logger.debug(f"Generated {len(self.rules)} service integration rules")
+            # Load from external configuration file with validation
+            ruleset_file = (
+                Path(__file__).parent
+                / "data"
+                / _RULESET_NAME
+                / _RULESET_DATA_VERSION
+                / f"{_RULESET_NAME}.yaml"
+            )
+            with ruleset_file.open("r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+
+            ruleset_data = RulesetData(**data)
+            self.rules = ruleset_data.to_rules()
+            logger.debug(f"Loaded {len(self.rules)} service integration patterns")
 
         return self.rules

@@ -84,7 +84,7 @@ class SourceCodeSchemaInputHandler:
         # Load all three rulesets
         self.processing_purposes_rules = RulesetLoader.load_ruleset("processing_purposes")
         self.service_integrations_rules = RulesetLoader.load_ruleset("service_integrations")
-        self.data_collection_rules = RulesetLoader.load_ruleset("data_collection_patterns")
+        self.data_collection_rules = RulesetLoader.load_ruleset("data_collection")
 ```
 
 ### Analysis Flow
@@ -99,7 +99,7 @@ def _analyse_single_file(self, file_data: SourceCodeFileDataModel):
     # Structured analysis with service_integrations
     findings.extend(self._analyse_structured_service_integrations(...))
 
-    # Structured analysis with data_collection_patterns
+    # Structured analysis with data_collection
     findings.extend(self._analyse_structured_data_collection(...))
 
     # Structured analysis with processing_purposes (secondary)
@@ -117,7 +117,7 @@ def _analyse_single_file(self, file_data: SourceCodeFileDataModel):
 | `function_name_analysis` | processing_purposes | functions | Set from ruleset | null |
 | `class_name_analysis` | service_integrations | classes | Set from ruleset | Set from ruleset |
 | `class_name_analysis` | processing_purposes | classes | Set from ruleset | null |
-| `data_collection_function_analysis` | data_collection_patterns | functions | "" (empty) | null |
+| `data_collection_function_analysis` | data_collection | functions | "" (empty) | null |
 | `import_analysis` | service_integrations | imports | Set from ruleset | Set from ruleset |
 
 ## Analysis Results
@@ -161,7 +161,7 @@ def _analyse_single_file(self, file_data: SourceCodeFileDataModel):
 
 ### Compliance Relevance
 - **Type**: Array of strings
-- **Handling**: Automatic conversion from string to array for data_collection_patterns
+- **Handling**: Automatic conversion from string to array for data_collection
 - **Default**: ["GDPR"]
 
 ## Benefits

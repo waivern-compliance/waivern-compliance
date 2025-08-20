@@ -1,7 +1,8 @@
-"""Personal data detection ruleset.
+"""Data collection ruleset.
 
-This module defines a ruleset for detecting personal data patterns.
-It serves as a base for compliance with GDPR and other privacy regulations.
+This module defines patterns for detecting data collection mechanisms
+in source code, such as HTTP form data, cookies, sessions, and API endpoints.
+All patterns use simple string matching for human readability and easy maintenance.
 """
 
 import logging
@@ -18,18 +19,14 @@ logger = logging.getLogger(__name__)
 
 # Version constant for this ruleset and its data (private)
 _RULESET_DATA_VERSION: Final[str] = "1.0.0"
-_RULESET_NAME: Final[str] = "personal_data"
+_RULESET_NAME: Final[str] = "data_collection"
 
 
-class PersonalDataRuleset(Ruleset):
-    """Class-based personal data detection ruleset with logging support.
-
-    This class provides structured access to personal data patterns
-    with built-in logging capabilities for debugging and monitoring.
-    """
+class DataCollectionRuleset(Ruleset):
+    """Ruleset for detecting data collection patterns in source code."""
 
     def __init__(self) -> None:
-        """Initialise the personal data ruleset."""
+        """Initialise the data collection patterns ruleset."""
         super().__init__()
         self.rules: tuple[Rule, ...] | None = None
         logger.debug(f"Initialised {self.name} ruleset version {self.version}")
@@ -48,10 +45,10 @@ class PersonalDataRuleset(Ruleset):
 
     @override
     def get_rules(self) -> tuple[Rule, ...]:
-        """Get the personal data rules.
+        """Get the data collection patterns rules.
 
         Returns:
-            Immutable tuple of Rule objects containing all GDPR-compliant personal data patterns
+            Immutable tuple of Rule objects containing all data collection patterns
 
         """
         if self.rules is None:
@@ -68,6 +65,6 @@ class PersonalDataRuleset(Ruleset):
 
             ruleset_data = RulesetData(**data)
             self.rules = ruleset_data.to_rules()
-            logger.debug(f"Loaded {len(self.rules)} personal data ruleset data")
+            logger.debug(f"Loaded {len(self.rules)} data collection ruleset data")
 
         return self.rules

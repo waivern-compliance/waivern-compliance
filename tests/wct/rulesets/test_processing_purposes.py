@@ -4,7 +4,7 @@ import pytest
 
 from wct.rulesets.base import RulesetLoader, RulesetRegistry
 from wct.rulesets.processing_purposes import ProcessingPurposesRuleset
-from wct.rulesets.types import Rule
+from wct.rulesets.types import Rule, RuleComplianceData
 
 
 class TestProcessingPurposesRuleset:
@@ -104,17 +104,24 @@ class TestProcessingPurposesRuleset:
             assert isinstance(rule.metadata["purpose_category"], str)
             assert len(rule.metadata["purpose_category"]) > 0
 
-    def test_rules_have_metadata_with_compliance_relevance(self):
-        """Test that all rules have metadata with compliance_relevance."""
+    def test_rules_have_compliance_information(self):
+        """Test that all rules have compliance information."""
         rules = self.ruleset.get_rules()
 
         for rule in rules:
-            assert "compliance_relevance" in rule.metadata
-            assert isinstance(rule.metadata["compliance_relevance"], list)
-            assert len(rule.metadata["compliance_relevance"]) > 0
-            assert all(
-                isinstance(item, str) for item in rule.metadata["compliance_relevance"]
-            )
+            assert hasattr(rule, "compliance")
+            assert isinstance(rule.compliance, list)
+            assert len(rule.compliance) > 0
+
+            # Check each compliance entry is a ComplianceData instance
+            for compliance_item in rule.compliance:
+                assert isinstance(compliance_item, RuleComplianceData)
+                assert hasattr(compliance_item, "regulation")
+                assert hasattr(compliance_item, "relevance")
+                assert isinstance(compliance_item.regulation, str)
+                assert isinstance(compliance_item.relevance, str)
+                assert len(compliance_item.regulation) > 0
+                assert len(compliance_item.relevance) > 0
 
     def test_get_rules_returns_same_tuple_each_time(self):
         """Test that get_rules returns the same immutable tuple instance each time."""

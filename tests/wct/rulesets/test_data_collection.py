@@ -1,21 +1,21 @@
-"""Unit tests for DataCollectionPatternsRuleset class."""
+"""Unit tests for DataCollectionRuleset class."""
 
-from wct.rulesets.data_collection_patterns import DataCollectionPatternsRuleset
-from wct.rulesets.types import Rule
+from wct.rulesets.data_collection import DataCollectionRuleset
+from wct.rulesets.types import Rule, RuleComplianceData
 
 
-class TestDataCollectionPatternsRuleset:
-    """Test cases for the DataCollectionPatternsRuleset class."""
+class TestDataCollectionRuleset:
+    """Test cases for the DataCollectionRuleset class."""
 
     def setup_method(self):
         """Set up test fixtures for each test method."""
-        self.ruleset = DataCollectionPatternsRuleset()
+        self.ruleset = DataCollectionRuleset()
 
     def test_name_property_returns_canonical_name(self):
-        """Test DataCollectionPatternsRuleset returns canonical name."""
-        ruleset = DataCollectionPatternsRuleset()
+        """Test DataCollectionRuleset returns canonical name."""
+        ruleset = DataCollectionRuleset()
 
-        assert ruleset.name == "data_collection_patterns"
+        assert ruleset.name == "data_collection"
 
     def test_version_property_returns_correct_string_format(self):
         """Test that version property returns a non-empty string."""
@@ -110,14 +110,24 @@ class TestDataCollectionPatternsRuleset:
             assert isinstance(rule.metadata["data_source"], str)
             assert len(rule.metadata["data_source"]) > 0
 
-    def test_rules_have_compliance_relevance_metadata(self):
-        """Test that rules have compliance_relevance in metadata."""
+    def test_rules_have_structured_compliance_data(self):
+        """Test that rules have structured compliance data."""
         rules = self.ruleset.get_rules()
 
         for rule in rules:
-            assert "compliance_relevance" in rule.metadata
-            assert isinstance(rule.metadata["compliance_relevance"], str)
-            assert len(rule.metadata["compliance_relevance"]) > 0
+            assert hasattr(rule, "compliance")
+            assert isinstance(rule.compliance, list)
+            assert len(rule.compliance) > 0
+
+            # Verify each compliance entry is a ComplianceData instance
+            for compliance_entry in rule.compliance:
+                assert isinstance(compliance_entry, RuleComplianceData)
+                assert hasattr(compliance_entry, "regulation")
+                assert hasattr(compliance_entry, "relevance")
+                assert isinstance(compliance_entry.regulation, str)
+                assert isinstance(compliance_entry.relevance, str)
+                assert len(compliance_entry.regulation) > 0
+                assert len(compliance_entry.relevance) > 0
 
     def test_patterns_are_tuples_not_lists(self):
         """Test that all patterns are stored as tuples, not lists."""
@@ -141,7 +151,7 @@ class TestDataCollectionPatternsRuleset:
             "file_upload",
         }
 
-        found_collection_types = set()
+        found_collection_types: set[str] = set()
         for rule in rules:
             found_collection_types.add(rule.metadata["collection_type"])
 
