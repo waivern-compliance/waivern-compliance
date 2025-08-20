@@ -27,10 +27,23 @@ _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
             "_POST[",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Article 6 lawful basis required for processing form data, Article 13 information duties apply",
+            },
+            {
+                "regulation": "ePrivacy",
+                "relevance": "Electronic communications data collection requires user consent or legitimate interest",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Personal information collection from consumers must comply with notice and opt-out requirements",
+            },
+        ],
         "metadata": {
             "collection_type": "form_data",
             "data_source": "http_post",
-            "compliance_relevance": "Form data collection detection for GDPR compliance",
         },
     },
     "php_get_data": {
@@ -40,10 +53,23 @@ _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
             "_GET[",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "URL parameters may contain personal data requiring Article 6 lawful basis and Article 14 information duties",
+            },
+            {
+                "regulation": "ePrivacy",
+                "relevance": "URL tracking parameters may require consent under electronic communications privacy rules",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "URL parameters containing personal information subject to consumer privacy rights and disclosure requirements",
+            },
+        ],
         "metadata": {
             "collection_type": "url_parameters",
             "data_source": "http_get",
-            "compliance_relevance": "URL parameter data collection detection",
         },
     },
     "php_cookie_access": {
@@ -54,10 +80,23 @@ _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
             "setcookie(",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Cookies containing personal data require Article 6 lawful basis and Article 7 consent where applicable",
+            },
+            {
+                "regulation": "ePrivacy",
+                "relevance": "Non-essential cookies require explicit user consent before storage or access under Cookie Law",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Cookies used for tracking or containing personal information subject to consumer opt-out rights",
+            },
+        ],
         "metadata": {
             "collection_type": "cookies",
             "data_source": "browser_cookies",
-            "compliance_relevance": "Cookie-based data storage and retrieval",
         },
     },
     "php_session_data": {
@@ -68,10 +107,19 @@ _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
             "session_start",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Session data processing requires Article 6 lawful basis and appropriate retention periods under Article 5",
+            },
+            {
+                "regulation": "ePrivacy",
+                "relevance": "Session tracking mechanisms may require consent for electronic communications monitoring",
+            },
+        ],
         "metadata": {
             "collection_type": "session_data",
             "data_source": "server_session",
-            "compliance_relevance": "Session-based data storage detection",
         },
     },
     "html_input_fields": {
@@ -84,10 +132,19 @@ _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
             "<select",
         ),
         "risk_level": "low",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "HTML forms collecting personal data require Article 13 information provision and Article 6 lawful basis",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Form data collection must comply with consumer notice requirements and right to know categories of information collected",
+            },
+        ],
         "metadata": {
             "collection_type": "html_forms",
             "data_source": "html_form",
-            "compliance_relevance": "HTML form-based data collection detection",
         },
     },
     "javascript_storage": {
@@ -99,10 +156,23 @@ _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
             "FormData",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Client-side storage of personal data requires Article 6 lawful basis and transparent information under Article 13",
+            },
+            {
+                "regulation": "ePrivacy",
+                "relevance": "Browser storage mechanisms require consent when used for tracking or storing personal data",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Local storage containing personal information subject to consumer access and deletion rights",
+            },
+        ],
         "metadata": {
             "collection_type": "client_storage",
             "data_source": "browser_javascript",
-            "compliance_relevance": "Client-side data collection and storage",
         },
     },
     "file_uploads": {
@@ -115,10 +185,19 @@ _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
             "upload",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "File uploads may contain personal data requiring Article 6 lawful basis, data minimisation under Article 5, and secure processing under Article 32",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Uploaded files containing personal information must comply with consumer rights to know, access, and delete personal information",
+            },
+        ],
         "metadata": {
             "collection_type": "file_upload",
             "data_source": "uploaded_files",
-            "compliance_relevance": "File uploads may contain personal data requiring special handling",
         },
     },
     "sql_database_queries": {
@@ -143,10 +222,23 @@ _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
             "sqlite_query",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Database operations on personal data require Article 6 lawful basis, data accuracy under Article 5, and appropriate technical measures under Article 32",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Database queries accessing personal information must support consumer rights to know, access, delete, and correct personal information",
+            },
+            {
+                "regulation": "SOX",
+                "relevance": "Financial data queries require adequate internal controls and data integrity measures under Section 404",
+            },
+        ],
         "metadata": {
             "collection_type": "database_query",
             "data_source": "database",
-            "compliance_relevance": "SQL queries may access or modify personal data in databases",
         },
     },
     "database_connections": {
@@ -173,10 +265,23 @@ _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
             "->delete(",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Database connections accessing personal data must implement appropriate security measures under Article 32 and ensure lawful processing under Article 6",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Database access to personal information requires adequate security and must support consumer privacy rights implementation",
+            },
+            {
+                "regulation": "SOX",
+                "relevance": "Database connections handling financial data must maintain adequate internal controls and audit trails under Section 404",
+            },
+        ],
         "metadata": {
             "collection_type": "database_connection",
             "data_source": "database",
-            "compliance_relevance": "Database connections enable access to stored personal data",
         },
     },
 }
@@ -220,6 +325,7 @@ class DataCollectionRuleset(Ruleset):
                         description=rule_data["description"],
                         patterns=rule_data["patterns"],
                         risk_level=rule_data["risk_level"],
+                        compliance=rule_data["compliance"],
                         metadata=rule_data["metadata"],
                     )
                 )

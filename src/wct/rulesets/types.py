@@ -4,6 +4,13 @@ from dataclasses import dataclass, field
 from typing import Any, TypedDict
 
 
+class ComplianceData(TypedDict):
+    """Type definition for compliance information."""
+
+    regulation: str
+    relevance: str
+
+
 # Make RuleData dataclass a Pydantic model (check the RuleData usage to see whether the metadata has mandatory fields)
 class RuleData(TypedDict):
     """Type definition for rule pattern data in PATTERNS dictionaries."""
@@ -11,6 +18,7 @@ class RuleData(TypedDict):
     description: str
     patterns: tuple[str, ...]
     risk_level: str
+    compliance: list[ComplianceData]
     metadata: dict[str, Any]
 
 
@@ -30,6 +38,7 @@ class Rule:
     description: str
     patterns: tuple[str, ...]
     risk_level: str
+    compliance: list[ComplianceData] = field(default_factory=list)
     # TODO: Make metadata a Pydantic model (check the metadata usage to see whether the metadata has mandatory fields)
     metadata: dict[str, Any] = field(default_factory=dict)
 

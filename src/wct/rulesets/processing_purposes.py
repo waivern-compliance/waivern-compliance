@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 _VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "processing_purposes"
 
-_PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
+_PROCESSING_PURPOSE: Final[dict[str, RuleData]] = {
     # ===== AI AND ML PURPOSES =====
     "Artificial Intelligence Model Training": {
         "description": "Training AI/ML models using personal data",
@@ -43,9 +43,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "feast",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "AI model training using personal data requires Article 6 lawful basis and Article 35 DPIA for high-risk processing",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "AI systems using personal data for training subject to data governance and risk management requirements",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "AI model training requires governance, risk assessment, and trustworthy AI practices framework compliance",
+            },
+        ],
         "metadata": {
             "purpose_category": "AI_AND_ML",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
         },
     },
     "Artificial Intelligence Bias Testing": {
@@ -74,9 +87,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "parity ai",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Bias testing using personal data requires Article 6 lawful basis and Article 22 safeguards for automated decision-making",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Bias testing mandatory for high-risk AI systems under risk management and testing requirements",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "Bias testing essential for trustworthy AI development and fairness assessment framework compliance",
+            },
+        ],
         "metadata": {
             "purpose_category": "AI_AND_ML",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
         },
     },
     "Artificial Intelligence Model Refinement": {
@@ -106,9 +132,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "labelbox",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Model refinement using personal data requires Article 6 lawful basis and data minimisation under Article 5",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "AI model refinement subject to quality management and performance monitoring requirements",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "Model refinement requires continuous monitoring and improvement within AI risk management framework",
+            },
+        ],
         "metadata": {
             "purpose_category": "AI_AND_ML",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
         },
     },
     "Artificial Intelligence Performance Testing": {
@@ -132,9 +171,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "decoding trust benchmark",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Performance testing using personal data requires Article 6 lawful basis and proportionate processing",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Performance testing mandatory for AI system validation and conformity assessment requirements",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "Performance testing essential for AI system reliability and trustworthiness validation",
+            },
+        ],
         "metadata": {
             "purpose_category": "AI_AND_ML",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
         },
     },
     "Artificial Intelligence Security Testing": {
@@ -162,15 +214,30 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "shellgpt",
         ),
         "risk_level": "low",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Security testing requires Article 32 security measures and data protection by design principles",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Security testing required for AI system robustness and cybersecurity measures",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "Security testing essential for AI system trustworthiness and risk management framework",
+            },
+            {
+                "regulation": "ISO_27001",
+                "relevance": "Security testing supports information security management system requirements",
+            },
+            {
+                "regulation": "SOC_2",
+                "relevance": "Security testing demonstrates security controls for service organisation compliance",
+            },
+        ],
         "metadata": {
             "purpose_category": "AI_AND_ML",
-            "compliance_relevance": [
-                "GDPR",
-                "EU_AI_ACT",
-                "NIST_AI_RMF",
-                "ISO_27001",
-                "SOC_2",
-            ],
         },
     },
     "Artificial Intelligence Compliance Management": {
@@ -200,9 +267,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "fiddler ai",
         ),
         "risk_level": "low",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "AI compliance management requires governance framework and accountability under Article 5 principles",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "AI compliance management mandatory for high-risk AI systems under governance and quality management requirements",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "AI compliance management essential for trustworthy AI governance and risk management framework implementation",
+            },
+        ],
         "metadata": {
             "purpose_category": "AI_AND_ML",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
         },
     },
     # ===== OPERATIONAL PURPOSES =====
@@ -222,9 +302,14 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "wordpress",
         ),
         "risk_level": "low",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Service delivery processing requires Article 6 lawful basis, typically contractual necessity under Article 6(1)(b)",
+            },
+        ],
         "metadata": {
             "purpose_category": "OPERATIONAL",
-            "compliance_relevance": ["GDPR"],
         },
     },
     "Customer Service and Support": {
@@ -246,9 +331,14 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "liveagent",
         ),
         "risk_level": "low",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Customer support processing requires Article 6 lawful basis, typically legitimate interests under Article 6(1)(f)",
+            },
+        ],
         "metadata": {
             "purpose_category": "OPERATIONAL",
-            "compliance_relevance": ["GDPR"],
         },
     },
     "Customization of Products and Services": {
@@ -263,9 +353,14 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "personalization",
         ),
         "risk_level": "low",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Customisation processing requires Article 6 lawful basis, typically consent under Article 6(1)(a) or legitimate interests",
+            },
+        ],
         "metadata": {
             "purpose_category": "OPERATIONAL",
-            "compliance_relevance": ["GDPR"],
         },
     },
     "User Identity and Login Management": {
@@ -286,9 +381,14 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "forgerock",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Identity management requires Article 6 lawful basis and Article 32 security measures for authentication data",
+            },
+        ],
         "metadata": {
             "purpose_category": "OPERATIONAL",
-            "compliance_relevance": ["GDPR"],
         },
     },
     "Payment, Billing, and Invoicing": {
@@ -305,9 +405,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "recurly",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Payment processing requires Article 6 lawful basis, typically contractual necessity under Article 6(1)(b)",
+            },
+            {
+                "regulation": "PCI_DSS",
+                "relevance": "Payment card processing must comply with Payment Card Industry Data Security Standards",
+            },
+            {
+                "regulation": "SOX",
+                "relevance": "Financial transaction processing requires adequate internal controls under Sarbanes-Oxley Act",
+            },
+        ],
         "metadata": {
             "purpose_category": "OPERATIONAL",
-            "compliance_relevance": ["GDPR", "PCI_DSS", "SOX"],
         },
     },
     # ===== ANALYTICS PURPOSES =====
@@ -328,9 +441,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "heap",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Behavioural analytics requires Article 6 lawful basis and Article 22 considerations for automated profiling",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Behavioural data analysis subject to consumer rights to know, delete, and opt-out of sale",
+            },
+            {
+                "regulation": "CPRA",
+                "relevance": "Enhanced consumer rights including sensitive personal information protections for behavioural profiling",
+            },
+        ],
         "metadata": {
             "purpose_category": "ANALYTICS",
-            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
         },
     },
     # ===== MARKETING AND ADVERTISING PURPOSES =====
@@ -351,9 +477,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "coveo relevance cloud",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Dynamic personalisation requires Article 6 lawful basis and Article 22 protections for automated decision-making",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Personalisation using personal information subject to consumer disclosure and opt-out rights",
+            },
+            {
+                "regulation": "CPRA",
+                "relevance": "Enhanced rights for sensitive personal information used in automated personalisation systems",
+            },
+        ],
         "metadata": {
             "purpose_category": "MARKETING_AND_ADVERTISING",
-            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
         },
     },
     "Consumer Marketing Within Owned Products": {
@@ -376,9 +515,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "onesignal",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Marketing communications require Article 6 lawful basis and Article 21 opt-out rights",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Marketing using personal information subject to consumer right to know and opt-out of sale",
+            },
+            {
+                "regulation": "CPRA",
+                "relevance": "Enhanced consumer rights including right to correct and limit use of sensitive personal information",
+            },
+        ],
         "metadata": {
             "purpose_category": "MARKETING_AND_ADVERTISING",
-            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
         },
     },
     "Targeted Marketing via Third-Party Platforms": {
@@ -398,9 +550,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "linkedin ads",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Third-party marketing requires Article 6 lawful basis and joint controller agreements under Article 26",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Third-party marketing constitutes sale of personal information requiring prominent opt-out disclosure",
+            },
+            {
+                "regulation": "CPRA",
+                "relevance": "Enhanced disclosure and consent requirements for sharing personal information with third parties",
+            },
+        ],
         "metadata": {
             "purpose_category": "MARKETING_AND_ADVERTISING",
-            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
         },
     },
     "Third-Party Marketing via Owned Products": {
@@ -417,9 +582,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "third-party advertisers",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Third-party marketing via owned products requires Article 6 lawful basis and data sharing agreements",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Allowing third-party marketing constitutes sale of personal information requiring opt-out mechanisms",
+            },
+            {
+                "regulation": "CPRA",
+                "relevance": "Enhanced transparency and control requirements for third-party advertising partnerships",
+            },
+        ],
         "metadata": {
             "purpose_category": "MARKETING_AND_ADVERTISING",
-            "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
         },
     },
     # ===== SECURITY PURPOSES =====
@@ -442,9 +620,22 @@ _PROCESSING_PURPOSES: Final[dict[str, RuleData]] = {
             "feedzai",
         ),
         "risk_level": "low",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Security processing typically justified by legitimate interests under Article 6(1)(f) with Article 32 security obligations",
+            },
+            {
+                "regulation": "ISO_27001",
+                "relevance": "Security measures support information security management system requirements and risk assessments",
+            },
+            {
+                "regulation": "SOC_2",
+                "relevance": "Security controls demonstrate commitment to security principles for service organisation compliance",
+            },
+        ],
         "metadata": {
             "purpose_category": "SECURITY",
-            "compliance_relevance": ["GDPR", "ISO_27001", "SOC_2"],
         },
     },
 }
@@ -492,13 +683,14 @@ class ProcessingPurposesRuleset(Ruleset):
         """
         if self.rules is None:
             rules_list: list[Rule] = []
-            for rule_name, rule_data in _PROCESSING_PURPOSES.items():
+            for rule_name, rule_data in _PROCESSING_PURPOSE.items():
                 rules_list.append(
                     Rule(
                         name=rule_name,
                         description=rule_data["description"],
                         patterns=rule_data["patterns"],
                         risk_level=rule_data["risk_level"],
+                        compliance=rule_data["compliance"],
                         metadata=rule_data["metadata"],
                     )
                 )

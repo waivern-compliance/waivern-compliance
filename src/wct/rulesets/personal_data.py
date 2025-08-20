@@ -76,15 +76,30 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "saveprofile",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Personal data processing under Articles 6 and 21, lawful basis and right to object",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Personal data used in AI systems requiring compliance with data governance requirements",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "AI risk management framework for trustworthy AI systems using personal data",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Personal information under CCPA definition requiring consumer privacy rights",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Personal data processing under UK GDPR Articles 6 and 21 requirements",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": [
-                "GDPR",
-                "EU_AI_ACT",
-                "NIST_AI_RMF",
-                "CCPA",
-                "UK_GDPR",
-            ],
         },
     },
     "account_data": {
@@ -106,9 +121,26 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "transaction_log",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Personal data processing requires lawful basis under Article 6",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Account data may be used in AI systems requiring compliance",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "Data governance and trustworthy AI practices",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Consumer personal information under CCPA definition",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF", "CCPA"],
         },
     },
     "payment_data": {
@@ -129,9 +161,26 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "billing_email",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Financial data processing under Article 6, contractual necessity",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Payment data used in AI systems for fraud detection",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "Financial AI system governance requirements",
+            },
+            {
+                "regulation": "PCI_DSS",
+                "relevance": "Payment card industry data security standards compliance",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF", "PCI_DSS"],
         },
     },
     "financial_data": {
@@ -170,15 +219,30 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "credit_history",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Financial data processing under Article 6, special attention to automated decision-making",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Financial AI systems subject to high-risk category requirements",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "Financial AI risk management and algorithmic accountability frameworks",
+            },
+            {
+                "regulation": "PCI_DSS",
+                "relevance": "Payment card data security standards for cardholder data protection",
+            },
+            {
+                "regulation": "SOX",
+                "relevance": "Financial reporting controls and data integrity requirements",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": [
-                "GDPR",
-                "EU_AI_ACT",
-                "NIST_AI_RMF",
-                "PCI_DSS",
-                "SOX",
-            ],
         },
     },
     "behavioral_event_data": {
@@ -209,9 +273,22 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "conversion_event",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Behavioural data processing under Article 6, profiling considerations under Article 22",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Personal information including inferences and behavioural data under consumer rights",
+            },
+            {
+                "regulation": "ePrivacy",
+                "relevance": "Electronic communications data and cookies requiring user consent",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": ["GDPR", "CCPA", "ePrivacy"],
         },
     },
     "technical_device_and_network_data": {
@@ -250,15 +327,30 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "advertisement_id",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Technical identifiers as personal data under Article 4(1), device fingerprinting concerns",
+            },
+            {
+                "regulation": "ePrivacy",
+                "relevance": "Electronic communications metadata and terminal equipment information requiring consent",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Device identifiers and network information as personal information under CCPA",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Technical data used for AI system training and operation governance",
+            },
+            {
+                "regulation": "NIST_AI_RMF",
+                "relevance": "Technical data governance in AI system development and deployment",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": [
-                "GDPR",
-                "ePrivacy",
-                "CCPA",
-                "EU_AI_ACT",
-                "NIST_AI_RMF",
-            ],
         },
     },
     "inferred_profile_data": {
@@ -271,9 +363,18 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "machine_learning",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Automated profiling and inferences under Article 22, right to explanation",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "AI-generated profiles and inferences subject to high-risk AI system requirements",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT"],
         },
     },
     "User_enriched_profile_data": {
@@ -285,9 +386,22 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "user_provided",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "User-provided personal data requiring lawful basis under Article 6",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "User preferences used in AI recommendation and personalisation systems",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Personal data processing under UK GDPR Article 6 lawful basis requirements",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR"],
         },
     },
     "location_data": {
@@ -321,9 +435,26 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "region_code",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Location data processing under Article 6, potential special category considerations",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Location data in AI systems for location-based services and analytics",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Location data processing under UK GDPR Article 6 requirements",
+            },
+            {
+                "regulation": "CCPA",
+                "relevance": "Geolocation information as personal information under CCPA definition",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR", "CCPA"],
         },
     },
     "user_generated_content": {
@@ -335,9 +466,22 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "message",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "User-generated content as personal data under Article 6 processing requirements",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "User content used for AI training and content moderation systems",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Personal data in user content under UK GDPR Article 6 lawful basis",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR"],
         },
     },
     "accurate_location": {
@@ -368,9 +512,14 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "geofence",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Precise location data may constitute special category data requiring Article 9 compliance",
+            },
+        ],
         "metadata": {
             "special_category": "Y",
-            "compliance_relevance": ["GDPR"],
         },
     },
     "health_data": {
@@ -385,9 +534,22 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "patient",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Health data as special category under Article 9 requiring explicit consent or legal basis",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Health AI systems classified as high-risk under Annex III requirements",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Health data as special category under UK GDPR Article 9 requirements",
+            },
+        ],
         "metadata": {
             "special_category": "Y",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR"],
         },
     },
     "political_data": {
@@ -398,9 +560,22 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "affiliation",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Political opinions as special category data under Article 9 requiring explicit consent",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Political profiling systems subject to prohibited AI practices under Article 5",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Political opinions as special category under UK GDPR Article 9 requirements",
+            },
+        ],
         "metadata": {
             "special_category": "Y",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR"],
         },
     },
     "racial_ethnic_data": {
@@ -412,9 +587,22 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "nationality",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Racial/ethnic origin as special category data under Article 9 requiring explicit consent",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Biased AI systems using racial data prohibited under Article 5 discriminatory practices",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Racial/ethnic data as special category under UK GDPR Article 9 requirements",
+            },
+        ],
         "metadata": {
             "special_category": "Y",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR"],
         },
     },
     "religious_philosophical_data": {
@@ -426,9 +614,22 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "faith",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Religious/philosophical beliefs as special category data under Article 9 requiring explicit consent",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Religious profiling systems subject to discriminatory AI practices prohibitions",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Religious/philosophical beliefs as special category under UK GDPR Article 9",
+            },
+        ],
         "metadata": {
             "special_category": "Y",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR"],
         },
     },
     "genetic_data": {
@@ -440,9 +641,22 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "sequence",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Genetic data as special category under Article 9 requiring explicit consent and high protection",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Genetic AI systems classified as high-risk requiring conformity assessments",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Genetic data as special category under UK GDPR Article 9 high protection requirements",
+            },
+        ],
         "metadata": {
             "special_category": "Y",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR"],
         },
     },
     "biometric_data": {
@@ -456,9 +670,22 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "voice",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Biometric data for identification as special category under Article 9 requiring explicit consent",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Biometric identification systems prohibited in public spaces under Article 5",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Biometric data as special category under UK GDPR Article 9 high protection standards",
+            },
+        ],
         "metadata": {
             "special_category": "Y",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR"],
         },
     },
     "sexual_orientation_data": {
@@ -470,9 +697,22 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "gender_identity",
         ),
         "risk_level": "high",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Sexual orientation data as special category under Article 9 requiring explicit consent",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "AI systems inferring sexual orientation prohibited under discriminatory practices",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Sexual orientation as special category under UK GDPR Article 9 protection requirements",
+            },
+        ],
         "metadata": {
             "special_category": "Y",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR"],
         },
     },
     "date_of_birth": {
@@ -496,9 +736,26 @@ _PERSONAL_DATA: Final[dict[str, RuleData]] = {
             "born_on",
         ),
         "risk_level": "medium",
+        "compliance": [
+            {
+                "regulation": "GDPR",
+                "relevance": "Age data processing under Article 8 for children's consent and Article 6 lawful basis",
+            },
+            {
+                "regulation": "EU_AI_ACT",
+                "relevance": "Age verification systems and child safety measures in AI applications",
+            },
+            {
+                "regulation": "UK_GDPR",
+                "relevance": "Age data under UK GDPR Article 8 children's protection and consent requirements",
+            },
+            {
+                "regulation": "COPPA",
+                "relevance": "Children's personal information requiring parental consent for under-13 processing",
+            },
+        ],
         "metadata": {
             "special_category": "N",
-            "compliance_relevance": ["GDPR", "EU_AI_ACT", "UK_GDPR", "COPPA"],
         },
     },
 }
@@ -546,6 +803,7 @@ class PersonalDataRuleset(Ruleset):
                         description=rule_data["description"],
                         patterns=rule_data["patterns"],
                         risk_level=rule_data["risk_level"],
+                        compliance=rule_data["compliance"],
                         metadata=rule_data["metadata"],
                     )
                 )
