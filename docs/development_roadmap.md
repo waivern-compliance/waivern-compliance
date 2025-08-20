@@ -4,23 +4,23 @@ This document outlines the development status and planned roadmap for the Waiver
 
 ## Feature Status Overview
 
-| Feature                    | PoC | WCT | Refactor* | Description                                                                                  |
-| -------------------------- | --- | --- | -------- | -------------------------------------------------------------------------------------------- |
-| Rulesets                   | N/A | ✅   | ✅        | Pattern rules for static analysis                                                            |
-| Input/Output Schema        | N/A | ✅   | ✅        | JSON Schema-based validation system with data flow schemas                |
-| Runbook                    | N/A | ✅   | ✅        | JSON Schema-based runbook configuration spec with validation utility                |
-| MySQL Connector            | ✅   | ✅   | ✅        | Database connectivity and data extraction with enhanced error handling and comprehensive tests |
-| Source Code Connector      | ✅   | ✅   | ✅        | PHP source code analysis with compliance-focused extraction and comprehensive test coverage  |
-| Personal Data (MySQL)      | ✅   | ✅   | ⏳        | Personal data collection analysis in MySQL databases                                         |
-| Personal Data (PHP)        | ✅   | ✅   | ⏳        | Personal data collection in PHP source code                                                  |
-| Processing Purpose (MySQL) | ✅   | ✅   | ⏳        | GDPR processing purpose analysis for MySQL                                                   |
-| Processing Purpose (PHP)   | ✅   | ✅   | ⏳        | GDPR processing purpose analysis for PHP code                                                |
-| Log Analysis               | ✅   | ✅   | ⏳        | Analysis of application and server logs for personal data collection and processing purposes |
-| Security Measures          | ✅   | ✅   | ⏳        | Security measures analysis                                                                   |
-| Generate SBODPA            | ✅   | ⏳   | ⏳        | Draft Service-Based Online Data Processing Agreement generation                              |
-| Generate Privacy Policy    | ✅   | ⏳   | ⏳        | Automated Privacy Policy draft generation                                                    |
-| Generate RoPA              | ✅   | ⏳   | ⏳        | Draft Record of Processing Activities generation                                             |
-| Data Export Analysis       | ✅   | ⏳   | ⏳        | Analysis of data export capabilities and compliance                                          |
+| Feature                             | PoC | WCT | Refactor* | Description                                                                                  |
+| ----------------------------------- | --- | --- | -------- | -------------------------------------------------------------------------------------------- |
+| Rulesets                            | N/A | ✅   | ✅        | Pattern rules for static analysis                                                            |
+| Input/Output Schema.                | N/A | ✅   | ✅        | JSON Schema-based validation system with data flow schemas                |
+| Runbook                             | N/A | ✅   | ✅        | JSON Schema-based runbook configuration spec with validation utility                |
+| MySQL Connector                     | ✅   | ✅   | ✅        | Database connectivity and data extraction with enhanced error handling and comprehensive tests |
+| Source Code Connector               | ✅   | ✅   | ✅        | PHP source code analysis with compliance-focused extraction and comprehensive test coverage  |
+| Personal Data Static Analysis       | ✅   | ✅   | ✅        | Personal data collection analysis in MySQL databases                                         |
+| Personal Data LLM Validation        | ✅   | ✅   | ✅        | Personal data collection in PHP source code                                                  |
+| Processing Purpose Static Analysis  | ✅   | ✅   | ✅        | GDPR processing purpose analysis for MySQL                                                   |
+| Processing Purpose LLM Validation   | ✅   | ⏳   | N/A       | GDPR processing purpose analysis for PHP code                                                |
+| Log Analysis                        | ✅   | 🔄   | N/A       | Analysis of application and server logs for personal data collection and processing purposes |
+| Security Measures                   | ✅   | ⏳   | N/A       | Security measures analysis                                                                   |
+| Generate SBODPA                     | ✅   | ⏳   | N/A       | Draft Service-Based Online Data Processing Agreement generation                              |
+| Generate Privacy Policy             | ✅   | ⏳   | N/A       | Automated Privacy Policy draft generation                                                    |
+| Generate RoPA                       | ✅   | ⏳   | N/A       | Draft Record of Processing Activities generation                                             |
+| Data Export Analysis                | ✅   | ⏳   | N/A       | Analysis of data export capabilities and compliance                                          |
 
 _*Test coverage, code quality review to produce production-ready code_
 
@@ -29,7 +29,7 @@ _*Test coverage, code quality review to produce production-ready code_
 - ✅ **Complete**: Feature is implemented
 - ⏳ **In Progress/Planned**: Feature is being worked on
 - ☐ **Not Started**: Feature has not been started yet
-- N/A: Not applicable (feature was implemented directly in WCT)
+- N/A: Not applicable
 
 ## Current State (v0.0.1)
 
@@ -70,7 +70,7 @@ Complete migration from manual validation to a comprehensive JSON Schema-based v
 - ✅ **Enhanced error reporting**: Field path reporting with clear validation failure details
 - ✅ **Comprehensive testing**: 119 total tests with 23 new tests for schema validation and runbook implementation
 
-**Completed:** January 2025 - Full JSON Schema-based validation system with declarative configuration validation
+**Completed:** August 2025 - Full JSON Schema-based validation system with declarative configuration validation
 
 ### ✅ Priority 2: Connector Refactoring (COMPLETED)
 
@@ -86,16 +86,16 @@ Enhanced connector implementations leveraging the JSON Schema-based validation s
 
 **Completed:** August 2025 - All three core connectors refactored with production-ready quality
 
-### 🎯 Priority 3: Analyser Refactoring
+### ✅ Priority 3: Analyser Refactoring (COMPLETED)
 
 Enhanced analyser implementations leveraging the JSON Schema-based validation system:
 
-**Goals:**
-- Comprehensive integration testing for all analysers with schema validation
-- Analyser improvements with Message-based validation
-- Performance optimisation for large-scale data processing
+**Completed Goals:**
+- ✅ Comprehensive integration testing for all analysers with schema validation
+- ✅ Analyser improvements with Message-based validation
+- ✅ Performance optimisation for large-scale data processing
 
-**Timeline:** TBC
+**Completed:** August 2025
 
 ### 🎯 Priority 4: End-to-End Testing & CI/CD Infrastructure
 
