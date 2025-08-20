@@ -1,7 +1,7 @@
 """Unit tests for DataCollectionRuleset class."""
 
 from wct.rulesets.data_collection import DataCollectionRuleset
-from wct.rulesets.types import Rule
+from wct.rulesets.types import Rule, RuleComplianceData
 
 
 class TestDataCollectionRuleset:
@@ -119,15 +119,15 @@ class TestDataCollectionRuleset:
             assert isinstance(rule.compliance, list)
             assert len(rule.compliance) > 0
 
-            # Verify each compliance entry has proper structure
+            # Verify each compliance entry is a ComplianceData instance
             for compliance_entry in rule.compliance:
-                assert isinstance(compliance_entry, dict)
-                assert "regulation" in compliance_entry
-                assert "relevance" in compliance_entry
-                assert isinstance(compliance_entry["regulation"], str)
-                assert isinstance(compliance_entry["relevance"], str)
-                assert len(compliance_entry["regulation"]) > 0
-                assert len(compliance_entry["relevance"]) > 0
+                assert isinstance(compliance_entry, RuleComplianceData)
+                assert hasattr(compliance_entry, "regulation")
+                assert hasattr(compliance_entry, "relevance")
+                assert isinstance(compliance_entry.regulation, str)
+                assert isinstance(compliance_entry.relevance, str)
+                assert len(compliance_entry.regulation) > 0
+                assert len(compliance_entry.relevance) > 0
 
     def test_patterns_are_tuples_not_lists(self):
         """Test that all patterns are stored as tuples, not lists."""

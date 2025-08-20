@@ -237,6 +237,7 @@ def extract_json_from_response(llm_response: str) -> str:
     return llm_response.strip()
 
 
+# QUESTION: would making this a dataclass improves performance?
 # Validation result constants for type safety
 class ValidationResult:
     """Constants for validation results."""

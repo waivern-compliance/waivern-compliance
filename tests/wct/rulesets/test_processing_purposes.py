@@ -4,7 +4,7 @@ import pytest
 
 from wct.rulesets.base import RulesetLoader, RulesetRegistry
 from wct.rulesets.processing_purposes import ProcessingPurposesRuleset
-from wct.rulesets.types import Rule
+from wct.rulesets.types import Rule, RuleComplianceData
 
 
 class TestProcessingPurposesRuleset:
@@ -113,15 +113,15 @@ class TestProcessingPurposesRuleset:
             assert isinstance(rule.compliance, list)
             assert len(rule.compliance) > 0
 
-            # Check each compliance entry has required structure
+            # Check each compliance entry is a ComplianceData instance
             for compliance_item in rule.compliance:
-                assert isinstance(compliance_item, dict)
-                assert "regulation" in compliance_item
-                assert "relevance" in compliance_item
-                assert isinstance(compliance_item["regulation"], str)
-                assert isinstance(compliance_item["relevance"], str)
-                assert len(compliance_item["regulation"]) > 0
-                assert len(compliance_item["relevance"]) > 0
+                assert isinstance(compliance_item, RuleComplianceData)
+                assert hasattr(compliance_item, "regulation")
+                assert hasattr(compliance_item, "relevance")
+                assert isinstance(compliance_item.regulation, str)
+                assert isinstance(compliance_item.relevance, str)
+                assert len(compliance_item.regulation) > 0
+                assert len(compliance_item.relevance) > 0
 
     def test_get_rules_returns_same_tuple_each_time(self):
         """Test that get_rules returns the same immutable tuple instance each time."""
