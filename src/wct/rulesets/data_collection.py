@@ -1,4 +1,4 @@
-"""Data collection patterns ruleset.
+"""Data collection ruleset.
 
 This module defines patterns for detecting data collection mechanisms
 in source code, such as HTTP form data, cookies, sessions, and API endpoints.
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Version constant for this ruleset (private)
 _VERSION: Final[str] = "1.0.0"
-_RULESET_NAME: Final[str] = "data_collection_patterns"
+_RULESET_NAME: Final[str] = "data_collection"
 
 _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
     "php_post_data": {
@@ -182,7 +182,7 @@ _DATA_COLLECTION_PATTERNS: Final[dict[str, RuleData]] = {
 }
 
 
-class DataCollectionPatternsRuleset(Ruleset):
+class DataCollectionRuleset(Ruleset):
     """Ruleset for detecting data collection patterns in source code."""
 
     def __init__(self) -> None:
