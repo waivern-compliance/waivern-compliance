@@ -13,10 +13,10 @@ from wct.logging import (
     LoggingError,
     create_log_directories,
     get_config_path,
-    get_project_root,
     load_config,
     setup_logging,
 )
+from wct.utils import get_project_root
 
 
 class TestLoggingConfiguration:
