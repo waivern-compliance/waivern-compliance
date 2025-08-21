@@ -1,0 +1,39 @@
+# Organisation Configuration
+# This file contains metadata about your organisation for privacy document generation.
+# Non-technical users can easily edit this file to update organisation information.
+
+data_controller:
+  name: "Waivern Ltd"
+  company_nr: "16345663802"
+  address: "Solbakken Alle 24D, 1086, Oslo, Norway"
+  contact_email: "info@waivern.com"
+  trading_name: ""  # Leave empty if same as company name
+  jurisdictions:
+    - "EU"
+    - "UK"
+
+# Optional
+joint_controller:
+  name: "Jean Dow"
+  processing_purposes: "Personal Data Collection"
+  contact_email: "jean.dow@waivern.com"
+  contact_address: "Solbakken Alle 24D, 1086, Oslo, Norway"
+
+# Optional
+eu_uk_representative:
+  company_name: "John Dow"
+  contact_email: "john.dow@waivern.com"
+  contact_address: "21 East Street, London, UK"
+
+dpo:
+  name: "Vincent G Nunan"
+  contact_email: "vincent.nunan@waivern.com"
+  contact_address: "Solbakken Alle 24D, 1086, Oslo"
+
+privacy_contact:
+  email: "info@waivern.com"
+
+data_retention:
+  general_rule: "18 months from creation"
+  exceptions:
+    financial_records: "6 years (legal obligation)"
