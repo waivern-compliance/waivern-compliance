@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from wct.analysers.types import EvidenceItem
+from wct.analysers.types import EvidenceItem, FindingComplianceData
 from wct.rulesets import RulesetLoader
 from wct.rulesets.types import Rule
 from wct.schemas import (
@@ -222,13 +222,16 @@ class SourceCodeSchemaInputHandler:
         }
 
         # Create strongly typed finding using Pydantic model
+        compliance_data = [
+            FindingComplianceData(regulation=comp.regulation, relevance=comp.relevance)
+            for comp in rule.compliance
+        ]
+
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
             purpose_category=rule.metadata.get("purpose_category", ""),
             risk_level=rule.risk_level,
-            compliance_relevance=rule.metadata.get("compliance_relevance", ["GDPR"])
-            if isinstance(rule.metadata.get("compliance_relevance", ["GDPR"]), list)
-            else ["GDPR"],
+            compliance=compliance_data,
             matched_pattern=pattern,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
@@ -410,13 +413,16 @@ class SourceCodeSchemaInputHandler:
             "pattern": pattern,
         }
 
+        compliance_data = [
+            FindingComplianceData(regulation=comp.regulation, relevance=comp.relevance)
+            for comp in rule.compliance
+        ]
+
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
             purpose_category=rule.metadata.get("purpose_category", ""),
             risk_level=rule.risk_level,
-            compliance_relevance=rule.metadata.get("compliance_relevance", ["GDPR"])
-            if isinstance(rule.metadata.get("compliance_relevance", ["GDPR"]), list)
-            else ["GDPR"],
+            compliance=compliance_data,
             matched_pattern=pattern,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(

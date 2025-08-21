@@ -4,7 +4,20 @@
       "purpose": "Artificial Intelligence Compliance Management",
       "purpose_category": "AI_AND_ML",
       "risk_level": "low",
-      "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "AI compliance framework requires lawful basis under Article 6 and privacy by design principles"
+        },
+        {
+          "regulation": "EU_AI_ACT",
+          "relevance": "AI systems must implement governance frameworks for risk management and compliance monitoring"
+        },
+        {
+          "regulation": "NIST_AI_RMF",
+          "relevance": "Requires establishing AI risk management practices and continuous monitoring of AI systems"
+        }
+      ],
       "matched_pattern": "compliance",
       "evidence": [
         {
@@ -31,7 +44,12 @@
       "purpose": "User Identity and Login Management",
       "purpose_category": "OPERATIONAL",
       "risk_level": "medium",
-      "compliance_relevance": ["GDPR"],
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "User authentication processing requires lawful basis under Article 6(1)(b) for contract performance"
+        }
+      ],
       "matched_pattern": "authentication",
       "evidence": [
         {
@@ -58,7 +76,20 @@
       "purpose": "Behavioral Data Analysis for Product Improvement",
       "purpose_category": "ANALYTICS",
       "risk_level": "high",
-      "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "Behavioral analytics requires explicit consent under Article 6(1)(a) and Article 21 opt-out rights"
+        },
+        {
+          "regulation": "CCPA",
+          "relevance": "Consumer behavioral data collection requires privacy notice and opt-out mechanisms under Section 1798.100"
+        },
+        {
+          "regulation": "CPRA",
+          "relevance": "Sensitive personal information processing requires additional consumer rights and disclosure requirements"
+        }
+      ],
       "matched_pattern": "analytics",
       "evidence": [
         {
@@ -85,7 +116,20 @@
       "purpose": "Dynamic Personalization of Products and Services",
       "purpose_category": "MARKETING_AND_ADVERTISING",
       "risk_level": "high",
-      "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "Profiling for personalization requires explicit consent under Article 6(1)(a) and Article 22 automated decision-making protections"
+        },
+        {
+          "regulation": "CCPA",
+          "relevance": "Personalization using personal information requires disclosure in privacy policy and opt-out options"
+        },
+        {
+          "regulation": "CPRA",
+          "relevance": "Automated profiling for personalization constitutes sensitive personal information processing requiring enhanced disclosures"
+        }
+      ],
       "matched_pattern": "personalization",
       "evidence": [
         {
@@ -112,7 +156,20 @@
       "purpose": "Security, Fraud Prevention, and Abuse Detection",
       "purpose_category": "SECURITY",
       "risk_level": "low",
-      "compliance_relevance": ["GDPR", "ISO_27001", "SOC_2"],
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "Fraud prevention processing justified under Article 6(1)(f) legitimate interests with proper balancing test"
+        },
+        {
+          "regulation": "ISO_27001",
+          "relevance": "Security monitoring aligns with information security management system requirements for threat detection"
+        },
+        {
+          "regulation": "SOC_2",
+          "relevance": "Fraud detection supports security principle requirements for monitoring and incident response"
+        }
+      ],
       "matched_pattern": "fraud",
       "evidence": [
         {

@@ -6,6 +6,12 @@
       "risk_level": "medium",
       "special_category": "N",
       "matched_pattern": "john.doe@company.com",
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "Email addresses are personal data under Article 4(1) requiring lawful basis for processing"
+        }
+      ],
       "evidence": [
         {
           "content": "the actual content of the email found in the employee data file",
@@ -25,6 +31,12 @@
       "risk_level": "low",
       "special_category": "N",
       "matched_pattern": "+1-555-123-4567",
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "Phone numbers are personal data under Article 4(1) requiring lawful basis for processing"
+        }
+      ],
       "evidence": [
         {
           "content": "the actual content of the phone number found in the employee data file",
@@ -43,6 +55,12 @@
       "risk_level": "high",
       "special_category": "Y",
       "matched_pattern": "diabetes",
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "Health data is special category personal data under Article 9 requiring explicit consent or other Article 9(2) conditions"
+        }
+      ],
       "evidence": [
         {
           "content": "the actual content of the health condition found in the medical records file",
@@ -61,6 +79,12 @@
       "risk_level": "high",
       "special_category": "Y",
       "matched_pattern": "ethnicity: Hispanic",
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "Ethnic origin is special category personal data under Article 9 requiring explicit consent or other Article 9(2) conditions"
+        }
+      ],
       "evidence": [
         {
           "content": "the actual content of the ethnicity found in the HR forms file",
@@ -79,6 +103,12 @@
       "risk_level": "high",
       "special_category": "N",
       "matched_pattern": "123-45-6789",
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "National identification numbers are personal data under Article 4(1) with heightened protection requirements"
+        }
+      ],
       "evidence": [
         {
           "content": "the actual content of the SSN found in the tax documents file",
@@ -97,6 +127,12 @@
       "risk_level": "medium",
       "special_category": "N",
       "matched_pattern": "4532-****-****-1234",
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "Payment card data is personal data under Article 4(1) subject to data minimisation and security requirements"
+        }
+      ],
       "evidence": [
         {
           "content": "the actual content of the credit card number found in the payment logs file",

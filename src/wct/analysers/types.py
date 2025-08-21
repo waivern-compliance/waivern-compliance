@@ -18,6 +18,17 @@ class EvidenceItem(BaseModel):
     )
 
 
+class FindingComplianceData(BaseModel):
+    """Compliance information for findings."""
+
+    regulation: str = Field(
+        ..., min_length=1, description="Regulation name (e.g., GDPR, CCPA)"
+    )
+    relevance: str = Field(
+        ..., min_length=1, description="Specific relevance to this regulation"
+    )
+
+
 class PatternMatchingConfig(BaseModel):
     """Strongly typed configuration for pattern matching analysis."""
 

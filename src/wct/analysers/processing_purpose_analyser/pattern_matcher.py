@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from wct.analysers.types import PatternMatchingConfig
+from wct.analysers.types import FindingComplianceData, PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
 
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
@@ -75,6 +75,13 @@ class ProcessingPurposePatternMatcher:
                                 **metadata_dict
                             )
 
+                        compliance_data = [
+                            FindingComplianceData(
+                                regulation=comp.regulation, relevance=comp.relevance
+                            )
+                            for comp in rule.compliance
+                        ]
+
                         finding = ProcessingPurposeFindingModel(
                             purpose=rule.name,
                             purpose_category=rule.metadata.get(
@@ -82,10 +89,7 @@ class ProcessingPurposePatternMatcher:
                                 ProcessingPurposePatternMatcher._DEFAULT_PURPOSE_CATEGORY,
                             ),
                             risk_level=rule.risk_level,
-                            compliance_relevance=rule.metadata.get(
-                                "compliance_relevance",
-                                ProcessingPurposePatternMatcher._DEFAULT_COMPLIANCE_RELEVANCE,
-                            ),
+                            compliance=compliance_data,
                             matched_pattern=pattern,
                             evidence=evidence,
                             metadata=finding_metadata,
