@@ -212,7 +212,7 @@ def _convert_findings_for_prompt(
                 "risk_level": finding.risk_level,
                 "special_category": finding.special_category,
                 "matched_pattern": finding.matched_pattern,
-                "evidence": finding.evidence,
+                "evidence": [item.content for item in finding.evidence],
                 "metadata": finding.metadata,
             }
         )

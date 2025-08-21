@@ -4,6 +4,8 @@ This test module focuses on testing the public API of SourceCodeSchemaInputHandl
 following black-box testing principles and proper encapsulation.
 """
 
+from datetime import datetime, timezone
+
 import pytest
 
 from wct.analysers.processing_purpose_analyser.source_code_schema_input_handler import (
@@ -12,6 +14,7 @@ from wct.analysers.processing_purpose_analyser.source_code_schema_input_handler 
 from wct.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeFindingModel,
 )
+from wct.analysers.types import EvidenceItem
 from wct.schemas import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeClassModel,
@@ -280,6 +283,10 @@ class MLAnalyticsService {
         assert isinstance(payment_finding.purpose, str)
         assert len(payment_finding.purpose) > 0
         assert payment_finding.metadata is not None
+
+        # Validate evidence has timestamps
+        for evidence_item in payment_finding.evidence:
+            assert evidence_item.collection_timestamp is not None
         assert (
             getattr(payment_finding.metadata, "file_path") == "/src/CustomerService.php"
         )
@@ -317,6 +324,10 @@ class MLAnalyticsService {
         assert "/src/CustomerService.php" in file_paths
         assert "/src/MLAnalyticsService.php" in file_paths
 
+        # Validate at least one finding has evidence with timestamps
+        if findings:
+            assert findings[0].evidence[0].collection_timestamp is not None
+
     def test_analyse_source_code_data_creates_proper_metadata(
         self,
         handler: SourceCodeSchemaInputHandler,
@@ -350,6 +361,27 @@ class MLAnalyticsService {
         assert hasattr(finding.metadata, "analysis_type")
         assert getattr(finding.metadata, "file_path") == "/src/CustomerService.php"
         assert getattr(finding.metadata, "language") == "php"
+
+        # Comprehensive timestamp validation
+        start_time = datetime.now(timezone.utc)
+        for evidence_item in finding.evidence:
+            # Validate timestamp exists and is correct type
+            assert evidence_item.collection_timestamp is not None
+            assert isinstance(evidence_item.collection_timestamp, datetime)
+
+            # Validate timezone is UTC
+            assert evidence_item.collection_timestamp.tzinfo == timezone.utc
+
+            # Validate timestamp is recent (within last minute for this test)
+            assert evidence_item.collection_timestamp <= start_time
+
+            # Validate timestamp can be serialized to ISO format
+            iso_string = evidence_item.collection_timestamp.isoformat()
+            assert iso_string.endswith("Z") or "+" in iso_string
+
+            # Validate timestamp can be round-tripped through ISO format
+            parsed_timestamp = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
+            assert parsed_timestamp.tzinfo is not None
 
     def test_analyse_source_code_data_handles_file_with_no_patterns(
         self,
@@ -446,6 +478,11 @@ class EmptyClass {
             assert isinstance(finding.compliance_relevance, list)
             assert isinstance(finding.evidence, list) and len(finding.evidence) > 0
 
-            # Verify each evidence item is a string
+            # Verify each evidence item is an EvidenceItem
             for evidence_item in finding.evidence:
-                assert isinstance(evidence_item, str) and len(evidence_item) > 0
+                assert isinstance(evidence_item, EvidenceItem)
+                assert (
+                    isinstance(evidence_item.content, str)
+                    and len(evidence_item.content) > 0
+                )
+                assert evidence_item.collection_timestamp is not None

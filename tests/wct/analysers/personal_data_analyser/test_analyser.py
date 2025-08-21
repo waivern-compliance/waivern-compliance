@@ -18,7 +18,7 @@ from wct.analysers.personal_data_analyser.types import (
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
 )
-from wct.analysers.types import LLMValidationConfig, PatternMatchingConfig
+from wct.analysers.types import EvidenceItem, LLMValidationConfig, PatternMatchingConfig
 from wct.analysers.utilities import LLMServiceManager
 from wct.message import Message
 from wct.schemas import (
@@ -101,7 +101,7 @@ class TestPersonalDataAnalyser:
                 risk_level=self.MEDIUM_RISK_LEVEL,
                 special_category=self.SPECIAL_CATEGORY_NO,
                 matched_pattern="support@example.com",
-                evidence=["Contact us at support@example.com"],
+                evidence=[EvidenceItem(content="Contact us at support@example.com")],
                 metadata=PersonalDataFindingMetadata(source="contact_form.html"),
             ),
             PersonalDataFindingModel(
@@ -109,7 +109,7 @@ class TestPersonalDataAnalyser:
                 risk_level=self.HIGH_RISK_LEVEL,
                 special_category=self.SPECIAL_CATEGORY_NO,
                 matched_pattern="123-456-7890",
-                evidence=["call 123-456-7890"],
+                evidence=[EvidenceItem(content="call 123-456-7890")],
                 metadata=PersonalDataFindingMetadata(source="contact_form.html"),
             ),
             PersonalDataFindingModel(
@@ -117,7 +117,7 @@ class TestPersonalDataAnalyser:
                 risk_level=self.MEDIUM_RISK_LEVEL,
                 special_category=self.SPECIAL_CATEGORY_NO,
                 matched_pattern="john.doe@company.com",
-                evidence=["john.doe@company.com"],
+                evidence=[EvidenceItem(content="john.doe@company.com")],
                 metadata=PersonalDataFindingMetadata(source="user_database"),
             ),
         ]
@@ -255,6 +255,15 @@ class TestPersonalDataAnalyser:
             assert "findings" in result_content
             assert "summary" in result_content
             assert len(result_content["findings"]) == 3
+
+            # Validate evidence timestamps in serialized output
+            for finding in result_content["findings"]:
+                assert "evidence" in finding
+                for evidence_item in finding["evidence"]:
+                    assert "collection_timestamp" in evidence_item
+                    assert isinstance(evidence_item["collection_timestamp"], str)
+                    # Validate ISO 8601 format
+                    assert evidence_item["collection_timestamp"].endswith("Z")
 
             # Verify summary statistics
             summary = result_content["summary"]

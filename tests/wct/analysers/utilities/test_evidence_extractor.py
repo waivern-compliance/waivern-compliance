@@ -4,6 +4,8 @@ This module tests the public API of EvidenceExtractor, focusing on black-box
 testing of the extract_evidence method without accessing private implementation details.
 """
 
+from datetime import datetime, timezone
+
 from wct.analysers.utilities import EvidenceExtractor
 
 
@@ -16,12 +18,20 @@ class TestEvidenceExtractorBasicFunctionality:
         content = "The user email address is test@example.com for contact."
         pattern = "email"
 
+        start_time = datetime.now(timezone.utc)
         evidence = extractor.extract_evidence(
             content, pattern, max_evidence=3, context_size="small"
         )
+        end_time = datetime.now(timezone.utc)
 
         assert len(evidence) == 1
-        assert "test@example.com" in evidence[0]
+        assert "test@example.com" in evidence[0].content
+
+        # Validate timestamp is automatically generated and in correct range
+        assert evidence[0].collection_timestamp is not None
+        assert isinstance(evidence[0].collection_timestamp, datetime)
+        assert evidence[0].collection_timestamp.tzinfo == timezone.utc
+        assert start_time <= evidence[0].collection_timestamp <= end_time
 
     def test_extract_evidence_with_multiple_matches(self):
         """Test extracting evidence when pattern appears multiple times."""
@@ -34,9 +44,13 @@ class TestEvidenceExtractorBasicFunctionality:
         )
 
         assert len(evidence) == 2
-        assert all("email" in snippet for snippet in evidence)
-        assert any("john@company.com" in snippet for snippet in evidence)
-        assert any("sarah@company.com" in snippet for snippet in evidence)
+        assert all("email" in item.content for item in evidence)
+        assert any("john@company.com" in item.content for item in evidence)
+        assert any("sarah@company.com" in item.content for item in evidence)
+
+        # Validate timestamps exist
+        for item in evidence:
+            assert item.collection_timestamp is not None
 
     def test_extract_evidence_respects_max_evidence_limit(self):
         """Test that max_evidence parameter limits the number of results."""
@@ -62,7 +76,8 @@ class TestEvidenceExtractorBasicFunctionality:
 
         # Should be deduplicated to a single unique snippet
         assert len(evidence) == 1
-        assert "password" in evidence[0].lower()
+        assert "password" in evidence[0].content.lower()
+        assert evidence[0].collection_timestamp is not None
 
     def test_extract_evidence_case_insensitive_matching(self):
         """Test that pattern matching is case insensitive."""
@@ -78,7 +93,8 @@ class TestEvidenceExtractorBasicFunctionality:
         assert len(evidence) >= 1  # At least one match should be found
         # Should contain both instances due to case-insensitive matching
         assert any(
-            "PASSWORD" in snippet and "Password123" in snippet for snippet in evidence
+            "PASSWORD" in item.content and "Password123" in item.content
+            for item in evidence
         )
 
     def test_extract_evidence_preserves_original_case_in_output(self):
@@ -92,8 +108,8 @@ class TestEvidenceExtractorBasicFunctionality:
         )
 
         assert len(evidence) == 1
-        assert "USERNAME" in evidence[0]  # Original case preserved
-        assert "AdminUser123" in evidence[0]
+        assert "USERNAME" in evidence[0].content  # Original case preserved
+        assert "AdminUser123" in evidence[0].content
 
     def test_extract_evidence_returns_sorted_results(self):
         """Test that evidence results are returned in sorted order."""
@@ -124,8 +140,9 @@ class TestEvidenceExtractorContextSizes:
 
         assert len(evidence) == 1
         # Should be shorter than full content due to small context
-        assert len(evidence[0]) < len(long_content)
-        assert "target_pattern" in evidence[0]
+        assert len(evidence[0].content) < len(long_content)
+        assert "target_pattern" in evidence[0].content
+        assert evidence[0].collection_timestamp is not None
 
     def test_extract_evidence_with_medium_context(self):
         """Test evidence extraction with medium context size."""
@@ -138,9 +155,9 @@ class TestEvidenceExtractorContextSizes:
         )
 
         assert len(evidence) == 1
-        assert "target_pattern" in evidence[0]
+        assert "target_pattern" in evidence[0].content
         # Medium should provide more context than small
-        assert len(evidence[0]) < len(long_content)
+        assert len(evidence[0].content) < len(long_content)
 
     def test_extract_evidence_with_large_context(self):
         """Test evidence extraction with large context size."""
@@ -153,9 +170,9 @@ class TestEvidenceExtractorContextSizes:
         )
 
         assert len(evidence) == 1
-        assert "target_pattern" in evidence[0]
+        assert "target_pattern" in evidence[0].content
         # Large should provide more context than medium/small
-        assert len(evidence[0]) < len(long_content)
+        assert len(evidence[0].content) < len(long_content)
 
     def test_extract_evidence_with_full_context(self):
         """Test evidence extraction with full context (entire content)."""
@@ -169,7 +186,8 @@ class TestEvidenceExtractorContextSizes:
 
         assert len(evidence) == 1
         # Full context should return the entire content (stripped)
-        assert evidence[0] == content.strip()
+        assert evidence[0].content == content.strip()
+        assert evidence[0].collection_timestamp is not None
 
     def test_extract_evidence_full_context_limits_to_one_snippet(self):
         """Test that full context returns only one snippet even with multiple matches."""
@@ -183,7 +201,8 @@ class TestEvidenceExtractorContextSizes:
 
         # Full context should return only one snippet containing everything
         assert len(evidence) == 1
-        assert evidence[0] == content.strip()
+        assert evidence[0].content == content.strip()
+        assert evidence[0].collection_timestamp is not None
 
     def test_extract_evidence_unknown_context_defaults_to_small(self):
         """Test that unknown context size defaults to small behaviour."""
@@ -199,9 +218,9 @@ class TestEvidenceExtractorContextSizes:
         )
 
         assert len(evidence) == 1
-        assert "target_pattern" in evidence[0]
+        assert "target_pattern" in evidence[0].content
         # Should behave like small context (default)
-        assert len(evidence[0]) < len(long_content)
+        assert len(evidence[0].content) < len(long_content)
 
 
 class TestEvidenceExtractorEdgeCases:
@@ -308,7 +327,8 @@ class TestEvidenceExtractorEdgeCases:
         )
 
         assert len(evidence) == 1
-        assert evidence[0] == "a"
+        assert evidence[0].content == "a"
+        assert evidence[0].collection_timestamp is not None
 
 
 class TestEvidenceExtractorDefaultParameters:
@@ -324,8 +344,8 @@ class TestEvidenceExtractorDefaultParameters:
         evidence = extractor.extract_evidence(content, pattern)
 
         assert len(evidence) == 1
-        assert "username" in evidence[0]
-        assert "sensitive information" in evidence[0]
+        assert "username" in evidence[0].content
+        assert "sensitive information" in evidence[0].content
 
     def test_extract_evidence_default_max_evidence_limit(self):
         """Test that default max_evidence parameter works correctly."""
@@ -347,9 +367,9 @@ class TestEvidenceExtractorDefaultParameters:
         evidence = extractor.extract_evidence(long_content, pattern)
 
         assert len(evidence) == 1
-        assert "target" in evidence[0]
+        assert "target" in evidence[0].content
         # Should be shorter than full content due to default context size
-        assert len(evidence[0]) < len(long_content)
+        assert len(evidence[0].content) < len(long_content)
 
 
 class TestEvidenceExtractorEllipsisHandling:
@@ -370,9 +390,9 @@ class TestEvidenceExtractorEllipsisHandling:
 
         assert len(evidence) == 1
         # Should contain the target pattern
-        assert "target_pattern" in evidence[0]
+        assert "target_pattern" in evidence[0].content
         # Should be much shorter than original content due to truncation
-        assert len(evidence[0]) < len(content)
+        assert len(evidence[0].content) < len(content)
 
     def test_extract_evidence_no_ellipsis_for_full_context(self):
         """Test that no ellipsis is added when using full context."""
@@ -386,9 +406,10 @@ class TestEvidenceExtractorEllipsisHandling:
 
         assert len(evidence) == 1
         # Full context should return exact content without ellipsis
-        assert evidence[0] == content.strip()
-        assert not evidence[0].startswith("...")
-        assert not evidence[0].endswith("...")
+        assert evidence[0].content == content.strip()
+        assert evidence[0].collection_timestamp is not None
+        assert not evidence[0].content.startswith("...")
+        assert not evidence[0].content.endswith("...")
 
     def test_extract_evidence_handles_pattern_at_content_boundaries(self):
         """Test evidence extraction when pattern is at start or end of content."""
@@ -400,7 +421,7 @@ class TestEvidenceExtractorEllipsisHandling:
             start_content, "target_pattern", max_evidence=1, context_size="small"
         )
         assert len(evidence_start) == 1
-        assert "target_pattern" in evidence_start[0]
+        assert "target_pattern" in evidence_start[0].content
 
         # Pattern at end
         end_content = "Some text before the target_pattern"
@@ -408,4 +429,4 @@ class TestEvidenceExtractorEllipsisHandling:
             end_content, "target_pattern", max_evidence=1, context_size="small"
         )
         assert len(evidence_end) == 1
-        assert "target_pattern" in evidence_end[0]
+        assert "target_pattern" in evidence_end[0].content

@@ -1,8 +1,21 @@
 """Type definitions for analysers."""
 
+from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class EvidenceItem(BaseModel):
+    """Evidence item with content and collection timestamp."""
+
+    model_config = ConfigDict(ser_json_timedelta="iso8601")
+
+    content: str = Field(description="The evidence content snippet")
+    collection_timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="When the evidence was collected",
+    )
 
 
 class PatternMatchingConfig(BaseModel):
