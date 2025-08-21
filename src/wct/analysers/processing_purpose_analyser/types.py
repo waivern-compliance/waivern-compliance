@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import Self
 
-from wct.analysers.types import LLMValidationConfig, PatternMatchingConfig
+from wct.analysers.types import EvidenceItem, LLMValidationConfig, PatternMatchingConfig
 
 
 class ProcessingPurposeAnalyserConfig(BaseModel):
@@ -59,8 +59,9 @@ class ProcessingPurposeFindingModel(BaseModel):
         description="Compliance frameworks this finding relates to",
     )
     matched_pattern: str = Field(description="Pattern that was matched")
-    evidence: list[str] = Field(
-        description="Evidence snippets that support the finding"
+    evidence: list[EvidenceItem] = Field(
+        min_length=1,
+        description="Evidence items with content and timestamps for this finding",
     )
     metadata: ProcessingPurposeFindingMetadata | None = Field(
         default=None, description="Additional metadata about the finding"

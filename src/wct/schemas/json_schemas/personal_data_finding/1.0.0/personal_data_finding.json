@@ -28,11 +28,24 @@
             "description": "The specific pattern that was matched"
           },
           "evidence": {
-            "type": ["array", "null"],
+            "type": "array",
+            "minItems": 1,
             "items": {
-              "type": "string"
+              "type": "object",
+              "properties": {
+                "content": {
+                  "type": "string",
+                  "description": "The evidence content snippet"
+                },
+                "collection_timestamp": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "ISO 8601 timestamp when the evidence was collected"
+                }
+              },
+              "required": ["content", "collection_timestamp"]
             },
-            "description": "Array of evidence snippets where the personal data was found"
+            "description": "Array of evidence objects with content and collection timestamps"
           },
           "metadata": {
             "type": "object",
@@ -47,7 +60,7 @@
             "required": ["source"]
           }
         },
-        "required": ["type", "risk_level", "special_category", "matched_pattern", "metadata"]
+        "required": ["type", "risk_level", "special_category", "matched_pattern", "evidence", "metadata"]
       }
     },
     "summary": {

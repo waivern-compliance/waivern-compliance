@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel
 
+from wct.analysers.types import EvidenceItem
 from wct.rulesets import RulesetLoader
 from wct.rulesets.types import Rule
 from wct.schemas import (
@@ -205,8 +206,8 @@ class SourceCodeSchemaInputHandler:
         """
         # Create processing purpose finding evidence
         evidence = [
-            f"Line {line_num}: {rule.description} - {pattern}",
-            f"Code: {line.strip()}",
+            EvidenceItem(content=f"Line {line_num}: {rule.description} - {pattern}"),
+            EvidenceItem(content=f"Code: {line.strip()}"),
         ]
 
         # Create extra metadata fields
@@ -396,8 +397,8 @@ class SourceCodeSchemaInputHandler:
         # Extract matched text from evidence prefix (e.g., "Function: getUserByEmail" -> "getUserByEmail")
         matched_text = evidence_prefix.split(": ")[-1]
         evidence = [
-            f"{evidence_prefix}: {rule.description} - {pattern}",
-            f"Matched: {matched_text}",
+            EvidenceItem(content=f"{evidence_prefix}: {rule.description} - {pattern}"),
+            EvidenceItem(content=f"Matched: {matched_text}"),
         ]
 
         extra_metadata = {

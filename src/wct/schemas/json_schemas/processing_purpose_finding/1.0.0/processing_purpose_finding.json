@@ -35,10 +35,23 @@
           },
           "evidence": {
             "type": "array",
+            "minItems": 1,
             "items": {
-              "type": "string"
+              "type": "object",
+              "properties": {
+                "content": {
+                  "type": "string",
+                  "description": "The evidence content snippet"
+                },
+                "collection_timestamp": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "ISO 8601 timestamp when the evidence was collected"
+                }
+              },
+              "required": ["content", "collection_timestamp"]
             },
-            "description": "Evidence snippets that indicate this processing purpose"
+            "description": "Evidence objects with content and collection timestamps"
           },
           "metadata": {
             "type": "object",

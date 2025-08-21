@@ -1,5 +1,7 @@
 """Utility for extracting evidence snippets from content."""
 
+from wct.analysers.types import EvidenceItem
+
 
 class EvidenceExtractor:
     """Utility for extracting evidence snippets from content where patterns are found."""
@@ -26,7 +28,7 @@ class EvidenceExtractor:
         pattern: str,
         max_evidence: int = _DEFAULT_MAX_EVIDENCE,
         context_size: str = _DEFAULT_CONTEXT_SIZE,
-    ) -> list[str]:
+    ) -> list[EvidenceItem]:
         """Extract evidence snippets where the pattern was found.
 
         Args:
@@ -37,7 +39,7 @@ class EvidenceExtractor:
                          ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars, 'full': entire content)
 
         Returns:
-            List of unique evidence snippets showing context around matches
+            List of unique evidence items with content and collection timestamps
 
         """
         if not content or not pattern:
@@ -46,13 +48,14 @@ class EvidenceExtractor:
         if max_evidence <= 0:
             return []
 
-        evidence_set: set[str] = set()  # Use set to avoid duplicates
+        evidence_content_set: set[str] = set()  # Use set to avoid duplicate content
+        evidence_items: list[EvidenceItem] = []
         content_lower = content.lower()
         pattern_lower = pattern.lower()
 
         # Find all pattern matches and extract evidence
         start_pos = 0
-        while len(evidence_set) < max_evidence:
+        while len(evidence_content_set) < max_evidence:
             match_pos = self._find_next_match(content_lower, pattern_lower, start_pos)
             if match_pos == -1:
                 break
@@ -61,8 +64,9 @@ class EvidenceExtractor:
                 content, pattern, match_pos, context_size
             )
 
-            if evidence_snippet:
-                evidence_set.add(evidence_snippet)
+            if evidence_snippet and evidence_snippet not in evidence_content_set:
+                evidence_content_set.add(evidence_snippet)
+                evidence_items.append(EvidenceItem(content=evidence_snippet))
 
             # Move past this match to find the next occurrence
             start_pos = match_pos + 1
@@ -71,8 +75,8 @@ class EvidenceExtractor:
             if self._is_full_context(context_size):
                 break
 
-        # Convert set back to list and maintain consistent ordering
-        return sorted(list(evidence_set))
+        # Return evidence items sorted by content for consistent ordering
+        return sorted(evidence_items, key=lambda item: item.content)
 
     def _find_next_match(
         self, content_lower: str, pattern_lower: str, start_pos: int

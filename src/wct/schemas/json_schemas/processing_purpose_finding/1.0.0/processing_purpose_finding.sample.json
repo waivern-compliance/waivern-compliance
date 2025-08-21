@@ -7,9 +7,18 @@
       "compliance_relevance": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF"],
       "matched_pattern": "compliance",
       "evidence": [
-        "AI compliance framework implementation",
-        "regulatory compliance dashboard",
-        "ethics review process"
+        {
+          "content": "AI compliance framework implementation",
+          "collection_timestamp": "2024-08-21T10:35:15.123Z"
+        },
+        {
+          "content": "regulatory compliance dashboard",
+          "collection_timestamp": "2024-08-21T10:35:15.124Z"
+        },
+        {
+          "content": "ethics review process",
+          "collection_timestamp": "2024-08-21T10:35:15.125Z"
+        }
       ],
       "metadata": {
         "source": "source_code_analysis",
@@ -25,9 +34,18 @@
       "compliance_relevance": ["GDPR"],
       "matched_pattern": "authentication",
       "evidence": [
-        "login credentials validation",
-        "password hash storage",
-        "okta integration"
+        {
+          "content": "login credentials validation",
+          "collection_timestamp": "2024-08-21T10:36:22.456Z"
+        },
+        {
+          "content": "password hash storage",
+          "collection_timestamp": "2024-08-21T10:36:22.457Z"
+        },
+        {
+          "content": "okta integration",
+          "collection_timestamp": "2024-08-21T10:36:22.458Z"
+        }
       ],
       "metadata": {
         "source": "source_code_analysis",
@@ -43,9 +61,18 @@
       "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
       "matched_pattern": "analytics",
       "evidence": [
-        "adobe analytics integration",
-        "user behavior tracking",
-        "product improvement metrics"
+        {
+          "content": "adobe analytics integration",
+          "collection_timestamp": "2024-08-21T10:37:05.789Z"
+        },
+        {
+          "content": "user behavior tracking",
+          "collection_timestamp": "2024-08-21T10:37:05.790Z"
+        },
+        {
+          "content": "product improvement metrics",
+          "collection_timestamp": "2024-08-21T10:37:05.791Z"
+        }
       ],
       "metadata": {
         "source": "third_party_integration",
@@ -61,9 +88,18 @@
       "compliance_relevance": ["GDPR", "CCPA", "CPRA"],
       "matched_pattern": "personalization",
       "evidence": [
-        "recommendation engine",
-        "user preferences tracking",
-        "dynamic yield optimisation"
+        {
+          "content": "recommendation engine",
+          "collection_timestamp": "2024-08-21T10:38:12.012Z"
+        },
+        {
+          "content": "user preferences tracking",
+          "collection_timestamp": "2024-08-21T10:38:12.013Z"
+        },
+        {
+          "content": "dynamic yield optimisation",
+          "collection_timestamp": "2024-08-21T10:38:12.014Z"
+        }
       ],
       "metadata": {
         "source": "feature_analysis",
@@ -79,9 +115,18 @@
       "compliance_relevance": ["GDPR", "ISO_27001", "SOC_2"],
       "matched_pattern": "fraud",
       "evidence": [
-        "transaction monitoring",
-        "scamalytics integration",
-        "abuse detection algorithms"
+        {
+          "content": "transaction monitoring",
+          "collection_timestamp": "2024-08-21T10:39:30.345Z"
+        },
+        {
+          "content": "scamalytics integration",
+          "collection_timestamp": "2024-08-21T10:39:30.346Z"
+        },
+        {
+          "content": "abuse detection algorithms",
+          "collection_timestamp": "2024-08-21T10:39:30.347Z"
+        }
       ],
       "metadata": {
         "source": "security_module",

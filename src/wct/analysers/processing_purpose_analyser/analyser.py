@@ -174,7 +174,7 @@ class ProcessingPurposeAnalyser(Analyser):
 
         """
         # Convert models to dicts for JSON output
-        findings_dicts = [finding.model_dump() for finding in findings]
+        findings_dicts = [finding.model_dump(mode="json") for finding in findings]
 
         # Create result data with findings
         result_data: dict[str, Any] = {

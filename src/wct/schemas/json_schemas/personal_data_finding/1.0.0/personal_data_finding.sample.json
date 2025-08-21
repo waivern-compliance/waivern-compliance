@@ -6,7 +6,12 @@
       "risk_level": "medium",
       "special_category": "N",
       "matched_pattern": "john.doe@company.com",
-      "evidence": ["the actual content of the email found in the employee data file"],
+      "evidence": [
+        {
+          "content": "the actual content of the email found in the employee data file",
+          "collection_timestamp": "2024-08-21T10:30:45.123Z"
+        }
+      ],
       "metadata": {
         "source": "employee_data.csv",
         "database": "hr_system",
@@ -20,7 +25,12 @@
       "risk_level": "low",
       "special_category": "N",
       "matched_pattern": "+1-555-123-4567",
-      "evidence": ["the actual content of the phone number found in the employee data file"],
+      "evidence": [
+        {
+          "content": "the actual content of the phone number found in the employee data file",
+          "collection_timestamp": "2024-08-21T10:31:22.456Z"
+        }
+      ],
       "metadata": {
         "source": "employee_data.csv",
         "file_path": "/data/employee_data.csv",
@@ -33,7 +43,12 @@
       "risk_level": "high",
       "special_category": "Y",
       "matched_pattern": "diabetes",
-      "evidence": ["the actual content of the health condition found in the medical records file"],
+      "evidence": [
+        {
+          "content": "the actual content of the health condition found in the medical records file",
+          "collection_timestamp": "2024-08-21T10:32:01.789Z"
+        }
+      ],
       "metadata": {
         "source": "medical_records.txt",
         "document_type": "medical_record",
@@ -46,7 +61,12 @@
       "risk_level": "high",
       "special_category": "Y",
       "matched_pattern": "ethnicity: Hispanic",
-      "evidence": ["the actual content of the ethnicity found in the HR forms file"],
+      "evidence": [
+        {
+          "content": "the actual content of the ethnicity found in the HR forms file",
+          "collection_timestamp": "2024-08-21T10:32:45.012Z"
+        }
+      ],
       "metadata": {
         "source": "hr_forms.pdf",
         "form_type": "employee_onboarding",
@@ -59,7 +79,12 @@
       "risk_level": "high",
       "special_category": "N",
       "matched_pattern": "123-45-6789",
-      "evidence": ["the actual content of the SSN found in the tax documents file"],
+      "evidence": [
+        {
+          "content": "the actual content of the SSN found in the tax documents file",
+          "collection_timestamp": "2024-08-21T10:33:18.345Z"
+        }
+      ],
       "metadata": {
         "source": "tax_documents.xlsx",
         "document_type": "tax_form",
@@ -72,7 +97,12 @@
       "risk_level": "medium",
       "special_category": "N",
       "matched_pattern": "4532-****-****-1234",
-      "evidence": ["the actual content of the credit card number found in the payment logs file"],
+      "evidence": [
+        {
+          "content": "the actual content of the credit card number found in the payment logs file",
+          "collection_timestamp": "2024-08-21T10:33:55.678Z"
+        }
+      ],
       "metadata": {
         "source": "payment_logs.txt",
         "system": "payment_processor",

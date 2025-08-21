@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import Self
 
 from wct.analysers.types import (
+    EvidenceItem,
     LLMValidationConfig,
     PatternMatchingConfig,
 )
@@ -62,9 +63,9 @@ class PersonalDataFindingModel(BaseModel):
     matched_pattern: str = Field(
         description="Specific pattern that matched in the content"
     )
-    evidence: list[str] | None = Field(
-        default=None,
-        description="Evidence snippets from content that matches this finding",
+    evidence: list[EvidenceItem] = Field(
+        min_length=1,
+        description="Evidence items with content and timestamps for this finding",
     )
     metadata: PersonalDataFindingMetadata | None = Field(
         default=None, description="Additional metadata from the original data source"
