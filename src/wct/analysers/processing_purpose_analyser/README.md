@@ -134,7 +134,12 @@ def _analyse_single_file(self, file_data: SourceCodeFileDataModel):
   "purpose": "payment_processing",
   "purpose_category": "OPERATIONAL",
   "risk_level": "high",
-  "compliance_relevance": ["GDPR", "PCI_DSS", "SOX"],
+  "compliance": [
+    {
+      "regulation": "GDPR",
+      "relevance": "Payment processing requires lawful basis under Article 6(1)(b) for contract performance"
+    }
+  ],
   "matched_pattern": "charge",
   "evidence": [
     "Function: chargeCustomer: Payment processing service integrations - charge",
@@ -159,10 +164,10 @@ def _analyse_single_file(self, file_data: SourceCodeFileDataModel):
 - **Default**: "" (empty string)
 - **Usage**: Each ruleset provides its own categories
 
-### Compliance Relevance
-- **Type**: Array of strings
-- **Handling**: Automatic conversion from string to array for data_collection
-- **Default**: ["GDPR"]
+### Compliance
+- **Type**: Array of objects with regulation and relevance fields
+- **Structure**: `[{regulation: "GDPR", relevance: "Specific regulatory context..."}]`
+- **Purpose**: Provides detailed compliance information rather than just regulation names
 
 ## Benefits
 

@@ -21,13 +21,24 @@
             "enum": ["low", "medium", "high"],
             "description": "Risk level associated with this processing purpose"
           },
-          "compliance_relevance": {
+          "compliance": {
             "type": "array",
             "items": {
-              "type": "string",
-              "enum": ["GDPR", "EU_AI_ACT", "NIST_AI_RMF", "ISO_27001", "SOC_2", "PCI_DSS", "SOX", "CCPA", "CPRA"]
+              "type": "object",
+              "properties": {
+                "regulation": {
+                  "type": "string",
+                  "description": "Regulation name (e.g., GDPR, CCPA)"
+                },
+                "relevance": {
+                  "type": "string",
+                  "description": "Specific relevance to this regulation"
+                }
+              },
+              "required": ["regulation", "relevance"],
+              "additionalProperties": false
             },
-            "description": "List of compliance frameworks relevant to this processing purpose"
+            "description": "Compliance information with regulation names and specific relevance"
           },
           "matched_pattern": {
             "type": "string",
@@ -59,7 +70,7 @@
             "description": "Additional metadata about where and how this purpose was identified"
           }
         },
-        "required": ["purpose", "purpose_category", "risk_level", "compliance_relevance", "matched_pattern", "evidence", "metadata"],
+        "required": ["purpose", "purpose_category", "risk_level", "compliance", "matched_pattern", "evidence", "metadata"],
         "additionalProperties": false
       }
     },

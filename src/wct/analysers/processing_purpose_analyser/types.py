@@ -5,7 +5,12 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import Self
 
-from wct.analysers.types import EvidenceItem, LLMValidationConfig, PatternMatchingConfig
+from wct.analysers.types import (
+    EvidenceItem,
+    FindingComplianceData,
+    LLMValidationConfig,
+    PatternMatchingConfig,
+)
 
 
 class ProcessingPurposeAnalyserConfig(BaseModel):
@@ -54,9 +59,8 @@ class ProcessingPurposeFindingModel(BaseModel):
         default="", description="Category of the processing purpose"
     )
     risk_level: str = Field(description="Risk level of the finding")
-    compliance_relevance: list[str] = Field(
-        default_factory=lambda: ["GDPR"],
-        description="Compliance frameworks this finding relates to",
+    compliance: list[FindingComplianceData] = Field(
+        default_factory=list, description="Compliance information for this finding"
     )
     matched_pattern: str = Field(description="Pattern that was matched")
     evidence: list[EvidenceItem] = Field(

@@ -7,6 +7,7 @@ from typing_extensions import Self
 
 from wct.analysers.types import (
     EvidenceItem,
+    FindingComplianceData,
     LLMValidationConfig,
     PatternMatchingConfig,
 )
@@ -62,6 +63,9 @@ class PersonalDataFindingModel(BaseModel):
     )
     matched_pattern: str = Field(
         description="Specific pattern that matched in the content"
+    )
+    compliance: list[FindingComplianceData] = Field(
+        default_factory=list, description="Compliance information for this finding"
     )
     evidence: list[EvidenceItem] = Field(
         min_length=1,

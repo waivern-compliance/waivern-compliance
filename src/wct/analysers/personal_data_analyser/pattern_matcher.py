@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from wct.analysers.types import PatternMatchingConfig
+from wct.analysers.types import FindingComplianceData, PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
 
 from .types import PersonalDataFindingMetadata, PersonalDataFindingModel
@@ -71,11 +71,19 @@ class PersonalDataPatternMatcher:
                                 **metadata_dict
                             )
 
+                        compliance_data = [
+                            FindingComplianceData(
+                                regulation=comp.regulation, relevance=comp.relevance
+                            )
+                            for comp in rule.compliance
+                        ]
+
                         finding = PersonalDataFindingModel(
                             type=rule.name,
                             risk_level=rule.risk_level,
                             special_category=rule.metadata.get("special_category"),
                             matched_pattern=pattern,
+                            compliance=compliance_data,
                             evidence=evidence_matches,
                             metadata=finding_metadata,
                         )

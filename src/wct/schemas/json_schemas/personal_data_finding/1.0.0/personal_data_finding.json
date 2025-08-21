@@ -27,6 +27,25 @@
             "type": "string",
             "description": "The specific pattern that was matched"
           },
+          "compliance": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "regulation": {
+                  "type": "string",
+                  "description": "Regulation name (e.g., GDPR, CCPA)"
+                },
+                "relevance": {
+                  "type": "string",
+                  "description": "Specific relevance to this regulation"
+                }
+              },
+              "required": ["regulation", "relevance"],
+              "additionalProperties": false
+            },
+            "description": "Compliance information with regulation names and specific relevance"
+          },
           "evidence": {
             "type": "array",
             "minItems": 1,
@@ -60,7 +79,7 @@
             "required": ["source"]
           }
         },
-        "required": ["type", "risk_level", "special_category", "matched_pattern", "evidence", "metadata"]
+        "required": ["type", "risk_level", "special_category", "matched_pattern", "compliance", "evidence", "metadata"]
       }
     },
     "summary": {
