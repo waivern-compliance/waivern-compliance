@@ -1,6 +1,6 @@
 # Waivern Compliance Tool (WCT)
 
-A modern, analyser-based compliance analysis framework for detecting and analysing compliance issues across tech stacks.
+A modern, analyser-based compliance analysis framework for detecting and analysing compliance issues across tech stacks that integrates directly into your team's CI/CD pipeline. The open standards that WCT defines for rulesets and analysers, in addition to the Apache-license open source approach for data connectors and the framework itself, means it can be made to work for any technology compliance regulation (GDPR, ePrivacy, EU AI Act, NIS2, DORA, etc.), can be adapted to work for any organisation's specific architectures, all while avoiding "vendor lock-in".
 
 ## Overview
 
