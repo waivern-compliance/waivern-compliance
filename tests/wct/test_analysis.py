@@ -8,10 +8,12 @@ import json
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from wct.analysis import AnalysisResult, AnalysisResultsExporter
+from wct.organisation import OrganisationConfig
 
 
 class TestAnalysisResultToDictBehaviour:
@@ -468,3 +470,112 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
 
         expected_success_rate = (5 / 7) * 100
         assert stats["success_rate"] == pytest.approx(expected_success_rate, rel=1e-10)
+
+
+class TestAnalysisResultsExporterOrganisationMetadata:
+    """Test AnalysisResultsExporter organisation metadata functionality."""
+
+    def test_save_with_organisation_config_includes_metadata(self) -> None:
+        """Test that providing organisation config includes it in export metadata."""
+        config_data = {
+            "data_controller": {
+                "name": "Test Export Company",
+                "address": "Export Street 123",
+                "contact_email": "export@test.com",
+            }
+        }
+        org_config = OrganisationConfig.model_validate(config_data)
+
+        result = AnalysisResult(
+            analyser_name="test_analyser",
+            input_schema="standard_input",
+            output_schema="personal_data_finding",
+            data={},
+            metadata={},
+            success=True,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "with_org_config.json"
+
+            AnalysisResultsExporter.save_to_json(
+                [result], output_path, organisation_config=org_config
+            )
+
+            with open(output_path, encoding="utf-8") as f:
+                saved_data = json.load(f)
+
+            # Verify organisation metadata is included
+            assert "organisation" in saved_data["export_metadata"]
+            org_data = saved_data["export_metadata"]["organisation"]
+            assert org_data["data_controller"]["name"] == "Test Export Company"
+            assert org_data["data_controller"]["contact_email"] == "export@test.com"
+
+    @patch("wct.analysis.OrganisationLoader.load")
+    def test_save_without_org_config_attempts_automatic_loading(self, mock_load):
+        """Test that save_to_json attempts to load organisation config automatically."""
+        # Mock successful loading
+        config_data = {
+            "data_controller": {
+                "name": "Auto Loaded Company",
+                "address": "Auto Address",
+                "contact_email": "auto@company.com",
+            }
+        }
+        mock_org_config = OrganisationConfig.model_validate(config_data)
+        mock_load.return_value = mock_org_config
+
+        result = AnalysisResult(
+            analyser_name="test_analyser",
+            input_schema="standard_input",
+            output_schema="personal_data_finding",
+            data={},
+            metadata={},
+            success=True,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "auto_loaded.json"
+
+            AnalysisResultsExporter.save_to_json([result], output_path)
+
+            # Verify load was called
+            mock_load.assert_called_once()
+
+            with open(output_path, encoding="utf-8") as f:
+                saved_data = json.load(f)
+
+            # Verify organisation metadata was included
+            assert "organisation" in saved_data["export_metadata"]
+            org_data = saved_data["export_metadata"]["organisation"]
+            assert org_data["data_controller"]["name"] == "Auto Loaded Company"
+
+    @patch("wct.analysis.OrganisationLoader.load")
+    def test_save_handles_no_organisation_config_gracefully(self, mock_load):
+        """Test that save_to_json handles absence of organisation config gracefully."""
+        mock_load.return_value = None
+
+        result = AnalysisResult(
+            analyser_name="test_analyser",
+            input_schema="standard_input",
+            output_schema="personal_data_finding",
+            data={},
+            metadata={},
+            success=True,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "no_org_config.json"
+
+            AnalysisResultsExporter.save_to_json([result], output_path)
+
+            with open(output_path, encoding="utf-8") as f:
+                saved_data = json.load(f)
+
+            # Verify no organisation metadata is included
+            assert "organisation" not in saved_data["export_metadata"]
+
+            # Verify other metadata is still present
+            assert "timestamp" in saved_data["export_metadata"]
+            assert "export_format_version" in saved_data["export_metadata"]
+            assert len(saved_data["results"]) == 1

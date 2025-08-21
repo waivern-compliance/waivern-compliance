@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from wct.organisation import OrganisationConfig, OrganisationLoader
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +42,7 @@ class AnalysisResultsExporter:
         results: list[AnalysisResult],
         output_path: Path,
         runbook_path: Path | None = None,
+        organisation_config: OrganisationConfig | None = None,
     ) -> None:
         """Save analysis results to a JSON file.
 
@@ -46,21 +50,29 @@ class AnalysisResultsExporter:
             results: List of analysis results to save
             output_path: Path where the JSON file should be saved
             runbook_path: Optional path to the runbook file for metadata
+            organisation_config: Optional organisation config for GDPR Article 30(1)(a) compliance
 
         Raises:
             IOError: If the file cannot be written
 
         """
         # Create comprehensive output structure
+        export_metadata = {
+            "timestamp": datetime.now().isoformat(),
+            "total_results": len(results),
+            "successful_results": sum(1 for r in results if r.success),
+            "failed_results": sum(1 for r in results if not r.success),
+            "runbook_path": str(runbook_path) if runbook_path else None,
+            "export_format_version": "1.0.0",
+        }
+
+        # Add organisation metadata for GDPR Article 30(1)(a) compliance
+        AnalysisResultsExporter._add_organisation_metadata(
+            export_metadata, organisation_config
+        )
+
         output_data = {
-            "export_metadata": {
-                "timestamp": datetime.now().isoformat(),
-                "total_results": len(results),
-                "successful_results": sum(1 for r in results if r.success),
-                "failed_results": sum(1 for r in results if not r.success),
-                "runbook_path": str(runbook_path) if runbook_path else None,
-                "export_format_version": "1.0.0",
-            },
+            "export_metadata": export_metadata,
             "results": [result.to_dict() for result in results],
         }
 
@@ -70,6 +82,39 @@ class AnalysisResultsExporter:
         # Write JSON file with pretty formatting
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
+
+    @classmethod
+    def _add_organisation_metadata(
+        cls,
+        export_metadata: dict[str, Any],
+        organisation_config: OrganisationConfig | None,
+    ) -> None:
+        """Add organisation metadata to export for GDPR Article 30(1)(a) compliance.
+
+        Args:
+            export_metadata: Export metadata dictionary to update
+            organisation_config: Organisation config, or None to load from project
+
+        """
+        logger = logging.getLogger(__name__)
+
+        # Load organisation config if not provided
+        if organisation_config is None:
+            organisation_config = OrganisationLoader.load()
+
+        # Add organisation information for GDPR Article 30(1)(a) compliance
+        if organisation_config:
+            export_metadata["organisation"] = organisation_config.to_export_metadata()
+            logger.info(
+                f"Including organisation metadata for GDPR Article 30(1)(a) compliance: "
+                f"{organisation_config.data_controller.name}"
+            )
+        else:
+            logger.warning(
+                "No organisation configuration found. Analysis export will not include "
+                "data controller information required for GDPR Article 30(1)(a) compliance. "
+                "Consider adding config/organisation.yaml to your project."
+            )
 
     @staticmethod
     def get_summary_stats(results: list[AnalysisResult]) -> dict[str, Any]:
