@@ -1,7 +1,7 @@
 """Python-standard logging configuration for WCT.
 
 This module provides centralized logging setup following Python best practices
-using logging.config.dictConfig() with YAML configuration files stored in config/.
+using logging.config.dictConfig() with YAML configuration files stored in src/wct/config/.
 """
 
 from __future__ import annotations
@@ -49,12 +49,12 @@ def get_project_root() -> Path:
                 real_package = package_path.resolve()
                 if real_package.name == "wct" and real_package.parent.name == "src":
                     potential_root = real_package.parent.parent
-                    if (potential_root / "config").is_dir():
+                    if (potential_root / "src" / "wct" / "config").is_dir():
                         return potential_root
 
             # For regular installs, search upward from package location
             for path in [package_path, *package_path.parents]:
-                if (path / "config").is_dir():
+                if (path / "src" / "wct" / "config").is_dir():
                     return path
     except (ImportError, AttributeError):
         # Package not found via importlib, continue to marker-based discovery
@@ -73,8 +73,8 @@ def get_project_root() -> Path:
         ]
 
         if any(marker.exists() for marker in markers):
-            # Verify this looks like our project by checking for config/
-            if (path / "config").is_dir():
+            # Verify this looks like our project by checking for src/wct/config/
+            if (path / "src" / "wct" / "config").is_dir():
                 return path
 
     # If both methods fail, provide clear error message
@@ -82,7 +82,7 @@ def get_project_root() -> Path:
         f"Could not determine project root. Searched:\n"
         f"1. Package location via importlib.util.find_spec('wct')\n"
         f"2. Upward from {current_path} for project markers\n"
-        f"Expected to find a directory containing 'config/' subdirectory."
+        f"Expected to find a directory containing 'src/wct/config/' subdirectory."
     )
 
 
@@ -103,7 +103,7 @@ def get_config_path(
 
     """
     project_root = get_project_root()
-    config_dir = project_root / "config"
+    config_dir = project_root / "src" / "wct" / "config"
 
     # Determine config file name based on environment
     if config_name:

@@ -26,7 +26,7 @@ class TestLoggingConfiguration:
         """Test that get_project_root returns the correct project root."""
         root = get_project_root()
         assert root.is_dir()
-        assert (root / "config").exists()
+        assert (root / "src" / "wct" / "config").exists()
         assert (root / "src" / "wct").exists()
 
     def test_get_project_root_finds_markers(self):
@@ -45,7 +45,7 @@ class TestLoggingConfiguration:
         assert any(marker.exists() for marker in markers)
 
         # Must have the config directory (our specific requirement)
-        assert (root / "config").is_dir()
+        assert (root / "src" / "wct" / "config").is_dir()
 
     def test_get_project_root_is_robust(self):
         """Test that get_project_root works from different locations."""
@@ -60,7 +60,7 @@ class TestLoggingConfiguration:
         assert root1.is_absolute()
 
         # Should contain expected structure
-        assert (root1 / "config").is_dir()
+        assert (root1 / "src" / "wct" / "config").is_dir()
         assert (root1 / "src" / "wct").is_dir()
 
     def test_get_project_root_uses_importlib(self):
@@ -75,7 +75,7 @@ class TestLoggingConfiguration:
 
         # Should contain the package source
         assert (root / "src" / "wct").is_dir()
-        assert (root / "config").is_dir()
+        assert (root / "src" / "wct" / "config").is_dir()
 
         # The root should be consistent with the package location
         package_path = Path(spec.origin).parent  # src/wct/__init__.py -> src/wct
@@ -94,13 +94,17 @@ class TestLoggingConfiguration:
         # Test dev environment
         with patch.dict("os.environ", {"WCT_ENV": "dev"}):
             config_path = get_config_path()
-            expected = get_project_root() / "config" / "logging-dev.yaml"
+            expected = (
+                get_project_root() / "src" / "wct" / "config" / "logging-dev.yaml"
+            )
             assert config_path == expected
 
         # Test test environment
         with patch.dict("os.environ", {"WCT_ENV": "test"}):
             config_path = get_config_path()
-            expected = get_project_root() / "config" / "logging-test.yaml"
+            expected = (
+                get_project_root() / "src" / "wct" / "config" / "logging-test.yaml"
+            )
             assert config_path == expected
 
     def test_get_config_path_fallback_to_default(self):
@@ -113,7 +117,9 @@ class TestLoggingConfiguration:
         """Test explicit environment parameter overrides env var."""
         with patch.dict("os.environ", {"WCT_ENV": "dev"}):
             config_path = get_config_path(environment="test")
-            expected = get_project_root() / "config" / "logging-test.yaml"
+            expected = (
+                get_project_root() / "src" / "wct" / "config" / "logging-test.yaml"
+            )
             assert config_path == expected
 
     def test_get_config_path_nonexistent_raises_error(self):
@@ -125,7 +131,7 @@ class TestLoggingConfiguration:
 
     def test_load_config_valid_yaml(self):
         """Test loading valid YAML configuration."""
-        config_path = get_project_root() / "config" / "logging.yaml"
+        config_path = get_project_root() / "src" / "wct" / "config" / "logging.yaml"
         config = load_config(config_path)
 
         assert isinstance(config, dict)
@@ -336,7 +342,9 @@ class TestEnvironmentIntegration:
         """Test that development environment uses logging-dev.yaml."""
         with patch.dict("os.environ", {"WCT_ENV": "development"}):
             config_path = get_config_path()
-            expected = get_project_root() / "config" / "logging-dev.yaml"
+            expected = (
+                get_project_root() / "src" / "wct" / "config" / "logging-dev.yaml"
+            )
             assert config_path == expected
 
     def test_production_environment_uses_prod_config(self):
@@ -344,14 +352,14 @@ class TestEnvironmentIntegration:
         with patch.dict("os.environ", {"WCT_ENV": "production"}):
             config_path = get_config_path()
             # Falls back to logging.yaml since logging-prod.yaml doesn't exist
-            expected = get_project_root() / "config" / "logging.yaml"
+            expected = get_project_root() / "src" / "wct" / "config" / "logging.yaml"
             assert config_path == expected
 
     def test_unknown_environment_uses_default_config(self):
         """Test that unknown environments fall back to default config."""
         with patch.dict("os.environ", {"WCT_ENV": "staging"}):
             config_path = get_config_path()
-            expected = get_project_root() / "config" / "logging.yaml"
+            expected = get_project_root() / "src" / "wct" / "config" / "logging.yaml"
             assert config_path == expected
 
 

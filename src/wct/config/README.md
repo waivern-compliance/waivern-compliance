@@ -51,7 +51,7 @@ root:
 
 To add environment-specific logging:
 
-1. Create `config/logging-{environment}.yaml`
+1. Create `src/wct/config/logging-{environment}.yaml`
 2. Set `WCT_ENV={environment}` in your environment
 3. The logging system will automatically use your configuration
 
