@@ -15,10 +15,6 @@ class ProcessingPurposePatternMatcher:
     detection, creating structured findings for the ProcessingPurposeAnalyser.
     """
 
-    # Private constants
-    _DEFAULT_PURPOSE_CATEGORY = "OPERATIONAL"
-    _DEFAULT_COMPLIANCE_RELEVANCE = ["GDPR"]
-
     def __init__(self, config: PatternMatchingConfig) -> None:
         """Initialise the pattern matcher with configuration.
 
@@ -84,10 +80,7 @@ class ProcessingPurposePatternMatcher:
 
                         finding = ProcessingPurposeFindingModel(
                             purpose=rule.name,
-                            purpose_category=rule.metadata.get(
-                                "purpose_category",
-                                ProcessingPurposePatternMatcher._DEFAULT_PURPOSE_CATEGORY,
-                            ),
+                            purpose_category=rule.metadata.get("purpose_category", ""),
                             risk_level=rule.risk_level,
                             compliance=compliance_data,
                             matched_pattern=pattern,

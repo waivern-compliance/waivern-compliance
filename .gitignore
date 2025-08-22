@@ -6,6 +6,7 @@ dist/
 wheels/
 *.egg-info
 .claude/
+CLAUDE.local.md
 
 # Virtual environments
 .venv
