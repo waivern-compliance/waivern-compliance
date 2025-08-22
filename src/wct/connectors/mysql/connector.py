@@ -65,7 +65,7 @@ class MySQLConnector(Connector):
             config: Validated MySQL connector configuration
 
         """
-        self.config = config
+        self._config = config
 
     @classmethod
     @override
@@ -117,14 +117,14 @@ class MySQLConnector(Connector):
         connection = None
         try:
             connection = pymysql.connect(
-                host=self.config.host,
-                port=self.config.port,
-                user=self.config.user,
-                password=self.config.password,
-                database=self.config.database,
-                charset=self.config.charset,
-                autocommit=self.config.autocommit,
-                connect_timeout=self.config.connect_timeout,
+                host=self._config.host,
+                port=self._config.port,
+                user=self._config.user,
+                password=self._config.password,
+                database=self._config.database,
+                charset=self._config.charset,
+                autocommit=self._config.autocommit,
+                connect_timeout=self._config.connect_timeout,
             )
 
             yield connection
@@ -191,7 +191,7 @@ class MySQLConnector(Connector):
         """
         try:
             metadata: dict[str, Any] = {
-                "database_name": self.config.database,
+                "database_name": self._config.database,
                 "tables": [],
                 "server_info": {},
             }
@@ -202,13 +202,13 @@ class MySQLConnector(Connector):
                 server_info = connection.get_server_info()  # type: ignore
                 metadata["server_info"] = {
                     "version": server_info,
-                    "host": self.config.host,
-                    "port": self.config.port,
+                    "host": self._config.host,
+                    "port": self._config.port,
                 }
 
                 # Get table information
                 tables: list[dict[str, Any]] = self._execute_query(
-                    _TABLES_QUERY, (self.config.database,)
+                    _TABLES_QUERY, (self._config.database,)
                 )
 
                 for table in tables:
@@ -222,7 +222,7 @@ class MySQLConnector(Connector):
 
                     # Get column information for each table
                     columns = self._execute_query(
-                        _COLUMNS_QUERY, (self.config.database, table["TABLE_NAME"])
+                        _COLUMNS_QUERY, (self._config.database, table["TABLE_NAME"])
                     )
                     table_info["columns"] = columns
 
@@ -252,7 +252,7 @@ class MySQLConnector(Connector):
         try:
             # Use configured limit if not specified
             effective_limit = (
-                limit if limit is not None else self.config.max_rows_per_table
+                limit if limit is not None else self._config.max_rows_per_table
             )
 
             # Safe to use table name since it's verified to exist in information_schema
@@ -278,7 +278,7 @@ class MySQLConnector(Connector):
 
         """
         try:
-            logger.info(f"Extracting data from MySQL database: {self.config.database}")
+            logger.info(f"Extracting data from MySQL database: {self._config.database}")
 
             output_schema = self._validate_output_schema(output_schema)
 
@@ -292,7 +292,7 @@ class MySQLConnector(Connector):
 
             # Create and validate message
             message = Message(
-                id=f"MySQL data from {self.config.database}@{self.config.host}",
+                id=f"MySQL data from {self._config.database}@{self._config.host}",
                 content=extracted_data,
                 schema=output_schema,
             )
@@ -331,7 +331,7 @@ class MySQLConnector(Connector):
         """
         data_items: list[dict[str, Any]] = []
         database_source = (
-            f"{self.config.host}:{self.config.port}/{self.config.database}"
+            f"{self._config.host}:{self._config.port}/{self._config.database}"
         )
 
         # Extract actual cell data from each table
@@ -341,25 +341,25 @@ class MySQLConnector(Connector):
 
         return {
             "schemaVersion": schema.version,
-            "name": f"mysql_text_from_{self.config.database}",
-            "description": f"Text content extracted from MySQL database: {self.config.database}",
+            "name": f"mysql_text_from_{self._config.database}",
+            "description": f"Text content extracted from MySQL database: {self._config.database}",
             "contentEncoding": "utf-8",
             "source": database_source,
             # Top-level metadata includes complete database schema for reference
             "metadata": {
                 "extraction_type": "mysql_to_text",
                 "connection_info": {
-                    "host": self.config.host,
-                    "port": self.config.port,
-                    "database": self.config.database,
-                    "user": self.config.user,
+                    "host": self._config.host,
+                    "port": self._config.port,
+                    "database": self._config.database,
+                    "user": self._config.user,
                 },
                 "database_schema": metadata,  # Complete database schema for traceability
                 "total_data_items": len(data_items),
                 "extraction_summary": {
                     "tables_processed": len(metadata.get("tables", [])),
                     "cell_values_extracted": len(data_items),
-                    "max_rows_per_table": self.config.max_rows_per_table,
+                    "max_rows_per_table": self._config.max_rows_per_table,
                 },
             },
             "data": data_items,
@@ -456,12 +456,12 @@ class MySQLConnector(Connector):
                 "source": f"mysql_cell_data_table_({table_name})_column_({column_name})",
                 "description": f"Cell data from `{table_name}.{column_name}` row {row_index + 1}",
                 "data_type": "cell_content",
-                "database": self.config.database,
+                "database": self._config.database,
                 "table": table_name,
                 "column": column_name,
                 "row_index": row_index + 1,
-                "host": self.config.host,
-                "port": self.config.port,
+                "host": self._config.host,
+                "port": self._config.port,
                 # Include column metadata for context
                 "sql_data_type": self._get_column_data_type(table_info, column_name),
             },

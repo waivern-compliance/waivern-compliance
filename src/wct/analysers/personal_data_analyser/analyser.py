@@ -54,7 +54,7 @@ class PersonalDataAnalyser(Analyser):
             llm_service_manager: LLM service manager for validation
 
         """
-        self.config = config
+        self._config = config
         self.pattern_matcher = pattern_matcher
         self.llm_service_manager = llm_service_manager
 
@@ -158,7 +158,7 @@ class PersonalDataAnalyser(Analyser):
         }
 
         if (
-            self.config.llm_validation.enable_llm_validation
+            self._config.llm_validation.enable_llm_validation
             and len(original_findings) > 0
         ):
             result_data["validation_summary"] = self._build_validation_summary(
@@ -196,7 +196,7 @@ class PersonalDataAnalyser(Analyser):
             List of validated findings (filtered/modified by LLM validation)
 
         """
-        if not self.config.llm_validation.enable_llm_validation:
+        if not self._config.llm_validation.enable_llm_validation:
             return findings
 
         if not findings:
@@ -211,7 +211,7 @@ class PersonalDataAnalyser(Analyser):
 
             llm_service = self.llm_service_manager.llm_service
             validated_findings = personal_data_validation_strategy(
-                findings, self.config.llm_validation, llm_service
+                findings, self._config.llm_validation, llm_service
             )
 
             logger.info(
@@ -273,5 +273,5 @@ class PersonalDataAnalyser(Analyser):
             "original_findings_count": original_count,
             "validated_findings_count": validated_count,
             "false_positives_removed": false_positives_removed,
-            "validation_mode": self.config.llm_validation.llm_validation_mode,
+            "validation_mode": self._config.llm_validation.llm_validation_mode,
         }
