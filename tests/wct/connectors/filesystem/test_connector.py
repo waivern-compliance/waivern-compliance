@@ -8,6 +8,7 @@ from unittest.mock import Mock
 import pytest
 
 from wct.connectors.base import ConnectorConfigError, ConnectorExtractionError
+from wct.connectors.filesystem.config import FilesystemConnectorConfig
 from wct.connectors.filesystem.connector import FilesystemConnector
 from wct.message import Message
 from wct.schemas import StandardInputSchema
@@ -87,12 +88,12 @@ class TestFilesystemConnector:
         properties = {"path": str(sample_file)}
         connector = FilesystemConnector.from_properties(properties)
 
-        assert connector.path == sample_file
-        assert connector.chunk_size == EXPECTED_DEFAULT_CHUNK_SIZE
-        assert connector.encoding == EXPECTED_DEFAULT_ENCODING
-        assert connector.errors == EXPECTED_DEFAULT_ERROR_HANDLING
-        assert connector.exclude_patterns == EXPECTED_DEFAULT_EXCLUDE_PATTERNS
-        assert connector.max_files == EXPECTED_DEFAULT_MAX_FILES
+        assert connector.config.path == sample_file
+        assert connector.config.chunk_size == EXPECTED_DEFAULT_CHUNK_SIZE
+        assert connector.config.encoding == EXPECTED_DEFAULT_ENCODING
+        assert connector.config.errors == EXPECTED_DEFAULT_ERROR_HANDLING
+        assert connector.config.exclude_patterns == EXPECTED_DEFAULT_EXCLUDE_PATTERNS
+        assert connector.config.max_files == EXPECTED_DEFAULT_MAX_FILES
 
     def test_from_properties_creates_instance_with_all_properties(self, sample_file):
         """Test from_properties creates instance with all properties."""
@@ -106,12 +107,12 @@ class TestFilesystemConnector:
         }
         connector = FilesystemConnector.from_properties(properties)
 
-        assert connector.path == sample_file
-        assert connector.chunk_size == TEST_CHUNK_SIZE
-        assert connector.encoding == TEST_ENCODING
-        assert connector.errors == TEST_ERROR_HANDLING
-        assert connector.exclude_patterns == TEST_EXCLUDE_PATTERNS
-        assert connector.max_files == TEST_MAX_FILES
+        assert connector.config.path == sample_file
+        assert connector.config.chunk_size == TEST_CHUNK_SIZE
+        assert connector.config.encoding == TEST_ENCODING
+        assert connector.config.errors == TEST_ERROR_HANDLING
+        assert connector.config.exclude_patterns == TEST_EXCLUDE_PATTERNS
+        assert connector.config.max_files == TEST_MAX_FILES
 
     def test_from_properties_raises_error_without_path(self):
         """Test from_properties raises error when path is missing."""
@@ -125,21 +126,29 @@ class TestFilesystemConnector:
         nonexistent_path = "/this/path/does/not/exist"
 
         with pytest.raises(ConnectorConfigError, match="Path does not exist"):
-            FilesystemConnector(nonexistent_path)
+            config = FilesystemConnectorConfig.from_properties(
+                {"path": nonexistent_path}
+            )
+            FilesystemConnector(config)
 
     def test_init_with_file_succeeds(self, sample_file):
         """Test initialisation with valid file path."""
-        connector = FilesystemConnector(sample_file)
-        assert connector.path == sample_file
+        config = FilesystemConnectorConfig.from_properties({"path": str(sample_file)})
+        connector = FilesystemConnector(config)
+        assert connector.config.path == sample_file
 
     def test_init_with_directory_succeeds(self, sample_directory):
         """Test initialisation with valid directory path."""
-        connector = FilesystemConnector(sample_directory)
-        assert connector.path == sample_directory
+        config = FilesystemConnectorConfig.from_properties(
+            {"path": str(sample_directory)}
+        )
+        connector = FilesystemConnector(config)
+        assert connector.config.path == sample_directory
 
     def test_extract_without_schema_uses_default(self, sample_file):
         """Test extract without schema uses default schema."""
-        connector = FilesystemConnector(sample_file)
+        config = FilesystemConnectorConfig.from_properties({"path": str(sample_file)})
+        connector = FilesystemConnector(config)
 
         result = connector.extract()
 
@@ -150,7 +159,8 @@ class TestFilesystemConnector:
 
     def test_extract_with_unsupported_schema_raises_error(self, sample_file):
         """Test extract with unsupported schema raises error."""
-        connector = FilesystemConnector(sample_file)
+        config = FilesystemConnectorConfig.from_properties({"path": str(sample_file)})
+        connector = FilesystemConnector(config)
         mock_schema = Mock()
         mock_schema.name = "unsupported_schema"
 
@@ -161,7 +171,8 @@ class TestFilesystemConnector:
         self, sample_file, standard_input_schema
     ):
         """Test extracting single file with standard input schema."""
-        connector = FilesystemConnector(sample_file)
+        config = FilesystemConnectorConfig.from_properties({"path": str(sample_file)})
+        connector = FilesystemConnector(config)
 
         result = connector.extract(standard_input_schema)
 
@@ -186,7 +197,10 @@ class TestFilesystemConnector:
         self, sample_directory, standard_input_schema
     ):
         """Test extracting directory with standard input schema."""
-        connector = FilesystemConnector(sample_directory)
+        config = FilesystemConnectorConfig.from_properties(
+            {"path": str(sample_directory)}
+        )
+        connector = FilesystemConnector(config)
 
         result = connector.extract(standard_input_schema)
 
@@ -215,9 +229,10 @@ class TestFilesystemConnector:
         (sample_directory / "file.log").write_text("Log content")
         (sample_directory / "temp.tmp").write_text("Temp content")
 
-        connector = FilesystemConnector(
-            sample_directory, exclude_patterns=TEST_EXCLUDE_PATTERNS
+        config = FilesystemConnectorConfig.from_properties(
+            {"path": str(sample_directory), "exclude_patterns": TEST_EXCLUDE_PATTERNS}
         )
+        connector = FilesystemConnector(config)
 
         result = connector.extract(standard_input_schema)
 
@@ -239,9 +254,10 @@ class TestFilesystemConnector:
         for i in range(10):
             (sample_directory / f"extra_file_{i}.txt").write_text(f"Content {i}")
 
-        connector = FilesystemConnector(
-            sample_directory, max_files=TEST_MAX_FILES_LIMIT
+        config = FilesystemConnectorConfig.from_properties(
+            {"path": str(sample_directory), "max_files": TEST_MAX_FILES_LIMIT}
         )
+        connector = FilesystemConnector(config)
 
         result = connector.extract(standard_input_schema)
 
@@ -259,7 +275,10 @@ class TestFilesystemConnector:
             temp_path = Path(f.name)
 
         try:
-            connector = FilesystemConnector(temp_path, chunk_size=1024)
+            config = FilesystemConnectorConfig.from_properties(
+                {"path": str(temp_path), "chunk_size": 1024}
+            )
+            connector = FilesystemConnector(config)
             result = connector.extract(standard_input_schema)
 
             assert isinstance(result, Message)
@@ -278,7 +297,8 @@ class TestFilesystemConnector:
             binary_file = temp_path / "binary.bin"
             binary_file.write_bytes(b"\x00\x01\x02\x03\xff\xfe\xfd")
 
-            connector = FilesystemConnector(temp_path)
+            config = FilesystemConnectorConfig.from_properties({"path": str(temp_path)})
+            connector = FilesystemConnector(config)
             schema = StandardInputSchema()
 
             with pytest.raises(
@@ -299,7 +319,10 @@ class TestFilesystemConnector:
             if os.name != "nt":  # Not Windows
                 restricted_file.chmod(0o000)
 
-            connector = FilesystemConnector(sample_directory)
+            config = FilesystemConnectorConfig.from_properties(
+                {"path": str(sample_directory)}
+            )
+            connector = FilesystemConnector(config)
             result = connector.extract(standard_input_schema)
 
             # Should still succeed with other readable files

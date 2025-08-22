@@ -8,7 +8,6 @@ This module provides:
 """
 
 import logging
-import os
 from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
@@ -21,6 +20,7 @@ from wct.connectors.base import (
     ConnectorConfigError,
     ConnectorExtractionError,
 )
+from wct.connectors.mysql.config import MySQLConnectorConfig
 from wct.message import Message
 from wct.schemas import Schema, StandardInputSchema
 
@@ -28,11 +28,6 @@ logger = logging.getLogger(__name__)
 
 # Constants
 _CONNECTOR_NAME = "mysql"
-_DEFAULT_PORT = 3306
-_DEFAULT_CHARSET = "utf8mb4"
-_DEFAULT_AUTOCOMMIT = True
-_DEFAULT_CONNECT_TIMEOUT = 10
-_DEFAULT_MAX_ROWS = 10
 _DEFAULT_SCHEMA_VERSION = "1.0.0"
 
 # SQL Queries
@@ -64,43 +59,14 @@ class MySQLConnector(Connector):
     for compliance analysis.
     """
 
-    def __init__(
-        self,
-        host: str,
-        port: int = _DEFAULT_PORT,
-        user: str = "",
-        password: str | None = None,
-        database: str = "",
-        charset: str = _DEFAULT_CHARSET,
-        autocommit: bool = _DEFAULT_AUTOCOMMIT,
-        connect_timeout: int = _DEFAULT_CONNECT_TIMEOUT,
-        max_rows_per_table: int = _DEFAULT_MAX_ROWS,
-    ) -> None:
-        """Initialise MySQL connector with connection parameters.
+    def __init__(self, config: MySQLConnectorConfig) -> None:
+        """Initialise MySQL connector with validated configuration.
 
         Args:
-            host: MySQL server hostname or IP address
-            port: MySQL server port (default: 3306)
-            user: Database username
-            password: Database password
-            database: Database name to connect to
-            charset: Character set for the connection (default: utf8mb4)
-            autocommit: Enable autocommit mode (default: True)
-            connect_timeout: Connection timeout in seconds (default: 10)
-            max_rows_per_table: Maximum number of rows to extract per table (default: 10)
+            config: Validated MySQL connector configuration
 
         """
-        self.host = host
-        self.port = port
-        self.user = user
-        self.password = password or ""
-        self.database = database
-        self.charset = charset
-        self.autocommit = autocommit
-        self.connect_timeout = connect_timeout
-        self.max_rows_per_table = max_rows_per_table
-
-        self._validate_required_connection_parameters(host, user)
+        self.config = config
 
     @classmethod
     @override
@@ -132,23 +98,8 @@ class MySQLConnector(Connector):
         - connect_timeout: Connection timeout (default: 10)
         - max_rows_per_table: Maximum rows per table (default: 10)
         """
-        # Load environment variables, with runbook properties as fallback
-        host, user = cls._validate_required_properties(properties)
-        password = os.getenv("MYSQL_PASSWORD") or properties.get("password")
-        database = os.getenv("MYSQL_DATABASE") or properties.get("database", "")
-        port = cls._parse_port_from_env_or_properties(properties)
-
-        return cls(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            database=database,
-            charset=properties.get("charset", _DEFAULT_CHARSET),
-            autocommit=properties.get("autocommit", _DEFAULT_AUTOCOMMIT),
-            connect_timeout=properties.get("connect_timeout", _DEFAULT_CONNECT_TIMEOUT),
-            max_rows_per_table=properties.get("max_rows_per_table", _DEFAULT_MAX_ROWS),
-        )
+        config = MySQLConnectorConfig.from_properties(properties)
+        return cls(config)
 
     @contextmanager
     def _get_connection(self) -> Generator[Any, None, None]:
@@ -167,14 +118,14 @@ class MySQLConnector(Connector):
         connection = None
         try:
             connection = pymysql.connect(
-                host=self.host,
-                port=self.port,
-                user=self.user,
-                password=self.password,
-                database=self.database,
-                charset=self.charset,
-                autocommit=self.autocommit,
-                connect_timeout=self.connect_timeout,
+                host=self.config.host,
+                port=self.config.port,
+                user=self.config.user,
+                password=self.config.password,
+                database=self.config.database,
+                charset=self.config.charset,
+                autocommit=self.config.autocommit,
+                connect_timeout=self.config.connect_timeout,
             )
 
             yield connection
@@ -241,7 +192,7 @@ class MySQLConnector(Connector):
         """
         try:
             metadata: dict[str, Any] = {
-                "database_name": self.database,
+                "database_name": self.config.database,
                 "tables": [],
                 "server_info": {},
             }
@@ -252,13 +203,13 @@ class MySQLConnector(Connector):
                 server_info = connection.get_server_info()  # type: ignore
                 metadata["server_info"] = {
                     "version": server_info,
-                    "host": self.host,
-                    "port": self.port,
+                    "host": self.config.host,
+                    "port": self.config.port,
                 }
 
                 # Get table information
                 tables: list[dict[str, Any]] = self._execute_query(
-                    _TABLES_QUERY, (self.database,)
+                    _TABLES_QUERY, (self.config.database,)
                 )
 
                 for table in tables:
@@ -272,7 +223,7 @@ class MySQLConnector(Connector):
 
                     # Get column information for each table
                     columns = self._execute_query(
-                        _COLUMNS_QUERY, (self.database, table["TABLE_NAME"])
+                        _COLUMNS_QUERY, (self.config.database, table["TABLE_NAME"])
                     )
                     table_info["columns"] = columns
 
@@ -301,7 +252,9 @@ class MySQLConnector(Connector):
         """
         try:
             # Use configured limit if not specified
-            effective_limit = limit if limit is not None else self.max_rows_per_table
+            effective_limit = (
+                limit if limit is not None else self.config.max_rows_per_table
+            )
 
             # Safe to use table name since it's verified to exist in information_schema
             # Using backticks to handle table names with special characters
@@ -326,7 +279,7 @@ class MySQLConnector(Connector):
 
         """
         try:
-            logger.info(f"Extracting data from MySQL database: {self.database}")
+            logger.info(f"Extracting data from MySQL database: {self.config.database}")
 
             output_schema = self._validate_output_schema(output_schema)
 
@@ -340,7 +293,7 @@ class MySQLConnector(Connector):
 
             # Create and validate message
             message = Message(
-                id=f"MySQL data from {self.database}@{self.host}",
+                id=f"MySQL data from {self.config.database}@{self.config.host}",
                 content=extracted_data,
                 schema=output_schema,
             )
@@ -378,7 +331,9 @@ class MySQLConnector(Connector):
 
         """
         data_items: list[dict[str, Any]] = []
-        database_source = f"{self.host}:{self.port}/{self.database}"
+        database_source = (
+            f"{self.config.host}:{self.config.port}/{self.config.database}"
+        )
 
         # Extract actual cell data from each table
         for table_info in metadata.get("tables", []):
@@ -387,100 +342,29 @@ class MySQLConnector(Connector):
 
         return {
             "schemaVersion": _DEFAULT_SCHEMA_VERSION,
-            "name": f"mysql_text_from_{self.database}",
-            "description": f"Text content extracted from MySQL database: {self.database}",
+            "name": f"mysql_text_from_{self.config.database}",
+            "description": f"Text content extracted from MySQL database: {self.config.database}",
             "contentEncoding": "utf-8",
             "source": database_source,
             # Top-level metadata includes complete database schema for reference
             "metadata": {
                 "extraction_type": "mysql_to_text",
                 "connection_info": {
-                    "host": self.host,
-                    "port": self.port,
-                    "database": self.database,
-                    "user": self.user,
+                    "host": self.config.host,
+                    "port": self.config.port,
+                    "database": self.config.database,
+                    "user": self.config.user,
                 },
                 "database_schema": metadata,  # Complete database schema for traceability
                 "total_data_items": len(data_items),
                 "extraction_summary": {
                     "tables_processed": len(metadata.get("tables", [])),
                     "cell_values_extracted": len(data_items),
-                    "max_rows_per_table": self.max_rows_per_table,
+                    "max_rows_per_table": self.config.max_rows_per_table,
                 },
             },
             "data": data_items,
         }
-
-    @classmethod
-    def _validate_required_properties(
-        cls, properties: dict[str, Any]
-    ) -> tuple[str, str]:
-        """Validate and extract required properties from configuration.
-
-        Args:
-            properties: Configuration properties dictionary
-
-        Returns:
-            Tuple of (host, user)
-
-        Raises:
-            ConnectorConfigError: If required properties are missing
-
-        """
-        host = os.getenv("MYSQL_HOST") or properties.get("host")
-        user = os.getenv("MYSQL_USER") or properties.get("user")
-
-        # Use specific error messages for configuration context
-        if not host:
-            raise ConnectorConfigError(
-                "MySQL host info is required (specify in runbook or MYSQL_HOST env var)"
-            )
-        if not user:
-            raise ConnectorConfigError(
-                "MySQL user info is required (specify in runbook or MYSQL_USER env var)"
-            )
-
-        return host, user
-
-    def _validate_required_connection_parameters(self, host: str, user: str) -> None:
-        """Validate required connection parameters.
-
-        Args:
-            host: MySQL server hostname
-            user: Database username
-
-        Raises:
-            ConnectorConfigError: If required parameters are missing
-
-        """
-        if not host:
-            raise ConnectorConfigError("MySQL host is required")
-        if not user:
-            raise ConnectorConfigError("MySQL user is required")
-
-    @classmethod
-    def _parse_port_from_env_or_properties(cls, properties: dict[str, Any]) -> int:
-        """Parse port from environment variable or properties.
-
-        Args:
-            properties: Configuration properties dictionary
-
-        Returns:
-            Port number
-
-        Raises:
-            ConnectorConfigError: If port value is invalid
-
-        """
-        port_str = os.getenv("MYSQL_PORT")
-        if port_str:
-            try:
-                return int(port_str)
-            except ValueError as e:
-                raise ConnectorConfigError(
-                    f"Invalid MYSQL_PORT environment variable: {port_str}"
-                ) from e
-        return properties.get("port", _DEFAULT_PORT)
 
     def _validate_output_schema(self, output_schema: Schema | None) -> Schema:
         """Validate the output schema.
@@ -573,12 +457,12 @@ class MySQLConnector(Connector):
                 "source": f"mysql_cell_data_table_({table_name})_column_({column_name})",
                 "description": f"Cell data from `{table_name}.{column_name}` row {row_index + 1}",
                 "data_type": "cell_content",
-                "database": self.database,
+                "database": self.config.database,
                 "table": table_name,
                 "column": column_name,
                 "row_index": row_index + 1,
-                "host": self.host,
-                "port": self.port,
+                "host": self.config.host,
+                "port": self.config.port,
                 # Include column metadata for context
                 "sql_data_type": self._get_column_data_type(table_info, column_name),
             },

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from wct.connectors.base import ConnectorConfigError, ConnectorExtractionError
+from wct.connectors.source_code.config import SourceCodeConnectorConfig
 from wct.connectors.source_code.connector import SourceCodeConnector
 from wct.message import Message
 from wct.schemas import SourceCodeSchema, StandardInputSchema
@@ -23,12 +24,14 @@ class TestSourceCodeConnectorInitialisation:
             f.flush()
 
             try:
-                connector = SourceCodeConnector(path=f.name)
+                connector = SourceCodeConnector.from_properties({"path": f.name})
 
-                assert connector.path == Path(f.name)
-                assert connector.language is None  # Auto-detected
-                assert connector.max_file_size == 10 * 1024 * 1024  # 10MB default
-                assert connector.max_files == 4000  # Default
+                assert connector.config.path == Path(f.name)
+                assert connector.config.language is None  # Auto-detected
+                assert (
+                    connector.config.max_file_size == 10 * 1024 * 1024
+                )  # 10MB default
+                assert connector.config.max_files == 4000  # Default
 
             finally:
                 Path(f.name).unlink()
@@ -40,10 +43,11 @@ class TestSourceCodeConnectorInitialisation:
             php_file = Path(temp_dir) / "test.php"
             php_file.write_text("<?php echo 'test'; ?>")
 
-            connector = SourceCodeConnector(path=temp_dir)
+            config = SourceCodeConnectorConfig.from_properties({"path": temp_dir})
+            connector = SourceCodeConnector(config)
 
-            assert connector.path == Path(temp_dir)
-            assert connector.language is None
+            assert connector.config.path == Path(temp_dir)
+            assert connector.config.language is None
             assert connector.parser is None  # Created on demand for directories
 
     def test_initialisation_with_custom_parameters(self):
@@ -52,26 +56,32 @@ class TestSourceCodeConnectorInitialisation:
             php_file = Path(temp_dir) / "test.php"
             php_file.write_text("<?php echo 'test'; ?>")
 
-            connector = SourceCodeConnector(
-                path=temp_dir,
-                language="php",
-                file_patterns=["*.php", "*.phtml"],
-                max_file_size=5 * 1024 * 1024,  # 5MB
-                max_files=1000,
+            config = SourceCodeConnectorConfig.from_properties(
+                {
+                    "path": temp_dir,
+                    "language": "php",
+                    "file_patterns": ["*.php", "*.phtml"],
+                    "max_file_size": 5 * 1024 * 1024,  # 5MB
+                    "max_files": 1000,
+                }
             )
+            connector = SourceCodeConnector(config)
 
-            assert connector.path == Path(temp_dir)
-            assert connector.language == "php"
-            assert connector.file_patterns == ["*.php", "*.phtml"]
-            assert connector.max_file_size == 5 * 1024 * 1024
-            assert connector.max_files == 1000
+            assert connector.config.path == Path(temp_dir)
+            assert connector.config.language == "php"
+            assert connector.config.file_patterns == ["*.php", "*.phtml"]
+            assert connector.config.max_file_size == 5 * 1024 * 1024
+            assert connector.config.max_files == 1000
 
     def test_initialisation_with_nonexistent_path(self):
         """Test error handling for nonexistent paths."""
         nonexistent_path = "/nonexistent/path/file.php"
 
         with pytest.raises(ConnectorConfigError, match="Path does not exist"):
-            SourceCodeConnector(path=nonexistent_path)
+            config = SourceCodeConnectorConfig.from_properties(
+                {"path": nonexistent_path}
+            )
+            SourceCodeConnector(config)
 
     def test_initialisation_with_path_object(self):
         """Test that connector accepts Path objects as well as strings."""
@@ -79,9 +89,10 @@ class TestSourceCodeConnectorInitialisation:
             php_file = Path(temp_dir) / "test.php"
             php_file.write_text("<?php echo 'test'; ?>")
 
-            connector = SourceCodeConnector(path=Path(temp_dir))
+            config = SourceCodeConnectorConfig.from_properties({"path": Path(temp_dir)})
+            connector = SourceCodeConnector(config)
 
-            assert connector.path == Path(temp_dir)
+            assert connector.config.path == Path(temp_dir)
 
 
 class TestSourceCodeConnectorClassMethods:
@@ -112,10 +123,10 @@ class TestSourceCodeConnectorClassMethods:
 
             connector = SourceCodeConnector.from_properties(properties)
 
-            assert connector.path == Path(temp_dir)
-            assert connector.language is None
-            assert connector.max_file_size == 10 * 1024 * 1024  # Default
-            assert connector.max_files == 4000  # Default
+            assert connector.config.path == Path(temp_dir)
+            assert connector.config.language is None
+            assert connector.config.max_file_size == 10 * 1024 * 1024  # Default
+            assert connector.config.max_files == 4000  # Default
 
     def test_from_properties_with_full_config(self):
         """Test creating connector from properties with full configuration."""
@@ -133,11 +144,11 @@ class TestSourceCodeConnectorClassMethods:
 
             connector = SourceCodeConnector.from_properties(properties)
 
-            assert connector.path == Path(temp_dir)
-            assert connector.language == "php"
-            assert connector.file_patterns == ["*.php"]
-            assert connector.max_file_size == 2 * 1024 * 1024
-            assert connector.max_files == 500
+            assert connector.config.path == Path(temp_dir)
+            assert connector.config.language == "php"
+            assert connector.config.file_patterns == ["*.php"]
+            assert connector.config.max_file_size == 2 * 1024 * 1024
+            assert connector.config.max_files == 500
 
     def test_from_properties_missing_path(self):
         """Test error handling when path property is missing."""
@@ -192,7 +203,7 @@ class UserManager {
             f.flush()
 
             try:
-                connector = SourceCodeConnector(path=f.name)
+                connector = SourceCodeConnector.from_properties({"path": f.name})
                 message = connector.extract()
 
                 # Verify Message structure
@@ -284,7 +295,7 @@ class UserManager {
             # Create non-PHP file (should be ignored)
             (temp_path / "readme.txt").write_text("This is not PHP")
 
-            connector = SourceCodeConnector(path=temp_dir)
+            connector = SourceCodeConnector.from_properties({"path": temp_dir})
             message = connector.extract()
 
             # Verify Message structure
@@ -311,7 +322,7 @@ class UserManager {
             f.flush()
 
             try:
-                connector = SourceCodeConnector(path=f.name)
+                connector = SourceCodeConnector.from_properties({"path": f.name})
                 explicit_schema = SourceCodeSchema()
 
                 message = connector.extract(output_schema=explicit_schema)
@@ -342,8 +353,8 @@ class UserManager {
 
             try:
                 # Set a very small max file size
-                connector = SourceCodeConnector(
-                    path=f.name, max_file_size=100
+                connector = SourceCodeConnector.from_properties(
+                    {"path": f.name, "max_file_size": 100}
                 )  # 100 bytes
                 message = connector.extract()
 
@@ -375,9 +386,11 @@ class UserManager {
             )
 
             # Test with specific pattern
-            connector = SourceCodeConnector(
-                path=temp_dir,
-                file_patterns=["*.php"],  # Only .php files
+            connector = SourceCodeConnector.from_properties(
+                {
+                    "path": temp_dir,
+                    "file_patterns": ["*.php"],  # Only .php files
+                }
             )
             message = connector.extract()
 
@@ -423,7 +436,7 @@ class UserManager {
             (temp_path / "node_modules").mkdir()
             (temp_path / "node_modules" / "package.json").write_text("{}")
 
-            connector = SourceCodeConnector(path=temp_dir)
+            connector = SourceCodeConnector.from_properties({"path": temp_dir})
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -473,9 +486,13 @@ class UserManager {
             (temp_path / "test.log").write_text("log content")  # Normally excluded
 
             # Test with patterns that only include specific files
-            connector = SourceCodeConnector(
-                path=temp_dir,
-                file_patterns=["include_me.*"],  # Only files starting with "include_me"
+            connector = SourceCodeConnector.from_properties(
+                {
+                    "path": temp_dir,
+                    "file_patterns": [
+                        "include_me.*"
+                    ],  # Only files starting with "include_me"
+                }
             )
             message = connector.extract()
 
@@ -522,7 +539,7 @@ class UserManager {
                 "<?php class UserController {} ?>"
             )
 
-            connector = SourceCodeConnector(path=temp_dir)
+            connector = SourceCodeConnector.from_properties({"path": temp_dir})
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -552,7 +569,7 @@ class TestSourceCodeConnectorEdgeCases:
     def test_extract_from_empty_directory(self):
         """Test extraction from empty directory."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            connector = SourceCodeConnector(path=temp_dir)
+            connector = SourceCodeConnector.from_properties({"path": temp_dir})
 
             # Empty directory should raise ConnectorExtractionError
             with pytest.raises(ConnectorExtractionError, match="No files found"):
@@ -568,7 +585,7 @@ class TestSourceCodeConnectorEdgeCases:
             (temp_path / "config.json").write_text('{"key": "value"}')
             (temp_path / "script.py").write_text("print('hello')")
 
-            connector = SourceCodeConnector(path=temp_dir)
+            connector = SourceCodeConnector.from_properties({"path": temp_dir})
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -587,7 +604,7 @@ class TestSourceCodeConnectorEdgeCases:
             f.flush()
 
             try:
-                connector = SourceCodeConnector(path=f.name)
+                connector = SourceCodeConnector.from_properties({"path": f.name})
                 # Should not raise exception - tree-sitter handles invalid syntax
                 message = connector.extract()
 
@@ -612,7 +629,7 @@ class TestSourceCodeConnectorEdgeCases:
             f.flush()
 
             try:
-                connector = SourceCodeConnector(path=f.name)
+                connector = SourceCodeConnector.from_properties({"path": f.name})
 
                 # Should handle gracefully or raise appropriate exception
                 try:
@@ -635,7 +652,7 @@ class TestSourceCodeConnectorEdgeCases:
             f.flush()
 
             try:
-                connector = SourceCodeConnector(path=f.name)
+                connector = SourceCodeConnector.from_properties({"path": f.name})
                 unsupported_schema = StandardInputSchema()
 
                 with pytest.raises(
@@ -673,7 +690,7 @@ class TestClass{i} {{
 ?>"""
                 (temp_path / f"file{i}.php").write_text(file_content)
 
-            connector = SourceCodeConnector(path=temp_dir)
+            connector = SourceCodeConnector.from_properties({"path": temp_dir})
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -699,7 +716,9 @@ class TestClass{i} {{
                 (temp_path / f"file{i}.php").write_text(file_content)
 
             # Set low max_files limit
-            connector = SourceCodeConnector(path=temp_dir, max_files=5)
+            connector = SourceCodeConnector.from_properties(
+                {"path": temp_dir, "max_files": 5}
+            )
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -742,7 +761,7 @@ class PrivacyManager {
             f.flush()
 
             try:
-                connector = SourceCodeConnector(path=f.name)
+                connector = SourceCodeConnector.from_properties({"path": f.name})
                 message = connector.extract()
 
                 content = message.content
@@ -793,7 +812,7 @@ class PrivacyManager {
             f.flush()
 
             try:
-                connector = SourceCodeConnector(path=f.name)
+                connector = SourceCodeConnector.from_properties({"path": f.name})
                 message = connector.extract()
 
                 # Message should be pre-validated by connector
@@ -824,7 +843,7 @@ class PrivacyManager {
                 "<?php class UserController { public function index() { return true; } } ?>"
             )
 
-            connector = SourceCodeConnector(path=temp_dir)
+            connector = SourceCodeConnector.from_properties({"path": temp_dir})
             message = connector.extract()
 
             content = message.content

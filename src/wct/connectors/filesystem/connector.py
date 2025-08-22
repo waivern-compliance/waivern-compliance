@@ -12,6 +12,7 @@ from wct.connectors.base import (
     ConnectorConfigError,
     ConnectorExtractionError,
 )
+from wct.connectors.filesystem.config import FilesystemConnectorConfig
 from wct.message import Message
 from wct.schemas import Schema, StandardInputSchema
 
@@ -20,10 +21,6 @@ logger = logging.getLogger(__name__)
 # Constants
 _CONNECTOR_NAME = "filesystem"
 _DEFAULT_SCHEMA_VERSION = "1.0.0"
-_DEFAULT_CHUNK_SIZE = 8192
-_DEFAULT_MAX_FILES = 1000
-_DEFAULT_ENCODING = "utf-8"
-_DEFAULT_ERROR_HANDLING = "strict"
 
 _SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
     StandardInputSchema(),
@@ -41,39 +38,14 @@ class FilesystemConnector(Connector):
     Memory-efficient for large files by reading content in configurable chunks.
     """
 
-    def __init__(
-        self,
-        path: str | Path,
-        chunk_size: int = _DEFAULT_CHUNK_SIZE,
-        encoding: str = _DEFAULT_ENCODING,
-        errors: str = _DEFAULT_ERROR_HANDLING,
-        exclude_patterns: list[str] | None = None,
-        max_files: int = _DEFAULT_MAX_FILES,
-    ) -> None:
-        """Initialise the filesystem connector.
+    def __init__(self, config: FilesystemConnectorConfig) -> None:
+        """Initialise the filesystem connector with validated configuration.
 
         Args:
-            path: Path to the file or directory to read
-            chunk_size: Size of chunks to read at a time (bytes)
-            encoding: Text encoding to use
-            errors: How to handle encoding errors (strict=skip binary files, replace=convert to garbled text)
-            exclude_patterns: List of glob patterns to exclude (e.g., ['*.log', '__pycache__'])
-            max_files: Maximum number of files to process (safety limit)
+            config: Validated filesystem connector configuration
 
         """
-        self.path = Path(path)
-        self.chunk_size = chunk_size
-        self.encoding = encoding
-        self.errors = errors
-        self.exclude_patterns = exclude_patterns or []
-        self.max_files = max_files
-
-        if not self.path.exists():
-            raise ConnectorConfigError(f"Path does not exist: {self.path}")
-
-        # Both files and directories are now supported
-        if not (self.path.is_file() or self.path.is_dir()):
-            raise ConnectorConfigError(f"Path must be a file or directory: {self.path}")
+        self.config = config
 
     @classmethod
     @override
@@ -126,24 +98,8 @@ class FilesystemConnector(Connector):
             >>> connector = FilesystemConnector.from_properties(properties)
 
         """
-        path = properties.get("path")
-        if not path:
-            raise ConnectorConfigError("path property is required")
-
-        chunk_size = properties.get("chunk_size", _DEFAULT_CHUNK_SIZE)
-        encoding = properties.get("encoding", _DEFAULT_ENCODING)
-        errors = properties.get("errors", _DEFAULT_ERROR_HANDLING)
-        exclude_patterns = properties.get("exclude_patterns", [])
-        max_files = properties.get("max_files", _DEFAULT_MAX_FILES)
-
-        return cls(
-            path=path,
-            chunk_size=chunk_size,
-            encoding=encoding,
-            errors=errors,
-            exclude_patterns=exclude_patterns,
-            max_files=max_files,
-        )
+        config = FilesystemConnectorConfig.from_properties(properties)
+        return cls(config)
 
     @override
     def extract(
@@ -173,7 +129,7 @@ class FilesystemConnector(Connector):
 
             if not all_file_data:
                 raise ConnectorExtractionError(
-                    f"No readable files found in {self.path}"
+                    f"No readable files found in {self.config.path}"
                 )
 
             # Transform content based on schema type
@@ -182,7 +138,7 @@ class FilesystemConnector(Connector):
             )
 
             message = Message(
-                id=f"Content from {self.path.name}",
+                id=f"Content from {self.config.path.name}",
                 content=wct_schema_transformed_content,
                 schema=output_schema,
             )
@@ -192,9 +148,9 @@ class FilesystemConnector(Connector):
             return message
 
         except Exception as e:
-            logger.error(f"Failed to extract from path {self.path}: {e}")
+            logger.error(f"Failed to extract from path {self.config.path}: {e}")
             raise ConnectorExtractionError(
-                f"Failed to read from path {self.path}: {e}"
+                f"Failed to read from path {self.config.path}: {e}"
             ) from e
 
     def _validate_is_supported_output_schema(
@@ -309,7 +265,7 @@ class FilesystemConnector(Connector):
                     "content": content,
                     "metadata": {
                         "source": str(file_path),
-                        "description": f"Content of {file_path.relative_to(self.path) if file_path != self.path else file_path.name}",
+                        "description": f"Content of {file_path.relative_to(self.config.path) if file_path != self.config.path else file_path.name}",
                         "file_size": stat.st_size,
                         "modified_time": stat.st_mtime,
                         "created_time": stat.st_ctime,
@@ -319,26 +275,26 @@ class FilesystemConnector(Connector):
             )
 
         # Determine source description
-        if self.path.is_file():
-            source_desc = f"Content from file {self.path.name}"
-            name_suffix = self.path.name
+        if self.config.path.is_file():
+            source_desc = f"Content from file {self.config.path.name}"
+            name_suffix = self.config.path.name
         else:
             source_desc = (
-                f"Content from directory {self.path.name} ({file_count} files)"
+                f"Content from directory {self.config.path.name} ({file_count} files)"
             )
-            name_suffix = f"{self.path.name}_directory"
+            name_suffix = f"{self.config.path.name}_directory"
 
         return {
             "schemaVersion": _DEFAULT_SCHEMA_VERSION,
             "name": f"standard_input_from_{name_suffix}",
             "description": source_desc,
-            "contentEncoding": self.encoding,
-            "source": str(self.path),
+            "contentEncoding": self.config.encoding,
+            "source": str(self.config.path),
             "metadata": {
                 "file_count": file_count,
                 "total_size_bytes": total_size,
-                "exclude_patterns": self.exclude_patterns,
-                "source_type": "file" if self.path.is_file() else "directory",
+                "exclude_patterns": self.config.exclude_patterns,
+                "source_type": "file" if self.config.path.is_file() else "directory",
             },
             "data": data_entries,
         }
@@ -353,8 +309,8 @@ class FilesystemConnector(Connector):
             ConnectorExtractionError: If too many files are found or no files are found
 
         """
-        if self.path.is_file():
-            return [self.path]
+        if self.config.path.is_file():
+            return [self.config.path]
 
         # Directory processing with recursive traversal
         files: list[Path] = []
@@ -362,9 +318,9 @@ class FilesystemConnector(Connector):
         def should_exclude_path(path: Path) -> bool:
             """Check if a path should be excluded based on patterns."""
             path_str = str(path)
-            relative_path = str(path.relative_to(self.path))
+            relative_path = str(path.relative_to(self.config.path))
 
-            for pattern in self.exclude_patterns:
+            for pattern in self.config.exclude_patterns:
                 if (
                     fnmatch.fnmatch(path.name, pattern)
                     or fnmatch.fnmatch(relative_path, pattern)
@@ -374,7 +330,7 @@ class FilesystemConnector(Connector):
             return False
 
         # Recursively collect files
-        for file_path in self.path.rglob("*"):
+        for file_path in self.config.path.rglob("*"):
             if not file_path.is_file():
                 continue
 
@@ -385,38 +341,46 @@ class FilesystemConnector(Connector):
             files.append(file_path)
 
             # Safety check
-            if len(files) >= self.max_files:
+            if len(files) >= self.config.max_files:
                 logger.warning(
-                    f"Reached maximum file limit ({self.max_files}), stopping collection"
+                    f"Reached maximum file limit ({self.config.max_files}), stopping collection"
                 )
                 break
 
         if not files:
-            raise ConnectorExtractionError(f"No files found in directory {self.path}")
+            raise ConnectorExtractionError(
+                f"No files found in directory {self.config.path}"
+            )
 
-        logger.info(f"Collected {len(files)} files from {self.path}")
+        logger.info(f"Collected {len(files)} files from {self.config.path}")
         return files
 
     def _read_file_content(self, file_path: Path | None = None) -> str:
         """Read file content efficiently for large files.
 
         Args:
-            file_path: Path to file to read. If None, uses self.path
+            file_path: Path to file to read. If None, uses self.config.path
 
         """
-        target_path = file_path or self.path
+        target_path = file_path or self.config.path
         try:
             # For small files, read all at once
-            if target_path.stat().st_size <= self.chunk_size:
-                return target_path.read_text(encoding=self.encoding, errors=self.errors)
+            if target_path.stat().st_size <= self.config.chunk_size:
+                return target_path.read_text(
+                    encoding=self.config.encoding, errors=self.config.errors
+                )
 
             # For large files, read in chunks
-            logger.debug(f"Reading large file in chunks of {self.chunk_size} bytes")
+            logger.debug(
+                f"Reading large file in chunks of {self.config.chunk_size} bytes"
+            )
             content_parts: list[str] = []
 
-            with open(target_path, encoding=self.encoding, errors=self.errors) as f:
+            with open(
+                target_path, encoding=self.config.encoding, errors=self.config.errors
+            ) as f:
                 while True:
-                    chunk = f.read(self.chunk_size)
+                    chunk = f.read(self.config.chunk_size)
                     if not chunk:
                         break
                     content_parts.append(chunk)
