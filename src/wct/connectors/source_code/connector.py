@@ -70,7 +70,7 @@ class SourceCodeConnector(Connector):
             config: Validated source code connector configuration
 
         """
-        self.config = config
+        self._config = config
 
         # Create filesystem connector for file collection with common exclusions
         filesystem_config = FilesystemConnectorConfig.from_properties(
@@ -84,10 +84,10 @@ class SourceCodeConnector(Connector):
         self.file_collector = FilesystemConnector(filesystem_config)
 
         # Initialise parser
-        if self.config.path.is_file():
+        if self._config.path.is_file():
             detected_language = (
                 config.language
-                or SourceCodeParser().detect_language_from_file(self.config.path)
+                or SourceCodeParser().detect_language_from_file(self._config.path)
             )
             self.parser = SourceCodeParser(detected_language)
         else:
@@ -151,7 +151,7 @@ class SourceCodeConnector(Connector):
             analysis_data = self._analyse_source_code(output_schema)
 
             message = Message(
-                id=f"Source code analysis from {self.config.path.name}",
+                id=f"Source code analysis from {self._config.path.name}",
                 content=analysis_data,
                 schema=output_schema,
             )
@@ -160,9 +160,9 @@ class SourceCodeConnector(Connector):
             return message
 
         except Exception as e:
-            logger.error(f"Failed to extract from source code {self.config.path}: {e}")
+            logger.error(f"Failed to extract from source code {self._config.path}: {e}")
             raise ConnectorExtractionError(
-                f"Failed to analyse source code {self.config.path}: {e}"
+                f"Failed to analyse source code {self._config.path}: {e}"
             ) from e
 
     def _validate_and_get_schema(self, output_schema: Schema | None) -> Schema:
@@ -201,21 +201,21 @@ class SourceCodeConnector(Connector):
             Dictionary containing analysis results in schema format
 
         """
-        if self.config.path.is_file():
+        if self._config.path.is_file():
             files_data, total_files, total_lines = self._analyse_single_file(
-                self.config.path
+                self._config.path
             )
         else:
             files_data, total_files, total_lines = self._analyse_directory(
-                self.config.path
+                self._config.path
             )
 
         return {
             "schemaVersion": schema.version,
-            "name": f"source_code_analysis_{self.config.path.name}",
-            "description": f"Source code analysis of {self.config.path}",
-            "language": self.config.language or "auto-detected",
-            "source": str(self.config.path),
+            "name": f"source_code_analysis_{self._config.path.name}",
+            "description": f"Source code analysis of {self._config.path}",
+            "language": self._config.language or "auto-detected",
+            "source": str(self._config.path),
             "metadata": {
                 "total_files": total_files,
                 "total_lines": total_lines,
@@ -238,7 +238,7 @@ class SourceCodeConnector(Connector):
         """
         try:
             # Check file size
-            if file_path.stat().st_size > self.config.max_file_size:
+            if file_path.stat().st_size > self._config.max_file_size:
                 logger.warning(f"Skipping large file: {file_path}")
                 return [], 0, 0
 
@@ -321,7 +321,7 @@ class SourceCodeConnector(Connector):
             return False
 
         # Apply file pattern matching if specified (inclusion patterns)
-        if self.config.file_patterns != ["**/*"]:
+        if self._config.file_patterns != ["**/*"]:
             return self._matches_inclusion_patterns(file_path)
 
         # No specific patterns, include all supported files
@@ -340,7 +340,7 @@ class SourceCodeConnector(Connector):
         return any(
             file_path.match(pattern)
             or file_path.name.endswith(pattern.replace("*", ""))
-            for pattern in self.config.file_patterns
+            for pattern in self._config.file_patterns
         )
 
     def _extract_file_data(
@@ -403,6 +403,8 @@ class SourceCodeConnector(Connector):
 
         """
         base_path = (
-            self.config.path.parent if self.config.path.is_file() else self.config.path
+            self._config.path.parent
+            if self._config.path.is_file()
+            else self._config.path
         )
         return str(file_path.relative_to(base_path))
