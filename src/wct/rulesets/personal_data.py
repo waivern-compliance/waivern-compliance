@@ -66,7 +66,7 @@ class PersonalDataRuleset(Ruleset):
             with yaml_file.open("r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
-            ruleset_data = RulesetData(**data)
+            ruleset_data = RulesetData.model_validate(data)
             self.rules = ruleset_data.to_rules()
             logger.debug(f"Loaded {len(self.rules)} personal data ruleset data")
 
