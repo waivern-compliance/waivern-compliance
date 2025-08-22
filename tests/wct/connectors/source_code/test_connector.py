@@ -233,7 +233,6 @@ class UserManager {
                 assert "total_files" in metadata
                 assert "total_lines" in metadata
                 assert "analysis_timestamp" in metadata
-                assert "parser_version" in metadata
                 assert metadata["total_files"] == 1
 
                 # Verify data structure

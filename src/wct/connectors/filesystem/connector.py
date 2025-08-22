@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 # Constants
 _CONNECTOR_NAME = "filesystem"
-_DEFAULT_SCHEMA_VERSION = "1.0.0"
 
 _SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
     StandardInputSchema(),
@@ -285,7 +284,7 @@ class FilesystemConnector(Connector):
             name_suffix = f"{self.config.path.name}_directory"
 
         return {
-            "schemaVersion": _DEFAULT_SCHEMA_VERSION,
+            "schemaVersion": schema.version,
             "name": f"standard_input_from_{name_suffix}",
             "description": source_desc,
             "contentEncoding": self.config.encoding,

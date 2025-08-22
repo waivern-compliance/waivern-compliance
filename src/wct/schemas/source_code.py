@@ -100,7 +100,6 @@ class SourceCodeAnalysisMetadataModel(BaseModel):
     total_files: int
     total_lines: int
     analysis_timestamp: str
-    parser_version: str
 
 
 class SourceCodeDataModel(BaseModel):

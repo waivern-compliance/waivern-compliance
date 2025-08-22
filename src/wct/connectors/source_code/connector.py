@@ -29,8 +29,6 @@ from wct.schemas import Schema, SourceCodeSchema
 logger = logging.getLogger(__name__)
 
 # Constants
-_DEFAULT_SCHEMA_VERSION = "1.0.0"
-_PARSER_VERSION = "tree-sitter-languages-1.15.0+"
 
 _SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
     SourceCodeSchema(),
@@ -150,7 +148,7 @@ class SourceCodeConnector(Connector):
         """
         try:
             output_schema = self._validate_and_get_schema(output_schema)
-            analysis_data = self._analyse_source_code()
+            analysis_data = self._analyse_source_code(output_schema)
 
             message = Message(
                 id=f"Source code analysis from {self.config.path.name}",
@@ -193,8 +191,11 @@ class SourceCodeConnector(Connector):
 
         return output_schema
 
-    def _analyse_source_code(self) -> dict[str, Any]:
+    def _analyse_source_code(self, schema: Schema) -> dict[str, Any]:
         """Analyse source code and extract compliance information.
+
+        Args:
+            schema: The schema to use for formatting the output
 
         Returns:
             Dictionary containing analysis results in schema format
@@ -210,7 +211,7 @@ class SourceCodeConnector(Connector):
             )
 
         return {
-            "schemaVersion": _DEFAULT_SCHEMA_VERSION,
+            "schemaVersion": schema.version,
             "name": f"source_code_analysis_{self.config.path.name}",
             "description": f"Source code analysis of {self.config.path}",
             "language": self.config.language or "auto-detected",
@@ -219,7 +220,6 @@ class SourceCodeConnector(Connector):
                 "total_files": total_files,
                 "total_lines": total_lines,
                 "analysis_timestamp": datetime.now().isoformat(),
-                "parser_version": _PARSER_VERSION,
             },
             "data": files_data,
         }
