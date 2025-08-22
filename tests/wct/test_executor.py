@@ -35,8 +35,8 @@ class MockConnector(Connector):
         return cls()
 
     @classmethod
-    def get_output_schema(cls):
-        return StandardInputSchema()
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        return [StandardInputSchema()]
 
     def extract(self, output_schema: Schema):
         if self.should_fail:

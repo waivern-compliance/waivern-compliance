@@ -94,6 +94,14 @@ class TestSourceCodeConnectorClassMethods:
         assert name == "source_code"
         assert isinstance(name, str)
 
+    def test_get_supported_output_schemas_returns_source_code(self):
+        """Test that the connector supports source_code schema."""
+        output_schemas = SourceCodeConnector.get_supported_output_schemas()
+
+        assert len(output_schemas) == 1
+        assert output_schemas[0].name == "source_code"
+        assert output_schemas[0].version == "1.0.0"
+
     def test_from_properties_with_minimal_config(self):
         """Test creating connector from properties with minimal configuration."""
         with tempfile.TemporaryDirectory() as temp_dir:

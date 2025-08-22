@@ -49,6 +49,16 @@ class Connector(abc.ABC):
 
         """
 
+    @classmethod
+    @abc.abstractmethod
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        """Return the output schemas supported by this connector.
+
+        Returns:
+            List of schemas that this connector can produce as output
+
+        """
+
     @abc.abstractmethod
     def extract(self, output_schema: Schema) -> Message:
         """Extract data from the source and return in WCF schema format.

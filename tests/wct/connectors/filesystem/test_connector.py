@@ -74,6 +74,14 @@ class TestFilesystemConnector:
         """Test get_name returns the connector name."""
         assert FilesystemConnector.get_name() == EXPECTED_CONNECTOR_NAME
 
+    def test_get_supported_output_schemas_returns_standard_input(self):
+        """Test that the connector supports standard_input schema."""
+        output_schemas = FilesystemConnector.get_supported_output_schemas()
+
+        assert len(output_schemas) == 1
+        assert output_schemas[0].name == "standard_input"
+        assert output_schemas[0].version == "1.0.0"
+
     def test_from_properties_creates_instance_with_required_path(self, sample_file):
         """Test from_properties creates instance with minimum required properties."""
         properties = {"path": str(sample_file)}
@@ -129,12 +137,16 @@ class TestFilesystemConnector:
         connector = FilesystemConnector(sample_directory)
         assert connector.path == sample_directory
 
-    def test_extract_without_schema_raises_error(self, sample_file):
-        """Test extract without schema raises error."""
+    def test_extract_without_schema_uses_default(self, sample_file):
+        """Test extract without schema uses default schema."""
         connector = FilesystemConnector(sample_file)
 
-        with pytest.raises(ConnectorExtractionError, match="No schema provided"):
-            connector.extract()
+        result = connector.extract()
+
+        # Should successfully extract with default schema
+        assert result is not None
+        assert result.schema is not None
+        assert result.schema.name == "standard_input"
 
     def test_extract_with_unsupported_schema_raises_error(self, sample_file):
         """Test extract with unsupported schema raises error."""
