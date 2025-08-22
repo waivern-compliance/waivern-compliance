@@ -25,9 +25,9 @@ _DEFAULT_MAX_FILES = 1000
 _DEFAULT_ENCODING = "utf-8"
 _DEFAULT_ERROR_HANDLING = "strict"
 
-_SUPPORTED_OUTPUT_SCHEMAS = {
-    "standard_input": StandardInputSchema(),
-}
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
+    StandardInputSchema(),
+]
 
 
 class FilesystemConnector(Connector):
@@ -80,6 +80,12 @@ class FilesystemConnector(Connector):
     def get_name(cls) -> str:
         """Return the name of the connector."""
         return _CONNECTOR_NAME
+
+    @classmethod
+    @override
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        """Return the output schemas supported by this connector."""
+        return _SUPPORTED_OUTPUT_SCHEMAS
 
     @classmethod
     @override
@@ -155,12 +161,8 @@ class FilesystemConnector(Connector):
 
         """
         try:
-            self._validate_is_supported_output_schema(output_schema)
+            output_schema = self._validate_is_supported_output_schema(output_schema)
             # After validation, we know output_schema is not None
-            if output_schema is None:
-                raise ConnectorConfigError(
-                    "Output schema cannot be None after validation"
-                )
 
             # Collect all files to process
             files_to_process = self.collect_files()
@@ -197,25 +199,30 @@ class FilesystemConnector(Connector):
 
     def _validate_is_supported_output_schema(
         self, output_schema: Schema | None
-    ) -> None:
+    ) -> Schema:
         """Validate that the provided schema is supported.
 
         Args:
             output_schema: The schema to validate
+
+        Returns:
+            The validated schema (or default if none provided)
 
         Raises:
             ConnectorConfigError: If schema is invalid or unsupported
 
         """
         if not output_schema:
+            logger.warning("No schema provided, using default schema")
+            output_schema = _SUPPORTED_OUTPUT_SCHEMAS[0]
+
+        supported_schema_names = [schema.name for schema in _SUPPORTED_OUTPUT_SCHEMAS]
+        if output_schema.name not in supported_schema_names:
             raise ConnectorConfigError(
-                "No schema provided for data extraction. Please specify a valid WCT schema."
+                f"Unsupported output schema: {output_schema.name}. Supported schemas: {supported_schema_names}"
             )
 
-        if output_schema.name not in _SUPPORTED_OUTPUT_SCHEMAS:
-            raise ConnectorConfigError(
-                f"Unsupported output schema: {output_schema.name}. Supported schemas: {list(_SUPPORTED_OUTPUT_SCHEMAS.keys())}"
-            )
+        return output_schema
 
     def _collect_file_data(self, files_to_process: list[Path]) -> list[dict[str, Any]]:
         """Collect file content and metadata for all files.

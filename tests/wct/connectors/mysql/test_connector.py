@@ -2,14 +2,13 @@
 
 import os
 from contextlib import contextmanager
-from typing import cast
 from unittest.mock import Mock, patch
 
 import pytest
 
 from wct.connectors.base import ConnectorConfigError, ConnectorExtractionError
 from wct.connectors.mysql.connector import MySQLConnector
-from wct.schemas import Schema, StandardInputSchema
+from wct.schemas import StandardInputSchema
 
 # Test constants - expected behaviour from public interface
 EXPECTED_CONNECTOR_NAME = "mysql"
@@ -63,6 +62,14 @@ class TestMySQLConnectorPublicAPI:
     def test_get_name_returns_correct_name(self):
         """Test get_name returns the connector name."""
         assert MySQLConnector.get_name() == EXPECTED_CONNECTOR_NAME
+
+    def test_get_supported_output_schemas_returns_standard_input(self):
+        """Test that the connector supports standard_input schema."""
+        output_schemas = MySQLConnector.get_supported_output_schemas()
+
+        assert len(output_schemas) == 1
+        assert output_schemas[0].name == "standard_input"
+        assert output_schemas[0].version == "1.0.0"
 
     def test_from_properties_creates_instance_with_required_properties(self):
         """Test from_properties creates instance with minimum required properties."""
@@ -196,12 +203,15 @@ class TestMySQLConnectorPublicAPI:
         connector = MySQLConnector(host=TEST_HOST, user=TEST_USER, password=None)
         assert connector.password == ""
 
-    def test_extract_without_schema_raises_error(self):
-        """Test extract without schema raises error."""
+    def test_extract_without_schema_uses_default(self):
+        """Test extract without schema uses default schema."""
+        # Test that the validation logic correctly assigns default schema
         connector = MySQLConnector(host=TEST_HOST, user=TEST_USER)
 
-        with pytest.raises(ConnectorExtractionError, match="No schema provided"):
-            connector.extract(cast("Schema", None))  # type: ignore
+        # Test the validation method directly since the full extract requires database connection
+        result_schema = connector._validate_output_schema(None)
+        assert result_schema is not None
+        assert result_schema.name == "standard_input"
 
     def test_extract_with_unsupported_schema_raises_error(self):
         """Test extract with unsupported schema raises error."""

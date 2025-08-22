@@ -33,9 +33,9 @@ _DEFAULT_MAX_FILES = 4000
 _DEFAULT_FILE_PATTERNS = ["**/*"]
 _PARSER_VERSION = "tree-sitter-languages-1.15.0+"
 
-_SUPPORTED_OUTPUT_SCHEMAS = {
-    "source_code": SourceCodeSchema(),
-}
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
+    SourceCodeSchema(),
+]
 
 # Common file patterns to exclude from source code analysis
 _COMMON_EXCLUSIONS = [
@@ -119,6 +119,12 @@ class SourceCodeConnector(Connector):
 
     @classmethod
     @override
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        """Return the output schemas supported by this connector."""
+        return _SUPPORTED_OUTPUT_SCHEMAS
+
+    @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
         """Create a source code connector instance from configuration properties.
 
@@ -198,15 +204,16 @@ class SourceCodeConnector(Connector):
             ConnectorConfigError: If schema is unsupported
 
         """
-        if output_schema and output_schema.name not in _SUPPORTED_OUTPUT_SCHEMAS:
+        supported_schema_names = [schema.name for schema in _SUPPORTED_OUTPUT_SCHEMAS]
+        if output_schema and output_schema.name not in supported_schema_names:
             raise ConnectorConfigError(
                 f"Unsupported output schema: {output_schema.name}. "
-                f"Supported schemas: {list(_SUPPORTED_OUTPUT_SCHEMAS.keys())}"
+                f"Supported schemas: {supported_schema_names}"
             )
 
         if not output_schema:
-            logger.warning("No schema provided, using default source_code schema")
-            return _SUPPORTED_OUTPUT_SCHEMAS["source_code"]
+            logger.warning("No schema provided, using default schema")
+            return _SUPPORTED_OUTPUT_SCHEMAS[0]  # First (and only) supported schema
 
         return output_schema
 

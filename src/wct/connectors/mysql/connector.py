@@ -51,9 +51,9 @@ WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
 ORDER BY ORDINAL_POSITION
 """
 
-_SUPPORTED_OUTPUT_SCHEMAS = {
-    "standard_input": StandardInputSchema(),
-}
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
+    StandardInputSchema(),
+]
 
 
 class MySQLConnector(Connector):
@@ -107,6 +107,12 @@ class MySQLConnector(Connector):
     def get_name(cls) -> str:
         """Return the name of the connector."""
         return _CONNECTOR_NAME
+
+    @classmethod
+    @override
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        """Return the output schemas supported by this connector."""
+        return _SUPPORTED_OUTPUT_SCHEMAS
 
     @classmethod
     @override
@@ -322,7 +328,7 @@ class MySQLConnector(Connector):
         try:
             logger.info(f"Extracting data from MySQL database: {self.database}")
 
-            self._validate_output_schema(output_schema)
+            output_schema = self._validate_output_schema(output_schema)
 
             # Extract database metadata (connection test included)
             metadata = self._get_database_metadata()
@@ -476,26 +482,31 @@ class MySQLConnector(Connector):
                 ) from e
         return properties.get("port", _DEFAULT_PORT)
 
-    def _validate_output_schema(self, output_schema: Schema | None) -> None:
+    def _validate_output_schema(self, output_schema: Schema | None) -> Schema:
         """Validate the output schema.
 
         Args:
             output_schema: Schema to validate
+
+        Returns:
+            The validated schema (or default if none provided)
 
         Raises:
             ConnectorConfigError: If schema is invalid or unsupported
 
         """
         if not output_schema:
-            raise ConnectorConfigError(
-                "No schema provided for data extraction. Please specify a valid WCT schema."
-            )
+            logger.warning("No schema provided, using default schema")
+            output_schema = _SUPPORTED_OUTPUT_SCHEMAS[0]
 
-        if output_schema.name not in _SUPPORTED_OUTPUT_SCHEMAS:
+        supported_schema_names = [schema.name for schema in _SUPPORTED_OUTPUT_SCHEMAS]
+        if output_schema.name not in supported_schema_names:
             raise ConnectorConfigError(
                 f"Unsupported output schema: {output_schema.name}. "
-                f"Supported schemas: {list(_SUPPORTED_OUTPUT_SCHEMAS.keys())}"
+                f"Supported schemas: {supported_schema_names}"
             )
+
+        return output_schema
 
     def _extract_table_cell_data(
         self, table_info: dict[str, Any]
