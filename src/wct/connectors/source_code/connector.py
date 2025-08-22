@@ -14,6 +14,8 @@ from wct.connectors.base import (
     ConnectorExtractionError,
 )
 from wct.connectors.filesystem import FilesystemConnector
+from wct.connectors.filesystem.config import FilesystemConnectorConfig
+from wct.connectors.source_code.config import SourceCodeConnectorConfig
 from wct.connectors.source_code.extractors import (
     ClassExtractor,
     FunctionExtractor,
@@ -28,9 +30,6 @@ logger = logging.getLogger(__name__)
 
 # Constants
 _DEFAULT_SCHEMA_VERSION = "1.0.0"
-_DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-_DEFAULT_MAX_FILES = 4000
-_DEFAULT_FILE_PATTERNS = ["**/*"]
 _PARSER_VERSION = "tree-sitter-languages-1.15.0+"
 
 _SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
@@ -66,45 +65,31 @@ class SourceCodeConnector(Connector):
     interactions, data collection patterns, and AI/ML usage indicators.
     """
 
-    def __init__(
-        self,
-        path: str | Path,
-        language: str | None = None,
-        file_patterns: list[str] | None = None,
-        max_file_size: int = _DEFAULT_MAX_FILE_SIZE,
-        max_files: int = _DEFAULT_MAX_FILES,
-    ) -> None:
-        """Initialise the source code connector.
+    def __init__(self, config: SourceCodeConnectorConfig) -> None:
+        """Initialise the source code connector with validated configuration.
 
         Args:
-            path: Path to source code file or directory
-            language: Programming language (auto-detected if None)
-            file_patterns: Glob patterns for file inclusion/exclusion
-            max_file_size: Skip files larger than this size (bytes)
-            max_files: Maximum number of files to process (default: 4000)
+            config: Validated source code connector configuration
 
         """
-        self.path = Path(path)
-        self.language = language
-        self.file_patterns = file_patterns or _DEFAULT_FILE_PATTERNS
-        self.max_file_size = max_file_size
-        self.max_files = max_files
-
-        if not self.path.exists():
-            raise ConnectorConfigError(f"Path does not exist: {self.path}")
+        self.config = config
 
         # Create filesystem connector for file collection with common exclusions
-        self.file_collector = FilesystemConnector(
-            path=path,
-            exclude_patterns=_COMMON_EXCLUSIONS,
-            max_files=max_files,
-            errors="strict",  # Skip binary files
+        filesystem_config = FilesystemConnectorConfig.from_properties(
+            {
+                "path": str(config.path),
+                "exclude_patterns": _COMMON_EXCLUSIONS,
+                "max_files": config.max_files,
+                "errors": "strict",  # Skip binary files
+            }
         )
+        self.file_collector = FilesystemConnector(filesystem_config)
 
         # Initialise parser
-        if self.path.is_file():
+        if self.config.path.is_file():
             detected_language = (
-                language or SourceCodeParser().detect_language_from_file(self.path)
+                config.language
+                or SourceCodeParser().detect_language_from_file(self.config.path)
             )
             self.parser = SourceCodeParser(detected_language)
         else:
@@ -143,17 +128,8 @@ class SourceCodeConnector(Connector):
             ConnectorConfigError: If required properties are missing.
 
         """
-        path = properties.get("path")
-        if not path:
-            raise ConnectorConfigError("path property is required")
-
-        return cls(
-            path=path,
-            language=properties.get("language"),
-            file_patterns=properties.get("file_patterns"),
-            max_file_size=properties.get("max_file_size", _DEFAULT_MAX_FILE_SIZE),
-            max_files=properties.get("max_files", _DEFAULT_MAX_FILES),
-        )
+        config = SourceCodeConnectorConfig.from_properties(properties)
+        return cls(config)
 
     @override
     def extract(
@@ -177,7 +153,7 @@ class SourceCodeConnector(Connector):
             analysis_data = self._analyse_source_code()
 
             message = Message(
-                id=f"Source code analysis from {self.path.name}",
+                id=f"Source code analysis from {self.config.path.name}",
                 content=analysis_data,
                 schema=output_schema,
             )
@@ -186,9 +162,9 @@ class SourceCodeConnector(Connector):
             return message
 
         except Exception as e:
-            logger.error(f"Failed to extract from source code {self.path}: {e}")
+            logger.error(f"Failed to extract from source code {self.config.path}: {e}")
             raise ConnectorExtractionError(
-                f"Failed to analyse source code {self.path}: {e}"
+                f"Failed to analyse source code {self.config.path}: {e}"
             ) from e
 
     def _validate_and_get_schema(self, output_schema: Schema | None) -> Schema:
@@ -224,17 +200,21 @@ class SourceCodeConnector(Connector):
             Dictionary containing analysis results in schema format
 
         """
-        if self.path.is_file():
-            files_data, total_files, total_lines = self._analyse_single_file(self.path)
+        if self.config.path.is_file():
+            files_data, total_files, total_lines = self._analyse_single_file(
+                self.config.path
+            )
         else:
-            files_data, total_files, total_lines = self._analyse_directory(self.path)
+            files_data, total_files, total_lines = self._analyse_directory(
+                self.config.path
+            )
 
         return {
             "schemaVersion": _DEFAULT_SCHEMA_VERSION,
-            "name": f"source_code_analysis_{self.path.name}",
-            "description": f"Source code analysis of {self.path}",
-            "language": self.language or "auto-detected",
-            "source": str(self.path),
+            "name": f"source_code_analysis_{self.config.path.name}",
+            "description": f"Source code analysis of {self.config.path}",
+            "language": self.config.language or "auto-detected",
+            "source": str(self.config.path),
             "metadata": {
                 "total_files": total_files,
                 "total_lines": total_lines,
@@ -258,7 +238,7 @@ class SourceCodeConnector(Connector):
         """
         try:
             # Check file size
-            if file_path.stat().st_size > self.max_file_size:
+            if file_path.stat().st_size > self.config.max_file_size:
                 logger.warning(f"Skipping large file: {file_path}")
                 return [], 0, 0
 
@@ -341,7 +321,7 @@ class SourceCodeConnector(Connector):
             return False
 
         # Apply file pattern matching if specified (inclusion patterns)
-        if self.file_patterns != _DEFAULT_FILE_PATTERNS:
+        if self.config.file_patterns != ["**/*"]:
             return self._matches_inclusion_patterns(file_path)
 
         # No specific patterns, include all supported files
@@ -360,7 +340,7 @@ class SourceCodeConnector(Connector):
         return any(
             file_path.match(pattern)
             or file_path.name.endswith(pattern.replace("*", ""))
-            for pattern in self.file_patterns
+            for pattern in self.config.file_patterns
         )
 
     def _extract_file_data(
@@ -422,5 +402,7 @@ class SourceCodeConnector(Connector):
             String representation of relative path
 
         """
-        base_path = self.path.parent if self.path.is_file() else self.path
+        base_path = (
+            self.config.path.parent if self.config.path.is_file() else self.config.path
+        )
         return str(file_path.relative_to(base_path))
