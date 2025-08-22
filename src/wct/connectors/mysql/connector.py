@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 # Constants
 _CONNECTOR_NAME = "mysql"
-_DEFAULT_SCHEMA_VERSION = "1.0.0"
 
 # SQL Queries
 _TABLES_QUERY = """
@@ -341,7 +340,7 @@ class MySQLConnector(Connector):
             data_items.extend(table_data_items)
 
         return {
-            "schemaVersion": _DEFAULT_SCHEMA_VERSION,
+            "schemaVersion": schema.version,
             "name": f"mysql_text_from_{self.config.database}",
             "description": f"Text content extracted from MySQL database: {self.config.database}",
             "contentEncoding": "utf-8",

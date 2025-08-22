@@ -32,9 +32,6 @@
         "analysis_timestamp": {
           "type": "string",
           "format": "date-time"
-        },
-        "parser_version": {
-          "type": "string"
         }
       },
       "additionalProperties": true
