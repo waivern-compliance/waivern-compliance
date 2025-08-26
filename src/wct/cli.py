@@ -73,8 +73,8 @@ class OutputFormatter:
             show_header=True,
             header_style="bold magenta",
         )
-        table.add_column("Analysis Name", style="cyan", no_wrap=True)
-        table.add_column("Analysis Description", style="white", max_width=40)
+        table.add_column("Analysis", style="cyan", no_wrap=True)
+        table.add_column("Description", style="white", max_width=40)
         table.add_column("Status", style="green")
         table.add_column("Input Schema", style="blue")
         table.add_column("Output Schema", style="blue")
