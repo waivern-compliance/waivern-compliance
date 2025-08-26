@@ -119,6 +119,44 @@ class TestAnalysisResultToDictBehaviour:
         assert result_dict["metadata"] == {}
         assert result_dict["success"] is True
 
+    def test_analysis_result_with_contact_to_dict(self) -> None:
+        """Test that AnalysisResult with contact converts to dict correctly."""
+        result = AnalysisResult(
+            analysis_name="Contact Test Analysis",
+            analysis_description="Analysis testing contact property",
+            input_schema="standard_input",
+            output_schema="personal_data_finding",
+            data={"findings": [{"pattern": "email", "value": "test@example.com"}]},
+            metadata={"version": "1.0"},
+            contact="Jane Austin <jane.austin@company.com>",
+            success=True,
+        )
+
+        result_dict = result.to_dict()
+
+        assert result_dict["contact"] == "Jane Austin <jane.austin@company.com>"
+        assert result_dict["analysis_name"] == "Contact Test Analysis"
+        assert result_dict["success"] is True
+
+    def test_analysis_result_without_contact_to_dict(self) -> None:
+        """Test that AnalysisResult without contact includes None in dict."""
+        result = AnalysisResult(
+            analysis_name="No Contact Test Analysis",
+            analysis_description="Analysis testing no contact property",
+            input_schema="standard_input",
+            output_schema="personal_data_finding",
+            data={"findings": []},
+            metadata={"version": "1.0"},
+            success=True,
+        )
+
+        result_dict = result.to_dict()
+
+        assert "contact" in result_dict
+        assert result_dict["contact"] is None
+        assert result_dict["analysis_name"] == "No Contact Test Analysis"
+        assert result_dict["success"] is True
+
 
 class TestAnalysisResultsExporterSaveToJsonBehaviour:
     """Test AnalysisResultsExporter save_to_json() method behaviour."""
@@ -309,6 +347,130 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
             assert (
                 result_data["metadata"]["description"] == "Análisis de datos personales"
             )
+
+    def test_save_includes_runbook_contact_in_metadata(self) -> None:
+        """Test that JSON export includes runbook contact in metadata when runbook is loaded."""
+        result = AnalysisResult(
+            analysis_name="Test Analysis",
+            analysis_description="Test analysis for runbook contact metadata",
+            input_schema="standard_input",
+            output_schema="personal_data_finding",
+            data={"findings": []},
+            metadata={},
+            success=True,
+        )
+
+        # Create a runbook YAML content with contact
+        runbook_content = """
+name: "Test Runbook with Contact"
+description: "Test runbook"
+contact: "Runbook Manager <runbook@company.com>"
+connectors:
+  - name: test_connector
+    type: filesystem
+    properties:
+      path: ./test
+analysers:
+  - name: test_analyser
+    type: personal_data_analyser
+    properties: {}
+execution:
+  - name: Test Step
+    description: Test step
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create a runbook file
+            runbook_path = Path(temp_dir) / "test_runbook.yaml"
+            with open(runbook_path, "w") as f:
+                f.write(runbook_content)
+
+            output_path = Path(temp_dir) / "results_with_runbook_contact.json"
+
+            AnalysisResultsExporter.save_to_json(
+                results=[result], output_path=output_path, runbook_path=runbook_path
+            )
+
+            with open(output_path, encoding="utf-8") as f:
+                saved_data = json.load(f)
+
+            # Should include runbook contact in export metadata
+            assert "export_metadata" in saved_data
+            assert "runbook_contact" in saved_data["export_metadata"]
+            assert (
+                saved_data["export_metadata"]["runbook_contact"]
+                == "Runbook Manager <runbook@company.com>"
+            )
+
+    def test_save_handles_missing_runbook_contact(self) -> None:
+        """Test export metadata when runbook has no contact property."""
+        result = AnalysisResult(
+            analysis_name="Test Analysis",
+            analysis_description="Test analysis for missing runbook contact",
+            input_schema="standard_input",
+            output_schema="personal_data_finding",
+            data={"findings": []},
+            metadata={},
+            success=True,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "results_no_runbook_contact.json"
+
+            AnalysisResultsExporter.save_to_json(
+                results=[result], output_path=output_path
+            )
+
+            with open(output_path, encoding="utf-8") as f:
+                saved_data = json.load(f)
+
+            # Should include runbook_contact field as None when no runbook provided
+            assert "export_metadata" in saved_data
+            assert "runbook_contact" in saved_data["export_metadata"]
+            assert saved_data["export_metadata"]["runbook_contact"] is None
+
+    def test_save_includes_step_contacts_in_results(self) -> None:
+        """Test that individual results include contact from AnalysisResult objects."""
+        results = [
+            AnalysisResult(
+                analysis_name="Analysis with Contact",
+                analysis_description="First analysis with contact info",
+                input_schema="standard_input",
+                output_schema="personal_data_finding",
+                data={"findings": []},
+                metadata={},
+                contact="Alice Smith <alice@company.com>",
+                success=True,
+            ),
+            AnalysisResult(
+                analysis_name="Analysis without Contact",
+                analysis_description="Second analysis without contact info",
+                input_schema="standard_input",
+                output_schema="personal_data_finding",
+                data={"findings": []},
+                metadata={},
+                success=True,
+            ),
+        ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "results_with_step_contacts.json"
+
+            AnalysisResultsExporter.save_to_json(results, output_path)
+
+            with open(output_path, encoding="utf-8") as f:
+                saved_data = json.load(f)
+
+            # Check that results include contact information
+            assert len(saved_data["results"]) == 2
+            assert (
+                saved_data["results"][0]["contact"] == "Alice Smith <alice@company.com>"
+            )
+            assert saved_data["results"][1]["contact"] is None
 
 
 class TestAnalysisResultsExporterGetSummaryStatsBehaviour:

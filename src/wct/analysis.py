@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from wct.organisation import OrganisationConfig, OrganisationLoader
+from wct.runbook import RunbookLoader
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +24,7 @@ class AnalysisResult:
     data: dict[str, Any]
     metadata: dict[str, Any]
     success: bool
+    contact: str | None = None
     error_message: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -57,6 +59,9 @@ class AnalysisResultsExporter:
             IOError: If the file cannot be written
 
         """
+        # Extract runbook contact if runbook_path is provided
+        runbook_contact = AnalysisResultsExporter._extract_runbook_contact(runbook_path)
+
         # Create comprehensive output structure
         export_metadata = {
             "timestamp": datetime.now().isoformat(),
@@ -64,6 +69,7 @@ class AnalysisResultsExporter:
             "successful_results": sum(1 for r in results if r.success),
             "failed_results": sum(1 for r in results if not r.success),
             "runbook_path": str(runbook_path) if runbook_path else None,
+            "runbook_contact": runbook_contact,
             "export_format_version": "1.0.0",
         }
 
@@ -116,6 +122,27 @@ class AnalysisResultsExporter:
                 "data controller information required for GDPR Article 30(1)(a) compliance. "
                 "Consider adding config/organisation.yaml to your project."
             )
+
+    @staticmethod
+    def _extract_runbook_contact(runbook_path: Path | None) -> str | None:
+        """Extract contact information from runbook file.
+
+        Args:
+            runbook_path: Path to runbook file, or None
+
+        Returns:
+            Contact string if found in runbook, None otherwise
+
+        """
+        if not runbook_path:
+            return None
+
+        try:
+            runbook = RunbookLoader.load(runbook_path)
+            return runbook.contact
+        except Exception:
+            # If runbook can't be loaded, contact remains None
+            return None
 
     @staticmethod
     def get_summary_stats(results: list[AnalysisResult]) -> dict[str, Any]:

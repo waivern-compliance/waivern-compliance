@@ -136,6 +136,71 @@ execution:
         finally:
             duplicate_path.unlink()
 
+    def test_load_runbook_with_contact_property(self) -> None:
+        """Test loading runbook with optional contact property."""
+        runbook_with_contact = """
+name: Contact Test Runbook
+description: Testing runbook with contact property
+contact: "Paul Smith <paul.smith@company.com>"
+connectors:
+  - name: test_connector
+    type: filesystem
+    properties:
+      path: ./test
+analysers:
+  - name: test_analyser
+    type: personal_data_analyser
+    properties: {}
+execution:
+  - name: "Contact test execution"
+    description: "Testing runbook contact loading"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+"""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(runbook_with_contact)
+            contact_path = Path(f.name)
+
+        try:
+            runbook = RunbookLoader.load(contact_path)
+            assert runbook.contact == "Paul Smith <paul.smith@company.com>"
+        finally:
+            contact_path.unlink()
+
+    def test_load_runbook_without_contact_defaults_none(self) -> None:
+        """Test loading runbook without contact defaults to None."""
+        runbook_without_contact = """
+name: No Contact Test Runbook
+description: Testing runbook without contact property
+connectors:
+  - name: test_connector
+    type: filesystem
+    properties:
+      path: ./test
+analysers:
+  - name: test_analyser
+    type: personal_data_analyser
+    properties: {}
+execution:
+  - name: "No contact test execution"
+    description: "Testing runbook without contact"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+"""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(runbook_without_contact)
+            no_contact_path = Path(f.name)
+
+        try:
+            runbook = RunbookLoader.load(no_contact_path)
+            assert runbook.contact is None
+        finally:
+            no_contact_path.unlink()
+
 
 class TestRunbookValidation:
     """Tests for custom runbook validation logic (not basic Pydantic validation)."""
@@ -453,6 +518,111 @@ class TestRunbookValidation:
         errors = exc_info.value.errors()
         assert any("unknown analyser" in error["msg"] for error in errors)
 
+    def test_execution_step_with_contact_property(self) -> None:
+        """Test that execution steps can have optional contact property."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "test_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "test_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "name": "Step with contact",
+                    "description": "Testing execution step with contact",
+                    "contact": "Jane Austin <jane.austin@company.com>",
+                    "connector": "test_connector",
+                    "analyser": "test_analyser",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
+                }
+            ],
+        }
+
+        # Should validate successfully
+        runbook = Runbook.model_validate(runbook_data)
+        assert runbook.execution[0].contact == "Jane Austin <jane.austin@company.com>"
+
+    def test_execution_step_without_contact_defaults_none(self) -> None:
+        """Test that execution steps without contact default to None."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "test_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "test_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "name": "Step without contact",
+                    "description": "Testing execution step without contact",
+                    "connector": "test_connector",
+                    "analyser": "test_analyser",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
+                }
+            ],
+        }
+
+        # Should validate successfully
+        runbook = Runbook.model_validate(runbook_data)
+        assert runbook.execution[0].contact is None
+
+    def test_execution_steps_mixed_contact_scenarios(self) -> None:
+        """Test runbook with mix of execution steps with and without contact."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "test_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "test_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "name": "Step with contact",
+                    "description": "Step that has contact information",
+                    "contact": "Alice Smith <alice@company.com>",
+                    "connector": "test_connector",
+                    "analyser": "test_analyser",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
+                },
+                {
+                    "name": "Step without contact",
+                    "description": "Step that has no contact information",
+                    "connector": "test_connector",
+                    "analyser": "test_analyser",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
+                },
+            ],
+        }
+
+        # Should validate successfully
+        runbook = Runbook.model_validate(runbook_data)
+        assert len(runbook.execution) == 2
+        assert runbook.execution[0].contact == "Alice Smith <alice@company.com>"
+        assert runbook.execution[1].contact is None
+
 
 class TestRunbookSummary:
     """Tests for RunbookSummary business logic."""
@@ -518,6 +688,7 @@ class TestRunbookIntegration:
         runbook_data = {
             "name": "Sample Integration Test",
             "description": "Testing Pydantic validation with realistic data",
+            "contact": "Integration Test Manager <integration@company.com>",
             "connectors": [
                 {
                     "name": "filesystem_connector",
@@ -575,6 +746,7 @@ class TestRunbookIntegration:
                 {
                     "name": "Filesystem personal data analysis",
                     "description": "Comprehensive analysis of filesystem for personal data patterns",
+                    "contact": "Data Analysis Team <data-analysis@company.com>",
                     "connector": "filesystem_connector",
                     "analyser": "personal_data_detector",
                     "input_schema": "standard_input",
@@ -607,6 +779,14 @@ class TestRunbookIntegration:
         assert len(runbook.connectors) == 2
         assert len(runbook.analysers) == 2
         assert len(runbook.execution) == 2
+
+        # Verify contact properties are preserved
+        assert runbook.contact == "Integration Test Manager <integration@company.com>"
+        assert (
+            runbook.execution[0].contact
+            == "Data Analysis Team <data-analysis@company.com>"
+        )
+        assert runbook.execution[1].contact is None  # Second step has no contact
 
         # Verify nested properties are preserved
         fs_connector = runbook.connectors[0]

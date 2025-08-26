@@ -234,6 +234,7 @@ class Executor:
             output_schema=output_schema.name,
             data=result_message.content,
             metadata=analyser_config.metadata,
+            contact=step.contact,
             success=True,
         )
 
@@ -248,6 +249,7 @@ class Executor:
             error_message=str(error),
             input_schema=step.input_schema,
             output_schema=step.output_schema,
+            contact=step.contact,
         )
 
     def _create_error_result(
@@ -258,6 +260,7 @@ class Executor:
         input_schema: str = "unknown",
         output_schema: str = "unknown",
         metadata: dict[str, Any] | None = None,
+        contact: str | None = None,
     ) -> AnalysisResult:
         """Create an error result for a failed analysis execution.
 
@@ -268,6 +271,7 @@ class Executor:
             input_schema: Input schema name (if known)
             output_schema: Output schema name (if known)
             metadata: Optional metadata
+            contact: Optional contact information for the analysis step
 
         Returns:
             Analysis result indicating failure
@@ -280,6 +284,7 @@ class Executor:
             output_schema=output_schema,
             data={},
             metadata=metadata or {},
+            contact=contact,
             success=False,
             error_message=error_message,
         )
