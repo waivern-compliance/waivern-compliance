@@ -1,0 +1,214 @@
+{
+  "system_metadata": {
+    "export_timestamp": "2024-01-15T14:30:45.123Z",
+    "export_version": "2.1.0",
+    "total_records": 156,
+    "data_classification": "MIXED_PERSONAL_TECHNICAL"
+  },
+  "customer_support_tickets": [
+    {
+      "ticket_id": "SUP-2024-0001",
+      "status": "resolved",
+      "created_at": "2024-01-10T09:15:30Z",
+      "category": "account_issue",
+      "customer_data": {
+        "name": "Rachel Green",
+        "email": "rachel.green@example.com",
+        "phone": "+1-555-234-5678",
+        "account_id": "CUST-789123"
+      },
+      "issue_description": "Customer reported login issues with account. Error code AUTH_FAIL_001 in logs.",
+      "technical_details": {
+        "error_code": "AUTH_FAIL_001",
+        "session_id": "sess_abc123xyz",
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0 Chrome/120.0"
+      },
+      "resolution": "Reset password and cleared session cache",
+      "agent_notes": "Customer confirmed email rachel.green@example.com is correct. Phone verification completed."
+    },
+    {
+      "ticket_id": "SUP-2024-0002",
+      "status": "in_progress",
+      "created_at": "2024-01-12T14:22:15Z",
+      "category": "billing_inquiry",
+      "customer_data": {
+        "name": "James Wilson",
+        "email": "j.wilson@businessdomain.com",
+        "phone": "020 7946 0123",
+        "company": "Wilson Consulting Ltd"
+      },
+      "issue_description": "Billing question about invoice INV-2024-001234",
+      "technical_reference": {
+        "invoice_api": "/api/v2/invoices/INV-2024-001234",
+        "payment_gateway": "stripe_webhook_endpoint",
+        "database_query": "SELECT * FROM invoices WHERE customer_email='j.wilson@businessdomain.com'"
+      }
+    }
+  ],
+  "system_logs": [
+    {
+      "timestamp": "2024-01-15T10:30:15Z",
+      "level": "INFO",
+      "component": "email_service",
+      "message": "Email sent successfully to customer@domain.com",
+      "metadata": {
+        "recipient": "sarah.mitchell@realemail.co.uk",
+        "template": "welcome_email_v2",
+        "delivery_status": "delivered"
+      }
+    },
+    {
+      "timestamp": "2024-01-15T10:31:42Z",
+      "level": "ERROR",
+      "component": "validation_service",
+      "message": "Phone number validation failed for input: invalid_phone_format",
+      "technical_data": {
+        "input_pattern": "phone_validation_regex",
+        "expected_format": "\\+?[1-9]\\d{1,14}",
+        "test_cases": [
+          "test@example.com",
+          "555-0100",
+          "user@localhost.test"
+        ]
+      }
+    },
+    {
+      "timestamp": "2024-01-15T10:32:18Z",
+      "level": "WARN",
+      "component": "gdpr_compliance",
+      "message": "Personal data detected in uploaded file",
+      "personal_data_found": {
+        "email_addresses": [
+          "david.jones@realcompany.com",
+          "marketing@company-domain.co.uk"
+        ],
+        "phone_numbers": [
+          "+44 161 234 5678"
+        ],
+        "addresses": [
+          "15 Manchester Road, Liverpool L1 5AB"
+        ]
+      },
+      "false_positive_patterns": [
+        "admin@localhost:3306",
+        "smtp.server.com:587",
+        "test_email@validation.pattern"
+      ]
+    }
+  ],
+  "application_config": {
+    "database": {
+      "host": "db.internal.company.com",
+      "port": 3306,
+      "username": "app_service@localhost",
+      "connection_string": "mysql://app_service@db.internal.company.com:3306/production"
+    },
+    "email_service": {
+      "smtp_server": "smtp.company.com",
+      "port": 587,
+      "from_address": "noreply@company.com",
+      "support_email": "help@company.com"
+    },
+    "api_endpoints": {
+      "user_validation": "/api/users/validate/email@pattern",
+      "phone_verification": "/api/verify/phone/{phone_format}",
+      "address_lookup": "/api/addresses/search?postcode={pattern}"
+    }
+  },
+  "test_data_samples": [
+    {
+      "description": "Valid customer data for testing",
+      "sample_customer": {
+        "name": "Test Customer",
+        "email": "test.customer@testdomain.com",
+        "phone": "555-TEST-01",
+        "address": "123 Test Street, Test City"
+      },
+      "note": "This is synthetic test data, not real personal information"
+    },
+    {
+      "description": "Validation patterns for development",
+      "email_patterns": [
+        "user@example.com",
+        "admin@localhost",
+        "service@internal.system"
+      ],
+      "phone_patterns": [
+        "555-0100",
+        "000-000-0000",
+        "+1-555-TEST"
+      ]
+    }
+  ],
+  "real_customer_feedback": [
+    {
+      "feedback_id": "FB-001",
+      "customer": {
+        "name": "Lisa Chen",
+        "email": "lisa.chen.feedback@gmail.com",
+        "submitted_date": "2024-01-14"
+      },
+      "message": "Great service! My account manager Sarah Johnson (s.johnson@company.com) was very helpful.",
+      "rating": 5,
+      "contact_preference": "email"
+    },
+    {
+      "feedback_id": "FB-002",
+      "customer": {
+        "name": "Anonymous User",
+        "email": "privacy.concerned@protonmail.com",
+        "submitted_date": "2024-01-13"
+      },
+      "message": "Please ensure my personal data is handled according to GDPR. Contact me at the provided email if needed.",
+      "rating": 3,
+      "privacy_request": "Please review data retention policy"
+    }
+  ],
+  "marketing_analytics": {
+    "campaign_data": {
+      "campaign_id": "CAMP-2024-001",
+      "target_demographics": {
+        "age_groups": ["25-34", "35-44"],
+        "locations": ["London", "Manchester", "Birmingham"],
+        "interests": ["technology", "business"]
+      }
+    },
+    "email_performance": {
+      "total_sent": 15000,
+      "delivery_rate": 98.5,
+      "open_rate": 24.3,
+      "click_rate": 3.7,
+      "sample_domains": [
+        "gmail.com",
+        "outlook.com",
+        "company-domain.co.uk",
+        "business-email.com"
+      ]
+    },
+    "anonymised_metrics": {
+      "user_locations": [
+        {"city": "London", "count": 1234},
+        {"city": "Manchester", "count": 567},
+        {"city": "Birmingham", "count": 432}
+      ],
+      "device_types": [
+        {"type": "mobile", "percentage": 67.5},
+        {"type": "desktop", "percentage": 32.5}
+      ]
+    }
+  },
+  "development_notes": {
+    "todo_items": [
+      "Update email validation regex to support international domains",
+      "Implement phone number formatting for different countries",
+      "Add address validation API for UK postcodes",
+      "Review GDPR compliance for user data export feature"
+    ],
+    "api_examples": [
+      "POST /api/customers -d '{\"email\": \"new.customer@domain.com\"}'",
+      "GET /api/customers/search?phone=+44-20-7946-0958",
+      "PUT /api/customers/123 -d '{\"address\": \"Updated address\"}'"
+    ]
+  }
+}

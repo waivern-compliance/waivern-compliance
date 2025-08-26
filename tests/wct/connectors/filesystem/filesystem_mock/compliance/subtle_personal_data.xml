@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DataExport xmlns="http://company.com/schemas/data-export"
+           version="2.1"
+           generatedAt="2024-01-15T14:30:45Z">
+
+  <!-- SUBTLE PERSONAL DATA PATTERNS - HARDER TO DETECT -->
+
+  <MetaData>
+    <ExportReason>Compliance audit - subtle PII detection testing</ExportReason>
+    <DataClassification>Contains embedded personal identifiers</DataClassification>
+    <ReviewRequired>True - manual review needed for embedded data</ReviewRequired>
+  </MetaData>
+
+  <!-- Base64 encoded email address: amFuZS5kb2VAY29tcGFueS5jb20= -->
+  <EncodedData format="base64">amFuZS5kb2VAY29tcGFueS5jb20=</EncodedData>
+
+  <!-- URL encoded phone number: %2B44%2020%207946%200958 -->
+  <URLParameter>redirect_url=https://system.com/verify?phone=%2B44%2020%207946%200958</URLParameter>
+
+  <UserReferences>
+    <!-- Subtle reference patterns -->
+    <Reference id="usr_sarah_j_1987" type="internal">Employee initials with birth year</Reference>
+    <Reference id="john.smith.dept.hr" type="department">Username pattern</Reference>
+    <Reference id="emp_123456_dob_150387" type="payroll">Employee ID with embedded DOB</Reference>
+  </UserReferences>
+
+  <DatabaseReferences>
+    <!-- SQL queries with embedded personal data -->
+    <Query purpose="user_lookup">
+      SELECT user_id FROM users WHERE email_hash = 'a1b2c3d4e5f6'
+      -- Original: lisa.wilson@company.com
+    </Query>
+
+    <Query purpose="phone_verification">
+      UPDATE contacts SET verified = 1 WHERE phone_digits = '07700900123'
+      -- Represents: +44 7700 900123
+    </Query>
+
+    <LogEntry timestamp="2024-01-15 10:30:45">
+      User authentication successful for session token: usr.emma.thompson.20240115
+    </LogEntry>
+  </DatabaseReferences>
+
+  <ConfigurationValues>
+    <!-- Configuration with personal data in unexpected places -->
+    <Setting name="default_contact_admin">Contact: admin.michael.chen@company.com for issues</Setting>
+    <Setting name="emergency_number">Emergency contact: +44-20-7946-0958</Setting>
+    <Setting name="sample_data_path">/data/samples/customer.jane.doe.profile.json</Setting>
+  </ConfigurationValues>
+
+  <CommentedOutCode>
+    <!--
+    Legacy code with personal data in comments
+    TODO: Remove hardcoded email: support@company.com
+    DEBUG: Test with phone +1-555-234-5678
+    NOTE: Sarah's extension is 1234, email: s.mitchell@company.com
+    -->
+  </CommentedOutCode>
+
+  <ErrorLogs>
+    <Error code="AUTH_001">
+      <Message>Authentication failed for user identifier: user_david_wilson_19850722</Message>
+      <Context>Login attempt from IP associated with previous user: jennifer.adams@email.com</Context>
+    </Error>
+
+    <Error code="VALIDATION_002">
+      <Message>Phone format validation error</Message>
+      <Details>Input received: 'home: 020 7946 0958, mobile: 07700 123456'</Details>
+      <UserContext>Validation failed for profile update - user contact: m.johnson@company.co.uk</UserContext>
+    </Error>
+  </ErrorLogs>
+
+  <FilePaths>
+    <!-- File paths containing personal identifiers -->
+    <Path>/var/backups/users/john.smith.backup.2024.tar.gz</Path>
+    <Path>/tmp/exports/employee_data_sarah_jones_20240115.csv</Path>
+    <Path>/logs/authentication/login_failures_emma_t_wilson.log</Path>
+    <Path>/uploads/documents/id_scan_david_chen_passport.pdf</Path>
+  </FilePaths>
+
+  <APICallLogs>
+    <!-- API calls with personal data in parameters -->
+    <APICall method="GET" timestamp="2024-01-15T10:30:15Z">
+      <URL>/api/v1/users/profile?email=hidden.email@company.com&amp;format=json</URL>
+      <Headers>
+        <Header name="X-User-Context">employee_lisa_rodriguez_hr_manager</Header>
+        <Header name="X-Request-ID">req_user_michael_2024_01_15_1030</Header>
+      </Headers>
+    </APICall>
+
+    <APICall method="POST" timestamp="2024-01-15T10:31:22Z">
+      <URL>/api/v1/notifications/send</URL>
+      <Body>
+        {"recipient_identifier": "emp_789_jenny_smith", "phone_last_four": "4567"}
+      </Body>
+    </APICall>
+  </APICallLogs>
+
+  <CacheKeys>
+    <!-- Cache keys with embedded personal information -->
+    <Key>user_session_john_doe_20240115_1030</Key>
+    <Key>profile_cache_sarah_wilson_profile_data</Key>
+    <Key>auth_token_lisa_chen_expires_20240116</Key>
+    <Key>phone_verify_07700123456_pending</Key>
+  </CacheKeys>
+
+  <TemplateVariables>
+    <!-- Template variables with personal data -->
+    <Variable name="customer_greeting">Hello {{customer_name_emma_thompson}}</Variable>
+    <Variable name="contact_info">For support, contact {{agent_name_david_smith}} at {{agent_email_d.smith@company.com}}</Variable>
+    <Variable name="appointment_reminder">Your appointment with Dr. {{doctor_name_sarah_jones}} is confirmed</Variable>
+  </TemplateVariables>
+
+  <HashReferences>
+    <!-- Hashed data with comments revealing original -->
+    <Hash algorithm="sha256" value="a9b8c7d6e5f4">
+      <!-- Original value: john.wilson@company.com -->
+    </Hash>
+    <Hash algorithm="md5" value="1a2b3c4d5e6f">
+      <!-- Represents phone: +44 20 7946 0958 -->
+    </Hash>
+  </HashReferences>
+
+  <EmbeddedJSON>
+    <!-- JSON with subtle personal data -->
+    <![CDATA[
+    {
+      "system_config": {
+        "admin_contact": "For urgent issues, call Sarah on 020-7946-0958",
+        "backup_notification": "Daily backups sent to: system.admin.michael.chen@company.co.uk",
+        "error_reporting": "Critical errors forwarded to: on-call.engineer.lisa.wilson@company.com"
+      },
+      "user_defaults": {
+        "sample_profile": {
+          "display_name": "example_user_emma_j",
+          "contact_hint": "Use format: firstname.lastname@company.domain"
+        }
+      }
+    }
+    ]]>
+  </EmbeddedJSON>
+
+  <RegularExpressions>
+    <!-- Regex patterns that might contain test personal data -->
+    <Pattern purpose="email_validation">
+      Test pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+      Example match: test.email.sarah.smith@domain.com
+    </Pattern>
+
+    <Pattern purpose="phone_validation">
+      UK phone pattern: ^\+44\s?[1-9]\d{8,9}$
+      Test case: +44 20 7946 0958 (should match)
+    </Pattern>
+  </RegularExpressions>
+
+  <SystemMessages>
+    <Message level="INFO">
+      Profile update completed for user reference: emp.david.jones.engineering.2024
+    </Message>
+
+    <Message level="WARN">
+      Unusual login pattern detected for account holder: lisa.adams@company-email.co.uk
+    </Message>
+
+    <Message level="ERROR">
+      Failed to send notification to emergency contact: +44-161-234-5678
+    </Message>
+  </SystemMessages>
+
+  <MetricData>
+    <!-- Metrics with embedded personal identifiers -->
+    <Metric name="user_activity" user_ref="u_sarah_m_1987" value="45" />
+    <Metric name="login_frequency" user_pattern="john.smith.pattern" value="12" />
+    <Metric name="data_access" user_context="employee_emma_wilson_hr" value="23" />
+  </MetricData>
+
+</DataExport>

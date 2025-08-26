@@ -1,0 +1,129 @@
+EMPLOYEE RECORDS - CONFIDENTIAL
+=====================================
+Document: HR-2024-001
+Classification: STRICTLY CONFIDENTIAL
+
+GENUINE PERSONAL DATA FOR COMPLIANCE TESTING:
+=============================================
+
+EMPLOYEE #1:
+Name: Sarah Michelle Johnson
+Email: sarah.johnson@company.com
+Personal Email: s.johnson.personal@gmail.com
+Phone: +44 20 7946 0958
+Mobile: 07700 900123
+Date of Birth: 15th March 1987
+National Insurance Number: AB123456C
+Address: 42 Baker Street, London, SW1A 1AA, United Kingdom
+Emergency Contact: Michael Johnson (Husband) - 07700 900456
+
+EMPLOYEE #2:
+Name: David Chen Wei
+Email: david.chen@company.com
+Phone: +1 (555) 234-5678
+DOB: 22/07/1985
+SSN: 123-45-6789
+Home Address: 1234 Maple Avenue, Springfield, IL 62701, USA
+Credit Card (Company): 4532-1234-5678-9012
+Bank Account: Royal Bank - Sort Code: 20-00-00, Account: 12345678
+
+EMPLOYEE #3:
+Name: Maria Gonzalez Rodriguez
+Email: maria.gonzalez@company.com
+Teléfono: +34 91 123 4567
+Fecha de Nacimiento: 03/11/1990
+DNI: 12345678Z
+Dirección: Calle Gran Vía, 123, 28013 Madrid, España
+IBAN: ES91 2100 0418 4502 0005 1332
+
+CUSTOMER DATA SAMPLES:
+=====================
+
+Customer ID: CUST-001
+Name: Emma Thompson-Williams
+Email: emma.t.williams@btinternet.com
+Phone: +44 161 234 5678
+Address: 15 Oxford Road, Manchester, M1 5QA
+Date of Birth: 1992-07-22
+Payment Method: **** **** **** 4321 (Expires: 05/2025)
+
+Customer ID: CUST-002
+Full Name: James Patrick O'Connor
+Contact: james.oconnor@yahoo.com
+Mobile: 087 123 4567 (Ireland)
+Home: 23 Grafton Street, Dublin 2, D02 X285, Ireland
+Born: 14 February 1988
+
+MEDICAL RECORDS (GDPR Special Category):
+=======================================
+Patient: Dr. Jennifer Smith
+Medical Record Number: MRN-789123
+Date of Birth: 05/08/1975
+Phone: 020 7123 4567
+Medical History: Type 2 Diabetes, Hypertension
+Insurance: NHS Number: 123 456 7890
+Next of Kin: Robert Smith (Brother) - 07700 123456
+
+FINANCIAL INFORMATION:
+=====================
+Account Holder: Alexandra Petrov
+IBAN: GB29 NWBK 6016 1331 9268 19
+BIC: NWBKGB2L
+Card Number: 5555-4444-3333-1111
+CVV: 123
+Expiry: 12/2026
+Annual Salary: £85,000
+
+CHILDREN'S DATA (GDPR Special Protection):
+=========================================
+Student Name: Oliver James Smith
+Age: 14
+School Email: o.smith@schoolemail.edu.uk
+Parent: Jennifer Smith
+Parent Phone: 07700 987654
+Home Address: 89 High Street, Cambridge, CB2 3EL
+
+BIOMETRIC DATA:
+==============
+Employee: Robert Anderson
+Fingerprint ID: FP-2024-0892
+Retina Scan: RS-2024-1445
+Voice Print: VP-2024-0334
+Photo ID: Stored in system as EMP-001.jpg
+
+SENSITIVE COMMUNICATIONS:
+========================
+From: hr-manager@company.com
+To: john.doe@company.com
+Subject: Disciplinary Action - CONFIDENTIAL
+Date: 2024-01-15
+
+Dear John,
+
+Following our investigation into the incident on 10th January, we need to discuss your employment status. Please contact me on my direct line 020 7123 9876.
+
+Your personal details on file:
+- Home: 15 Acacia Avenue, London N12 8HG
+- Mobile: 07890 123456
+- Emergency contact: Jane Doe (Wife) - 07890 654321
+
+This matter is strictly confidential.
+
+Best regards,
+Helen Williams
+HR Manager
+
+CONTRACTOR INFORMATION:
+======================
+Consultant: Dr. Michael O'Brien
+Company: Tech Solutions Ltd
+Personal Mobile: +353 87 123 4567
+Business Email: michael.obrien@techsolutions.ie
+Home Office: 45 Trinity College Green, Dublin 2
+Tax Reference: IE1234567T
+Bank Details: AIB Bank - IBAN: IE12 AIBK 9311 5212 3456 78
+
+---
+Document Last Modified: 2024-01-15 14:32:18
+Authorised by: Helen Williams, HR Director
+Review Date: 2024-07-15
