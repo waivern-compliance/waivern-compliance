@@ -45,6 +45,7 @@ This is a Python project using `uv` for dependency management. Key commands:
 - `uv run wct ls-connectors` - List available connectors
 - `uv run wct ls-analysers` - List available analysers
 - `uv run wct validate-runbook runbooks/<runbook.yaml>` - Validate a runbook
+- `uv run wct generate-schema` - Generate JSON Schema for IDE support and validation
 - `uv run wct test-llm` - Test LLM connectivity and configuration
 
 **Dependency Groups:**

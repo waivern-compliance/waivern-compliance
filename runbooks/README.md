@@ -47,6 +47,17 @@ When creating new runbooks for specific scenarios:
 3. Include appropriate metadata for compliance frameworks
 4. Document the purpose and expected outcomes
 
+### IDE Support for Runbook Creation
+
+For enhanced development experience with autocomplete, validation, and documentation:
+
+```bash
+# Generate JSON Schema for IDE support
+uv run wct generate-schema
+```
+
+This enables real-time validation and autocomplete in VS Code, PyCharm, and other IDEs. See [IDE Integration Guide](../docs/ide-integration.md) for setup instructions.
+
 ## Scenario Ideas
 
 Future runbooks could include:
