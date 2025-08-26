@@ -142,6 +142,17 @@ execution:
 - **End-to-end validation**: Full pipeline validation from runbook loading to analysis results
 - **Optional dependencies**: MySQL connector requires `uv sync --group mysql`, source code connector requires `uv sync --group source-code`
 
+## IDE Support
+
+WCT runbooks support JSON Schema validation for enhanced developer experience with real-time validation, autocomplete, documentation on hover, and structure guidance.
+
+```bash
+# Validate runbooks with enhanced IDE support
+uv run wct validate-runbook runbooks/my-runbook.yaml
+```
+
+📖 **Setup instructions**: [IDE Integration Guide](docs/ide-integration.md)
+
 
 ## Architecture
 
