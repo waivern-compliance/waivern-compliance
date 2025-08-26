@@ -20,6 +20,13 @@ connectors:
       file_patterns: ["**/*.php"]
       max_file_size: 10485760  # 10MB
       max_files: 30  # Allow up to 30 files
+  - name: "log_files"
+    type: "filesystem"
+    properties:
+      path: "./tests/wct/connectors/filesystem/filesystem_mock/logs"
+      exclude_patterns: []
+      max_files: 100
+      encoding: "utf-8"
 
 analysers:
   - name: "personal_data_analyser_for_mysql"
@@ -71,6 +78,42 @@ analysers:
       priority: "medium"
       description: "Identify data processing purposes from MySQL database content"
       compliance_frameworks: ["GDPR", "CCPA"]
+  - name: "personal_data_analyser_for_logs"
+    type: "personal_data_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "personal_data"
+        evidence_context_size: "large"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 50
+        llm_validation_mode: "conservative"  # More careful validation for log content
+    metadata:
+      priority: "high"
+      description: "Analyse log files for personally identifiable information using pattern matching"
+  - name: "processing_purpose_analyser_for_logs"
+    type: "processing_purpose_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "processing_purposes"
+        evidence_context_size: "medium"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 30
+        llm_validation_mode: "conservative"
+        confidence_threshold: 0.5
+    metadata:
+      priority: "medium"
+      description: "Identify data processing purposes and compliance frameworks from log file content"
+      compliance_frameworks: ["GDPR", "CCPA"]
 
 execution:
   - name: "Personal Data Detection in MySQL Database"
@@ -106,3 +149,24 @@ execution:
         - "processing_purpose_detection"
         - "service_integration_detection"
         - "business_logic_analysis"
+  - name: "Personal Data Detection in Log Files"
+    description: "Scan log files for personally identifiable information using pattern matching and context analysis"
+    connector: "log_files"
+    analyser: "personal_data_analyser_for_logs"
+    input_schema: "standard_input"
+    output_schema: "personal_data_finding"
+    context:
+      description: "Analyse log files for personal data collection and storage"
+      priority: "high"
+      analysis_type: "log_content_analysis"
+  - name: "Processing Purpose Analysis of Log Content"
+    description: "Identify data processing purposes and compliance frameworks from log file content and system activities"
+    connector: "log_files"
+    analyser: "processing_purpose_analyser_for_logs"
+    input_schema: "standard_input"
+    output_schema: "processing_purpose_finding"
+    context:
+      description: "Identify data processing purposes from log file content and system activities"
+      priority: "medium"
+      compliance_frameworks: ["GDPR", "CCPA"]
+      analysis_type: "log_content_analysis"
