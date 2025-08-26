@@ -22,7 +22,8 @@ class TestAnalysisResultToDictBehaviour:
     def test_successful_result_to_dict_structure(self) -> None:
         """Test that successful analysis result converts to correct dictionary structure."""
         result = AnalysisResult(
-            analyser_name="personal_data_analyser",
+            analysis_name="Personal Data Analysis",
+            analysis_description="Analysis for detecting personal data patterns",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": [{"pattern": "email", "value": "test@example.com"}]},
@@ -32,7 +33,7 @@ class TestAnalysisResultToDictBehaviour:
 
         result_dict = result.to_dict()
 
-        assert result_dict["analyser_name"] == "personal_data_analyser"
+        assert result_dict["analysis_name"] == "Personal Data Analysis"
         assert result_dict["input_schema"] == "standard_input"
         assert result_dict["output_schema"] == "personal_data_finding"
         assert result_dict["data"] == {
@@ -45,7 +46,8 @@ class TestAnalysisResultToDictBehaviour:
     def test_failed_result_to_dict_includes_error_message(self) -> None:
         """Test that failed analysis result includes error message in dictionary."""
         result = AnalysisResult(
-            analyser_name="processing_purpose_analyser",
+            analysis_name="Processing Purpose Analysis",
+            analysis_description="Analysis for identifying data processing purposes",
             input_schema="source_code",
             output_schema="processing_purpose_finding",
             data={},
@@ -84,7 +86,8 @@ class TestAnalysisResultToDictBehaviour:
         }
 
         result = AnalysisResult(
-            analyser_name="comprehensive_analyser",
+            analysis_name="Comprehensive Data Analysis",
+            analysis_description="Detailed analysis with complex data structures",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data=complex_data,
@@ -101,7 +104,8 @@ class TestAnalysisResultToDictBehaviour:
     def test_result_to_dict_with_empty_data_and_metadata(self) -> None:
         """Test to_dict() works correctly with empty data and metadata."""
         result = AnalysisResult(
-            analyser_name="minimal_analyser",
+            analysis_name="Minimal Analysis",
+            analysis_description="Basic analysis with empty data and metadata",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
@@ -122,7 +126,8 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
     def test_save_single_successful_result_to_json(self) -> None:
         """Test saving a single successful analysis result creates valid JSON file."""
         result = AnalysisResult(
-            analyser_name="personal_data_analyser",
+            analysis_name="Personal Data Analysis",
+            analysis_description="Analysis for detecting personal data patterns",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": [{"pattern": "email", "count": 3}]},
@@ -150,13 +155,14 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
             # Verify results data
             assert len(saved_data["results"]) == 1
             result_data = saved_data["results"][0]
-            assert result_data["analyser_name"] == "personal_data_analyser"
+            assert result_data["analysis_name"] == "Personal Data Analysis"
             assert result_data["success"] is True
 
     def test_save_multiple_mixed_results_to_json(self) -> None:
         """Test saving multiple results with mixed success/failure status."""
         successful_result = AnalysisResult(
-            analyser_name="analyser_1",
+            analysis_name="Successful Analysis 1",
+            analysis_description="First successful analysis test case",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": []},
@@ -165,7 +171,8 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
         )
 
         failed_result = AnalysisResult(
-            analyser_name="analyser_2",
+            analysis_name="Failed Analysis 2",
+            analysis_description="Second analysis that failed during processing",
             input_schema="source_code",
             output_schema="processing_purpose_finding",
             data={},
@@ -192,7 +199,8 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
     def test_save_with_runbook_path_includes_metadata(self) -> None:
         """Test saving results with runbook path includes it in export metadata."""
         result = AnalysisResult(
-            analyser_name="test_analyser",
+            analysis_name="Test Analysis",
+            analysis_description="Test analysis for runbook path metadata",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
@@ -215,7 +223,8 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
     def test_save_creates_parent_directories(self) -> None:
         """Test save_to_json creates parent directories if they don't exist."""
         result = AnalysisResult(
-            analyser_name="test_analyser",
+            analysis_name="Test Analysis",
+            analysis_description="Test analysis for directory creation functionality",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
@@ -251,7 +260,8 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
     def test_save_json_includes_timestamp(self) -> None:
         """Test saved JSON includes valid ISO format timestamp."""
         result = AnalysisResult(
-            analyser_name="test_analyser",
+            analysis_name="Test Analysis",
+            analysis_description="Test analysis for timestamp functionality",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
@@ -277,7 +287,8 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
     def test_save_handles_unicode_content(self) -> None:
         """Test save_to_json correctly handles Unicode content in results."""
         result = AnalysisResult(
-            analyser_name="unicode_analyser",
+            analysis_name="Unicode Analysis",
+            analysis_description="Analysis for testing Unicode content handling",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": [{"pattern": "name", "value": "José García"}]},
@@ -319,7 +330,8 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
         """Test get_summary_stats calculates correct statistics for all successful results."""
         results = [
             AnalysisResult(
-                analyser_name="personal_data_analyser",
+                analysis_name="Personal Data Analysis",
+                analysis_description="Analysis for detecting personal data patterns",
                 input_schema="standard_input",
                 output_schema="personal_data_finding",
                 data={"findings": []},
@@ -327,7 +339,8 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
                 success=True,
             ),
             AnalysisResult(
-                analyser_name="processing_purpose_analyser",
+                analysis_name="Processing Purpose Analysis",
+                analysis_description="Analysis for identifying data processing purposes",
                 input_schema="source_code",
                 output_schema="processing_purpose_finding",
                 data={"purposes": []},
@@ -343,8 +356,8 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
         assert stats["failed"] == 0
         assert stats["success_rate"] == 100.0
         assert set(stats["analysers"]) == {
-            "personal_data_analyser",
-            "processing_purpose_analyser",
+            "Personal Data Analysis",
+            "Processing Purpose Analysis",
         }
         assert set(stats["schemas"]["input"]) == {"standard_input", "source_code"}
         assert set(stats["schemas"]["output"]) == {
@@ -357,7 +370,8 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
         """Test get_summary_stats handles mixed successful and failed results."""
         results = [
             AnalysisResult(
-                analyser_name="analyser_1",
+                analysis_name="Successful Analysis",
+                analysis_description="First analysis that completed successfully",
                 input_schema="standard_input",
                 output_schema="personal_data_finding",
                 data={},
@@ -365,7 +379,8 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
                 success=True,
             ),
             AnalysisResult(
-                analyser_name="analyser_2",
+                analysis_name="Failed Connection Analysis",
+                analysis_description="Analysis that failed due to connection timeout",
                 input_schema="standard_input",
                 output_schema="personal_data_finding",
                 data={},
@@ -374,7 +389,8 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
                 error_message="Connection timeout",
             ),
             AnalysisResult(
-                analyser_name="analyser_3",
+                analysis_name="Invalid Format Analysis",
+                analysis_description="Analysis that failed due to invalid file format",
                 input_schema="source_code",
                 output_schema="processing_purpose_finding",
                 data={},
@@ -390,19 +406,27 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
         assert stats["successful"] == 1
         assert stats["failed"] == 2
         assert stats["success_rate"] == pytest.approx(33.33, rel=1e-2)
-        assert set(stats["analysers"]) == {"analyser_1", "analyser_2", "analyser_3"}
+        assert set(stats["analysers"]) == {
+            "Successful Analysis",
+            "Failed Connection Analysis",
+            "Invalid Format Analysis",
+        }
 
         # Check error summary
         error_summary = stats["error_summary"]
         assert len(error_summary) == 2
         error_analysers = {error["analyser"] for error in error_summary}
-        assert error_analysers == {"analyser_2", "analyser_3"}
+        assert error_analysers == {
+            "Failed Connection Analysis",
+            "Invalid Format Analysis",
+        }
 
     def test_summary_stats_deduplicates_analyser_and_schema_names(self) -> None:
         """Test get_summary_stats correctly deduplicates repeated analyser and schema names."""
         results = [
             AnalysisResult(
-                analyser_name="repeated_analyser",
+                analysis_name="Repeated Analysis",
+                analysis_description="First instance of repeated analysis",
                 input_schema="standard_input",
                 output_schema="personal_data_finding",
                 data={},
@@ -410,7 +434,8 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
                 success=True,
             ),
             AnalysisResult(
-                analyser_name="repeated_analyser",
+                analysis_name="Repeated Analysis",
+                analysis_description="Second instance of repeated analysis",
                 input_schema="standard_input",
                 output_schema="personal_data_finding",
                 data={},
@@ -418,7 +443,8 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
                 success=True,
             ),
             AnalysisResult(
-                analyser_name="repeated_analyser",
+                analysis_name="Repeated Analysis",
+                analysis_description="Third instance of repeated analysis that failed",
                 input_schema="source_code",
                 output_schema="processing_purpose_finding",
                 data={},
@@ -431,7 +457,7 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
         stats = AnalysisResultsExporter.get_summary_stats(results)
 
         assert len(stats["analysers"]) == 1
-        assert stats["analysers"][0] == "repeated_analyser"
+        assert stats["analysers"][0] == "Repeated Analysis"
         assert set(stats["schemas"]["input"]) == {"standard_input", "source_code"}
         assert set(stats["schemas"]["output"]) == {
             "personal_data_finding",
@@ -445,7 +471,8 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
         for i in range(5):
             results.append(
                 AnalysisResult(
-                    analyser_name=f"success_analyser_{i}",
+                    analysis_name=f"Successful Analysis {i}",
+                    analysis_description=f"Success test case number {i}",
                     input_schema="standard_input",
                     output_schema="personal_data_finding",
                     data={},
@@ -456,7 +483,8 @@ class TestAnalysisResultsExporterGetSummaryStatsBehaviour:
         for i in range(2):
             results.append(
                 AnalysisResult(
-                    analyser_name=f"failed_analyser_{i}",
+                    analysis_name=f"Failed Analysis {i}",
+                    analysis_description=f"Failed test case number {i}",
                     input_schema="standard_input",
                     output_schema="personal_data_finding",
                     data={},
@@ -487,7 +515,8 @@ class TestAnalysisResultsExporterOrganisationMetadata:
         org_config = OrganisationConfig.model_validate(config_data)
 
         result = AnalysisResult(
-            analyser_name="test_analyser",
+            analysis_name="Test Analysis",
+            analysis_description="Test analysis for organisation metadata functionality",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
@@ -526,7 +555,8 @@ class TestAnalysisResultsExporterOrganisationMetadata:
         mock_load.return_value = mock_org_config
 
         result = AnalysisResult(
-            analyser_name="test_analyser",
+            analysis_name="Test Analysis",
+            analysis_description="Test analysis for organisation metadata functionality",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
@@ -556,7 +586,8 @@ class TestAnalysisResultsExporterOrganisationMetadata:
         mock_load.return_value = None
 
         result = AnalysisResult(
-            analyser_name="test_analyser",
+            analysis_name="Test Analysis",
+            analysis_description="Test analysis for organisation metadata functionality",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},

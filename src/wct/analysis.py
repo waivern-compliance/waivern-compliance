@@ -16,7 +16,8 @@ from wct.organisation import OrganisationConfig, OrganisationLoader
 class AnalysisResult:
     """Result from an analyser analysis."""
 
-    analyser_name: str
+    analysis_name: str
+    analysis_description: str
     input_schema: str
     output_schema: str
     data: dict[str, Any]
@@ -145,13 +146,13 @@ class AnalysisResultsExporter:
             "successful": len(successful_results),
             "failed": len(failed_results),
             "success_rate": len(successful_results) / len(results) * 100,
-            "analysers": list(set(r.analyser_name for r in results)),
+            "analysers": list(set(r.analysis_name for r in results)),
             "schemas": {
                 "input": list(set(r.input_schema for r in results)),
                 "output": list(set(r.output_schema for r in results)),
             },
             "error_summary": [
-                {"analyser": r.analyser_name, "error": r.error_message}
+                {"analyser": r.analysis_name, "error": r.error_message}
                 for r in failed_results
             ]
             if failed_results

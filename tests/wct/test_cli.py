@@ -55,7 +55,9 @@ analysers:
         - "phone"
 
 execution:
-  - connector: "test_filesystem"
+  - name: "File system analysis for personal data"
+    description: "Test execution for filesystem connector with personal data analyser"
+    connector: "test_filesystem"
     analyser: "test_personal_data"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
@@ -144,7 +146,9 @@ analysers:
         - "email"
 
 execution:
-  - connector: "test_filesystem"
+  - name: "File system analysis with output directory creation"
+    description: "Test execution that creates output directory if not exists"
+    connector: "test_filesystem"
     analyser: "test_personal_data"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
@@ -191,7 +195,9 @@ analysers:
         - "email"
 
 execution:
-  - connector: "test_filesystem"
+  - name: "File system analysis with absolute output path"
+    description: "Test execution that handles absolute output paths correctly"
+    connector: "test_filesystem"
     analyser: "test_personal_data"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
@@ -236,7 +242,9 @@ analysers:
         - "email"
 
 execution:
-  - connector: "test_filesystem"
+  - name: "File system analysis with verbose mode"
+    description: "Test execution that demonstrates verbose logging mode changes"
+    connector: "test_filesystem"
     analyser: "test_personal_data"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
@@ -333,7 +341,9 @@ analysers:
         - "phone"
 
 execution:
-  - connector: "test_filesystem"
+  - name: "File system analysis for validation test"
+    description: "Test execution for runbook validation functionality"
+    connector: "test_filesystem"
     analyser: "test_personal_data"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
@@ -385,7 +395,9 @@ analysers:
       patterns: ["email"]
 
 execution:
-  - connector: "test_filesystem"
+  - name: "File system analysis for log level test"
+    description: "Test execution for verifying log level parameter handling"
+    connector: "test_filesystem"
     analyser: "test_personal_data"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
@@ -457,7 +469,8 @@ class TestOutputFormatter:
         # Create mock results - we only test that the method executes without error
         mock_results = [
             AnalysisResult(
-                analyser_name="test_analyser",
+                analysis_name="Test Analysis",
+                analysis_description="Test analysis for completion summary display",
                 success=True,
                 input_schema="standard_input",
                 output_schema="test_output",

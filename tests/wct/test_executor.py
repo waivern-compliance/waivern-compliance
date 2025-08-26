@@ -207,7 +207,9 @@ analysers:
     type: unknown_analyser_type
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with unknown analyser"
+    description: "Testing error handling for unknown analyser type"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -220,7 +222,7 @@ execution:
         assert result.success is False
         assert result.error_message is not None
         assert "Unknown analyser type: unknown_analyser_type" in result.error_message
-        assert result.analyser_name == "test_analyser"
+        assert result.analysis_name == "Test execution with unknown analyser"
 
     def test_execute_runbook_unknown_connector_type(self) -> None:
         """Test execution fails gracefully with unknown connector type."""
@@ -240,7 +242,9 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with unknown connector"
+    description: "Testing error handling for unknown connector type"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -253,7 +257,7 @@ execution:
         assert result.success is False
         assert result.error_message is not None
         assert "Unknown connector type: unknown_connector_type" in result.error_message
-        assert result.analyser_name == "test_analyser"
+        assert result.analysis_name == "Test execution with unknown connector"
 
     def test_execute_runbook_unsupported_input_schema(self) -> None:
         """Test execution fails gracefully with unsupported input schema."""
@@ -272,7 +276,9 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with unsupported input schema"
+    description: "Testing error handling for unsupported input schema"
+    connector: test_connector
     analyser: test_analyser
     input_schema: unsupported_schema
     output_schema: personal_data_finding
@@ -285,7 +291,7 @@ execution:
         assert result.success is False
         assert result.error_message is not None
         assert "Schema 'unsupported_schema' not supported" in result.error_message
-        assert result.analyser_name == "test_analyser"
+        assert result.analysis_name == "Test execution with unsupported input schema"
 
     def test_execute_runbook_unsupported_output_schema(self) -> None:
         """Test execution fails gracefully with unsupported output schema."""
@@ -304,7 +310,9 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with unsupported output schema"
+    description: "Testing error handling for unsupported output schema"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: unsupported_output_schema
@@ -319,7 +327,7 @@ execution:
         assert (
             "Schema 'unsupported_output_schema' not supported" in result.error_message
         )
-        assert result.analyser_name == "test_analyser"
+        assert result.analysis_name == "Test execution with unsupported output schema"
 
     def test_execute_runbook_connector_failure(self) -> None:
         """Test execution handles connector failures gracefully."""
@@ -351,7 +359,9 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with failing connector"
+    description: "Testing error handling for connector that throws exceptions"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -369,7 +379,7 @@ execution:
             assert result.success is False
             assert result.error_message is not None
             assert "Mock connector failure" in result.error_message
-            assert result.analyser_name == "test_analyser"
+            assert result.analysis_name == "Test execution with failing connector"
         finally:
             runbook_path.unlink()
 
@@ -403,7 +413,9 @@ analysers:
     type: failing_analyser
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with failing analyser"
+    description: "Testing error handling for analyser that throws exceptions"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -421,7 +433,7 @@ execution:
             assert result.success is False
             assert result.error_message is not None
             assert "Mock analyser failure" in result.error_message
-            assert result.analyser_name == "test_analyser"
+            assert result.analysis_name == "Test execution with failing analyser"
         finally:
             runbook_path.unlink()
 
@@ -444,7 +456,9 @@ analysers:
     metadata:
       purpose: "testing"
 execution:
-  - connector: test_connector
+  - name: "Successful test execution"
+    description: "Testing successful execution with valid components"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -456,7 +470,7 @@ execution:
         result = results[0]
         assert result.success is True
         assert result.error_message is None
-        assert result.analyser_name == "test_analyser"
+        assert result.analysis_name == "Successful test execution"
         assert result.input_schema == "standard_input"
         assert result.output_schema == "personal_data_finding"
         assert result.data == {"findings": []}
@@ -485,11 +499,15 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: connector1
+  - name: "First execution step"
+    description: "Testing first step in multi-step execution"
+    connector: connector1
     analyser: analyser1
     input_schema: standard_input
     output_schema: personal_data_finding
-  - connector: connector2
+  - name: "Second execution step"
+    description: "Testing second step in multi-step execution"
+    connector: connector2
     analyser: analyser2
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -502,12 +520,12 @@ execution:
         # Check first result
         result1 = results[0]
         assert result1.success is True
-        assert result1.analyser_name == "analyser1"
+        assert result1.analysis_name == "First execution step"
 
         # Check second result
         result2 = results[1]
         assert result2.success is True
-        assert result2.analyser_name == "analyser2"
+        assert result2.analysis_name == "Second execution step"
 
     def test_execute_runbook_mixed_success_failure(self) -> None:
         """Test execution continues even when some steps fail."""
@@ -546,11 +564,15 @@ analysers:
     type: failing_analyser
     properties: {}
 execution:
-  - connector: connector1
+  - name: "Working execution step"
+    description: "Testing successful step in mixed scenario"
+    connector: connector1
     analyser: working_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
-  - connector: connector2
+  - name: "Failing execution step"
+    description: "Testing failing step in mixed scenario"
+    connector: connector2
     analyser: broken_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -568,12 +590,12 @@ execution:
             # First step should succeed
             result1 = results[0]
             assert result1.success is True
-            assert result1.analyser_name == "working_analyser"
+            assert result1.analysis_name == "Working execution step"
 
             # Second step should fail but still return a result
             result2 = results[1]
             assert result2.success is False
-            assert result2.analyser_name == "broken_analyser"
+            assert result2.analysis_name == "Failing execution step"
             assert result2.error_message is not None
             assert "Mock analyser failure" in result2.error_message
         finally:
@@ -633,7 +655,9 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: broken_conn
+  - name: "Test execution with broken connector"
+    description: "Testing error handling for connector with generic exception"
+    connector: broken_conn
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -651,7 +675,7 @@ execution:
             assert result.success is False
             assert result.error_message is not None
             assert "Generic error during instantiation" in result.error_message
-            assert result.analyser_name == "test_analyser"
+            assert result.analysis_name == "Test execution with broken connector"
         finally:
             runbook_path.unlink()
 
@@ -676,7 +700,9 @@ analysers:
       author: "test"
       compliance_standard: "GDPR"
 execution:
-  - connector: test_connector
+  - name: "Test execution with context and metadata"
+    description: "Testing execution step context and analyser metadata"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding

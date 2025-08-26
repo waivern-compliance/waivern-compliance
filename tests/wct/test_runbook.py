@@ -80,7 +80,9 @@ analysers:
       pattern_matching:
         ruleset: personal_data
 execution:
-  - connector: test_connector
+  - name: "Valid runbook test execution"
+    description: "Testing valid runbook loading and parsing"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -115,7 +117,9 @@ analysers:
     type: personal_data_analyser
     properties: {}
 execution:
-  - connector: duplicate_name
+  - name: "Duplicate names test execution"
+    description: "Testing validation of duplicate connector names"
+    connector: duplicate_name
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -136,6 +140,181 @@ execution:
 class TestRunbookValidation:
     """Tests for custom runbook validation logic (not basic Pydantic validation)."""
 
+    def test_execution_step_missing_name_field(self) -> None:
+        """Test that execution steps without name field are rejected."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "test_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "test_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "description": "Test execution step without name",
+                    "connector": "test_connector",
+                    "analyser": "test_analyser",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
+                }
+            ],
+        }
+
+        with pytest.raises(ValidationError) as exc_info:
+            Runbook.model_validate(runbook_data)
+
+        errors = exc_info.value.errors()
+        assert any(
+            error["loc"] == ("execution", 0, "name") and error["type"] == "missing"
+            for error in errors
+        )
+
+    def test_execution_step_missing_description_field(self) -> None:
+        """Test that execution steps without description field are rejected."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "test_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "test_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "name": "Test execution step without description",
+                    "connector": "test_connector",
+                    "analyser": "test_analyser",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
+                }
+            ],
+        }
+
+        with pytest.raises(ValidationError) as exc_info:
+            Runbook.model_validate(runbook_data)
+
+        errors = exc_info.value.errors()
+        assert any(
+            error["loc"] == ("execution", 0, "description")
+            and error["type"] == "missing"
+            for error in errors
+        )
+
+    def test_execution_step_empty_name_field(self) -> None:
+        """Test that execution steps with empty name field are rejected."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "test_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "test_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "name": "",
+                    "description": "Test execution step with empty name",
+                    "connector": "test_connector",
+                    "analyser": "test_analyser",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
+                }
+            ],
+        }
+
+        with pytest.raises(ValidationError) as exc_info:
+            Runbook.model_validate(runbook_data)
+
+        errors = exc_info.value.errors()
+        assert any(
+            error["loc"] == ("execution", 0, "name")
+            and "at least 1 character" in error["msg"]
+            for error in errors
+        )
+
+    def test_execution_step_empty_description_field_allowed(self) -> None:
+        """Test that execution steps with empty description field are allowed."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "test_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "test_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "name": "Test execution step with empty description",
+                    "description": "",
+                    "connector": "test_connector",
+                    "analyser": "test_analyser",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
+                }
+            ],
+        }
+
+        # Should validate successfully
+        runbook = Runbook.model_validate(runbook_data)
+        assert runbook.execution[0].name == "Test execution step with empty description"
+        assert runbook.execution[0].description == ""
+
+    def test_execution_step_valid_name_and_description(self) -> None:
+        """Test that execution steps with valid name and description fields work correctly."""
+        runbook_data = {
+            "name": "Test Runbook",
+            "description": "A test runbook",
+            "connectors": [
+                {"name": "test_connector", "type": "filesystem", "properties": {}}
+            ],
+            "analysers": [
+                {
+                    "name": "test_analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                }
+            ],
+            "execution": [
+                {
+                    "name": "Personal Data Analysis",
+                    "description": "Analyse filesystem for personal data using pattern matching",
+                    "connector": "test_connector",
+                    "analyser": "test_analyser",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
+                }
+            ],
+        }
+
+        # Should validate successfully
+        runbook = Runbook.model_validate(runbook_data)
+        assert runbook.execution[0].name == "Personal Data Analysis"
+        assert (
+            runbook.execution[0].description
+            == "Analyse filesystem for personal data using pattern matching"
+        )
+
     def test_runbook_duplicate_connector_names(self) -> None:
         """Test that duplicate connector names are rejected."""
         runbook_data = {
@@ -154,6 +333,8 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "name": "Duplicate connector validation test",
+                    "description": "Testing duplicate connector name validation logic",
                     "connector": "duplicate_name",
                     "analyser": "test_analyser",
                     "input_schema": "standard_input",
@@ -190,6 +371,8 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "name": "Duplicate analyser validation test",
+                    "description": "Testing duplicate analyser name validation logic",
                     "connector": "test_connector",
                     "analyser": "duplicate_name",
                     "input_schema": "standard_input",
@@ -221,6 +404,8 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "name": "Invalid connector reference test",
+                    "description": "Testing validation of nonexistent connector references",
                     "connector": "nonexistent_connector",
                     "analyser": "test_analyser",
                     "input_schema": "standard_input",
@@ -252,6 +437,8 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "name": "Invalid analyser reference test",
+                    "description": "Testing validation of nonexistent analyser references",
                     "connector": "test_connector",
                     "analyser": "nonexistent_analyser",
                     "input_schema": "standard_input",
@@ -290,12 +477,16 @@ class TestRunbookSummary:
             ],
             "execution": [
                 {
+                    "name": "First summary test execution",
+                    "description": "First step in runbook summary test",
                     "connector": "conn1",
                     "analyser": "anal1",
                     "input_schema": "input",
                     "output_schema": "output1",
                 },
                 {
+                    "name": "Second summary test execution",
+                    "description": "Second step in runbook summary test",
                     "connector": "conn2",
                     "analyser": "anal2",
                     "input_schema": "input",
@@ -382,6 +573,8 @@ class TestRunbookIntegration:
             ],
             "execution": [
                 {
+                    "name": "Filesystem personal data analysis",
+                    "description": "Comprehensive analysis of filesystem for personal data patterns",
                     "connector": "filesystem_connector",
                     "analyser": "personal_data_detector",
                     "input_schema": "standard_input",
@@ -392,6 +585,8 @@ class TestRunbookIntegration:
                     },
                 },
                 {
+                    "name": "Database processing purpose analysis",
+                    "description": "Identification of data processing purposes in database",
                     "connector": "database_connector",
                     "analyser": "purpose_detector",
                     "input_schema": "standard_input",

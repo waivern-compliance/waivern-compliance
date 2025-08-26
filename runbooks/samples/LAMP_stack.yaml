@@ -73,14 +73,18 @@ analysers:
       compliance_frameworks: ["GDPR", "CCPA"]
 
 execution:
-  - connector: "my_mysql_db"
+  - name: "Personal Data Detection in MySQL Database"
+    description: "Scan MySQL database tables and columns for personally identifiable information using pattern matching"
+    connector: "my_mysql_db"
     analyser: "personal_data_analyser_for_mysql"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
     context:
       description: "Analyse MySQL database for personal data collection"
       priority: "high"
-  - connector: "my_mysql_db"
+  - name: "Processing Purpose Analysis of Database Content"
+    description: "Identify GDPR and CCPA compliance processing purposes from database structure and content"
+    connector: "my_mysql_db"
     analyser: "processing_purpose_analyser_for_mysql"
     input_schema: "standard_input"
     output_schema: "processing_purpose_finding"
@@ -89,7 +93,9 @@ execution:
       priority: "medium"
       compliance_frameworks: ["GDPR", "CCPA"]
       analysis_type: "database_content_analysis"
-  - connector: "php_source_code"
+  - name: "PHP Source Code Processing Purpose Detection"
+    description: "Analyse PHP application code for business logic, service integrations, and data processing activities"
+    connector: "php_source_code"
     analyser: "processing_purpose_analyser_for_source_code"
     input_schema: "source_code"
     output_schema: "processing_purpose_finding"

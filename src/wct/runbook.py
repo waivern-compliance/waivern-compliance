@@ -67,6 +67,13 @@ class AnalyserConfig(BaseModel):
 class ExecutionStep(BaseModel):
     """Pydantic model for execution step configuration."""
 
+    name: str = Field(
+        min_length=1,
+        description="Human-readable name for this execution step",
+    )
+    description: str = Field(
+        description="Description of what this execution step does (can be empty)",
+    )
     connector: str = Field(
         min_length=1,
         pattern=r"^[a-zA-Z0-9._-]+$",
