@@ -17,9 +17,11 @@ outputs/
 # Environment variables
 .env
 
-# Logs
+# System logs (but not test/mock log files)
 logs/*.log
 logs/*.log.*
+# Allow test log files
+!tests/**/logs/*.log
 
 # Misc
 .local_workspace/

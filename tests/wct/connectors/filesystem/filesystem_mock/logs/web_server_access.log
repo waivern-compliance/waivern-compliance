@@ -1,0 +1,44 @@
+# Apache Web Server Access Log
+# Contains IP addresses (personal data under GDPR), user agents, and potentially sensitive URLs
+# Format: IP - - [timestamp] "request" status size "referrer" "user-agent"
+
+192.168.1.145 - - [15/Jan/2024:10:30:15 +0000] "GET /login HTTP/1.1" 200 2847 "https://company.com/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+203.0.113.42 - - [15/Jan/2024:10:30:16 +0000] "POST /api/users HTTP/1.1" 201 156 "https://app.company.com/register" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+192.168.1.89 - sarah.johnson [15/Jan/2024:10:30:17 +0000] "GET /profile?user_id=12345 HTTP/1.1" 200 4521 "-" "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X)"
+198.51.100.15 - - [15/Jan/2024:10:30:18 +0000] "GET /reset-password?email=john.doe@company.com HTTP/1.1" 200 1847 "https://company.com/forgot-password" "Chrome/120.0.6099.71"
+10.0.0.23 - michael.chen [15/Jan/2024:10:30:19 +0000] "POST /api/profile HTTP/1.1" 200 892 "https://app.company.com/settings" "Mozilla/5.0 (X11; Linux x86_64)"
+192.168.1.156 - - [15/Jan/2024:10:30:20 +0000] "GET /search?q=customer%20phone%20%2B44-20-7946-0958 HTTP/1.1" 200 3421 "-" "Mozilla/5.0 (Windows NT 10.0)"
+203.0.113.87 - - [15/Jan/2024:10:30:21 +0000] "GET /api/customers/search?email=emma.wilson@email.com HTTP/1.1" 200 756 "-" "PostmanRuntime/7.34.0"
+192.168.1.98 - admin.user [15/Jan/2024:10:30:22 +0000] "GET /admin/users?filter=email%3Dlisa.rodriguez@gmail.com HTTP/1.1" 200 2156 "https://admin.company.com/users" "Mozilla/5.0"
+198.51.100.45 - - [15/Jan/2024:10:30:23 +0000] "POST /contact HTTP/1.1" 200 1234 "https://company.com/contact" "Mozilla/5.0 (Android 14; Mobile)"
+10.0.0.67 - - [15/Jan/2024:10:30:24 +0000] "GET /export/users.csv?include=email%2Cphone%2Caddress HTTP/1.1" 200 45672 "-" "Python-requests/2.31.0"
+192.168.1.201 - - [15/Jan/2024:10:30:25 +0000] "POST /api/auth/login HTTP/1.1" 401 98 "-" "curl/8.0.1"
+203.0.113.156 - - [15/Jan/2024:10:30:26 +0000] "GET /profile/settings?phone=%2B44%207700%20900123 HTTP/1.1" 200 1876 "https://app.company.com/profile" "Safari/17.1"
+192.168.1.78 - - [15/Jan/2024:10:30:27 +0000] "POST /support/ticket HTTP/1.1" 201 445 "https://support.company.com/new" "Mozilla/5.0 (iPad; CPU OS 17_1)"
+198.51.100.89 - support.agent [15/Jan/2024:10:30:28 +0000] "GET /api/tickets?customer_email=david.smith@yahoo.co.uk HTTP/1.1" 200 3245 "-" "Mozilla/5.0 (Windows NT)"
+10.0.0.145 - - [15/Jan/2024:10:30:29 +0000] "GET /verify?token=abc123&email=customer%40domain.com HTTP/1.1" 200 892 "-" "Mozilla/5.0"
+192.168.1.89 - - [15/Jan/2024:10:30:30 +0000] "GET /callback?user=james.oconnor%40icloud.com&success=true HTTP/1.1" 302 156 "https://oauth.provider.com/" "OAuth2Client/1.0"
+203.0.113.23 - - [15/Jan/2024:10:30:31 +0000] "POST /webhook/payment HTTP/1.1" 200 234 "-" "Stripe-Webhook/1.0"
+192.168.1.167 - billing.admin [15/Jan/2024:10:30:32 +0000] "GET /admin/billing?customer=maria.garcia%40telefonica.es HTTP/1.1" 200 4567 "-" "Mozilla/5.0"
+198.51.100.34 - - [15/Jan/2024:10:30:33 +0000] "GET /unsubscribe?email=robert.anderson@gmail.com&list=newsletter HTTP/1.1" 200 1234 "https://email.campaign.com/" "Mozilla/5.0"
+10.0.0.78 - - [15/Jan/2024:10:30:34 +0000] "POST /api/gdpr/delete HTTP/1.1" 200 67 "-" "Python-requests/2.31.0"
+192.168.1.134 - - [15/Jan/2024:10:30:35 +0000] "GET /health HTTP/1.1" 200 23 "-" "Prometheus/2.45.0"
+203.0.113.67 - - [15/Jan/2024:10:30:36 +0000] "GET /api/users/12345/addresses HTTP/1.1" 200 1456 "-" "Mozilla/5.0 (Mobile)"
+192.168.1.45 - hr.manager [15/Jan/2024:10:30:37 +0000] "POST /api/employees HTTP/1.1" 201 789 "https://hr.company.com/add" "Mozilla/5.0"
+198.51.100.156 - - [15/Jan/2024:10:30:38 +0000] "GET /download/backup_users_20240115.sql HTTP/1.1" 200 2456789 "-" "wget/1.21.3"
+10.0.0.234 - - [15/Jan/2024:10:30:39 +0000] "POST /api/newsletter HTTP/1.1" 400 156 "-" "Newsletter-Service/2.1"
+
+# Potential GDPR violations in above logs:
+# - IP addresses of EU residents (personal data under GDPR Article 4)
+# - Email addresses in URL parameters (plain text personal data)
+# - Phone numbers in URL parameters
+# - User authentication names (personal identifiers)
+# - Customer search queries containing personal data
+# - GDPR deletion requests logged with details
+
+# Additional entries with various personal data patterns:
+84.91.132.45 - - [15/Jan/2024:10:31:40 +0000] "GET /password-reset?user=sarah.wilson%40company.com HTTP/1.1" 200 1234 "-" "Mozilla/5.0"
+92.48.156.78 - - [15/Jan/2024:10:31:41 +0000] "POST /contact?name=Michael%20Johnson&email=michael.j%40email.com&phone=07700-900-123 HTTP/1.1" 302 0 "-" "Mozilla/5.0"
+151.101.193.67 - - [15/Jan/2024:10:31:42 +0000] "GET /api/search?dob=1987-03-15&location=London HTTP/1.1" 200 2345 "-" "ApiClient/1.0"
+80.249.99.12 - - [15/Jan/2024:10:31:43 +0000] "GET /profile?ssn=123-45-6789 HTTP/1.1" 404 234 "-" "BadBot/1.0"
+217.138.219.34 - system.admin [15/Jan/2024:10:31:44 +0000] "GET /admin/users/export?include_personal=true HTTP/1.1" 200 456789 "-" "Admin-Tools/2.0"

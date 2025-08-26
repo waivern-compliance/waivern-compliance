@@ -1,0 +1,159 @@
+APPLICATION SERVER LOG - TECHNICAL PATTERNS ONLY
+================================================
+Generated: 2024-01-15 10:30:45.123
+Server: web-server-01.company.internal
+Application: CustomerPortal v2.3.1
+
+[2024-01-15 10:30:01] INFO - System startup completed
+[2024-01-15 10:30:02] DEBUG - Database connection pool initialized
+[2024-01-15 10:30:03] INFO - Email service configuration loaded: smtp@mail.company.com:587
+[2024-01-15 10:30:04] DEBUG - Authentication module loaded
+[2024-01-15 10:30:05] INFO - API endpoints registered
+
+API ENDPOINT DEFINITIONS:
+========================
+POST /api/v1/users/validate/email@{domain}
+GET /api/v1/users/search?email=pattern@domain.com
+PUT /api/v1/profiles/{id}/update-phone/{phone-format}
+DELETE /api/v1/accounts/cleanup-test-data@sandbox.local
+
+CONFIGURATION SAMPLES:
+=====================
+database.host=db.company.internal
+database.port=3306
+database.user=app_user@localhost
+database.ssl.cert=/etc/ssl/certs/server.crt
+
+smtp.server=smtp.company.com
+smtp.port=587
+smtp.username=system@notifications.company.com
+smtp.password=REDACTED
+smtp.timeout=30000
+
+ldap.url=ldap://directory.company.com:389
+ldap.bind.dn=service-account@company.local
+ldap.search.base=ou=users,dc=company,dc=local
+
+DOCUMENTATION PATTERNS:
+======================
+Email format validation: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+Phone number regex: /^\d{3}-\d{3}-\d{4}$/
+Date format expected: YYYY-MM-DD or DD/MM/YYYY
+Password requirements: minimum 8 characters, special chars
+
+Test email addresses for validation:
+- valid@example.com (should pass)
+- invalid@domain (should fail)
+- test@localhost (development only)
+- admin@127.0.0.1 (internal testing)
+- noreply@system.local (automated emails)
+
+SYSTEM MESSAGES:
+===============
+[2024-01-15 10:31:15] INFO - Processing validation for field: email_address
+[2024-01-15 10:31:16] DEBUG - Regex match attempted on: test_email@validation.pattern
+[2024-01-15 10:31:17] INFO - Phone number format check initiated
+[2024-01-15 10:31:18] DEBUG - Pattern matching: phone_number_field against \d{10}
+[2024-01-15 10:31:19] INFO - Date of birth field validation completed
+[2024-01-15 10:31:20] DEBUG - Social security number format verified
+
+ERROR MESSAGES (NOT PERSONAL DATA):
+==================================
+[2024-01-15 10:32:01] ERROR - Invalid email format detected in field validation
+[2024-01-15 10:32:02] WARN - Phone number field exceeds maximum length
+[2024-01-15 10:32:03] ERROR - Birth date field contains invalid characters
+[2024-01-15 10:32:04] INFO - Address validation module returned error code 422
+[2024-01-15 10:32:05] DEBUG - Credit card format validation failed - test environment
+
+DATABASE SCHEMA DOCUMENTATION:
+==============================
+Table: users
+- id (PRIMARY KEY)
+- username (VARCHAR)
+- email_address (VARCHAR) - stores user email
+- phone_number (VARCHAR) - stores contact number
+- date_of_birth (DATE) - user's birth date
+- billing_address (TEXT) - user's billing address
+- social_security_number (VARCHAR) - encrypted SSN storage
+
+Table: sessions
+- session_id (VARCHAR)
+- user_id (FOREIGN KEY)
+- ip_address (VARCHAR) - client IP for security
+- user_agent (TEXT) - browser information
+- created_at (TIMESTAMP)
+
+DEVELOPMENT NOTES:
+=================
+TODO: Implement email validation on user registration form
+TODO: Add phone number formatting to profile update API
+TODO: Review date of birth field requirements for GDPR compliance
+TODO: Update address parsing for international formats
+
+FEATURE FLAGS:
+=============
+enable_email_verification=true
+require_phone_validation=false
+collect_birth_date=true
+store_user_address=true
+gdpr_compliance_mode=enabled
+
+API DOCUMENTATION SNIPPETS:
+===========================
+Request examples for testing:
+curl -X POST /api/users -d '{"email": "test@example.com", "phone": "555-0100"}'
+curl -X GET /api/users/search?email_pattern=admin@domain.com
+curl -X PUT /api/profiles/123 -d '{"birth_date": "1990-01-01"}'
+
+Response formats:
+{
+  "user": {
+    "id": 123,
+    "email": "user@domain.pattern",
+    "phone": "phone_format_example",
+    "address": "address_field_placeholder"
+  }
+}
+
+MONITORING ALERTS:
+=================
+[2024-01-15 10:35:00] MONITOR - Email delivery queue at 95% capacity
+[2024-01-15 10:35:30] MONITOR - Phone verification service responding slowly
+[2024-01-15 10:36:00] MONITOR - Date validation errors increased by 15%
+[2024-01-15 10:36:30] MONITOR - Address geocoding service timeout detected
+
+FILE PATHS & REFERENCES:
+========================
+/var/log/email_service.log - contains SMTP transaction logs
+/etc/postfix/main.cf - mail server configuration
+/opt/app/config/validation_patterns.json - field validation rules
+/home/developer/test_data/sample_emails.txt - development test data
+/usr/share/doc/api_examples/phone_formats.md - documentation
+
+TECHNICAL IDENTIFIERS:
+=====================
+Process ID: 1234 (email_service_daemon)
+Thread ID: 5678 (phone_validation_worker)
+Session Token: bearer_token_abc123@session.local
+API Key: service_key_xyz789@api.company.com
+Database Connection: db_conn_pool_01@internal.db
+
+CODE COMMENTS FROM DEVELOPMENT:
+===============================
+// TODO: Validate email format before saving
+// FIXME: Phone number regex needs international support
+// NOTE: Birth date field is required for age verification
+// WARNING: Address field may contain special characters
+// INFO: Social security field requires encryption at rest
+
+SYSTEM ENVIRONMENT VARIABLES:
+=============================
+EMAIL_SERVICE_HOST=smtp.internal.com
+PHONE_API_ENDPOINT=https://validation.service.com/phone
+DATE_FORMAT_LOCALE=en_GB
+ADDRESS_VALIDATION_KEY=validation_service@api.key
+USER_DATA_ENCRYPTION_KEY=ENCRYPTED_KEY_REFERENCE
+
+Log rotation completed at 2024-01-15 10:40:00
+Next rotation scheduled: 2024-01-16 10:40:00
+Archive location: /var/log/archive/app_logs_20240115.tar.gz

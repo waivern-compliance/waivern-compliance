@@ -1,0 +1,202 @@
+# System Error Log with Stack Traces
+# Contains detailed error information including stack traces, method parameters, and user context
+# High risk for accidental personal data exposure through exception details and debugging information
+
+2024-01-15 10:30:15.123 [ERROR] UserController - NullPointerException in updateUserProfile()
+java.lang.NullPointerException: Cannot invoke "User.getEmail()" because "user" is null
+	at com.company.controller.UserController.updateUserProfile(UserController.java:145)
+	at com.company.controller.UserController.processRequest(UserController.java:89)
+	at com.company.servlet.MainServlet.doPost(MainServlet.java:156)
+User context: {email: "sarah.johnson@gmail.com", userId: 12345, session: "sess_abc123"}
+Request parameters: {firstName: "Sarah", lastName: "Johnson", phone: "+44 20 7946 0958"}
+
+2024-01-15 10:30:16.456 [ERROR] DatabaseService - Connection timeout executing user query
+java.sql.SQLTimeoutException: Query execution exceeded timeout
+	at com.mysql.cj.jdbc.StatementImpl.executeQuery(StatementImpl.java:1201)
+	at com.company.service.DatabaseService.findUserByEmail(DatabaseService.java:234)
+	at com.company.service.UserService.authenticateUser(UserService.java:67)
+Failed query: SELECT * FROM users WHERE email = 'michael.chen@company.co.uk' AND password_hash = '$2b$12$...'
+Connection string: jdbc:mysql://db.company.com:3306/production?user=app_service
+
+2024-01-15 10:30:17.789 [ERROR] PaymentProcessor - Card validation failed for customer
+com.payment.ValidationException: Invalid credit card number
+	at com.company.payment.CardValidator.validate(CardValidator.java:78)
+	at com.company.payment.PaymentProcessor.processPayment(PaymentProcessor.java:123)
+	at com.company.service.OrderService.completeOrder(OrderService.java:189)
+Customer details: {email: "emma.wilson@btinternet.com", name: "Emma Wilson", cardLastFour: "1234"}
+Billing address: {street: "42 Baker Street", city: "London", postcode: "SW1A 1AA", country: "UK"}
+
+2024-01-15 10:30:18.012 [ERROR] EmailService - SMTP authentication failure
+javax.mail.AuthenticationFailedException: Username and Password not accepted
+	at com.sun.mail.smtp.SMTPTransport.authenticate(SMTPTransport.java:965)
+	at com.company.service.EmailService.sendWelcomeEmail(EmailService.java:145)
+	at com.company.service.UserService.createUser(UserService.java:234)
+SMTP config: {host: "smtp.company.com", username: "noreply@company.com", password: "***"}
+Recipient: david.smith@yahoo.co.uk
+Email content preview: "Dear David Smith, Welcome to our service..."
+
+2024-01-15 10:30:19.345 [ERROR] FileUploadService - File upload failed for user document
+java.io.IOException: Insufficient disk space
+	at java.io.FileOutputStream.write(FileOutputStream.java:326)
+	at com.company.service.FileUploadService.saveFile(FileUploadService.java:89)
+	at com.company.controller.DocumentController.uploadDocument(DocumentController.java:156)
+User context: {email: "lisa.rodriguez@hotmail.com", userId: 67890, fileName: "personal_id_document.pdf"}
+Upload path: /var/uploads/users/67890/personal_documents/personal_id_document.pdf
+File metadata: {size: 2.3MB, contentType: "application/pdf", containsPersonalData: true}
+
+2024-01-15 10:30:20.678 [ERROR] ValidationService - Phone number validation error
+com.company.validation.ValidationException: Invalid phone number format
+	at com.company.validation.PhoneValidator.validate(PhoneValidator.java:45)
+	at com.company.service.UserService.updateContactInfo(UserService.java:178)
+	at com.company.controller.ProfileController.updateProfile(ProfileController.java:123)
+Validation input: {phone: "020 7946 0958", country: "UK", user: "james.oconnor@icloud.com"}
+Expected format: +44XXXXXXXXXX, Received: 020 7946 0958
+
+2024-01-15 10:30:21.901 [ERROR] CacheService - Redis connection failed during user session update
+redis.clients.jedis.exceptions.JedisConnectionException: Failed to connect to Redis server
+	at redis.clients.jedis.Connection.connect(Connection.java:207)
+	at com.company.service.CacheService.updateUserSession(CacheService.java:67)
+	at com.company.service.SessionService.refreshSession(SessionService.java:89)
+Session data: {userId: 54321, email: "maria.garcia@telefonica.es", lastActivity: "2024-01-15T10:30:21Z"}
+Cache key: session:user:maria.garcia@telefonica.es:54321
+
+2024-01-15 10:30:22.234 [ERROR] GDPRService - Data export generation failed
+java.lang.OutOfMemoryError: Java heap space
+	at java.util.ArrayList.grow(ArrayList.java:237)
+	at com.company.service.GDPRService.generateDataExport(GDPRService.java:156)
+	at com.company.controller.PrivacyController.exportUserData(PrivacyController.java:89)
+Export request: {userId: 98765, email: "robert.anderson@gmail.com", requestDate: "2024-01-15"}
+Data size: {orders: 1247, communications: 5678, analytics: 23456, profileData: 89}
+Heap dump generated: /tmp/heap_dump_robert.anderson@gmail.com_20240115.hprof
+
+2024-01-15 10:30:23.567 [ERROR] SerializationService - Object serialization failed
+com.fasterxml.jackson.databind.JsonMappingException: Cannot serialize personal data
+	at com.company.service.SerializationService.toJson(SerializationService.java:78)
+	at com.company.service.ApiService.sendWebhookData(ApiService.java:123)
+	at com.company.controller.IntegrationController.processWebhook(IntegrationController.java:145)
+Serialization object: UserProfile{email='jennifer.adams@company.com', name='Jennifer Adams', phone='+44 161 234 5678', address=Address{street='123 High Street', city='Manchester', postcode='M1 1AA'}, preferences=UserPreferences{marketing=true, analytics=false}}
+
+2024-01-15 10:30:24.890 [ERROR] SearchService - Elasticsearch indexing error
+org.elasticsearch.client.ResponseException: 413 Request Entity Too Large
+	at com.company.search.ElasticsearchService.indexUser(ElasticsearchService.java:89)
+	at com.company.service.UserService.createUserProfile(UserService.java:234)
+	at com.company.controller.RegistrationController.registerUser(RegistrationController.java:167)
+Index document: {
+  "userId": 13579,
+  "email": "premium.customer@business.co.uk",
+  "profile": {
+    "name": "Premium Customer",
+    "company": "Business Solutions Ltd",
+    "phone": "+44 20 7946 1234",
+    "address": "456 Business Park, London EC1A 1BB"
+  }
+}
+
+2024-01-15 10:30:25.123 [ERROR] WebSocketService - Connection error during real-time updates
+java.net.SocketException: Connection reset
+	at java.net.SocketInputStream.read(SocketInputStream.java:186)
+	at com.company.websocket.WebSocketHandler.sendUpdate(WebSocketHandler.java:123)
+	at com.company.service.NotificationService.notifyUser(NotificationService.java:89)
+WebSocket session: {userId: 24680, email: "mobile.user@app.com", connectionId: "ws_xyz789"}
+Message payload: {type: "profile_update", data: {email: "mobile.user@app.com", phone: "+44 7700 900123"}}
+
+2024-01-15 10:30:26.456 [ERROR] TemplateEngine - Email template rendering failed
+freemarker.template.TemplateException: Variable 'customerName' is undefined
+	at freemarker.core.InvalidReferenceException.getMessage(InvalidReferenceException.java:129)
+	at com.company.template.EmailTemplateService.render(EmailTemplateService.java:156)
+	at com.company.service.MarketingService.sendCampaignEmail(MarketingService.java:89)
+Template variables: {customerEmail: "developer.test@company.com", firstName: "", lastName: "Test User", phone: "555-0100"}
+Template: welcome_email_v2.ftl
+Error line: <p>Dear ${customerName}, welcome to our service!</p>
+
+2024-01-15 10:30:27.789 [ERROR] ReportGenerator - PDF generation memory error
+java.lang.OutOfMemoryError: Requested array size exceeds VM limit
+	at com.lowagie.text.pdf.PdfWriter.getImageReference(PdfWriter.java:2156)
+	at com.company.reports.PdfReportGenerator.generateCustomerReport(PdfReportGenerator.java:234)
+	at com.company.service.ReportService.createMonthlyReport(ReportService.java:123)
+Report data: 15,678 customer records including personal data fields [name, email, phone, address, order_history]
+Memory usage: heap 2.1GB/2GB, requested array size: 1.8GB
+Sample customer data in memory: {id: 1, email: "security.test@company.com", name: "Security Test", orders: [...]}
+
+2024-01-15 10:30:28.012 [ERROR] CryptographyService - Encryption key rotation failed
+javax.crypto.BadPaddingException: Given final block not properly padded
+	at com.sun.crypto.provider.CipherCore.unpad(CipherCore.java:975)
+	at com.company.crypto.CryptographyService.rotateUserDataKeys(CryptographyService.java:189)
+	at com.company.service.SecurityService.weeklyKeyRotation(SecurityService.java:78)
+Affected user data: {users: 12345, emails encrypted: 12345, phones encrypted: 11234, addresses encrypted: 9876}
+Key rotation log: old_key=AES_2024_001, new_key=AES_2024_002, rotation_status=FAILED
+Sample affected user: john.smith@client.com (encryption_status: PARTIALLY_ROTATED)
+
+2024-01-15 10:30:29.345 [ERROR] DatabaseMigration - Migration script failed with constraint violation
+java.sql.SQLIntegrityConstraintViolationException: Duplicate entry 'anna.müller@unternehmen.de' for key 'email'
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:117)
+	at com.company.migration.UserMigrationService.migrateUserData(UserMigrationService.java:156)
+	at com.company.migration.DatabaseMigrator.runMigration(DatabaseMigrator.java:89)
+Migration SQL: INSERT INTO users_new (email, first_name, last_name, phone) SELECT email, first_name, last_name, phone FROM users_old WHERE created_date < '2024-01-01'
+Duplicate records found: [
+  {email: "anna.müller@unternehmen.de", first_name: "Anna", last_name: "Müller"},
+  {email: "françois.dubois@entreprise.fr", first_name: "François", last_name: "Dubois"}
+]
+
+2024-01-15 10:30:30.678 [ERROR] MessageQueueService - RabbitMQ publishing failed
+com.rabbitmq.client.ShutdownSignalException: Connection refused
+	at com.company.queue.MessagePublisher.publishUserEvent(MessagePublisher.java:123)
+	at com.company.service.EventService.publishProfileUpdate(EventService.java:67)
+	at com.company.controller.UserController.updateProfile(UserController.java:189)
+Message payload: {
+  "event": "user_profile_updated",
+  "userId": 87654,
+  "userEmail": "privacy.concerned@protonmail.com",
+  "changes": {
+    "phone": {"old": "+44 20 7946 0958", "new": "+44 20 7946 5678"},
+    "address": {"old": "123 Old St", "new": "456 New Ave"}
+  }
+}
+
+2024-01-15 10:30:31.901 [ERROR] BackupService - S3 backup upload failed
+com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied
+	at com.company.backup.S3BackupService.uploadUserDataBackup(S3BackupService.java:145)
+	at com.company.service.BackupService.dailyUserBackup(BackupService.java:78)
+	at com.company.scheduler.BackupScheduler.runDailyBackup(BackupScheduler.java:67)
+Backup manifest: {
+  "backup_id": "BKP_20240115_001",
+  "user_count": 15678,
+  "includes_personal_data": true,
+  "sample_users": ["backup.user1@domain.com", "backup.user2@email.com"],
+  "data_categories": ["profiles", "communications", "orders", "analytics"]
+}
+S3 path: s3://company-backups/users/2024/01/15/user_data_backup.enc
+
+2024-01-15 10:30:32.234 [ERROR] MLPipelineService - Model training failed with data quality issues
+org.apache.spark.SparkException: Job aborted due to stage failure
+	at com.company.ml.CustomerSegmentationModel.train(CustomerSegmentationModel.java:234)
+	at com.company.service.MLPipelineService.trainSegmentationModel(MLPipelineService.java:123)
+	at com.company.scheduler.MLScheduler.weeklyModelRetrain(MLScheduler.java:89)
+Training dataset: 25,678 customer records with personal data features
+Data quality issues: {
+  "null_emails": 234,
+  "invalid_phones": 567,
+  "missing_addresses": 1234,
+  "duplicate_customers": ["duplicate1@email.com", "duplicate2@domain.com"]
+}
+Feature extraction errors: {
+  "age_calculation_failed": ["customer.with.invalid.dob@email.com"],
+  "location_geocoding_failed": ["customer.with.bad.address@domain.com"]
+}
+
+2024-01-15 10:30:33.567 [ERROR] IntegrationService - Third-party API call failed
+java.net.HttpTimeoutException: request timed out
+	at com.company.integration.CRMIntegration.syncCustomer(CRMIntegration.java:156)
+	at com.company.service.IntegrationService.syncCustomerToCRM(IntegrationService.java:89)
+	at com.company.controller.CustomerController.updateCustomer(CustomerController.java:234)
+API request: POST https://crm-system.com/api/customers
+Request body: {
+  "customer": {
+    "email": "api.integration@customer.com",
+    "name": "API Integration Customer",
+    "phone": "+44 7700 900456",
+    "company": "Integration Test Ltd",
+    "address": "789 API Street, Test City, TC1 2TC"
+  }
+}
+CRM customer ID: CRM_98765, Sync status: FAILED_TIMEOUT

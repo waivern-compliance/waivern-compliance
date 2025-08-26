@@ -1,0 +1,243 @@
+# MySQL Query Log - CONTAINS PERSONAL DATA IN SQL STATEMENTS
+# This log shows how personal data frequently appears in database query logs
+# Time: 2024-01-15 10:30:00 - 2024-01-15 11:30:00
+
+# Time: 2024-01-15 10:30:15
+# User@Host: webapp[webapp] @ app-server-01.internal [192.168.1.145]
+# Query_time: 0.001234  Lock_time: 0.000123  Rows_sent: 1  Rows_examined: 1
+SELECT id, first_name, last_name, email, phone FROM users WHERE email = 'sarah.johnson@gmail.com';
+
+# Time: 2024-01-15 10:30:16
+# User@Host: webapp[webapp] @ app-server-01.internal [192.168.1.145]
+# Query_time: 0.002345  Lock_time: 0.000234  Rows_sent: 0  Rows_examined: 456
+INSERT INTO users (first_name, last_name, email, phone, date_of_birth, created_at) VALUES ('Michael', 'Chen', 'michael.chen@company.co.uk', '+44 161 234 5678', '1985-07-22', NOW());
+
+# Time: 2024-01-15 10:30:17
+# User@Host: admin[admin] @ admin-console.internal [10.0.0.15]
+# Query_time: 1.234567  Lock_time: 0.123456  Rows_sent: 1247  Rows_examined: 15678
+SELECT u.email, u.first_name, u.last_name, u.phone, a.street_address, a.city, a.postal_code
+FROM users u
+JOIN addresses a ON u.id = a.user_id
+WHERE u.email LIKE '%@gmail.com'
+ORDER BY u.created_at DESC;
+
+# Time: 2024-01-15 10:30:18
+# User@Host: webapp[webapp] @ app-server-02.internal [192.168.1.146]
+# Query_time: 0.003456  Lock_time: 0.000345  Rows_sent: 1  Rows_examined: 1
+UPDATE users SET last_login_at = NOW(), last_login_ip = '203.0.113.42' WHERE email = 'emma.wilson@btinternet.com';
+
+# Time: 2024-01-15 10:30:19
+# User@Host: billing[billing] @ billing-service.internal [192.168.1.147]
+# Query_time: 0.004567  Lock_time: 0.000456  Rows_sent: 3  Rows_examined: 3
+SELECT pm.card_last_four, pm.expiry_month, pm.expiry_year, pm.cardholder_name
+FROM payment_methods pm
+JOIN users u ON pm.user_id = u.id
+WHERE u.email = 'david.smith@yahoo.co.uk';
+
+# Time: 2024-01-15 10:30:20
+# User@Host: support[support] @ support-system.internal [192.168.1.148]
+# Query_time: 0.005678  Lock_time: 0.000567  Rows_sent: 5  Rows_examined: 12
+SELECT st.id, st.subject, st.description, u.email, u.first_name, u.last_name, u.phone
+FROM support_tickets st
+JOIN users u ON st.customer_id = u.id
+WHERE u.email = 'lisa.rodriguez@hotmail.com' OR u.phone LIKE '%555-234-5678%';
+
+# Time: 2024-01-15 10:30:21
+# User@Host: webapp[webapp] @ app-server-01.internal [192.168.1.145]
+# Query_time: 0.006789  Lock_time: 0.000678  Rows_sent: 0  Rows_examined: 1
+INSERT INTO audit_log (table_name, record_id, action, old_values, new_values, changed_by, timestamp)
+VALUES ('users', 12345, 'UPDATE', '{"phone": "+44 20 7946 0958"}', '{"phone": "+44 20 7946 1234"}', 'james.oconnor@icloud.com', NOW());
+
+# Time: 2024-01-15 10:30:22
+# User@Host: marketing[marketing] @ marketing-db.internal [192.168.1.149]
+# Query_time: 2.345678  Lock_time: 0.234567  Rows_sent: 8756  Rows_examined: 25643
+SELECT email, first_name, last_name,
+       CASE WHEN marketing_consent = 1 THEN 'yes' ELSE 'no' END as can_email
+FROM users
+WHERE marketing_consent = 1
+  AND email NOT LIKE '%+noemail@%'
+  AND created_at >= '2023-01-01';
+
+# Time: 2024-01-15 10:30:23
+# User@Host: reporting[reporting] @ reports-db.internal [192.168.1.150]
+# Query_time: 3.456789  Lock_time: 0.345678  Rows_sent: 156  Rows_examined: 5643
+SELECT
+  DATE(created_at) as signup_date,
+  COUNT(*) as new_users,
+  AVG(DATEDIFF(NOW(), date_of_birth)/365.25) as avg_age
+FROM users
+WHERE created_at >= '2024-01-01'
+GROUP BY DATE(created_at);
+
+# Time: 2024-01-15 10:30:24
+# User@Host: gdpr[gdpr] @ compliance-system.internal [10.0.0.25]
+# Query_time: 0.007890  Lock_time: 0.000789  Rows_sent: 1  Rows_examined: 1
+SELECT * FROM users WHERE email = 'maria.garcia@telefonica.es' FOR UPDATE;
+
+# Time: 2024-01-15 10:30:25
+# User@Host: gdpr[gdpr] @ compliance-system.internal [10.0.0.25]
+# Query_time: 0.008901  Lock_time: 0.000890  Rows_sent: 0  Rows_examined: 1
+UPDATE users SET
+  first_name = 'ANONYMIZED',
+  last_name = 'USER',
+  email = 'deleted_user_12345@anonymized.local',
+  phone = NULL,
+  date_of_birth = NULL,
+  deleted_at = NOW()
+WHERE email = 'maria.garcia@telefonica.es';
+
+# Time: 2024-01-15 10:30:26
+# User@Host: backup[backup] @ backup-system.internal [10.0.0.30]
+# Query_time: 15.123456  Lock_time: 2.123456  Rows_sent: 15678  Rows_examined: 15678
+SELECT id, email, first_name, last_name, phone, created_at, last_login_at
+FROM users
+WHERE deleted_at IS NULL
+INTO OUTFILE '/backup/users_export_20240115.csv'
+FIELDS TERMINATED BY ',' ENCLOSED BY '"';
+
+# Time: 2024-01-15 10:30:27
+# User@Host: webapp[webapp] @ app-server-03.internal [192.168.1.147]
+# Query_time: 0.009012  Lock_time: 0.000901  Rows_sent: 2  Rows_examined: 15
+SELECT u1.email as customer_email, u2.email as referrer_email
+FROM users u1
+JOIN referrals r ON u1.id = r.customer_id
+JOIN users u2 ON r.referrer_id = u2.id
+WHERE u1.email = 'robert.anderson@gmail.com';
+
+# Time: 2024-01-15 10:30:28
+# User@Host: analytics[analytics] @ analytics-db.internal [192.168.1.151]
+# Query_time: 4.567890  Lock_time: 0.456789  Rows_sent: 1234  Rows_examined: 45678
+SELECT
+  SUBSTRING(email, LOCATE('@', email) + 1) as email_domain,
+  COUNT(*) as user_count,
+  AVG(YEAR(NOW()) - YEAR(date_of_birth)) as avg_age
+FROM users
+WHERE deleted_at IS NULL
+GROUP BY SUBSTRING(email, LOCATE('@', email) + 1)
+HAVING user_count >= 10;
+
+# Time: 2024-01-15 10:30:29
+# User@Host: webapp[webapp] @ app-server-01.internal [192.168.1.145]
+# Query_time: 0.010123  Lock_time: 0.001012  Rows_sent: 0  Rows_examined: 1
+INSERT INTO login_attempts (email, ip_address, success, attempted_at)
+VALUES ('jennifer.adams@company.com', '84.91.132.45', 1, NOW());
+
+# Time: 2024-01-15 10:30:30
+# User@Host: hr[hr] @ hr-system.internal [192.168.1.152]
+# Query_time: 0.011234  Lock_time: 0.001123  Rows_sent: 1  Rows_examined: 1
+SELECT e.employee_id, e.first_name, e.last_name, e.personal_email, e.work_email, e.phone, e.emergency_contact_name, e.emergency_contact_phone
+FROM employees e
+WHERE e.personal_email = 'john.smith.personal@gmail.com';
+
+# Time: 2024-01-15 10:30:31
+# User@Host: crm[crm] @ crm-integration.internal [192.168.1.153]
+# Query_time: 5.678901  Lock_time: 0.567890  Rows_sent: 567  Rows_examined: 12345
+SELECT
+  u.email,
+  u.first_name,
+  u.last_name,
+  u.phone,
+  MAX(o.created_at) as last_order_date,
+  COUNT(o.id) as total_orders,
+  SUM(o.total_amount) as total_spent
+FROM users u
+LEFT JOIN orders o ON u.id = o.customer_id
+WHERE u.created_at >= '2023-01-01'
+GROUP BY u.id, u.email, u.first_name, u.last_name, u.phone;
+
+# Time: 2024-01-15 10:30:32
+# User@Host: webapp[webapp] @ app-server-02.internal [192.168.1.146]
+# Query_time: 0.012345  Lock_time: 0.001234  Rows_sent: 1  Rows_examined: 5
+SELECT u.id, u.email, p.preferences
+FROM users u
+JOIN user_preferences p ON u.id = p.user_id
+WHERE u.email = 'premium.customer@business.co.uk'
+  AND p.preference_type = 'communication';
+
+# Time: 2024-01-15 10:30:33
+# User@Host: support[support] @ support-system.internal [192.168.1.148]
+# Query_time: 0.013456  Lock_time: 0.001345  Rows_sent: 0  Rows_examined: 1
+INSERT INTO support_tickets (customer_id, subject, description, created_at, agent_email)
+SELECT u.id, 'Account Issue', 'Customer reported login problems. Customer phone: +44 7700 900123, preferred contact method: email', NOW(), 'support.agent@company.com'
+FROM users u
+WHERE u.email = 'mobile.user@app.com';
+
+# Time: 2024-01-15 10:30:34
+# User@Host: admin[admin] @ admin-console.internal [10.0.0.15]
+# Query_time: 0.014567  Lock_time: 0.001456  Rows_sent: 25  Rows_examined: 156
+SELECT id, email, first_name, last_name, created_at, last_login_at
+FROM users
+WHERE email IN ('security.test@company.com', 'developer.test@company.com', 'admin.test@company.com')
+ORDER BY last_login_at DESC;
+
+# Time: 2024-01-15 10:30:35
+# User@Host: fraud[fraud] @ fraud-detection.internal [192.168.1.154]
+# Query_time: 1.234567  Lock_time: 0.123456  Rows_sent: 3  Rows_examined: 1256
+SELECT
+  u.email,
+  u.phone,
+  COUNT(DISTINCT o.ip_address) as unique_ips,
+  COUNT(o.id) as order_count,
+  SUM(o.total_amount) as total_amount
+FROM users u
+JOIN orders o ON u.id = o.customer_id
+WHERE o.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+GROUP BY u.id
+HAVING unique_ips > 3 OR total_amount > 1000;
+
+# Time: 2024-01-15 10:30:36
+# User@Host: migration[migration] @ migration-tool.internal [10.0.0.35]
+# Query_time: 8.901234  Lock_time: 1.890123  Rows_sent: 0  Rows_examined: 25643
+UPDATE users u
+JOIN user_migration_mapping m ON u.legacy_user_id = m.old_id
+SET u.email = CONCAT(m.new_email_prefix, '@company.com'),
+    u.migrated_at = NOW()
+WHERE u.email LIKE '%@legacy-domain.com';
+
+# Time: 2024-01-15 10:30:37
+# User@Host: webapp[webapp] @ app-server-01.internal [192.168.1.145]
+# Query_time: 0.015678  Lock_time: 0.001567  Rows_sent: 1  Rows_examined: 1
+SELECT verification_token FROM email_verifications
+WHERE email = 'verify.email@new.com' AND expires_at > NOW();
+
+# Time: 2024-01-15 10:30:38
+# User@Host: cleanup[cleanup] @ maintenance-system.internal [10.0.0.40]
+# Query_time: 6.789012  Lock_time: 0.678901  Rows_sent: 0  Rows_examined: 5643
+DELETE FROM password_reset_tokens
+WHERE email IN (
+  SELECT email FROM users WHERE deleted_at IS NOT NULL
+) AND expires_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+
+# Time: 2024-01-15 10:30:39
+# User@Host: export[export] @ data-export.internal [10.0.0.45]
+# Query_time: 12.345678  Lock_time: 3.234567  Rows_sent: 1  Rows_examined: 15678
+SELECT JSON_OBJECT(
+  'personal_info', JSON_OBJECT(
+    'email', u.email,
+    'name', CONCAT(u.first_name, ' ', u.last_name),
+    'phone', u.phone,
+    'addresses', (
+      SELECT JSON_ARRAYAGG(JSON_OBJECT('street', street_address, 'city', city, 'postal_code', postal_code))
+      FROM addresses WHERE user_id = u.id
+    )
+  ),
+  'orders', (
+    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'date', created_at, 'amount', total_amount))
+    FROM orders WHERE customer_id = u.id
+  )
+) as gdpr_export
+FROM users u
+WHERE u.email = 'gdpr.request@customer.com';
+
+# Time: 2024-01-15 10:30:40
+# User@Host: monitoring[monitoring] @ monitoring-system.internal [10.0.0.50]
+# Query_time: 2.456789  Lock_time: 0.245678  Rows_sent: 156  Rows_examined: 1567
+SELECT
+  DATE(created_at) as date,
+  COUNT(*) as registrations,
+  COUNT(CASE WHEN email LIKE '%@gmail.com' THEN 1 END) as gmail_users,
+  COUNT(CASE WHEN email LIKE '%@yahoo.%' THEN 1 END) as yahoo_users,
+  COUNT(CASE WHEN email LIKE '%@company.com' THEN 1 END) as company_emails
+FROM users
+WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+GROUP BY DATE(created_at);
