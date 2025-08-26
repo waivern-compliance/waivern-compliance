@@ -1,0 +1,367 @@
+# Application Configuration File
+# Contains system settings and potentially personal data in various contexts
+# Test file for configuration analysis and personal data detection
+
+# Application metadata
+application:
+  name: "CustomerPortal"
+  version: "2.3.1"
+  environment: "production"
+  deployment_date: "2024-01-15T14:30:45Z"
+
+# Database configuration (may contain connection credentials)
+database:
+  primary:
+    host: "db.company.internal"
+    port: 3306
+    username: "app_user"
+    password: "${DB_PASSWORD}"  # Environment variable
+    database_name: "customer_db"
+    connection_string: "mysql://app_user:${DB_PASSWORD}@db.company.internal:3306/customer_db"
+
+  read_replica:
+    host: "db-read.company.internal"
+    port: 3306
+    username: "readonly_user"
+    password: "${DB_READONLY_PASSWORD}"
+
+  admin_access:
+    # Administrative database access - contains potential personal data references
+    username: "admin.database@company.com"  # Admin email - could be personal data
+    emergency_contact: "+44 20 7946 0900"   # Emergency number - could be personal data
+    dba_email: "database.admin@company.com" # DBA contact - could be personal data
+
+# Email service configuration
+email:
+  smtp:
+    host: "smtp.company.com"
+    port: 587
+    username: "system.mailer@company.com"
+    password: "${SMTP_PASSWORD}"
+    use_tls: true
+
+  templates:
+    welcome_email:
+      from_address: "welcome@company.com"
+      from_name: "Customer Service Team"
+      subject: "Welcome {{customer_name}}!"  # Template with personal data placeholder
+
+    password_reset:
+      from_address: "security@company.com"
+      subject: "Password Reset for {{user_email}}"  # Contains personal data placeholder
+
+    account_deletion:
+      from_address: "privacy@company.com"
+      subject: "Account Deletion Confirmation - {{user_full_name}}"  # Personal data in template
+
+  notification_settings:
+    admin_alerts: "alerts.admin@company.com"
+    security_notifications: "security.team@company.com"
+    privacy_officer: "dpo@company.com"  # Data Protection Officer contact
+    gdpr_requests: "gdpr.requests@company.com"
+
+    # Emergency contacts (potentially personal data)
+    emergency_contacts:
+      - name: "John Smith"
+        role: "System Administrator"
+        email: "john.smith@company.com"
+        phone: "+44 20 7946 0958"
+        mobile: "07700 900123"
+
+      - name: "Sarah Wilson"
+        role: "Security Manager"
+        email: "sarah.wilson@company.com"
+        phone: "+44 161 234 5678"
+        out_of_hours: "07700 900456"
+
+# Authentication and session management
+authentication:
+  jwt:
+    secret_key: "${JWT_SECRET}"
+    expiration_hours: 24
+    issuer: "company.com"
+
+  password_policy:
+    minimum_length: 8
+    require_special_characters: true
+    require_numbers: true
+    require_uppercase: true
+
+  login_security:
+    max_attempts: 5
+    lockout_duration_minutes: 15
+    track_failed_logins: true
+    log_successful_logins: true
+
+  session_management:
+    timeout_minutes: 120
+    remember_me_days: 30
+    concurrent_sessions: 3
+
+# Personal data handling configuration
+privacy:
+  data_retention:
+    user_profiles: 2555  # days (7 years)
+    session_logs: 365    # days (1 year)
+    audit_logs: 2555     # days (7 years)
+    email_logs: 1095     # days (3 years)
+
+  gdpr_compliance:
+    enabled: true
+    data_protection_officer: "Sarah Mitchell <dpo@company.com>"  # DPO personal contact
+    privacy_policy_url: "https://company.com/privacy"
+    cookie_policy_url: "https://company.com/cookies"
+
+    auto_deletion:
+      enabled: true
+      inactive_user_threshold_days: 730  # 2 years
+      notification_before_deletion_days: 30
+
+    consent_management:
+      require_explicit_consent: true
+      allow_consent_withdrawal: true
+      track_consent_changes: true
+
+  encryption:
+    personal_data_fields:
+      - "phone_number"
+      - "date_of_birth"
+      - "address"
+      - "national_id"
+    algorithm: "AES-256-GCM"
+    key_rotation_days: 90
+
+# Logging and monitoring
+logging:
+  level: "INFO"
+  format: "json"
+
+  destinations:
+    file:
+      path: "/var/log/application/app.log"
+      rotate_size: "100MB"
+      max_files: 10
+
+    syslog:
+      host: "log.company.internal"
+      port: 514
+      facility: "local0"
+
+    email_alerts:
+      enabled: true
+      recipients:
+        - "alerts@company.com"
+        - "monitoring.team@company.com"
+        - "system.admin.michael.jones@company.com"  # Admin personal email
+
+  personal_data_logging:
+    # Configuration for logging personal data access
+    enabled: true
+    log_data_access: true
+    log_data_modifications: true
+    log_failed_access_attempts: true
+
+    audit_contacts:
+      primary_auditor: "audit.manager@company.com"
+      security_auditor: "security.audit@company.com"
+      compliance_officer: "Lisa Rodriguez <compliance@company.com>"  # Personal name and email
+
+# External services integration
+external_services:
+  payment_processor:
+    api_endpoint: "https://api.payment-provider.com/v2"
+    api_key: "${PAYMENT_API_KEY}"
+    webhook_url: "https://company.com/webhooks/payments"
+
+  address_validation:
+    provider: "PostcodeAPI"
+    api_key: "${ADDRESS_API_KEY}"
+    endpoint: "https://api.postcodeapi.co.uk/v1"
+
+  analytics:
+    google_analytics:
+      tracking_id: "GA-123456789"
+      anonymize_ip: true
+      respect_do_not_track: true
+
+    internal_analytics:
+      endpoint: "https://analytics.company.internal"
+      collect_personal_data: false  # Compliance setting
+
+  marketing:
+    mailchimp:
+      api_key: "${MAILCHIMP_API_KEY}"
+      list_id: "abc123def456"
+      sync_customer_data: true  # Syncs personal data
+
+    social_media:
+      facebook_pixel: "123456789012345"
+      twitter_analytics: "enabled"
+      linkedin_insights: "enabled"
+
+# Feature flags and personal data processing
+features:
+  user_registration:
+    enabled: true
+    collect_phone: true          # Collects personal data
+    collect_date_of_birth: true  # Collects personal data
+    require_address: false       # Address collection setting
+
+  customer_support:
+    enabled: true
+    collect_support_emails: true    # Stores personal communications
+    track_support_calls: true       # May record personal conversations
+    integrate_with_crm: true        # Shares personal data with CRM
+
+  marketing_features:
+    email_campaigns: true
+    personalization: true           # Uses personal data for personalization
+    recommendation_engine: true     # Processes personal preferences
+    behavioral_tracking: true       # Tracks personal behavior
+
+  data_export:
+    gdpr_export: true              # GDPR data portability
+    user_self_export: true         # Users can export their personal data
+    admin_export: true             # Admin can export user data
+
+  account_deletion:
+    self_service_deletion: true     # Users can delete their accounts
+    hard_delete_option: false       # Soft delete only for compliance
+    retention_override: false       # Cannot override retention periods
+
+# Development and testing settings
+development:
+  debug_mode: false
+  test_mode: false
+
+  test_users:
+    # Test user accounts with personal data
+    - email: "test.user@company.com"
+      name: "Test User"
+      phone: "+44 555 123 4567"
+      role: "standard_user"
+
+    - email: "admin.test@company.com"
+      name: "Admin Test User"
+      phone: "+44 555 987 6543"
+      role: "administrator"
+
+  sample_data:
+    # Sample personal data for development
+    customers:
+      - name: "John Doe"
+        email: "john.doe@sample.com"
+        phone: "+44 20 7946 0958"
+        address: "123 Sample Street, London SW1A 1AA"
+
+      - name: "Jane Smith"
+        email: "jane.smith@sample.com"
+        phone: "+44 161 234 5678"
+        address: "456 Test Road, Manchester M1 1AA"
+
+  api_testing:
+    mock_external_apis: true
+    test_webhooks: true
+    test_email_delivery: false
+
+    test_endpoints:
+      user_creation: "/api/test/users"
+      data_export: "/api/test/export"
+      gdpr_deletion: "/api/test/delete"
+
+# Compliance and audit configuration
+compliance:
+  audit_trail:
+    enabled: true
+    log_all_personal_data_access: true
+    retention_period: 2555  # 7 years
+
+  scheduled_audits:
+    personal_data_audit:
+      frequency: "monthly"
+      auditor_email: "compliance.auditor@company.com"
+
+    gdpr_compliance_check:
+      frequency: "quarterly"
+      responsible_person: "Emma Thompson <privacy.manager@company.com>"  # Personal contact
+
+  incident_response:
+    data_breach_contacts:
+      - role: "Data Protection Officer"
+        name: "Sarah Mitchell"
+        email: "dpo@company.com"
+        phone: "+44 20 7946 0800"
+
+      - role: "Legal Counsel"
+        name: "Michael Brown"
+        email: "legal@company.com"
+        phone: "+44 20 7946 0801"
+
+      - role: "IT Security Manager"
+        name: "David Wilson"
+        email: "security@company.com"
+        mobile: "07700 900789"
+
+    notification_requirements:
+      supervisory_authority: "ICO (Information Commissioner's Office)"
+      notification_deadline_hours: 72
+      authority_contact: "casework@ico.org.uk"
+
+# Backup and disaster recovery
+backup:
+  schedule: "daily at 02:00 UTC"
+  retention:
+    daily: 30   # days
+    weekly: 12  # weeks
+    monthly: 12 # months
+
+  encryption: true
+
+  notification_contacts:
+    backup_admin: "backup.admin@company.com"
+    system_admin: "David Chen <system.admin@company.com>"  # Personal name
+
+  personal_data_backup:
+    enabled: true
+    encrypt_personal_data: true
+    exclude_deleted_users: true
+    gdpr_compliant: true
+
+# Performance and scaling
+performance:
+  caching:
+    redis:
+      host: "redis.company.internal"
+      port: 6379
+      password: "${REDIS_PASSWORD}"
+
+    session_cache:
+      ttl_seconds: 7200  # 2 hours
+      cache_user_data: true    # Caches personal data
+
+  rate_limiting:
+    api_requests: 1000  # per hour per user
+    login_attempts: 5   # per 15 minutes per IP
+    password_reset: 3   # per hour per email address
+
+  monitoring:
+    health_check_url: "/health"
+    metrics_endpoint: "/metrics"
+
+    alerts:
+      high_cpu:
+        threshold: 80
+        contact: "ops.team@company.com"
+
+      database_errors:
+        contact: "database.team@company.com"
+        escalation_contact: "senior.dba@company.com"
+
+      personal_data_access_spikes:
+        threshold: 1000  # accesses per hour
+        contact: "security.team@company.com"
+
+# End of configuration
+# Last updated: 2024-01-15 14:30:45 UTC
+# Updated by: system.admin@company.com
+# Review date: 2024-04-15

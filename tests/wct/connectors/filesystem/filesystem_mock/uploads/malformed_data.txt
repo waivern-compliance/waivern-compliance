@@ -1,0 +1,212 @@
+MALFORMED AND EDGE CASE PERSONAL DATA PATTERNS
+==============================================
+Test File: Edge cases, invalid formats, and partial matches
+Purpose: Test analyser's robustness against malformed data
+
+MALFORMED EMAIL ADDRESSES:
+==========================
+Incomplete domains:
+- john.doe@company
+- user@.com
+- admin@localhost.
+- @company.com
+- test@
+
+Invalid characters:
+- user@@company.com
+- user@company..com
+- user name@company.com (space in local part)
+- user@comp any.com (space in domain)
+- user@company,com (comma instead of dot)
+
+Edge case valid emails that might be incorrectly flagged:
+- user+tag@company.com
+- user.name.long@sub.domain.company.co.uk
+- "user with spaces"@company.com
+- user@company-name.com
+- user@123.456.789.012
+
+MALFORMED PHONE NUMBERS:
+========================
+Incomplete numbers:
+- +44 20 79
+- 555-123
+- +1 (555)
+
+Invalid formats:
+- +44 20 7946 0958 ext. 123
+- 020-7946-0958x456
+- +44 (0) 20 7946 0958
+- ++44 20 7946 0958
+- +44 20 7946 0958 (Sarah's direct line)
+
+International edge cases:
+- +999 123 456 789 (invalid country code)
+- +44 0 20 7946 0958 (extra zero)
+- 0044 20 7946 0958 (no plus sign)
+- +44.20.7946.0958 (dots instead of spaces)
+
+PARTIAL PERSONAL DATA:
+=====================
+Masked credit cards:
+- **** **** **** 1234
+- 4532-****-****-9012
+- ****-1234-5678-****
+
+Redacted information:
+- Name: John [REDACTED]
+- Email: ********@company.com
+- Phone: +44 *** *** 0958
+- Address: 123 [ADDRESS REDACTED], London
+
+Incomplete dates:
+- DOB: **/**/1987
+- Born: March **, 1987
+- Date: 15/03/****
+- Age: 35 (as of 2024-01-15)
+
+CORRUPTED DATA:
+==============
+Encoding issues:
+- Namé: Jöhñ Smîth (special characters)
+- Email: üser@cømpàny.com
+- Address: 123 Röyal Streét, Løndon
+
+Character corruption:
+- Name: John\x00Smith (null character)
+- Email: user@company\x0A.com (newline)
+- Phone: +44\t20\t7946\t0958 (tabs)
+
+Mixed encodings:
+- UTF-8: café@company.com
+- Latin-1: naïve.user@domain.com
+- ASCII: user@company.com
+
+CONTEXT CONFUSION:
+=================
+False alarm patterns:
+- "email field validation error"
+- "phone number format check failed"
+- "address parsing module updated"
+- "user table schema change: add email column"
+
+Real data in error messages:
+- Error: Invalid email format for input 'john.doe@company.com'
+- Warning: Phone number '020 7946 0958' exceeds field limit
+- Debug: Processing user 'Sarah Wilson' profile update
+
+Mixed legitimate and test data:
+- Production contact: sarah.support@company.com
+- Test environment: test@localhost
+- Development: dev.user@staging.company.com
+- Real backup contact: emergency@company.co.uk
+
+TRUNCATED DATA:
+==============
+Database field limits:
+- Name: "Johnathan Christopher Williamso..." (truncated)
+- Email: "very.long.email.address.that.mig..."
+- Address: "123 Very Long Street Name That..."
+
+Split across lines:
+Name: Sarah Michelle
+      Johnson
+Email: sarah.johnson@
+       company.com
+Phone: +44 20
+       7946 0958
+
+CSV parsing errors:
+"John","Doe","john.doe@company.com","020 7946
+"Sarah","Wilson","sarah@company","incomplete row
+"David",,"david@","","malformed columns"
+
+TEMPORAL DATA ISSUES:
+====================
+Invalid dates:
+- DOB: 31/02/1987 (February 31st doesn't exist)
+- Born: 00/00/1987
+- Date: 1987-13-15 (month 13)
+- Age: -5 years old
+
+Ambiguous formats:
+- 01/02/1987 (Jan 2nd or Feb 1st?)
+- 1987/03/15 (unusual year-first format)
+- 15-Mar-87 (two-digit year)
+
+MIXED DATA TYPES:
+================
+Numbers as strings:
+- Phone: "020 7946 0958"
+- ID: "123456789"
+- Postcode: "SW1A 1AA"
+
+Strings as other types:
+- Age: "thirty-five"
+- Date: "fifteenth of March"
+- Boolean: "yes" (instead of true/false)
+
+INJECTION ATTEMPTS:
+==================
+SQL-like patterns:
+- Name: "John'; DROP TABLE users;--"
+- Email: "user@company.com' OR '1'='1"
+- Address: "123 Street'; UPDATE users SET--"
+
+Script injection:
+- Name: "<script>alert('xss')</script>"
+- Comment: "javascript:void(0)"
+
+UNICODE EDGE CASES:
+==================
+Right-to-left text:
+- Name: محمد أحمد (Arabic)
+- Email: user@شركة.com
+
+Emoji in data:
+- Name: "John 😊 Smith"
+- Email: "user+😀@company.com"
+- Comment: "Great service! ⭐⭐⭐⭐⭐"
+
+Zero-width characters:
+- Email: "user@company.c‌om" (zero-width non-joiner)
+- Name: "Jo‌hn Smith" (hidden character)
+
+BOUNDARY CONDITIONS:
+===================
+Maximum length strings:
+- Email: "a" * 320 + "@company.com" (too long)
+- Name: "John" + "n" * 100 (extremely long name)
+- Phone: "+44" + "1" * 50 (too many digits)
+
+Minimum length:
+- Name: "A"
+- Email: "a@b.c" (shortest possible valid email)
+
+Empty/null values:
+- Name: ""
+- Email: null
+- Phone: undefined
+- Address: N/A
+
+SPECIAL CASES:
+=============
+System accounts:
+- root@localhost
+- admin@system
+- service@internal
+
+Legacy formats:
+- PHONE: 020 7946 0958 (old UK format without +44)
+- EMAIL: USER%COMPANY.COM (old % format)
+- DATE: 15-MAR-87 (old abbreviated format)
+
+Multiple formats in same field:
+- "Contact: 020 7946 0958 or email john.doe@company.com"
+- "Sarah Wilson <s.wilson@company.com> or 07700 123456"
+- "Emergency: +44 20 7946 0958, backup: sarah@company.com"
+
+---
+File contains intentionally malformed data for robust testing
+Last updated: 2024-01-15 15:45:32
+Test coverage: Malformed patterns, edge cases, boundary conditions

@@ -1,0 +1,81 @@
+# System Audit Trail Log
+# Comprehensive activity logging for compliance and security monitoring
+# Contains detailed user activities, data access patterns, and administrative actions
+# Critical for GDPR Article 30 records of processing activities
+
+[2024-01-15 10:30:00] AUDIT_START session_id=audit_20240115_103000 audit_version=2.1.0
+[2024-01-15 10:30:01] USER_LOGIN user=sarah.johnson@gmail.com ip=192.168.1.145 method=password session_id=sess_abc123 login_time=2024-01-15T10:30:01Z
+[2024-01-15 10:30:02] DATA_ACCESS user=sarah.johnson@gmail.com resource=personal_profile action=READ record_id=CUST_12345 accessed_fields=["name","email","phone","address"]
+[2024-01-15 10:30:03] PROFILE_UPDATE user=sarah.johnson@gmail.com resource=personal_profile action=UPDATE record_id=CUST_12345 changed_fields=["phone"] old_value="+44 20 7946 0958" new_value="+44 20 7946 1234"
+
+# Administrative actions with personal data implications
+[2024-01-15 10:30:05] ADMIN_ACTION admin=system.admin@company.com action=USER_CREATE new_user=michael.chen@company.co.uk department=Engineering role=Developer personal_data_collected=["full_name","work_email","phone","start_date"]
+[2024-01-15 10:30:06] PERMISSION_GRANT admin=system.admin@company.com target_user=michael.chen@company.co.uk permissions_added=["read_customer_data","export_reports"] data_access_level=level_2
+[2024-01-15 10:30:07] BULK_EXPORT admin=data.admin@company.com export_type=customer_data record_count=1567 includes_personal_data=true export_reason="quarterly_compliance_report" recipients=["compliance.officer@company.com"]
+
+# GDPR compliance activities
+[2024-01-15 10:30:10] GDPR_REQUEST user=emma.wilson@btinternet.com request_type=DATA_EXPORT request_id=GDPR_EXP_001 submitted_at=2024-01-15T10:30:10Z processing_deadline=2024-02-15T10:30:10Z
+[2024-01-15 10:30:11] CONSENT_UPDATE user=emma.wilson@btinternet.com consent_type=marketing previous_status=granted new_status=withdrawn timestamp=2024-01-15T10:30:11Z legal_basis_change=true
+[2024-01-15 10:30:12] DATA_PROCESSING_LOG user=emma.wilson@btinternet.com processing_activity="email_marketing" lawful_basis="consent" purpose="send_promotional_emails" data_categories=["email","preferences"] retention_period="until_consent_withdrawn"
+
+# Right to be forgotten / Data deletion
+[2024-01-15 10:30:15] RTF_REQUEST user=david.smith@yahoo.co.uk request_type=RIGHT_TO_BE_FORGOTTEN request_id=RTF_002 reason="no_longer_customer" submitted_at=2024-01-15T10:30:15Z
+[2024-01-15 10:30:16] DATA_DELETION_INITIATED admin=privacy.officer@company.com target_user=david.smith@yahoo.co.uk deletion_scope=["profile","orders","communications","analytics"] cascading_deletes=true
+[2024-01-15 10:30:17] DATA_DELETION_VERIFIED admin=privacy.officer@company.com target_user=david.smith@yahoo.co.uk deleted_records=47 systems_checked=["crm","email","analytics","backups"] deletion_complete=true
+
+# Data access by staff members
+[2024-01-15 10:30:20] STAFF_DATA_ACCESS staff=lisa.rodriguez@company.com customer=james.oconnor@icloud.com reason="customer_support_ticket_12345" accessed_data=["contact_info","order_history","support_tickets"] access_duration=15min
+[2024-01-15 10:30:21] CUSTOMER_SEARCH staff=support.agent@company.com search_query="phone:+44-20-7946" results_count=12 customers_viewed=["customer_001@domain.com","customer_002@email.com"] search_reason="phone_number_verification"
+[2024-01-15 10:30:22] SENSITIVE_DATA_ACCESS staff=hr.manager@company.com employee=maria.garcia@company.com accessed_data=["salary_info","performance_reviews","personal_details"] access_reason="annual_review" authorized_by="director.hr@company.com"
+
+# Data breach investigation and response
+[2024-01-15 10:30:25] SECURITY_INCIDENT incident_id=SEC_2024_001 type=potential_data_breach affected_users=["robert.anderson@gmail.com","jennifer.adams@company.com"] investigator="security.team@company.com" severity=high
+[2024-01-15 10:30:26] INCIDENT_INVESTIGATION incident_id=SEC_2024_001 investigator="security.team@company.com" action=USER_DATA_REVIEW reviewed_accounts=12 suspicious_activity_found=true personal_data_at_risk=["emails","phone_numbers","addresses"]
+[2024-01-15 10:30:27] BREACH_NOTIFICATION incident_id=SEC_2024_001 notified_authority=ICO notification_sent=true affected_user_count=2 notification_deadline=2024-01-18T10:30:27Z personal_data_categories=["contact_details","account_credentials"]
+
+# Marketing and communications tracking
+[2024-01-15 10:30:30] MARKETING_CAMPAIGN campaign=NEWSLETTER_JAN_2024 target_users=15678 segmentation_criteria=["age_25_45","location_UK","marketing_consent_granted"] personal_data_used=["email","name","location","preferences"]
+[2024-01-15 10:30:31] EMAIL_DELIVERY_TRACKING campaign=NEWSLETTER_JAN_2024 recipient=premium.customer@business.co.uk delivery_status=delivered open_time=2024-01-15T11:15:32Z click_tracking=enabled personal_identifier_logged=true
+[2024-01-15 10:30:32] UNSUBSCRIBE_REQUEST user=mobile.user@app.com unsubscribe_type=all_marketing timestamp=2024-01-15T10:30:32Z preference_center_accessed=true personal_data_updated=["email_preferences","consent_status"]
+
+# Financial and payment data access
+[2024-01-15 10:30:35] PAYMENT_DATA_ACCESS staff=billing.admin@company.com customer=developer.test@company.com payment_method="card_ending_1234" access_reason="billing_inquiry_resolution" pci_compliance_logged=true accessed_data=["last_four_digits","expiry_date","billing_address"]
+[2024-01-15 10:30:36] REFUND_PROCESSING admin=finance.manager@company.com customer=security.test@company.com amount="£149.99" personal_data_accessed=["payment_details","order_history","customer_contact"] refund_reason="service_cancellation"
+[2024-01-15 10:30:37] FRAUD_INVESTIGATION staff=fraud.analyst@company.com suspected_account=suspicious.account@domain.com investigation_scope=["transaction_history","device_fingerprints","login_patterns"] personal_data_reviewed=["payment_info","contact_details","behavioral_data"]
+
+# Third-party data sharing and integrations
+[2024-01-15 10:30:40] DATA_SHARING_EVENT recipient=external.partner@client.com shared_data_type="customer_analytics" customer_count=1234 personal_data_included=false anonymization_verified=true sharing_agreement=PARTNER_2024_001
+[2024-01-15 10:30:41] API_DATA_EXPORT integration=CRM_SYNC exported_customers=567 personal_data_fields=["email","phone","company"] data_processor="salesforce.com" processing_agreement=DPA_2024_SF001
+[2024-01-15 10:30:42] WEBHOOK_PERSONAL_DATA webhook_url="https://client-system.com/webhook" customer_data_sent=true customer_id=CUST_78901 data_fields=["email","order_status","shipping_address"] webhook_recipient="integration.partner@client.com"
+
+# Data quality and maintenance activities
+[2024-01-15 10:30:45] DATA_QUALITY_SCAN scan_type=duplicate_detection affected_records=123 personal_data_duplicates=["john.smith@email.com","j.smith@email.com"] merge_candidates=true data_steward="data.quality@company.com"
+[2024-01-15 10:30:46] DATA_CORRECTION admin=customer.service@company.com customer=anna.müller@unternehmen.de corrected_field="address" old_value="123 Old Street, London" new_value="456 New Avenue, Manchester" correction_reason="customer_request"
+[2024-01-15 10:30:47] INACTIVE_USER_REVIEW reviewer="retention.officer@company.com" inactive_users_identified=2567 last_activity_before="2022-01-01" personal_data_retention_assessment=true proposed_action="anonymize_or_delete"
+
+# Employee access and training
+[2024-01-15 10:30:50] GDPR_TRAINING_COMPLETION employee=new.employee@company.com training_module="personal_data_handling" completion_date=2024-01-15T10:30:50Z certification_valid_until=2025-01-15T10:30:50Z access_level_updated=true
+[2024-01-15 10:30:51] ACCESS_REVIEW reviewer="security.officer@company.com" reviewed_employee=hr.specialist@company.com current_access=["employee_records","payroll_data","personal_files"] review_result=access_appropriate next_review_date=2024-07-15
+[2024-01-15 10:30:52] PRIVILEGE_REVOCATION admin="it.security@company.com" target_user=former.employee@company.com revoked_access=["customer_database","personal_data_exports"] reason="employment_termination" effective_immediately=true
+
+# Automated processing and profiling
+[2024-01-15 10:30:55] AUTOMATED_DECISION customer=analytics.user@tracked.com decision_type="credit_assessment" algorithm_version="v2.1" personal_data_inputs=["income","credit_history","spending_patterns"] decision_result="approved" human_review_required=false
+[2024-01-15 10:30:56] PROFILING_ACTIVITY customer=marketing.target@customer.com profile_type="behavioral_targeting" data_sources=["website_activity","purchase_history","demographic_data"] profile_categories=["high_value_customer","tech_enthusiast"] lawful_basis="legitimate_interest"
+[2024-01-15 10:30:57] AI_PROCESSING_LOG model=customer_lifetime_value processed_customers=10000 personal_data_features=["age","location","purchase_frequency","communication_preferences"] model_accuracy=94.2% bias_assessment_passed=true
+
+# Cross-border data transfers
+[2024-01-15 10:31:00] INTERNATIONAL_TRANSFER customer=global.customer@worldwide.com destination_country="United States" transfer_mechanism="Standard Contractual Clauses" personal_data_categories=["contact_info","service_usage"] adequacy_decision_status=false additional_safeguards=true
+[2024-01-15 10:31:01] DATA_LOCALISATION_CHECK customer=eu.resident@europa.eu data_location="EU_West_1" data_sovereignty_compliant=true processing_location="Frankfurt, Germany" controller_location="London, UK" lawful_basis_documented=true
+[2024-01-15 10:31:02] TRANSFER_AUDIT transfer_id=XFER_001 recipients=["us.processor@american.com"] personal_data_volume=2.3GB transfer_date=2024-01-15T10:31:02Z privacy_impact_assessment_ref=PIA_2024_001
+
+# Retention and disposal activities
+[2024-01-15 10:31:05] RETENTION_REVIEW data_category="customer_communications" records_reviewed=15678 retention_policy="7_years_after_last_contact" records_due_for_deletion=234 personal_data_officer="retention.manager@company.com"
+[2024-01-15 10:31:06] SCHEDULED_DELETION deletion_job=RETENTION_2024_001 deleted_records=234 affected_customers=["old.customer1@expired.com","old.customer2@expired.com"] deletion_method="secure_overwrite" certificate_generated=true
+[2024-01-15 10:31:07] BACKUP_RETENTION_AUDIT backup_date="2017-01-15" retention_period_expired=true personal_data_in_backup=true backup_destruction_scheduled=true destruction_method="cryptographic_erasure" compliance_officer_notified=true
+
+# Compliance reporting and monitoring
+[2024-01-15 10:31:10] COMPLIANCE_REPORT report_type="monthly_gdpr_summary" generated_by="compliance.officer@company.com" period="2024-01" data_subjects_affected=15678 processing_activities=67 incidents=2 data_requests=12
+[2024-01-15 10:31:11] DPO_NOTIFICATION notification_type="high_risk_processing" data_protection_officer="dpo@company.com" processing_activity="ai_powered_customer_scoring" personal_data_categories=["financial","behavioral"] risk_level=medium dpia_required=true
+[2024-01-15 10:31:12] AUDIT_TRAIL_EXPORT exported_by="external.auditor@audit-firm.com" export_period="2024-Q1" records_exported=45678 personal_data_pseudonymized=true audit_reference="EXT_AUDIT_2024_001" retention_period="7_years"
+
+[2024-01-15 10:31:15] AUDIT_END session_id=audit_20240115_103000 total_events_logged=1247 personal_data_events=967 compliance_events=156 security_events=89 retention_policy_applied=true
