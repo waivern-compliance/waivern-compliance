@@ -15,6 +15,26 @@ from typing_extensions import Self
 
 from wct.connectors.base import ConnectorConfigError
 
+# Common file patterns to exclude from source code analysis
+_DEFAULT_EXCLUDE_PATTERNS = [
+    "*.pyc",
+    "__pycache__",
+    "*.class",
+    "*.o",
+    "*.so",
+    "*.dll",
+    ".git",
+    ".svn",
+    ".hg",
+    "node_modules",
+    ".DS_Store",
+    "*.log",
+    "*.tmp",
+    "*.bak",
+    "*.swp",
+    "*.swo",
+]
+
 
 def _validate_path_required(v: str | Path | None) -> Path:
     """Validate that path is provided and convert to Path object."""
@@ -65,6 +85,10 @@ class SourceCodeConnectorConfig(BaseModel):
         description="Maximum number of files to process",
         gt=0,
     )
+    exclude_patterns: list[str] = Field(
+        default_factory=lambda: list(_DEFAULT_EXCLUDE_PATTERNS),
+        description="Glob patterns to exclude from processing. Defaults to common exclusions (*.pyc, __pycache__, etc.). Specify custom patterns to override defaults, or empty list [] to disable all exclusions",
+    )
 
     model_config = ConfigDict(
         # Allow extra fields for future extensibility
@@ -98,7 +122,13 @@ class SourceCodeConnectorConfig(BaseModel):
         """Create configuration from runbook properties.
 
         Args:
-            properties: Raw properties from runbook configuration
+            properties: Raw properties from runbook configuration containing:
+                - path (str): Required. Path to source code file or directory.
+                - language (str, optional): Programming language.
+                - file_patterns (list[str], optional): File inclusion patterns.
+                - max_file_size (int, optional): Maximum file size to process.
+                - max_files (int, optional): Maximum number of files to process.
+                - exclude_patterns (list[str], optional): Glob patterns to exclude.
 
         Returns:
             Validated configuration object
