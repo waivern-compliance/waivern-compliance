@@ -207,7 +207,9 @@ analysers:
     type: unknown_analyser_type
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with unknown analyser"
+    description: "Testing error handling for unknown analyser type"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -240,7 +242,9 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with unknown connector"
+    description: "Testing error handling for unknown connector type"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -272,7 +276,9 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with unsupported input schema"
+    description: "Testing error handling for unsupported input schema"
+    connector: test_connector
     analyser: test_analyser
     input_schema: unsupported_schema
     output_schema: personal_data_finding
@@ -304,7 +310,9 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with unsupported output schema"
+    description: "Testing error handling for unsupported output schema"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: unsupported_output_schema
@@ -351,7 +359,9 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with failing connector"
+    description: "Testing error handling for connector that throws exceptions"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -403,7 +413,9 @@ analysers:
     type: failing_analyser
     properties: {}
 execution:
-  - connector: test_connector
+  - name: "Test execution with failing analyser"
+    description: "Testing error handling for analyser that throws exceptions"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -444,7 +456,9 @@ analysers:
     metadata:
       purpose: "testing"
 execution:
-  - connector: test_connector
+  - name: "Successful test execution"
+    description: "Testing successful execution with valid components"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -485,11 +499,15 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: connector1
+  - name: "First execution step"
+    description: "Testing first step in multi-step execution"
+    connector: connector1
     analyser: analyser1
     input_schema: standard_input
     output_schema: personal_data_finding
-  - connector: connector2
+  - name: "Second execution step"
+    description: "Testing second step in multi-step execution"
+    connector: connector2
     analyser: analyser2
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -546,11 +564,15 @@ analysers:
     type: failing_analyser
     properties: {}
 execution:
-  - connector: connector1
+  - name: "Working execution step"
+    description: "Testing successful step in mixed scenario"
+    connector: connector1
     analyser: working_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
-  - connector: connector2
+  - name: "Failing execution step"
+    description: "Testing failing step in mixed scenario"
+    connector: connector2
     analyser: broken_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -633,7 +655,9 @@ analysers:
     type: mock_analyser
     properties: {}
 execution:
-  - connector: broken_conn
+  - name: "Test execution with broken connector"
+    description: "Testing error handling for connector with generic exception"
+    connector: broken_conn
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
@@ -676,7 +700,9 @@ analysers:
       author: "test"
       compliance_standard: "GDPR"
 execution:
-  - connector: test_connector
+  - name: "Test execution with context and metadata"
+    description: "Testing execution step context and analyser metadata"
+    connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding

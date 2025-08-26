@@ -29,7 +29,9 @@ analysers:
         llm_validation_mode: "standard"
 
 execution:
-  - connector: "file_content_connector"
+  - name: "Personal Data Detection in Filesystem (Mock)"
+    description: "Analyse file content for personal data using pattern matching and optional LLM validation"
+    connector: "file_content_connector"
     analyser: "personal_data_analyser"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"

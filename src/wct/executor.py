@@ -109,6 +109,10 @@ class Executor:
 
     def _execute_step(self, step: ExecutionStep, runbook: Runbook) -> AnalysisResult:
         """Execute a single step in the runbook."""
+        logger.info("Executing analysis: %s", step.name)
+        if step.description:
+            logger.info("Analysis description: %s", step.description)
+
         try:
             # Get configurations and validate types
             analyser_config, connector_config = self._get_step_configs(step, runbook)

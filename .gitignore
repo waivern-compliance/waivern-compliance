@@ -10,6 +10,8 @@ CLAUDE.local.md
 
 # Virtual environments
 .venv
+
+# Default analyses results output directory
 outputs/
 
 # Environment variables
@@ -18,3 +20,6 @@ outputs/
 # Logs
 logs/*.log
 logs/*.log.*
+
+# Misc
+.local_workspace/
