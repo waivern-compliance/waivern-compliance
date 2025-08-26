@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 from wct.cli import (
     execute_runbook_command,
+    generate_schema_command,
     list_analysers_command,
     list_connectors_command,
     validate_runbook_command,
@@ -154,6 +155,35 @@ def validate_runbook(
 ) -> None:
     """Validate a runbook."""
     validate_runbook_command(runbook, log_level)
+
+
+@app.command(name="generate-schema")
+def generate_schema(
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Output file path for generated schema",
+            file_okay=True,
+            dir_okay=False,
+            writable=True,
+        ),
+    ] = None,
+    log_level: Annotated[
+        str,
+        typer.Option(
+            "--log-level",
+            help="Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+            case_sensitive=False,
+        ),
+    ] = "INFO",
+) -> None:
+    """Generate JSON schema for WCT runbooks."""
+    if output is None:
+        output = Path("runbook.schema.json")
+
+    generate_schema_command(output, log_level)
 
 
 if __name__ == "__main__":

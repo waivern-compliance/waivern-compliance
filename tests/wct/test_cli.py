@@ -13,6 +13,7 @@ Following black-box testing principles:
 - Use British English spelling throughout ✔️
 """
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -24,6 +25,7 @@ from wct.cli import (
     CLIError,
     OutputFormatter,
     execute_runbook_command,
+    generate_schema_command,
     list_analysers_command,
     list_connectors_command,
     validate_runbook_command,
@@ -409,6 +411,95 @@ execution:
         with patch("wct.cli.setup_logging") as mock_setup_logging:
             validate_runbook_command(runbook_path=runbook_path, log_level="CRITICAL")
             mock_setup_logging.assert_called_once_with(level="CRITICAL")
+
+
+class TestGenerateSchemaCommand:
+    """Test generate_schema_command functionality."""
+
+    def test_generates_schema_successfully(self, tmp_path: Path) -> None:
+        """Test that CLI command generates schema file successfully."""
+        output_path = tmp_path / "test_schema.json"
+
+        # Should execute without raising an exception
+        generate_schema_command(output=output_path, log_level="INFO")
+
+        # Verify output file was created and is valid JSON
+        assert output_path.exists()
+        assert output_path.stat().st_size > 0
+
+        # Basic validation that it's valid JSON (content testing is in unit tests)
+        with open(output_path, encoding="utf-8") as f:
+            schema_data = json.load(f)
+
+        assert isinstance(schema_data, dict)
+
+    def test_creates_parent_directories_if_needed(self, tmp_path: Path) -> None:
+        """Test that parent directories are created if they don't exist."""
+        nested_output = tmp_path / "nested" / "deep" / "schema.json"
+
+        # Should handle creating the directory structure
+        generate_schema_command(output=nested_output, log_level="INFO")
+
+        # Verify nested directories and file were created
+        assert nested_output.parent.exists()
+        assert nested_output.exists()
+        assert nested_output.stat().st_size > 0
+
+    def test_overwrites_existing_file(self, tmp_path: Path) -> None:
+        """Test that CLI command overwrites existing files."""
+        output_path = tmp_path / "existing_schema.json"
+
+        # Create an existing file with different content
+        output_path.write_text('{"old": "content"}')
+        original_size = output_path.stat().st_size
+
+        # Generate new schema
+        generate_schema_command(output=output_path, log_level="INFO")
+
+        # Verify file was overwritten (different size)
+        assert output_path.exists()
+        new_size = output_path.stat().st_size
+        assert new_size != original_size
+
+        # Basic verification it's valid JSON (content testing is in unit tests)
+        with open(output_path, encoding="utf-8") as f:
+            json.load(f)  # Should not raise exception
+
+    def test_respects_log_level_parameter(self, tmp_path: Path) -> None:
+        """Test that log level parameter is respected."""
+        output_path = tmp_path / "test_schema.json"
+
+        with patch("wct.cli.setup_logging") as mock_setup_logging:
+            generate_schema_command(output=output_path, log_level="DEBUG")
+            mock_setup_logging.assert_called_once_with(level="DEBUG")
+
+    def test_handles_file_write_error_gracefully(self, tmp_path: Path) -> None:
+        """Test graceful handling of file write errors."""
+        # Try to write to a read-only directory (simulate permission error)
+        readonly_dir = tmp_path / "readonly"
+        readonly_dir.mkdir()
+        readonly_dir.chmod(0o444)  # Read-only
+
+        output_path = readonly_dir / "schema.json"
+
+        # Should raise typer.Exit due to write permission error
+        with pytest.raises(typer.Exit):
+            generate_schema_command(output=output_path, log_level="INFO")
+
+        # Cleanup: restore write permissions for cleanup
+        readonly_dir.chmod(0o755)
+
+    def test_handles_schema_generation_failure(self, tmp_path: Path) -> None:
+        """Test graceful handling of schema generation failure."""
+        output_path = tmp_path / "test_schema.json"
+
+        with patch(
+            "wct.schemas.runbook.RunbookSchemaGenerator.save_schema"
+        ) as mock_save_schema:
+            mock_save_schema.side_effect = Exception("Schema generation failed")
+
+            with pytest.raises(typer.Exit):
+                generate_schema_command(output=output_path, log_level="INFO")
 
 
 class TestOutputFormatter:

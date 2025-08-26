@@ -19,5 +19,24 @@
     },
     "terminal.integrated.env.windows": {
         "PYTHONPATH": "${workspaceFolder}/src"
+    },
+    "yaml.schemas": {
+        "./src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json": "runbooks/**/*.yaml"
+    },
+    "yaml.format.enable": true,
+    "yaml.validate": true,
+    "files.associations": {
+        "*.runbook.yaml": "yaml",
+        "*.runbook.yml": "yaml"
+    },
+    "yaml.completion": true,
+    "yaml.hover": true,
+    "yaml.format.bracketSpacing": true,
+    "yaml.format.printWidth": 100,
+    "[yaml]": {
+        "editor.defaultFormatter": "redhat.vscode-yaml",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.autoIndent": "advanced"
     }
 }

@@ -15,6 +15,7 @@ from wct.analysis import AnalysisResult, AnalysisResultsExporter
 from wct.executor import Executor
 from wct.logging import setup_logging
 from wct.runbook import Runbook, RunbookLoader
+from wct.schemas.runbook import RunbookSchemaGenerator
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -470,6 +471,37 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
         error_panel = Panel(
             f"[red]{cli_error}[/red]",
             title="❌ Runbook validation failed",
+            border_style="red",
+        )
+        console.print(error_panel)
+        raise typer.Exit(1) from cli_error
+
+
+def generate_schema_command(output: Path, log_level: str = "INFO") -> None:
+    """CLI command implementation for generating JSON schema.
+
+    Args:
+        output: Output file path for generated schema
+        log_level: Logging level
+
+    """
+    setup_logging(level=log_level)
+
+    try:
+        RunbookSchemaGenerator.save_schema(output)
+        console.print(f"✅ Generated JSON schema: {output}")
+        logger.info("JSON schema generated successfully at %s", output)
+
+    except Exception as e:
+        logger.error("Schema generation failed: %s", e)
+        cli_error = CLIError(
+            f"Failed to generate schema: {e}",
+            command="generate-schema",
+            original_error=e,
+        )
+        error_panel = Panel(
+            f"[red]{cli_error}[/red]",
+            title="❌ Schema generation failed",
             border_style="red",
         )
         console.print(error_panel)

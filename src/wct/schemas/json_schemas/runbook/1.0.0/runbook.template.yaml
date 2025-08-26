@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=./runbook.json
+# This template demonstrates how to structure a WCT runbook with JSON Schema validation
+# Copy this template and modify it for your specific compliance requirements
+
+name: "Sample Compliance Analysis"
+description: "Template runbook demonstrating personal data analysis across filesystem and database sources"
+
+# Data source connectors - extract information from various systems
+connectors:
+  # Filesystem connector for analysing files
+  - name: "sample_filesystem"
+    type: "filesystem"
+    properties:
+      root_path: "/path/to/your/files"
+      include_patterns:
+        - "*.txt"
+        - "*.csv"
+        - "*.log"
+      exclude_patterns:
+        - "*.tmp"
+        - "node_modules/*"
+
+  # MySQL database connector for analysing database content
+  - name: "sample_database"
+    type: "mysql"
+    properties:
+      host: "${MYSQL_HOST}"           # Use environment variables for sensitive data
+      port: ${MYSQL_PORT}             # Defaults to 3306 if not specified
+      user: "${MYSQL_USER}"
+      password: "${MYSQL_PASSWORD}"
+      database: "${MYSQL_DATABASE}"
+      tables:
+        - "users"
+        - "customer_data"
+        - "transaction_logs"
+
+# Analysis processors - examine extracted data for compliance issues
+analysers:
+  # Personal data analyser using pattern matching and LLM validation
+  - name: "personal_data_detector"
+    type: "personal_data_analyser"
+    properties:
+      patterns:
+        - "email"
+        - "phone"
+        - "ssn"
+        - "credit_card"
+      validation_strategy: "llm"
+      confidence_threshold: 0.8
+
+  # Processing purpose analyser for GDPR compliance
+  - name: "processing_purpose_detector"
+    type: "processing_purpose_analyser"
+    properties:
+      patterns:
+        - "marketing"
+        - "analytics"
+        - "authentication"
+        - "payment_processing"
+
+# Execution pipeline - defines the analysis workflow
+execution:
+  # Analyse filesystem for personal data
+  - name: "Filesystem Personal Data Analysis"
+    description: "Scan files for personal data patterns using LLM validation"
+    connector: "sample_filesystem"
+    analyser: "personal_data_detector"
+    input_schema: "standard_input"
+    output_schema: "personal_data_finding"
+
+  # Analyse database for personal data
+  - name: "Database Personal Data Analysis"
+    description: "Examine database tables for personal information and PII patterns"
+    connector: "sample_database"
+    analyser: "personal_data_detector"
+    input_schema: "standard_input"
+    output_schema: "personal_data_finding"
+
+  # Analyse database for processing purposes
+  - name: "Database Processing Purpose Analysis"
+    description: "Identify data processing purposes for GDPR compliance assessment"
+    connector: "sample_database"
+    analyser: "processing_purpose_detector"
+    input_schema: "standard_input"
+    output_schema: "processing_purpose_finding"
