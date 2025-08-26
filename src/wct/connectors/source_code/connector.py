@@ -34,26 +34,6 @@ _SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
     SourceCodeSchema(),
 ]
 
-# Common file patterns to exclude from source code analysis
-_COMMON_EXCLUSIONS = [
-    "*.pyc",
-    "__pycache__",
-    "*.class",
-    "*.o",
-    "*.so",
-    "*.dll",
-    ".git",
-    ".svn",
-    ".hg",
-    "node_modules",
-    ".DS_Store",
-    "*.log",
-    "*.tmp",
-    "*.bak",
-    "*.swp",
-    "*.swo",
-]
-
 
 class SourceCodeConnector(Connector):
     """Connector that analyses source code for compliance information.
@@ -72,11 +52,11 @@ class SourceCodeConnector(Connector):
         """
         self._config = config
 
-        # Create filesystem connector for file collection with common exclusions
+        # Create filesystem connector for file collection with user-controlled exclusions
         filesystem_config = FilesystemConnectorConfig.from_properties(
             {
                 "path": str(config.path),
-                "exclude_patterns": _COMMON_EXCLUSIONS,
+                "exclude_patterns": config.exclude_patterns,
                 "max_files": config.max_files,
                 "errors": "strict",  # Skip binary files
             }
@@ -118,6 +98,9 @@ class SourceCodeConnector(Connector):
                 - file_patterns (list[str], optional): File inclusion patterns.
                 - max_file_size (int, optional): Maximum file size to process.
                 - max_files (int, optional): Maximum number of files to process.
+                - exclude_patterns (list[str], optional): Glob patterns to exclude.
+                  Defaults to common exclusions (*.pyc, __pycache__, etc.).
+                  Specify custom patterns to override defaults, or [] to disable exclusions.
 
         Returns:
             Self: A new SourceCodeConnector instance.

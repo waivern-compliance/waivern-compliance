@@ -833,3 +833,58 @@ class PrivacyManager {
             assert "src/controllers/UserController.php" in file_data["file_path"]
             # Should not include the full temporary directory path
             assert temp_dir not in file_data["file_path"]
+
+
+class TestSourceCodeConnectorExcludePatterns:
+    """Test custom exclude_patterns functionality."""
+
+    def test_exclude_patterns_with_directory_patterns(self):
+        """Test exclude_patterns with directory-based exclusions."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+
+            # Create valid PHP files in main directory
+            (temp_path / "MainController.php").write_text(
+                "<?php class MainController {} ?>"
+            )
+
+            # Create directories with PHP files
+            test_dir = temp_path / "tests"
+            test_dir.mkdir()
+            (test_dir / "TestController.php").write_text(
+                "<?php class TestController {} ?>"
+            )
+
+            vendor_dir = temp_path / "vendor" / "package"
+            vendor_dir.mkdir(parents=True)
+            (vendor_dir / "VendorClass.php").write_text("<?php class VendorClass {} ?>")
+
+            build_dir = temp_path / "build"
+            build_dir.mkdir()
+            (build_dir / "BuildScript.php").write_text("<?php class BuildScript {} ?>")
+
+            # Exclude specific directories
+            connector = SourceCodeConnector.from_properties(
+                {
+                    "path": temp_dir,
+                    "exclude_patterns": ["tests/*", "vendor/*", "build/*"],
+                }
+            )
+            message = connector.extract()
+
+            assert isinstance(message, Message)
+            content = message.content
+
+            processed_files = [file_data["file_path"] for file_data in content["data"]]
+            processed_files_str = str(processed_files)
+
+            # Should include main PHP file
+            assert "MainController.php" in processed_files_str
+
+            # Should exclude files in excluded directories
+            assert "TestController.php" not in processed_files_str
+            assert "VendorClass.php" not in processed_files_str
+            assert "BuildScript.php" not in processed_files_str
+
+            # Should process exactly 1 file
+            assert len(content["data"]) == 1
