@@ -228,7 +228,8 @@ class Executor:
 
         # Construct and return the analysis result
         return AnalysisResult(
-            analyser_name=step.analyser,
+            analysis_name=step.name,
+            analysis_description=step.description,
             input_schema=input_schema.name,
             output_schema=output_schema.name,
             data=result_message.content,
@@ -240,9 +241,10 @@ class Executor:
         self, step: ExecutionStep, error: Exception
     ) -> AnalysisResult:
         """Handle execution errors and return appropriate error result."""
-        logger.error(f"Step execution failed for {step.analyser}: {error}")
+        logger.error(f"Step execution failed for {step.name}: {error}")
         return self._create_error_result(
-            step.analyser,
+            step.name,
+            step.description,
             error_message=str(error),
             input_schema=step.input_schema,
             output_schema=step.output_schema,
@@ -250,16 +252,18 @@ class Executor:
 
     def _create_error_result(
         self,
-        analyser_name: str,
+        analysis_name: str,
+        analysis_description: str,
         error_message: str,
         input_schema: str = "unknown",
         output_schema: str = "unknown",
         metadata: dict[str, Any] | None = None,
     ) -> AnalysisResult:
-        """Create an error result for a failed analyser execution.
+        """Create an error result for a failed analysis execution.
 
         Args:
-            analyser_name: Name of the analyser that failed
+            analysis_name: Name of the analysis that failed
+            analysis_description: Description of the analysis that failed
             error_message: Description of the error
             input_schema: Input schema name (if known)
             output_schema: Output schema name (if known)
@@ -270,7 +274,8 @@ class Executor:
 
         """
         return AnalysisResult(
-            analyser_name=analyser_name,
+            analysis_name=analysis_name,
+            analysis_description=analysis_description,
             input_schema=input_schema,
             output_schema=output_schema,
             data={},

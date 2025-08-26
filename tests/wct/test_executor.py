@@ -222,7 +222,7 @@ execution:
         assert result.success is False
         assert result.error_message is not None
         assert "Unknown analyser type: unknown_analyser_type" in result.error_message
-        assert result.analyser_name == "test_analyser"
+        assert result.analysis_name == "Test execution with unknown analyser"
 
     def test_execute_runbook_unknown_connector_type(self) -> None:
         """Test execution fails gracefully with unknown connector type."""
@@ -257,7 +257,7 @@ execution:
         assert result.success is False
         assert result.error_message is not None
         assert "Unknown connector type: unknown_connector_type" in result.error_message
-        assert result.analyser_name == "test_analyser"
+        assert result.analysis_name == "Test execution with unknown connector"
 
     def test_execute_runbook_unsupported_input_schema(self) -> None:
         """Test execution fails gracefully with unsupported input schema."""
@@ -291,7 +291,7 @@ execution:
         assert result.success is False
         assert result.error_message is not None
         assert "Schema 'unsupported_schema' not supported" in result.error_message
-        assert result.analyser_name == "test_analyser"
+        assert result.analysis_name == "Test execution with unsupported input schema"
 
     def test_execute_runbook_unsupported_output_schema(self) -> None:
         """Test execution fails gracefully with unsupported output schema."""
@@ -327,7 +327,7 @@ execution:
         assert (
             "Schema 'unsupported_output_schema' not supported" in result.error_message
         )
-        assert result.analyser_name == "test_analyser"
+        assert result.analysis_name == "Test execution with unsupported output schema"
 
     def test_execute_runbook_connector_failure(self) -> None:
         """Test execution handles connector failures gracefully."""
@@ -379,7 +379,7 @@ execution:
             assert result.success is False
             assert result.error_message is not None
             assert "Mock connector failure" in result.error_message
-            assert result.analyser_name == "test_analyser"
+            assert result.analysis_name == "Test execution with failing connector"
         finally:
             runbook_path.unlink()
 
@@ -433,7 +433,7 @@ execution:
             assert result.success is False
             assert result.error_message is not None
             assert "Mock analyser failure" in result.error_message
-            assert result.analyser_name == "test_analyser"
+            assert result.analysis_name == "Test execution with failing analyser"
         finally:
             runbook_path.unlink()
 
@@ -470,7 +470,7 @@ execution:
         result = results[0]
         assert result.success is True
         assert result.error_message is None
-        assert result.analyser_name == "test_analyser"
+        assert result.analysis_name == "Successful test execution"
         assert result.input_schema == "standard_input"
         assert result.output_schema == "personal_data_finding"
         assert result.data == {"findings": []}
@@ -520,12 +520,12 @@ execution:
         # Check first result
         result1 = results[0]
         assert result1.success is True
-        assert result1.analyser_name == "analyser1"
+        assert result1.analysis_name == "First execution step"
 
         # Check second result
         result2 = results[1]
         assert result2.success is True
-        assert result2.analyser_name == "analyser2"
+        assert result2.analysis_name == "Second execution step"
 
     def test_execute_runbook_mixed_success_failure(self) -> None:
         """Test execution continues even when some steps fail."""
@@ -590,12 +590,12 @@ execution:
             # First step should succeed
             result1 = results[0]
             assert result1.success is True
-            assert result1.analyser_name == "working_analyser"
+            assert result1.analysis_name == "Working execution step"
 
             # Second step should fail but still return a result
             result2 = results[1]
             assert result2.success is False
-            assert result2.analyser_name == "broken_analyser"
+            assert result2.analysis_name == "Failing execution step"
             assert result2.error_message is not None
             assert "Mock analyser failure" in result2.error_message
         finally:
@@ -675,7 +675,7 @@ execution:
             assert result.success is False
             assert result.error_message is not None
             assert "Generic error during instantiation" in result.error_message
-            assert result.analyser_name == "test_analyser"
+            assert result.analysis_name == "Test execution with broken connector"
         finally:
             runbook_path.unlink()
 

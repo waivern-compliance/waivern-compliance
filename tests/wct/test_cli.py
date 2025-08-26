@@ -469,7 +469,8 @@ class TestOutputFormatter:
         # Create mock results - we only test that the method executes without error
         mock_results = [
             AnalysisResult(
-                analyser_name="test_analyser",
+                analysis_name="Test Analysis",
+                analysis_description="Test analysis for completion summary display",
                 success=True,
                 input_schema="standard_input",
                 output_schema="test_output",

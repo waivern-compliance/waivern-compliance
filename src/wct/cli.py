@@ -72,7 +72,8 @@ class OutputFormatter:
             show_header=True,
             header_style="bold magenta",
         )
-        table.add_column("Analyser", style="cyan", no_wrap=True)
+        table.add_column("Analysis Name", style="cyan", no_wrap=True)
+        table.add_column("Analysis Description", style="white", max_width=40)
         table.add_column("Status", style="green")
         table.add_column("Input Schema", style="blue")
         table.add_column("Output Schema", style="blue")
@@ -85,7 +86,8 @@ class OutputFormatter:
             status_text = f"{status_icon} {'Success' if result.success else 'Failed'}"
 
             row = [
-                result.analyser_name,
+                result.analysis_name,
+                result.analysis_description,
                 status_text,
                 result.input_schema,
                 result.output_schema,
@@ -106,12 +108,12 @@ class OutputFormatter:
             for result in failed_results:
                 error_panel = Panel(
                     f"[red]{result.error_message}[/red]",
-                    title=f"Error in {result.analyser_name}",
+                    title=f"Error in {result.analysis_name}",
                     border_style="red",
                 )
                 console.print(error_panel)
                 logger.error(
-                    "Analyser %s failed: %s", result.analyser_name, result.error_message
+                    "Analysis %s failed: %s", result.analysis_name, result.error_message
                 )
 
         # Show successful results in verbose mode
@@ -123,7 +125,11 @@ class OutputFormatter:
                 )
                 for result in successful_results:
                     # Create a tree structure for the data
-                    tree = Tree(f"[bold green]{result.analyser_name}[/bold green]")
+                    tree = Tree(f"[bold green]{result.analysis_name}[/bold green]")
+                    if result.analysis_description:
+                        tree.add(
+                            f"Description: [white]{result.analysis_description}[/white]"
+                        )
                     tree.add(f"Input Schema: [blue]{result.input_schema}[/blue]")
                     tree.add(f"Output Schema: [blue]{result.output_schema}[/blue]")
 
@@ -133,7 +139,7 @@ class OutputFormatter:
                             metadata_branch.add(f"{key}: {value}")
 
                     console.print(tree)
-                    logger.debug("Analyser %s succeeded.", result.analyser_name)
+                    logger.debug("Analysis %s succeeded.", result.analysis_name)
 
     def format_component_list(
         self, components: dict[str, type], component_type: str
