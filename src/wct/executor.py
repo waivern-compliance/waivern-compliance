@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
 
 from wct.analysers import BUILTIN_ANALYSERS, Analyser, AnalyserError
 from wct.analysis import AnalysisMetadata, AnalysisResult
@@ -226,18 +225,13 @@ class Executor:
             input_schema, output_schema, connector_message
         )
 
-        # Construct and return the analysis result
-        analysis_metadata = None
-        if analyser_config.metadata:
-            analysis_metadata = AnalysisMetadata(**analyser_config.metadata)
-
         return AnalysisResult(
             analysis_name=step.name,
             analysis_description=step.description,
             input_schema=input_schema.name,
             output_schema=output_schema.name,
             data=result_message.content,
-            metadata=analysis_metadata,
+            metadata=analyser_config.metadata,
             contact=step.contact,
             success=True,
         )
@@ -263,7 +257,6 @@ class Executor:
         error_message: str,
         input_schema: str = "unknown",
         output_schema: str = "unknown",
-        metadata: dict[str, Any] | None = None,
         contact: str | None = None,
     ) -> AnalysisResult:
         """Create an error result for a failed analysis execution.
@@ -274,24 +267,18 @@ class Executor:
             error_message: Description of the error
             input_schema: Input schema name (if known)
             output_schema: Output schema name (if known)
-            metadata: Optional metadata
             contact: Optional contact information for the analysis step
 
         Returns:
             Analysis result indicating failure
 
         """
-        analysis_metadata = None
-        if metadata:
-            analysis_metadata = AnalysisMetadata(**metadata)
-
         return AnalysisResult(
             analysis_name=analysis_name,
             analysis_description=analysis_description,
             input_schema=input_schema,
             output_schema=output_schema,
             data={},
-            metadata=analysis_metadata,
             contact=contact,
             success=False,
             error_message=error_message,

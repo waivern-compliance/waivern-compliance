@@ -8,25 +8,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
+from wct.metadata import AnalysisMetadata
 from wct.organisation import OrganisationConfig, OrganisationLoader
 from wct.runbook import RunbookLoader
 
 
-class AnalysisMetadata(BaseModel):
-    """Metadata for analysis results.
-
-    This model provides a extensible structure for metadata that can be
-    extended in the future for specific metadata types.
-    """
-
-    model_config = ConfigDict(extra="allow")
-
-
 class AnalysisResult(BaseModel):
     """Result from an analyser analysis."""
-
     analysis_name: str = Field(description="Name of the analysis")
     analysis_description: str = Field(description="Description of the analysis")
     input_schema: str = Field(description="Input schema name")

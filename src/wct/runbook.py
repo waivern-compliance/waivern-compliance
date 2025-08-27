@@ -19,6 +19,7 @@ import yaml
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from wct.errors import WCTError
+from wct.metadata import AnalysisMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class AnalyserConfig(BaseModel):
     properties: dict[str, Any] = Field(
         default_factory=dict, description="Analyser-specific configuration properties"
     )
-    metadata: dict[str, Any] | None = Field(
+    metadata: AnalysisMetadata | None = Field(
         default=None, description="Optional metadata for the analyser"
     )
 

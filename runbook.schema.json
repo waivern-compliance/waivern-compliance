@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "$defs": {
+    "AnalyserConfig": {
+      "description": "Pydantic model for analyser configuration.",
+      "properties": {
+        "name": {
+          "description": "Analyser instance name",
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9._-]+$",
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "description": "Analyser type identifier",
+          "minLength": 1,
+          "title": "Type",
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Analyser-specific configuration properties",
+          "title": "Properties"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AnalysisMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional metadata for the analyser"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "title": "AnalyserConfig",
+      "type": "object"
+    },
+    "AnalysisMetadata": {
+      "additionalProperties": true,
+      "description": "Metadata for analysis results.\n\nThis model provides a extensible structure for metadata that can be\nextended in the future for specific metadata types.",
+      "properties": {},
+      "title": "AnalysisMetadata",
+      "type": "object"
+    },
+    "ConnectorConfig": {
+      "description": "Pydantic model for connector configuration.",
+      "properties": {
+        "name": {
+          "description": "Connector instance name",
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9._-]+$",
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "description": "Connector type identifier",
+          "minLength": 1,
+          "title": "Type",
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Connector-specific configuration properties",
+          "title": "Properties"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "title": "ConnectorConfig",
+      "type": "object"
+    },
+    "ExecutionStep": {
+      "description": "Pydantic model for execution step configuration.",
+      "properties": {
+        "name": {
+          "description": "Human-readable name for this execution step",
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of what this execution step does (can be empty)",
+          "title": "Description",
+          "type": "string"
+        },
+        "contact": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional contact information for this execution step",
+          "title": "Contact"
+        },
+        "connector": {
+          "description": "Name of connector instance to use",
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9._-]+$",
+          "title": "Connector",
+          "type": "string"
+        },
+        "analyser": {
+          "description": "Name of analyser instance to use",
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9._-]+$",
+          "title": "Analyser",
+          "type": "string"
+        },
+        "input_schema": {
+          "description": "Schema name for connector output validation",
+          "minLength": 1,
+          "title": "Input Schema",
+          "type": "string"
+        },
+        "output_schema": {
+          "description": "Schema name for analyser output validation",
+          "minLength": 1,
+          "title": "Output Schema",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": true,
+          "description": "Optional execution metadata and runtime configuration",
+          "title": "Context",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "connector",
+        "analyser",
+        "input_schema",
+        "output_schema"
+      ],
+      "title": "ExecutionStep",
+      "type": "object"
+    }
+  },
+  "description": "Waivern Compliance Tool runbook configuration schema",
+  "properties": {
+    "name": {
+      "description": "Runbook display name",
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "description": "Runbook description explaining its purpose",
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "contact": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional contact information for this runbook",
+      "title": "Contact"
+    },
+    "connectors": {
+      "description": "List of data source connectors",
+      "items": {
+        "$ref": "#/$defs/ConnectorConfig"
+      },
+      "minItems": 1,
+      "title": "Connectors",
+      "type": "array"
+    },
+    "analysers": {
+      "description": "List of analysis processors",
+      "items": {
+        "$ref": "#/$defs/AnalyserConfig"
+      },
+      "minItems": 1,
+      "title": "Analysers",
+      "type": "array"
+    },
+    "execution": {
+      "description": "Execution pipeline steps",
+      "items": {
+        "$ref": "#/$defs/ExecutionStep"
+      },
+      "minItems": 1,
+      "title": "Execution",
+      "type": "array"
+    }
+  },
+  "required": [
+    "name",
+    "description",
+    "connectors",
+    "analysers",
+    "execution"
+  ],
+  "title": "WCT Runbook",
+  "type": "object"
+}
