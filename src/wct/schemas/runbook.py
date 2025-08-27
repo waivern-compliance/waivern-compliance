@@ -24,17 +24,20 @@ class RunbookSchemaGenerator:
         """
         schema = Runbook.model_json_schema()
 
-        # Add WCT-specific metadata
-        schema.update(
-            {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "version": cls.SCHEMA_VERSION,
-                "title": "WCT Runbook",
-                "description": "Waivern Compliance Tool runbook configuration schema",
-            }
+        # Create new ordered dictionary with WCT-specific metadata at the beginning
+        ordered_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "version": cls.SCHEMA_VERSION,
+            **schema,
+        }
+
+        # Update the title and description
+        ordered_schema["title"] = "WCT Runbook"
+        ordered_schema["description"] = (
+            "Waivern Compliance Tool runbook configuration schema"
         )
 
-        return schema
+        return ordered_schema
 
     @classmethod
     def save_schema(cls, output_path: Path) -> None:
