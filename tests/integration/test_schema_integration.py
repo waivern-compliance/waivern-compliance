@@ -16,6 +16,7 @@ import json
 from pathlib import Path
 
 import jsonschema
+import pytest
 import yaml
 
 from wct.runbook import RunbookLoader
@@ -67,12 +68,15 @@ class TestSchemaIntegration:
 
     def test_bundled_schema_file_validates_samples(self) -> None:
         """Test that the bundled schema file validates sample runbooks."""
-        # Ensure bundled schema file exists
         bundled_path = RunbookSchemaGenerator.get_schema_path()
-        bundled_path.parent.mkdir(parents=True, exist_ok=True)
-        RunbookSchemaGenerator.save_schema(bundled_path)
 
-        # Load the bundled schema file
+        # Skip test if bundled schema doesn't exist
+        if not bundled_path.exists():
+            pytest.skip(
+                "Bundled schema file doesn't exist. Run 'wct generate-schema' first."
+            )
+
+        # Load the existing bundled schema file
         with open(bundled_path, encoding="utf-8") as f:
             bundled_schema = json.load(f)
 

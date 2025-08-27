@@ -1,4 +1,6 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
   "$defs": {
     "AnalyserConfig": {
       "description": "Pydantic model for analyser configuration.",
@@ -201,7 +203,5 @@
     "execution"
   ],
   "title": "WCT Runbook",
-  "type": "object",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "version": "1.0.0"
+  "type": "object"
 }
