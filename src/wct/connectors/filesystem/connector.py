@@ -2,6 +2,7 @@
 
 import fnmatch
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -266,8 +267,12 @@ class FilesystemConnector(Connector):
                         "source": str(file_path),
                         "description": f"Content of {file_path.relative_to(self._config.path) if file_path != self._config.path else file_path.name}",
                         "file_size": stat.st_size,
-                        "modified_time": stat.st_mtime,
-                        "created_time": stat.st_ctime,
+                        "modified_time": datetime.fromtimestamp(
+                            stat.st_mtime
+                        ).isoformat(),
+                        "created_time": datetime.fromtimestamp(
+                            stat.st_ctime
+                        ).isoformat(),
                         "permissions": oct(stat.st_mode)[-3:],
                     },
                 }
