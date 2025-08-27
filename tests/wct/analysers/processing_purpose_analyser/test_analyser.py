@@ -106,6 +106,66 @@ class TestProcessingPurposeAnalyserInitialisation:
         assert analyser is not None
         assert isinstance(analyser, ProcessingPurposeAnalyser)
 
+    def test_from_properties_enables_llm_validation_by_default(self) -> None:
+        """Test that from_properties enables LLM validation by default."""
+        # Arrange
+        properties: dict[str, dict[str, str]] = {}
+
+        # Act
+        analyser = ProcessingPurposeAnalyser.from_properties(properties)
+
+        # Assert
+        # Create a test message to verify LLM validation is enabled in metadata
+        test_data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="LLM validation test",
+            description="Test LLM validation default",
+            source="test",
+            metadata={},
+            data=[],
+        )
+        message = Message(
+            id="test_llm_default",
+            content=test_data.model_dump(exclude_none=True),
+            schema=StandardInputSchema(),
+        )
+
+        result = analyser.process(
+            StandardInputSchema(), ProcessingPurposeFindingSchema(), message
+        )
+        metadata = result.content["analysis_metadata"]
+        assert metadata["llm_validation_enabled"] is True
+
+    def test_from_properties_respects_explicit_llm_validation_config(self) -> None:
+        """Test that from_properties respects explicit LLM validation configuration."""
+        # Arrange
+        properties = {"llm_validation": {"enable_llm_validation": False}}
+
+        # Act
+        analyser = ProcessingPurposeAnalyser.from_properties(properties)
+
+        # Assert
+        # Create a test message to verify LLM validation is disabled in metadata
+        test_data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="LLM validation disabled test",
+            description="Test explicit LLM validation disabled",
+            source="test",
+            metadata={},
+            data=[],
+        )
+        message = Message(
+            id="test_llm_disabled",
+            content=test_data.model_dump(exclude_none=True),
+            schema=StandardInputSchema(),
+        )
+
+        result = analyser.process(
+            StandardInputSchema(), ProcessingPurposeFindingSchema(), message
+        )
+        metadata = result.content["analysis_metadata"]
+        assert metadata["llm_validation_enabled"] is False
+
     def test_get_name_returns_correct_analyser_name(self) -> None:
         """Test that get_name returns correct analyser name."""
         # Act
