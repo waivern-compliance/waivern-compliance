@@ -797,4 +797,4 @@ class TestRunbookIntegration:
             personal_data_analyser.properties["pattern_matching"]["ruleset"]
             == "personal_data"
         )
-        assert personal_data_analyser.metadata["priority"] == "high"
+        assert personal_data_analyser.metadata.priority == "high"

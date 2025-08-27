@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
 
 from wct.analysers import BUILTIN_ANALYSERS, Analyser, AnalyserError
 from wct.analysis import AnalysisResult
@@ -227,13 +226,15 @@ class Executor:
         )
 
         # Construct and return the analysis result
+        analysis_metadata = analyser_config.metadata
+
         return AnalysisResult(
             analysis_name=step.name,
             analysis_description=step.description,
             input_schema=input_schema.name,
             output_schema=output_schema.name,
             data=result_message.content,
-            metadata=analyser_config.metadata,
+            metadata=analysis_metadata,
             contact=step.contact,
             success=True,
         )
@@ -259,7 +260,6 @@ class Executor:
         error_message: str,
         input_schema: str = "unknown",
         output_schema: str = "unknown",
-        metadata: dict[str, Any] | None = None,
         contact: str | None = None,
     ) -> AnalysisResult:
         """Create an error result for a failed analysis execution.
@@ -270,7 +270,6 @@ class Executor:
             error_message: Description of the error
             input_schema: Input schema name (if known)
             output_schema: Output schema name (if known)
-            metadata: Optional metadata
             contact: Optional contact information for the analysis step
 
         Returns:
@@ -283,7 +282,6 @@ class Executor:
             input_schema=input_schema,
             output_schema=output_schema,
             data={},
-            metadata=metadata or {},
             contact=contact,
             success=False,
             error_message=error_message,
