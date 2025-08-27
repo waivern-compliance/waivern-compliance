@@ -2,6 +2,7 @@ name: "Sample Runbook for LAMP Stack"
 description: >
   Analyse database and source code for potentially sensitive information and processing purposes.
   This runbook runs both personal data analysis and processing purpose analysis on MySQL and PHP source code.
+contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
 
 connectors:
   - name: my_mysql_db
@@ -118,6 +119,7 @@ analysers:
 execution:
   - name: "Personal Data Detection in MySQL Database"
     description: "Scan MySQL database tables and columns for personally identifiable information using pattern matching"
+    contact: "Emily Chen (Database Administrator) <emily.chen@company.co.uk>"
     connector: "my_mysql_db"
     analyser: "personal_data_analyser_for_mysql"
     input_schema: "standard_input"
@@ -138,6 +140,7 @@ execution:
       analysis_type: "database_content_analysis"
   - name: "PHP Source Code Processing Purpose Detection"
     description: "Analyse PHP application code for business logic, service integrations, and data processing activities"
+    contact: "James Wilson (Lead Developer) <james.wilson@company.co.uk>"
     connector: "php_source_code"
     analyser: "processing_purpose_analyser_for_source_code"
     input_schema: "source_code"
@@ -151,6 +154,7 @@ execution:
         - "business_logic_analysis"
   - name: "Personal Data Detection in Log Files"
     description: "Scan log files for personally identifiable information using pattern matching and context analysis"
+    contact: "Michael Brown (DevOps) <michael.brown@company.co.uk>"
     connector: "log_files"
     analyser: "personal_data_analyser_for_logs"
     input_schema: "standard_input"
