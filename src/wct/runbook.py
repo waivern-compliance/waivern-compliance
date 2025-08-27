@@ -59,8 +59,8 @@ class AnalyserConfig(BaseModel):
     properties: dict[str, Any] = Field(
         default_factory=dict, description="Analyser-specific configuration properties"
     )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Optional metadata for the analyser"
+    metadata: dict[str, Any] | None = Field(
+        default=None, description="Optional metadata for the analyser"
     )
 
 

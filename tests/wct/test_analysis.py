@@ -12,62 +12,55 @@ from unittest.mock import patch
 
 import pytest
 
-from wct.analysis import AnalysisResult, AnalysisResultsExporter
+from wct.analysis import AnalysisMetadata, AnalysisResult, AnalysisResultsExporter
 from wct.organisation import OrganisationConfig
 
 
-class TestAnalysisResultToDictBehaviour:
-    """Test AnalysisResult to_dict() method behaviour."""
+class TestAnalysisResultBehaviour:
+    """Test AnalysisResult creation and field access."""
 
-    def test_successful_result_to_dict_structure(self) -> None:
-        """Test that successful analysis result converts to correct dictionary structure."""
+    def test_successful_result_creation(self) -> None:
+        """Test that successful analysis result can be created with proper fields."""
         result = AnalysisResult(
             analysis_name="Personal Data Analysis",
             analysis_description="Analysis for detecting personal data patterns",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": [{"pattern": "email", "value": "test@example.com"}]},
-            metadata={"version": "1.0", "priority": "high"},
+            metadata=AnalysisMetadata(version="1.0", priority="high"),
             success=True,
         )
 
-        result_dict = result.to_dict()
-
-        assert result_dict["analysis_name"] == "Personal Data Analysis"
-        assert result_dict["input_schema"] == "standard_input"
-        assert result_dict["output_schema"] == "personal_data_finding"
-        assert result_dict["data"] == {
+        assert result.analysis_name == "Personal Data Analysis"
+        assert result.input_schema == "standard_input"
+        assert result.output_schema == "personal_data_finding"
+        assert result.data == {
             "findings": [{"pattern": "email", "value": "test@example.com"}]
         }
-        assert result_dict["metadata"] == {"version": "1.0", "priority": "high"}
-        assert result_dict["success"] is True
-        assert result_dict["error_message"] is None
+        assert result.metadata.version == "1.0"
+        assert result.metadata.priority == "high"
+        assert result.success is True
+        assert result.error_message is None
 
-    def test_failed_result_to_dict_includes_error_message(self) -> None:
-        """Test that failed analysis result includes error message in dictionary."""
+    def test_failed_result_creation(self) -> None:
+        """Test that failed analysis result can be created with error message."""
         result = AnalysisResult(
             analysis_name="Processing Purpose Analysis",
             analysis_description="Analysis for identifying data processing purposes",
             input_schema="source_code",
             output_schema="processing_purpose_finding",
             data={},
-            metadata={},
             success=False,
             error_message="Connector failed to extract data from source",
         )
 
-        result_dict = result.to_dict()
+        assert result.success is False
+        assert result.error_message == "Connector failed to extract data from source"
+        assert result.data == {}
+        assert result.metadata is None
 
-        assert result_dict["success"] is False
-        assert (
-            result_dict["error_message"]
-            == "Connector failed to extract data from source"
-        )
-        assert result_dict["data"] == {}
-        assert result_dict["metadata"] == {}
-
-    def test_result_to_dict_with_complex_data_structures(self) -> None:
-        """Test to_dict() handles complex nested data structures correctly."""
+    def test_result_with_complex_data_structures(self) -> None:
+        """Test AnalysisResult handles complex nested data structures correctly."""
         complex_data = {
             "personal_data_findings": [
                 {
@@ -91,71 +84,63 @@ class TestAnalysisResultToDictBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data=complex_data,
-            metadata={"analysis_depth": "detailed", "confidence_threshold": 0.8},
+            metadata=AnalysisMetadata(
+                analysis_depth="detailed", confidence_threshold=0.8
+            ),
             success=True,
         )
 
-        result_dict = result.to_dict()
+        assert result.data == complex_data
+        assert result.metadata.analysis_depth == "detailed"
+        assert result.metadata.confidence_threshold == 0.8
 
-        assert result_dict["data"] == complex_data
-        assert result_dict["metadata"]["analysis_depth"] == "detailed"
-        assert result_dict["metadata"]["confidence_threshold"] == 0.8
-
-    def test_result_to_dict_with_empty_data_and_metadata(self) -> None:
-        """Test to_dict() works correctly with empty data and metadata."""
+    def test_result_with_empty_data(self) -> None:
+        """Test AnalysisResult works with empty data."""
         result = AnalysisResult(
             analysis_name="Minimal Analysis",
-            analysis_description="Basic analysis with empty data and metadata",
+            analysis_description="Basic analysis with empty data",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
-            metadata={},
             success=True,
         )
 
-        result_dict = result.to_dict()
+        assert result.data == {}
+        assert result.metadata is None
+        assert result.success is True
 
-        assert result_dict["data"] == {}
-        assert result_dict["metadata"] == {}
-        assert result_dict["success"] is True
-
-    def test_analysis_result_with_contact_to_dict(self) -> None:
-        """Test that AnalysisResult with contact converts to dict correctly."""
+    def test_result_with_contact(self) -> None:
+        """Test that AnalysisResult properly handles contact information."""
         result = AnalysisResult(
             analysis_name="Contact Test Analysis",
             analysis_description="Analysis testing contact property",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": [{"pattern": "email", "value": "test@example.com"}]},
-            metadata={"version": "1.0"},
+            metadata=AnalysisMetadata(version="1.0"),
             contact="Jane Austin <jane.austin@company.com>",
             success=True,
         )
 
-        result_dict = result.to_dict()
+        assert result.contact == "Jane Austin <jane.austin@company.com>"
+        assert result.analysis_name == "Contact Test Analysis"
+        assert result.success is True
 
-        assert result_dict["contact"] == "Jane Austin <jane.austin@company.com>"
-        assert result_dict["analysis_name"] == "Contact Test Analysis"
-        assert result_dict["success"] is True
-
-    def test_analysis_result_without_contact_to_dict(self) -> None:
-        """Test that AnalysisResult without contact includes None in dict."""
+    def test_result_without_contact(self) -> None:
+        """Test that AnalysisResult without contact defaults to None."""
         result = AnalysisResult(
             analysis_name="No Contact Test Analysis",
             analysis_description="Analysis testing no contact property",
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": []},
-            metadata={"version": "1.0"},
+            metadata=AnalysisMetadata(version="1.0"),
             success=True,
         )
 
-        result_dict = result.to_dict()
-
-        assert "contact" in result_dict
-        assert result_dict["contact"] is None
-        assert result_dict["analysis_name"] == "No Contact Test Analysis"
-        assert result_dict["success"] is True
+        assert result.contact is None
+        assert result.analysis_name == "No Contact Test Analysis"
+        assert result.success is True
 
 
 class TestAnalysisResultsExporterSaveToJsonBehaviour:
@@ -442,7 +427,6 @@ execution:
                 input_schema="standard_input",
                 output_schema="personal_data_finding",
                 data={"findings": []},
-                metadata={},
                 contact="Alice Smith <alice@company.com>",
                 success=True,
             ),
@@ -452,7 +436,6 @@ execution:
                 input_schema="standard_input",
                 output_schema="personal_data_finding",
                 data={"findings": []},
-                metadata={},
                 success=True,
             ),
         ]
@@ -470,7 +453,8 @@ execution:
             assert (
                 saved_data["results"][0]["contact"] == "Alice Smith <alice@company.com>"
             )
-            assert saved_data["results"][1]["contact"] is None
+            # Contact field should be excluded when None (empty collections excluded behavior)
+            assert "contact" not in saved_data["results"][1]
 
 
 class TestAnalysisResultsExporterGetSummaryStatsBehaviour:

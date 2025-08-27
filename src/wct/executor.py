@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from wct.analysers import BUILTIN_ANALYSERS, Analyser, AnalyserError
-from wct.analysis import AnalysisResult
+from wct.analysis import AnalysisMetadata, AnalysisResult
 from wct.connectors import BUILTIN_CONNECTORS, Connector, ConnectorError
 from wct.errors import WCTError
 from wct.runbook import (
@@ -227,13 +227,17 @@ class Executor:
         )
 
         # Construct and return the analysis result
+        analysis_metadata = None
+        if analyser_config.metadata:
+            analysis_metadata = AnalysisMetadata(**analyser_config.metadata)
+
         return AnalysisResult(
             analysis_name=step.name,
             analysis_description=step.description,
             input_schema=input_schema.name,
             output_schema=output_schema.name,
             data=result_message.content,
-            metadata=analyser_config.metadata,
+            metadata=analysis_metadata,
             contact=step.contact,
             success=True,
         )
@@ -277,13 +281,17 @@ class Executor:
             Analysis result indicating failure
 
         """
+        analysis_metadata = None
+        if metadata:
+            analysis_metadata = AnalysisMetadata(**metadata)
+
         return AnalysisResult(
             analysis_name=analysis_name,
             analysis_description=analysis_description,
             input_schema=input_schema,
             output_schema=output_schema,
             data={},
-            metadata=metadata or {},
+            metadata=analysis_metadata,
             contact=contact,
             success=False,
             error_message=error_message,
