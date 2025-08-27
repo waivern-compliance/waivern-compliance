@@ -4,37 +4,44 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from wct.organisation import OrganisationConfig, OrganisationLoader
 from wct.runbook import RunbookLoader
 
 
-@dataclass(frozen=True, slots=True)
-class AnalysisResult:
+class AnalysisMetadata(BaseModel):
+    """Metadata for analysis results.
+
+    This model provides a extensible structure for metadata that can be
+    extended in the future for specific metadata types.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+
+class AnalysisResult(BaseModel):
     """Result from an analyser analysis."""
 
-    analysis_name: str
-    analysis_description: str
-    input_schema: str
-    output_schema: str
-    data: dict[str, Any]
-    metadata: dict[str, Any]
-    success: bool
-    contact: str | None = None
-    error_message: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert AnalysisResult to a dictionary for JSON serialisation.
-
-        Returns:
-            Dictionary representation of the analysis result
-
-        """
-        return asdict(self)
+    analysis_name: str = Field(description="Name of the analysis")
+    analysis_description: str = Field(description="Description of the analysis")
+    input_schema: str = Field(description="Input schema name")
+    output_schema: str = Field(description="Output schema name")
+    data: dict[str, Any] = Field(description="Analysis result data")
+    metadata: AnalysisMetadata | None = Field(
+        default=None, description="Optional metadata for the analysis"
+    )
+    success: bool = Field(description="Whether the analysis was successful")
+    contact: str | None = Field(
+        default=None, description="Contact information for the analysis"
+    )
+    error_message: str | None = Field(
+        default=None, description="Error message if analysis failed"
+    )
 
 
 class AnalysisResultsExporter:
@@ -80,7 +87,10 @@ class AnalysisResultsExporter:
 
         output_data = {
             "export_metadata": export_metadata,
-            "results": [result.to_dict() for result in results],
+            "results": [
+                result.model_dump(exclude_defaults=True, exclude_none=True)
+                for result in results
+            ],
         }
 
         # Ensure parent directory exists

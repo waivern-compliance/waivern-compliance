@@ -136,7 +136,7 @@ class OutputFormatter:
 
                     if result.metadata:
                         metadata_branch = tree.add("[yellow]Metadata[/yellow]")
-                        for key, value in result.metadata.items():
+                        for key, value in result.metadata.model_dump().items():
                             metadata_branch.add(f"{key}: {value}")
 
                     console.print(tree)

@@ -474,7 +474,7 @@ execution:
         assert result.input_schema == "standard_input"
         assert result.output_schema == "personal_data_finding"
         assert result.data == {"findings": []}
-        assert result.metadata == {"purpose": "testing"}
+        assert result.metadata.purpose == "testing"
 
     def test_execute_runbook_multiple_steps(self) -> None:
         """Test execution of runbook with multiple steps."""
@@ -716,11 +716,9 @@ execution:
         assert len(results) == 1
         result = results[0]
         assert result.success is True
-        assert result.metadata == {
-            "version": "1.0",
-            "author": "test",
-            "compliance_standard": "GDPR",
-        }
+        assert result.metadata.version == "1.0"
+        assert result.metadata.author == "test"
+        assert result.metadata.compliance_standard == "GDPR"
         # Note: ExecutionStep context is not directly included in AnalysisResult
         # but is available during execution
 
