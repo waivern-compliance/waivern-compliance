@@ -5,6 +5,8 @@ following black-box testing principles and proper encapsulation. Each test class
 encapsulates specific concerns and processing paths.
 """
 
+from unittest.mock import Mock
+
 import pytest
 
 from wct.analysers.processing_purpose_analyser.analyser import ProcessingPurposeAnalyser
@@ -15,6 +17,7 @@ from wct.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeAnalyserConfig,
 )
 from wct.analysers.types import LLMValidationConfig, PatternMatchingConfig
+from wct.analysers.utilities import LLMServiceManager
 from wct.message import Message
 from wct.schemas import (
     ProcessingPurposeFindingSchema,
@@ -59,14 +62,22 @@ class TestProcessingPurposeAnalyserInitialisation:
         """Create pattern matcher for testing."""
         return ProcessingPurposePatternMatcher(valid_pattern_matching_config)
 
+    @pytest.fixture
+    def mock_llm_service_manager(self) -> Mock:
+        """Create mock LLM service manager for testing."""
+        return Mock(spec=LLMServiceManager)
+
     def test_init_creates_analyser_with_valid_configuration(
         self,
         valid_config: ProcessingPurposeAnalyserConfig,
         pattern_matcher: ProcessingPurposePatternMatcher,
+        mock_llm_service_manager: Mock,
     ) -> None:
         """Test that __init__ creates analyser with valid configuration."""
         # Act
-        analyser = ProcessingPurposeAnalyser(valid_config, pattern_matcher)
+        analyser = ProcessingPurposeAnalyser(
+            valid_config, pattern_matcher, mock_llm_service_manager
+        )
 
         # Assert - only verify object creation and public method availability
         assert analyser is not None
@@ -75,7 +86,9 @@ class TestProcessingPurposeAnalyserInitialisation:
         assert hasattr(analyser, "get_name")
         assert callable(getattr(analyser, "get_name"))
 
-    def test_from_properties_creates_analyser_from_dict(self) -> None:
+    def test_from_properties_creates_analyser_from_dict(
+        self, mock_llm_service_manager: Mock
+    ) -> None:
         """Test that from_properties creates analyser from dictionary properties."""
         # Arrange
         properties = {
@@ -89,22 +102,92 @@ class TestProcessingPurposeAnalyserInitialisation:
 
         # Act
         analyser = ProcessingPurposeAnalyser.from_properties(properties)
+        analyser.llm_service_manager = mock_llm_service_manager
 
         # Assert
         assert analyser is not None
         assert isinstance(analyser, ProcessingPurposeAnalyser)
 
-    def test_from_properties_handles_minimal_configuration(self) -> None:
+    def test_from_properties_handles_minimal_configuration(
+        self, mock_llm_service_manager: Mock
+    ) -> None:
         """Test that from_properties handles minimal configuration with defaults."""
         # Arrange
         properties: dict[str, dict[str, str]] = {}
 
         # Act
         analyser = ProcessingPurposeAnalyser.from_properties(properties)
+        analyser.llm_service_manager = mock_llm_service_manager
 
         # Assert
         assert analyser is not None
         assert isinstance(analyser, ProcessingPurposeAnalyser)
+
+    def test_from_properties_enables_llm_validation_by_default(
+        self, mock_llm_service_manager: Mock
+    ) -> None:
+        """Test that from_properties enables LLM validation by default."""
+        # Arrange
+        properties: dict[str, dict[str, str]] = {}
+
+        # Act
+        analyser = ProcessingPurposeAnalyser.from_properties(properties)
+        analyser.llm_service_manager = mock_llm_service_manager
+
+        # Assert
+        # Create a test message to verify LLM validation is enabled in metadata
+        test_data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="LLM validation test",
+            description="Test LLM validation default",
+            source="test",
+            metadata={},
+            data=[],
+        )
+        message = Message(
+            id="test_llm_default",
+            content=test_data.model_dump(exclude_none=True),
+            schema=StandardInputSchema(),
+        )
+
+        result = analyser.process(
+            StandardInputSchema(), ProcessingPurposeFindingSchema(), message
+        )
+        metadata = result.content["analysis_metadata"]
+        assert metadata["llm_validation_enabled"] is True
+
+    def test_from_properties_respects_explicit_llm_validation_config(
+        self, mock_llm_service_manager: Mock
+    ) -> None:
+        """Test that from_properties respects explicit LLM validation configuration."""
+        # Arrange
+        properties = {"llm_validation": {"enable_llm_validation": False}}
+
+        # Act
+        analyser = ProcessingPurposeAnalyser.from_properties(properties)
+        analyser.llm_service_manager = mock_llm_service_manager
+
+        # Assert
+        # Create a test message to verify LLM validation is disabled in metadata
+        test_data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="LLM validation disabled test",
+            description="Test explicit LLM validation disabled",
+            source="test",
+            metadata={},
+            data=[],
+        )
+        message = Message(
+            id="test_llm_disabled",
+            content=test_data.model_dump(exclude_none=True),
+            schema=StandardInputSchema(),
+        )
+
+        result = analyser.process(
+            StandardInputSchema(), ProcessingPurposeFindingSchema(), message
+        )
+        metadata = result.content["analysis_metadata"]
+        assert metadata["llm_validation_enabled"] is False
 
     def test_get_name_returns_correct_analyser_name(self) -> None:
         """Test that get_name returns correct analyser name."""
@@ -153,9 +236,16 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     """Test class for standard_input schema processing path."""
 
     @pytest.fixture
-    def analyser(self) -> ProcessingPurposeAnalyser:
+    def mock_llm_service_manager(self) -> Mock:
+        """Create mock LLM service manager for testing."""
+        return Mock(spec=LLMServiceManager)
+
+    @pytest.fixture
+    def analyser(self, mock_llm_service_manager: Mock) -> ProcessingPurposeAnalyser:
         """Create analyser instance for testing."""
-        return ProcessingPurposeAnalyser.from_properties({})
+        analyser = ProcessingPurposeAnalyser.from_properties({})
+        analyser.llm_service_manager = mock_llm_service_manager
+        return analyser
 
     @pytest.fixture
     def standard_input_schema(self) -> StandardInputSchema:
@@ -278,13 +368,46 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
 
         # Assert
         summary = result.content["summary"]
+        findings = result.content["findings"]
+
         assert isinstance(summary, dict)
         assert "total_findings" in summary
         assert "purposes_identified" in summary
+        assert "high_risk_count" in summary
+        assert "purpose_categories" in summary
+        assert "risk_level_distribution" in summary
+
         assert isinstance(summary["total_findings"], int)
         assert isinstance(summary["purposes_identified"], int)
+        assert isinstance(summary["high_risk_count"], int)
+        assert isinstance(summary["purpose_categories"], dict)
+        assert isinstance(summary["risk_level_distribution"], dict)
+
         assert summary["total_findings"] >= 0
         assert summary["purposes_identified"] >= 0
+        assert summary["high_risk_count"] >= 0
+
+        risk_dist = summary["risk_level_distribution"]
+        assert "low" in risk_dist and "medium" in risk_dist and "high" in risk_dist
+        for count in risk_dist.values():
+            assert isinstance(count, int) and count >= 0
+
+        for category, count in summary["purpose_categories"].items():
+            assert isinstance(category, str)
+            assert isinstance(count, int) and count > 0
+
+        assert summary["total_findings"] == len(findings)
+
+        if len(findings) > 0:
+            actual_unique_purposes = len(set(f["purpose"] for f in findings))
+            assert summary["purposes_identified"] == actual_unique_purposes
+            assert sum(risk_dist.values()) == summary["total_findings"]
+            assert summary["high_risk_count"] == risk_dist["high"]
+            if summary["purpose_categories"]:
+                assert (
+                    sum(summary["purpose_categories"].values())
+                    == summary["total_findings"]
+                )
 
     def test_process_standard_input_creates_valid_analysis_metadata(
         self,
@@ -302,21 +425,136 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         # Assert
         metadata = result.content["analysis_metadata"]
         assert isinstance(metadata, dict)
+
         assert "ruleset_used" in metadata
         assert "llm_validation_enabled" in metadata
         assert "evidence_context_size" in metadata
+        assert "llm_validation_mode" in metadata
+        assert "llm_batch_size" in metadata
+        assert "analyser_version" in metadata
+        assert "input_schema" in metadata
+        assert "processing_purpose_categories_detected" in metadata
+
         assert isinstance(metadata["ruleset_used"], str)
         assert isinstance(metadata["llm_validation_enabled"], bool)
         assert isinstance(metadata["evidence_context_size"], str)
+        assert isinstance(metadata["llm_validation_mode"], str)
+        assert isinstance(metadata["llm_batch_size"], int)
+        assert isinstance(metadata["analyser_version"], str)
+        assert isinstance(metadata["input_schema"], str)
+        assert isinstance(metadata["processing_purpose_categories_detected"], int)
+
+        assert metadata["llm_batch_size"] > 0
+        assert len(metadata["analyser_version"]) > 0
+        assert metadata["input_schema"] == "standard_input"
+        assert metadata["processing_purpose_categories_detected"] >= 0
+
+    def test_process_standard_input_summary_handles_empty_findings(
+        self,
+        analyser: ProcessingPurposeAnalyser,
+        standard_input_schema: StandardInputSchema,
+        output_schema: ProcessingPurposeFindingSchema,
+    ) -> None:
+        """Test that summary handles empty findings correctly."""
+        # Arrange
+        data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="No patterns test",
+            description="Content with no processing purpose patterns",
+            source="test",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content="this text has no processing purpose keywords",
+                    metadata=StandardInputDataItemMetadataModel(source="test"),
+                )
+            ],
+        )
+        message = Message(
+            id="test_empty",
+            content=data.model_dump(exclude_none=True),
+            schema=standard_input_schema,
+        )
+
+        # Act
+        result = analyser.process(standard_input_schema, output_schema, message)
+
+        # Assert
+        summary = result.content["summary"]
+
+        assert summary["total_findings"] == 0
+        assert summary["purposes_identified"] == 0
+        assert summary["high_risk_count"] == 0
+        assert summary["purpose_categories"] == {}
+
+        risk_dist = summary["risk_level_distribution"]
+        assert risk_dist["low"] == 0
+        assert risk_dist["medium"] == 0
+        assert risk_dist["high"] == 0
+
+    def test_process_standard_input_summary_handles_duplicate_purposes_correctly(
+        self,
+        analyser: ProcessingPurposeAnalyser,
+        standard_input_schema: StandardInputSchema,
+        output_schema: ProcessingPurposeFindingSchema,
+    ) -> None:
+        """Test that summary counts unique purposes correctly when findings have duplicate purposes."""
+        # Arrange - content that should generate multiple findings but potentially same purposes
+        data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Duplicate purposes test",
+            description="Content that may generate duplicate processing purposes",
+            source="test",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content="customer payment processing system",
+                    metadata=StandardInputDataItemMetadataModel(source="system1"),
+                ),
+                StandardInputDataItemModel(
+                    content="process customer payments daily",
+                    metadata=StandardInputDataItemMetadataModel(source="system2"),
+                ),
+                StandardInputDataItemModel(
+                    content="customer service support portal",
+                    metadata=StandardInputDataItemMetadataModel(source="system3"),
+                ),
+            ],
+        )
+        message = Message(
+            id="test_duplicate_purposes",
+            content=data.model_dump(exclude_none=True),
+            schema=standard_input_schema,
+        )
+
+        # Act
+        result = analyser.process(standard_input_schema, output_schema, message)
+
+        # Assert
+        findings = result.content["findings"]
+        summary = result.content["summary"]
+
+        if len(findings) > 0:
+            # Verify purposes_identified counts unique purposes, not total findings
+            actual_unique_purposes = len(set(f["purpose"] for f in findings))
+            assert summary["purposes_identified"] == actual_unique_purposes
+            assert summary["purposes_identified"] <= summary["total_findings"]
 
 
 class TestProcessingPurposeAnalyserSourceCodeProcessing:
     """Test class for source_code schema processing path."""
 
     @pytest.fixture
-    def analyser(self) -> ProcessingPurposeAnalyser:
+    def mock_llm_service_manager(self) -> Mock:
+        """Create mock LLM service manager for testing."""
+        return Mock(spec=LLMServiceManager)
+
+    @pytest.fixture
+    def analyser(self, mock_llm_service_manager: Mock) -> ProcessingPurposeAnalyser:
         """Create analyser instance for testing."""
-        return ProcessingPurposeAnalyser.from_properties({})
+        analyser = ProcessingPurposeAnalyser.from_properties({})
+        analyser.llm_service_manager = mock_llm_service_manager
+        return analyser
 
     @pytest.fixture
     def source_code_schema(self) -> SourceCodeSchema:
@@ -525,9 +763,16 @@ class TestProcessingPurposeAnalyserErrorHandling:
     """Test class for error handling and validation."""
 
     @pytest.fixture
-    def analyser(self) -> ProcessingPurposeAnalyser:
+    def mock_llm_service_manager(self) -> Mock:
+        """Create mock LLM service manager for testing."""
+        return Mock(spec=LLMServiceManager)
+
+    @pytest.fixture
+    def analyser(self, mock_llm_service_manager: Mock) -> ProcessingPurposeAnalyser:
         """Create analyser instance for testing."""
-        return ProcessingPurposeAnalyser.from_properties({})
+        analyser = ProcessingPurposeAnalyser.from_properties({})
+        analyser.llm_service_manager = mock_llm_service_manager
+        return analyser
 
     @pytest.fixture
     def standard_input_schema(self) -> StandardInputSchema:
@@ -594,9 +839,16 @@ class TestProcessingPurposeAnalyserOutputValidation:
     """Test class for output message validation and structure."""
 
     @pytest.fixture
-    def analyser(self) -> ProcessingPurposeAnalyser:
+    def mock_llm_service_manager(self) -> Mock:
+        """Create mock LLM service manager for testing."""
+        return Mock(spec=LLMServiceManager)
+
+    @pytest.fixture
+    def analyser(self, mock_llm_service_manager: Mock) -> ProcessingPurposeAnalyser:
         """Create analyser instance for testing."""
-        return ProcessingPurposeAnalyser.from_properties({})
+        analyser = ProcessingPurposeAnalyser.from_properties({})
+        analyser.llm_service_manager = mock_llm_service_manager
+        return analyser
 
     @pytest.fixture
     def standard_input_schema(self) -> StandardInputSchema:

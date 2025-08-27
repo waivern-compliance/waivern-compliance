@@ -25,8 +25,8 @@ class ProcessingPurposeAnalyserConfig(BaseModel):
         description="Pattern matching configuration",
     )
     llm_validation: LLMValidationConfig = Field(
-        default_factory=lambda: LLMValidationConfig(enable_llm_validation=False),
-        description="LLM validation configuration (not yet implemented)",
+        default_factory=lambda: LLMValidationConfig(enable_llm_validation=True),
+        description="LLM validation configuration for filtering false positives",
     )
 
     @classmethod
