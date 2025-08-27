@@ -80,6 +80,19 @@
           "title": "Description",
           "type": "string"
         },
+        "contact": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional contact information for this execution step",
+          "title": "Contact"
+        },
         "connector": {
           "description": "Name of connector instance to use",
           "minLength": 1,
@@ -138,6 +151,19 @@
       "minLength": 1,
       "title": "Description",
       "type": "string"
+    },
+    "contact": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional contact information for this runbook",
+      "title": "Contact"
     },
     "connectors": {
       "description": "List of data source connectors",

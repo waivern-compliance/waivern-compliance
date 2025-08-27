@@ -74,6 +74,9 @@ class ExecutionStep(BaseModel):
     description: str = Field(
         description="Description of what this execution step does (can be empty)",
     )
+    contact: str | None = Field(
+        default=None, description="Optional contact information for this execution step"
+    )
     connector: str = Field(
         min_length=1,
         pattern=r"^[a-zA-Z0-9._-]+$",
@@ -102,6 +105,9 @@ class Runbook(BaseModel):
     name: str = Field(min_length=1, description="Runbook display name")
     description: str = Field(
         min_length=1, description="Runbook description explaining its purpose"
+    )
+    contact: str | None = Field(
+        default=None, description="Optional contact information for this runbook"
     )
     connectors: list[ConnectorConfig] = Field(
         min_length=1, description="List of data source connectors"
