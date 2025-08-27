@@ -75,9 +75,12 @@ class TestProcessingPurposeValidationStrategy:
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
 
-        result = processing_purpose_validation_strategy([], config, mock_llm_service)
+        result, success = processing_purpose_validation_strategy(
+            [], config, mock_llm_service
+        )
 
         assert result == []
+        assert success is True
 
     def test_filters_false_positives(self) -> None:
         """Test that false positive findings are filtered out."""
@@ -108,13 +111,14 @@ class TestProcessingPurposeValidationStrategy:
             ]
         )
 
-        result = processing_purpose_validation_strategy(
+        result, success = processing_purpose_validation_strategy(
             findings, config, mock_llm_service
         )
 
         # Should keep only the true positive
         assert len(result) == 1
         assert result[0].purpose == "Customer Service"
+        assert success is True
 
     def test_keeps_all_true_positives(self) -> None:
         """Test that all true positive findings are kept."""
@@ -145,7 +149,7 @@ class TestProcessingPurposeValidationStrategy:
             ]
         )
 
-        result = processing_purpose_validation_strategy(
+        result, success = processing_purpose_validation_strategy(
             findings, config, mock_llm_service
         )
 
@@ -154,6 +158,7 @@ class TestProcessingPurposeValidationStrategy:
         purposes = [finding.purpose for finding in result]
         assert "Customer Support" in purposes
         assert "Order Processing" in purposes
+        assert success is True
 
     def test_error_handling_returns_original_findings(self) -> None:
         """Test that LLM errors return original findings safely."""
@@ -164,13 +169,14 @@ class TestProcessingPurposeValidationStrategy:
         # Mock LLM service to raise an exception
         mock_llm_service.analyse_data.side_effect = Exception("LLM service error")
 
-        result = processing_purpose_validation_strategy(
+        result, success = processing_purpose_validation_strategy(
             findings, config, mock_llm_service
         )
 
         # Should return original findings on error
         assert len(result) == 1
         assert result[0].purpose == "Test Purpose"
+        assert success is False
 
     def test_handles_malformed_json_response(self) -> None:
         """Test graceful handling of malformed JSON responses."""
@@ -181,13 +187,14 @@ class TestProcessingPurposeValidationStrategy:
         # Mock invalid JSON response
         mock_llm_service.analyse_data.return_value = "invalid json response"
 
-        result = processing_purpose_validation_strategy(
+        result, success = processing_purpose_validation_strategy(
             findings, config, mock_llm_service
         )
 
         # Should return original findings on JSON parse error
         assert len(result) == 1
         assert result[0].purpose == "Test Purpose"
+        assert success is False
 
     def test_handles_flag_for_review_action(self) -> None:
         """Test that flag_for_review action keeps findings."""
@@ -208,10 +215,11 @@ class TestProcessingPurposeValidationStrategy:
             ]
         )
 
-        result = processing_purpose_validation_strategy(
+        result, success = processing_purpose_validation_strategy(
             findings, config, mock_llm_service
         )
 
         # Should keep findings marked for review
         assert len(result) == 1
         assert result[0].purpose == "High Risk Processing"
+        assert success is True

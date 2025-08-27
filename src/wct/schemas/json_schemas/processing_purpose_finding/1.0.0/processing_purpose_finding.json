@@ -86,9 +86,42 @@
           "type": "integer",
           "minimum": 0,
           "description": "Number of unique processing purposes identified"
+        },
+        "high_risk_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of high risk processing purpose findings"
+        },
+        "purpose_categories": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": "Count of findings by purpose category"
+        },
+        "risk_level_distribution": {
+          "type": "object",
+          "properties": {
+            "low": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "medium": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "high": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": ["low", "medium", "high"],
+          "additionalProperties": false,
+          "description": "Distribution of findings by risk level"
         }
       },
-      "required": ["total_findings", "purposes_identified"],
+      "required": ["total_findings", "purposes_identified", "high_risk_count", "purpose_categories", "risk_level_distribution"],
       "additionalProperties": false
     },
     "analysis_metadata": {
@@ -111,6 +144,5 @@
       "additionalProperties": true
     }
   },
-  "required": ["findings", "summary", "analysis_metadata"],
-  "additionalProperties": false
+  "required": ["findings", "summary", "analysis_metadata"]
 }

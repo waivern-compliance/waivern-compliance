@@ -44,7 +44,7 @@ def processing_purpose_validation_strategy(
     findings: list[ProcessingPurposeFindingModel],
     config: LLMValidationConfig,
     llm_service: AnthropicLLMService,
-) -> list[ProcessingPurposeFindingModel]:
+) -> tuple[list[ProcessingPurposeFindingModel], bool]:
     """LLM validation strategy for processing purpose findings.
 
     This strategy validates processing purpose findings using LLM to filter false positives.
@@ -56,23 +56,29 @@ def processing_purpose_validation_strategy(
         llm_service: LLM service instance
 
     Returns:
-        List of validated ProcessingPurposeFindingModel objects with false positives removed
+        Tuple of (validated findings, validation_succeeded)
 
     """
     if not findings:
         logger.debug("No findings to validate")
-        return findings
+        return findings, True
 
-    # Process findings in batches - working directly with typed objects
-    validated_finding_objects = _process_findings_in_batches(
-        findings, config, llm_service
-    )
+    try:
+        # Process findings in batches - working directly with typed objects
+        validated_finding_objects = _process_findings_in_batches(
+            findings, config, llm_service
+        )
 
-    logger.debug(
-        f"Processing purpose validation completed: {len(findings)} → {len(validated_finding_objects)} findings"
-    )
+        logger.debug(
+            f"Processing purpose validation completed: {len(findings)} → {len(validated_finding_objects)} findings"
+        )
 
-    return validated_finding_objects
+        return validated_finding_objects, True
+
+    except Exception as e:
+        logger.error(f"LLM validation strategy failed: {e}")
+        logger.warning("Returning original findings due to validation strategy error")
+        return findings, False
 
 
 def _process_findings_in_batches(
@@ -164,29 +170,21 @@ def _validate_findings_batch(
         List of validated findings from this batch
 
     """
-    try:
-        # Generate validation prompt using strongly-typed findings directly
-        prompt = get_processing_purpose_validation_prompt(
-            findings_batch, config.llm_validation_mode
-        )
+    # Generate validation prompt using strongly-typed findings directly
+    prompt = get_processing_purpose_validation_prompt(
+        findings_batch, config.llm_validation_mode
+    )
 
-        # Get LLM validation response
-        logger.debug(f"Validating batch of {len(findings_batch)} findings")
-        response = llm_service.analyse_data("", prompt)
+    # Get LLM validation response
+    logger.debug(f"Validating batch of {len(findings_batch)} findings")
+    response = llm_service.analyse_data("", prompt)
 
-        # Extract and parse JSON response
-        clean_json = extract_json_from_response(response)
-        validation_results = json.loads(clean_json)
+    # Extract and parse JSON response
+    clean_json = extract_json_from_response(response)
+    validation_results = json.loads(clean_json)
 
-        # Filter findings based on validation results
-        return _filter_findings_by_validation_results(
-            findings_batch, validation_results
-        )
-
-    except Exception as e:
-        logger.error(f"LLM validation failed for batch: {e}")
-        logger.warning("Returning unvalidated findings due to LLM validation error")
-        return findings_batch
+    # Filter findings based on validation results
+    return _filter_findings_by_validation_results(findings_batch, validation_results)
 
 
 def _filter_findings_by_validation_results(

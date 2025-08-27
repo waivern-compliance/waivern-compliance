@@ -6,6 +6,7 @@ from typing import Any
 from typing_extensions import Self, override
 
 from wct.analysers.base import Analyser
+from wct.analysers.utilities import LLMServiceManager
 from wct.message import Message
 from wct.schemas import (
     ProcessingPurposeFindingSchema,
@@ -17,6 +18,7 @@ from wct.schemas import (
     parse_data_model,
 )
 
+from .llm_validation_strategy import processing_purpose_validation_strategy
 from .pattern_matcher import ProcessingPurposePatternMatcher
 from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
 from .types import ProcessingPurposeAnalyserConfig, ProcessingPurposeFindingModel
@@ -44,17 +46,20 @@ class ProcessingPurposeAnalyser(Analyser):
         self,
         config: ProcessingPurposeAnalyserConfig,
         pattern_matcher: ProcessingPurposePatternMatcher,
+        llm_service_manager: LLMServiceManager,
     ) -> None:
         """Initialise the processing purpose analyser with specified configuration and pattern matcher.
 
         Args:
             config: Configuration object with analysis settings
             pattern_matcher: Pattern matcher for processing purpose detection
+            llm_service_manager: LLM service manager for validation
 
         """
         # Store strongly-typed configuration
         self._config: ProcessingPurposeAnalyserConfig = config
         self._pattern_matcher = pattern_matcher
+        self.llm_service_manager = llm_service_manager
 
         # Initialise source code handler for SourceCodeSchema processing
         self._source_code_handler = SourceCodeSchemaInputHandler()
@@ -75,7 +80,16 @@ class ProcessingPurposeAnalyser(Analyser):
         # Create pattern matcher with processing purpose specific strategy
         pattern_matcher = ProcessingPurposePatternMatcher(config.pattern_matching)
 
-        return cls(config=config, pattern_matcher=pattern_matcher)
+        # Create LLM service manager
+        llm_service_manager = LLMServiceManager(
+            config.llm_validation.enable_llm_validation
+        )
+
+        return cls(
+            config=config,
+            pattern_matcher=pattern_matcher,
+            llm_service_manager=llm_service_manager,
+        )
 
     @classmethod
     @override
@@ -114,8 +128,19 @@ class ProcessingPurposeAnalyser(Analyser):
         else:
             raise ValueError(f"Unsupported input schema: {input_schema.name}")
 
+        # Apply LLM validation if enabled and findings exist
+        validated_findings, validation_applied = self._validate_findings_with_llm(
+            findings
+        )
+
         # Create and validate output message
-        return self._create_output_message(findings, output_schema)
+        return self._create_output_message(
+            findings,
+            validated_findings,
+            validation_applied,
+            input_schema,
+            output_schema,
+        )
 
     def _process_standard_input_data(
         self, typed_data: StandardInputDataModel
@@ -160,36 +185,93 @@ class ProcessingPurposeAnalyser(Analyser):
 
         return findings
 
+    def _validate_findings_with_llm(
+        self, findings: list[ProcessingPurposeFindingModel]
+    ) -> tuple[list[ProcessingPurposeFindingModel], bool]:
+        """Validate findings using LLM if enabled and available.
+
+        Args:
+            findings: List of findings to validate
+
+        Returns:
+            Tuple of (validated findings, validation_was_applied)
+
+        """
+        if not self._config.llm_validation.enable_llm_validation:
+            return findings, False
+
+        if not findings:
+            return findings, False
+
+        llm_service = self.llm_service_manager.llm_service
+        if not llm_service:
+            logger.warning("LLM service unavailable, returning original findings")
+            return findings, False
+
+        try:
+            validated_findings, validation_succeeded = (
+                processing_purpose_validation_strategy(
+                    findings, self._config.llm_validation, llm_service
+                )
+            )
+            return validated_findings, validation_succeeded
+        except Exception as e:
+            logger.error(f"LLM validation failed: {e}")
+            logger.warning("Returning original findings due to validation error")
+            return findings, False
+
     def _create_output_message(
-        self, findings: list[ProcessingPurposeFindingModel], output_schema: Schema
+        self,
+        original_findings: list[ProcessingPurposeFindingModel],
+        validated_findings: list[ProcessingPurposeFindingModel],
+        validation_applied: bool,
+        input_schema: Schema,
+        output_schema: Schema,
     ) -> Message:
         """Create and validate output message.
 
         Args:
-            findings: Processing purpose findings
+            original_findings: Original findings before LLM validation
+            validated_findings: Findings after LLM validation
+            validation_applied: Whether LLM validation was actually applied
+            input_schema: Schema that was used for input processing
             output_schema: Schema for output validation
 
         Returns:
             Validated output message
 
         """
-        # Convert models to dicts for JSON output
-        findings_dicts = [finding.model_dump(mode="json") for finding in findings]
+        # Convert validated models to dicts for JSON output
+        findings_dicts = [
+            finding.model_dump(mode="json") for finding in validated_findings
+        ]
 
-        # Create result data with findings
+        # Create result data with validated findings
         result_data: dict[str, Any] = {
             "findings": findings_dicts,
-            "summary": {
-                "total_findings": len(findings),
-                "purposes_identified": len(set(f.purpose for f in findings)),
-            },
+            "summary": self._build_findings_summary(validated_findings),
         }
 
-        # Add analysis metadata
+        # Add validation summary if LLM validation was actually applied
+        if validation_applied and len(original_findings) > 0:
+            result_data["validation_summary"] = self._build_validation_summary(
+                original_findings, validated_findings
+            )
+
+        # Add enhanced analysis metadata
         result_data["analysis_metadata"] = {
             "ruleset_used": self._config.pattern_matching.ruleset,
             "llm_validation_enabled": self._config.llm_validation.enable_llm_validation,
+            "llm_validation_mode": self._config.llm_validation.llm_validation_mode,
+            "llm_batch_size": self._config.llm_validation.llm_batch_size,
             "evidence_context_size": self._config.pattern_matching.evidence_context_size,
+            "analyser_version": "1.0.0",
+            "input_schema": input_schema.name,
+            "processing_purpose_categories_detected": len(
+                set(
+                    f.purpose_category for f in validated_findings if f.purpose_category
+                )
+            ),
         }
 
         output_message = Message(
@@ -204,3 +286,92 @@ class ProcessingPurposeAnalyser(Analyser):
         logger.debug(f"Processing purpose analysis completed with data: {result_data}")
 
         return output_message
+
+    def _build_findings_summary(
+        self, findings: list[ProcessingPurposeFindingModel]
+    ) -> dict[str, Any]:
+        """Build summary statistics for processing purpose findings.
+
+        Args:
+            findings: List of validated findings
+
+        Returns:
+            Summary statistics dictionary with purpose categories, risk levels, and totals
+
+        """
+        if not findings:
+            return {
+                "total_findings": 0,
+                "purposes_identified": 0,
+                "high_risk_count": 0,
+                "purpose_categories": {},
+                "risk_level_distribution": {"low": 0, "medium": 0, "high": 0},
+            }
+
+        # Count unique purposes and categories
+        unique_purposes = set(f.purpose for f in findings)
+        purpose_categories: dict[str, int] = {}
+        risk_distribution = {"low": 0, "medium": 0, "high": 0}
+
+        for finding in findings:
+            # Count purpose categories
+            category = finding.purpose_category or "uncategorised"
+            purpose_categories[category] = purpose_categories.get(category, 0) + 1
+
+            # Count risk levels
+            risk_distribution[finding.risk_level] = (
+                risk_distribution.get(finding.risk_level, 0) + 1
+            )
+
+        return {
+            "total_findings": len(findings),
+            "purposes_identified": len(unique_purposes),
+            "high_risk_count": risk_distribution["high"],
+            "purpose_categories": purpose_categories,
+            "risk_level_distribution": risk_distribution,
+        }
+
+    def _build_validation_summary(
+        self,
+        original_findings: list[ProcessingPurposeFindingModel],
+        validated_findings: list[ProcessingPurposeFindingModel],
+    ) -> dict[str, Any]:
+        """Build LLM validation summary statistics for processing purposes.
+
+        Args:
+            original_findings: Original findings before validation
+            validated_findings: Findings after validation
+
+        Returns:
+            Validation summary dictionary with effectiveness metrics
+
+        """
+        original_count = len(original_findings)
+        validated_count = len(validated_findings)
+        false_positives_removed = original_count - validated_count
+
+        # Calculate effectiveness metrics
+        if original_count > 0:
+            validation_effectiveness = (false_positives_removed / original_count) * 100
+        else:
+            validation_effectiveness = 0.0
+
+        # Analyze which purposes were removed (false positives)
+        original_purposes = {f.purpose for f in original_findings}
+        validated_purposes = {f.purpose for f in validated_findings}
+        removed_purposes = original_purposes - validated_purposes
+
+        logger.info(
+            f"LLM validation completed: {original_count} → {validated_count} findings "
+            f"({false_positives_removed} false positives removed, {validation_effectiveness:.1f}% effectiveness)"
+        )
+
+        return {
+            "llm_validation_enabled": True,
+            "original_findings_count": original_count,
+            "validated_findings_count": validated_count,
+            "false_positives_removed": false_positives_removed,
+            "validation_effectiveness_percentage": round(validation_effectiveness, 1),
+            "validation_mode": self._config.llm_validation.llm_validation_mode,
+            "removed_purposes": sorted(list(removed_purposes)),
+        }

@@ -44,8 +44,8 @@ class StandardInputDataModel(BaseModel):
         default=None, description="Content encoding if applicable"
     )
     source: str | None = Field(default=None, description="Source of the data")
-    metadata: dict[str, Any] | None = Field(
-        default=None, description="Additional metadata"
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
     )
 
 
