@@ -17,7 +17,6 @@ from wct.runbook import RunbookLoader
 
 class AnalysisResult(BaseModel):
     """Result from an analyser analysis."""
-
     analysis_name: str = Field(description="Name of the analysis")
     analysis_description: str = Field(description="Description of the analysis")
     input_schema: str = Field(description="Input schema name")
