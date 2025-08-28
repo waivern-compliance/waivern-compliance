@@ -21,38 +21,24 @@ The system is designed to be extensible and configurable through YAML runbook fi
 
 ### Installation
 
-This project uses `uv` for dependency management with optional dependency groups for specific connectors and analysers:
+This project uses `uv` for dependency management:
 
 ```bash
-# Install core dependencies only
+# Install all dependencies
 uv sync
 
-# Install with specific connector/analyser dependencies
-uv sync --group mysql      # MySQL connector support
-uv sync --group source-code # Source code analysis support
-uv sync --group dev        # Development tools
-
-# Install multiple groups
-uv sync --group mysql --group source-code --group dev
+# Install with development tools
+uv sync --group dev
 
 # Install pre-commit hooks (recommended)
 uv run pre-commit install
 ```
 
-**Available Dependency Groups**:
-- `mysql` - MySQL connector dependencies (pymysql, cryptography)
-- `source-code` - Source code analysis dependencies (tree-sitter, tree-sitter-php)
-- `dev` - Development tools (pytest, ruff, basedpyright, etc.)
+**Dependencies**:
+- All connector and analyser dependencies are included by default
 
-**Core Dependencies**:
-- `jsonschema` - Data validation for component interoperability
-- `langchain` and `langchain-anthropic` - AI-powered compliance analysis and validation
-
-Some connectors and analysers require additional dependencies that are not installed by default. Check the connector/analyser documentation or error messages for specific dependency group requirements.
-
-**Notable Connectors**:
-- MySQL connector requires `uv sync --group mysql`
-- Source code connector requires `uv sync --group source-code`
+**Development Dependencies** (`--group dev`):
+- Testing and code quality tools
 
 ### Basic Usage
 
@@ -140,7 +126,7 @@ execution:
 - **Explicit connector-analyser mapping**: Clear data flow specification in execution steps
 - **Dynamic schema loading**: Flexible schema file discovery with multiple search paths
 - **End-to-end validation**: Full pipeline validation from runbook loading to analysis results
-- **Optional dependencies**: MySQL connector requires `uv sync --group mysql`, source code connector requires `uv sync --group source-code`
+- **All-inclusive dependencies**: All connector and analyser dependencies included by default
 
 ## IDE Support
 
@@ -202,7 +188,7 @@ Key features:
 ### Modular Architecture Benefits
 
 - **Schema Contracts**: Clear input/output schema declarations for all components
-- **Dependency Isolation**: Optional dependencies grouped by component (`uv sync --group mysql`)
+- **Complete Dependencies**: All connector and analyser dependencies included for immediate use
 - **Independent Testing**: Each module tested in isolation with comprehensive coverage
 - **Declarative Configuration**: YAML runbooks with comprehensive validation eliminate manual validation
 - **Type Safety**: Strongly typed interfaces with comprehensive error reporting
@@ -365,7 +351,7 @@ src/wct/
 ├── connectors/          # Data source extractors
 │   ├── base.py         # Abstract connector interface
 │   ├── filesystem/     # File content extraction
-│   └── mysql/          # Database analysis (requires --group mysql)
+│   └── mysql/          # Database analysis
 ├── analysers/          # Compliance analysis engines
 │   ├── base.py         # Abstract analyser interface
 │   └── personal_data_analyser/ # Personal data detection with LLM
