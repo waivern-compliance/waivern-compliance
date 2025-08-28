@@ -10,10 +10,9 @@ This module provides:
 import logging
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, Self, override
 
 import pymysql
-from typing_extensions import Self, override
 
 from wct.connectors.base import (
     Connector,

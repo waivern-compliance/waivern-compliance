@@ -1,7 +1,7 @@
 """Unit tests for DataCollectionRuleset class."""
 
 from wct.rulesets.data_collection import DataCollectionRuleset
-from wct.rulesets.types import Rule, RuleComplianceData
+from wct.rulesets.types import DataCollectionRule, RuleComplianceData
 
 
 class TestDataCollectionRuleset:
@@ -34,7 +34,7 @@ class TestDataCollectionRuleset:
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0
-        assert all(isinstance(rule, Rule) for rule in rules)
+        assert all(isinstance(rule, DataCollectionRule) for rule in rules)
 
     def test_get_rules_returns_consistent_count(self):
         """Test that get_rules returns a consistent number of rules."""
@@ -59,13 +59,15 @@ class TestDataCollectionRuleset:
             assert hasattr(rule, "description")
             assert hasattr(rule, "patterns")
             assert hasattr(rule, "risk_level")
-            assert hasattr(rule, "metadata")
+            assert hasattr(rule, "collection_type")
+            assert hasattr(rule, "data_source")
 
             assert isinstance(rule.name, str)
             assert isinstance(rule.description, str)
             assert isinstance(rule.patterns, tuple)
             assert isinstance(rule.risk_level, str)
-            assert isinstance(rule.metadata, dict)
+            assert isinstance(rule.collection_type, str)
+            assert isinstance(rule.data_source, str)
 
     def test_rules_have_valid_risk_levels(self):
         """Test that all rules have valid risk levels."""
@@ -92,23 +94,21 @@ class TestDataCollectionRuleset:
             assert len(rule.name) > 0
             assert len(rule.description) > 0
 
-    def test_rules_have_collection_type_metadata(self):
-        """Test that rules have collection_type in metadata."""
+    def test_rules_have_collection_type_field(self):
+        """Test that rules have collection_type field."""
         rules = self.ruleset.get_rules()
 
         for rule in rules:
-            assert "collection_type" in rule.metadata
-            assert isinstance(rule.metadata["collection_type"], str)
-            assert len(rule.metadata["collection_type"]) > 0
+            assert isinstance(rule.collection_type, str)
+            assert len(rule.collection_type) > 0
 
-    def test_rules_have_data_source_metadata(self):
-        """Test that rules have data_source in metadata."""
+    def test_rules_have_data_source_field(self):
+        """Test that rules have data_source field."""
         rules = self.ruleset.get_rules()
 
         for rule in rules:
-            assert "data_source" in rule.metadata
-            assert isinstance(rule.metadata["data_source"], str)
-            assert len(rule.metadata["data_source"]) > 0
+            assert isinstance(rule.data_source, str)
+            assert len(rule.data_source) > 0
 
     def test_rules_have_structured_compliance_data(self):
         """Test that rules have structured compliance data."""
@@ -153,7 +153,7 @@ class TestDataCollectionRuleset:
 
         found_collection_types: set[str] = set()
         for rule in rules:
-            found_collection_types.add(rule.metadata["collection_type"])
+            found_collection_types.add(rule.collection_type)
 
         # Should have some overlap with expected types
         assert len(found_collection_types.intersection(expected_collection_types)) > 0

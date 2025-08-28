@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import override
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
-from typing_extensions import override
 
 from wct.analysis import AnalysisResult, AnalysisResultsExporter
 from wct.executor import Executor

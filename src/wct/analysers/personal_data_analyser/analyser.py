@@ -2,9 +2,7 @@
 
 import logging
 from pprint import pformat
-from typing import Any
-
-from typing_extensions import Self, override
+from typing import Any, Self, override
 
 from wct.analysers.base import Analyser
 from wct.analysers.utilities import LLMServiceManager
@@ -246,7 +244,7 @@ class PersonalDataAnalyser(Analyser):
             "total_findings": len(findings),
             "high_risk_count": len([f for f in findings if f.risk_level == "high"]),
             "special_category_count": len(
-                [f for f in findings if f.special_category == "Y"]
+                [f for f in findings if f.special_category is True]
             ),
         }
 

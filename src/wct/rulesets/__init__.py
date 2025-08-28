@@ -7,26 +7,30 @@ from wct.rulesets.base import (
     RulesetRegistry,
 )
 from wct.rulesets.data_collection import DataCollectionRuleset
-
-# Import and register built-in rulesets automatically
 from wct.rulesets.personal_data import PersonalDataRuleset
 from wct.rulesets.processing_purposes import ProcessingPurposesRuleset
 from wct.rulesets.service_integrations import ServiceIntegrationsRuleset
 
-# Built-in rulesets - internal use only
-_BUILTIN_RULESETS = (
-    PersonalDataRuleset,
-    ProcessingPurposesRuleset,
-    DataCollectionRuleset,
-    ServiceIntegrationsRuleset,
+# Import rule types for registration
+from wct.rulesets.types import (
+    DataCollectionRule,
+    PersonalDataRule,
+    ProcessingPurposeRule,
+    ServiceIntegrationRule,
 )
 
-# Register all built-in rulesets automatically on import
+# Built-in rulesets with their corresponding rule types
+_BUILTIN_RULESETS = [
+    ("personal_data", PersonalDataRuleset, PersonalDataRule),
+    ("processing_purposes", ProcessingPurposesRuleset, ProcessingPurposeRule),
+    ("data_collection", DataCollectionRuleset, DataCollectionRule),
+    ("service_integrations", ServiceIntegrationsRuleset, ServiceIntegrationRule),
+]
+
+# Register all built-in rulesets automatically on import with type information
 _registry = RulesetRegistry()
-for _ruleset_class in _BUILTIN_RULESETS:
-    # Use the module name as the ruleset name (e.g., personal_data_code_functions)
-    _module_name = _ruleset_class.__module__.split(".")[-1]
-    _registry.register(_module_name, _ruleset_class)
+for _ruleset_name, _ruleset_class, _rule_type in _BUILTIN_RULESETS:
+    _registry.register(_ruleset_name, _ruleset_class, _rule_type)
 
 __all__ = (
     "RulesetError",

@@ -4,9 +4,7 @@ import fnmatch
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
-
-from typing_extensions import Self, override
+from typing import Any, Self, override
 
 from wct.connectors.base import (
     Connector,

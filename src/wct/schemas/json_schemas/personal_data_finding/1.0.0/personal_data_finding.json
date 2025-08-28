@@ -19,9 +19,8 @@
             "description": "Risk level associated with this type of personal data"
           },
           "special_category": {
-            "type": ["string", "null"],
-            "enum": ["Y", "N", null],
-            "description": "Indicates if this is a special category under GDPR (Y/N/null)"
+            "type": "boolean",
+            "description": "Whether this is GDPR Article 9 special category data"
           },
           "matched_pattern": {
             "type": "string",

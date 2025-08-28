@@ -1,9 +1,8 @@
 """Class extractor for source code analysis."""
 
-from typing import Any
+from typing import Any, override
 
 from tree_sitter import Node
-from typing_extensions import override
 
 from wct.connectors.source_code.extractors.base import BaseExtractor
 from wct.connectors.source_code.extractors.functions import FunctionExtractor

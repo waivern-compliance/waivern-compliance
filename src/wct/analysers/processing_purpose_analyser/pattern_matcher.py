@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from wct.analysers.types import FindingComplianceData, PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
+from wct.rulesets.types import ProcessingPurposeRule
 
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
 
@@ -45,7 +46,9 @@ class ProcessingPurposePatternMatcher:
         if not content.strip():
             return []
 
-        rules = self._ruleset_manager.get_rules(self._config.ruleset)
+        rules = self._ruleset_manager.get_rules(
+            self._config.ruleset, ProcessingPurposeRule
+        )
         findings: list[ProcessingPurposeFindingModel] = []
         content_lower = content.lower()
 
@@ -80,7 +83,7 @@ class ProcessingPurposePatternMatcher:
 
                         finding = ProcessingPurposeFindingModel(
                             purpose=rule.name,
-                            purpose_category=rule.metadata.get("purpose_category", ""),
+                            purpose_category=rule.purpose_category,
                             risk_level=rule.risk_level,
                             compliance=compliance_data,
                             matched_pattern=pattern,

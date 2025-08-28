@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from wct.analysers.types import FindingComplianceData, PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
+from wct.rulesets.types import PersonalDataRule
 
 from .types import PersonalDataFindingMetadata, PersonalDataFindingModel
 
@@ -45,7 +46,7 @@ class PersonalDataPatternMatcher:
         if not content.strip():
             return []
 
-        rules = self.ruleset_manager.get_rules(self.config.ruleset)
+        rules = self.ruleset_manager.get_rules(self.config.ruleset, PersonalDataRule)
         findings: list[PersonalDataFindingModel] = []
         content_lower = content.lower()
 
@@ -81,7 +82,7 @@ class PersonalDataPatternMatcher:
                         finding = PersonalDataFindingModel(
                             type=rule.name,
                             risk_level=rule.risk_level,
-                            special_category=rule.metadata.get("special_category"),
+                            special_category=rule.special_category,
                             matched_pattern=pattern,
                             compliance=compliance_data,
                             evidence=evidence_matches,

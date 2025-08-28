@@ -1,7 +1,7 @@
 """Configuration for FilesystemConnector."""
 
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Self
 
 from pydantic import (
     BaseModel,
@@ -11,7 +11,6 @@ from pydantic import (
     ValidationError,
     field_validator,
 )
-from typing_extensions import Self
 
 from wct.connectors.base import ConnectorConfigError
 

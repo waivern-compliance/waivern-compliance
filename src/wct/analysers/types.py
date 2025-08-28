@@ -1,6 +1,6 @@
 """Type definitions for analysers."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -13,7 +13,7 @@ class EvidenceItem(BaseModel):
 
     content: str = Field(description="The evidence content snippet")
     collection_timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="When the evidence was collected",
     )
 

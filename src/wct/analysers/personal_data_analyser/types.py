@@ -1,9 +1,8 @@
 """Data models for personal data analysis analyser."""
 
-from typing import Any
+from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from typing_extensions import Self
 
 from wct.analysers.types import (
     EvidenceItem,
@@ -58,8 +57,9 @@ class PersonalDataFindingModel(BaseModel):
         description="Type of personal data found (e.g., 'email', 'phone_number')"
     )
     risk_level: str = Field(description="Risk assessment level (low, medium, high)")
-    special_category: str | None = Field(
-        default=None, description="GDPR special category indicator (Y/N)"
+    special_category: bool = Field(
+        default=False,
+        description="Whether this is GDPR Article 9 special category data",
     )
     matched_pattern: str = Field(
         description="Specific pattern that matched in the content"

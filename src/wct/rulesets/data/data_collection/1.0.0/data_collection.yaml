@@ -6,11 +6,13 @@ version: "1.0.0"
 description: "Ruleset for detecting data collection patterns in source code"
 
 rules:
-  php_post_data:
+  - name: "php_post_data"
     description: "PHP POST data collection patterns"
     patterns:
       - "$_POST["
       - "_POST["
+    collection_type: "form_data"
+    data_source: "http_post"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -19,15 +21,14 @@ rules:
         relevance: "Electronic communications data collection requires user consent or legitimate interest"
       - regulation: "CCPA"
         relevance: "Personal information collection from consumers must comply with notice and opt-out requirements"
-    metadata:
-      collection_type: "form_data"
-      data_source: "http_post"
 
-  php_get_data:
+  - name: "php_get_data"
     description: "PHP GET parameter collection patterns"
     patterns:
       - "$_GET["
       - "_GET["
+    collection_type: "url_parameters"
+    data_source: "http_get"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -36,16 +37,15 @@ rules:
         relevance: "URL tracking parameters may require consent under electronic communications privacy rules"
       - regulation: "CCPA"
         relevance: "URL parameters containing personal information subject to consumer privacy rights and disclosure requirements"
-    metadata:
-      collection_type: "url_parameters"
-      data_source: "http_get"
 
-  php_cookie_access:
+  - name: "php_cookie_access"
     description: "PHP cookie access patterns"
     patterns:
       - "$_COOKIE["
       - "_COOKIE["
       - "setcookie("
+    collection_type: "cookies"
+    data_source: "browser_cookies"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -54,27 +54,23 @@ rules:
         relevance: "Non-essential cookies require explicit user consent before storage or access under Cookie Law"
       - regulation: "CCPA"
         relevance: "Cookies used for tracking or containing personal information subject to consumer opt-out rights"
-    metadata:
-      collection_type: "cookies"
-      data_source: "browser_cookies"
 
-  php_session_data:
+  - name: "php_session_data"
     description: "PHP session data patterns"
     patterns:
       - "$_SESSION["
       - "_SESSION["
       - "session_start"
+    collection_type: "session_data"
+    data_source: "server_session"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Session data processing requires Article 6 lawful basis and appropriate retention periods under Article 5"
       - regulation: "ePrivacy"
         relevance: "Session tracking mechanisms may require consent for electronic communications monitoring"
-    metadata:
-      collection_type: "session_data"
-      data_source: "server_session"
 
-  html_input_fields:
+  - name: "html_input_fields"
     description: "HTML form input field patterns"
     patterns:
       - 'name="'
@@ -82,23 +78,24 @@ rules:
       - "<input"
       - "<textarea"
       - "<select"
+    collection_type: "html_forms"
+    data_source: "html_form"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
         relevance: "HTML forms collecting personal data require Article 13 information provision and Article 6 lawful basis"
       - regulation: "CCPA"
         relevance: "Form data collection must comply with consumer notice requirements and right to know categories of information collected"
-    metadata:
-      collection_type: "html_forms"
-      data_source: "html_form"
 
-  javascript_storage:
+  - name: "javascript_storage"
     description: "JavaScript local storage and data access"
     patterns:
       - "localStorage"
       - "sessionStorage"
       - "document.cookie"
       - "FormData"
+    collection_type: "client_storage"
+    data_source: "browser_javascript"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -107,11 +104,8 @@ rules:
         relevance: "Browser storage mechanisms require consent when used for tracking or storing personal data"
       - regulation: "CCPA"
         relevance: "Local storage containing personal information subject to consumer access and deletion rights"
-    metadata:
-      collection_type: "client_storage"
-      data_source: "browser_javascript"
 
-  file_uploads:
+  - name: "file_uploads"
     description: "File upload processing patterns"
     patterns:
       - "$_FILES["
@@ -119,17 +113,16 @@ rules:
       - "is_uploaded_file"
       - "file_get_contents"
       - "upload"
+    collection_type: "file_upload"
+    data_source: "uploaded_files"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "File uploads may contain personal data requiring Article 6 lawful basis, data minimisation under Article 5, and secure processing under Article 32"
       - regulation: "CCPA"
         relevance: "Uploaded files containing personal information must comply with consumer rights to know, access, and delete personal information"
-    metadata:
-      collection_type: "file_upload"
-      data_source: "uploaded_files"
 
-  sql_database_queries:
+  - name: "sql_database_queries"
     description: "SQL database query patterns for data retrieval and manipulation"
     patterns:
       - "SELECT"
@@ -149,6 +142,8 @@ rules:
       - "mysql_query"
       - "pg_query"
       - "sqlite_query"
+    collection_type: "database_query"
+    data_source: "database"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
@@ -157,11 +152,8 @@ rules:
         relevance: "Database queries accessing personal information must support consumer rights to know, access, delete, and correct personal information"
       - regulation: "SOX"
         relevance: "Financial data queries require adequate internal controls and data integrity measures under Section 404"
-    metadata:
-      collection_type: "database_query"
-      data_source: "database"
 
-  database_connections:
+  - name: "database_connections"
     description: "Database connection and ORM patterns"
     patterns:
       - "PDO::"
@@ -183,6 +175,8 @@ rules:
       - "->create("
       - "->update("
       - "->delete("
+    collection_type: "database_connection"
+    data_source: "database"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -191,6 +185,3 @@ rules:
         relevance: "Database access to personal information requires adequate security and must support consumer privacy rights implementation"
       - regulation: "SOX"
         relevance: "Database connections handling financial data must maintain adequate internal controls and audit trails under Section 404"
-    metadata:
-      collection_type: "database_connection"
-      data_source: "database"

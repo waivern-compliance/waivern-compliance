@@ -2,9 +2,23 @@ name: "processing_purposes"
 version: "1.0.0"
 description: "Known processing purposes to search for during analysis. This ruleset contains processing purpose patterns for GDPR compliance analysis."
 
+# Master list of all valid purpose categories
+purpose_categories:
+  - "AI_AND_ML"
+  - "ANALYTICS"
+  - "MARKETING_AND_ADVERTISING"
+  - "OPERATIONAL"
+  - "SECURITY"
+
+# Subset of purpose_categories considered privacy-sensitive
+sensitive_categories:
+  - "AI_AND_ML"
+  - "ANALYTICS"
+  - "MARKETING_AND_ADVERTISING"
+
 rules:
   # ===== AI AND ML PURPOSES =====
-  "Artificial Intelligence Model Training":
+  - name: "Artificial Intelligence Model Training"
     description: "Training AI/ML models using personal data"
     patterns:
       - "model training"
@@ -25,18 +39,15 @@ rules:
       - "snorkel ai"
       - "kubeflow"
       - "feast"
+    purpose_category: "AI_AND_ML"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "AI model training using personal data requires Article 6 lawful basis and Article 35 DPIA for high-risk processing"
       - regulation: "EU_AI_ACT"
         relevance: "AI systems using personal data for training subject to data governance and risk management requirements"
-      - regulation: "NIST_AI_RMF"
-        relevance: "AI model training requires governance, risk assessment, and trustworthy AI practices framework compliance"
-    metadata:
-      purpose_category: "AI_AND_ML"
 
-  "Artificial Intelligence Bias Testing":
+  - name: "Artificial Intelligence Bias Testing"
     description: "Testing AI/ML models for bias and fairness issues"
     patterns:
       - "bias testing"
@@ -60,18 +71,13 @@ rules:
       - "credo ai"
       - "aws sagemaker clarify"
       - "parity ai"
+    purpose_category: "AI_AND_ML"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Bias testing using personal data requires Article 6 lawful basis and Article 22 safeguards for automated decision-making"
-      - regulation: "EU_AI_ACT"
-        relevance: "Bias testing mandatory for high-risk AI systems under risk management and testing requirements"
-      - regulation: "NIST_AI_RMF"
-        relevance: "Bias testing essential for trustworthy AI development and fairness assessment framework compliance"
-    metadata:
-      purpose_category: "AI_AND_ML"
 
-  "Artificial Intelligence Model Refinement":
+  - name: "Artificial Intelligence Model Refinement"
     description: "Refining and improving AI/ML models for better performance"
     patterns:
       - "model refinement"
@@ -96,18 +102,13 @@ rules:
       - "cohere"
       - "scale ai"
       - "labelbox"
+    purpose_category: "AI_AND_ML"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Model refinement using personal data requires Article 6 lawful basis and data minimisation under Article 5"
-      - regulation: "EU_AI_ACT"
-        relevance: "AI model refinement subject to quality management and performance monitoring requirements"
-      - regulation: "NIST_AI_RMF"
-        relevance: "Model refinement requires continuous monitoring and improvement within AI risk management framework"
-    metadata:
-      purpose_category: "AI_AND_ML"
 
-  "Artificial Intelligence Performance Testing":
+  - name: "Artificial Intelligence Performance Testing"
     description: "Testing AI/ML model performance, accuracy, and robustness"
     patterns:
       - "performance testing"
@@ -126,18 +127,13 @@ rules:
       - "helm"
       - "big-bench"
       - "decoding trust benchmark"
+    purpose_category: "AI_AND_ML"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Performance testing using personal data requires Article 6 lawful basis and proportionate processing"
-      - regulation: "EU_AI_ACT"
-        relevance: "Performance testing mandatory for AI system validation and conformity assessment requirements"
-      - regulation: "NIST_AI_RMF"
-        relevance: "Performance testing essential for AI system reliability and trustworthiness validation"
-    metadata:
-      purpose_category: "AI_AND_ML"
 
-  "Artificial Intelligence Security Testing":
+  - name: "Artificial Intelligence Security Testing"
     description: "Testing AI/ML models for security vulnerabilities and threats"
     patterns:
       - "security testing"
@@ -160,22 +156,15 @@ rules:
       - "darktrace"
       - "synack"
       - "shellgpt"
+    purpose_category: "AI_AND_ML"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
         relevance: "Security testing requires Article 32 security measures and data protection by design principles"
       - regulation: "EU_AI_ACT"
         relevance: "Security testing required for AI system robustness and cybersecurity measures"
-      - regulation: "NIST_AI_RMF"
-        relevance: "Security testing essential for AI system trustworthiness and risk management framework"
-      - regulation: "ISO_27001"
-        relevance: "Security testing supports information security management system requirements"
-      - regulation: "SOC_2"
-        relevance: "Security testing demonstrates security controls for service organisation compliance"
-    metadata:
-      purpose_category: "AI_AND_ML"
 
-  "Artificial Intelligence Compliance Management":
+  - name: "Artificial Intelligence Compliance Management"
     description: "Managing AI/ML compliance, governance, and regulatory requirements"
     patterns:
       - "compliance"
@@ -205,19 +194,14 @@ rules:
       - "vanta"
       - "waivern"
       - "mineos"
+    purpose_category: "AI_AND_ML"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
         relevance: "AI compliance management requires governance framework and accountability under Article 5 principles"
-      - regulation: "EU_AI_ACT"
-        relevance: "AI compliance management mandatory for high-risk AI systems under governance and quality management requirements"
-      - regulation: "NIST_AI_RMF"
-        relevance: "AI compliance management essential for trustworthy AI governance and risk management framework implementation"
-    metadata:
-      purpose_category: "AI_AND_ML"
 
   # ===== OPERATIONAL PURPOSES =====
-  "General Product and Service Delivery":
+  - name: "General Product and Service Delivery"
     description: "Delivering products and services to customers and users"
     patterns:
       - "service"
@@ -236,14 +220,13 @@ rules:
       - "labrador"
       - "Stibo DX"
       - "Dr Publish"
+    purpose_category: "OPERATIONAL"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
         relevance: "Service delivery processing requires Article 6 lawful basis, typically contractual necessity under Article 6(1)(b)"
-    metadata:
-      purpose_category: "OPERATIONAL"
 
-  "Customer Service and Support":
+  - name: "Customer Service and Support"
     description: "Providing customer service, support, and assistance"
     patterns:
       - "support"
@@ -260,14 +243,13 @@ rules:
       - "salesforce servicecloud"
       - "helpscout"
       - "liveagent"
+    purpose_category: "OPERATIONAL"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
         relevance: "Customer support processing requires Article 6 lawful basis, typically legitimate interests under Article 6(1)(f)"
-    metadata:
-      purpose_category: "OPERATIONAL"
 
-  "Customization of Products and Services":
+  - name: "Customization of Products and Services"
     description: "Customising products and services based on user preferences"
     patterns:
       - "customisation"
@@ -277,14 +259,13 @@ rules:
       - "theme"
       - "ui"
       - "personalization"
+    purpose_category: "OPERATIONAL"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
         relevance: "Customisation processing requires Article 6 lawful basis, typically consent under Article 6(1)(a) or legitimate interests"
-    metadata:
-      purpose_category: "OPERATIONAL"
 
-  "User Identity and Login Management":
+  - name: "User Identity and Login Management"
     description: "Managing user identity, authentication, and login processes"
     patterns:
       - "authentication"
@@ -351,14 +332,13 @@ rules:
       - "vipps sign-in"
       - "microsoft active directory"
       - "forgerock"
+    purpose_category: "OPERATIONAL"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Identity management requires Article 6 lawful basis and Article 32 security measures for authentication data"
-    metadata:
-      purpose_category: "OPERATIONAL"
 
-  "Payment, Billing, and Invoicing":
+  - name: "Payment, Billing, and Invoicing"
     description: "Processing payments, billing, and financial transactions"
     patterns:
       - "payment"
@@ -397,19 +377,14 @@ rules:
       - "Chase Paymentech"
       - "Bank of America Merchant Services"
       - "Wells Fargo Merchant Services"
+    purpose_category: "OPERATIONAL"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Payment processing requires Article 6 lawful basis, typically contractual necessity under Article 6(1)(b)"
-      - regulation: "PCI_DSS"
-        relevance: "Payment card processing must comply with Payment Card Industry Data Security Standards"
-      - regulation: "SOX"
-        relevance: "Financial transaction processing requires adequate internal controls under Sarbanes-Oxley Act"
-    metadata:
-      purpose_category: "OPERATIONAL"
 
   # ===== ANALYTICS PURPOSES =====
-  "Behavioral Data Analysis for Product Improvement":
+  - name: "Behavioral Data Analysis for Product Improvement"
     description: "Analysing user behaviour and data to improve products and services"
     patterns:
       - "analytics"
@@ -438,24 +413,18 @@ rules:
       - "Kibana"
       - "Microsoft Power BI"
       - "Chartio"
-      - "Kibana"
       - "Salesforce Analytics"
       - "Tableau"
       - "SAS Analytics"
       - "IBM Watson Analytics"
+    purpose_category: "ANALYTICS"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Behavioural analytics requires Article 6 lawful basis and Article 22 considerations for automated profiling"
-      - regulation: "CCPA"
-        relevance: "Behavioural data analysis subject to consumer rights to know, delete, and opt-out of sale"
-      - regulation: "CPRA"
-        relevance: "Enhanced consumer rights including sensitive personal information protections for behavioural profiling"
-    metadata:
-      purpose_category: "ANALYTICS"
 
   # ===== MARKETING AND ADVERTISING PURPOSES =====
-  "Dynamic Personalization of Products and Services":
+  - name: "Dynamic Personalization of Products and Services"
     description: "Dynamically personalising products and services based on user data"
     patterns:
       - "personalization"
@@ -482,18 +451,13 @@ rules:
       - "OneSignal"
       - "Leanplum"
       - "Clevertap"
+    purpose_category: "MARKETING_AND_ADVERTISING"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Dynamic personalisation requires Article 6 lawful basis and Article 22 protections for automated decision-making"
-      - regulation: "CCPA"
-        relevance: "Personalisation using personal information subject to consumer disclosure and opt-out rights"
-      - regulation: "CPRA"
-        relevance: "Enhanced rights for sensitive personal information used in automated personalisation systems"
-    metadata:
-      purpose_category: "MARKETING_AND_ADVERTISING"
 
-  "Consumer Marketing Within Owned Products":
+  - name: "Consumer Marketing Within Owned Products"
     description: "Marketing and promotional activities within company-owned products and platforms"
     patterns:
       - "marketing"
@@ -511,18 +475,13 @@ rules:
       - "sendgrid"
       - "mailjet"
       - "onesignal"
+    purpose_category: "MARKETING_AND_ADVERTISING"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Marketing communications require Article 6 lawful basis and Article 21 opt-out rights"
-      - regulation: "CCPA"
-        relevance: "Marketing using personal information subject to consumer right to know and opt-out of sale"
-      - regulation: "CPRA"
-        relevance: "Enhanced consumer rights including right to correct and limit use of sensitive personal information"
-    metadata:
-      purpose_category: "MARKETING_AND_ADVERTISING"
 
-  "Targeted Marketing via Third-Party Platforms":
+  - name: "Targeted Marketing via Third-Party Platforms"
     description: "Targeted marketing and advertising through third-party platforms"
     patterns:
       - "advertising"
@@ -537,18 +496,13 @@ rules:
       - "tiktok"
       - "twitter"
       - "linkedin ads"
+    purpose_category: "MARKETING_AND_ADVERTISING"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Third-party marketing requires Article 6 lawful basis and joint controller agreements under Article 26"
-      - regulation: "CCPA"
-        relevance: "Third-party marketing constitutes sale of personal information requiring prominent opt-out disclosure"
-      - regulation: "CPRA"
-        relevance: "Enhanced disclosure and consent requirements for sharing personal information with third parties"
-    metadata:
-      purpose_category: "MARKETING_AND_ADVERTISING"
 
-  "Third-Party Marketing via Owned Products":
+  - name: "Third-Party Marketing via Owned Products"
     description: "Third-party marketing and advertising activities conducted through company-owned products"
     patterns:
       - "partner marketing"
@@ -560,19 +514,14 @@ rules:
       - "google ads 360"
       - "tiktok"
       - "third-party advertisers"
+    purpose_category: "MARKETING_AND_ADVERTISING"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Third-party marketing via owned products requires Article 6 lawful basis and data sharing agreements"
-      - regulation: "CCPA"
-        relevance: "Allowing third-party marketing constitutes sale of personal information requiring opt-out mechanisms"
-      - regulation: "CPRA"
-        relevance: "Enhanced transparency and control requirements for third-party advertising partnerships"
-    metadata:
-      purpose_category: "MARKETING_AND_ADVERTISING"
 
   # ===== SECURITY PURPOSES =====
-  "Security, Fraud Prevention, and Abuse Detection":
+  - name: "Security, Fraud Prevention, and Abuse Detection"
     description: "Protecting against security threats, fraud, and platform abuse"
     patterns:
       - "security"
@@ -589,13 +538,8 @@ rules:
       - "complyadvantage"
       - "veriff"
       - "feedzai"
+    purpose_category: "SECURITY"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
         relevance: "Security processing typically justified by legitimate interests under Article 6(1)(f) with Article 32 security obligations"
-      - regulation: "ISO_27001"
-        relevance: "Security measures support information security management system requirements and risk assessments"
-      - regulation: "SOC_2"
-        relevance: "Security controls demonstrate commitment to security principles for service organisation compliance"
-    metadata:
-      purpose_category: "SECURITY"

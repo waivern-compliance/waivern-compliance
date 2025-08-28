@@ -4,7 +4,7 @@ import pytest
 
 from wct.rulesets.base import RulesetLoader, RulesetRegistry
 from wct.rulesets.personal_data import PersonalDataRuleset
-from wct.rulesets.types import Rule
+from wct.rulesets.types import PersonalDataRule
 
 
 class TestPersonalDataRuleset:
@@ -37,7 +37,7 @@ class TestPersonalDataRuleset:
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0
-        assert all(isinstance(rule, Rule) for rule in rules)
+        assert all(isinstance(rule, PersonalDataRule) for rule in rules)
 
     def test_get_rules_returns_consistent_count(self):
         """Test that get_rules returns a consistent number of rules."""
@@ -62,13 +62,13 @@ class TestPersonalDataRuleset:
             assert hasattr(rule, "description")
             assert hasattr(rule, "patterns")
             assert hasattr(rule, "risk_level")
-            assert hasattr(rule, "metadata")
+            assert hasattr(rule, "special_category")
 
             assert isinstance(rule.name, str)
             assert isinstance(rule.description, str)
             assert isinstance(rule.patterns, tuple)
             assert isinstance(rule.risk_level, str)
-            assert isinstance(rule.metadata, dict)
+            assert isinstance(rule.special_category, bool)
 
     def test_rules_have_valid_risk_levels(self):
         """Test that all rules have valid risk levels."""
@@ -95,19 +95,13 @@ class TestPersonalDataRuleset:
             assert len(rule.name) > 0
             assert len(rule.description) > 0
 
-    def test_rules_have_special_category_when_gdpr_relevant(self):
-        """Test that rules have special_category metadata when GDPR is relevant."""
+    def test_rules_have_special_category_field(self):
+        """Test that rules have special_category field."""
         rules = self.ruleset.get_rules()
 
         for rule in rules:
-            # If GDPR is listed in compliance relevance, special_category is required
-            if (
-                "compliance_relevance" in rule.metadata
-                and "GDPR" in rule.metadata["compliance_relevance"]
-            ):
-                assert "special_category" in rule.metadata
-                assert isinstance(rule.metadata["special_category"], str)
-                assert rule.metadata["special_category"] in {"Y", "N"}
+            # All personal data rules should have the special_category field
+            assert isinstance(rule.special_category, bool)
 
     def test_gdpr_article_9_special_categories_exist(self):
         """Test that GDPR Article 9 special category rules exist."""
@@ -182,10 +176,12 @@ class TestPersonalDataIntegration:
         RulesetRegistry._instance = None  # type: ignore[attr-defined]
 
         registry = RulesetRegistry()
-        registry.register("test_personal_data", PersonalDataRuleset)
+        registry.register("test_personal_data", PersonalDataRuleset, PersonalDataRule)
 
         # Should be able to retrieve and instantiate
-        ruleset_class = registry.get_ruleset_class("test_personal_data")
+        ruleset_class = registry.get_ruleset_class(
+            "test_personal_data", PersonalDataRule
+        )
         assert ruleset_class is PersonalDataRuleset
 
         instance = ruleset_class()
@@ -198,14 +194,14 @@ class TestPersonalDataIntegration:
         RulesetRegistry._instance = None  # type: ignore[attr-defined]
 
         registry = RulesetRegistry()
-        registry.register("loader_test", PersonalDataRuleset)
+        registry.register("loader_test", PersonalDataRuleset, PersonalDataRule)
 
         # Load via RulesetLoader
-        rules = RulesetLoader.load_ruleset("loader_test")
+        rules = RulesetLoader.load_ruleset("loader_test", PersonalDataRule)
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0
-        assert all(isinstance(rule, Rule) for rule in rules)
+        assert all(isinstance(rule, PersonalDataRule) for rule in rules)
 
         # Should have the same rules as direct instantiation
         direct_rules = PersonalDataRuleset().get_rules()

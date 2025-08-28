@@ -112,7 +112,7 @@ class TestProcessingPurposeValidationPrompt:
         assert "HIGH RISK PROCESSING" in prompt
 
     def test_privacy_sensitive_categories_trigger_warnings(self) -> None:
-        """Test that privacy-sensitive categories trigger warnings in conservative mode."""
+        """Test that privacy-sensitive categories trigger warnings when explicitly configured."""
         sensitive_categories = ["AI_AND_ML", "ANALYTICS", "MARKETING_AND_ADVERTISING"]
 
         for category in sensitive_categories:
@@ -124,12 +124,14 @@ class TestProcessingPurposeValidationPrompt:
                 )
             ]
 
-            # Act
-            prompt = get_processing_purpose_validation_prompt(findings, "conservative")
+            # Act - Pass sensitive categories explicitly
+            prompt = get_processing_purpose_validation_prompt(
+                findings, "conservative", sensitive_categories
+            )
 
             # Assert
             assert "PRIVACY SENSITIVE" in prompt, (
-                f"Category {category} should trigger privacy warning"
+                f"Category {category} should trigger privacy warning when configured"
             )
 
     def test_security_category_does_not_trigger_privacy_warnings(self) -> None:

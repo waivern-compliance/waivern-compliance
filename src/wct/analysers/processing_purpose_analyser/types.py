@@ -1,9 +1,8 @@
 """Types for processing purpose analyser."""
 
-from typing import Any
+from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from typing_extensions import Self
 
 from wct.analysers.types import (
     EvidenceItem,

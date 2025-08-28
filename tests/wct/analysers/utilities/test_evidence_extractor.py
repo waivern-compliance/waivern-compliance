@@ -4,7 +4,7 @@ This module tests the public API of EvidenceExtractor, focusing on black-box
 testing of the extract_evidence method without accessing private implementation details.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from wct.analysers.utilities import EvidenceExtractor
 
@@ -18,11 +18,11 @@ class TestEvidenceExtractorBasicFunctionality:
         content = "The user email address is test@example.com for contact."
         pattern = "email"
 
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
         evidence = extractor.extract_evidence(
             content, pattern, max_evidence=3, context_size="small"
         )
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
 
         assert len(evidence) == 1
         assert "test@example.com" in evidence[0].content
@@ -30,7 +30,7 @@ class TestEvidenceExtractorBasicFunctionality:
         # Validate timestamp is automatically generated and in correct range
         assert evidence[0].collection_timestamp is not None
         assert isinstance(evidence[0].collection_timestamp, datetime)
-        assert evidence[0].collection_timestamp.tzinfo == timezone.utc
+        assert evidence[0].collection_timestamp.tzinfo == UTC
         assert start_time <= evidence[0].collection_timestamp <= end_time
 
     def test_extract_evidence_with_multiple_matches(self):

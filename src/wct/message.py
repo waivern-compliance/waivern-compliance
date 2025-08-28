@@ -6,10 +6,9 @@ This module provides:
 """
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Self
 
 import jsonschema
-from typing_extensions import Self
 
 from .schemas.base import Schema, SchemaLoadError
 

@@ -4,7 +4,7 @@ import pytest
 
 from wct.rulesets.base import RulesetLoader, RulesetRegistry
 from wct.rulesets.processing_purposes import ProcessingPurposesRuleset
-from wct.rulesets.types import Rule, RuleComplianceData
+from wct.rulesets.types import ProcessingPurposeRule, RuleComplianceData
 
 
 class TestProcessingPurposesRuleset:
@@ -37,7 +37,7 @@ class TestProcessingPurposesRuleset:
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0
-        assert all(isinstance(rule, Rule) for rule in rules)
+        assert all(isinstance(rule, ProcessingPurposeRule) for rule in rules)
 
     def test_get_rules_returns_consistent_count(self):
         """Test that get_rules returns a consistent number of rules."""
@@ -62,13 +62,13 @@ class TestProcessingPurposesRuleset:
             assert hasattr(rule, "description")
             assert hasattr(rule, "patterns")
             assert hasattr(rule, "risk_level")
-            assert hasattr(rule, "metadata")
+            assert hasattr(rule, "purpose_category")
 
             assert isinstance(rule.name, str)
             assert isinstance(rule.description, str)
             assert isinstance(rule.patterns, tuple)
             assert isinstance(rule.risk_level, str)
-            assert isinstance(rule.metadata, dict)
+            assert isinstance(rule.purpose_category, str)
 
     def test_rules_have_valid_risk_levels(self):
         """Test that all rules have valid risk levels."""
@@ -95,14 +95,13 @@ class TestProcessingPurposesRuleset:
             assert len(rule.name) > 0
             assert len(rule.description) > 0
 
-    def test_rules_have_metadata_with_purpose_category(self):
-        """Test that all rules have metadata with purpose_category."""
+    def test_rules_have_purpose_category_field(self):
+        """Test that all rules have purpose_category field."""
         rules = self.ruleset.get_rules()
 
         for rule in rules:
-            assert "purpose_category" in rule.metadata
-            assert isinstance(rule.metadata["purpose_category"], str)
-            assert len(rule.metadata["purpose_category"]) > 0
+            assert isinstance(rule.purpose_category, str)
+            assert len(rule.purpose_category) > 0
 
     def test_rules_have_compliance_information(self):
         """Test that all rules have compliance information."""
@@ -159,10 +158,14 @@ class TestProcessingPurposesIntegration:
         RulesetRegistry._instance = None  # type: ignore[attr-defined]
 
         registry = RulesetRegistry()
-        registry.register("test_processing_purposes", ProcessingPurposesRuleset)
+        registry.register(
+            "test_processing_purposes", ProcessingPurposesRuleset, ProcessingPurposeRule
+        )
 
         # Should be able to retrieve and instantiate
-        ruleset_class = registry.get_ruleset_class("test_processing_purposes")
+        ruleset_class = registry.get_ruleset_class(
+            "test_processing_purposes", ProcessingPurposeRule
+        )
         assert ruleset_class is ProcessingPurposesRuleset
 
         instance = ruleset_class()
@@ -175,14 +178,16 @@ class TestProcessingPurposesIntegration:
         RulesetRegistry._instance = None  # type: ignore[attr-defined]
 
         registry = RulesetRegistry()
-        registry.register("loader_test", ProcessingPurposesRuleset)
+        registry.register(
+            "loader_test", ProcessingPurposesRuleset, ProcessingPurposeRule
+        )
 
         # Load via RulesetLoader
-        rules = RulesetLoader.load_ruleset("loader_test")
+        rules = RulesetLoader.load_ruleset("loader_test", ProcessingPurposeRule)
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0
-        assert all(isinstance(rule, Rule) for rule in rules)
+        assert all(isinstance(rule, ProcessingPurposeRule) for rule in rules)
 
         # Should have the same rules as direct instantiation
         direct_rules = ProcessingPurposesRuleset().get_rules()

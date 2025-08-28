@@ -9,9 +9,7 @@ Connector configuration is handled by ConnectorConfig in the runbook module.
 
 import abc
 import logging
-from typing import Any
-
-from typing_extensions import Self
+from typing import Any, Self
 
 from wct.errors import WCTError
 from wct.message import Message
