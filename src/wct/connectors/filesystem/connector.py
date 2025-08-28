@@ -2,7 +2,6 @@
 
 import fnmatch
 import logging
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Self, override
 
@@ -256,22 +255,12 @@ class FilesystemConnector(Connector):
         for file_data in all_file_data:
             file_path = file_data["path"]
             content = file_data["content"]
-            stat = file_data["stat"]
 
             data_entries.append(
                 {
                     "content": content,
                     "metadata": {
                         "source": str(file_path),
-                        "description": f"Content of {file_path.relative_to(self._config.path) if file_path != self._config.path else file_path.name}",
-                        "file_size": stat.st_size,
-                        "modified_time": datetime.fromtimestamp(
-                            stat.st_mtime
-                        ).isoformat(),
-                        "created_time": datetime.fromtimestamp(
-                            stat.st_ctime
-                        ).isoformat(),
-                        "permissions": oct(stat.st_mode)[-3:],
                     },
                 }
             )

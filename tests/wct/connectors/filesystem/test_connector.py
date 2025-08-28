@@ -1,7 +1,6 @@
 """Tests for FilesystemConnector."""
 
 import os
-import re
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock
@@ -309,10 +308,10 @@ class TestFilesystemConnector:
             if os.name != "nt" and restricted_file.exists():
                 restricted_file.chmod(0o644)
 
-    def test_extract_timestamps_are_human_readable(
+    def test_extract_metadata_contains_only_source(
         self, sample_file, standard_input_schema
     ):
-        """Test that extracted file timestamps are in human-readable ISO format."""
+        """Test that extracted file metadata contains only essential source information."""
         config = FilesystemConnectorConfig.from_properties({"path": str(sample_file)})
         connector = FilesystemConnector(config)
 
@@ -325,29 +324,12 @@ class TestFilesystemConnector:
         assert len(content["data"]) == 1
         metadata = content["data"][0]["metadata"]
 
-        # Verify timestamps exist and are in ISO format (YYYY-MM-DDTHH:MM:SS.ffffff)
-        assert "modified_time" in metadata
-        assert "created_time" in metadata
-
-        # ISO format regex pattern
-        iso_pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$"
-
-        # Check modified_time is in ISO format, not Unix timestamp
-        modified_time = metadata["modified_time"]
-        assert isinstance(modified_time, str)
-        assert re.match(iso_pattern, modified_time), (
-            f"modified_time '{modified_time}' is not in ISO format"
-        )
-        assert not modified_time.replace(".", "").isdigit(), (
-            "modified_time should not be a Unix timestamp"
+        # Verify metadata contains only source field
+        assert "source" in metadata
+        assert isinstance(metadata["source"], str)
+        assert len(metadata) == 1, (
+            f"Expected only 'source' field, got: {list(metadata.keys())}"
         )
 
-        # Check created_time is in ISO format, not Unix timestamp
-        created_time = metadata["created_time"]
-        assert isinstance(created_time, str)
-        assert re.match(iso_pattern, created_time), (
-            f"created_time '{created_time}' is not in ISO format"
-        )
-        assert not created_time.replace(".", "").isdigit(), (
-            "created_time should not be a Unix timestamp"
-        )
+        # Verify source contains the file path
+        assert str(sample_file) in metadata["source"]
