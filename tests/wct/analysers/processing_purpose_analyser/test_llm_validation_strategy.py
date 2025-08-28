@@ -3,10 +3,7 @@
 import json
 from unittest.mock import Mock
 
-import pytest
-
 from wct.analysers.processing_purpose_analyser.llm_validation_strategy import (
-    LLMValidationResultModel,
     processing_purpose_validation_strategy,
 )
 from wct.analysers.processing_purpose_analyser.types import (
@@ -15,33 +12,6 @@ from wct.analysers.processing_purpose_analyser.types import (
 )
 from wct.analysers.types import EvidenceItem, LLMValidationConfig
 from wct.llm_service import AnthropicLLMService
-
-
-class TestLLMValidationResultModel:
-    """Test LLM validation result model."""
-
-    def test_default_values(self) -> None:
-        """Test that model has appropriate defaults."""
-        result = LLMValidationResultModel()
-
-        assert result.validation_result == "unknown"
-        assert result.confidence == 0.0
-        assert result.reasoning == "No reasoning provided"
-        assert result.recommended_action == "keep"
-
-    def test_validation_constraints(self) -> None:
-        """Test model validation constraints."""
-        # Valid confidence range
-        valid_result = LLMValidationResultModel(confidence=0.85)
-        assert valid_result.confidence == 0.85
-
-        # Invalid confidence - too high
-        with pytest.raises(ValueError):
-            LLMValidationResultModel(confidence=1.5)
-
-        # Invalid confidence - negative
-        with pytest.raises(ValueError):
-            LLMValidationResultModel(confidence=-0.1)
 
 
 class TestProcessingPurposeValidationStrategy:

@@ -3,6 +3,7 @@
 from typing import Any
 
 from tree_sitter import Node
+from typing_extensions import override
 
 from wct.connectors.source_code.extractors.base import BaseExtractor
 
@@ -14,6 +15,7 @@ _LINE_INDEX_OFFSET = 1
 class FunctionExtractor(BaseExtractor):
     """Extracts function definitions from source code."""
 
+    @override
     def extract(self, node: Node, source_code: str) -> list[dict[str, Any]]:
         """Extract function information from AST.
 

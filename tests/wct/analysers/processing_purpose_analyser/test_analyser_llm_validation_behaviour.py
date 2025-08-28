@@ -1,6 +1,6 @@
-"""Tests for ProcessingPurposeAnalyser LLM validation behavior - TDD approach.
+"""Tests for ProcessingPurposeAnalyser LLM validation behaviour - TDD approach.
 
-These tests describe the expected behavior of LLM validation integration
+These tests describe the expected behaviour of LLM validation integration
 and should initially fail until the functionality is implemented.
 """
 
@@ -22,8 +22,8 @@ from wct.schemas import (
 )
 
 
-class TestProcessingPurposeAnalyserLLMValidationBehavior:
-    """Test actual LLM validation behavior in the analyser process method."""
+class TestProcessingPurposeAnalyserLLMValidationBehaviour:
+    """Test actual LLM validation behaviour in the analyser process method."""
 
     @pytest.fixture
     def mock_llm_service(self) -> Mock:

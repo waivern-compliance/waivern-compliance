@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
+from typing_extensions import override
 
 from wct.analysis import AnalysisResult, AnalysisResultsExporter
 from wct.executor import Executor
@@ -46,6 +47,7 @@ class CLIError(Exception):
         self.command = command
         self.original_error = original_error
 
+    @override
     def __str__(self) -> str:
         """Return formatted error message with CLI context."""
         base_message = super().__str__()
