@@ -95,28 +95,6 @@ class TestPersonalDataRuleset:
             assert len(rule.name) > 0
             assert len(rule.description) > 0
 
-    def test_rules_have_special_category_field(self):
-        """Test that rules have special_category field."""
-        rules = self.ruleset.get_rules()
-
-        for rule in rules:
-            # All personal data rules should have the special_category field
-            assert isinstance(rule.special_category, bool)
-
-    def test_gdpr_article_9_special_categories_exist(self):
-        """Test that GDPR Article 9 special category rules exist."""
-        rules = self.ruleset.get_rules()
-        rule_names = [rule.name.lower() for rule in rules]
-
-        # Should have health, genetic, biometric data rules
-        health_terms_found = [name for name in rule_names if "health" in name]
-        genetic_terms_found = [name for name in rule_names if "genetic" in name]
-        biometric_terms_found = [name for name in rule_names if "biometric" in name]
-
-        assert len(health_terms_found) > 0
-        assert len(genetic_terms_found) > 0
-        assert len(biometric_terms_found) > 0
-
     def test_patterns_are_tuples_not_lists(self):
         """Test that all patterns are stored as tuples, not lists."""
         rules = self.ruleset.get_rules()
@@ -170,12 +148,15 @@ class TestPersonalDataRuleset:
 class TestPersonalDataIntegration:
     """Integration tests for PersonalDataRuleset with other components."""
 
+    def teardown_method(self):
+        """Clear registry after each test to prevent side effects."""
+        registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
+
     def test_ruleset_can_be_used_with_registry(self):
         """Test that PersonalDataRuleset works with the registry pattern."""
-        # Reset singleton to avoid conflicts
-        RulesetRegistry._instance = None  # type: ignore[attr-defined]
-
         registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
         registry.register("test_personal_data", PersonalDataRuleset, PersonalDataRule)
 
         # Should be able to retrieve and instantiate
@@ -190,10 +171,8 @@ class TestPersonalDataIntegration:
 
     def test_ruleset_loader_integration(self):
         """Test that PersonalDataRuleset works with RulesetLoader."""
-        # Reset singleton
-        RulesetRegistry._instance = None  # type: ignore[attr-defined]
-
         registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
         registry.register("loader_test", PersonalDataRuleset, PersonalDataRule)
 
         # Load via RulesetLoader

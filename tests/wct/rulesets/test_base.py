@@ -89,7 +89,13 @@ class TestRulesetRegistry:
     def setup_method(self):
         """Reset the singleton instance before each test."""
         # Reset singleton instance to ensure clean state
-        RulesetRegistry._instance = None  # type: ignore[attr-defined]
+        registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
+
+    def teardown_method(self):
+        """Clear registry after each test to prevent side effects."""
+        registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
 
     def test_registry_is_singleton(self):
         """Test that RulesetRegistry implements singleton pattern."""
@@ -193,7 +199,13 @@ class TestRulesetLoader:
 
     def setup_method(self):
         """Reset the singleton registry before each test."""
-        RulesetRegistry._instance = None  # type: ignore[attr-defined]
+        registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
+
+    def teardown_method(self):
+        """Clear registry after each test to prevent side effects."""
+        registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
 
     def test_load_ruleset_uses_registry(self):
         """Test that load_ruleset uses the singleton registry."""
@@ -264,7 +276,13 @@ class TestRulesetIntegration:
 
     def setup_method(self):
         """Reset the singleton registry before each test."""
-        RulesetRegistry._instance = None  # type: ignore[attr-defined]
+        registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
+
+    def teardown_method(self):
+        """Clear registry after each test to prevent side effects."""
+        registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
 
     def test_end_to_end_ruleset_workflow(self):
         """Test the complete workflow from registration to loading."""

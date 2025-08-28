@@ -152,12 +152,15 @@ class TestProcessingPurposesRuleset:
 class TestProcessingPurposesIntegration:
     """Integration tests for ProcessingPurposesRuleset with other components."""
 
+    def teardown_method(self):
+        """Clear registry after each test to prevent side effects."""
+        registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
+
     def test_ruleset_can_be_used_with_registry(self):
         """Test that ProcessingPurposesRuleset works with the registry pattern."""
-        # Reset singleton to avoid conflicts
-        RulesetRegistry._instance = None  # type: ignore[attr-defined]
-
         registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
         registry.register(
             "test_processing_purposes", ProcessingPurposesRuleset, ProcessingPurposeRule
         )
@@ -174,10 +177,8 @@ class TestProcessingPurposesIntegration:
 
     def test_ruleset_loader_integration(self):
         """Test that ProcessingPurposesRuleset works with RulesetLoader."""
-        # Reset singleton
-        RulesetRegistry._instance = None  # type: ignore[attr-defined]
-
         registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
         registry.register(
             "loader_test", ProcessingPurposesRuleset, ProcessingPurposeRule
         )
