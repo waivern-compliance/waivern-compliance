@@ -2,15 +2,9 @@
 
 import abc
 import logging
-from typing import Any, TypeVar
+from typing import Any
 
 from wct.rulesets.types import BaseRule
-
-# Generic type for rule implementations
-RuleType = TypeVar("RuleType", bound=BaseRule)
-
-# Generic type for RulesetLoader
-LoaderRuleType = TypeVar("LoaderRuleType", bound=BaseRule)
 
 logger = logging.getLogger(__name__)
 

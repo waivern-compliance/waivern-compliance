@@ -3,7 +3,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, TypeVar
+from typing import Any
 
 from wct.analysers.types import LLMValidationConfig
 from wct.llm_service import AnthropicLLMService
@@ -15,9 +15,6 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Generic type for finding models
-T = TypeVar("T")
 
 
 class LLMValidationStrategy[T](ABC):

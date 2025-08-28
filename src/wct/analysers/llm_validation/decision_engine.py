@@ -2,20 +2,17 @@
 
 import logging
 from collections.abc import Callable
-from typing import TypeVar
 
 from .models import LLMValidationResultModel
 
 logger = logging.getLogger(__name__)
-
-T = TypeVar("T")
 
 
 class ValidationDecisionEngine:
     """Validation decision engine."""
 
     @staticmethod
-    def should_keep_finding(
+    def should_keep_finding[T](
         result: LLMValidationResultModel,
         finding: T,
         get_identifier_func: Callable[[T], str],
@@ -62,7 +59,7 @@ class ValidationDecisionEngine:
         return True
 
     @staticmethod
-    def log_validation_decision(
+    def log_validation_decision[T](
         result: LLMValidationResultModel,
         finding: T,
         get_identifier_func: Callable[[T], str],
