@@ -1,6 +1,6 @@
 """Pydantic-based types for structured rulesets with inheritance."""
 
-from typing import Literal, TypeVar
+from typing import Literal
 
 from pydantic import (
     BaseModel,
@@ -10,9 +10,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-
-# Generic type for BaseRuleset
-RulesetRuleType = TypeVar("RulesetRuleType", bound="BaseRule")
 
 
 class RuleComplianceData(BaseModel):
@@ -31,17 +28,16 @@ class BaseRule(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    name: str = Field(..., min_length=1, description="Unique name for this rule")
+    name: str = Field(min_length=1, description="Unique name for this rule")
     description: str = Field(
-        ...,
         min_length=1,
         description="Human-readable description of what this rule detects",
     )
     patterns: tuple[str, ...] = Field(
-        ..., min_length=1, description="Tuple of patterns to match"
+        min_length=1, description="Tuple of patterns to match"
     )
     risk_level: Literal["low", "medium", "high"] = Field(
-        ..., description="Risk level assessment"
+        description="Risk level assessment"
     )
     compliance: list[RuleComplianceData] = Field(
         default_factory=list, description="Compliance information"
@@ -58,25 +54,23 @@ class BaseRule(BaseModel):
         return patterns
 
 
-class BaseRuleset[RulesetRuleType: BaseRule](BaseModel):
+class BaseRuleset[RuleType: BaseRule](BaseModel):
     """Base ruleset class with minimal guaranteed properties."""
 
-    name: str = Field(..., min_length=1, description="Canonical name of the ruleset")
+    name: str = Field(min_length=1, description="Canonical name of the ruleset")
     version: str = Field(
-        ..., pattern=r"^\d+\.\d+\.\d+$", description='Semantic version (e.g., "1.0.0")'
+        pattern=r"^\d+\.\d+\.\d+$", description='Semantic version (e.g., "1.0.0")'
     )
     description: str = Field(
-        ..., min_length=1, description="Description of what this ruleset detects"
+        min_length=1, description="Description of what this ruleset detects"
     )
-    rules: list[RulesetRuleType] = Field(
-        ..., min_length=1, description="List of rules in this ruleset"
+    rules: list[RuleType] = Field(
+        min_length=1, description="List of rules in this ruleset"
     )
 
     @field_validator("rules")
     @classmethod
-    def validate_unique_rule_names(
-        cls, rules: list[RulesetRuleType]
-    ) -> list[RulesetRuleType]:
+    def validate_unique_rule_names(cls, rules: list[RuleType]) -> list[RuleType]:
         """Validate that rule names are unique within the ruleset."""
         names = [rule.name for rule in rules]
         duplicates = [name for name in names if names.count(name) > 1]
@@ -88,9 +82,7 @@ class BaseRuleset[RulesetRuleType: BaseRule](BaseModel):
 class ProcessingPurposeRule(BaseRule):
     """Processing purpose rule with category and risk information."""
 
-    purpose_category: str = Field(
-        ..., description="Category of this processing purpose"
-    )
+    purpose_category: str = Field(description="Category of this processing purpose")
 
 
 class ProcessingPurposesRulesetData(BaseRuleset[ProcessingPurposeRule]):
@@ -98,7 +90,7 @@ class ProcessingPurposesRulesetData(BaseRuleset[ProcessingPurposeRule]):
 
     # Ruleset-specific properties
     purpose_categories: list[str] = Field(
-        ..., min_length=1, description="Master list of valid purpose categories"
+        min_length=1, description="Master list of valid purpose categories"
     )
     sensitive_categories: list[str] = Field(
         default_factory=list,
@@ -157,8 +149,8 @@ class PersonalDataRulesetData(BaseRuleset[PersonalDataRule]):
 class DataCollectionRule(BaseRule):
     """Data collection rule with collection type and source."""
 
-    collection_type: str = Field(..., description="Type of data collection")
-    data_source: str = Field(..., description="Source of the data")
+    collection_type: str = Field(description="Type of data collection")
+    data_source: str = Field(description="Source of the data")
 
 
 class DataCollectionRulesetData(BaseRuleset[DataCollectionRule]):
@@ -168,8 +160,8 @@ class DataCollectionRulesetData(BaseRuleset[DataCollectionRule]):
 class ServiceIntegrationRule(BaseRule):
     """Service integration rule with service category and purpose."""
 
-    service_category: str = Field(..., description="Category of service integration")
-    purpose_category: str = Field(..., description="Purpose category for compliance")
+    service_category: str = Field(description="Category of service integration")
+    purpose_category: str = Field(description="Purpose category for compliance")
 
 
 class ServiceIntegrationsRulesetData(BaseRuleset[ServiceIntegrationRule]):

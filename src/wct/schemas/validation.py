@@ -6,12 +6,9 @@ abstracting the implementation details from the calling code.
 
 from __future__ import annotations
 
-from typing import Any, TypeVar
+from typing import Any
 
 from pydantic import BaseModel, ValidationError
-
-# Type variable for data model validation
-T = TypeVar("T", bound=BaseModel)
 
 
 class DataParsingError(Exception):
