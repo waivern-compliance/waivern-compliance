@@ -114,7 +114,7 @@ class ProcessingPurposeAnalyser(Analyser):
         logger.info("Starting processing purpose analysis")
 
         # Validate input message
-        Analyser._validate_input_message(message, input_schema)
+        Analyser.validate_input_message(message, input_schema)
 
         logger.debug(f"Processing data with schema: {input_schema.name}")
 

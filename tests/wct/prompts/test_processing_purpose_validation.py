@@ -1,4 +1,4 @@
-"""Tests for processing purpose validation prompts focusing on behavior."""
+"""Tests for processing purpose validation prompts focusing on behaviour."""
 
 import pytest
 
@@ -8,15 +8,12 @@ from wct.analysers.processing_purpose_analyser.types import (
 )
 from wct.analysers.types import EvidenceItem
 from wct.prompts.processing_purpose_validation import (
-    RecommendedAction,
-    ValidationResult,
-    extract_json_from_response,
     get_processing_purpose_validation_prompt,
 )
 
 
 class TestProcessingPurposeValidationPrompt:
-    """Test processing purpose validation prompt generation focusing on behavior."""
+    """Test processing purpose validation prompt generation focusing on behaviour."""
 
     def _create_test_finding(
         self,
@@ -213,124 +210,14 @@ class TestProcessingPurposeValidationPrompt:
             get_processing_purpose_validation_prompt([], "standard")
 
     def test_validation_mode_fallback(self) -> None:
-        """Test that invalid validation modes fall back to standard behavior."""
+        """Test that invalid validation modes fall back to standard behaviour."""
         # Arrange
         findings = [self._create_test_finding()]
 
         # Act
         prompt = get_processing_purpose_validation_prompt(findings, "invalid_mode")
 
-        # Assert - Should fall back to standard mode behavior
+        # Assert - Should fall back to standard mode behaviour
         assert "STANDARD VALIDATION MODE" in prompt
         assert "CONSERVATIVE VALIDATION MODE" not in prompt
         assert '"flag_for_review"' not in prompt
-
-
-class TestExtractJsonFromResponse:
-    """Test JSON extraction utility function."""
-
-    def test_extract_json_from_response_with_markdown_wrapper(self) -> None:
-        """Test JSON extraction from markdown-wrapped response."""
-        # Arrange
-        llm_response = """Here's my analysis:
-
-```json
-{
-  "validation_result": "TRUE_POSITIVE",
-  "confidence": 0.85,
-  "reasoning": "This appears to be actual business processing",
-  "recommended_action": "keep"
-}
-```
-
-That's my assessment."""
-
-        # Act
-        result = extract_json_from_response(llm_response)
-
-        # Assert
-        expected = """{
-  "validation_result": "TRUE_POSITIVE",
-  "confidence": 0.85,
-  "reasoning": "This appears to be actual business processing",
-  "recommended_action": "keep"
-}"""
-        assert result == expected
-
-    def test_extract_json_from_response_with_array(self) -> None:
-        """Test JSON array extraction from markdown-wrapped response."""
-        # Arrange
-        llm_response = """```json
-[
-  {
-    "finding_index": 0,
-    "validation_result": "TRUE_POSITIVE",
-    "confidence": 0.9
-  }
-]
-```"""
-
-        # Act
-        result = extract_json_from_response(llm_response)
-
-        # Assert
-        expected = """[
-  {
-    "finding_index": 0,
-    "validation_result": "TRUE_POSITIVE",
-    "confidence": 0.9
-  }
-]"""
-        assert result == expected
-
-    def test_extract_json_from_response_plain_json(self) -> None:
-        """Test JSON extraction from plain response without markdown."""
-        # Arrange
-        plain_json = '{"validation_result": "FALSE_POSITIVE", "confidence": 0.95}'
-
-        # Act
-        result = extract_json_from_response(plain_json)
-
-        # Assert
-        assert result == plain_json
-
-    def test_extract_json_from_response_no_json_format(self) -> None:
-        """Test extraction when response contains no JSON formatting."""
-        # Arrange
-        text_response = "This is just plain text with no JSON."
-
-        # Act
-        result = extract_json_from_response(text_response)
-
-        # Assert
-        assert result == text_response
-
-    def test_extract_json_from_response_with_json_lang_specifier(self) -> None:
-        """Test JSON extraction with explicit json language specifier."""
-        # Arrange
-        llm_response = """```json
-[{"finding_index": 0, "validation_result": "FALSE_POSITIVE"}]
-```"""
-
-        # Act
-        result = extract_json_from_response(llm_response)
-
-        # Assert
-        assert result == '[{"finding_index": 0, "validation_result": "FALSE_POSITIVE"}]'
-
-
-class TestValidationConstants:
-    """Test validation result and action constants."""
-
-    def test_validation_result_constants(self) -> None:
-        """Test ValidationResult constants are properly defined."""
-        # Assert
-        assert ValidationResult.TRUE_POSITIVE == "TRUE_POSITIVE"
-        assert ValidationResult.FALSE_POSITIVE == "FALSE_POSITIVE"
-
-    def test_recommended_action_constants(self) -> None:
-        """Test RecommendedAction constants are properly defined."""
-        # Assert
-        assert RecommendedAction.KEEP == "keep"
-        assert RecommendedAction.DISCARD == "discard"
-        assert RecommendedAction.FLAG_FOR_REVIEW == "flag_for_review"

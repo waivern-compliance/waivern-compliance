@@ -63,12 +63,13 @@ class TestPersonalDataValidationStrategy:
         findings: list[PersonalDataFindingModel] = []
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             findings, llm_config, mock_llm_service
         )
 
         # Assert
         assert result == []
+        assert success is True
         mock_llm_service.analyse_data.assert_not_called()
 
     def test_validates_findings_and_keeps_true_positives(
@@ -100,7 +101,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             sample_findings, llm_config, mock_llm_service
         )
 
@@ -108,6 +109,7 @@ class TestPersonalDataValidationStrategy:
         assert len(result) == 2
         assert result[0].type == "email"
         assert result[1].type == "phone"
+        assert success is True
         mock_llm_service.analyse_data.assert_called_once()
 
     def test_filters_out_false_positive_findings(
@@ -139,13 +141,14 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             sample_findings, llm_config, mock_llm_service
         )
 
         # Assert
         assert len(result) == 1
         assert result[0].type == "phone"
+        assert success is True
 
     def test_handles_mixed_validation_results_correctly(
         self, llm_config: LLMValidationConfig, mock_llm_service: Mock
@@ -210,7 +213,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             findings, llm_config, mock_llm_service
         )
 
@@ -219,6 +222,7 @@ class TestPersonalDataValidationStrategy:
         assert result[0].type == "email"
         assert result[0].matched_pattern == "admin@domain.com"
         assert result[1].type == "ssn"
+        assert success is True
 
     def test_processes_findings_in_configured_batches(
         self, llm_config: LLMValidationConfig, mock_llm_service: Mock
@@ -294,13 +298,14 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.side_effect = batch_responses
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             findings, llm_config, mock_llm_service
         )
 
         # Assert
         assert len(result) == 4  # 2 + 1 + 1 = 4 kept findings
         assert mock_llm_service.analyse_data.call_count == 3  # 3 batch calls
+        assert success is True
 
     def test_handles_llm_service_errors_gracefully(
         self,
@@ -313,7 +318,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.side_effect = Exception("LLM service unavailable")
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             sample_findings, llm_config, mock_llm_service
         )
 
@@ -321,6 +326,7 @@ class TestPersonalDataValidationStrategy:
         # Should return original findings when validation fails
         assert len(result) == 2
         assert result == sample_findings
+        assert success is False
 
     def test_handles_malformed_llm_response_gracefully(
         self,
@@ -333,7 +339,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.return_value = "Invalid JSON response"
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             sample_findings, llm_config, mock_llm_service
         )
 
@@ -341,6 +347,7 @@ class TestPersonalDataValidationStrategy:
         # Should return original findings when JSON parsing fails
         assert len(result) == 2
         assert result == sample_findings
+        assert success is False
 
     def test_handles_incomplete_validation_results(
         self,
@@ -369,7 +376,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             sample_findings, llm_config, mock_llm_service
         )
 
@@ -377,6 +384,7 @@ class TestPersonalDataValidationStrategy:
         # Should handle missing fields gracefully
         assert len(result) == 2  # Both kept due to conservative approach
         assert result == sample_findings
+        assert success is True
 
     def test_preserves_original_finding_objects(
         self,
@@ -407,7 +415,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             sample_findings, llm_config, mock_llm_service
         )
 
@@ -416,6 +424,7 @@ class TestPersonalDataValidationStrategy:
         # Verify the returned objects are the same instances
         assert result[0] is sample_findings[0]
         assert result[1] is sample_findings[1]
+        assert success is True
         # Verify all properties are unchanged
         assert result[0].type == "email"
         assert len(result[0].evidence) == 1
@@ -446,7 +455,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             sample_findings, llm_config, mock_llm_service
         )
 
@@ -454,6 +463,7 @@ class TestPersonalDataValidationStrategy:
         # Should only process the findings that have validation results
         assert len(result) == 1
         assert result[0].type == "email"
+        assert success is True
 
     def test_handles_various_batch_sizes(
         self, llm_config: LLMValidationConfig, mock_llm_service: Mock
@@ -503,13 +513,14 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             findings, llm_config, mock_llm_service
         )
 
         # Assert
         assert len(result) == 2  # Two kept, one discarded
         assert mock_llm_service.analyse_data.call_count == 1  # Single batch
+        assert success is True
 
     def test_handles_single_finding_validation(
         self, llm_config: LLMValidationConfig, mock_llm_service: Mock
@@ -541,12 +552,13 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             findings, llm_config, mock_llm_service
         )
 
         # Assert
         assert len(result) == 0  # Discarded as false positive
+        assert success is True
 
     def test_validates_findings_with_complex_metadata(
         self, llm_config: LLMValidationConfig, mock_llm_service: Mock
@@ -578,7 +590,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             findings, llm_config, mock_llm_service
         )
 
@@ -587,6 +599,7 @@ class TestPersonalDataValidationStrategy:
         assert result[0].metadata == findings[0].metadata
         assert result[0].metadata is not None
         assert result[0].metadata.source == "customer_database"
+        assert success is True
 
     @pytest.mark.parametrize(
         "batch_size,expected_calls",
@@ -724,10 +737,11 @@ class TestPersonalDataValidationStrategy:
         mock_llm_service.analyse_data.side_effect = mock_responses
 
         # Act
-        result = personal_data_validation_strategy(
+        result, success = personal_data_validation_strategy(
             findings, llm_config, mock_llm_service
         )
 
         # Assert
         assert len(result) == 3  # All findings kept
         assert mock_llm_service.analyse_data.call_count == expected_calls
+        assert success is True

@@ -3,6 +3,7 @@
 from typing import Any
 
 from tree_sitter import Node
+from typing_extensions import override
 
 from wct.connectors.source_code.extractors.base import BaseExtractor
 from wct.connectors.source_code.extractors.functions import FunctionExtractor
@@ -25,6 +26,7 @@ class ClassExtractor(BaseExtractor):
         super().__init__(language)
         self.function_extractor = FunctionExtractor(language)
 
+    @override
     def extract(self, node: Node, source_code: str) -> list[dict[str, Any]]:
         """Extract class information from AST.
 

@@ -89,9 +89,9 @@ class Analyser(abc.ABC):
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this analyser."""
 
-    @classmethod
-    def _validate_input_message(cls, message: Message, expected_schema: Schema) -> None:
-        """Validate the input message against the expected schema.
+    @staticmethod
+    def validate_input_message(message: Message, expected_schema: Schema) -> None:
+        """Validate input message against expected schema.
 
         Args:
             message: Message to validate

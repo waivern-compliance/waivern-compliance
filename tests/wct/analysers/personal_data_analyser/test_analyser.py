@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from wct.analysers.base import Analyser
 from wct.analysers.personal_data_analyser.analyser import PersonalDataAnalyser
 from wct.analysers.personal_data_analyser.pattern_matcher import (
     PersonalDataPatternMatcher,
@@ -20,11 +21,13 @@ from wct.analysers.personal_data_analyser.types import (
 )
 from wct.analysers.types import EvidenceItem, LLMValidationConfig, PatternMatchingConfig
 from wct.analysers.utilities import LLMServiceManager
-from wct.message import Message
+from wct.message import Message, MessageValidationError
 from wct.schemas import (
     PersonalDataFindingSchema,
     StandardInputSchema,
 )
+from wct.schemas.base import SchemaLoadError
+from wct.schemas.source_code import SourceCodeSchema
 
 
 class TestPersonalDataAnalyser:
@@ -291,7 +294,7 @@ class TestPersonalDataAnalyser:
         filtered_findings = [sample_findings[0]]  # Remove one finding
         with patch(
             "wct.analysers.personal_data_analyser.analyser.personal_data_validation_strategy",
-            return_value=filtered_findings,
+            return_value=(filtered_findings, True),
         ):
             input_schema = StandardInputSchema()
             output_schema = PersonalDataFindingSchema()
@@ -420,29 +423,139 @@ class TestPersonalDataAnalyser:
         # Verify pattern matcher was not called (no data items)
         mock_pattern_matcher.find_patterns.assert_not_called()
 
-    @patch("wct.analysers.base.Analyser._validate_input_message")
-    def test_process_validates_input_message(
+    def test_process_raises_error_with_invalid_schema(
         self,
-        mock_validate: Mock,
         valid_config: PersonalDataAnalyserConfig,
         mock_pattern_matcher: Mock,
         mock_llm_service_manager: Mock,
-        sample_input_message: Message,
     ) -> None:
-        """Test that process validates the input message."""
+        """Test that process raises error when message schema doesn't match expected."""
+
         # Arrange
         analyser = PersonalDataAnalyser(
             valid_config, mock_pattern_matcher, mock_llm_service_manager
         )
 
-        mock_pattern_matcher.find_patterns.return_value = []
-        mock_llm_service_manager.llm_service = None
+        # Create message with wrong schema
+        wrong_message = Message(
+            id="test_wrong_schema",
+            content={"some": "data"},
+            schema=SourceCodeSchema(),  # Wrong schema - expected StandardInputSchema
+        )
 
         input_schema = StandardInputSchema()
         output_schema = PersonalDataFindingSchema()
 
-        # Act
-        analyser.process(input_schema, output_schema, sample_input_message)
+        # Act & Assert
+        with pytest.raises(
+            SchemaLoadError,
+            match="Message schema .* does not match expected input schema",
+        ):
+            analyser.process(input_schema, output_schema, wrong_message)
 
-        # Assert
-        mock_validate.assert_called_once_with(sample_input_message, input_schema)
+    def test_validate_input_message_passes_with_matching_schema_names(self) -> None:
+        """Test that validate_input_message passes when schema names match."""
+        # Arrange
+        message = Message(
+            id="test_message",
+            content={"schemaVersion": "1.0.0", "name": "test", "data": []},
+            schema=StandardInputSchema(),
+        )
+        expected_schema = StandardInputSchema()
+
+        # Act & Assert - should not raise any exception
+        Analyser.validate_input_message(message, expected_schema)
+
+    def test_validate_input_message_raises_error_when_message_has_no_schema(
+        self,
+    ) -> None:
+        """Test that validate_input_message raises error when message has no schema."""
+        # Arrange
+        message = Message(
+            id="test_message",
+            content={"schemaVersion": "1.0.0", "name": "test", "data": []},
+            schema=None,  # No schema attached
+        )
+        expected_schema = StandardInputSchema()
+
+        # Act & Assert - should raise MessageValidationError
+        with pytest.raises(
+            MessageValidationError, match="No schema provided for validation"
+        ):
+            Analyser.validate_input_message(message, expected_schema)
+
+    def test_validate_input_message_passes_with_valid_message_content(self) -> None:
+        """Test that validate_input_message passes when message content is valid."""
+        # Arrange - create message with comprehensive valid standard_input content
+        valid_content = {
+            "schemaVersion": "1.0.0",
+            "name": "Comprehensive test data",
+            "data": [
+                {
+                    "content": "User email: john.doe@example.com, Phone: +1-555-123-4567",
+                    "metadata": {
+                        "source": "user_profile.html",
+                        "timestamp": "2024-01-01T00:00:00Z",
+                        "extraction_method": "html_parser",
+                    },
+                },
+                {
+                    "content": "Contact support at help@company.com or call our hotline",
+                    "metadata": {
+                        "source": "contact_page.html",
+                        "section": "footer",
+                        "confidence": 0.95,
+                    },
+                },
+            ],
+        }
+        message = Message(
+            id="test_message",
+            content=valid_content,
+            schema=StandardInputSchema(),
+        )
+        expected_schema = StandardInputSchema()
+
+        # Act & Assert - should not raise any exception
+        Analyser.validate_input_message(message, expected_schema)
+
+    def test_validate_input_message_raises_error_with_invalid_message_content(
+        self,
+    ) -> None:
+        """Test that validate_input_message raises error when message content is invalid."""
+        # Arrange - create message with invalid content (missing required fields)
+        invalid_content = {
+            "schemaVersion": "1.0.0",
+            # Missing required 'name' field
+            "data": [],
+        }
+        message = Message(
+            id="test_message",
+            content=invalid_content,
+            schema=StandardInputSchema(),
+        )
+        expected_schema = StandardInputSchema()
+
+        # Act & Assert - should raise MessageValidationError due to schema validation failure
+        with pytest.raises(MessageValidationError, match="Schema validation failed"):
+            Analyser.validate_input_message(message, expected_schema)
+
+    def test_validate_input_message_raises_error_with_malformed_data_structure(
+        self,
+    ) -> None:
+        """Test that validate_input_message raises error with completely malformed data."""
+        # Arrange - create message with completely wrong structure
+        malformed_content = {
+            "wrong_field": "wrong_value",
+            "data": "should_be_array_not_string",
+        }
+        message = Message(
+            id="test_message",
+            content=malformed_content,
+            schema=StandardInputSchema(),
+        )
+        expected_schema = StandardInputSchema()
+
+        # Act & Assert - should raise MessageValidationError
+        with pytest.raises(MessageValidationError, match="Schema validation failed"):
+            Analyser.validate_input_message(message, expected_schema)

@@ -110,7 +110,7 @@ class PersonalDataAnalyser(Analyser):
         message: Message,
     ) -> Message:
         """Process data to find personal data patterns using runners."""
-        Analyser._validate_input_message(message, input_schema)
+        Analyser.validate_input_message(message, input_schema)
 
         # Extract and validate data using Pydantic.model_validate
         typed_data = StandardInputDataModel.model_validate(message.content)
@@ -210,13 +210,19 @@ class PersonalDataAnalyser(Analyser):
             logger.info(f"Starting LLM validation of {len(findings)} findings")
 
             llm_service = self.llm_service_manager.llm_service
-            validated_findings = personal_data_validation_strategy(
-                findings, self._config.llm_validation, llm_service
+            validated_findings, validation_succeeded = (
+                personal_data_validation_strategy(
+                    findings, self._config.llm_validation, llm_service
+                )
             )
 
-            logger.info(
-                f"LLM validation completed: {len(findings)} → {len(validated_findings)} findings"
-            )
+            if validation_succeeded:
+                logger.info(
+                    f"LLM validation completed: {len(findings)} → {len(validated_findings)} findings"
+                )
+            else:
+                logger.warning("LLM validation failed, using original findings")
+
             return validated_findings
 
         except Exception as e:

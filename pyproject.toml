@@ -54,6 +54,7 @@ addopts = [
 [tool.basedpyright]
 include = ["src/wct"]
 typeCheckingMode = "strict"
+reportImplicitOverride = "error"
 
 [tool.mypy]
 files = ["src/"]

@@ -1,6 +1,5 @@
 """LLM validation prompts for personal data findings validation."""
 
-import re
 from typing import Any
 
 
@@ -208,47 +207,3 @@ Respond with valid JSON only (no markdown formatting):
 }}
 
 Provide your conservative validation response:"""
-
-
-def extract_json_from_response(llm_response: str) -> str:
-    """Extract JSON from LLM response that may be wrapped in markdown.
-
-    Claude often returns JSON wrapped in ```json``` blocks. This function
-    extracts the clean JSON for parsing.
-
-    Args:
-        llm_response: Raw response from LLM
-
-    Returns:
-        Clean JSON string
-
-    """
-    # Remove markdown code block wrapper if present
-    json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", llm_response, re.DOTALL)
-    if json_match:
-        return json_match.group(1).strip()
-
-    # Also try to extract JSON array for batch responses
-    array_match = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", llm_response, re.DOTALL)
-    if array_match:
-        return array_match.group(1).strip()
-
-    # If no markdown wrapper, return the response as-is
-    return llm_response.strip()
-
-
-# QUESTION: would making this a dataclass improves performance?
-# Validation result constants for type safety
-class ValidationResult:
-    """Constants for validation results."""
-
-    TRUE_POSITIVE = "TRUE_POSITIVE"
-    FALSE_POSITIVE = "FALSE_POSITIVE"
-
-
-class RecommendedAction:
-    """Constants for recommended actions."""
-
-    KEEP = "keep"
-    DISCARD = "discard"
-    FLAG_FOR_REVIEW = "flag_for_review"

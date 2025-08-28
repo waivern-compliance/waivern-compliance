@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import override
 
 from .base import JsonSchemaLoader, Schema, SchemaLoader
 
@@ -62,16 +63,19 @@ class StandardInputSchema(Schema):
     _loader: SchemaLoader = field(default_factory=JsonSchemaLoader, init=False)
 
     @property
+    @override
     def name(self) -> str:
         """Return the schema name."""
         return "standard_input"
 
     @property
+    @override
     def version(self) -> str:
         """Return the schema version."""
         return self._VERSION
 
     @property
+    @override
     def schema(self) -> dict[str, Any]:
         """Return the JSON schema definition for validation."""
         return self._loader.load(self.name, self.version)
