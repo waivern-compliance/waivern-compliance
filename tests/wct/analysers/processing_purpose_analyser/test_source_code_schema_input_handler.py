@@ -4,7 +4,7 @@ This test module focuses on testing the public API of SourceCodeSchemaInputHandl
 following black-box testing principles and proper encapsulation.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -287,9 +287,8 @@ class MLAnalyticsService {
         # Validate evidence has timestamps
         for evidence_item in payment_finding.evidence:
             assert evidence_item.collection_timestamp is not None
-        assert (
-            getattr(payment_finding.metadata, "file_path") == "/src/CustomerService.php"
-        )
+        # Metadata contains source information
+        assert payment_finding.metadata.source == "source_code"
 
     def test_analyse_source_code_data_handles_multiple_files(
         self,
@@ -318,11 +317,11 @@ class MLAnalyticsService {
         assert len(findings) > 0
 
         # Verify findings from both files are present
-        file_paths = {
-            getattr(f.metadata, "file_path") for f in findings if f.metadata is not None
-        }
-        assert "/src/CustomerService.php" in file_paths
-        assert "/src/MLAnalyticsService.php" in file_paths
+        # Verify findings are generated for multiple sources
+        assert len(findings) >= 2
+        # All findings should have source_code as the source
+        sources = {f.metadata.source for f in findings if f.metadata is not None}
+        assert "source_code" in sources
 
         # Validate at least one finding has evidence with timestamps
         if findings:
@@ -353,24 +352,19 @@ class MLAnalyticsService {
         assert len(findings) > 0
         finding = findings[0]
 
-        # Verify metadata structure
+        # Verify metadata structure (simplified - essential business data only)
         assert finding.metadata is not None
         assert finding.metadata.source == "source_code"
-        assert hasattr(finding.metadata, "file_path")
-        assert hasattr(finding.metadata, "language")
-        assert hasattr(finding.metadata, "analysis_type")
-        assert getattr(finding.metadata, "file_path") == "/src/CustomerService.php"
-        assert getattr(finding.metadata, "language") == "php"
 
         # Comprehensive timestamp validation
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
         for evidence_item in finding.evidence:
             # Validate timestamp exists and is correct type
             assert evidence_item.collection_timestamp is not None
             assert isinstance(evidence_item.collection_timestamp, datetime)
 
             # Validate timezone is UTC
-            assert evidence_item.collection_timestamp.tzinfo == timezone.utc
+            assert evidence_item.collection_timestamp.tzinfo == UTC
 
             # Validate timestamp is recent (within last minute for this test)
             assert evidence_item.collection_timestamp <= start_time

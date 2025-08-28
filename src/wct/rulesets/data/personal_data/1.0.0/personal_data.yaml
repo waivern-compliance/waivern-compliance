@@ -6,7 +6,7 @@ version: "1.0.0"
 description: "Ruleset for detecting personal data patterns including GDPR Article 9 special categories"
 
 rules:
-  basic_profile:
+  - name: "basic_profile"
     description: "Basic identifying information about individuals"
     patterns:
       - "first_name"
@@ -61,16 +61,15 @@ rules:
       - "getprofile"
       - "updateprofile"
       - "saveprofile"
+    special_category: false
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Personal data processing under Articles 6 and 21, lawful basis and right to object"
       - regulation: "EU_AI_ACT"
         relevance: "Personal data used in AI systems requiring compliance with data governance requirements"
-    metadata:
-      special_category: "N"
 
-  account_data:
+  - name: "account_data"
     description: "Account and subscription related data"
     patterns:
       - "subscriptions"
@@ -87,14 +86,13 @@ rules:
       - "membership_info"
       - "order_history"
       - "transaction_log"
+    special_category: false
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Personal data processing requires lawful basis under Article 6"
-    metadata:
-      special_category: "N"
 
-  payment_data:
+  - name: "payment_data"
     description: "Payment and billing information"
     patterns:
       - "payments"
@@ -110,14 +108,13 @@ rules:
       - "invoice_number"
       - "receipt_id"
       - "billing_email"
+    special_category: false
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Financial data processing under Article 6, contractual necessity"
-    metadata:
-      special_category: "N"
 
-  financial_data:
+  - name: "financial_data"
     description: "Financial identifiers and sensitive financial information"
     patterns:
       - "financial_data"
@@ -151,14 +148,13 @@ rules:
       - "credit_score"
       - "financial_rating"
       - "credit_history"
+    special_category: false
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Financial data processing under Article 6, special attention to automated decision-making"
-    metadata:
-      special_category: "N"
 
-  behavioral_event_data:
+  - name: "behavioral_event_data"
     description: "User behavioral and interaction data"
     patterns:
       - "user_events"
@@ -184,14 +180,13 @@ rules:
       - "utm_campaign"
       - "scroll_depth"
       - "conversion_event"
+    special_category: false
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Behavioural data processing under Article 6, profiling considerations under Article 22"
-    metadata:
-      special_category: "N"
 
-  technical_device_and_network_data:
+  - name: "technical_device_and_network_data"
     description: "Technical device and network identifiers"
     patterns:
       - "user_devices"
@@ -225,16 +220,15 @@ rules:
       - "session_cookie"
       - "tracking_cookie"
       - "advertisement_id"
+    special_category: false
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Technical identifiers as personal data under Article 4(1), device fingerprinting concerns"
       - regulation: "ePrivacy"
         relevance: "Electronic communications metadata and terminal equipment information requiring consent"
-    metadata:
-      special_category: "N"
 
-  inferred_profile_data:
+  - name: "inferred_profile_data"
     description: "Algorithmically inferred or predicted user characteristics"
     patterns:
       - "predicted"
@@ -242,30 +236,28 @@ rules:
       - "calculated"
       - "profiling"
       - "machine_learning"
+    special_category: false
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Automated profiling and inferences under Article 22, right to explanation"
       - regulation: "EU_AI_ACT"
         relevance: "AI-generated profiles and inferences subject to high-risk AI system requirements"
-    metadata:
-      special_category: "N"
 
-  User_enriched_profile_data:
+  - name: "user_enriched_profile_data"
     description: "User-declared preferences and interests"
     patterns:
       - "interests"
       - "preferences"
       - "declared"
       - "user_provided"
+    special_category: false
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "User-provided personal data requiring lawful basis under Article 6"
-    metadata:
-      special_category: "N"
 
-  location_data:
+  - name: "location_data"
     description: "General location information"
     patterns:
       - "locations"
@@ -294,28 +286,26 @@ rules:
       - "general_location"
       - "approximate_location"
       - "region_code"
+    special_category: false
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Location data processing under Article 6, potential special category considerations"
-    metadata:
-      special_category: "N"
 
-  user_generated_content:
+  - name: "user_generated_content"
     description: "Content created by users"
     patterns:
       - "comment"
       - "review"
       - "feedback"
       - "message"
+    special_category: false
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "User-generated content as personal data under Article 6 processing requirements"
-    metadata:
-      special_category: "N"
 
-  accurate_location:
+  - name: "accurate_location"
     description: "Precise location data (GDPR Article 9 special category)"
     patterns:
       - "gps_data"
@@ -341,14 +331,13 @@ rules:
       - "velocity"
       - "tracking_point"
       - "geofence"
+    special_category: true
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Precise location data may constitute special category data requiring Article 9 compliance"
-    metadata:
-      special_category: "Y"
 
-  health_data:
+  - name: "health_data"
     description: "Health and medical information (GDPR Article 9 special category)"
     patterns:
       - "health"
@@ -358,69 +347,64 @@ rules:
       - "diagnosis"
       - "treatment"
       - "patient"
+    special_category: true
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Health data as special category under Article 9 requiring explicit consent or legal basis"
-    metadata:
-      special_category: "Y"
 
-  political_data:
+  - name: "political_data"
     description: "Political opinions and trade union membership (GDPR Article 9 special category)"
     patterns:
       - "political"
       - "trade_union"
       - "affiliation"
+    special_category: true
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Political opinions as special category data under Article 9 requiring explicit consent"
-    metadata:
-      special_category: "Y"
 
-  racial_ethnic_data:
+  - name: "racial_ethnic_data"
     description: "Racial or ethnic origin data (GDPR Article 9 special category)"
     patterns:
       - "race"
       - "ethnic"
       - "origin"
       - "nationality"
+    special_category: true
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Racial/ethnic origin as special category data under Article 9 requiring explicit consent"
-    metadata:
-      special_category: "Y"
 
-  religious_philosophical_data:
+  - name: "religious_philosophical_data"
     description: "Religious or philosophical beliefs (GDPR Article 9 special category)"
     patterns:
       - "religion"
       - "belief"
       - "philosophy"
       - "faith"
+    special_category: true
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Religious/philosophical beliefs as special category data under Article 9 requiring explicit consent"
-    metadata:
-      special_category: "Y"
 
-  genetic_data:
+  - name: "genetic_data"
     description: "Genetic information (GDPR Article 9 special category)"
     patterns:
       - "genetic"
       - "dna"
       - "genome"
       - "sequence"
+    special_category: true
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Genetic data as special category under Article 9 requiring explicit consent and high protection"
-    metadata:
-      special_category: "Y"
 
-  biometric_data:
+  - name: "biometric_data"
     description: "Biometric identifiers (GDPR Article 9 special category)"
     patterns:
       - "biometric"
@@ -429,30 +413,28 @@ rules:
       - "facial_recognition"
       - "face"
       - "voice"
+    special_category: true
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Biometric data for identification as special category under Article 9 requiring explicit consent"
       - regulation: "EU_AI_ACT"
         relevance: "Biometric identification systems prohibited in public spaces under Article 5"
-    metadata:
-      special_category: "Y"
 
-  sexual_orientation_data:
+  - name: "sexual_orientation_data"
     description: "Sexual orientation and sex life data (GDPR Article 9 special category)"
     patterns:
       - "sexual"
       - "orientation"
       - "sex_life"
       - "gender_identity"
+    special_category: true
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
         relevance: "Sexual orientation data as special category under Article 9 requiring explicit consent"
-    metadata:
-      special_category: "Y"
 
-  date_of_birth:
+  - name: "date_of_birth"
     description: "Birth date and age-related information"
     patterns:
       - "birth_data"
@@ -471,9 +453,8 @@ rules:
       - "age_category"
       - "date_born"
       - "born_on"
+    special_category: false
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
         relevance: "Age data processing under Article 8 for children's consent and Article 6 lawful basis"
-    metadata:
-      special_category: "N"

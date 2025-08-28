@@ -1,9 +1,7 @@
 """Processing purpose analysis analyser for GDPR compliance."""
 
 import logging
-from typing import Any
-
-from typing_extensions import Self, override
+from typing import Any, Self, override
 
 from wct.analysers.base import Analyser
 from wct.analysers.utilities import LLMServiceManager

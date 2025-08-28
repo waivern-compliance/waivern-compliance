@@ -6,13 +6,12 @@ It serves as a base for compliance with GDPR and other privacy regulations.
 
 import logging
 from pathlib import Path
-from typing import Final
+from typing import Final, override
 
 import yaml
-from typing_extensions import override
 
 from wct.rulesets.base import Ruleset
-from wct.rulesets.types import Rule, RulesetData
+from wct.rulesets.types import PersonalDataRule, PersonalDataRulesetData
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "personal_data"
 
 
-class PersonalDataRuleset(Ruleset):
+class PersonalDataRuleset(Ruleset[PersonalDataRule]):
     """Class-based personal data detection ruleset with logging support.
 
     This class provides structured access to personal data patterns
@@ -31,7 +30,7 @@ class PersonalDataRuleset(Ruleset):
     def __init__(self) -> None:
         """Initialise the personal data ruleset."""
         super().__init__()
-        self.rules: tuple[Rule, ...] | None = None
+        self.rules: tuple[PersonalDataRule, ...] | None = None
         logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
     @property
@@ -47,7 +46,7 @@ class PersonalDataRuleset(Ruleset):
         return _RULESET_DATA_VERSION
 
     @override
-    def get_rules(self) -> tuple[Rule, ...]:
+    def get_rules(self) -> tuple[PersonalDataRule, ...]:
         """Get the personal data rules.
 
         Returns:
@@ -66,8 +65,8 @@ class PersonalDataRuleset(Ruleset):
             with yaml_file.open("r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
-            ruleset_data = RulesetData.model_validate(data)
-            self.rules = ruleset_data.to_rules()
+            ruleset_data = PersonalDataRulesetData.model_validate(data)
+            self.rules = tuple(ruleset_data.rules)
             logger.debug(f"Loaded {len(self.rules)} personal data ruleset data")
 
         return self.rules

@@ -3,7 +3,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from wct.analysers.types import LLMValidationConfig
 from wct.llm_service import AnthropicLLMService
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-class LLMValidationStrategy(ABC, Generic[T]):
+class LLMValidationStrategy[T](ABC):
     """Abstract base class for LLM validation strategies.
 
     This eliminates code duplication between Personal Data and Processing Purpose

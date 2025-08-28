@@ -231,7 +231,7 @@ class TestPersonalDataAnalyser:
         mock_llm_service_manager.llm_service = Mock()
         with patch(
             "wct.analysers.personal_data_analyser.analyser.personal_data_validation_strategy",
-            return_value=sample_findings,
+            return_value=(sample_findings, True),
         ):
             input_schema = StandardInputSchema()
             output_schema = PersonalDataFindingSchema()

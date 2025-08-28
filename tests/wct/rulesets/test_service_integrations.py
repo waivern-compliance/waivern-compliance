@@ -4,6 +4,7 @@ import pytest
 
 from wct.rulesets.base import RulesetLoader, RulesetRegistry
 from wct.rulesets.service_integrations import ServiceIntegrationsRuleset
+from wct.rulesets.types import ServiceIntegrationRule
 
 
 class TestServiceIntegrationsRuleset:
@@ -65,14 +66,16 @@ class TestServiceIntegrationsRuleset:
             assert hasattr(rule, "description")
             assert hasattr(rule, "patterns")
             assert hasattr(rule, "risk_level")
-            assert hasattr(rule, "metadata")
+            assert hasattr(rule, "service_category")
+            assert hasattr(rule, "purpose_category")
 
             # Check field types
             assert isinstance(rule.name, str)
             assert isinstance(rule.description, str)
             assert isinstance(rule.patterns, tuple)
             assert isinstance(rule.risk_level, str)
-            assert isinstance(rule.metadata, dict)
+            assert isinstance(rule.service_category, str)
+            assert isinstance(rule.purpose_category, str)
 
     def test_rules_have_valid_risk_levels(
         self, ruleset: ServiceIntegrationsRuleset
@@ -104,15 +107,16 @@ class TestServiceIntegrationsRuleset:
             assert len(rule.name) > 0
             assert len(rule.description) > 0
 
-    def test_rules_have_service_category_metadata(
+    def test_rules_have_service_category_field(
         self, ruleset: ServiceIntegrationsRuleset
     ) -> None:
-        """Test that all rules have service_category in metadata."""
+        """Test that all rules have service_category field."""
         rules = ruleset.get_rules()
         for rule in rules:
-            assert "service_category" in rule.metadata
-            assert isinstance(rule.metadata["service_category"], str)
-            assert len(rule.metadata["service_category"]) > 0
+            assert isinstance(rule.service_category, str)
+            assert len(rule.service_category) > 0
+            assert isinstance(rule.purpose_category, str)
+            assert len(rule.purpose_category) > 0
 
     def test_patterns_are_tuples_not_lists(
         self, ruleset: ServiceIntegrationsRuleset
@@ -149,9 +153,15 @@ class TestServiceIntegrationsIntegration:
     def test_ruleset_can_be_used_with_registry(self) -> None:
         """Test that the ruleset can be registered and retrieved."""
         registry = RulesetRegistry()
-        registry.register("test_service_integrations", ServiceIntegrationsRuleset)
+        registry.register(
+            "test_service_integrations",
+            ServiceIntegrationsRuleset,
+            ServiceIntegrationRule,
+        )
 
-        retrieved_class = registry.get_ruleset_class("test_service_integrations")
+        retrieved_class = registry.get_ruleset_class(
+            "test_service_integrations", ServiceIntegrationRule
+        )
         assert retrieved_class == ServiceIntegrationsRuleset
         registry.clear()
 
@@ -159,8 +169,12 @@ class TestServiceIntegrationsIntegration:
         """Test that ServiceIntegrationsRuleset works with RulesetLoader."""
         # This should work since we register it in setup_method
         registry = RulesetRegistry()
-        registry.register("service_integrations", ServiceIntegrationsRuleset)
-        rules = RulesetLoader.load_ruleset("service_integrations")
+        registry.register(
+            "service_integrations", ServiceIntegrationsRuleset, ServiceIntegrationRule
+        )
+        rules = RulesetLoader.load_ruleset(
+            "service_integrations", ServiceIntegrationRule
+        )
         assert isinstance(rules, tuple)
         assert len(rules) > 0
         registry.clear()

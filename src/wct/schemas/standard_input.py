@@ -7,10 +7,9 @@ the standard input format used by most WCT connectors.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, override
 
 from pydantic import BaseModel, ConfigDict, Field
-from typing_extensions import override
 
 from .base import JsonSchemaLoader, Schema, SchemaLoader
 

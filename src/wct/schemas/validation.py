@@ -20,7 +20,7 @@ class DataParsingError(Exception):
     pass
 
 
-def parse_data_model(data: dict[str, Any], model_class: type[T]) -> T:
+def parse_data_model[T: BaseModel](data: dict[str, Any], model_class: type[T]) -> T:
     """Parse dictionary data into a strongly typed data model.
 
     This function converts dictionary data to a strongly typed data model

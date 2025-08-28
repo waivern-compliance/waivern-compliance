@@ -6,13 +6,12 @@ Version 1.0.0 has separated service integration patterns into dedicated service_
 
 import logging
 from pathlib import Path
-from typing import Final
+from typing import Final, override
 
 import yaml
-from typing_extensions import override
 
 from wct.rulesets.base import Ruleset
-from wct.rulesets.types import Rule, RulesetData
+from wct.rulesets.types import ProcessingPurposeRule, ProcessingPurposesRulesetData
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "processing_purposes"
 
 
-class ProcessingPurposesRuleset(Ruleset):
+class ProcessingPurposesRuleset(Ruleset[ProcessingPurposeRule]):
     """Class-based processing purposes detection ruleset with logging support.
 
     This class provides structured access to processing purposes patterns
@@ -38,7 +37,7 @@ class ProcessingPurposesRuleset(Ruleset):
     def __init__(self) -> None:
         """Initialise the processing purposes ruleset."""
         super().__init__()
-        self.rules: tuple[Rule, ...] | None = None
+        self.rules: tuple[ProcessingPurposeRule, ...] | None = None
         logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
     @property
@@ -54,11 +53,11 @@ class ProcessingPurposesRuleset(Ruleset):
         return _RULESET_DATA_VERSION
 
     @override
-    def get_rules(self) -> tuple[Rule, ...]:
+    def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
         """Get the processing purposes rules.
 
         Returns:
-            Immutable tuple of Rule objects containing all processing purpose patterns with metadata
+            Immutable tuple of ProcessingPurposeRule objects with strongly typed properties
 
         """
         if self.rules is None:
@@ -73,8 +72,8 @@ class ProcessingPurposesRuleset(Ruleset):
             with ruleset_file.open("r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
-            ruleset_data = RulesetData.model_validate(data)
-            self.rules = ruleset_data.to_rules()
+            ruleset_data = ProcessingPurposesRulesetData.model_validate(data)
+            self.rules = tuple(ruleset_data.rules)
             logger.debug(f"Loaded {len(self.rules)} processing purpose patterns")
 
         return self.rules

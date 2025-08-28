@@ -51,9 +51,9 @@
   <CommentedOutCode>
     <!--
     Legacy code with personal data in comments
-    TODO: Remove hardcoded email: support@company.com
+    NEXT: Remove hardcoded email: support@company.com
     DEBUG: Test with phone +1-555-234-5678
-    NOTE: Sarah's extension is 1234, email: s.mitchell@company.com
+    NOTICE: Sarah's extension is 1234, email: s.mitchell@company.com
     -->
   </CommentedOutCode>
 

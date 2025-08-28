@@ -4,7 +4,7 @@
     {
       "type": "email",
       "risk_level": "medium",
-      "special_category": "N",
+      "special_category": false,
       "matched_pattern": "john.doe@company.com",
       "compliance": [
         {
@@ -29,7 +29,7 @@
     {
       "type": "phone_number",
       "risk_level": "low",
-      "special_category": "N",
+      "special_category": false,
       "matched_pattern": "+1-555-123-4567",
       "compliance": [
         {
@@ -53,7 +53,7 @@
     {
       "type": "health_condition",
       "risk_level": "high",
-      "special_category": "Y",
+      "special_category": true,
       "matched_pattern": "diabetes",
       "compliance": [
         {
@@ -77,7 +77,7 @@
     {
       "type": "ethnic_origin",
       "risk_level": "high",
-      "special_category": "Y",
+      "special_category": true,
       "matched_pattern": "ethnicity: Hispanic",
       "compliance": [
         {
@@ -101,7 +101,7 @@
     {
       "type": "ssn",
       "risk_level": "high",
-      "special_category": "N",
+      "special_category": false,
       "matched_pattern": "123-45-6789",
       "compliance": [
         {
@@ -125,7 +125,7 @@
     {
       "type": "credit_card",
       "risk_level": "medium",
-      "special_category": "N",
+      "special_category": false,
       "matched_pattern": "4532-****-****-1234",
       "compliance": [
         {

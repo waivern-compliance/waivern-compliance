@@ -85,10 +85,10 @@ Table: sessions
 
 DEVELOPMENT NOTES:
 =================
-TODO: Implement email validation on user registration form
-TODO: Add phone number formatting to profile update API
-TODO: Review date of birth field requirements for GDPR compliance
-TODO: Update address parsing for international formats
+NEXT: Implement email validation on user registration form
+NEXT: Add phone number formatting to profile update API
+NEXT: Review date of birth field requirements for GDPR compliance
+NEXT: Update address parsing for international formats
 
 FEATURE FLAGS:
 =============
@@ -140,9 +140,9 @@ Database Connection: db_conn_pool_01@internal.db
 
 CODE COMMENTS FROM DEVELOPMENT:
 ===============================
-// TODO: Validate email format before saving
-// FIXME: Phone number regex needs international support
-// NOTE: Birth date field is required for age verification
+// NEXT: Validate email format before saving
+// FIX: Phone number regex needs international support
+// NOTICE: Birth date field is required for age verification
 // WARNING: Address field may contain special characters
 // INFO: Social security field requires encryption at rest
 

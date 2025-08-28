@@ -6,7 +6,9 @@ from wct.analysers.processing_purpose_analyser.types import (
 
 
 def get_processing_purpose_validation_prompt(
-    findings: list[ProcessingPurposeFindingModel], validation_mode: str = "standard"
+    findings: list[ProcessingPurposeFindingModel],
+    validation_mode: str = "standard",
+    sensitive_categories: list[str] | None = None,
 ) -> str:
     """Generate validation prompt for processing purpose findings.
 
@@ -17,6 +19,7 @@ def get_processing_purpose_validation_prompt(
     Args:
         findings: List of processing purpose findings to validate
         validation_mode: "standard" or "conservative" validation approach
+        sensitive_categories: List of categories considered privacy-sensitive (optional)
 
     Returns:
         Formatted validation prompt for the LLM
@@ -31,7 +34,9 @@ def get_processing_purpose_validation_prompt(
     findings_to_validate = _build_findings_to_validate(findings)
 
     # Build validation approach section
-    validation_approach = _get_validation_approach(validation_mode, findings)
+    validation_approach = _get_validation_approach(
+        validation_mode, findings, sensitive_categories
+    )
 
     # Build category guidance
     category_guidance = _get_category_guidance_summary()
@@ -101,17 +106,18 @@ Finding {i}:
 
 
 def _get_validation_approach(
-    validation_mode: str, findings: list[ProcessingPurposeFindingModel]
+    validation_mode: str,
+    findings: list[ProcessingPurposeFindingModel],
+    sensitive_categories: list[str] | None = None,
 ) -> str:
     """Get validation approach section based on mode and findings."""
     if validation_mode == "conservative":
         # Check if any findings are high-risk or sensitive categories
         high_risk_findings = [f for f in findings if f.risk_level == "high"]
-        sensitive_categories = [
+        sensitive_category_findings = [
             f
             for f in findings
-            if f.purpose_category
-            in ["AI_AND_ML", "ANALYTICS", "MARKETING_AND_ADVERTISING"]
+            if sensitive_categories and f.purpose_category in sensitive_categories
         ]
 
         warnings: list[str] = []
@@ -119,7 +125,7 @@ def _get_validation_approach(
             warnings.append(
                 "⚠️ HIGH RISK PROCESSING detected - use CONSERVATIVE validation"
             )
-        if sensitive_categories:
+        if sensitive_category_findings:
             warnings.append(
                 "⚠️ PRIVACY SENSITIVE categories detected - conservative approach required"
             )

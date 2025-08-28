@@ -9,11 +9,10 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, Self
 
 import yaml
 from pydantic import BaseModel, Field, model_validator
-from typing_extensions import Self
 
 from wct.utils import get_project_root
 

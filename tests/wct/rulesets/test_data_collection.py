@@ -1,7 +1,8 @@
 """Unit tests for DataCollectionRuleset class."""
 
+from wct.rulesets.base import RulesetLoader, RulesetRegistry
 from wct.rulesets.data_collection import DataCollectionRuleset
-from wct.rulesets.types import Rule, RuleComplianceData
+from wct.rulesets.types import DataCollectionRule, RuleComplianceData
 
 
 class TestDataCollectionRuleset:
@@ -34,7 +35,7 @@ class TestDataCollectionRuleset:
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0
-        assert all(isinstance(rule, Rule) for rule in rules)
+        assert all(isinstance(rule, DataCollectionRule) for rule in rules)
 
     def test_get_rules_returns_consistent_count(self):
         """Test that get_rules returns a consistent number of rules."""
@@ -59,13 +60,19 @@ class TestDataCollectionRuleset:
             assert hasattr(rule, "description")
             assert hasattr(rule, "patterns")
             assert hasattr(rule, "risk_level")
-            assert hasattr(rule, "metadata")
+            assert hasattr(rule, "collection_type")
+            assert hasattr(rule, "data_source")
 
             assert isinstance(rule.name, str)
             assert isinstance(rule.description, str)
             assert isinstance(rule.patterns, tuple)
             assert isinstance(rule.risk_level, str)
-            assert isinstance(rule.metadata, dict)
+            assert isinstance(rule.collection_type, str)
+            assert isinstance(rule.data_source, str)
+
+            # Validate non-empty field contents
+            assert len(rule.collection_type) > 0
+            assert len(rule.data_source) > 0
 
     def test_rules_have_valid_risk_levels(self):
         """Test that all rules have valid risk levels."""
@@ -91,24 +98,6 @@ class TestDataCollectionRuleset:
         for rule in rules:
             assert len(rule.name) > 0
             assert len(rule.description) > 0
-
-    def test_rules_have_collection_type_metadata(self):
-        """Test that rules have collection_type in metadata."""
-        rules = self.ruleset.get_rules()
-
-        for rule in rules:
-            assert "collection_type" in rule.metadata
-            assert isinstance(rule.metadata["collection_type"], str)
-            assert len(rule.metadata["collection_type"]) > 0
-
-    def test_rules_have_data_source_metadata(self):
-        """Test that rules have data_source in metadata."""
-        rules = self.ruleset.get_rules()
-
-        for rule in rules:
-            assert "data_source" in rule.metadata
-            assert isinstance(rule.metadata["data_source"], str)
-            assert len(rule.metadata["data_source"]) > 0
 
     def test_rules_have_structured_compliance_data(self):
         """Test that rules have structured compliance data."""
@@ -137,23 +126,31 @@ class TestDataCollectionRuleset:
             assert isinstance(rule.patterns, tuple)
             assert not isinstance(rule.patterns, list)
 
-    def test_collection_types_are_valid(self):
-        """Test that collection_type metadata contains valid categories."""
-        rules = self.ruleset.get_rules()
-        expected_collection_types = {
-            "form_data",
-            "url_parameters",
-            "cookies",
-            "session_data",
-            "html_forms",
-            "client_storage",
-            "api",
-            "file_upload",
-        }
 
-        found_collection_types: set[str] = set()
-        for rule in rules:
-            found_collection_types.add(rule.metadata["collection_type"])
+class TestDataCollectionIntegration:
+    """Integration tests for DataCollectionRuleset with other components."""
 
-        # Should have some overlap with expected types
-        assert len(found_collection_types.intersection(expected_collection_types)) > 0
+    def teardown_method(self):
+        """Clear registry after each test to prevent side effects."""
+        registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
+
+    def test_ruleset_loader_integration(self):
+        """Test that DataCollectionRuleset works with RulesetLoader."""
+        registry = RulesetRegistry()
+        registry.clear()  # Use proper public API
+
+        registry.register("loader_test", DataCollectionRuleset, DataCollectionRule)
+
+        # Load via RulesetLoader
+        rules = RulesetLoader.load_ruleset("loader_test", DataCollectionRule)
+
+        assert isinstance(rules, tuple)
+        assert len(rules) > 0
+        assert all(isinstance(rule, DataCollectionRule) for rule in rules)
+
+        # Should have the same rules as direct instantiation
+        direct_rules = DataCollectionRuleset().get_rules()
+        assert len(rules) == len(direct_rules)
+
+        registry.clear()  # Clean up

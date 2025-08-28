@@ -7,9 +7,7 @@ from __future__ import annotations
 
 import abc
 import logging
-from typing import Any
-
-from typing_extensions import Self
+from typing import Any, Self
 
 from wct.message import Message
 from wct.schemas import Schema, SchemaLoadError
