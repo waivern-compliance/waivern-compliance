@@ -48,15 +48,9 @@ This is a Python project using `uv` for dependency management. Key commands:
 - `uv run wct generate-schema` - Generate JSON Schema for IDE support and validation
 - `uv run wct test-llm` - Test LLM connectivity and configuration
 
-**Dependency Groups:**
-WCT uses optional dependency groups for specific features:
-- `uv sync --group mysql` - Install MySQL connector dependencies (pymysql, cryptography)
-- `uv sync --group source-code` - Install source code analysis dependencies (tree-sitter, tree-sitter-php)
-- `uv sync --group dev` - Install development tools
-- `uv sync --group mysql --group source-code --group dev` - Install multiple groups
-
-**Core Dependencies:**
-LLM functionality (langchain, langchain-anthropic) is now included as core dependencies and available by default for AI-powered compliance analysis and validation.
+**Dependencies:**
+- All connector and analyser dependencies are included by default
+- `uv sync --group dev` - Install development tools only when needed for contributing
 
 **Logging Options:**
 All WCT commands support logging configuration:
@@ -127,7 +121,7 @@ execution:
 - **Quick start**: Begin with `uv run wct run runbooks/samples/file_content_analysis.yaml -v`
 
 ## Project Structure Notes
-- Uses `uv` for dependency management with optional dependency groups
+- Uses `uv` for dependency management with all dependencies included by default
 - **Core Dependencies:** `jsonschema` for comprehensive JSON schema validation, `langchain` and `langchain-anthropic` for AI-powered compliance analysis
 - Type annotations are enforced with `basedpyright` (schema system is fully type-safe)
 - Main package is `wct` located in `src/wct/`
