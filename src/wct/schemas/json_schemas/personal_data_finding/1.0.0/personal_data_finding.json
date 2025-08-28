@@ -67,7 +67,7 @@
           },
           "metadata": {
             "type": "object",
-            "additionalProperties": true,
+            "additionalProperties": false,
             "description": "Metadata from the original data source including source location",
             "properties": {
               "source": {

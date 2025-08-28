@@ -66,8 +66,15 @@
           },
           "metadata": {
             "type": "object",
-            "additionalProperties": true,
-            "description": "Additional metadata about where and how this purpose was identified"
+            "additionalProperties": false,
+            "description": "Additional metadata about where and how this purpose was identified",
+            "properties": {
+              "source": {
+                "type": "string",
+                "description": "Source file or location where the purpose was identified"
+              }
+            },
+            "required": ["source"]
           }
         },
         "required": ["purpose", "purpose_category", "risk_level", "compliance", "matched_pattern", "evidence", "metadata"],

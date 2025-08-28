@@ -22,6 +22,3 @@ logs/*.log
 logs/*.log.*
 # Allow test log files
 !tests/**/logs/*.log
-
-# Misc
-.local_workspace/

@@ -38,7 +38,6 @@ class TestProcessingPurposePatternMatcher:
 
         class SampleMetadata(BaseModel):
             source: str = "test_file.php"
-            table: str = "users"
 
         return SampleMetadata()
 
@@ -170,9 +169,8 @@ class TestProcessingPurposePatternMatcher:
         assert finding.metadata is not None
         assert isinstance(finding.metadata, ProcessingPurposeFindingMetadata)
         assert finding.metadata.source == "test_file.php"
-        # Extra field preserved - use getattr to avoid type checker issues
-        assert hasattr(finding.metadata, "table")
-        assert getattr(finding.metadata, "table") == "users"
+        # Verify that metadata contains only the essential source field
+        assert len(finding.metadata.model_dump()) == 1
 
     def test_find_patterns_handles_none_metadata_gracefully(
         self,

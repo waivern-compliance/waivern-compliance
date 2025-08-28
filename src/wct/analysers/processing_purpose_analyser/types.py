@@ -47,7 +47,7 @@ class ProcessingPurposeFindingMetadata(BaseModel):
 
     source: str = Field(description="Source file or location where the data was found")
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
 
 class ProcessingPurposeFindingModel(BaseModel):

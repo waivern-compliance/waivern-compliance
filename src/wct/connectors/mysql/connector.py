@@ -452,17 +452,7 @@ class MySQLConnector(Connector):
         return {
             "content": str(cell_value),
             "metadata": {
-                "source": f"mysql_cell_data_table_({table_name})_column_({column_name})",
-                "description": f"Cell data from `{table_name}.{column_name}` row {row_index + 1}",
-                "data_type": "cell_content",
-                "database": self._config.database,
-                "table": table_name,
-                "column": column_name,
-                "row_index": row_index + 1,
-                "host": self._config.host,
-                "port": self._config.port,
-                # Include column metadata for context
-                "sql_data_type": self._get_column_data_type(table_info, column_name),
+                "source": f"mysql_database_({self._config.database})_table_({table_name})_column_({column_name})_row_({row_index + 1})",
             },
         }
 
