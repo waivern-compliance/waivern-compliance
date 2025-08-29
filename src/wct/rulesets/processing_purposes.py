@@ -36,8 +36,7 @@ class ProcessingPurposesRuleset(Ruleset[ProcessingPurposeRule]):
 
     def __init__(self) -> None:
         """Initialise the processing purposes ruleset."""
-        super().__init__()
-        self.rules: tuple[ProcessingPurposeRule, ...] | None = None
+        self._rules: tuple[ProcessingPurposeRule, ...] | None = None
         logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
     @property
@@ -60,7 +59,7 @@ class ProcessingPurposesRuleset(Ruleset[ProcessingPurposeRule]):
             Immutable tuple of ProcessingPurposeRule objects with strongly typed properties
 
         """
-        if self.rules is None:
+        if self._rules is None:
             # Load from external configuration file with validation
             ruleset_file = (
                 Path(__file__).parent
@@ -73,7 +72,7 @@ class ProcessingPurposesRuleset(Ruleset[ProcessingPurposeRule]):
                 data = yaml.safe_load(f)
 
             ruleset_data = ProcessingPurposesRulesetData.model_validate(data)
-            self.rules = tuple(ruleset_data.rules)
-            logger.debug(f"Loaded {len(self.rules)} processing purpose patterns")
+            self._rules = tuple(ruleset_data.rules)
+            logger.debug(f"Loaded {len(self._rules)} processing purpose patterns")
 
-        return self.rules
+        return self._rules
