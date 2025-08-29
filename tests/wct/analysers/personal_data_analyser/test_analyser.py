@@ -22,7 +22,7 @@ from wct.analysers.personal_data_analyser.types import (
 from wct.analysers.types import EvidenceItem, LLMValidationConfig, PatternMatchingConfig
 from wct.analysers.utilities import LLMServiceManager
 from wct.message import Message, MessageValidationError
-from wct.rulesets.types import PersonalDataRule
+from wct.rulesets.personal_data import PersonalDataRule
 from wct.schemas import (
     PersonalDataFindingSchema,
     StandardInputSchema,

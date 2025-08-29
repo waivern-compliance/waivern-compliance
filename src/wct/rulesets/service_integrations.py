@@ -11,14 +11,54 @@ from pathlib import Path
 from typing import Final, override
 
 import yaml
+from pydantic import Field, model_validator
 
 from wct.rulesets.base import AbstractRuleset
-from wct.rulesets.types import ServiceIntegrationRule, ServiceIntegrationsRulesetData
+from wct.rulesets.types import BaseRule, RulesetData
 
 logger = logging.getLogger(__name__)
 
 # Version constant for this ruleset and its data (private)
 _RULESET_DATA_VERSION: Final[str] = "1.0.0"
+
+
+class ServiceIntegrationRule(BaseRule):
+    """Service integration rule with service category and purpose."""
+
+    service_category: str = Field(description="Category of service integration")
+    purpose_category: str = Field(description="Purpose category for compliance")
+
+
+class ServiceIntegrationsRulesetData(RulesetData[ServiceIntegrationRule]):
+    """Service integrations ruleset data model."""
+
+    # Ruleset-specific properties
+    service_categories: list[str] = Field(
+        min_length=1, description="Master list of valid service integration categories"
+    )
+    purpose_categories: list[str] = Field(
+        min_length=1,
+        description="Master list of valid purpose categories for service integrations",
+    )
+
+    @model_validator(mode="after")
+    def validate_rule_categories(self) -> "ServiceIntegrationsRulesetData":
+        """Validate all rule service_category and purpose_category values against master lists."""
+        valid_service_categories = set(self.service_categories)
+        valid_purpose_categories = set(self.purpose_categories)
+
+        for rule in self.rules:
+            if rule.service_category not in valid_service_categories:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid service_category '{rule.service_category}'. Valid: {valid_service_categories}"
+                )
+            if rule.purpose_category not in valid_purpose_categories:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid purpose_category '{rule.purpose_category}'. Valid: {valid_purpose_categories}"
+                )
+        return self
+
+
 _RULESET_NAME: Final[str] = "service_integrations"
 
 

@@ -10,14 +10,53 @@ from pathlib import Path
 from typing import Final, override
 
 import yaml
+from pydantic import Field, model_validator
 
 from wct.rulesets.base import AbstractRuleset
-from wct.rulesets.types import DataCollectionRule, DataCollectionRulesetData
+from wct.rulesets.types import BaseRule, RulesetData
 
 logger = logging.getLogger(__name__)
 
 # Version constant for this ruleset and its data (private)
 _RULESET_DATA_VERSION: Final[str] = "1.0.0"
+
+
+class DataCollectionRule(BaseRule):
+    """Data collection rule with collection type and source."""
+
+    collection_type: str = Field(description="Type of data collection")
+    data_source: str = Field(description="Source of the data")
+
+
+class DataCollectionRulesetData(RulesetData[DataCollectionRule]):
+    """Data collection ruleset data model."""
+
+    # Ruleset-specific properties
+    collection_type_categories: list[str] = Field(
+        min_length=1, description="Master list of valid data collection type categories"
+    )
+    data_source_categories: list[str] = Field(
+        min_length=1, description="Master list of valid data source categories"
+    )
+
+    @model_validator(mode="after")
+    def validate_rule_categories(self) -> "DataCollectionRulesetData":
+        """Validate all rule collection_type and data_source values against master lists."""
+        valid_collection_types = set(self.collection_type_categories)
+        valid_data_sources = set(self.data_source_categories)
+
+        for rule in self.rules:
+            if rule.collection_type not in valid_collection_types:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid collection_type '{rule.collection_type}'. Valid: {valid_collection_types}"
+                )
+            if rule.data_source not in valid_data_sources:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid data_source '{rule.data_source}'. Valid: {valid_data_sources}"
+                )
+        return self
+
+
 _RULESET_NAME: Final[str] = "data_collection"
 
 

@@ -1,8 +1,28 @@
 """Unit tests for DataCollectionRuleset class."""
 
 from wct.rulesets.base import RulesetLoader, RulesetRegistry
-from wct.rulesets.data_collection import DataCollectionRuleset
-from wct.rulesets.types import DataCollectionRule, RuleComplianceData
+from wct.rulesets.data_collection import DataCollectionRule, DataCollectionRuleset
+from wct.rulesets.types import RuleComplianceData
+
+
+class TestDataCollectionRule:
+    """Test cases for the DataCollectionRule class."""
+
+    def test_data_collection_rule_with_all_fields(self):
+        """Test DataCollectionRule with all fields."""
+        rule = DataCollectionRule(
+            name="form_data_rule",
+            description="Form data collection rule",
+            patterns=("$_POST", "form_data"),
+            collection_type="form_data",
+            data_source="http_post",
+            risk_level="medium",
+        )
+
+        assert rule.name == "form_data_rule"
+        assert rule.collection_type == "form_data"
+        assert rule.data_source == "http_post"
+        assert rule.risk_level == "medium"
 
 
 class TestDataCollectionRuleset:

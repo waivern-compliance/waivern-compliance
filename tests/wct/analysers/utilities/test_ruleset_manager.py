@@ -6,7 +6,8 @@ from unittest.mock import patch
 import pytest
 
 from wct.analysers.utilities import RulesetManager
-from wct.rulesets.types import DataCollectionRule, ProcessingPurposeRule
+from wct.rulesets.data_collection import DataCollectionRule
+from wct.rulesets.processing_purposes import ProcessingPurposeRule
 
 
 class TestRulesetManager:

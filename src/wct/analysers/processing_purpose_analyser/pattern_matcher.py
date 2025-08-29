@@ -2,7 +2,7 @@
 
 from wct.analysers.types import FindingComplianceData, PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
-from wct.rulesets.types import ProcessingPurposeRule
+from wct.rulesets.processing_purposes import ProcessingPurposeRule
 from wct.schemas import BaseMetadata
 
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel

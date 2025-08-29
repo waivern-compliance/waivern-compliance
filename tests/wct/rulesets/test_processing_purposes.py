@@ -1,10 +1,93 @@
 """Unit tests for ProcessingPurposesRuleset class."""
 
 import pytest
+from pydantic import ValidationError
 
 from wct.rulesets.base import RulesetLoader, RulesetRegistry
-from wct.rulesets.processing_purposes import ProcessingPurposesRuleset
-from wct.rulesets.types import ProcessingPurposeRule, RuleComplianceData
+from wct.rulesets.processing_purposes import (
+    ProcessingPurposeRule,
+    ProcessingPurposesRuleset,
+    ProcessingPurposesRulesetData,
+)
+from wct.rulesets.types import RuleComplianceData
+
+
+class TestProcessingPurposeRule:
+    """Test cases for the ProcessingPurposeRule class."""
+
+    def test_processing_purpose_rule_with_all_fields(self):
+        """Test ProcessingPurposeRule with all fields."""
+        rule = ProcessingPurposeRule(
+            name="analytics_rule",
+            description="Analytics processing rule",
+            patterns=("analytics", "tracking"),
+            purpose_category="analytics",
+            risk_level="medium",
+        )
+
+        assert rule.name == "analytics_rule"
+        assert rule.purpose_category == "analytics"
+        assert rule.risk_level == "medium"
+
+
+class TestProcessingPurposesRulesetData:
+    """Test cases for the ProcessingPurposesRulesetData class."""
+
+    def test_processing_purposes_ruleset_validation(self):
+        """Test ProcessingPurposesRulesetData validates categories correctly."""
+        rule = ProcessingPurposeRule(
+            name="test_rule",
+            description="Test rule",
+            patterns=("test",),
+            purpose_category="ANALYTICS",
+            risk_level="medium",
+        )
+
+        ruleset = ProcessingPurposesRulesetData(
+            name="test_ruleset",
+            version="1.0.0",
+            description="Test ruleset",
+            purpose_categories=["ANALYTICS", "OPERATIONAL"],
+            sensitive_categories=["ANALYTICS"],
+            rules=[rule],
+        )
+
+        assert len(ruleset.rules) == 1
+        assert "ANALYTICS" in ruleset.sensitive_categories
+        assert "OPERATIONAL" in ruleset.purpose_categories
+
+    def test_processing_purposes_ruleset_invalid_category(self):
+        """Test ProcessingPurposesRulesetData rejects invalid rule categories."""
+        rule = ProcessingPurposeRule(
+            name="test_rule",
+            description="Test rule",
+            patterns=("test",),
+            purpose_category="INVALID_CATEGORY",
+            risk_level="medium",
+        )
+
+        with pytest.raises(ValidationError, match="invalid purpose_category"):
+            ProcessingPurposesRulesetData(
+                name="test_ruleset",
+                version="1.0.0",
+                description="Test ruleset",
+                purpose_categories=["ANALYTICS", "OPERATIONAL"],
+                rules=[rule],
+            )
+
+    def test_processing_purposes_sensitive_categories_subset_validation(self):
+        """Test sensitive_categories must be subset of purpose_categories."""
+        with pytest.raises(
+            ValidationError, match="must be subset of purpose_categories"
+        ):
+            ProcessingPurposesRulesetData(
+                name="test_ruleset",
+                version="1.0.0",
+                description="Test ruleset",
+                purpose_categories=["ANALYTICS"],
+                sensitive_categories=["INVALID_SENSITIVE"],
+                rules=[],
+            )
 
 
 class TestProcessingPurposesRuleset:

@@ -6,17 +6,18 @@ from wct.rulesets.base import (
     RulesetNotFoundError,
     RulesetRegistry,
 )
-from wct.rulesets.data_collection import DataCollectionRuleset
-from wct.rulesets.personal_data import PersonalDataRuleset
-from wct.rulesets.processing_purposes import ProcessingPurposesRuleset
-from wct.rulesets.service_integrations import ServiceIntegrationsRuleset
 
 # Import rule types for registration
-from wct.rulesets.types import (
-    DataCollectionRule,
-    PersonalDataRule,
+from wct.rulesets.data_collection import DataCollectionRule, DataCollectionRuleset
+from wct.rulesets.data_subjects import DataSubjectRule, DataSubjectsRuleset
+from wct.rulesets.personal_data import PersonalDataRule, PersonalDataRuleset
+from wct.rulesets.processing_purposes import (
     ProcessingPurposeRule,
+    ProcessingPurposesRuleset,
+)
+from wct.rulesets.service_integrations import (
     ServiceIntegrationRule,
+    ServiceIntegrationsRuleset,
 )
 
 # Built-in rulesets with their corresponding rule types
@@ -25,6 +26,7 @@ _BUILTIN_RULESETS = [
     ("processing_purposes", ProcessingPurposesRuleset, ProcessingPurposeRule),
     ("data_collection", DataCollectionRuleset, DataCollectionRule),
     ("service_integrations", ServiceIntegrationsRuleset, ServiceIntegrationRule),
+    ("data_subjects", DataSubjectsRuleset, DataSubjectRule),
 ]
 
 # Register all built-in rulesets automatically on import with type information

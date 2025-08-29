@@ -1,0 +1,51 @@
+name: "data_subjects"
+version: "1.0.0"
+description: "Data subject classification ruleset for GDPR Article 30(1)(c) compliance"
+
+subject_categories:
+  - "employee"
+  - "customer"
+  - "prospect"
+
+confidence_thresholds:
+  high: 90
+  medium: 70
+  low: 50
+
+rules:
+  - name: "employee_primary_indicator"
+    description: "Primary employee identification pattern"
+    patterns:
+      - "employee"
+      - "staff"
+    subject_category: "employee"
+    indicator_type: "primary"
+    confidence_weight: 40
+    applicable_contexts:
+      - "database"
+      - "source_code"
+    risk_level: "medium"
+
+  - name: "customer_secondary_indicator"
+    description: "Secondary customer identification pattern"
+    patterns:
+      - "customer"
+      - "client"
+    subject_category: "customer"
+    indicator_type: "secondary"
+    confidence_weight: 25
+    applicable_contexts:
+      - "database"
+    risk_level: "low"
+
+  - name: "prospect_contextual_indicator"
+    description: "Contextual prospect identification pattern"
+    patterns:
+      - "lead"
+      - "prospect"
+    subject_category: "prospect"
+    indicator_type: "contextual"
+    confidence_weight: 10
+    applicable_contexts:
+      - "filesystem"
+    risk_level: "low"

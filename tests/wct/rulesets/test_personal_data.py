@@ -3,8 +3,39 @@
 import pytest
 
 from wct.rulesets.base import RulesetLoader, RulesetRegistry
-from wct.rulesets.personal_data import PersonalDataRuleset
-from wct.rulesets.types import PersonalDataRule
+from wct.rulesets.personal_data import PersonalDataRule, PersonalDataRuleset
+
+
+class TestPersonalDataRule:
+    """Test cases for the PersonalDataRule class."""
+
+    def test_personal_data_rule_with_all_fields(self):
+        """Test PersonalDataRule with all fields."""
+        rule = PersonalDataRule(
+            name="email_rule",
+            description="Email detection rule",
+            patterns=("email", "e_mail"),
+            data_type="basic_profile",
+            special_category=False,
+            risk_level="medium",
+        )
+
+        assert rule.name == "email_rule"
+        assert rule.special_category is False
+        assert rule.risk_level == "medium"
+        assert len(rule.compliance) == 0
+
+    def test_personal_data_rule_special_category_default(self):
+        """Test PersonalDataRule special_category defaults to False."""
+        rule = PersonalDataRule(
+            name="basic_rule",
+            description="Basic rule",
+            patterns=("test",),
+            data_type="basic_profile",
+            risk_level="low",
+        )
+
+        assert rule.special_category is False
 
 
 class TestPersonalDataRuleset:

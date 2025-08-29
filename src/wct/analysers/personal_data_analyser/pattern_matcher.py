@@ -2,7 +2,7 @@
 
 from wct.analysers.types import FindingComplianceData, PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
-from wct.rulesets.types import PersonalDataRule
+from wct.rulesets.personal_data import PersonalDataRule
 from wct.schemas import BaseMetadata
 
 from .types import PersonalDataFindingMetadata, PersonalDataFindingModel
