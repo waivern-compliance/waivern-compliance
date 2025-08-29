@@ -9,7 +9,7 @@ from wct.rulesets.types import BaseRule
 logger = logging.getLogger(__name__)
 
 
-class Ruleset[RuleType: BaseRule](abc.ABC):
+class AbstractRuleset[RuleType: BaseRule](abc.ABC):
     """Base class for all rulesets with logging support.
 
     This provides a common interface for rulesets and automatic
@@ -70,7 +70,7 @@ class RulesetRegistry:
     """Type-aware singleton registry for ruleset classes with explicit registration."""
 
     _instance: "RulesetRegistry | None" = None
-    _registry: dict[str, type[Ruleset[Any]]]
+    _registry: dict[str, type[AbstractRuleset[Any]]]
     _type_mapping: dict[str, type[BaseRule]]
 
     def __new__(cls, *args: Any, **kwargs: Any) -> "RulesetRegistry":  # noqa: ANN401  # Singleton pattern requires flexible constructor arguments
@@ -90,7 +90,7 @@ class RulesetRegistry:
         return cls._instance
 
     def register[T: BaseRule](
-        self, name: str, ruleset_class: type[Ruleset[T]], rule_type: type[T]
+        self, name: str, ruleset_class: type[AbstractRuleset[T]], rule_type: type[T]
     ) -> None:
         """Register a ruleset class with its rule type.
 
@@ -112,7 +112,7 @@ class RulesetRegistry:
 
     def get_ruleset_class[T: BaseRule](
         self, name: str, expected_rule_type: type[T]
-    ) -> type[Ruleset[T]]:
+    ) -> type[AbstractRuleset[T]]:
         """Get a registered ruleset class with type validation.
 
         Args:

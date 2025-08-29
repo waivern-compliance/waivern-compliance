@@ -12,7 +12,7 @@ from typing import Final, override
 
 import yaml
 
-from wct.rulesets.base import Ruleset
+from wct.rulesets.base import AbstractRuleset
 from wct.rulesets.types import ServiceIntegrationRule, ServiceIntegrationsRulesetData
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "service_integrations"
 
 
-class ServiceIntegrationsRuleset(Ruleset[ServiceIntegrationRule]):
+class ServiceIntegrationsRuleset(AbstractRuleset[ServiceIntegrationRule]):
     """Ruleset for detecting third-party service integrations in source code.
 
     This ruleset focuses on identifying service integrations through:

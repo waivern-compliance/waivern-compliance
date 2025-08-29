@@ -10,7 +10,7 @@ from typing import Final, override
 
 import yaml
 
-from wct.rulesets.base import Ruleset
+from wct.rulesets.base import AbstractRuleset
 from wct.rulesets.types import PersonalDataRule, PersonalDataRulesetData
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "personal_data"
 
 
-class PersonalDataRuleset(Ruleset[PersonalDataRule]):
+class PersonalDataRuleset(AbstractRuleset[PersonalDataRule]):
     """Class-based personal data detection ruleset with logging support.
 
     This class provides structured access to personal data patterns

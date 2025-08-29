@@ -10,7 +10,7 @@ from typing import Final, override
 
 import yaml
 
-from wct.rulesets.base import Ruleset
+from wct.rulesets.base import AbstractRuleset
 from wct.rulesets.types import ProcessingPurposeRule, ProcessingPurposesRulesetData
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "processing_purposes"
 
 
-class ProcessingPurposesRuleset(Ruleset[ProcessingPurposeRule]):
+class ProcessingPurposesRuleset(AbstractRuleset[ProcessingPurposeRule]):
     """Class-based processing purposes detection ruleset with logging support.
 
     This class provides structured access to processing purposes patterns
