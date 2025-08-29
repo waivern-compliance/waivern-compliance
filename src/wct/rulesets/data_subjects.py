@@ -50,6 +50,9 @@ class DataSubjectRulesetData(RulesetData[DataSubjectRule]):
     subject_categories: list[str] = Field(
         min_length=1, description="Master list of valid data subject categories"
     )
+    applicable_contexts: list[str] = Field(
+        min_length=1, description="Master list of valid applicable contexts"
+    )
     confidence_thresholds: dict[str, int] = Field(
         description="Confidence thresholds for classification levels (high, medium, low)"
     )
@@ -74,6 +77,19 @@ class DataSubjectRulesetData(RulesetData[DataSubjectRule]):
             if rule.subject_category not in valid_categories:
                 raise ValueError(
                     f"Rule '{rule.name}' has invalid subject_category '{rule.subject_category}'. Valid: {valid_categories}"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def validate_rule_contexts(self) -> "DataSubjectRulesetData":
+        """Validate all rule applicable_contexts values against master list."""
+        valid_contexts = set(self.applicable_contexts)
+
+        for rule in self.rules:
+            invalid_contexts = set(rule.applicable_contexts) - valid_contexts
+            if invalid_contexts:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid applicable_contexts {sorted(invalid_contexts)}. Valid: {sorted(valid_contexts)}"
                 )
         return self
 

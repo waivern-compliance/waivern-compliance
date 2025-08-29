@@ -123,6 +123,7 @@ class TestDataSubjectRulesetData:
             version="1.0.0",
             description="Data subject classification ruleset",
             subject_categories=["employee", "customer", "prospect"],
+            applicable_contexts=["database", "filesystem", "source_code"],
             confidence_thresholds={"high": 90, "medium": 70, "low": 50},
             rules=[rule],
         )
@@ -150,6 +151,7 @@ class TestDataSubjectRulesetData:
                 version="1.0.0",
                 description="Data subject classification ruleset",
                 subject_categories=["employee", "customer"],
+                applicable_contexts=["database", "filesystem", "source_code"],
                 confidence_thresholds={"high": 90, "medium": 70, "low": 50},
                 rules=[rule],
             )
@@ -174,6 +176,7 @@ class TestDataSubjectRulesetData:
             version="1.0.0",
             description="Test ruleset",
             subject_categories=["employee"],
+            applicable_contexts=["database", "filesystem", "source_code"],
             confidence_thresholds={"high": 90, "medium": 70, "low": 50},
             rules=[rule],
         )
@@ -186,6 +189,7 @@ class TestDataSubjectRulesetData:
                 version="1.0.0",
                 description="Test ruleset",
                 subject_categories=["employee"],
+                applicable_contexts=["database", "filesystem", "source_code"],
                 confidence_thresholds={"high": 90, "medium": 70},  # Missing 'low'
                 rules=[rule],
             )
@@ -210,7 +214,7 @@ class TestDataSubjectRulesetData:
             subject_category="customer",
             indicator_type="secondary",
             confidence_weight=20,
-            applicable_contexts=["database"],
+            applicable_contexts=["database", "filesystem"],
             risk_level="low",
         )
 
@@ -220,8 +224,33 @@ class TestDataSubjectRulesetData:
                 version="1.0.0",
                 description="Test ruleset",
                 subject_categories=["employee", "customer"],
+                applicable_contexts=["database", "filesystem", "source_code"],
                 confidence_thresholds={"high": 90, "medium": 70, "low": 50},
                 rules=[rule1, rule2],
+            )
+
+    def test_data_subject_ruleset_invalid_applicable_contexts(self):
+        """Test DataSubjectRulesetData rejects rules with invalid applicable contexts."""
+        rule = DataSubjectRule(
+            name="invalid_context_rule",
+            description="Rule with invalid context",
+            patterns=("test",),
+            subject_category="employee",
+            indicator_type="primary",
+            confidence_weight=40,
+            applicable_contexts=["invalid_context"],  # Not in master list
+            risk_level="medium",
+        )
+
+        with pytest.raises(ValidationError, match="invalid applicable_contexts"):
+            DataSubjectRulesetData(
+                name="data_subjects",
+                version="1.0.0",
+                description="Data subject classification ruleset",
+                subject_categories=["employee", "customer"],
+                applicable_contexts=["database", "filesystem", "source_code"],
+                confidence_thresholds={"high": 90, "medium": 70, "low": 50},
+                rules=[rule],
             )
 
 
