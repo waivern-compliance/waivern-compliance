@@ -76,11 +76,18 @@ class TestPersonalDataAnalyser:
             "data": [
                 {
                     "content": "Contact us at support@example.com or call 123-456-7890",
-                    "metadata": {"source": "contact_form.html"},
+                    "metadata": {
+                        "source": "contact_form.html",
+                        "connector_type": "filesystem",
+                    },
                 },
                 {
                     "content": "User profile: john.doe@company.com, phone: +44-20-1234-5678",
-                    "metadata": {"source": "user_database", "table": "users"},
+                    "metadata": {
+                        "source": "user_database",
+                        "connector_type": "test",
+                        "table": "users",
+                    },
                 },
             ],
         }
@@ -635,7 +642,10 @@ class TestPersonalDataAnalyser:
                 "data": [
                     {
                         "content": "Please provide your email address",
-                        "metadata": {"source": "test.html"},
+                        "metadata": {
+                            "source": "test.html",
+                            "connector_type": "filesystem",
+                        },
                     }
                 ],
             }

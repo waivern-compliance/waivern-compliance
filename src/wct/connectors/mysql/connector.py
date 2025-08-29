@@ -21,7 +21,7 @@ from wct.connectors.base import (
 )
 from wct.connectors.mysql.config import MySQLConnectorConfig
 from wct.message import Message
-from wct.schemas import Schema, StandardInputSchema
+from wct.schemas import RelationalDatabaseMetadata, Schema, StandardInputSchema
 
 logger = logging.getLogger(__name__)
 
@@ -449,11 +449,18 @@ class MySQLConnector(Connector):
             Data item dictionary with content and metadata
 
         """
+        # Create RelationalDatabaseMetadata instance
+        metadata = RelationalDatabaseMetadata(
+            source=f"mysql_database_({self._config.database})_table_({table_name})_column_({column_name})_row_({row_index + 1})",
+            connector_type=_CONNECTOR_NAME,
+            table_name=table_name,
+            column_name=column_name,
+            schema_name=self._config.database,
+        )
+
         return {
             "content": str(cell_value),
-            "metadata": {
-                "source": f"mysql_database_({self._config.database})_table_({table_name})_column_({column_name})_row_({row_index + 1})",
-            },
+            "metadata": metadata.model_dump(),
         }
 
     def _get_column_data_type(

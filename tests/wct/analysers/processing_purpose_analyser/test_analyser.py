@@ -20,13 +20,15 @@ from wct.analysers.types import LLMValidationConfig, PatternMatchingConfig
 from wct.analysers.utilities import LLMServiceManager
 from wct.message import Message
 from wct.schemas import (
+    BaseMetadata,
+    FilesystemMetadata,
     ProcessingPurposeFindingSchema,
+    RelationalDatabaseMetadata,
     SourceCodeAnalysisMetadataModel,
     SourceCodeDataModel,
     SourceCodeFileDataModel,
     SourceCodeFileMetadataModel,
     SourceCodeSchema,
-    StandardInputDataItemMetadataModel,
     StandardInputDataItemModel,
     StandardInputDataModel,
     StandardInputSchema,
@@ -290,7 +292,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             data=[
                 StandardInputDataItemModel(
                     content="Contact our customer support team for payment assistance",
-                    metadata=StandardInputDataItemMetadataModel(source="test_data"),
+                    metadata=BaseMetadata(source="test_data", connector_type="test"),
                 ),
             ],
         )
@@ -466,7 +468,13 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             data=[
                 StandardInputDataItemModel(
                     content="this text has no processing purpose keywords",
-                    metadata=StandardInputDataItemMetadataModel(source="test"),
+                    metadata=RelationalDatabaseMetadata(
+                        source="test_source",
+                        connector_type="mysql",
+                        table_name="customers",
+                        column_name="purpose_description",
+                        schema_name="test_db",
+                    ),
                 )
             ],
         )
@@ -509,15 +517,21 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             data=[
                 StandardInputDataItemModel(
                     content="customer payment processing system",
-                    metadata=StandardInputDataItemMetadataModel(source="system1"),
+                    metadata=BaseMetadata(source="system1", connector_type="test"),
                 ),
                 StandardInputDataItemModel(
                     content="process customer payments daily",
-                    metadata=StandardInputDataItemMetadataModel(source="system2"),
+                    metadata=RelationalDatabaseMetadata(
+                        source="system2",
+                        connector_type="mysql",
+                        table_name="orders",
+                        column_name="purpose",
+                        schema_name="ecommerce",
+                    ),
                 ),
                 StandardInputDataItemModel(
                     content="customer service support portal",
-                    metadata=StandardInputDataItemMetadataModel(source="system3"),
+                    metadata=BaseMetadata(source="system3", connector_type="test"),
                 ),
             ],
         )
@@ -869,8 +883,10 @@ class TestProcessingPurposeAnalyserOutputValidation:
             data=[
                 StandardInputDataItemModel(
                     content="Customer support and payment processing",
-                    metadata=StandardInputDataItemMetadataModel(
-                        source="test_validation"
+                    metadata=FilesystemMetadata(
+                        source="test_validation",
+                        connector_type="filesystem",
+                        file_path="/test/validation.txt",
                     ),
                 ),
             ],

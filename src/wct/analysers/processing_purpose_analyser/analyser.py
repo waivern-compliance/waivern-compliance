@@ -7,6 +7,7 @@ from wct.analysers.base import Analyser
 from wct.analysers.utilities import LLMServiceManager
 from wct.message import Message
 from wct.schemas import (
+    BaseMetadata,
     ProcessingPurposeFindingSchema,
     Schema,
     SourceCodeDataModel,
@@ -118,7 +119,9 @@ class ProcessingPurposeAnalyser(Analyser):
 
         # Validate and parse data based on schema type
         if input_schema.name == "standard_input":
-            typed_data = StandardInputDataModel.model_validate(message.content)
+            typed_data = StandardInputDataModel[BaseMetadata].model_validate(
+                message.content
+            )
             findings = self._process_standard_input_data(typed_data)
         elif input_schema.name == "source_code":
             typed_data = parse_data_model(message.content, SourceCodeDataModel)
@@ -141,7 +144,7 @@ class ProcessingPurposeAnalyser(Analyser):
         )
 
     def _process_standard_input_data(
-        self, typed_data: StandardInputDataModel
+        self, typed_data: StandardInputDataModel[BaseMetadata]
     ) -> list[ProcessingPurposeFindingModel]:
         """Process standard_input schema data using runners.
 

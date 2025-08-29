@@ -1,10 +1,9 @@
 """Pattern matcher class for personal data analysis."""
 
-from pydantic import BaseModel
-
 from wct.analysers.types import FindingComplianceData, PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
 from wct.rulesets.types import PersonalDataRule
+from wct.schemas import BaseMetadata
 
 from .types import PersonalDataFindingMetadata, PersonalDataFindingModel
 
@@ -30,7 +29,7 @@ class PersonalDataPatternMatcher:
     def find_patterns(
         self,
         content: str,
-        metadata: BaseModel,
+        metadata: BaseMetadata,
     ) -> list[PersonalDataFindingModel]:
         """Find all personal data patterns in content.
 
@@ -67,9 +66,8 @@ class PersonalDataPatternMatcher:
                         # Create personal data specific finding
                         finding_metadata = None
                         if metadata:
-                            metadata_dict = metadata.model_dump()
                             finding_metadata = PersonalDataFindingMetadata(
-                                **metadata_dict
+                                source=metadata.source
                             )
 
                         compliance_data = [

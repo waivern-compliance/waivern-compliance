@@ -32,7 +32,9 @@ from .source_code import (
     SourceCodeSchema,
 )
 from .standard_input import (
-    StandardInputDataItemMetadataModel,
+    BaseMetadata,
+    FilesystemMetadata,
+    RelationalDatabaseMetadata,
     StandardInputDataItemModel,
     StandardInputDataModel,
     StandardInputSchema,
@@ -40,27 +42,22 @@ from .standard_input import (
 from .validation import DataParsingError, parse_data_model
 
 __all__ = [
-    # Base classes and utilities
     "Schema",
     "SchemaLoader",
     "JsonSchemaLoader",
     "SchemaLoadError",
-    # Data parsing utilities
     "parse_data_model",
     "DataParsingError",
-    # Schema classes
     "StandardInputSchema",
     "SourceCodeSchema",
     "PersonalDataFindingSchema",
     "ProcessingPurposeFindingSchema",
-    # Note: Runbook validation uses Pydantic models in the runbook module
-    # Standard input Pydantic models
     "StandardInputDataModel",
     "StandardInputDataItemModel",
-    "StandardInputDataItemMetadataModel",
-    # Source code schema
+    "BaseMetadata",
+    "RelationalDatabaseMetadata",
+    "FilesystemMetadata",
     "SourceCodeSchema",
-    # Source code Pydantic models
     "SourceCodeDataModel",
     "SourceCodeFileDataModel",
     "SourceCodeAnalysisMetadataModel",

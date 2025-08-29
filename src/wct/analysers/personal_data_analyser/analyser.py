@@ -8,6 +8,7 @@ from wct.analysers.base import Analyser
 from wct.analysers.utilities import LLMServiceManager
 from wct.message import Message
 from wct.schemas import (
+    BaseMetadata,
     PersonalDataFindingSchema,
     Schema,
     StandardInputDataModel,
@@ -111,7 +112,9 @@ class PersonalDataAnalyser(Analyser):
         Analyser.validate_input_message(message, input_schema)
 
         # Extract and validate data using Pydantic.model_validate
-        typed_data = StandardInputDataModel.model_validate(message.content)
+        typed_data = StandardInputDataModel[BaseMetadata].model_validate(
+            message.content
+        )
 
         # Process each data item using the pattern matcher
         findings: list[PersonalDataFindingModel] = []

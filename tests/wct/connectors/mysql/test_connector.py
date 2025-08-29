@@ -9,7 +9,11 @@ import pytest
 from wct.connectors.base import ConnectorConfigError, ConnectorExtractionError
 from wct.connectors.mysql.config import MySQLConnectorConfig
 from wct.connectors.mysql.connector import MySQLConnector
-from wct.schemas import StandardInputSchema
+from wct.schemas import (
+    RelationalDatabaseMetadata,
+    StandardInputDataModel,
+    StandardInputSchema,
+)
 
 # Test constants - expected behaviour from public interface
 EXPECTED_CONNECTOR_NAME = "mysql"
@@ -172,3 +176,78 @@ class TestMySQLConnectorPublicAPI:
                 ConnectorExtractionError, match="Unsupported output schema"
             ):
                 connector.extract(mock_schema)
+
+
+class TestMySQLConnectorDataExtraction:
+    """Tests for MySQL connector data extraction with RelationalDatabaseMetadata."""
+
+    @pytest.fixture
+    def mock_connector_with_data(self):
+        """Create a mock connector that returns test database data."""
+        with clear_mysql_env_vars():
+            config = MySQLConnectorConfig.from_properties(
+                {
+                    "host": TEST_HOST,
+                    "user": TEST_USER,
+                    "password": TEST_PASSWORD,
+                    "database": TEST_DATABASE,
+                }
+            )
+            connector = MySQLConnector(config)
+
+        # Mock database responses
+        with (
+            patch.object(connector, "_get_database_metadata") as mock_metadata,
+            patch.object(connector, "_get_table_data") as mock_table_data,
+        ):
+            mock_metadata.return_value = {
+                "tables": [
+                    {
+                        "name": "customers",
+                        "columns": [
+                            {"COLUMN_NAME": "email", "DATA_TYPE": "varchar"},
+                            {"COLUMN_NAME": "phone", "DATA_TYPE": "varchar"},
+                        ],
+                    }
+                ]
+            }
+
+            mock_table_data.return_value = [
+                {"email": "john@test.com", "phone": "+1234567890"}
+            ]
+
+            yield connector
+
+    def test_extracts_data_with_relational_database_metadata(
+        self, mock_connector_with_data
+    ):
+        """Test MySQL connector creates RelationalDatabaseMetadata with accurate database context."""
+        result_message = mock_connector_with_data.extract(StandardInputSchema())
+
+        # Validate the result conforms to RelationalDatabaseMetadata expectations
+        typed_result = StandardInputDataModel[
+            RelationalDatabaseMetadata
+        ].model_validate(result_message.content)
+
+        # Should have 2 data items (email + phone from 1 row)
+        assert len(typed_result.data) == 2
+
+        # Verify each data item has proper RelationalDatabaseMetadata
+        email_item = next(
+            item for item in typed_result.data if "john@test.com" in item.content
+        )
+        phone_item = next(
+            item for item in typed_result.data if "+1234567890" in item.content
+        )
+
+        # Test email metadata
+        assert email_item.metadata.connector_type == "mysql"
+        assert email_item.metadata.table_name == "customers"
+        assert email_item.metadata.column_name == "email"
+        assert email_item.metadata.schema_name == TEST_DATABASE
+
+        # Test phone metadata
+        assert phone_item.metadata.connector_type == "mysql"
+        assert phone_item.metadata.table_name == "customers"
+        assert phone_item.metadata.column_name == "phone"
+        assert phone_item.metadata.schema_name == TEST_DATABASE

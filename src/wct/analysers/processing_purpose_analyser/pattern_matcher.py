@@ -1,10 +1,9 @@
 """Pattern matcher class for processing purpose analysis."""
 
-from pydantic import BaseModel
-
 from wct.analysers.types import FindingComplianceData, PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
 from wct.rulesets.types import ProcessingPurposeRule
+from wct.schemas import BaseMetadata
 
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
 
@@ -30,7 +29,7 @@ class ProcessingPurposePatternMatcher:
     def find_patterns(
         self,
         content: str,
-        metadata: BaseModel,
+        metadata: BaseMetadata,
     ) -> list[ProcessingPurposeFindingModel]:
         """Find all processing purpose patterns in content.
 
@@ -69,9 +68,8 @@ class ProcessingPurposePatternMatcher:
                         # Create processing purpose specific finding
                         finding_metadata = None
                         if metadata:
-                            metadata_dict = metadata.model_dump()
                             finding_metadata = ProcessingPurposeFindingMetadata(
-                                **metadata_dict
+                                source=metadata.source
                             )
 
                         compliance_data = [

@@ -14,8 +14,8 @@ from wct.analysers.utilities import LLMServiceManager
 from wct.llm_service import AnthropicLLMService
 from wct.message import Message
 from wct.schemas import (
+    BaseMetadata,
     ProcessingPurposeFindingSchema,
-    StandardInputDataItemMetadataModel,
     StandardInputDataItemModel,
     StandardInputDataModel,
     StandardInputSchema,
@@ -56,11 +56,13 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
             data=[
                 StandardInputDataItemModel(
                     content="customer service documentation example",
-                    metadata=StandardInputDataItemMetadataModel(source="documentation"),
+                    metadata=BaseMetadata(
+                        source="documentation", connector_type="test"
+                    ),
                 ),
                 StandardInputDataItemModel(
                     content="process customer payment transactions",
-                    metadata=StandardInputDataItemMetadataModel(source="database"),
+                    metadata=BaseMetadata(source="database", connector_type="test"),
                 ),
             ],
         )
@@ -299,7 +301,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
             data=[
                 StandardInputDataItemModel(
                     content="this content has no processing purpose patterns",
-                    metadata=StandardInputDataItemMetadataModel(source="test"),
+                    metadata=BaseMetadata(source="test", connector_type="test"),
                 )
             ],
         )
