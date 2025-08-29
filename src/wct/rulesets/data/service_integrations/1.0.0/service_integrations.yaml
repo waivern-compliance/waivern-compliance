@@ -2,9 +2,24 @@ name: "service_integrations"
 version: "1.0.0"
 description: "Service integrations ruleset for detecting third-party service usage in source code, such as cloud platforms, payment processors, analytics services, and communication tools."
 
+# Master list of valid service integration categories
+service_categories:
+  - "cloud_infrastructure"
+  - "communication"
+  - "identity_management"
+  - "payment_processing"
+  - "user_analytics"
+  - "social_media"
+
+# Master list of valid purpose categories for service integrations (maps to processing purposes)
+purpose_categories:
+  - "OPERATIONAL"
+  - "ANALYTICS"
+  - "MARKETING_AND_ADVERTISING"
+
 rules:
   # ===== CLOUD INFRASTRUCTURE SERVICES =====
-  - name: "cloud_infrastructure"
+  - name: "Cloud Infrastructure Services"
     description: "Cloud storage and platform service integrations"
     patterns:
       - "aws"
@@ -26,7 +41,7 @@ rules:
         relevance: "Article 28 requires data processing agreements with cloud service providers as they act as data processors. Article 44-49 govern international data transfers, requiring adequacy decisions or appropriate safeguards for cloud storage outside the EU. Data localisation requirements may apply for certain cloud storage locations."
 
   # ===== COMMUNICATION SERVICES =====
-  - name: "communication_services"
+  - name: "Communication Services"
     description: "Email and communication service integrations"
     patterns:
       - "sendgrid"
@@ -48,7 +63,7 @@ rules:
         relevance: "Article 28 requires data processing agreements with communication service providers as they act as data processors when handling personal data in emails, messages, or notifications. Controllers must ensure processors implement appropriate technical and organisational measures."
 
   # ===== IDENTITY MANAGEMENT SERVICES =====
-  - name: "identity_management"
+  - name: "Identity Management Services"
     description: "Third-party authentication and identity service integrations"
     patterns:
       - "auth0"
@@ -71,7 +86,7 @@ rules:
         relevance: "Identity verification services processing personal information for authentication require service provider agreements. Consumers have rights to request deletion and correction of identity data, though verification purposes may provide grounds for retention exceptions under CCPA Section 1798.105(d)."
 
   # ===== PAYMENT PROCESSING SERVICES =====
-  - name: "payment_processing"
+  - name: "Payment Processing Services"
     description: "Payment processing service integrations"
     patterns:
       - "stripe"

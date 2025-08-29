@@ -39,16 +39,18 @@ class TestPersonalDataValidationStrategy:
         return [
             PersonalDataFindingModel(
                 type="email",
+                data_type="basic_profile",
                 risk_level="medium",
-                special_category="N",
+                special_category=False,
                 matched_pattern="test@example.com",
                 evidence=[EvidenceItem(content="Contact us at test@example.com")],
                 metadata=PersonalDataFindingMetadata(source="contact_form.php"),
             ),
             PersonalDataFindingModel(
                 type="phone",
+                data_type="basic_profile",
                 risk_level="high",
-                special_category="N",
+                special_category=False,
                 matched_pattern="123-456-7890",
                 evidence=[EvidenceItem(content="Call us at 123-456-7890")],
                 metadata=PersonalDataFindingMetadata(source="customer_db"),
@@ -158,24 +160,27 @@ class TestPersonalDataValidationStrategy:
         findings = [
             PersonalDataFindingModel(
                 type="email",
+                data_type="basic_profile",
                 risk_level="low",
-                special_category="N",
+                special_category=False,
                 matched_pattern="admin@domain.com",
                 evidence=[EvidenceItem(content="Email: admin@domain.com")],
                 metadata=PersonalDataFindingMetadata(source="config.txt"),
             ),
             PersonalDataFindingModel(
                 type="ssn",
+                data_type="identification",
                 risk_level="high",
-                special_category="Y",
+                special_category=True,
                 matched_pattern="123-45-6789",
                 evidence=[EvidenceItem(content="SSN: 123-45-6789")],
                 metadata=PersonalDataFindingMetadata(source="employee_records"),
             ),
             PersonalDataFindingModel(
                 type="email",
+                data_type="basic_profile",
                 risk_level="medium",
-                special_category="N",
+                special_category=False,
                 matched_pattern="user@test.com",
                 evidence=[EvidenceItem(content="Example: user@test.com")],
                 metadata=PersonalDataFindingMetadata(source="documentation.md"),
@@ -232,8 +237,9 @@ class TestPersonalDataValidationStrategy:
         findings = [
             PersonalDataFindingModel(
                 type="email",
+                data_type="basic_profile",
                 risk_level="medium",
-                special_category="N",
+                special_category=False,
                 matched_pattern=f"user{i}@example.com",
                 evidence=[EvidenceItem(content=f"Email: user{i}@example.com")],
                 metadata=PersonalDataFindingMetadata(source="database"),
@@ -473,8 +479,9 @@ class TestPersonalDataValidationStrategy:
         findings = [
             PersonalDataFindingModel(
                 type="email",
+                data_type="basic_profile",
                 risk_level="medium",
-                special_category="N",
+                special_category=False,
                 matched_pattern=f"test{i}@example.com",
                 evidence=[EvidenceItem(content=f"Email {i}")],
                 metadata=PersonalDataFindingMetadata(source="test"),
@@ -530,8 +537,9 @@ class TestPersonalDataValidationStrategy:
         findings = [
             PersonalDataFindingModel(
                 type="credit_card",
+                data_type="financial",
                 risk_level="high",
-                special_category="N",
+                special_category=False,
                 matched_pattern="4111-1111-1111-1111",
                 evidence=[EvidenceItem(content="Card: 4111-1111-1111-1111")],
                 metadata=PersonalDataFindingMetadata(source="payment_form"),
@@ -568,8 +576,9 @@ class TestPersonalDataValidationStrategy:
         findings = [
             PersonalDataFindingModel(
                 type="phone",
+                data_type="basic_profile",
                 risk_level="medium",
-                special_category="N",
+                special_category=False,
                 matched_pattern="+44 20 7946 0958",
                 evidence=[EvidenceItem(content="Contact: +44 20 7946 0958")],
                 metadata=PersonalDataFindingMetadata(source="customer_database"),
@@ -622,8 +631,9 @@ class TestPersonalDataValidationStrategy:
         findings = [
             PersonalDataFindingModel(
                 type="email",
+                data_type="basic_profile",
                 risk_level="medium",
-                special_category="N",
+                special_category=False,
                 matched_pattern=f"user{i}@test.com",
                 evidence=[EvidenceItem(content=f"Email: user{i}@test.com")],
                 metadata=PersonalDataFindingMetadata(source="test"),

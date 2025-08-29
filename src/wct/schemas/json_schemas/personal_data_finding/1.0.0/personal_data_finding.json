@@ -13,6 +13,10 @@
             "type": "string",
             "description": "Type of personal data found (e.g., email, phone, ssn, health_data)"
           },
+          "data_type": {
+            "type": "string",
+            "description": "Categorical data type identifier from GDPR classification (e.g., basic_profile, health_data)"
+          },
           "risk_level": {
             "type": "string",
             "enum": ["low", "medium", "high"],
@@ -78,7 +82,7 @@
             "required": ["source"]
           }
         },
-        "required": ["type", "risk_level", "special_category", "matched_pattern", "compliance", "evidence", "metadata"]
+        "required": ["type", "data_type", "risk_level", "special_category", "matched_pattern", "compliance", "evidence", "metadata"]
       }
     },
     "summary": {

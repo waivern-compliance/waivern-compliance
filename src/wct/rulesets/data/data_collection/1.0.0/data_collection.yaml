@@ -5,8 +5,31 @@ name: "data_collection"
 version: "1.0.0"
 description: "Ruleset for detecting data collection patterns in source code"
 
+# Master list of valid data collection type categories
+collection_type_categories:
+  - "form_data"
+  - "url_parameters"
+  - "cookies"
+  - "session_data"
+  - "html_forms"
+  - "client_storage"
+  - "file_upload"
+  - "database_query"
+  - "database_connection"
+
+# Master list of valid data source categories
+data_source_categories:
+  - "http_post"
+  - "http_get"
+  - "browser_cookies"
+  - "server_session"
+  - "html_form"
+  - "browser_javascript"
+  - "uploaded_files"
+  - "database"
+
 rules:
-  - name: "php_post_data"
+  - name: "PHP POST Data Collection"
     description: "PHP POST data collection patterns"
     patterns:
       - "$_POST["
@@ -17,12 +40,8 @@ rules:
     compliance:
       - regulation: "GDPR"
         relevance: "Article 6 lawful basis required for processing form data, Article 13 information duties apply"
-      - regulation: "ePrivacy"
-        relevance: "Electronic communications data collection requires user consent or legitimate interest"
-      - regulation: "CCPA"
-        relevance: "Personal information collection from consumers must comply with notice and opt-out requirements"
 
-  - name: "php_get_data"
+  - name: "PHP GET Parameter Collection"
     description: "PHP GET parameter collection patterns"
     patterns:
       - "$_GET["
@@ -33,12 +52,8 @@ rules:
     compliance:
       - regulation: "GDPR"
         relevance: "URL parameters may contain personal data requiring Article 6 lawful basis and Article 14 information duties"
-      - regulation: "ePrivacy"
-        relevance: "URL tracking parameters may require consent under electronic communications privacy rules"
-      - regulation: "CCPA"
-        relevance: "URL parameters containing personal information subject to consumer privacy rights and disclosure requirements"
 
-  - name: "php_cookie_access"
+  - name: "PHP Cookie Access"
     description: "PHP cookie access patterns"
     patterns:
       - "$_COOKIE["
@@ -50,12 +65,8 @@ rules:
     compliance:
       - regulation: "GDPR"
         relevance: "Cookies containing personal data require Article 6 lawful basis and Article 7 consent where applicable"
-      - regulation: "ePrivacy"
-        relevance: "Non-essential cookies require explicit user consent before storage or access under Cookie Law"
-      - regulation: "CCPA"
-        relevance: "Cookies used for tracking or containing personal information subject to consumer opt-out rights"
 
-  - name: "php_session_data"
+  - name: "PHP Session Data Access"
     description: "PHP session data patterns"
     patterns:
       - "$_SESSION["
@@ -67,10 +78,8 @@ rules:
     compliance:
       - regulation: "GDPR"
         relevance: "Session data processing requires Article 6 lawful basis and appropriate retention periods under Article 5"
-      - regulation: "ePrivacy"
-        relevance: "Session tracking mechanisms may require consent for electronic communications monitoring"
 
-  - name: "html_input_fields"
+  - name: "HTML Form Input Fields"
     description: "HTML form input field patterns"
     patterns:
       - 'name="'
@@ -84,10 +93,8 @@ rules:
     compliance:
       - regulation: "GDPR"
         relevance: "HTML forms collecting personal data require Article 13 information provision and Article 6 lawful basis"
-      - regulation: "CCPA"
-        relevance: "Form data collection must comply with consumer notice requirements and right to know categories of information collected"
 
-  - name: "javascript_storage"
+  - name: "JavaScript Client Storage"
     description: "JavaScript local storage and data access"
     patterns:
       - "localStorage"
@@ -102,10 +109,8 @@ rules:
         relevance: "Client-side storage of personal data requires Article 6 lawful basis and transparent information under Article 13"
       - regulation: "ePrivacy"
         relevance: "Browser storage mechanisms require consent when used for tracking or storing personal data"
-      - regulation: "CCPA"
-        relevance: "Local storage containing personal information subject to consumer access and deletion rights"
 
-  - name: "file_uploads"
+  - name: "File Upload Processing"
     description: "File upload processing patterns"
     patterns:
       - "$_FILES["
@@ -119,10 +124,8 @@ rules:
     compliance:
       - regulation: "GDPR"
         relevance: "File uploads may contain personal data requiring Article 6 lawful basis, data minimisation under Article 5, and secure processing under Article 32"
-      - regulation: "CCPA"
-        relevance: "Uploaded files containing personal information must comply with consumer rights to know, access, and delete personal information"
 
-  - name: "sql_database_queries"
+  - name: "SQL Database Queries"
     description: "SQL database query patterns for data retrieval and manipulation"
     patterns:
       - "SELECT"
@@ -148,12 +151,8 @@ rules:
     compliance:
       - regulation: "GDPR"
         relevance: "Database operations on personal data require Article 6 lawful basis, data accuracy under Article 5, and appropriate technical measures under Article 32"
-      - regulation: "CCPA"
-        relevance: "Database queries accessing personal information must support consumer rights to know, access, delete, and correct personal information"
-      - regulation: "SOX"
-        relevance: "Financial data queries require adequate internal controls and data integrity measures under Section 404"
 
-  - name: "database_connections"
+  - name: "Database Connections and ORM"
     description: "Database connection and ORM patterns"
     patterns:
       - "PDO::"
@@ -181,7 +180,3 @@ rules:
     compliance:
       - regulation: "GDPR"
         relevance: "Database connections accessing personal data must implement appropriate security measures under Article 32 and ensure lawful processing under Article 6"
-      - regulation: "CCPA"
-        relevance: "Database access to personal information requires adequate security and must support consumer privacy rights implementation"
-      - regulation: "SOX"
-        relevance: "Database connections handling financial data must maintain adequate internal controls and audit trails under Section 404"

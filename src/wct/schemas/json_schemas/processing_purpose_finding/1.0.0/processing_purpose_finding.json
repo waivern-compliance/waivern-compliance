@@ -75,6 +75,18 @@
               }
             },
             "required": ["source"]
+          },
+          "service_category": {
+            "type": ["string", "null"],
+            "description": "Service category from ServiceIntegrationRule (when applicable)"
+          },
+          "collection_type": {
+            "type": ["string", "null"],
+            "description": "Collection type from DataCollectionRule (when applicable)"
+          },
+          "data_source": {
+            "type": ["string", "null"],
+            "description": "Data source from DataCollectionRule (when applicable)"
           }
         },
         "required": ["purpose", "purpose_category", "risk_level", "compliance", "matched_pattern", "evidence", "metadata"],

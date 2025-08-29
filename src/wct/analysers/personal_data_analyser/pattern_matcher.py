@@ -81,6 +81,7 @@ class PersonalDataPatternMatcher:
 
                         finding = PersonalDataFindingModel(
                             type=rule.name,
+                            data_type=rule.data_type,
                             risk_level=rule.risk_level,
                             special_category=rule.special_category,
                             matched_pattern=pattern,

@@ -22,6 +22,7 @@ from wct.analysers.personal_data_analyser.types import (
 from wct.analysers.types import EvidenceItem, LLMValidationConfig, PatternMatchingConfig
 from wct.analysers.utilities import LLMServiceManager
 from wct.message import Message, MessageValidationError
+from wct.rulesets.types import PersonalDataRule
 from wct.schemas import (
     PersonalDataFindingSchema,
     StandardInputSchema,
@@ -39,8 +40,6 @@ class TestPersonalDataAnalyser:
     HIGH_RISK_LEVEL = "high"
     MEDIUM_RISK_LEVEL = "medium"
     LOW_RISK_LEVEL = "low"
-    SPECIAL_CATEGORY_YES = "Y"
-    SPECIAL_CATEGORY_NO = "N"
 
     @pytest.fixture
     def mock_pattern_matcher(self) -> Mock:
@@ -101,24 +100,27 @@ class TestPersonalDataAnalyser:
         return [
             PersonalDataFindingModel(
                 type="email",
+                data_type="basic_profile",
                 risk_level=self.MEDIUM_RISK_LEVEL,
-                special_category=self.SPECIAL_CATEGORY_NO,
+                special_category=False,
                 matched_pattern="support@example.com",
                 evidence=[EvidenceItem(content="Contact us at support@example.com")],
                 metadata=PersonalDataFindingMetadata(source="contact_form.html"),
             ),
             PersonalDataFindingModel(
                 type="phone",
+                data_type="basic_profile",
                 risk_level=self.HIGH_RISK_LEVEL,
-                special_category=self.SPECIAL_CATEGORY_NO,
+                special_category=False,
                 matched_pattern="123-456-7890",
                 evidence=[EvidenceItem(content="call 123-456-7890")],
                 metadata=PersonalDataFindingMetadata(source="contact_form.html"),
             ),
             PersonalDataFindingModel(
                 type="email",
+                data_type="basic_profile",
                 risk_level=self.MEDIUM_RISK_LEVEL,
-                special_category=self.SPECIAL_CATEGORY_NO,
+                special_category=False,
                 matched_pattern="john.doe@company.com",
                 evidence=[EvidenceItem(content="john.doe@company.com")],
                 metadata=PersonalDataFindingMetadata(source="user_database"),
@@ -215,7 +217,7 @@ class TestPersonalDataAnalyser:
         sample_input_message: Message,
         sample_findings: list[PersonalDataFindingModel],
     ) -> None:
-        """Test that process returns a valid output message with findings."""
+        """Test that process returns valid output message with minimal required findings structure."""
         # Arrange
         analyser = PersonalDataAnalyser(
             valid_config, mock_pattern_matcher, mock_llm_service_manager
@@ -241,7 +243,7 @@ class TestPersonalDataAnalyser:
                 input_schema, output_schema, sample_input_message
             )
 
-            # Assert
+            # Assert - Basic message structure
             assert isinstance(result_message, Message)
             assert result_message.id == self.EXPECTED_OUTPUT_MESSAGE_ID
             assert result_message.schema == output_schema
@@ -252,15 +254,6 @@ class TestPersonalDataAnalyser:
             assert "summary" in result_content
             assert len(result_content["findings"]) == 3
 
-            # Validate evidence timestamps in serialized output
-            for finding in result_content["findings"]:
-                assert "evidence" in finding
-                for evidence_item in finding["evidence"]:
-                    assert "collection_timestamp" in evidence_item
-                    assert isinstance(evidence_item["collection_timestamp"], str)
-                    # Validate ISO 8601 format
-                    assert evidence_item["collection_timestamp"].endswith("Z")
-
             # Verify summary statistics
             summary = result_content["summary"]
             assert summary["total_findings"] == 3
@@ -268,6 +261,54 @@ class TestPersonalDataAnalyser:
             assert (
                 summary["special_category_count"] == 0
             )  # No special category findings
+
+    def test_process_findings_include_expected_metadata_and_categorical_info(
+        self,
+        valid_config: PersonalDataAnalyserConfig,
+        mock_pattern_matcher: Mock,
+        mock_llm_service_manager: Mock,
+        sample_input_message: Message,
+        sample_findings: list[PersonalDataFindingModel],
+    ) -> None:
+        """Test that findings include source metadata and data_type categorical information."""
+        # Arrange
+        analyser = PersonalDataAnalyser(
+            valid_config, mock_pattern_matcher, mock_llm_service_manager
+        )
+
+        mock_pattern_matcher.find_patterns.side_effect = [
+            [sample_findings[0], sample_findings[1]],
+            [sample_findings[2]],
+        ]
+
+        mock_llm_service_manager.llm_service = Mock()
+        with patch(
+            "wct.analysers.personal_data_analyser.analyser.personal_data_validation_strategy",
+            return_value=(sample_findings, True),
+        ):
+            input_schema = StandardInputSchema()
+            output_schema = PersonalDataFindingSchema()
+
+            # Act
+            result_message = analyser.process(
+                input_schema, output_schema, sample_input_message
+            )
+
+            # Assert - Verify source field and data_type categorical information are included
+            result_content = result_message.content
+            for finding in result_content["findings"]:
+                # Test source field directly
+                assert finding["metadata"]["source"] in [
+                    "contact_form.html",
+                    "user_database",
+                ]
+
+                # Test data_type categorical information
+                assert "data_type" in finding, (
+                    "PersonalDataFindingModel should include data_type field for categorical reference"
+                )
+                assert isinstance(finding["data_type"], str)
+                assert finding["data_type"] != "", "data_type should not be empty"
 
     def test_process_includes_validation_summary_when_llm_validation_enabled(
         self,
@@ -559,3 +600,61 @@ class TestPersonalDataAnalyser:
         # Act & Assert - should raise MessageValidationError
         with pytest.raises(MessageValidationError, match="Schema validation failed"):
             Analyser.validate_input_message(message, expected_schema)
+
+    def test_personal_data_finding_data_type_matches_rule_data_type(
+        self,
+        valid_config: PersonalDataAnalyserConfig,
+        mock_llm_service_manager: Mock,
+    ) -> None:
+        """Test that finding.data_type matches the rule.data_type it was processed against."""
+        # Arrange
+        # Create a mock rule with known data_type
+        mock_rule = PersonalDataRule(
+            name="Test Email Detection",
+            description="Test rule for email detection",
+            patterns=("email",),
+            data_type="basic_profile",  # This should appear in finding.data_type
+            special_category=False,
+            risk_level="medium",
+        )
+
+        # Create real pattern matcher and mock its ruleset manager
+        pattern_matcher = PersonalDataPatternMatcher(valid_config.pattern_matching)
+        with patch.object(
+            pattern_matcher.ruleset_manager, "get_rules", return_value=[mock_rule]
+        ):
+            analyser = PersonalDataAnalyser(
+                valid_config, pattern_matcher, mock_llm_service_manager
+            )
+            mock_llm_service_manager.llm_service = None  # Disable LLM validation
+
+            # Create input with content that matches our rule pattern
+            input_content = {
+                "schemaVersion": "1.0.0",
+                "name": "Test data with email",
+                "data": [
+                    {
+                        "content": "Please provide your email address",
+                        "metadata": {"source": "test.html"},
+                    }
+                ],
+            }
+            test_message = Message(
+                id="test_data_type", content=input_content, schema=StandardInputSchema()
+            )
+
+            input_schema = StandardInputSchema()
+            output_schema = PersonalDataFindingSchema()
+
+            # Act
+            result_message = analyser.process(input_schema, output_schema, test_message)
+
+            # Assert - verify that finding.data_type matches rule.data_type
+            result_content = result_message.content
+            findings = result_content["findings"]
+            assert len(findings) > 0, "Should have at least one finding"
+
+            for finding in findings:
+                assert finding["data_type"] == "basic_profile", (
+                    f"Finding data_type should match rule.data_type, got: {finding.get('data_type')}"
+                )

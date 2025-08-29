@@ -56,6 +56,9 @@ class PersonalDataFindingModel(BaseModel):
     type: str = Field(
         description="Type of personal data found (e.g., 'email', 'phone_number')"
     )
+    data_type: str = Field(
+        description="Categorical data type identifier from GDPR classification (e.g., 'basic_profile', 'health_data')"
+    )
     risk_level: str = Field(description="Risk assessment level (low, medium, high)")
     special_category: bool = Field(
         default=False,

@@ -194,7 +194,18 @@
   ],
   "summary": {
     "total_findings": 4,
-    "purposes_identified": 4
+    "purposes_identified": 4,
+    "high_risk_count": 0,
+    "purpose_categories": {
+      "AI_AND_ML": 1,
+      "OPERATIONAL": 2,
+      "SECURITY_AND_FRAUD_PREVENTION": 1
+    },
+    "risk_level_distribution": {
+      "low": 1,
+      "medium": 3,
+      "high": 0
+    }
   },
   "analysis_metadata": {
     "ruleset_used": "processing_purpose",

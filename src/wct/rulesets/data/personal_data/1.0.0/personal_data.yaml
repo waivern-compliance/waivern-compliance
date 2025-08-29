@@ -5,9 +5,43 @@ name: "personal_data"
 version: "1.0.0"
 description: "Ruleset for detecting personal data patterns including GDPR Article 9 special categories"
 
+# Master list of valid personal data type categories based on GDPR requirements
+data_type_categories:
+  - "basic_profile"
+  - "account_data"
+  - "payment_data"
+  - "financial_data"
+  - "behavioral_event_data"
+  - "technical_device_and_network_data"
+  - "inferred_profile_data"
+  - "user_enriched_profile_data"
+  - "location_data"
+  - "user_generated_content"
+  - "accurate_location"
+  - "health_data"
+  - "political_data"
+  - "racial_ethnic_data"
+  - "religious_philosophical_data"
+  - "genetic_data"
+  - "biometric_data"
+  - "sexual_orientation_data"
+  - "date_of_birth"
+
+# Subset of data_type_categories that are GDPR Article 9 special category types
+special_category_types:
+  - "accurate_location"
+  - "health_data"
+  - "political_data"
+  - "racial_ethnic_data"
+  - "religious_philosophical_data"
+  - "genetic_data"
+  - "biometric_data"
+  - "sexual_orientation_data"
+
 rules:
-  - name: "basic_profile"
+  - name: "Basic Profile Information"
     description: "Basic identifying information about individuals"
+    data_type: "basic_profile"
     patterns:
       - "first_name"
       - "last_name"
@@ -69,8 +103,9 @@ rules:
       - regulation: "EU_AI_ACT"
         relevance: "Personal data used in AI systems requiring compliance with data governance requirements"
 
-  - name: "account_data"
+  - name: "Account and Subscription Data"
     description: "Account and subscription related data"
+    data_type: "account_data"
     patterns:
       - "subscriptions"
       - "memberships"
@@ -92,8 +127,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Personal data processing requires lawful basis under Article 6"
 
-  - name: "payment_data"
+  - name: "Payment and Billing Information"
     description: "Payment and billing information"
+    data_type: "payment_data"
     patterns:
       - "payments"
       - "invoices"
@@ -114,8 +150,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Financial data processing under Article 6, contractual necessity"
 
-  - name: "financial_data"
+  - name: "Financial Identifiers and Data"
     description: "Financial identifiers and sensitive financial information"
+    data_type: "financial_data"
     patterns:
       - "financial_data"
       - "bank_accounts"
@@ -154,8 +191,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Financial data processing under Article 6, special attention to automated decision-making"
 
-  - name: "behavioral_event_data"
+  - name: "User Behavioral and Interaction Data"
     description: "User behavioral and interaction data"
+    data_type: "behavioral_event_data"
     patterns:
       - "user_events"
       - "activity_logs"
@@ -186,8 +224,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Behavioural data processing under Article 6, profiling considerations under Article 22"
 
-  - name: "technical_device_and_network_data"
+  - name: "Technical Device and Network Data"
     description: "Technical device and network identifiers"
+    data_type: "technical_device_and_network_data"
     patterns:
       - "user_devices"
       - "device_info"
@@ -228,8 +267,9 @@ rules:
       - regulation: "ePrivacy"
         relevance: "Electronic communications metadata and terminal equipment information requiring consent"
 
-  - name: "inferred_profile_data"
+  - name: "Inferred Profile Data"
     description: "Algorithmically inferred or predicted user characteristics"
+    data_type: "inferred_profile_data"
     patterns:
       - "predicted"
       - "inferred"
@@ -244,8 +284,9 @@ rules:
       - regulation: "EU_AI_ACT"
         relevance: "AI-generated profiles and inferences subject to high-risk AI system requirements"
 
-  - name: "user_enriched_profile_data"
+  - name: "User-Declared Preferences and Interests"
     description: "User-declared preferences and interests"
+    data_type: "user_enriched_profile_data"
     patterns:
       - "interests"
       - "preferences"
@@ -257,8 +298,9 @@ rules:
       - regulation: "GDPR"
         relevance: "User-provided personal data requiring lawful basis under Article 6"
 
-  - name: "location_data"
+  - name: "General Location Information"
     description: "General location information"
+    data_type: "location_data"
     patterns:
       - "locations"
       - "addresses"
@@ -292,8 +334,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Location data processing under Article 6, potential special category considerations"
 
-  - name: "user_generated_content"
+  - name: "User-Generated Content"
     description: "Content created by users"
+    data_type: "user_generated_content"
     patterns:
       - "comment"
       - "review"
@@ -305,8 +348,9 @@ rules:
       - regulation: "GDPR"
         relevance: "User-generated content as personal data under Article 6 processing requirements"
 
-  - name: "accurate_location"
+  - name: "Precise Location Data (Article 9)"
     description: "Precise location data (GDPR Article 9 special category)"
+    data_type: "accurate_location"
     patterns:
       - "gps_data"
       - "precise_locations"
@@ -337,8 +381,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Precise location data may constitute special category data requiring Article 9 compliance"
 
-  - name: "health_data"
+  - name: "Health and Medical Data (Article 9)"
     description: "Health and medical information (GDPR Article 9 special category)"
+    data_type: "health_data"
     patterns:
       - "health"
       - "medical"
@@ -353,8 +398,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Health data as special category under Article 9 requiring explicit consent or legal basis"
 
-  - name: "political_data"
+  - name: "Political Opinions Data (Article 9)"
     description: "Political opinions and trade union membership (GDPR Article 9 special category)"
+    data_type: "political_data"
     patterns:
       - "political"
       - "trade_union"
@@ -365,8 +411,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Political opinions as special category data under Article 9 requiring explicit consent"
 
-  - name: "racial_ethnic_data"
+  - name: "Racial or Ethnic Origin Data (Article 9)"
     description: "Racial or ethnic origin data (GDPR Article 9 special category)"
+    data_type: "racial_ethnic_data"
     patterns:
       - "race"
       - "ethnic"
@@ -378,8 +425,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Racial/ethnic origin as special category data under Article 9 requiring explicit consent"
 
-  - name: "religious_philosophical_data"
+  - name: "Religious or Philosophical Beliefs (Article 9)"
     description: "Religious or philosophical beliefs (GDPR Article 9 special category)"
+    data_type: "religious_philosophical_data"
     patterns:
       - "religion"
       - "belief"
@@ -391,8 +439,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Religious/philosophical beliefs as special category data under Article 9 requiring explicit consent"
 
-  - name: "genetic_data"
+  - name: "Genetic Information (Article 9)"
     description: "Genetic information (GDPR Article 9 special category)"
+    data_type: "genetic_data"
     patterns:
       - "genetic"
       - "dna"
@@ -404,8 +453,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Genetic data as special category under Article 9 requiring explicit consent and high protection"
 
-  - name: "biometric_data"
+  - name: "Biometric Identifiers (Article 9)"
     description: "Biometric identifiers (GDPR Article 9 special category)"
+    data_type: "biometric_data"
     patterns:
       - "biometric"
       - "fingerprint"
@@ -421,8 +471,9 @@ rules:
       - regulation: "EU_AI_ACT"
         relevance: "Biometric identification systems prohibited in public spaces under Article 5"
 
-  - name: "sexual_orientation_data"
+  - name: "Sexual Orientation Data (Article 9)"
     description: "Sexual orientation and sex life data (GDPR Article 9 special category)"
+    data_type: "sexual_orientation_data"
     patterns:
       - "sexual"
       - "orientation"
@@ -434,8 +485,9 @@ rules:
       - regulation: "GDPR"
         relevance: "Sexual orientation data as special category under Article 9 requiring explicit consent"
 
-  - name: "date_of_birth"
+  - name: "Date of Birth and Age Information"
     description: "Birth date and age-related information"
+    data_type: "date_of_birth"
     patterns:
       - "birth_data"
       - "age_data"

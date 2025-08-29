@@ -1,8 +1,9 @@
 {
-  "schema_version": "1.0.0",
+  "schemaVersion": "1.0.0",
   "findings": [
     {
       "type": "email",
+      "data_type": "basic_profile",
       "risk_level": "medium",
       "special_category": false,
       "matched_pattern": "john.doe@company.com",
@@ -28,6 +29,7 @@
     },
     {
       "type": "phone_number",
+      "data_type": "basic_profile",
       "risk_level": "low",
       "special_category": false,
       "matched_pattern": "+1-555-123-4567",
@@ -52,6 +54,7 @@
     },
     {
       "type": "health_condition",
+      "data_type": "health_data",
       "risk_level": "high",
       "special_category": true,
       "matched_pattern": "diabetes",
@@ -76,6 +79,7 @@
     },
     {
       "type": "ethnic_origin",
+      "data_type": "special_category",
       "risk_level": "high",
       "special_category": true,
       "matched_pattern": "ethnicity: Hispanic",
@@ -100,6 +104,7 @@
     },
     {
       "type": "ssn",
+      "data_type": "government_id",
       "risk_level": "high",
       "special_category": false,
       "matched_pattern": "123-45-6789",
@@ -124,6 +129,7 @@
     },
     {
       "type": "credit_card",
+      "data_type": "financial_data",
       "risk_level": "medium",
       "special_category": false,
       "matched_pattern": "4532-****-****-1234",

@@ -87,6 +87,7 @@ class TestPersonalDataRule:
             name="email_rule",
             description="Email detection rule",
             patterns=("email", "e_mail"),
+            data_type="basic_profile",
             special_category=False,
             risk_level="medium",
         )
@@ -102,6 +103,7 @@ class TestPersonalDataRule:
             name="basic_rule",
             description="Basic rule",
             patterns=("test",),
+            data_type="basic_profile",
             risk_level="low",
         )
 

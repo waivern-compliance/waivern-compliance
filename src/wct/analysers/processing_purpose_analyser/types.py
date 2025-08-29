@@ -69,6 +69,18 @@ class ProcessingPurposeFindingModel(BaseModel):
     metadata: ProcessingPurposeFindingMetadata | None = Field(
         default=None, description="Additional metadata about the finding"
     )
+    service_category: str | None = Field(
+        default=None,
+        description="Service category from ServiceIntegrationRule (when applicable)",
+    )
+    collection_type: str | None = Field(
+        default=None,
+        description="Collection type from DataCollectionRule (when applicable)",
+    )
+    data_source: str | None = Field(
+        default=None,
+        description="Data source from DataCollectionRule (when applicable)",
+    )
 
     @field_validator("risk_level")
     @classmethod

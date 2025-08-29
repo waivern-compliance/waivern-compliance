@@ -147,7 +147,8 @@ class PersonalDataAnalyser(Analyser):
         """
         # Convert models to dicts for final output
         validated_findings_dicts = [
-            finding.model_dump(mode="json") for finding in validated_findings
+            finding.model_dump(mode="json", exclude_none=True)
+            for finding in validated_findings
         ]
 
         result_data: dict[str, Any] = {

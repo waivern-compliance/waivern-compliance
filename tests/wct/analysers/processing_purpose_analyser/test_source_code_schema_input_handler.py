@@ -53,7 +53,6 @@ class TestSourceCodeSchemaInputHandler:
             file_size=1024,
             line_count=50,
             last_modified="2024-01-01T00:00:00Z",
-            complexity_score=3.5,
         )
 
     @pytest.fixture
@@ -130,66 +129,103 @@ class CustomerService {
         )
 
     @pytest.fixture
-    def ml_service_file_data(
+    def service_integration_file_data(
         self, sample_file_metadata: SourceCodeFileMetadataModel
     ) -> SourceCodeFileDataModel:
-        """Create file data with machine learning and service integration patterns."""
+        """Create file data with actual service integration patterns from ruleset."""
         return SourceCodeFileDataModel(
-            file_path="/src/MLAnalyticsService.php",
+            file_path="/src/CloudStorageService.php",
             language="php",
             raw_content="""<?php
-require_once 'vendor/google/cloud-ml/autoload.php';
-use Google\\Cloud\\MachineLearning\\V1\\MLServiceClient;
+require_once 'vendor/aws/aws-sdk-php/src/functions.php';
 
-class MLAnalyticsService {
-    public function trainModel($trainingData) {
-        // Machine learning model training
-        $client = new MLServiceClient();
-        return $client->createModel($trainingData);
+class CloudStorageService {
+    public function uploadToAWS($file) {
+        // Upload file to amazon s3 storage
+        $client = new S3Client();
+        return $client->upload($file);
     }
 
-    public function trackAnalytics($userData) {
-        // Track user analytics for insights
-        $this->analyticsClient->track($userData);
+    public function uploadToDropbox($message) {
+        // Upload to dropbox cloud storage
+        $this->dropbox->upload($message);
     }
 }
 """,
             metadata=sample_file_metadata,
             functions=[
                 SourceCodeFunctionModel(
-                    name="trainModel",
-                    line_start=6,
-                    line_end=10,
+                    name="uploadToAWS",
+                    line_start=5,
+                    line_end=9,
                     parameters=[],
                     visibility="public",
                 ),
                 SourceCodeFunctionModel(
-                    name="trackAnalytics",
-                    line_start=12,
-                    line_end=15,
+                    name="uploadToDropbox",
+                    line_start=11,
+                    line_end=14,
                     parameters=[],
                     visibility="public",
                 ),
             ],
             classes=[
                 SourceCodeClassModel(
-                    name="MLAnalyticsService",
-                    line_start=5,
-                    line_end=16,
+                    name="CloudStorageService",
+                    line_start=4,
+                    line_end=15,
                 ),
             ],
             imports=[
                 SourceCodeImportModel(
-                    module="vendor/google/cloud-ml/autoload.php",
+                    module="vendor/aws/aws-sdk-php/src/functions.php",
                     line=2,
                     type="require_once",
                 ),
-                SourceCodeImportModel(
-                    module="Google\\Cloud\\MachineLearning\\V1\\MLServiceClient",
-                    line=3,
-                    type="use",
+            ],
+        )
+
+    @pytest.fixture
+    def data_collection_file_data(
+        self, sample_file_metadata: SourceCodeFileMetadataModel
+    ) -> SourceCodeFileDataModel:
+        """Create file data with actual data collection patterns from ruleset."""
+        return SourceCodeFileDataModel(
+            file_path="/src/UserFormHandler.php",
+            language="php",
+            raw_content="""<?php
+class UserFormHandler {
+    public function processForm() {
+        // Collect form data via POST
+        $userData = $_POST['user_data'];
+        $userId = $_GET['user_id'];
+
+        // Access cookies for session
+        $sessionId = $_COOKIE['session_id'];
+        setcookie('user_pref', $userData);
+
+        return $userData;
+    }
+}
+""",
+            metadata=sample_file_metadata,
+            functions=[
+                SourceCodeFunctionModel(
+                    name="processForm",
+                    line_start=3,
+                    line_end=12,
+                    parameters=[],
+                    visibility="public",
                 ),
             ],
+            classes=[
+                SourceCodeClassModel(
+                    name="UserFormHandler",
+                    line_start=2,
+                    line_end=13,
+                ),
+            ],
+            imports=[],
         )
 
     def test_init_creates_handler_successfully(self) -> None:
@@ -294,7 +330,7 @@ class MLAnalyticsService {
         self,
         handler: SourceCodeSchemaInputHandler,
         simple_php_file_data: SourceCodeFileDataModel,
-        ml_service_file_data: SourceCodeFileDataModel,
+        service_integration_file_data: SourceCodeFileDataModel,
         sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
     ) -> None:
         """Test that analyse_source_code_data handles multiple files correctly."""
@@ -306,7 +342,7 @@ class MLAnalyticsService {
             language="php",
             source="source_code",
             metadata=sample_analysis_metadata,
-            data=[simple_php_file_data, ml_service_file_data],
+            data=[simple_php_file_data, service_integration_file_data],
         )
 
         # Act
@@ -480,3 +516,111 @@ class EmptyClass {
                     and len(evidence_item.content) > 0
                 )
                 assert evidence_item.collection_timestamp is not None
+
+    def test_service_integration_findings_include_service_category(
+        self,
+        handler: SourceCodeSchemaInputHandler,
+        service_integration_file_data: SourceCodeFileDataModel,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+    ) -> None:
+        """Test that findings from ServiceIntegrationRule include service_category field.
+
+        This test verifies that when the SourceCodeSchemaInputHandler creates findings
+        from ServiceIntegrationRule patterns, the resulting ProcessingPurposeFindingModel
+        includes the service_category from the rule.
+        """
+        # Arrange
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Service integration test",
+            description="Test service integration categorical data",
+            language="php",
+            source="source_code",
+            metadata=sample_analysis_metadata,
+            data=[service_integration_file_data],
+        )
+
+        # Act
+        findings = handler.analyse_source_code_data(source_data)
+
+        # Assert
+        # Filter for findings that came from ServiceIntegrationRule using exact patterns
+        service_integration_findings = [
+            f
+            for f in findings
+            if f.matched_pattern.lower() in ["aws", "dropbox", "amazon"]
+        ]
+
+        assert len(service_integration_findings) > 0, (
+            "Expected at least one service integration finding"
+        )
+
+        for finding in service_integration_findings:
+            # TDD: This will fail until we implement service_category
+            assert hasattr(finding, "service_category"), (
+                "Finding should have service_category field from ServiceIntegrationRule"
+            )
+            assert isinstance(finding.service_category, str), (
+                "service_category should be a string"
+            )
+            assert len(finding.service_category) > 0, (
+                "service_category should not be empty"
+            )
+
+    def test_data_collection_findings_include_collection_type_and_data_source(
+        self,
+        handler: SourceCodeSchemaInputHandler,
+        data_collection_file_data: SourceCodeFileDataModel,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+    ) -> None:
+        """Test that findings from DataCollectionRule include collection_type and data_source fields.
+
+        This test verifies that when the SourceCodeSchemaInputHandler creates findings
+        from DataCollectionRule patterns, the resulting ProcessingPurposeFindingModel
+        includes both collection_type and data_source from the rule.
+        """
+        # Arrange
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Data collection test",
+            description="Test data collection categorical data",
+            language="php",
+            source="source_code",
+            metadata=sample_analysis_metadata,
+            data=[data_collection_file_data],
+        )
+
+        # Act
+        findings = handler.analyse_source_code_data(source_data)
+
+        # Assert
+        # Filter for findings that came from DataCollectionRule using exact patterns
+        data_collection_findings = [
+            f
+            for f in findings
+            if f.matched_pattern in ["$_POST[", "$_GET[", "$_COOKIE[", "setcookie("]
+        ]
+
+        assert len(data_collection_findings) > 0, (
+            "Expected at least one data collection finding"
+        )
+
+        for finding in data_collection_findings:
+            # TDD: These will fail until we implement collection_type and data_source
+            assert hasattr(finding, "collection_type"), (
+                "Finding should have collection_type field from DataCollectionRule"
+            )
+            assert isinstance(finding.collection_type, str), (
+                "collection_type should be a string"
+            )
+            assert len(finding.collection_type) > 0, (
+                "collection_type should not be empty"
+            )
+
+            assert hasattr(finding, "data_source"), (
+                "Finding should have data_source field from DataCollectionRule"
+            )
+            assert isinstance(finding.data_source, str), (
+                "data_source should be a string"
+            )
+            assert len(finding.data_source) > 0, "data_source should not be empty"
