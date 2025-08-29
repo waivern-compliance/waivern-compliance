@@ -14,9 +14,11 @@ Available schemas:
 - SourceCodeSchema: Source code analysis format
 - PersonalDataFindingSchema: Personal data analysis results
 - ProcessingPurposeFindingSchema: GDPR processing purpose results
+- DataSubjectFindingSchema: Data subject classification results
 """
 
 from .base import JsonSchemaLoader, Schema, SchemaLoader, SchemaLoadError
+from .data_subject_finding import DataSubjectFindingSchema
 from .personal_data_finding import PersonalDataFindingSchema
 from .processing_purpose_finding import ProcessingPurposeFindingSchema
 from .source_code import (
@@ -52,6 +54,7 @@ __all__ = [
     "SourceCodeSchema",
     "PersonalDataFindingSchema",
     "ProcessingPurposeFindingSchema",
+    "DataSubjectFindingSchema",
     "StandardInputDataModel",
     "StandardInputDataItemModel",
     "BaseMetadata",
