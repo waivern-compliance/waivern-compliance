@@ -278,7 +278,7 @@ class SourceCodeSchemaInputHandler:
 
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
-            purpose_category="OPERATIONAL",  # DataCollectionRule doesn't have purpose_category
+            purpose_category="operational",  # DataCollectionRule doesn't have purpose_category
             risk_level=rule.risk_level,
             compliance=compliance_data,
             matched_pattern=matched_pattern,

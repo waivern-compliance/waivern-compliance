@@ -119,12 +119,12 @@ class TestProcessingPurposeRule:
             name="analytics_rule",
             description="Analytics processing rule",
             patterns=("analytics", "tracking"),
-            purpose_category="ANALYTICS",
+            purpose_category="analytics",
             risk_level="medium",
         )
 
         assert rule.name == "analytics_rule"
-        assert rule.purpose_category == "ANALYTICS"
+        assert rule.purpose_category == "analytics"
         assert rule.risk_level == "medium"
 
 

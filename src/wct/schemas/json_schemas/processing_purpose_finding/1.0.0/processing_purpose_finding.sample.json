@@ -2,7 +2,7 @@
   "findings": [
     {
       "purpose": "Artificial Intelligence Compliance Management",
-      "purpose_category": "AI_AND_ML",
+      "purpose_category": "ai_and_ml",
       "risk_level": "low",
       "compliance": [
         {
@@ -42,7 +42,7 @@
     },
     {
       "purpose": "User Identity and Login Management",
-      "purpose_category": "OPERATIONAL",
+      "purpose_category": "operational",
       "risk_level": "medium",
       "compliance": [
         {
@@ -74,7 +74,7 @@
     },
     {
       "purpose": "Behavioral Data Analysis for Product Improvement",
-      "purpose_category": "ANALYTICS",
+      "purpose_category": "analytics",
       "risk_level": "high",
       "compliance": [
         {
@@ -114,7 +114,7 @@
     },
     {
       "purpose": "Dynamic Personalization of Products and Services",
-      "purpose_category": "MARKETING_AND_ADVERTISING",
+      "purpose_category": "marketing_and_advertising",
       "risk_level": "high",
       "compliance": [
         {
@@ -154,7 +154,7 @@
     },
     {
       "purpose": "Security, Fraud Prevention, and Abuse Detection",
-      "purpose_category": "SECURITY",
+      "purpose_category": "security",
       "risk_level": "low",
       "compliance": [
         {
@@ -197,9 +197,9 @@
     "purposes_identified": 4,
     "high_risk_count": 0,
     "purpose_categories": {
-      "AI_AND_ML": 1,
-      "OPERATIONAL": 2,
-      "SECURITY_AND_FRAUD_PREVENTION": 1
+      "ai_and_ml": 1,
+      "operational": 2,
+      "security": 1
     },
     "risk_level_distribution": {
       "low": 1,

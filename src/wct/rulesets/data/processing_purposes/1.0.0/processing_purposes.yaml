@@ -4,17 +4,17 @@ description: "Known processing purposes to search for during analysis. This rule
 
 # Master list of all valid purpose categories
 purpose_categories:
-  - "AI_AND_ML"
-  - "ANALYTICS"
-  - "MARKETING_AND_ADVERTISING"
-  - "OPERATIONAL"
-  - "SECURITY"
+  - "ai_and_ml"
+  - "analytics"
+  - "marketing_and_advertising"
+  - "operational"
+  - "security"
 
 # Subset of purpose_categories considered privacy-sensitive
 sensitive_categories:
-  - "AI_AND_ML"
-  - "ANALYTICS"
-  - "MARKETING_AND_ADVERTISING"
+  - "ai_and_ml"
+  - "analytics"
+  - "marketing_and_advertising"
 
 rules:
   # ===== AI AND ML PURPOSES =====
@@ -39,7 +39,7 @@ rules:
       - "snorkel ai"
       - "kubeflow"
       - "feast"
-    purpose_category: "AI_AND_ML"
+    purpose_category: "ai_and_ml"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
@@ -71,7 +71,7 @@ rules:
       - "credo ai"
       - "aws sagemaker clarify"
       - "parity ai"
-    purpose_category: "AI_AND_ML"
+    purpose_category: "ai_and_ml"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
@@ -102,7 +102,7 @@ rules:
       - "cohere"
       - "scale ai"
       - "labelbox"
-    purpose_category: "AI_AND_ML"
+    purpose_category: "ai_and_ml"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -127,7 +127,7 @@ rules:
       - "helm"
       - "big-bench"
       - "decoding trust benchmark"
-    purpose_category: "AI_AND_ML"
+    purpose_category: "ai_and_ml"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -156,7 +156,7 @@ rules:
       - "darktrace"
       - "synack"
       - "shellgpt"
-    purpose_category: "AI_AND_ML"
+    purpose_category: "ai_and_ml"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
@@ -194,7 +194,7 @@ rules:
       - "vanta"
       - "waivern"
       - "mineos"
-    purpose_category: "AI_AND_ML"
+    purpose_category: "ai_and_ml"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
@@ -220,7 +220,7 @@ rules:
       - "labrador"
       - "Stibo DX"
       - "Dr Publish"
-    purpose_category: "OPERATIONAL"
+    purpose_category: "operational"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
@@ -243,7 +243,7 @@ rules:
       - "salesforce servicecloud"
       - "helpscout"
       - "liveagent"
-    purpose_category: "OPERATIONAL"
+    purpose_category: "operational"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
@@ -259,7 +259,7 @@ rules:
       - "theme"
       - "ui"
       - "personalization"
-    purpose_category: "OPERATIONAL"
+    purpose_category: "operational"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"
@@ -332,7 +332,7 @@ rules:
       - "vipps sign-in"
       - "microsoft active directory"
       - "forgerock"
-    purpose_category: "OPERATIONAL"
+    purpose_category: "operational"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -377,7 +377,7 @@ rules:
       - "Chase Paymentech"
       - "Bank of America Merchant Services"
       - "Wells Fargo Merchant Services"
-    purpose_category: "OPERATIONAL"
+    purpose_category: "operational"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -417,7 +417,7 @@ rules:
       - "Tableau"
       - "SAS Analytics"
       - "IBM Watson Analytics"
-    purpose_category: "ANALYTICS"
+    purpose_category: "analytics"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
@@ -451,7 +451,7 @@ rules:
       - "OneSignal"
       - "Leanplum"
       - "Clevertap"
-    purpose_category: "MARKETING_AND_ADVERTISING"
+    purpose_category: "marketing_and_advertising"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
@@ -475,7 +475,7 @@ rules:
       - "sendgrid"
       - "mailjet"
       - "onesignal"
-    purpose_category: "MARKETING_AND_ADVERTISING"
+    purpose_category: "marketing_and_advertising"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -496,7 +496,7 @@ rules:
       - "tiktok"
       - "twitter"
       - "linkedin ads"
-    purpose_category: "MARKETING_AND_ADVERTISING"
+    purpose_category: "marketing_and_advertising"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
@@ -514,7 +514,7 @@ rules:
       - "google ads 360"
       - "tiktok"
       - "third-party advertisers"
-    purpose_category: "MARKETING_AND_ADVERTISING"
+    purpose_category: "marketing_and_advertising"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
@@ -538,7 +538,7 @@ rules:
       - "complyadvantage"
       - "veriff"
       - "feedzai"
-    purpose_category: "SECURITY"
+    purpose_category: "security"
     risk_level: "low"
     compliance:
       - regulation: "GDPR"

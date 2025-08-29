@@ -13,9 +13,9 @@ service_categories:
 
 # Master list of valid purpose categories for service integrations (maps to processing purposes)
 purpose_categories:
-  - "OPERATIONAL"
-  - "ANALYTICS"
-  - "MARKETING_AND_ADVERTISING"
+  - "operational"
+  - "analytics"
+  - "marketing_and_advertising"
 
 rules:
   # ===== CLOUD INFRASTRUCTURE SERVICES =====
@@ -34,7 +34,7 @@ rules:
       - "storage"
       - "upload"
     service_category: "cloud_infrastructure"
-    purpose_category: "OPERATIONAL"
+    purpose_category: "operational"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -56,7 +56,7 @@ rules:
       - "sms"
       - "notification"
     service_category: "communication"
-    purpose_category: "OPERATIONAL"
+    purpose_category: "operational"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -77,7 +77,7 @@ rules:
       - "authorization"
       - "identity"
     service_category: "identity_management"
-    purpose_category: "OPERATIONAL"
+    purpose_category: "operational"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
@@ -98,7 +98,7 @@ rules:
       - "adyen"
       - "charge"
     service_category: "payment_processing"
-    purpose_category: "OPERATIONAL"
+    purpose_category: "operational"
     risk_level: "high"
     compliance:
       - regulation: "GDPR"
@@ -118,7 +118,7 @@ rules:
       - "fullstory"
       - "logrocket"
     service_category: "user_analytics"
-    purpose_category: "ANALYTICS"
+    purpose_category: "analytics"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
@@ -138,7 +138,7 @@ rules:
       - "pinterest"
       - "social"
     service_category: "social_media"
-    purpose_category: "MARKETING_AND_ADVERTISING"
+    purpose_category: "marketing_and_advertising"
     risk_level: "medium"
     compliance:
       - regulation: "GDPR"
