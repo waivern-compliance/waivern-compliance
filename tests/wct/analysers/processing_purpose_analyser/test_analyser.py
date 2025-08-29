@@ -611,7 +611,6 @@ class PaymentService {
                 file_size=256,
                 line_count=8,
                 last_modified="2024-01-01T00:00:00Z",
-                complexity_score=2.0,
             ),
             functions=[],
             classes=[],
@@ -707,7 +706,6 @@ class PaymentService {
                 file_size=128,
                 line_count=4,
                 last_modified="2024-01-01T00:00:00Z",
-                complexity_score=1.0,
             ),
             functions=[],
             classes=[],
@@ -722,7 +720,6 @@ class PaymentService {
                 file_size=128,
                 line_count=4,
                 last_modified="2024-01-01T00:00:00Z",
-                complexity_score=1.0,
             ),
             functions=[],
             classes=[],
@@ -941,3 +938,149 @@ class TestProcessingPurposeAnalyserOutputValidation:
             purposes_identified = content["summary"]["purposes_identified"]
             assert purposes_identified <= findings_count
             assert purposes_identified >= 0
+
+    def test_null_values_omitted_from_json_output_standard_input(
+        self,
+        analyser: ProcessingPurposeAnalyser,
+        standard_input_schema: StandardInputSchema,
+        output_schema: ProcessingPurposeFindingSchema,
+        test_message: Message,
+    ) -> None:
+        """Test that null values are omitted from JSON output for standard input (all three fields null)."""
+        # Act
+        result = analyser.process(standard_input_schema, output_schema, test_message)
+
+        # Assert - check that findings don't contain null fields
+        content = result.content
+        findings = content["findings"]
+
+        for finding in findings:
+            # These fields should not be present in the output when they are null
+            assert "service_category" not in finding
+            assert "collection_type" not in finding
+            assert "data_source" not in finding
+
+    def test_null_values_omitted_from_json_output_service_integration(
+        self,
+        analyser: ProcessingPurposeAnalyser,
+        output_schema: ProcessingPurposeFindingSchema,
+    ) -> None:
+        """Test that null values are omitted for ServiceIntegrationRule (service_category populated, others null)."""
+        # Arrange - create source code with service integration pattern
+        source_code_schema = SourceCodeSchema()
+        file_data = SourceCodeFileDataModel(
+            file_path="/src/PaymentService.php",
+            language="php",
+            raw_content="<?php $aws_s3 = new AmazonS3Client();",  # Triggers service integration rule
+            metadata=SourceCodeFileMetadataModel(
+                file_size=50,
+                line_count=1,
+                last_modified="2024-01-01T00:00:00Z",
+            ),
+            functions=[],
+            classes=[],
+            imports=[],
+        )
+
+        data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Service integration test",
+            description="Test service integration rule",
+            language="php",
+            source="source_code",
+            metadata=SourceCodeAnalysisMetadataModel(
+                total_files=1,
+                total_lines=1,
+                analysis_timestamp="2024-01-01T00:00:00Z",
+                parser_version="1.0.0",
+            ),
+            data=[file_data],
+        )
+
+        test_message = Message(
+            id="test_service_integration",
+            content=data.model_dump(exclude_none=True),
+            schema=source_code_schema,
+        )
+
+        # Act
+        result = analyser.process(source_code_schema, output_schema, test_message)
+
+        # Assert
+        content = result.content
+        findings = content["findings"]
+
+        # Should have findings from service integration rule
+        service_integration_findings = [f for f in findings if "service_category" in f]
+        assert len(service_integration_findings) > 0
+
+        for finding in service_integration_findings:
+            # service_category should be present and not null
+            assert "service_category" in finding
+            assert finding["service_category"] is not None
+            # collection_type and data_source should not be present (they would be null)
+            assert "collection_type" not in finding
+            assert "data_source" not in finding
+
+    def test_null_values_omitted_from_json_output_data_collection(
+        self,
+        analyser: ProcessingPurposeAnalyser,
+        output_schema: ProcessingPurposeFindingSchema,
+    ) -> None:
+        """Test that null values are omitted for DataCollectionRule (collection_type and data_source populated, service_category null)."""
+        # Arrange - create source code with data collection pattern
+        source_code_schema = SourceCodeSchema()
+        file_data = SourceCodeFileDataModel(
+            file_path="/src/FormHandler.php",
+            language="php",
+            raw_content="<?php $data = $_POST['email'];",  # Triggers data collection rule
+            metadata=SourceCodeFileMetadataModel(
+                file_size=30,
+                line_count=1,
+                last_modified="2024-01-01T00:00:00Z",
+            ),
+            functions=[],
+            classes=[],
+            imports=[],
+        )
+
+        data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Data collection test",
+            description="Test data collection rule",
+            language="php",
+            source="source_code",
+            metadata=SourceCodeAnalysisMetadataModel(
+                total_files=1,
+                total_lines=1,
+                analysis_timestamp="2024-01-01T00:00:00Z",
+                parser_version="1.0.0",
+            ),
+            data=[file_data],
+        )
+
+        test_message = Message(
+            id="test_data_collection",
+            content=data.model_dump(exclude_none=True),
+            schema=source_code_schema,
+        )
+
+        # Act
+        result = analyser.process(source_code_schema, output_schema, test_message)
+
+        # Assert
+        content = result.content
+        findings = content["findings"]
+
+        # Should have findings from data collection rule
+        data_collection_findings = [f for f in findings if "collection_type" in f]
+        assert len(data_collection_findings) > 0
+
+        for finding in data_collection_findings:
+            # collection_type and data_source should be present and not null
+            assert "collection_type" in finding
+            assert finding["collection_type"] is not None
+            assert "data_source" in finding
+            assert finding["data_source"] is not None
+            # service_category should not be present (it would be null)
+            assert "service_category" not in finding

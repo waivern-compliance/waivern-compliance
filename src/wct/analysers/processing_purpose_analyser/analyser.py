@@ -241,7 +241,8 @@ class ProcessingPurposeAnalyser(Analyser):
         """
         # Convert validated models to dicts for JSON output
         findings_dicts = [
-            finding.model_dump(mode="json") for finding in validated_findings
+            finding.model_dump(mode="json", exclude_none=True)
+            for finding in validated_findings
         ]
 
         # Create result data with validated findings

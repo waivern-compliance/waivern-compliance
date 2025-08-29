@@ -260,6 +260,7 @@ class SourceCodeSchemaInputHandler:
             metadata=ProcessingPurposeFindingMetadata(
                 source=file_metadata.source,
             ),
+            service_category=rule.service_category,
         )
 
     def _create_finding_from_data_collection_rule(
@@ -285,4 +286,6 @@ class SourceCodeSchemaInputHandler:
             metadata=ProcessingPurposeFindingMetadata(
                 source=file_metadata.source,
             ),
+            collection_type=rule.collection_type,
+            data_source=rule.data_source,
         )

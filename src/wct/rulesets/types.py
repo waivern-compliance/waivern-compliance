@@ -127,6 +127,7 @@ class ProcessingPurposesRulesetData(BaseRuleset[ProcessingPurposeRule]):
 class PersonalDataRule(BaseRule):
     """Personal data rule with GDPR categories."""
 
+    data_type: str = Field(description="Type of personal data this rule detects")
     special_category: bool = Field(
         default=False,
         description="Whether this is GDPR Article 9 special category data",
@@ -137,13 +138,40 @@ class PersonalDataRulesetData(BaseRuleset[PersonalDataRule]):
     """Personal data ruleset with GDPR Article 9 support."""
 
     # Ruleset-specific properties
-    data_types: list[str] = Field(
-        default_factory=list, description="Valid data types for this ruleset"
+    data_type_categories: list[str] = Field(
+        min_length=1,
+        description="Master list of valid personal data type categories based on GDPR requirements",
     )
-    special_categories: list[str] = Field(
+    special_category_types: list[str] = Field(
         default_factory=list,
-        description="GDPR Article 9 special category types",
+        description="Subset of data_type_categories that are GDPR Article 9 special category types",
     )
+
+    @field_validator("special_category_types")
+    @classmethod
+    def validate_special_categories_subset(
+        cls, v: list[str], info: ValidationInfo
+    ) -> list[str]:
+        """Ensure special_category_types is subset of data_type_categories."""
+        data_type_categories = info.data.get("data_type_categories", [])
+        invalid = [cat for cat in v if cat not in data_type_categories]
+        if invalid:
+            raise ValueError(
+                f"Special category types must be subset of data_type_categories. Invalid: {invalid}"
+            )
+        return v
+
+    @model_validator(mode="after")
+    def validate_rule_data_types(self) -> "PersonalDataRulesetData":
+        """Validate all rule data_type values against master list."""
+        valid_categories = set(self.data_type_categories)
+
+        for rule in self.rules:
+            if rule.data_type not in valid_categories:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid data_type '{rule.data_type}'. Valid: {valid_categories}"
+                )
+        return self
 
 
 class DataCollectionRule(BaseRule):
@@ -156,6 +184,31 @@ class DataCollectionRule(BaseRule):
 class DataCollectionRulesetData(BaseRuleset[DataCollectionRule]):
     """Data collection ruleset data model."""
 
+    # Ruleset-specific properties
+    collection_type_categories: list[str] = Field(
+        min_length=1, description="Master list of valid data collection type categories"
+    )
+    data_source_categories: list[str] = Field(
+        min_length=1, description="Master list of valid data source categories"
+    )
+
+    @model_validator(mode="after")
+    def validate_rule_categories(self) -> "DataCollectionRulesetData":
+        """Validate all rule collection_type and data_source values against master lists."""
+        valid_collection_types = set(self.collection_type_categories)
+        valid_data_sources = set(self.data_source_categories)
+
+        for rule in self.rules:
+            if rule.collection_type not in valid_collection_types:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid collection_type '{rule.collection_type}'. Valid: {valid_collection_types}"
+                )
+            if rule.data_source not in valid_data_sources:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid data_source '{rule.data_source}'. Valid: {valid_data_sources}"
+                )
+        return self
+
 
 class ServiceIntegrationRule(BaseRule):
     """Service integration rule with service category and purpose."""
@@ -166,3 +219,29 @@ class ServiceIntegrationRule(BaseRule):
 
 class ServiceIntegrationsRulesetData(BaseRuleset[ServiceIntegrationRule]):
     """Service integrations ruleset data model."""
+
+    # Ruleset-specific properties
+    service_categories: list[str] = Field(
+        min_length=1, description="Master list of valid service integration categories"
+    )
+    purpose_categories: list[str] = Field(
+        min_length=1,
+        description="Master list of valid purpose categories for service integrations",
+    )
+
+    @model_validator(mode="after")
+    def validate_rule_categories(self) -> "ServiceIntegrationsRulesetData":
+        """Validate all rule service_category and purpose_category values against master lists."""
+        valid_service_categories = set(self.service_categories)
+        valid_purpose_categories = set(self.purpose_categories)
+
+        for rule in self.rules:
+            if rule.service_category not in valid_service_categories:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid service_category '{rule.service_category}'. Valid: {valid_service_categories}"
+                )
+            if rule.purpose_category not in valid_purpose_categories:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid purpose_category '{rule.purpose_category}'. Valid: {valid_purpose_categories}"
+                )
+        return self

@@ -196,9 +196,6 @@
               "line_count": {
                 "type": "integer"
               },
-              "complexity_score": {
-                "type": "number"
-              },
               "last_modified": {
                 "type": "string",
                 "format": "date-time"

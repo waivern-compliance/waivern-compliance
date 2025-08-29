@@ -79,7 +79,6 @@ class SourceCodeFileMetadataModel(BaseModel):
     file_size: int
     line_count: int
     last_modified: str
-    complexity_score: float | None = None
 
 
 class SourceCodeFileDataModel(BaseModel):
