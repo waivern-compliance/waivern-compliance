@@ -77,7 +77,7 @@ rules:
 from pathlib import Path
 from typing import Final
 import yaml
-from wct.rulesets.base import Ruleset
+from wct.rulesets.base import AbstractRuleset
 from wct.rulesets.types import Rule, RulesetData
 
 _RULESET_DATA_VERSION: Final[str] = "1.0.0"

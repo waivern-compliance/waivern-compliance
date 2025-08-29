@@ -3,7 +3,7 @@
 import pytest
 
 from wct.rulesets.base import (
-    Ruleset,
+    AbstractRuleset,
     RulesetAlreadyRegisteredError,
     RulesetLoader,
     RulesetNotFoundError,
@@ -12,7 +12,7 @@ from wct.rulesets.base import (
 from wct.rulesets.types import ProcessingPurposeRule
 
 
-class ConcreteRuleset(Ruleset[ProcessingPurposeRule]):
+class ConcreteRuleset(AbstractRuleset[ProcessingPurposeRule]):
     """Concrete implementation of Ruleset for testing."""
 
     @property
@@ -44,7 +44,7 @@ class TestRulesetClass:
     def test_ruleset_get_rules_is_abstract(self):
         """Test that Ruleset.get_rules is an abstract method."""
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            Ruleset()  # type: ignore[abstract]
+            AbstractRuleset()  # type: ignore[abstract]
 
     def test_ruleset_initialisation_uses_name_property(self):
         """Test Ruleset initialisation uses name property."""
@@ -73,7 +73,7 @@ class TestRulesetClass:
     def test_ruleset_name_and_version_are_abstract(self):
         """Test that Ruleset.name and version are abstract properties."""
 
-        class IncompleteRuleset(Ruleset):
+        class IncompleteRuleset(AbstractRuleset):
             def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
                 return ()
 
@@ -168,7 +168,7 @@ class TestRulesetRegistry:
     def test_registry_prevents_duplicate_registration(self):
         """Test that registering the same name raises RulesetAlreadyRegisteredError."""
 
-        class AnotherRuleset(Ruleset[ProcessingPurposeRule]):
+        class AnotherRuleset(AbstractRuleset[ProcessingPurposeRule]):
             @property
             def name(self) -> str:
                 return "another_test"
@@ -230,7 +230,7 @@ class TestRulesetLoader:
     def test_load_ruleset_creates_instance_with_correct_name(self):
         """Test that load_ruleset creates ruleset instance with correct name."""
 
-        class NameTrackingRuleset(Ruleset[ProcessingPurposeRule]):
+        class NameTrackingRuleset(AbstractRuleset[ProcessingPurposeRule]):
             @property
             def name(self) -> str:
                 return "name_tracking"
@@ -288,7 +288,7 @@ class TestRulesetIntegration:
         """Test the complete workflow from registration to loading."""
 
         # Define a custom ruleset
-        class CustomRuleset(Ruleset[ProcessingPurposeRule]):
+        class CustomRuleset(AbstractRuleset[ProcessingPurposeRule]):
             @property
             def name(self) -> str:
                 return "custom_rules"
@@ -341,7 +341,7 @@ class TestRulesetIntegration:
     def test_ruleset_version_accessible_through_loader(self):
         """Test that ruleset version is accessible after loading."""
 
-        class VersionedRuleset(Ruleset[ProcessingPurposeRule]):
+        class VersionedRuleset(AbstractRuleset[ProcessingPurposeRule]):
             @property
             def name(self) -> str:
                 return "versioned_rules"

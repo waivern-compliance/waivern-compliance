@@ -11,7 +11,7 @@ from typing import Final, override
 
 import yaml
 
-from wct.rulesets.base import Ruleset
+from wct.rulesets.base import AbstractRuleset
 from wct.rulesets.types import DataCollectionRule, DataCollectionRulesetData
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "data_collection"
 
 
-class DataCollectionRuleset(Ruleset[DataCollectionRule]):
+class DataCollectionRuleset(AbstractRuleset[DataCollectionRule]):
     """Ruleset for detecting data collection patterns in source code."""
 
     def __init__(self) -> None:

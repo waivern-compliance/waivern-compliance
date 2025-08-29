@@ -54,7 +54,7 @@ class BaseRule(BaseModel):
         return patterns
 
 
-class BaseRuleset[RuleType: BaseRule](BaseModel):
+class RulesetData[RuleType: BaseRule](BaseModel):
     """Base ruleset class with minimal guaranteed properties."""
 
     name: str = Field(min_length=1, description="Canonical name of the ruleset")
@@ -85,7 +85,7 @@ class ProcessingPurposeRule(BaseRule):
     purpose_category: str = Field(description="Category of this processing purpose")
 
 
-class ProcessingPurposesRulesetData(BaseRuleset[ProcessingPurposeRule]):
+class ProcessingPurposesRulesetData(RulesetData[ProcessingPurposeRule]):
     """Processing purposes ruleset data model with category management."""
 
     # Ruleset-specific properties
@@ -134,7 +134,7 @@ class PersonalDataRule(BaseRule):
     )
 
 
-class PersonalDataRulesetData(BaseRuleset[PersonalDataRule]):
+class PersonalDataRulesetData(RulesetData[PersonalDataRule]):
     """Personal data ruleset with GDPR Article 9 support."""
 
     # Ruleset-specific properties
@@ -181,7 +181,7 @@ class DataCollectionRule(BaseRule):
     data_source: str = Field(description="Source of the data")
 
 
-class DataCollectionRulesetData(BaseRuleset[DataCollectionRule]):
+class DataCollectionRulesetData(RulesetData[DataCollectionRule]):
     """Data collection ruleset data model."""
 
     # Ruleset-specific properties
@@ -217,7 +217,7 @@ class ServiceIntegrationRule(BaseRule):
     purpose_category: str = Field(description="Purpose category for compliance")
 
 
-class ServiceIntegrationsRulesetData(BaseRuleset[ServiceIntegrationRule]):
+class ServiceIntegrationsRulesetData(RulesetData[ServiceIntegrationRule]):
     """Service integrations ruleset data model."""
 
     # Ruleset-specific properties
