@@ -132,7 +132,7 @@ def _analyse_single_file(self, file_data: SourceCodeFileDataModel):
 ```json
 {
   "purpose": "payment_processing",
-  "purpose_category": "OPERATIONAL",
+  "purpose_category": "operational",
   "risk_level": "high",
   "compliance": [
     {
