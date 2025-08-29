@@ -37,8 +37,7 @@ class ServiceIntegrationsRuleset(Ruleset[ServiceIntegrationRule]):
 
     def __init__(self) -> None:
         """Initialise the service integrations ruleset."""
-        super().__init__()
-        self.rules: tuple[ServiceIntegrationRule, ...] | None = None
+        self._rules: tuple[ServiceIntegrationRule, ...] | None = None
         logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
     @property
@@ -61,7 +60,7 @@ class ServiceIntegrationsRuleset(Ruleset[ServiceIntegrationRule]):
             Immutable tuple of ServiceIntegrationRule objects containing all service integration patterns
 
         """
-        if self.rules is None:
+        if self._rules is None:
             # Load from external configuration file with validation
             ruleset_file = (
                 Path(__file__).parent
@@ -74,7 +73,7 @@ class ServiceIntegrationsRuleset(Ruleset[ServiceIntegrationRule]):
                 data = yaml.safe_load(f)
 
             ruleset_data = ServiceIntegrationsRulesetData.model_validate(data)
-            self.rules = tuple(ruleset_data.rules)
-            logger.debug(f"Loaded {len(self.rules)} service integration patterns")
+            self._rules = tuple(ruleset_data.rules)
+            logger.debug(f"Loaded {len(self._rules)} service integration patterns")
 
-        return self.rules
+        return self._rules

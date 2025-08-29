@@ -26,8 +26,7 @@ class DataCollectionRuleset(Ruleset[DataCollectionRule]):
 
     def __init__(self) -> None:
         """Initialise the data collection patterns ruleset."""
-        super().__init__()
-        self.rules: tuple[DataCollectionRule, ...] | None = None
+        self._rules: tuple[DataCollectionRule, ...] | None = None
         logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
     @property
@@ -50,7 +49,7 @@ class DataCollectionRuleset(Ruleset[DataCollectionRule]):
             Immutable tuple of Rule objects containing all data collection patterns
 
         """
-        if self.rules is None:
+        if self._rules is None:
             # Load from YAML file with Pydantic validation
             yaml_file = (
                 Path(__file__).parent
@@ -63,7 +62,7 @@ class DataCollectionRuleset(Ruleset[DataCollectionRule]):
                 data = yaml.safe_load(f)
 
             ruleset_data = DataCollectionRulesetData.model_validate(data)
-            self.rules = tuple(ruleset_data.rules)
-            logger.debug(f"Loaded {len(self.rules)} data collection ruleset data")
+            self._rules = tuple(ruleset_data.rules)
+            logger.debug(f"Loaded {len(self._rules)} data collection ruleset data")
 
-        return self.rules
+        return self._rules

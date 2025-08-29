@@ -29,8 +29,7 @@ class PersonalDataRuleset(Ruleset[PersonalDataRule]):
 
     def __init__(self) -> None:
         """Initialise the personal data ruleset."""
-        super().__init__()
-        self.rules: tuple[PersonalDataRule, ...] | None = None
+        self._rules: tuple[PersonalDataRule, ...] | None = None
         logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
     @property
@@ -53,7 +52,7 @@ class PersonalDataRuleset(Ruleset[PersonalDataRule]):
             Immutable tuple of Rule objects containing all GDPR-compliant personal data patterns
 
         """
-        if self.rules is None:
+        if self._rules is None:
             # Load from YAML file with Pydantic validation
             yaml_file = (
                 Path(__file__).parent
@@ -66,7 +65,7 @@ class PersonalDataRuleset(Ruleset[PersonalDataRule]):
                 data = yaml.safe_load(f)
 
             ruleset_data = PersonalDataRulesetData.model_validate(data)
-            self.rules = tuple(ruleset_data.rules)
-            logger.debug(f"Loaded {len(self.rules)} personal data ruleset data")
+            self._rules = tuple(ruleset_data.rules)
+            logger.debug(f"Loaded {len(self._rules)} personal data ruleset data")
 
-        return self.rules
+        return self._rules
