@@ -44,7 +44,7 @@ class DataSubjectRule(BaseRule):
 
 
 class DataSubjectRulesetData(RulesetData[DataSubjectRule]):
-    """Data subject ruleset data model with confidence thresholds and category management."""
+    """Data subject ruleset data model with category management."""
 
     # Ruleset-specific properties
     subject_categories: list[str] = Field(
@@ -53,20 +53,9 @@ class DataSubjectRulesetData(RulesetData[DataSubjectRule]):
     applicable_contexts: list[str] = Field(
         min_length=1, description="Master list of valid applicable contexts"
     )
-    confidence_thresholds: dict[str, int] = Field(
-        description="Confidence thresholds for classification levels (high, medium, low)"
+    modifiers: list[str] = Field(
+        min_length=1, description="Master list of valid cross-category modifiers"
     )
-
-    @model_validator(mode="after")
-    def validate_confidence_thresholds(self) -> "DataSubjectRulesetData":
-        """Validate confidence thresholds contain required keys."""
-        required_keys = {"high", "medium", "low"}
-        missing_keys = required_keys - set(self.confidence_thresholds.keys())
-        if missing_keys:
-            raise ValueError(
-                f"confidence_thresholds must contain keys: {sorted(required_keys)}. Missing: {sorted(missing_keys)}"
-            )
-        return self
 
     @model_validator(mode="after")
     def validate_rule_categories(self) -> "DataSubjectRulesetData":

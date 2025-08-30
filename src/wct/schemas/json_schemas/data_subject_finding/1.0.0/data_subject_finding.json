@@ -19,29 +19,32 @@
             "maximum": 100,
             "description": "Confidence score for the classification (0-100)"
           },
-          "confidence_level": {
-            "type": "string",
-            "enum": ["high", "medium", "low"],
-            "description": "Confidence level based on score thresholds"
-          },
-          "supporting_evidence": {
+          "evidence": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "object",
+              "properties": {
+                "content": {
+                  "type": "string",
+                  "description": "The evidence content snippet"
+                },
+                "collection_timestamp": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When the evidence was collected"
+                }
+              },
+              "required": ["content", "collection_timestamp"],
+              "additionalProperties": false
             },
-            "description": "Evidence that supports this classification"
+            "description": "Evidence items that support this classification"
           },
           "modifiers": {
             "type": "array",
             "items": {
-              "type": "string",
-              "enum": ["MINOR", "EU_RESIDENT"]
+              "type": "string"
             },
-            "description": "Cross-category regulatory modifiers"
-          },
-          "requires_manual_review": {
-            "type": "boolean",
-            "description": "Whether this classification requires manual review"
+            "description": "Cross-category regulatory modifiers - validated by analyser against ruleset"
           },
           "matched_patterns": {
             "type": "array",
@@ -63,7 +66,7 @@
             "required": ["source"]
           }
         },
-        "required": ["primary_category", "confidence_score", "confidence_level", "supporting_evidence", "modifiers", "requires_manual_review", "matched_patterns", "metadata"],
+        "required": ["primary_category", "confidence_score", "evidence", "modifiers", "matched_patterns", "metadata"],
         "additionalProperties": false
       }
     },
@@ -76,45 +79,15 @@
           "description": "Total number of data subject classifications",
           "minimum": 0
         },
-        "high_confidence_count": {
-          "type": "integer",
-          "description": "Number of high confidence classifications",
-          "minimum": 0
-        },
         "categories_identified": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "description": "List of unique categories identified"
-        },
-        "manual_review_required": {
-          "type": "integer",
-          "description": "Number of classifications requiring manual review",
-          "minimum": 0
-        },
-        "confidence_distribution": {
-          "type": "object",
-          "properties": {
-            "high": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "medium": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "low": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "required": ["high", "medium", "low"],
-          "additionalProperties": false,
-          "description": "Distribution of classifications by confidence level"
         }
       },
-      "required": ["total_classifications", "high_confidence_count", "categories_identified", "manual_review_required", "confidence_distribution"],
+      "required": ["total_classifications", "categories_identified"],
       "additionalProperties": false
     },
     "analysis_metadata": {

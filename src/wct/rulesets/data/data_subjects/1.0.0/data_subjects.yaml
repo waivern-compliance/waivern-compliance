@@ -28,10 +28,9 @@ applicable_contexts:
   - "filesystem"
   - "source_code"
 
-confidence_thresholds:
-  high: 90
-  medium: 70
-  low: 50
+modifiers:
+  - "minor"
+  - "eu_resident"
 
 rules:
   # ===== EMPLOYEE CATEGORY =====

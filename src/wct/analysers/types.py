@@ -1,9 +1,9 @@
 """Type definitions for analysers."""
 
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator
 
 
 class EvidenceItem(BaseModel):
@@ -12,7 +12,10 @@ class EvidenceItem(BaseModel):
     model_config = ConfigDict(ser_json_timedelta="iso8601")
 
     content: str = Field(description="The evidence content snippet")
-    collection_timestamp: datetime = Field(
+    collection_timestamp: Annotated[
+        datetime,
+        PlainSerializer(lambda v: v.isoformat(), return_type=str, when_used="json"),
+    ] = Field(
         default_factory=lambda: datetime.now(UTC),
         description="When the evidence was collected",
     )

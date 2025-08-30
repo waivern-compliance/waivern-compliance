@@ -124,13 +124,13 @@ class TestDataSubjectRulesetData:
             description="Data subject classification ruleset",
             subject_categories=["employee", "customer", "prospect"],
             applicable_contexts=["database", "filesystem", "source_code"],
-            confidence_thresholds={"high": 90, "medium": 70, "low": 50},
+            modifiers=["minor", "eu_resident"],
             rules=[rule],
         )
 
         assert len(ruleset.rules) == 1
         assert "employee" in ruleset.subject_categories
-        assert ruleset.confidence_thresholds["high"] == 90
+        assert "minor" in ruleset.modifiers
 
     def test_data_subject_ruleset_invalid_subject_category(self):
         """Test DataSubjectRulesetData rejects rules with invalid subject categories."""
@@ -152,16 +152,16 @@ class TestDataSubjectRulesetData:
                 description="Data subject classification ruleset",
                 subject_categories=["employee", "customer"],
                 applicable_contexts=["database", "filesystem", "source_code"],
-                confidence_thresholds={"high": 90, "medium": 70, "low": 50},
+                modifiers=["minor", "eu_resident"],
                 rules=[rule],
             )
 
-    def test_data_subject_ruleset_confidence_thresholds_validation(self):
-        """Test DataSubjectRulesetData validates confidence thresholds."""
+    def test_data_subject_ruleset_modifiers_validation(self):
+        """Test DataSubjectRulesetData validates modifiers."""
         # Create dummy rule to satisfy minimum rule requirement
         rule = DataSubjectRule(
             name="dummy_rule",
-            description="Dummy rule for threshold testing",
+            description="Dummy rule for modifier testing",
             patterns=("test",),
             subject_category="employee",
             indicator_type="primary",
@@ -170,29 +170,18 @@ class TestDataSubjectRulesetData:
             risk_level="low",
         )
 
-        # Valid thresholds should work
+        # Valid modifiers should work
         ruleset = DataSubjectRulesetData(
             name="data_subjects",
             version="1.0.0",
             description="Test ruleset",
             subject_categories=["employee"],
             applicable_contexts=["database", "filesystem", "source_code"],
-            confidence_thresholds={"high": 90, "medium": 70, "low": 50},
+            modifiers=["minor", "eu_resident"],
             rules=[rule],
         )
-        assert ruleset.confidence_thresholds["high"] == 90
-
-        # Missing required threshold keys should fail
-        with pytest.raises(ValidationError, match="confidence_thresholds must contain"):
-            DataSubjectRulesetData(
-                name="data_subjects",
-                version="1.0.0",
-                description="Test ruleset",
-                subject_categories=["employee"],
-                applicable_contexts=["database", "filesystem", "source_code"],
-                confidence_thresholds={"high": 90, "medium": 70},  # Missing 'low'
-                rules=[rule],
-            )
+        assert "minor" in ruleset.modifiers
+        assert "eu_resident" in ruleset.modifiers
 
     def test_data_subject_ruleset_duplicate_rule_names(self):
         """Test DataSubjectRulesetData rejects duplicate rule names."""
@@ -225,7 +214,7 @@ class TestDataSubjectRulesetData:
                 description="Test ruleset",
                 subject_categories=["employee", "customer"],
                 applicable_contexts=["database", "filesystem", "source_code"],
-                confidence_thresholds={"high": 90, "medium": 70, "low": 50},
+                modifiers=["minor", "eu_resident"],
                 rules=[rule1, rule2],
             )
 
@@ -249,7 +238,7 @@ class TestDataSubjectRulesetData:
                 description="Data subject classification ruleset",
                 subject_categories=["employee", "customer"],
                 applicable_contexts=["database", "filesystem", "source_code"],
-                confidence_thresholds={"high": 90, "medium": 70, "low": 50},
+                modifiers=["minor", "eu_resident"],
                 rules=[rule],
             )
 

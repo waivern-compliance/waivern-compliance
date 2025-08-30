@@ -4,14 +4,17 @@
     {
       "primary_category": "employee",
       "confidence_score": 95,
-      "confidence_level": "high",
-      "supporting_evidence": [
-        "Direct role field match: employee",
-        "Company domain email: @company.com",
-        "HR data fields present: hire_date, salary"
+      "evidence": [
+        {
+          "content": "Direct role field match: employee",
+          "collection_timestamp": "2024-08-21T10:30:45.123Z"
+        },
+        {
+          "content": "Company domain email: @company.com",
+          "collection_timestamp": "2024-08-21T10:30:45.124Z"
+        }
       ],
       "modifiers": [],
-      "requires_manual_review": false,
       "matched_patterns": [
         "employee",
         "staff_id",
@@ -24,14 +27,17 @@
     {
       "primary_category": "customer",
       "confidence_score": 78,
-      "confidence_level": "medium",
-      "supporting_evidence": [
-        "Active subscription status",
-        "Recent payment transaction",
-        "Customer support tickets"
+      "evidence": [
+        {
+          "content": "Active subscription status",
+          "collection_timestamp": "2024-08-21T10:30:46.123Z"
+        },
+        {
+          "content": "Recent payment transaction",
+          "collection_timestamp": "2024-08-21T10:30:46.124Z"
+        }
       ],
-      "modifiers": ["EU_RESIDENT"],
-      "requires_manual_review": true,
+      "modifiers": ["eu_resident"],
       "matched_patterns": [
         "customer_status_active",
         "subscription_table",
@@ -44,14 +50,17 @@
     {
       "primary_category": "patient",
       "confidence_score": 92,
-      "confidence_level": "high",
-      "supporting_evidence": [
-        "Medical record number present",
-        "HIPAA compliance flags",
-        "Healthcare provider relationship"
+      "evidence": [
+        {
+          "content": "Medical record number present",
+          "collection_timestamp": "2024-08-21T10:30:47.123Z"
+        },
+        {
+          "content": "HIPAA compliance flags",
+          "collection_timestamp": "2024-08-21T10:30:47.124Z"
+        }
       ],
-      "modifiers": ["MINOR"],
-      "requires_manual_review": false,
+      "modifiers": ["minor"],
       "matched_patterns": [
         "medical_record_number",
         "patient_id",
@@ -64,14 +73,7 @@
   ],
   "summary": {
     "total_classifications": 3,
-    "high_confidence_count": 2,
-    "categories_identified": ["employee", "customer", "patient"],
-    "manual_review_required": 1,
-    "confidence_distribution": {
-      "high": 2,
-      "medium": 1,
-      "low": 0
-    }
+    "categories_identified": ["employee", "customer", "patient"]
   },
   "analysis_metadata": {
     "ruleset_used": "data_subjects/1.0.0",
