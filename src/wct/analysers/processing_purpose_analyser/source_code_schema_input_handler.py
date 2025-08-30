@@ -4,11 +4,9 @@ from pydantic import BaseModel
 
 from wct.analysers.types import EvidenceItem, FindingComplianceData
 from wct.rulesets import RulesetLoader
-from wct.rulesets.types import (
-    DataCollectionRule,
-    ProcessingPurposeRule,
-    ServiceIntegrationRule,
-)
+from wct.rulesets.data_collection import DataCollectionRule
+from wct.rulesets.processing_purposes import ProcessingPurposeRule
+from wct.rulesets.service_integrations import ServiceIntegrationRule
 from wct.schemas import (
     SourceCodeDataModel,
     SourceCodeFileDataModel,

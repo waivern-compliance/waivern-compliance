@@ -10,6 +10,10 @@ from wct.analysers.base import (
     AnalyserInputError,
     AnalyserProcessingError,
 )
+from wct.analysers.data_subject_analyser import (
+    DataSubjectAnalyser,
+    DataSubjectFindingModel,
+)
 from wct.analysers.personal_data_analyser import (
     PersonalDataAnalyser,
     PersonalDataFindingModel,
@@ -25,6 +29,8 @@ __all__ = (
     "AnalyserError",
     "AnalyserInputError",
     "AnalyserProcessingError",
+    "DataSubjectAnalyser",
+    "DataSubjectFindingModel",
     "PersonalDataAnalyser",
     "PersonalDataFindingModel",
     "ProcessingPurposeAnalyser",
@@ -34,4 +40,8 @@ __all__ = (
     "BUILTIN_ANALYSERS",
 )
 
-BUILTIN_ANALYSERS = (PersonalDataAnalyser, ProcessingPurposeAnalyser)
+BUILTIN_ANALYSERS = (
+    DataSubjectAnalyser,
+    PersonalDataAnalyser,
+    ProcessingPurposeAnalyser,
+)

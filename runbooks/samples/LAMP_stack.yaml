@@ -44,6 +44,34 @@ analysers:
         enable_llm_validation: false
         llm_batch_size: 80
         llm_validation_mode: "conservative"  # More careful validation for database content
+  - name: "data_subject_analyser_for_mysql"
+    type: "data_subject_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "data_subjects"
+        evidence_context_size: "medium"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 50
+        llm_validation_mode: "conservative"
+  - name: "data_subject_analyser_for_logs"
+    type: "data_subject_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "data_subjects"
+        evidence_context_size: "medium"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 50
+        llm_validation_mode: "conservative"
   - name: "processing_purpose_analyser_for_source_code"
     type: "processing_purpose_analyser"
     properties:
@@ -127,6 +155,29 @@ execution:
     context:
       description: "Analyse MySQL database for personal data collection"
       priority: "high"
+  - name: "Data Subject Classification in MySQL Database"
+    description: "Identify data subject categories (employees, customers, etc.) from database content for GDPR Article 30(1)(c) compliance"
+    contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
+    connector: "my_mysql_db"
+    analyser: "data_subject_analyser_for_mysql"
+    input_schema: "standard_input"
+    output_schema: "data_subject_finding"
+    context:
+      description: "Classify data subjects in MySQL database for GDPR compliance records"
+      priority: "high"
+      compliance_frameworks: ["GDPR"]
+  - name: "Data Subject Classification in Log Files"
+    description: "Identify data subject categories (employees, customers, etc.) from log file content for GDPR Article 30(1)(c) compliance"
+    contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
+    connector: "log_files"
+    analyser: "data_subject_analyser_for_logs"
+    input_schema: "standard_input"
+    output_schema: "data_subject_finding"
+    context:
+      description: "Classify data subjects in log files for GDPR compliance records"
+      priority: "high"
+      compliance_frameworks: ["GDPR"]
+      analysis_type: "log_content_analysis"
   - name: "Processing Purpose Analysis of Database Content"
     description: "Identify GDPR and CCPA compliance processing purposes from database structure and content"
     connector: "my_mysql_db"

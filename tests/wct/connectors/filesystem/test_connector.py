@@ -11,7 +11,7 @@ from wct.connectors.base import ConnectorConfigError, ConnectorExtractionError
 from wct.connectors.filesystem.config import FilesystemConnectorConfig
 from wct.connectors.filesystem.connector import FilesystemConnector
 from wct.message import Message
-from wct.schemas import StandardInputSchema
+from wct.schemas import FilesystemMetadata, StandardInputDataModel, StandardInputSchema
 
 # Test constants - expected behaviour from public interface
 EXPECTED_CONNECTOR_NAME = "filesystem"
@@ -308,28 +308,25 @@ class TestFilesystemConnector:
             if os.name != "nt" and restricted_file.exists():
                 restricted_file.chmod(0o644)
 
-    def test_extract_metadata_contains_only_source(
+    def test_extract_creates_filesystem_metadata(
         self, sample_file, standard_input_schema
     ):
-        """Test that extracted file metadata contains only essential source information."""
+        """Test that filesystem connector creates FilesystemMetadata with accurate file context."""
         config = FilesystemConnectorConfig.from_properties({"path": str(sample_file)})
         connector = FilesystemConnector(config)
 
         result = connector.extract(standard_input_schema)
 
-        assert isinstance(result, Message)
-        content = result.content
-
-        # Check that we have data entries with metadata
-        assert len(content["data"]) == 1
-        metadata = content["data"][0]["metadata"]
-
-        # Verify metadata contains only source field
-        assert "source" in metadata
-        assert isinstance(metadata["source"], str)
-        assert len(metadata) == 1, (
-            f"Expected only 'source' field, got: {list(metadata.keys())}"
+        # Validate the result conforms to FilesystemMetadata expectations
+        typed_result = StandardInputDataModel[FilesystemMetadata].model_validate(
+            result.content
         )
 
-        # Verify source contains the file path
-        assert str(sample_file) in metadata["source"]
+        # Should have 1 data item for the file
+        assert len(typed_result.data) == 1
+
+        # Verify data item has proper FilesystemMetadata
+        data_item = typed_result.data[0]
+        assert data_item.metadata.connector_type == "filesystem"
+        assert data_item.metadata.file_path == str(sample_file)
+        assert str(sample_file) in data_item.metadata.source

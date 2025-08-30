@@ -9,15 +9,66 @@ from pathlib import Path
 from typing import Final, override
 
 import yaml
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from wct.rulesets.base import AbstractRuleset
-from wct.rulesets.types import PersonalDataRule, PersonalDataRulesetData
+from wct.rulesets.types import BaseRule, RulesetData
 
 logger = logging.getLogger(__name__)
 
 # Version constant for this ruleset and its data (private)
 _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "personal_data"
+
+
+class PersonalDataRule(BaseRule):
+    """Personal data rule with GDPR categories."""
+
+    data_type: str = Field(description="Type of personal data this rule detects")
+    special_category: bool = Field(
+        default=False,
+        description="Whether this is GDPR Article 9 special category data",
+    )
+
+
+class PersonalDataRulesetData(RulesetData[PersonalDataRule]):
+    """Personal data ruleset with GDPR Article 9 support."""
+
+    # Ruleset-specific properties
+    data_type_categories: list[str] = Field(
+        min_length=1,
+        description="Master list of valid personal data type categories based on GDPR requirements",
+    )
+    special_category_types: list[str] = Field(
+        default_factory=list,
+        description="Subset of data_type_categories that are GDPR Article 9 special category types",
+    )
+
+    @field_validator("special_category_types")
+    @classmethod
+    def validate_special_categories_subset(
+        cls, v: list[str], info: ValidationInfo
+    ) -> list[str]:
+        """Ensure special_category_types is subset of data_type_categories."""
+        data_type_categories = info.data.get("data_type_categories", [])
+        invalid = [cat for cat in v if cat not in data_type_categories]
+        if invalid:
+            raise ValueError(
+                f"Special category types must be subset of data_type_categories. Invalid: {invalid}"
+            )
+        return v
+
+    @model_validator(mode="after")
+    def validate_rule_data_types(self) -> "PersonalDataRulesetData":
+        """Validate all rule data_type values against master list."""
+        valid_categories = set(self.data_type_categories)
+
+        for rule in self.rules:
+            if rule.data_type not in valid_categories:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid data_type '{rule.data_type}'. Valid: {valid_categories}"
+                )
+        return self
 
 
 class PersonalDataRuleset(AbstractRuleset[PersonalDataRule]):

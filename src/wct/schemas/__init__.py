@@ -14,9 +14,11 @@ Available schemas:
 - SourceCodeSchema: Source code analysis format
 - PersonalDataFindingSchema: Personal data analysis results
 - ProcessingPurposeFindingSchema: GDPR processing purpose results
+- DataSubjectFindingSchema: Data subject classification results
 """
 
 from .base import JsonSchemaLoader, Schema, SchemaLoader, SchemaLoadError
+from .data_subject_finding import DataSubjectFindingSchema
 from .personal_data_finding import PersonalDataFindingSchema
 from .processing_purpose_finding import ProcessingPurposeFindingSchema
 from .source_code import (
@@ -32,7 +34,9 @@ from .source_code import (
     SourceCodeSchema,
 )
 from .standard_input import (
-    StandardInputDataItemMetadataModel,
+    BaseMetadata,
+    FilesystemMetadata,
+    RelationalDatabaseMetadata,
     StandardInputDataItemModel,
     StandardInputDataModel,
     StandardInputSchema,
@@ -40,27 +44,23 @@ from .standard_input import (
 from .validation import DataParsingError, parse_data_model
 
 __all__ = [
-    # Base classes and utilities
     "Schema",
     "SchemaLoader",
     "JsonSchemaLoader",
     "SchemaLoadError",
-    # Data parsing utilities
     "parse_data_model",
     "DataParsingError",
-    # Schema classes
     "StandardInputSchema",
     "SourceCodeSchema",
     "PersonalDataFindingSchema",
     "ProcessingPurposeFindingSchema",
-    # Note: Runbook validation uses Pydantic models in the runbook module
-    # Standard input Pydantic models
+    "DataSubjectFindingSchema",
     "StandardInputDataModel",
     "StandardInputDataItemModel",
-    "StandardInputDataItemMetadataModel",
-    # Source code schema
+    "BaseMetadata",
+    "RelationalDatabaseMetadata",
+    "FilesystemMetadata",
     "SourceCodeSchema",
-    # Source code Pydantic models
     "SourceCodeDataModel",
     "SourceCodeFileDataModel",
     "SourceCodeAnalysisMetadataModel",

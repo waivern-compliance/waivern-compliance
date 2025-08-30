@@ -3,8 +3,30 @@
 import pytest
 
 from wct.rulesets.base import RulesetLoader, RulesetRegistry
-from wct.rulesets.service_integrations import ServiceIntegrationsRuleset
-from wct.rulesets.types import ServiceIntegrationRule
+from wct.rulesets.service_integrations import (
+    ServiceIntegrationRule,
+    ServiceIntegrationsRuleset,
+)
+
+
+class TestServiceIntegrationRule:
+    """Test cases for the ServiceIntegrationRule class."""
+
+    def test_service_integration_rule_with_all_fields(self):
+        """Test ServiceIntegrationRule with all fields."""
+        rule = ServiceIntegrationRule(
+            name="aws_integration",
+            description="AWS integration rule",
+            patterns=("aws", "s3.amazonaws"),
+            service_category="cloud_infrastructure",
+            purpose_category="OPERATIONAL",
+            risk_level="medium",
+        )
+
+        assert rule.name == "aws_integration"
+        assert rule.service_category == "cloud_infrastructure"
+        assert rule.purpose_category == "OPERATIONAL"
+        assert rule.risk_level == "medium"
 
 
 class TestServiceIntegrationsRuleset:

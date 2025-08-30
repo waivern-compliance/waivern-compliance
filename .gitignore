@@ -11,6 +11,9 @@ CLAUDE.local.md
 # Virtual environments
 .venv
 
+# Git worktrees
+.worktrees
+
 # Default analyses results output directory
 outputs/
 

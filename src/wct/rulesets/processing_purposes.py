@@ -9,15 +9,61 @@ from pathlib import Path
 from typing import Final, override
 
 import yaml
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from wct.rulesets.base import AbstractRuleset
-from wct.rulesets.types import ProcessingPurposeRule, ProcessingPurposesRulesetData
+from wct.rulesets.types import BaseRule, RulesetData
 
 logger = logging.getLogger(__name__)
 
 # Version constant for this ruleset and its data (private)
 _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "processing_purposes"
+
+
+class ProcessingPurposeRule(BaseRule):
+    """Processing purpose rule with category and risk information."""
+
+    purpose_category: str = Field(description="Category of this processing purpose")
+
+
+class ProcessingPurposesRulesetData(RulesetData[ProcessingPurposeRule]):
+    """Processing purposes ruleset data model with category management."""
+
+    # Ruleset-specific properties
+    purpose_categories: list[str] = Field(
+        min_length=1, description="Master list of valid purpose categories"
+    )
+    sensitive_categories: list[str] = Field(
+        default_factory=list,
+        description="Subset of purpose_categories considered privacy-sensitive",
+    )
+
+    @field_validator("sensitive_categories")
+    @classmethod
+    def validate_sensitive_categories_subset(
+        cls, v: list[str], info: ValidationInfo
+    ) -> list[str]:
+        """Ensure sensitive_categories is subset of purpose_categories."""
+        purpose_categories = info.data.get("purpose_categories", [])
+        invalid = [cat for cat in v if cat not in purpose_categories]
+        if invalid:
+            raise ValueError(
+                f"Sensitive categories must be subset of purpose_categories. Invalid: {invalid}"
+            )
+        return v
+
+    @model_validator(mode="after")
+    def validate_rule_categories(self) -> "ProcessingPurposesRulesetData":
+        """Validate all rule purpose_categories against master list."""
+        purpose_categories = set(self.purpose_categories)
+
+        for rule in self.rules:
+            if rule.purpose_category not in purpose_categories:
+                raise ValueError(
+                    f"Rule '{rule.name}' has invalid purpose_category '{rule.purpose_category}'. Valid: {purpose_categories}"
+                )
+        return self
 
 
 class ProcessingPurposesRuleset(AbstractRuleset[ProcessingPurposeRule]):

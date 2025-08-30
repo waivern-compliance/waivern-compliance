@@ -9,7 +9,7 @@ from wct.rulesets.base import (
     RulesetNotFoundError,
     RulesetRegistry,
 )
-from wct.rulesets.types import ProcessingPurposeRule
+from wct.rulesets.processing_purposes import ProcessingPurposeRule
 
 
 class ConcreteRuleset(AbstractRuleset[ProcessingPurposeRule]):

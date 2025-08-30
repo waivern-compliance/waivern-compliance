@@ -12,7 +12,7 @@ from wct.connectors.base import (
 )
 from wct.connectors.filesystem.config import FilesystemConnectorConfig
 from wct.message import Message
-from wct.schemas import Schema, StandardInputSchema
+from wct.schemas import FilesystemMetadata, Schema, StandardInputSchema
 
 logger = logging.getLogger(__name__)
 
@@ -256,12 +256,17 @@ class FilesystemConnector(Connector):
             file_path = file_data["path"]
             content = file_data["content"]
 
+            # Create FilesystemMetadata instance
+            metadata = FilesystemMetadata(
+                source=str(file_path),
+                connector_type=_CONNECTOR_NAME,
+                file_path=str(file_path),
+            )
+
             data_entries.append(
                 {
                     "content": content,
-                    "metadata": {
-                        "source": str(file_path),
-                    },
+                    "metadata": metadata.model_dump(),
                 }
             )
 
