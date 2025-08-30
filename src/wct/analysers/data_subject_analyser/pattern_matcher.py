@@ -94,26 +94,38 @@ class DataSubjectPatternMatcher:
         findings: list[DataSubjectFindingModel] = []
         content_lower = content.lower()
 
-        # Group matched rules by subject category for confidence calculation
-        category_matched_rules: dict[str, list[DataSubjectRule]] = {}
+        # Group matched rules and patterns by subject category for confidence calculation
+        category_matched_data: dict[str, list[tuple[DataSubjectRule, list[str]]]] = {}
 
-        # Find all matching rules
+        # Find all matching rules and track which patterns matched
         for rule in rules:
             # Check if rule applies to this context
             if not self._rule_applies_to_context(rule, metadata):
                 continue
 
-            # Check each pattern in the rule
+            # Check each pattern in the rule and collect all matches
+            matched_patterns_for_rule: list[str] = []
             for pattern in rule.patterns:
                 if pattern.lower() in content_lower:
-                    category = rule.subject_category
-                    if category not in category_matched_rules:
-                        category_matched_rules[category] = []
-                    category_matched_rules[category].append(rule)
-                    break  # Only match each rule once per content
+                    matched_patterns_for_rule.append(pattern)
 
-        # Create findings for each category with matched rules
-        for category, matched_rules in category_matched_rules.items():
+            # If any patterns matched, add the rule and its matched patterns
+            if matched_patterns_for_rule:
+                category = rule.subject_category
+                if category not in category_matched_data:
+                    category_matched_data[category] = []
+                category_matched_data[category].append(
+                    (rule, matched_patterns_for_rule)
+                )
+
+        # Create findings for each category with matched data
+        for category, matched_data in category_matched_data.items():
+            # Extract rules and patterns from matched data
+            matched_rules = [rule for rule, _ in matched_data]
+            matched_patterns: list[str] = []
+            for _, patterns in matched_data:
+                matched_patterns.extend(patterns)
+
             # Calculate confidence for this category
             confidence_score = self._confidence_scorer.calculate_confidence(
                 matched_rules
@@ -122,9 +134,7 @@ class DataSubjectPatternMatcher:
             # Extract evidence for the first matched pattern (representative)
             evidence = self._evidence_extractor.extract_evidence(
                 content,
-                matched_rules[0].patterns[
-                    0
-                ],  # Use first pattern of first rule for evidence
+                matched_patterns[0],  # Use first actually matched pattern for evidence
                 self._config.maximum_evidence_count,
                 self._config.evidence_context_size,
             )
@@ -132,11 +142,6 @@ class DataSubjectPatternMatcher:
             if evidence:  # Only create finding if we have evidence
                 # Create metadata for the finding
                 finding_metadata = DataSubjectFindingMetadata(source=metadata.source)
-
-                # Get all matched pattern names
-                matched_patterns: list[str] = []
-                for rule in matched_rules:
-                    matched_patterns.extend(rule.patterns)
 
                 # Create the finding
                 finding = DataSubjectFindingModel(

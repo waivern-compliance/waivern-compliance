@@ -211,3 +211,58 @@ class TestDataSubjectAnalyserProcessing:
         datetime.fromisoformat(
             parsed_data["collection_timestamp"].replace("Z", "+00:00")
         )
+
+    def test_matched_patterns_only_includes_actual_matches(self) -> None:
+        """Test that matched_patterns only contains patterns that actually matched, not all patterns from matched rules."""
+        # Arrange
+        analyser = DataSubjectAnalyser.from_properties({})
+        input_schema = StandardInputSchema()
+        output_schema = DataSubjectFindingSchema()
+
+        # Create test data with multiple director patterns that should all match
+        # Test content contains director, ceo, and executive patterns
+        test_metadata = BaseMetadata(source="test_company_db", connector_type="mysql")
+        test_item = StandardInputDataItemModel[BaseMetadata](
+            content="director john smith is also the ceo and executive officer",
+            metadata=test_metadata,
+        )
+        test_data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Director test data",
+            description="Test data with multiple director patterns",
+            source="test",
+            metadata={},
+            data=[test_item],
+        )
+        message = Message(
+            id="test_matched_patterns",
+            content=test_data.model_dump(exclude_none=True),
+            schema=input_schema,
+        )
+
+        # Act
+        result = analyser.process(input_schema, output_schema, message)
+
+        # Assert
+        findings = result.content["findings"]
+        assert len(findings) > 0
+
+        # Find director finding
+        director_finding = next(
+            (f for f in findings if f["primary_category"] == "director"), None
+        )
+        assert director_finding is not None
+
+        # Verify matched_patterns contains only the pattern that actually matched
+        matched_patterns = director_finding["matched_patterns"]
+        assert isinstance(matched_patterns, list)
+        assert len(matched_patterns) >= 2  # Should have multiple matches
+
+        # Verify it contains the patterns that are actually in the content
+        assert "director" in matched_patterns
+        assert "ceo" in matched_patterns
+        # Note: "executive" and "executive_officer" may both match "executive officer"
+
+        # Verify it doesn't contain patterns that aren't in the content
+        assert "board_member" not in matched_patterns
+        assert "chairman" not in matched_patterns
