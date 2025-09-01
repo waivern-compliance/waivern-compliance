@@ -1,0 +1,137 @@
+name: "Lightweight LAMP Stack Analysis with SQLite"
+description: >
+  Analyse SQLite database and filesystem for personally sensitive information and processing purposes.
+  This runbook provides comprehensive analysis using SQLite instead of MySQL and a lightweight
+  filesystem mock for easier testing and development workflows.
+contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
+
+connectors:
+  - name: compliance_sqlite_db
+    type: sqlite
+    properties:
+      # SQLite database path can be set via environment variable SQLITE_DATABASE_PATH
+      # or specified directly in the runbook
+      database_path: "./tests/integration/test_data/sqlite_compliance_test.db"
+      max_rows_per_table: 10
+  - name: "filesystem_mock_lite"
+    type: "filesystem"
+    properties:
+      path: "./tests/wct/connectors/filesystem/filesystem_mock_lite"
+      exclude_patterns: ["README_lite.md"]
+      max_files: 50
+      encoding: "utf-8"
+
+analysers:
+  - name: "personal_data_analyser_for_sqlite"
+    type: "personal_data_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "personal_data"
+        evidence_context_size: "large"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 80
+        llm_validation_mode: "conservative"
+  - name: "data_subject_analyser_for_sqlite"
+    type: "data_subject_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "data_subjects"
+        evidence_context_size: "medium"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 50
+        llm_validation_mode: "conservative"
+  - name: "personal_data_analyser_for_filesystem"
+    type: "personal_data_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "personal_data"
+        evidence_context_size: "large"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 50
+        llm_validation_mode: "conservative"
+    metadata:
+      description: "Analyse filesystem mock for personally identifiable information"
+  - name: "processing_purpose_analyser_for_sqlite"
+    type: "processing_purpose_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "processing_purposes"
+        evidence_context_size: "medium"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 20
+        llm_validation_mode: "conservative"
+        confidence_threshold: 0.5
+    metadata:
+      description: "Identify data processing purposes from SQLite database content"
+  - name: "processing_purpose_analyser_for_filesystem"
+    type: "processing_purpose_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "processing_purposes"
+        evidence_context_size: "medium"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 30
+        llm_validation_mode: "conservative"
+        confidence_threshold: 0.5
+    metadata:
+      description: "Identify data processing purposes and compliance frameworks from filesystem content"
+
+execution:
+  - name: "Personal Data Detection in SQLite Database"
+    description: "Scan SQLite database tables and columns for personally identifiable information"
+    contact: "Emily Chen (Database Administrator) <emily.chen@company.co.uk>"
+    connector: "compliance_sqlite_db"
+    analyser: "personal_data_analyser_for_sqlite"
+    input_schema: "standard_input"
+    output_schema: "personal_data_finding"
+  - name: "Data Subject Classification in SQLite Database"
+    description: "Identify data subject categories from database content for GDPR Article 30(1)(c) compliance"
+    contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
+    connector: "compliance_sqlite_db"
+    analyser: "data_subject_analyser_for_sqlite"
+    input_schema: "standard_input"
+    output_schema: "data_subject_finding"
+  - name: "Personal Data Detection in Filesystem"
+    description: "Scan filesystem mock for personally identifiable information in files"
+    contact: "Michael Brown (DevOps) <michael.brown@company.co.uk>"
+    connector: "filesystem_mock_lite"
+    analyser: "personal_data_analyser_for_filesystem"
+    input_schema: "standard_input"
+    output_schema: "personal_data_finding"
+  - name: "Processing Purpose Analysis of Database Content"
+    description: "Identify GDPR and CCPA compliance processing purposes from database content"
+    connector: "compliance_sqlite_db"
+    analyser: "processing_purpose_analyser_for_sqlite"
+    input_schema: "standard_input"
+    output_schema: "processing_purpose_finding"
+  - name: "Processing Purpose Analysis of Filesystem Content"
+    description: "Identify data processing purposes and compliance frameworks from filesystem content"
+    connector: "filesystem_mock_lite"
+    analyser: "processing_purpose_analyser_for_filesystem"
+    input_schema: "standard_input"
+    output_schema: "processing_purpose_finding"

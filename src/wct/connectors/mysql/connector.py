@@ -347,7 +347,7 @@ class MySQLConnector(Connector):
             "source": database_source,
             # Top-level metadata includes complete database schema for reference
             "metadata": {
-                "extraction_type": "mysql_to_text",
+                "connector_type": "mysql",  # Standard connector type field
                 "connection_info": {
                     "host": self._config.host,
                     "port": self._config.port,

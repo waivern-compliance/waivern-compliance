@@ -724,7 +724,6 @@ class TestRunbookIntegration:
                         },
                     },
                     "metadata": {
-                        "priority": "high",
                         "description": "Detects personal data patterns",
                     },
                 },
@@ -736,10 +735,7 @@ class TestRunbookIntegration:
                         "enable_llm_validation": True,
                         "confidence_threshold": 0.7,
                     },
-                    "metadata": {
-                        "priority": "medium",
-                        "compliance_frameworks": ["GDPR", "CCPA"],
-                    },
+                    "metadata": {},
                 },
             ],
             "execution": [
@@ -751,10 +747,6 @@ class TestRunbookIntegration:
                     "analyser": "personal_data_detector",
                     "input_schema": "standard_input",
                     "output_schema": "personal_data_finding",
-                    "context": {
-                        "description": "Analyze filesystem for personal data",
-                        "priority": "high",
-                    },
                 },
                 {
                     "name": "Database processing purpose analysis",
@@ -763,10 +755,6 @@ class TestRunbookIntegration:
                     "analyser": "purpose_detector",
                     "input_schema": "standard_input",
                     "output_schema": "processing_purpose_finding",
-                    "context": {
-                        "description": "Identify processing purposes in database",
-                        "compliance_frameworks": ["GDPR"],
-                    },
                 },
             ],
         }
@@ -797,4 +785,3 @@ class TestRunbookIntegration:
             personal_data_analyser.properties["pattern_matching"]["ruleset"]
             == "personal_data"
         )
-        assert personal_data_analyser.metadata.priority == "high"

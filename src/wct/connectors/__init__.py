@@ -13,6 +13,7 @@ from wct.connectors.base import (
 from wct.connectors.filesystem import FilesystemConnector
 from wct.connectors.mysql import MySQLConnector
 from wct.connectors.source_code import SourceCodeConnector
+from wct.connectors.sqlite import SQLiteConnector
 
 __all__ = (
     "Connector",
@@ -22,6 +23,7 @@ __all__ = (
     "FilesystemConnector",
     "MySQLConnector",
     "SourceCodeConnector",
+    "SQLiteConnector",
     "BUILTIN_CONNECTORS",
 )
 
@@ -29,4 +31,5 @@ BUILTIN_CONNECTORS = (
     FilesystemConnector,
     MySQLConnector,
     SourceCodeConnector,
+    SQLiteConnector,
 )

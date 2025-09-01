@@ -36,5 +36,3 @@ execution:
     analyser: "personal_data_analyser"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
-    context:
-      description: "Analyse file content for personal data"

@@ -285,7 +285,7 @@ class SQLiteConnector(DatabaseConnector):
             "source": database_source,
             # Top-level metadata includes complete database schema for reference
             "metadata": {
-                "extraction_type": "sqlite_to_text",
+                "connector_type": "sqlite",  # Standard connector type field
                 "connection_info": {
                     "database_path": self._config.database_path,
                 },

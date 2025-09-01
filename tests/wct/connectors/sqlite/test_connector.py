@@ -91,15 +91,26 @@ class TestSQLiteConnector:
 
             # Should have limited number of rows per table
             data = message.content.get("data", [])
-            # Filter data from users table (look for _table metadata)
-            users_data = [item for item in data if item.get("_table") == "users"]
-            assert (
-                len(users_data) == 2
-            )  # Should extract exactly max_rows_per_table (2) rows
+            # Filter data from users table (look for table_name in metadata)
+            users_data = [
+                item
+                for item in data
+                if item.get("metadata", {}).get("table_name") == "users"
+            ]
+            # With 2 rows and 3 columns (id, name, email), expect 6 data items
+            expected_items = 2 * 3  # max_rows_per_table * column_count
+            assert len(users_data) == expected_items
 
-            # Verify we got the first 2 rows (by ID)
-            user_ids = sorted([user.get("id") for user in users_data])
-            assert user_ids == [1, 2]
+            # Verify we got the first 2 rows (check for ID values 1 and 2 in content)
+            id_values = [
+                item["content"]
+                for item in users_data
+                if item.get("metadata", {}).get("column_name") == "id"
+            ]
+            id_values = sorted(
+                [int(val) for val in id_values if val and str(val).isdigit()]
+            )
+            assert id_values == [1, 2]
 
         finally:
             # Clean up
@@ -667,7 +678,7 @@ class TestSQLiteConnectorEdgeCases:
 
             # Metadata structure
             metadata = content["metadata"]
-            assert metadata["extraction_type"] == "sqlite_to_text"
+            assert metadata["connector_type"] == "sqlite"
             assert "connection_info" in metadata
             assert "database_schema" in metadata
             assert "total_data_items" in metadata
