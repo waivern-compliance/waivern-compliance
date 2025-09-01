@@ -284,6 +284,7 @@ class MySQLConnector(Connector):
             # Extract database metadata (connection test included)
             metadata = self._get_database_metadata()
 
+            # TODO: This should be strongly typed - even just a TypedDict
             # Transform data for standard_input schema
             extracted_data = self._transform_for_standard_input_schema(
                 output_schema, metadata
