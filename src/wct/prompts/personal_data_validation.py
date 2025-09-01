@@ -7,7 +7,7 @@ def get_personal_data_validation_prompt(
     finding_type: str,
     risk_level: str,
     special_category: str | None,
-    matched_pattern: str,
+    matched_patterns: list[str],
     evidence: list[str] | None,
     source: str,
 ) -> str:
@@ -20,7 +20,7 @@ def get_personal_data_validation_prompt(
         finding_type: Type of personal data detected (e.g., 'email', 'phone')
         risk_level: Risk level (low/medium/high)
         special_category: GDPR special category (Y/N/null)
-        matched_pattern: Pattern that was matched during detection
+        matched_patterns: Patterns that were matched during detection
         evidence: List of evidence snippets where pattern was found
         source: Source location of the data (e.g., database table, file path)
 
@@ -38,7 +38,7 @@ def get_personal_data_validation_prompt(
 Type: {finding_type}
 Risk Level: {risk_level}
 Special Category: {special_category or "Not specified"}
-Pattern: {matched_pattern}
+Patterns: {", ".join(matched_patterns)}
 Source: {source}
 
 **EVIDENCE:**
@@ -97,7 +97,7 @@ Finding {i}:
   Type: {finding.get("type", "Unknown")}
   Risk: {finding.get("risk_level", "Unknown")}
   Special Category: {finding.get("special_category", "Not specified")}
-  Pattern: {finding.get("matched_pattern", "Unknown")}
+  Patterns: {", ".join(finding.get("matched_patterns", ["Unknown"]))}
   Source: {getattr(finding.get("metadata", {}), "source", "Unknown") if finding.get("metadata") else "Unknown"}
   Evidence:
   {evidence_text}""")
@@ -145,7 +145,7 @@ def get_conservative_validation_prompt(
     finding_type: str,
     risk_level: str,
     special_category: str | None,
-    matched_pattern: str,
+    matched_patterns: list[str],
     evidence: list[str] | None,
     source: str,
 ) -> str:
@@ -158,7 +158,7 @@ def get_conservative_validation_prompt(
         finding_type: Type of personal data detected
         risk_level: Risk level (low/medium/high)
         special_category: GDPR special category (Y/N/null)
-        matched_pattern: Pattern that was matched during detection
+        matched_patterns: Patterns that were matched during detection
         evidence: List of evidence snippets where pattern was found
         source: Source location of the data
 
@@ -182,7 +182,7 @@ def get_conservative_validation_prompt(
 Type: {finding_type}
 Risk Level: {risk_level}
 Special Category: {special_category or "Not specified"}
-Pattern: {matched_pattern}
+Patterns: {", ".join(matched_patterns)}
 Source: {source}
 {sensitivity_note}
 

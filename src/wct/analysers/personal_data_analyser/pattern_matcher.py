@@ -51,42 +51,47 @@ class PersonalDataPatternMatcher:
 
         # Process each rule
         for rule in rules:
-            # Check each pattern in the rule
+            # Check each pattern in the rule and collect all matches
+            matched_patterns: list[str] = []
             for pattern in rule.patterns:
                 if pattern.lower() in content_lower:
-                    # Extract evidence for this matched pattern
-                    evidence_matches = self.evidence_extractor.extract_evidence(
-                        content,
-                        pattern,
-                        self.config.maximum_evidence_count,
-                        self.config.evidence_context_size,
-                    )
+                    matched_patterns.append(pattern)
 
-                    if evidence_matches:  # Only create finding if we have evidence
-                        # Create personal data specific finding
-                        finding_metadata = None
-                        if metadata:
-                            finding_metadata = PersonalDataFindingMetadata(
-                                source=metadata.source
-                            )
+            # If any patterns matched, create a single finding for this rule
+            if matched_patterns:
+                # Extract evidence using the first matched pattern as representative
+                evidence_matches = self.evidence_extractor.extract_evidence(
+                    content,
+                    matched_patterns[0],
+                    self.config.maximum_evidence_count,
+                    self.config.evidence_context_size,
+                )
 
-                        compliance_data = [
-                            FindingComplianceData(
-                                regulation=comp.regulation, relevance=comp.relevance
-                            )
-                            for comp in rule.compliance
-                        ]
-
-                        finding = PersonalDataFindingModel(
-                            type=rule.name,
-                            data_type=rule.data_type,
-                            risk_level=rule.risk_level,
-                            special_category=rule.special_category,
-                            matched_pattern=pattern,
-                            compliance=compliance_data,
-                            evidence=evidence_matches,
-                            metadata=finding_metadata,
+                if evidence_matches:  # Only create finding if we have evidence
+                    # Create personal data specific finding
+                    finding_metadata = None
+                    if metadata:
+                        finding_metadata = PersonalDataFindingMetadata(
+                            source=metadata.source
                         )
-                        findings.append(finding)
+
+                    compliance_data = [
+                        FindingComplianceData(
+                            regulation=comp.regulation, relevance=comp.relevance
+                        )
+                        for comp in rule.compliance
+                    ]
+
+                    finding = PersonalDataFindingModel(
+                        type=rule.name,
+                        data_type=rule.data_type,
+                        risk_level=rule.risk_level,
+                        special_category=rule.special_category,
+                        matched_patterns=matched_patterns,
+                        compliance=compliance_data,
+                        evidence=evidence_matches,
+                        metadata=finding_metadata,
+                    )
+                    findings.append(finding)
 
         return findings

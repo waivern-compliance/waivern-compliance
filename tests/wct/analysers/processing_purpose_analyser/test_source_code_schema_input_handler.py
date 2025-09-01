@@ -35,7 +35,7 @@ class TestSourceCodeSchemaInputHandler:
         "purpose_category",
         "risk_level",
         "compliance",
-        "matched_pattern",
+        "matched_patterns",
         "evidence",
         "metadata",
     ]
@@ -311,7 +311,8 @@ class UserFormHandler {
         payment_findings = [
             f
             for f in findings
-            if "payment" in f.matched_pattern.lower() or "payment" in f.purpose.lower()
+            if any("payment" in pattern.lower() for pattern in f.matched_patterns)
+            or "payment" in f.purpose.lower()
         ]
         assert len(payment_findings) > 0
 
@@ -500,8 +501,8 @@ class EmptyClass {
                 and finding.risk_level in self.VALID_RISK_LEVELS
             )
             assert (
-                isinstance(finding.matched_pattern, str)
-                and len(finding.matched_pattern) > 0
+                isinstance(finding.matched_patterns, list)
+                and len(finding.matched_patterns) > 0
             )
 
             # Verify list fields
@@ -548,7 +549,10 @@ class EmptyClass {
         service_integration_findings = [
             f
             for f in findings
-            if f.matched_pattern.lower() in ["aws", "dropbox", "amazon"]
+            if any(
+                pattern.lower() in ["aws", "dropbox", "amazon"]
+                for pattern in f.matched_patterns
+            )
         ]
 
         assert len(service_integration_findings) > 0, (
@@ -598,7 +602,10 @@ class EmptyClass {
         data_collection_findings = [
             f
             for f in findings
-            if f.matched_pattern in ["$_POST[", "$_GET[", "$_COOKIE[", "setcookie("]
+            if any(
+                pattern in ["$_POST[", "$_GET[", "$_COOKIE[", "setcookie("]
+                for pattern in f.matched_patterns
+            )
         ]
 
         assert len(data_collection_findings) > 0, (

@@ -6,7 +6,7 @@
       "data_type": "basic_profile",
       "risk_level": "medium",
       "special_category": false,
-      "matched_pattern": "john.doe@company.com",
+      "matched_patterns": ["john.doe@company.com"],
       "compliance": [
         {
           "regulation": "GDPR",
@@ -32,7 +32,7 @@
       "data_type": "basic_profile",
       "risk_level": "low",
       "special_category": false,
-      "matched_pattern": "+1-555-123-4567",
+      "matched_patterns": ["+1-555-123-4567"],
       "compliance": [
         {
           "regulation": "GDPR",
@@ -57,7 +57,7 @@
       "data_type": "health_data",
       "risk_level": "high",
       "special_category": true,
-      "matched_pattern": "diabetes",
+      "matched_patterns": ["diabetes"],
       "compliance": [
         {
           "regulation": "GDPR",
@@ -82,7 +82,7 @@
       "data_type": "special_category",
       "risk_level": "high",
       "special_category": true,
-      "matched_pattern": "ethnicity: Hispanic",
+      "matched_patterns": ["ethnicity: Hispanic"],
       "compliance": [
         {
           "regulation": "GDPR",
@@ -107,7 +107,7 @@
       "data_type": "government_id",
       "risk_level": "high",
       "special_category": false,
-      "matched_pattern": "123-45-6789",
+      "matched_patterns": ["123-45-6789"],
       "compliance": [
         {
           "regulation": "GDPR",
@@ -132,7 +132,7 @@
       "data_type": "financial_data",
       "risk_level": "medium",
       "special_category": false,
-      "matched_pattern": "4532-****-****-1234",
+      "matched_patterns": ["4532-****-****-1234"],
       "compliance": [
         {
           "regulation": "GDPR",

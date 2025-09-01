@@ -40,9 +40,12 @@
             },
             "description": "Compliance information with regulation names and specific relevance"
           },
-          "matched_pattern": {
-            "type": "string",
-            "description": "The specific pattern that was matched to identify this purpose"
+          "matched_patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The specific patterns that were matched to identify this purpose"
           },
           "evidence": {
             "type": "array",
@@ -89,7 +92,7 @@
             "description": "Data source from DataCollectionRule (when applicable)"
           }
         },
-        "required": ["purpose", "purpose_category", "risk_level", "compliance", "matched_pattern", "evidence", "metadata"],
+        "required": ["purpose", "purpose_category", "risk_level", "compliance", "matched_patterns", "evidence", "metadata"],
         "additionalProperties": false
       }
     },

@@ -42,7 +42,7 @@ class TestPersonalDataValidationStrategy:
                 data_type="basic_profile",
                 risk_level="medium",
                 special_category=False,
-                matched_pattern="test@example.com",
+                matched_patterns=["test@example.com"],
                 evidence=[EvidenceItem(content="Contact us at test@example.com")],
                 metadata=PersonalDataFindingMetadata(source="contact_form.php"),
             ),
@@ -51,7 +51,7 @@ class TestPersonalDataValidationStrategy:
                 data_type="basic_profile",
                 risk_level="high",
                 special_category=False,
-                matched_pattern="123-456-7890",
+                matched_patterns=["123-456-7890"],
                 evidence=[EvidenceItem(content="Call us at 123-456-7890")],
                 metadata=PersonalDataFindingMetadata(source="customer_db"),
             ),
@@ -163,7 +163,7 @@ class TestPersonalDataValidationStrategy:
                 data_type="basic_profile",
                 risk_level="low",
                 special_category=False,
-                matched_pattern="admin@domain.com",
+                matched_patterns=["admin@domain.com"],
                 evidence=[EvidenceItem(content="Email: admin@domain.com")],
                 metadata=PersonalDataFindingMetadata(source="config.txt"),
             ),
@@ -172,7 +172,7 @@ class TestPersonalDataValidationStrategy:
                 data_type="identification",
                 risk_level="high",
                 special_category=True,
-                matched_pattern="123-45-6789",
+                matched_patterns=["123-45-6789"],
                 evidence=[EvidenceItem(content="SSN: 123-45-6789")],
                 metadata=PersonalDataFindingMetadata(source="employee_records"),
             ),
@@ -181,7 +181,7 @@ class TestPersonalDataValidationStrategy:
                 data_type="basic_profile",
                 risk_level="medium",
                 special_category=False,
-                matched_pattern="user@test.com",
+                matched_patterns=["user@test.com"],
                 evidence=[EvidenceItem(content="Example: user@test.com")],
                 metadata=PersonalDataFindingMetadata(source="documentation.md"),
             ),
@@ -225,7 +225,7 @@ class TestPersonalDataValidationStrategy:
         # Assert
         assert len(result) == 2
         assert result[0].type == "email"
-        assert result[0].matched_pattern == "admin@domain.com"
+        assert "admin@domain.com" in result[0].matched_patterns
         assert result[1].type == "ssn"
         assert success is True
 
@@ -240,7 +240,7 @@ class TestPersonalDataValidationStrategy:
                 data_type="basic_profile",
                 risk_level="medium",
                 special_category=False,
-                matched_pattern=f"user{i}@example.com",
+                matched_patterns=[f"user{i}@example.com"],
                 evidence=[EvidenceItem(content=f"Email: user{i}@example.com")],
                 metadata=PersonalDataFindingMetadata(source="database"),
             )
@@ -482,7 +482,7 @@ class TestPersonalDataValidationStrategy:
                 data_type="basic_profile",
                 risk_level="medium",
                 special_category=False,
-                matched_pattern=f"test{i}@example.com",
+                matched_patterns=[f"test{i}@example.com"],
                 evidence=[EvidenceItem(content=f"Email {i}")],
                 metadata=PersonalDataFindingMetadata(source="test"),
             )
@@ -540,7 +540,7 @@ class TestPersonalDataValidationStrategy:
                 data_type="financial",
                 risk_level="high",
                 special_category=False,
-                matched_pattern="4111-1111-1111-1111",
+                matched_patterns=["4111-1111-1111-1111"],
                 evidence=[EvidenceItem(content="Card: 4111-1111-1111-1111")],
                 metadata=PersonalDataFindingMetadata(source="payment_form"),
             )
@@ -579,7 +579,7 @@ class TestPersonalDataValidationStrategy:
                 data_type="basic_profile",
                 risk_level="medium",
                 special_category=False,
-                matched_pattern="+44 20 7946 0958",
+                matched_patterns=["+44 20 7946 0958"],
                 evidence=[EvidenceItem(content="Contact: +44 20 7946 0958")],
                 metadata=PersonalDataFindingMetadata(source="customer_database"),
             )
@@ -634,7 +634,7 @@ class TestPersonalDataValidationStrategy:
                 data_type="basic_profile",
                 risk_level="medium",
                 special_category=False,
-                matched_pattern=f"user{i}@test.com",
+                matched_patterns=[f"user{i}@test.com"],
                 evidence=[EvidenceItem(content=f"Email: user{i}@test.com")],
                 metadata=PersonalDataFindingMetadata(source="test"),
             )

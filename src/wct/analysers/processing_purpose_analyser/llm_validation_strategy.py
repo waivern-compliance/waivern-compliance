@@ -43,7 +43,7 @@ class ProcessingPurposeValidationStrategy(
     @override
     def get_finding_identifier(self, finding: ProcessingPurposeFindingModel) -> str:
         """Get human-readable identifier for processing purpose finding."""
-        return f"{finding.purpose} - {finding.matched_pattern}"
+        return f"{finding.purpose} - {', '.join(finding.matched_patterns)}"
 
 
 def processing_purpose_validation_strategy(

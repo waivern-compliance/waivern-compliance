@@ -61,7 +61,9 @@ class ProcessingPurposeFindingModel(BaseModel):
     compliance: list[FindingComplianceData] = Field(
         default_factory=list, description="Compliance information for this finding"
     )
-    matched_pattern: str = Field(description="Pattern that was matched")
+    matched_patterns: list[str] = Field(
+        default_factory=list, description="Patterns that were matched"
+    )
     evidence: list[EvidenceItem] = Field(
         min_length=1,
         description="Evidence items with content and timestamps for this finding",

@@ -53,41 +53,46 @@ class ProcessingPurposePatternMatcher:
 
         # Process each rule
         for rule in rules:
-            # Check each pattern in the rule
+            # Check each pattern in the rule and collect all matches
+            matched_patterns: list[str] = []
             for pattern in rule.patterns:
                 if pattern.lower() in content_lower:
-                    # Extract evidence for this matched pattern
-                    evidence = self._evidence_extractor.extract_evidence(
-                        content,
-                        pattern,
-                        self._config.maximum_evidence_count,
-                        self._config.evidence_context_size,
-                    )
+                    matched_patterns.append(pattern)
 
-                    if evidence:  # Only create finding if we have evidence
-                        # Create processing purpose specific finding
-                        finding_metadata = None
-                        if metadata:
-                            finding_metadata = ProcessingPurposeFindingMetadata(
-                                source=metadata.source
-                            )
+            # If any patterns matched, create a single finding for this rule
+            if matched_patterns:
+                # Extract evidence using the first matched pattern as representative
+                evidence = self._evidence_extractor.extract_evidence(
+                    content,
+                    matched_patterns[0],
+                    self._config.maximum_evidence_count,
+                    self._config.evidence_context_size,
+                )
 
-                        compliance_data = [
-                            FindingComplianceData(
-                                regulation=comp.regulation, relevance=comp.relevance
-                            )
-                            for comp in rule.compliance
-                        ]
-
-                        finding = ProcessingPurposeFindingModel(
-                            purpose=rule.name,
-                            purpose_category=rule.purpose_category,
-                            risk_level=rule.risk_level,
-                            compliance=compliance_data,
-                            matched_pattern=pattern,
-                            evidence=evidence,
-                            metadata=finding_metadata,
+                if evidence:  # Only create finding if we have evidence
+                    # Create processing purpose specific finding
+                    finding_metadata = None
+                    if metadata:
+                        finding_metadata = ProcessingPurposeFindingMetadata(
+                            source=metadata.source
                         )
-                        findings.append(finding)
+
+                    compliance_data = [
+                        FindingComplianceData(
+                            regulation=comp.regulation, relevance=comp.relevance
+                        )
+                        for comp in rule.compliance
+                    ]
+
+                    finding = ProcessingPurposeFindingModel(
+                        purpose=rule.name,
+                        purpose_category=rule.purpose_category,
+                        risk_level=rule.risk_level,
+                        compliance=compliance_data,
+                        matched_patterns=matched_patterns,
+                        evidence=evidence,
+                        metadata=finding_metadata,
+                    )
+                    findings.append(finding)
 
         return findings

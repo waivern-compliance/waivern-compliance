@@ -223,7 +223,7 @@ class TestSQLiteE2EPipeline:
             # Check structure of findings
             if findings:
                 finding = findings[0]
-                assert "matched_pattern" in finding
+                assert "matched_patterns" in finding
                 assert "evidence" in finding
                 assert "data_type" in finding
 
@@ -253,6 +253,6 @@ class TestSQLiteE2EPipeline:
             # Structure should be correct even if no findings
             if findings:
                 finding = findings[0]
-                assert "matched_pattern" in finding
+                assert "matched_patterns" in finding
                 assert "evidence" in finding
                 assert "purpose" in finding

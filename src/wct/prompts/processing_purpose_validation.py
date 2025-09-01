@@ -97,7 +97,7 @@ Finding {i}:
   Purpose: {finding.purpose}
   Category: {finding.purpose_category}
   Risk: {finding.risk_level}
-  Pattern: {finding.matched_pattern}
+  Patterns: {", ".join(finding.matched_patterns)}
   Source: {source}
   Evidence:
   {evidence_text}""")

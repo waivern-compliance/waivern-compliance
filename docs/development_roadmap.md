@@ -14,8 +14,8 @@ This document outlines the development status and planned roadmap for the Waiver
 | Personal Data Static Analysis       | ✅   | ✅   | ✅        | Personal data collection analysis in MySQL databases                                         |
 | Personal Data LLM Validation        | ✅   | ✅   | ✅        | Personal data collection in PHP source code                                                  |
 | Processing Purpose Static Analysis  | ✅   | ✅   | ✅        | GDPR processing purpose analysis for MySQL                                                   |
-| Processing Purpose LLM Validation   | ✅   | ⏳   | N/A       | GDPR processing purpose analysis for PHP code                                                |
-| Log Analysis                        | ✅   | 🔄   | N/A       | Analysis of application and server logs for personal data collection and processing purposes |
+| Processing Purpose LLM Validation   | ✅   | ✅   | ✅        | GDPR processing purpose analysis for PHP code with LLM validation                           |
+| Log Analysis                        | ✅   | ✅   | ✅        | Analysis of application and server logs for personal data collection and processing purposes |
 | Security Measures                   | ✅   | ⏳   | N/A       | Security measures analysis                                                                   |
 | Generate SBODPA                     | ✅   | ⏳   | N/A       | Draft Service-Based Online Data Processing Agreement generation                              |
 | Generate Privacy Policy             | ✅   | ⏳   | N/A       | Automated Privacy Policy draft generation                                                    |
