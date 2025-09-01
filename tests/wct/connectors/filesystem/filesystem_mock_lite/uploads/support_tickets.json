@@ -1,0 +1,81 @@
+{
+  "system_metadata": {
+    "export_timestamp": "2024-01-15T14:30:45.123Z",
+    "total_records": 15,
+    "data_classification": "MIXED_PERSONAL_TECHNICAL"
+  },
+  "customer_support_tickets": [
+    {
+      "ticket_id": "SUP-2024-0001",
+      "status": "resolved",
+      "customer_data": {
+        "name": "Rachel Green",
+        "email": "rachel.green@example.com",
+        "phone": "+1-555-234-5678"
+      },
+      "issue_description": "Customer reported login issues with account.",
+      "agent_notes": "Customer confirmed email rachel.green@example.com is correct."
+    }
+  ],
+  "system_logs": [
+    {
+      "timestamp": "2024-01-15T10:30:15Z",
+      "level": "INFO",
+      "component": "email_service",
+      "message": "Email sent successfully to customer@domain.com",
+      "metadata": {
+        "recipient": "sarah.mitchell@realemail.co.uk",
+        "template": "welcome_email_v2",
+        "delivery_status": "delivered"
+      }
+    },
+    {
+      "timestamp": "2024-01-15T10:32:18Z",
+      "level": "WARN",
+      "component": "gdpr_compliance",
+      "message": "Personal data detected in uploaded file",
+      "personal_data_found": {
+        "email_addresses": [
+          "david.jones@realcompany.com",
+          "marketing@company-domain.co.uk"
+        ],
+        "phone_numbers": [
+          "+44 161 234 5678"
+        ],
+        "addresses": [
+          "15 Manchester Road, Liverpool L1 5AB"
+        ]
+      },
+      "false_positive_patterns": [
+        "admin@localhost:3306",
+        "smtp.server.com:587",
+        "test_email@validation.pattern"
+      ]
+    }
+  ],
+  "real_customer_feedback": [
+    {
+      "feedback_id": "FB-001",
+      "customer": {
+        "name": "Lisa Chen",
+        "email": "lisa.chen.feedback@gmail.com"
+      },
+      "message": "Great service! My account manager Sarah Johnson (s.johnson@company.com) was very helpful.",
+      "rating": 5
+    }
+  ],
+  "application_config": {
+    "database": {
+      "username": "app_service@localhost",
+      "connection_string": "mysql://app_service@db.internal.company.com:3306/production"
+    },
+    "email_service": {
+      "from_address": "noreply@company.com",
+      "support_email": "help@company.com"
+    },
+    "api_endpoints": {
+      "user_validation": "/api/users/validate/email@pattern",
+      "phone_verification": "/api/verify/phone/{phone_format}"
+    }
+  }
+}

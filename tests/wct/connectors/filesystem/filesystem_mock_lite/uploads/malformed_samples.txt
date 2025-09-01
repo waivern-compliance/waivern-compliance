@@ -1,0 +1,68 @@
+MALFORMED AND EDGE CASE PERSONAL DATA PATTERNS
+==============================================
+Test File: Edge cases, invalid formats, and partial matches
+Purpose: Test analyser's robustness against malformed data
+
+MALFORMED EMAIL ADDRESSES:
+==========================
+Incomplete domains:
+- john.doe@company
+- @company.com
+
+Invalid characters:
+- user@@company.com
+- user name@company.com (space in local part)
+
+Edge case valid emails:
+- user+tag@company.com
+- user.name.long@sub.domain.company.co.uk
+
+MALFORMED PHONE NUMBERS:
+========================
+Incomplete numbers:
+- +44 20 79
+- 555-123
+
+Invalid formats:
+- +44 20 7946 0958 ext. 123
+- +44 20 7946 0958 (Sarah's direct line)
+
+PARTIAL PERSONAL DATA:
+=====================
+Masked credit cards:
+- **** **** **** 1234
+
+Redacted information:
+- Name: John [REDACTED]
+- Email: ********@company.com
+
+CORRUPTED DATA:
+==============
+Encoding issues:
+- Namé: Jöhñ Smîth (special characters)
+- Email: üser@cømpàny.com
+
+Character corruption:
+- Name: John\x00Smith (null character)
+
+CONTEXT CONFUSION:
+=================
+Real data in error messages:
+- Error: Invalid email format for input 'john.doe@company.com'
+- Debug: Processing user 'Sarah Wilson' profile update
+
+Mixed legitimate and test data:
+- Production contact: sarah.support@company.com
+- Test environment: test@localhost
+
+TRUNCATED DATA:
+==============
+Split across lines:
+Name: Sarah Michelle
+      Johnson
+Email: sarah.johnson@
+       company.com
+
+Multiple formats in same field:
+- "Contact: 020 7946 0958 or email john.doe@company.com"
+- "Emergency: +44 20 7946 0958, backup: sarah@company.com"

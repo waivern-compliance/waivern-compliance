@@ -1,0 +1,44 @@
+EMPLOYEE RECORDS - CONFIDENTIAL
+=====================================
+Document: HR-2024-LITE
+Classification: STRICTLY CONFIDENTIAL
+
+GENUINE PERSONAL DATA FOR COMPLIANCE TESTING:
+=============================================
+
+EMPLOYEE #1:
+Name: Sarah Michelle Johnson
+Email: sarah.johnson@company.com
+Phone: +44 20 7946 0958
+Date of Birth: 15th March 1987
+National Insurance Number: AB123456C
+Address: 42 Baker Street, London, SW1A 1AA, United Kingdom
+Emergency Contact: Michael Johnson (Husband) - 07700 900456
+
+EMPLOYEE #2:
+Name: David Chen Wei
+Email: david.chen@company.com
+Phone: +1 (555) 234-5678
+DOB: 22/07/1985
+SSN: 123-45-6789
+Home Address: 1234 Maple Avenue, Springfield, IL 62701, USA
+
+CUSTOMER DATA SAMPLE:
+====================
+Customer ID: CUST-001
+Name: Emma Thompson-Williams
+Email: emma.t.williams@btinternet.com
+Phone: +44 161 234 5678
+Address: 15 Oxford Road, Manchester, M1 5QA
+Date of Birth: 1992-07-22
+
+MEDICAL RECORDS (GDPR Special Category):
+=======================================
+Patient: Dr. Jennifer Smith
+Date of Birth: 05/08/1975
+Phone: 020 7123 4567
+NHS Number: 123 456 7890
+
+---
+Document Last Modified: 2024-01-15 14:32:18
+Authorised by: Helen Williams, HR Director
