@@ -1,0 +1,10 @@
+Country,Name,Email,Phone,Address,National_ID,Date_Format,Notes
+UK,"John Smith","john.smith@btinternet.com","+44 20 7946 0958","123 High St, London SW1A 1AA","AB123456C","15/03/1987","British format"
+US,"Jane Doe","jane.doe@gmail.com","(555) 123-4567","123 Main St, Springfield IL 62701","123-45-6789","03/15/1987","US format"
+DE,"Hans Müller","hans.mueller@gmx.de","+49 30 12345678","Hauptstraße 123, 10115 Berlin","123456789012","15.03.1987","German format"
+ES,"José García","jose.garcia@telefonica.es","+34 91 123 4567","Calle Mayor 123, 28013 Madrid","12345678Z","15/03/1987","Spanish format"
+JP,"田中太郎","tanaka.taro@yahoo.co.jp","+81 3 1234 5678","東京都千代田区丸の内1-2-3","123-45-678901","昭和62年3月15日","Japanese format"
+BR,"João Silva","joao.silva@uol.com.br","+55 11 1234 5678","Av. Paulista 123, São Paulo SP 01310-100","123.456.789-01","15/03/1987","Brazilian format"
+RU,"Иван Иванов","ivan.ivanov@yandex.ru","+7 495 123 4567","ул. Тверская 123, Москва 125009","1234 567890","15.03.1987","Russian format with Cyrillic"
+EDGE_CASE_1,"O'Connor","irish.name@domain.ie","020-7946-0958","123 O'Connell Street, Dublin","IE123456789","15th March, 1987","Irish apostrophe"
+EDGE_CASE_2,"van der Berg","dutch.name@domain.nl","31-20-123-4567","123 van der Bergstraat, Amsterdam","123456789","Maart 15, 1987","Dutch prefixes"

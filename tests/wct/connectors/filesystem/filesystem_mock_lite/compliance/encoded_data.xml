@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DataExport xmlns="http://company.com/schemas/data-export"
+           version="2.1"
+           generatedAt="2024-01-15T14:30:45Z">
+
+  <!-- SUBTLE PERSONAL DATA PATTERNS - HARDER TO DETECT -->
+
+  <MetaData>
+    <ExportReason>Compliance audit - subtle PII detection testing</ExportReason>
+    <DataClassification>Contains embedded personal identifiers</DataClassification>
+  </MetaData>
+
+  <!-- Base64 encoded email address: amFuZS5kb2VAY29tcGFueS5jb20= -->
+  <EncodedData format="base64">amFuZS5kb2VAY29tcGFueS5jb20=</EncodedData>
+
+  <!-- URL encoded phone number: %2B44%2020%207946%200958 -->
+  <URLParameter>redirect_url=https://system.com/verify?phone=%2B44%2020%207946%200958</URLParameter>
+
+  <UserReferences>
+    <Reference id="usr_sarah_j_1987" type="internal">Employee initials with birth year</Reference>
+    <Reference id="john.smith.dept.hr" type="department">Username pattern</Reference>
+  </UserReferences>
+
+  <DatabaseReferences>
+    <!-- SQL queries with embedded personal data -->
+    <Query purpose="user_lookup">
+      SELECT user_id FROM users WHERE email_hash = 'a1b2c3d4e5f6'
+      -- Original: lisa.wilson@company.com
+    </Query>
+
+    <LogEntry timestamp="2024-01-15 10:30:45">
+      User authentication successful for session token: usr.emma.thompson.20240115
+    </LogEntry>
+  </DatabaseReferences>
+
+  <ConfigurationValues>
+    <!-- Configuration with personal data in unexpected places -->
+    <Setting name="default_contact_admin">Contact: admin.michael.chen@company.com for issues</Setting>
+    <Setting name="emergency_number">Emergency contact: +44-20-7946-0958</Setting>
+    <Setting name="sample_data_path">/data/samples/customer.jane.doe.profile.json</Setting>
+  </ConfigurationValues>
+
+  <CommentedOutCode>
+    <!--
+    Legacy code with personal data in comments
+    NEXT: Remove hardcoded email: support@company.com
+    DEBUG: Test with phone +1-555-234-5678
+    NOTICE: Sarah's extension is 1234, email: s.mitchell@company.com
+    -->
+  </CommentedOutCode>
+
+  <FilePaths>
+    <!-- File paths containing personal identifiers -->
+    <Path>/var/backups/users/john.smith.backup.2024.tar.gz</Path>
+    <Path>/tmp/exports/employee_data_sarah_jones_20240115.csv</Path>
+  </FilePaths>
+
+  <HashReferences>
+    <!-- Hashed data with comments revealing original -->
+    <Hash algorithm="sha256" value="a9b8c7d6e5f4">
+      <!-- Original value: john.wilson@company.com -->
+    </Hash>
+    <Hash algorithm="md5" value="1a2b3c4d5e6f">
+      <!-- Represents phone: +44 20 7946 0958 -->
+    </Hash>
+  </HashReferences>
+
+</DataExport>

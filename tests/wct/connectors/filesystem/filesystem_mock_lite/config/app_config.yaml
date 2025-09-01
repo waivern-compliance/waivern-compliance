@@ -1,0 +1,85 @@
+# Application Configuration File - Lite Version
+# Contains system settings and personal data in various contexts
+# Test file for configuration analysis and personal data detection
+
+application:
+  name: "CustomerPortal"
+  version: "2.3.1"
+  environment: "production"
+
+# Database configuration
+database:
+  primary:
+    host: "db.company.internal"
+    username: "app_user"
+    database_name: "customer_db"
+
+  admin_access:
+    username: "admin.database@company.com"  # Admin email - personal data
+    emergency_contact: "+44 20 7946 0900"   # Emergency number - personal data
+    dba_email: "database.admin@company.com" # DBA contact - personal data
+
+# Email service configuration
+email:
+  templates:
+    welcome_email:
+      from_address: "welcome@company.com"
+      subject: "Welcome {{customer_name}}!"  # Template with personal data placeholder
+
+    password_reset:
+      subject: "Password Reset for {{user_email}}"  # Contains personal data placeholder
+
+  notification_settings:
+    privacy_officer: "dpo@company.com"  # Data Protection Officer contact
+    gdpr_requests: "gdpr.requests@company.com"
+
+    # Emergency contacts (personal data)
+    emergency_contacts:
+      - name: "John Smith"
+        role: "System Administrator"
+        email: "john.smith@company.com"
+        phone: "+44 20 7946 0958"
+
+# Personal data handling configuration
+privacy:
+  gdpr_compliance:
+    enabled: true
+    data_protection_officer: "Sarah Mitchell <dpo@company.com>"  # DPO personal contact
+
+  personal_data_logging:
+    enabled: true
+    audit_contacts:
+      compliance_officer: "Lisa Rodriguez <compliance@company.com>"  # Personal name and email
+
+# External services that process personal data
+external_services:
+  marketing:
+    mailchimp:
+      sync_customer_data: true  # Syncs personal data
+
+# Features that collect personal data
+features:
+  user_registration:
+    collect_phone: true          # Collects personal data
+    collect_date_of_birth: true  # Collects personal data
+
+  customer_support:
+    collect_support_emails: true    # Stores personal communications
+    integrate_with_crm: true        # Shares personal data with CRM
+
+# Incident response contacts
+compliance:
+  incident_response:
+    data_breach_contacts:
+      - role: "Data Protection Officer"
+        name: "Sarah Mitchell"
+        email: "dpo@company.com"
+        phone: "+44 20 7946 0800"
+
+# Development test data
+development:
+  sample_data:
+    customers:
+      - name: "John Doe"
+        email: "john.doe@sample.com"
+        phone: "+44 20 7946 0958"

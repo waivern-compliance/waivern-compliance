@@ -1,0 +1,29 @@
+MIXED CONTENT SAMPLE - LITE VERSION
+===================================
+File purpose: Quick test of mixed personal and technical content
+
+GENUINE PERSONAL DATA:
+=====================
+Employee: John Smith
+Email: john.smith@company.com
+Phone: +44 20 7946 0958
+
+Customer Record:
+Name: Sarah Wilson
+Contact: sarah.wilson@btinternet.com
+DOB: 15/03/1987
+
+TECHNICAL CONTENT (SHOULD NOT BE FLAGGED):
+=========================================
+Configuration:
+- smtp.server=mail.company.com
+- database.user=app_user@localhost
+
+Documentation:
+Test email: test@example.com
+API Example: GET /users?email_pattern=admin@system.local
+
+LOG ENTRIES:
+===========
+[2024-01-15 10:30:01] User login: emma.thompson@customer.com (REAL PERSONAL DATA)
+[2024-01-15 10:30:02] Config loaded: smtp@mail.server.com (TECHNICAL PATTERN)
