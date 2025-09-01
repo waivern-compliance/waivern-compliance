@@ -86,7 +86,6 @@ analysers:
         enable_llm_validation: false
         llm_batch_size: 50
     metadata:
-      priority: "high"
       description: "Analyse PHP source code for processing purposes and service integrations"
   - name: "processing_purpose_analyser_for_mysql"
     type: "processing_purpose_analyser"
@@ -104,9 +103,7 @@ analysers:
         llm_validation_mode: "conservative"
         confidence_threshold: 0.5
     metadata:
-      priority: "medium"
       description: "Identify data processing purposes from MySQL database content"
-      compliance_frameworks: ["GDPR", "CCPA"]
   - name: "personal_data_analyser_for_logs"
     type: "personal_data_analyser"
     properties:
@@ -122,7 +119,6 @@ analysers:
         llm_batch_size: 50
         llm_validation_mode: "conservative"  # More careful validation for log content
     metadata:
-      priority: "high"
       description: "Analyse log files for personally identifiable information using pattern matching"
   - name: "processing_purpose_analyser_for_logs"
     type: "processing_purpose_analyser"
@@ -140,9 +136,7 @@ analysers:
         llm_validation_mode: "conservative"
         confidence_threshold: 0.5
     metadata:
-      priority: "medium"
       description: "Identify data processing purposes and compliance frameworks from log file content"
-      compliance_frameworks: ["GDPR", "CCPA"]
 
 execution:
   - name: "Personal Data Detection in MySQL Database"
@@ -152,9 +146,6 @@ execution:
     analyser: "personal_data_analyser_for_mysql"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
-    context:
-      description: "Analyse MySQL database for personal data collection"
-      priority: "high"
   - name: "Data Subject Classification in MySQL Database"
     description: "Identify data subject categories (employees, customers, etc.) from database content for GDPR Article 30(1)(c) compliance"
     contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
@@ -162,10 +153,6 @@ execution:
     analyser: "data_subject_analyser_for_mysql"
     input_schema: "standard_input"
     output_schema: "data_subject_finding"
-    context:
-      description: "Classify data subjects in MySQL database for GDPR compliance records"
-      priority: "high"
-      compliance_frameworks: ["GDPR"]
   - name: "Data Subject Classification in Log Files"
     description: "Identify data subject categories (employees, customers, etc.) from log file content for GDPR Article 30(1)(c) compliance"
     contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
@@ -173,22 +160,12 @@ execution:
     analyser: "data_subject_analyser_for_logs"
     input_schema: "standard_input"
     output_schema: "data_subject_finding"
-    context:
-      description: "Classify data subjects in log files for GDPR compliance records"
-      priority: "high"
-      compliance_frameworks: ["GDPR"]
-      analysis_type: "log_content_analysis"
   - name: "Processing Purpose Analysis of Database Content"
     description: "Identify GDPR and CCPA compliance processing purposes from database structure and content"
     connector: "my_mysql_db"
     analyser: "processing_purpose_analyser_for_mysql"
     input_schema: "standard_input"
     output_schema: "processing_purpose_finding"
-    context:
-      description: "Identify data processing purposes from MySQL database content"
-      priority: "medium"
-      compliance_frameworks: ["GDPR", "CCPA"]
-      analysis_type: "database_content_analysis"
   - name: "PHP Source Code Processing Purpose Detection"
     description: "Analyse PHP application code for business logic, service integrations, and data processing activities"
     contact: "James Wilson (Lead Developer) <james.wilson@company.co.uk>"
@@ -196,13 +173,6 @@ execution:
     analyser: "processing_purpose_analyser_for_source_code"
     input_schema: "source_code"
     output_schema: "processing_purpose_finding"
-    context:
-      description: "Analyse PHP source code for processing purposes and service integrations"
-      priority: "high"
-      analysis_focus:
-        - "processing_purpose_detection"
-        - "service_integration_detection"
-        - "business_logic_analysis"
   - name: "Personal Data Detection in Log Files"
     description: "Scan log files for personally identifiable information using pattern matching and context analysis"
     contact: "Michael Brown (DevOps) <michael.brown@company.co.uk>"
@@ -210,18 +180,9 @@ execution:
     analyser: "personal_data_analyser_for_logs"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
-    context:
-      description: "Analyse log files for personal data collection and storage"
-      priority: "high"
-      analysis_type: "log_content_analysis"
   - name: "Processing Purpose Analysis of Log Content"
     description: "Identify data processing purposes and compliance frameworks from log file content and system activities"
     connector: "log_files"
     analyser: "processing_purpose_analyser_for_logs"
     input_schema: "standard_input"
     output_schema: "processing_purpose_finding"
-    context:
-      description: "Identify data processing purposes from log file content and system activities"
-      priority: "medium"
-      compliance_frameworks: ["GDPR", "CCPA"]
-      analysis_type: "log_content_analysis"

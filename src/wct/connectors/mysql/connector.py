@@ -284,6 +284,7 @@ class MySQLConnector(Connector):
             # Extract database metadata (connection test included)
             metadata = self._get_database_metadata()
 
+            # TODO: This should be strongly typed - even just a TypedDict
             # Transform data for standard_input schema
             extracted_data = self._transform_for_standard_input_schema(
                 output_schema, metadata
@@ -346,7 +347,7 @@ class MySQLConnector(Connector):
             "source": database_source,
             # Top-level metadata includes complete database schema for reference
             "metadata": {
-                "extraction_type": "mysql_to_text",
+                "connector_type": "mysql",  # Standard connector type field
                 "connection_info": {
                     "host": self._config.host,
                     "port": self._config.port,

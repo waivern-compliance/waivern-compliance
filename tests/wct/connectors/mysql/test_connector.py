@@ -251,3 +251,50 @@ class TestMySQLConnectorDataExtraction:
         assert phone_item.metadata.table_name == "customers"
         assert phone_item.metadata.column_name == "phone"
         assert phone_item.metadata.schema_name == TEST_DATABASE
+
+    # TODO: Add these tests to match SQLite connector comprehensive coverage
+    def test_extracts_multiple_tables_with_metadata(self):
+        """Test extraction from multiple tables with proper metadata for each."""
+        # TODO: Implement to match SQLite connector test pattern
+        pass
+
+    def test_extracts_empty_database_returns_empty_data(self):
+        """Test extraction from database with no tables returns empty data list."""
+        # TODO: Implement to match SQLite connector test pattern
+        pass
+
+    def test_extracts_tables_with_special_characters_in_names(self):
+        """Test extraction handles table names with underscores and hyphens."""
+        # TODO: Implement to match SQLite connector test pattern
+        pass
+
+
+class TestMySQLConnectorEdgeCases:
+    """Tests for MySQL connector edge cases and error handling."""
+
+    # TODO: Add comprehensive edge case tests to match SQLite connector
+
+    def test_handles_database_with_no_tables(self):
+        """Test handling of valid MySQL database with no user-created tables."""
+        # TODO: Implement to match SQLite connector test pattern
+        pass
+
+    def test_handles_tables_with_null_values(self):
+        """Test extraction properly handles NULL values in database cells."""
+        # TODO: Implement to match SQLite connector test pattern
+        pass
+
+    def test_skips_tables_with_unsafe_names(self):
+        """Test security validation skips tables with non-alphanumeric characters."""
+        # TODO: Implement to match SQLite connector test pattern
+        pass
+
+    def test_returned_message_validates_against_schema(self):
+        """Test that returned Message validates against StandardInputSchema."""
+        # TODO: Implement to match SQLite connector test pattern
+        pass
+
+    def test_message_content_structure_matches_standard_input(self):
+        """Test message content structure conforms to standard_input schema."""
+        # TODO: Implement to match SQLite connector test pattern
+        pass

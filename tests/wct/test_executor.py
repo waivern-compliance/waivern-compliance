@@ -679,14 +679,14 @@ execution:
         finally:
             runbook_path.unlink()
 
-    def test_execute_runbook_with_context_and_metadata(self) -> None:
-        """Test execution with context in execution steps and metadata in analysers."""
+    def test_execute_runbook_with_metadata(self) -> None:
+        """Test execution with metadata in analysers."""
         executor = self._create_executor_with_mocks()
 
-        # Create a runbook with context and metadata
+        # Create a runbook with metadata
         runbook_content = """
-name: Context and Metadata Test
-description: Test execution with context and metadata
+name: Metadata Test
+description: Test execution with metadata
 connectors:
   - name: test_connector
     type: mock_connector
@@ -700,15 +700,12 @@ analysers:
       author: "test"
       compliance_standard: "GDPR"
 execution:
-  - name: "Test execution with context and metadata"
-    description: "Testing execution step context and analyser metadata"
+  - name: "Test execution with metadata"
+    description: "Testing execution with analyser metadata"
     connector: test_connector
     analyser: test_analyser
     input_schema: standard_input
     output_schema: personal_data_finding
-    context:
-      environment: "test"
-      priority: "high"
 """
 
         results = self._execute_runbook_yaml(executor, runbook_content)
@@ -719,8 +716,7 @@ execution:
         assert result.metadata.version == "1.0"
         assert result.metadata.author == "test"
         assert result.metadata.compliance_standard == "GDPR"
-        # Note: ExecutionStep context is not directly included in AnalysisResult
-        # but is available during execution
+        # Analyser metadata is included in AnalysisResult
 
     def test_register_duplicate_connector_overrides(self) -> None:
         """Test that registering a connector with the same name overrides the previous one."""
