@@ -61,3 +61,18 @@ jobs:
 
       - name: Test
         run: ./scripts/test.sh
+
+      - name: Generate WCT CLI artifacts
+        run: |
+          mkdir -p ci_artifacts
+          uv run wct run runbooks/samples/LAMP_stack_lite.yaml --output-dir ci_artifacts/lamp_stack_lite
+          uv run wct run runbooks/samples/file_content_analysis.yaml --output-dir ci_artifacts/file_content_analysis
+        continue-on-error: true
+
+      - name: Upload WCT CLI artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wct-cli-outputs-${{ matrix.python-version }}-${{ matrix.runner }}
+          path: ci_artifacts/
+          retention-days: 30
