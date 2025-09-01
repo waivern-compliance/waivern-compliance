@@ -18,7 +18,7 @@
           "relevance": "Requires establishing AI risk management practices and continuous monitoring of AI systems"
         }
       ],
-      "matched_pattern": "compliance",
+      "matched_patterns": ["compliance"],
       "evidence": [
         {
           "content": "AI compliance framework implementation",
@@ -50,7 +50,7 @@
           "relevance": "User authentication processing requires lawful basis under Article 6(1)(b) for contract performance"
         }
       ],
-      "matched_pattern": "authentication",
+      "matched_patterns": ["authentication"],
       "evidence": [
         {
           "content": "login credentials validation",
@@ -90,7 +90,7 @@
           "relevance": "Sensitive personal information processing requires additional consumer rights and disclosure requirements"
         }
       ],
-      "matched_pattern": "analytics",
+      "matched_patterns": ["analytics"],
       "evidence": [
         {
           "content": "adobe analytics integration",
@@ -130,7 +130,7 @@
           "relevance": "Automated profiling for personalization constitutes sensitive personal information processing requiring enhanced disclosures"
         }
       ],
-      "matched_pattern": "personalization",
+      "matched_patterns": ["personalization"],
       "evidence": [
         {
           "content": "recommendation engine",
@@ -170,7 +170,7 @@
           "relevance": "Fraud detection supports security principle requirements for monitoring and incident response"
         }
       ],
-      "matched_pattern": "fraud",
+      "matched_patterns": ["fraud"],
       "evidence": [
         {
           "content": "transaction monitoring",

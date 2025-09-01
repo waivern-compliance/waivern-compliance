@@ -91,13 +91,15 @@ class TestProcessingPurposePatternMatcher:
         assert len(findings) > 0
         # Look for a support-related finding
         support_findings = [
-            f for f in findings if "support" in f.matched_pattern.lower()
+            f
+            for f in findings
+            if any("support" in pattern.lower() for pattern in f.matched_patterns)
         ]
         assert len(support_findings) > 0
 
         support_finding = support_findings[0]
         assert isinstance(support_finding, ProcessingPurposeFindingModel)
-        assert support_finding.matched_pattern == "support"
+        assert "support" in support_finding.matched_patterns
         assert len(support_finding.evidence) > 0
 
     def test_find_patterns_creates_multiple_findings_for_multiple_matches(
@@ -119,8 +121,10 @@ class TestProcessingPurposePatternMatcher:
         assert len(findings) > 1
 
         # Verify we get findings for different purposes
-        matched_patterns = {f.matched_pattern for f in findings}
-        assert len(matched_patterns) > 1
+        all_matched_patterns = set()
+        for f in findings:
+            all_matched_patterns.update(f.matched_patterns)
+        assert len(all_matched_patterns) > 1
 
         # Verify all findings have evidence
         for finding in findings:
@@ -146,7 +150,9 @@ class TestProcessingPurposePatternMatcher:
         assert len(findings) > 0
         # Should find patterns regardless of case
         customer_findings = [
-            f for f in findings if "customer" in f.matched_pattern.lower()
+            f
+            for f in findings
+            if any("customer" in pattern.lower() for pattern in f.matched_patterns)
         ]
         assert len(customer_findings) > 0
 
@@ -216,7 +222,7 @@ class TestProcessingPurposePatternMatcher:
         assert len(finding.compliance) > 0
         assert hasattr(finding.compliance[0], "regulation")
         assert hasattr(finding.compliance[0], "relevance")
-        assert isinstance(finding.matched_pattern, str)
-        assert len(finding.matched_pattern) > 0
+        assert isinstance(finding.matched_patterns, list)
+        assert len(finding.matched_patterns) > 0
         assert isinstance(finding.evidence, list)
         assert len(finding.evidence) > 0

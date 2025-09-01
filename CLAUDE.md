@@ -89,6 +89,10 @@ This codebase implements WCT (Waivern Compliance Tool), a modern compliance anal
 
 ### Runbook Format
 ```yaml
+name: "Runbook Name"
+description: "Description of what this runbook does"
+contact: "Contact Person <email@company.com>"
+
 connectors:
   - name: "connector_name"
     type: "connector_type"
@@ -100,7 +104,10 @@ analysers:
     properties: {...}
 
 execution:
-  - connector: "connector_name"
+  - name: "Execution Step Name"
+    description: "Description of what this step does"
+    contact: "Step Contact <email@company.com>"  # Optional
+    connector: "connector_name"
     analyser: "analyser_name"
     input_schema: "schema_name"
     output_schema: "output_schema"

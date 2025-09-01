@@ -91,7 +91,7 @@ class SourceCodeSchemaInputHandler:
                         ]
                         finding = self._create_finding_from_processing_purpose_rule(
                             rule=rule,
-                            matched_pattern=pattern,
+                            matched_patterns=[pattern],
                             evidence=evidence,
                             file_metadata=file_metadata,
                         )
@@ -111,7 +111,7 @@ class SourceCodeSchemaInputHandler:
                         ]
                         finding = self._create_finding_from_service_integration_rule(
                             rule=rule,
-                            matched_pattern=pattern,
+                            matched_patterns=[pattern],
                             evidence=evidence,
                             file_metadata=file_metadata,
                         )
@@ -131,7 +131,7 @@ class SourceCodeSchemaInputHandler:
                         ]
                         finding = self._create_finding_from_data_collection_rule(
                             rule=rule,
-                            matched_pattern=pattern,
+                            matched_patterns=[pattern],
                             evidence=evidence,
                             file_metadata=file_metadata,
                         )
@@ -162,7 +162,7 @@ class SourceCodeSchemaInputHandler:
                         ]
                         finding = self._create_finding_from_service_integration_rule(
                             rule=rule,
-                            matched_pattern=pattern,
+                            matched_patterns=[pattern],
                             evidence=evidence,
                             file_metadata=file_metadata,
                         )
@@ -182,7 +182,7 @@ class SourceCodeSchemaInputHandler:
                         ]
                         finding = self._create_finding_from_service_integration_rule(
                             rule=rule,
-                            matched_pattern=pattern,
+                            matched_patterns=[pattern],
                             evidence=evidence,
                             file_metadata=file_metadata,
                         )
@@ -202,7 +202,7 @@ class SourceCodeSchemaInputHandler:
                         ]
                         finding = self._create_finding_from_service_integration_rule(
                             rule=rule,
-                            matched_pattern=pattern,
+                            matched_patterns=[pattern],
                             evidence=evidence,
                             file_metadata=file_metadata,
                         )
@@ -213,7 +213,7 @@ class SourceCodeSchemaInputHandler:
     def _create_finding_from_processing_purpose_rule(
         self,
         rule: ProcessingPurposeRule,
-        matched_pattern: str,
+        matched_patterns: list[str],
         evidence: list[EvidenceItem],
         file_metadata: SourceCodeFileMetadata,
     ) -> ProcessingPurposeFindingModel:
@@ -228,7 +228,7 @@ class SourceCodeSchemaInputHandler:
             purpose_category=rule.purpose_category,  # Type-safe!
             risk_level=rule.risk_level,
             compliance=compliance_data,
-            matched_pattern=matched_pattern,
+            matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
                 source=file_metadata.source,
@@ -238,7 +238,7 @@ class SourceCodeSchemaInputHandler:
     def _create_finding_from_service_integration_rule(
         self,
         rule: ServiceIntegrationRule,
-        matched_pattern: str,
+        matched_patterns: list[str],
         evidence: list[EvidenceItem],
         file_metadata: SourceCodeFileMetadata,
     ) -> ProcessingPurposeFindingModel:
@@ -253,7 +253,7 @@ class SourceCodeSchemaInputHandler:
             purpose_category=rule.purpose_category,  # Type-safe!
             risk_level=rule.risk_level,
             compliance=compliance_data,
-            matched_pattern=matched_pattern,
+            matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
                 source=file_metadata.source,
@@ -264,7 +264,7 @@ class SourceCodeSchemaInputHandler:
     def _create_finding_from_data_collection_rule(
         self,
         rule: DataCollectionRule,
-        matched_pattern: str,
+        matched_patterns: list[str],
         evidence: list[EvidenceItem],
         file_metadata: SourceCodeFileMetadata,
     ) -> ProcessingPurposeFindingModel:
@@ -279,7 +279,7 @@ class SourceCodeSchemaInputHandler:
             purpose_category="operational",  # DataCollectionRule doesn't have purpose_category
             risk_level=rule.risk_level,
             compliance=compliance_data,
-            matched_pattern=matched_pattern,
+            matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
                 source=file_metadata.source,

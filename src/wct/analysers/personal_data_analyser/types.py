@@ -64,8 +64,9 @@ class PersonalDataFindingModel(BaseModel):
         default=False,
         description="Whether this is GDPR Article 9 special category data",
     )
-    matched_pattern: str = Field(
-        description="Specific pattern that matched in the content"
+    matched_patterns: list[str] = Field(
+        default_factory=list,
+        description="Specific patterns that matched in the content",
     )
     compliance: list[FindingComplianceData] = Field(
         default_factory=list, description="Compliance information for this finding"

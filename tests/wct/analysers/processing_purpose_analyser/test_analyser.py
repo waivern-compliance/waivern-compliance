@@ -351,7 +351,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             assert "purpose_category" in finding
             assert "risk_level" in finding
             assert "compliance" in finding
-            assert "matched_pattern" in finding
+            assert "matched_patterns" in finding
             assert "evidence" in finding
             assert "metadata" in finding
 
@@ -700,7 +700,7 @@ class PaymentService {
             assert "purpose_category" in finding
             assert "risk_level" in finding
             assert "compliance" in finding
-            assert "matched_pattern" in finding
+            assert "matched_patterns" in finding
             assert "evidence" in finding
             assert "metadata" in finding
 

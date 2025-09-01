@@ -26,9 +26,12 @@
             "type": "boolean",
             "description": "Whether this is GDPR Article 9 special category data"
           },
-          "matched_pattern": {
-            "type": "string",
-            "description": "The specific pattern that was matched"
+          "matched_patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The specific patterns that were matched"
           },
           "compliance": {
             "type": "array",
@@ -82,7 +85,7 @@
             "required": ["source"]
           }
         },
-        "required": ["type", "data_type", "risk_level", "special_category", "matched_pattern", "compliance", "evidence", "metadata"]
+        "required": ["type", "data_type", "risk_level", "special_category", "matched_patterns", "compliance", "evidence", "metadata"]
       }
     },
     "summary": {

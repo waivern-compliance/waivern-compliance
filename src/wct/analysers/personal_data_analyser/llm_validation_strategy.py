@@ -40,7 +40,7 @@ class PersonalDataValidationStrategy(LLMValidationStrategy[PersonalDataFindingMo
                     "type": finding.type,
                     "risk_level": finding.risk_level,
                     "special_category": finding.special_category,
-                    "matched_pattern": finding.matched_pattern,
+                    "matched_patterns": finding.matched_patterns,
                     "evidence": [item.content for item in finding.evidence],
                     "metadata": finding.metadata,
                 }
@@ -50,7 +50,7 @@ class PersonalDataValidationStrategy(LLMValidationStrategy[PersonalDataFindingMo
     @override
     def get_finding_identifier(self, finding: PersonalDataFindingModel) -> str:
         """Get human-readable identifier for personal data finding."""
-        return f"{finding.type} - {finding.matched_pattern}"
+        return f"{finding.type} - {', '.join(finding.matched_patterns)}"
 
 
 def personal_data_validation_strategy(
