@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from wct.connectors.base import ConnectorConfigError, ConnectorExtractionError
+from wct.connectors.database.schema_utils import DatabaseSchemaUtils
 from wct.connectors.mysql.config import MySQLConnectorConfig
 from wct.connectors.mysql.connector import MySQLConnector
 from wct.schemas import (
@@ -157,8 +158,10 @@ class TestMySQLConnectorPublicAPI:
             )
             connector = MySQLConnector(config)
 
-            # Test the validation method directly since the full extract requires database connection
-            result_schema = connector._validate_output_schema(None)
+            # Test the validation logic directly since the full extract requires database connection
+            result_schema = DatabaseSchemaUtils.validate_output_schema(
+                None, tuple(connector.get_supported_output_schemas())
+            )
             assert result_schema is not None
             assert result_schema.name == "standard_input"
 

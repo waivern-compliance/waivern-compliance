@@ -16,9 +16,10 @@ import pymysql
 
 from wct.connectors.base import (
     Connector,
-    ConnectorConfigError,
     ConnectorExtractionError,
 )
+from wct.connectors.database.extraction_utils import DatabaseExtractionUtils
+from wct.connectors.database.schema_utils import DatabaseSchemaUtils
 from wct.connectors.mysql.config import MySQLConnectorConfig
 from wct.message import Message
 from wct.schemas import RelationalDatabaseMetadata, Schema, StandardInputSchema
@@ -279,7 +280,9 @@ class MySQLConnector(Connector):
         try:
             logger.info(f"Extracting data from MySQL database: {self._config.database}")
 
-            output_schema = self._validate_output_schema(output_schema)
+            output_schema = DatabaseSchemaUtils.validate_output_schema(
+                output_schema, tuple(_SUPPORTED_OUTPUT_SCHEMAS)
+            )
 
             # Extract database metadata (connection test included)
             metadata = self._get_database_metadata()
@@ -365,32 +368,6 @@ class MySQLConnector(Connector):
             "data": data_items,
         }
 
-    def _validate_output_schema(self, output_schema: Schema | None) -> Schema:
-        """Validate the output schema.
-
-        Args:
-            output_schema: Schema to validate
-
-        Returns:
-            The validated schema (or default if none provided)
-
-        Raises:
-            ConnectorConfigError: If schema is invalid or unsupported
-
-        """
-        if not output_schema:
-            logger.warning("No schema provided, using default schema")
-            output_schema = _SUPPORTED_OUTPUT_SCHEMAS[0]
-
-        supported_schema_names = [schema.name for schema in _SUPPORTED_OUTPUT_SCHEMAS]
-        if output_schema.name not in supported_schema_names:
-            raise ConnectorConfigError(
-                f"Unsupported output schema: {output_schema.name}. "
-                f"Supported schemas: {supported_schema_names}"
-            )
-
-        return output_schema
-
     def _extract_table_cell_data(
         self, table_info: dict[str, Any]
     ) -> list[dict[str, Any]]:
@@ -413,56 +390,26 @@ class MySQLConnector(Connector):
             for row_index, row in enumerate(table_data):
                 for column_name, cell_value in row.items():
                     # Only extract non-null, non-empty values
-                    if cell_value is not None and str(cell_value).strip():
-                        data_items.append(
-                            self._create_cell_data_item(
-                                table_info,
-                                table_name,
-                                column_name,
-                                cell_value,
-                                row_index,
-                            )
+                    if DatabaseExtractionUtils.filter_non_empty_cell(cell_value):
+                        # Create RelationalDatabaseMetadata for the cell
+                        cell_metadata = RelationalDatabaseMetadata(
+                            source=f"mysql_database_({self._config.database})_table_({table_name})_column_({column_name})_row_({row_index + 1})",
+                            connector_type=_CONNECTOR_NAME,
+                            table_name=table_name,
+                            column_name=column_name,
+                            schema_name=self._config.database,
                         )
+
+                        # Use utility to create the data item
+                        data_item = DatabaseExtractionUtils.create_cell_data_item(
+                            cell_value, cell_metadata
+                        )
+                        data_items.append(data_item.model_dump())
 
         except Exception as e:
             logger.warning(f"Failed to extract data from table {table_name}: {e}")
 
         return data_items
-
-    def _create_cell_data_item(
-        self,
-        table_info: dict[str, Any],
-        table_name: str,
-        column_name: str,
-        cell_value: Any,  # noqa: ANN401  # Database cell values can be any type (str, int, float, date, None, etc.)
-        row_index: int,
-    ) -> dict[str, Any]:
-        """Create a single cell data item with metadata.
-
-        Args:
-            table_info: Table metadata
-            table_name: Name of the table
-            column_name: Name of the column
-            cell_value: The cell value
-            row_index: Zero-based row index
-
-        Returns:
-            Data item dictionary with content and metadata
-
-        """
-        # Create RelationalDatabaseMetadata instance
-        metadata = RelationalDatabaseMetadata(
-            source=f"mysql_database_({self._config.database})_table_({table_name})_column_({column_name})_row_({row_index + 1})",
-            connector_type=_CONNECTOR_NAME,
-            table_name=table_name,
-            column_name=column_name,
-            schema_name=self._config.database,
-        )
-
-        return {
-            "content": str(cell_value),
-            "metadata": metadata.model_dump(),
-        }
 
     def _get_column_data_type(
         self, table_info: dict[str, Any], column_name: str
