@@ -150,17 +150,31 @@ class TestMySQLConnectorPublicAPI:
 
     def test_extract_without_schema_uses_default(self):
         """Test extract without schema uses default schema."""
-        # Test that the validation logic correctly assigns default schema
         with clear_mysql_env_vars():
             config = MySQLConnectorConfig.from_properties(
                 {"host": TEST_HOST, "user": TEST_USER}
             )
             connector = MySQLConnector(config)
 
-            # Test the validation method directly since the full extract requires database connection
-            result_schema = connector._validate_output_schema(None)
-            assert result_schema is not None
-            assert result_schema.name == "standard_input"
+            # Mock the database connection and metadata to test full extract() method
+            mock_cursor = Mock()
+            mock_cursor.fetchall.return_value = []  # Empty table list
+            mock_cursor.description = None
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+
+            mock_connection = Mock()
+            mock_connection.cursor.return_value = mock_cursor
+            mock_connection.get_server_info.return_value = "8.0.0-mock"
+
+            with patch.object(connector, "_get_connection") as mock_get_conn:
+                mock_get_conn.return_value.__enter__.return_value = mock_connection
+                mock_get_conn.return_value.__exit__.return_value = None
+
+                # Extract with StandardInputSchema - should use default
+                result_message = connector.extract(StandardInputSchema())
+                assert result_message.schema is not None
+                assert result_message.schema.name == "standard_input"
 
     def test_extract_with_unsupported_schema_raises_error(self):
         """Test extract with unsupported schema raises error."""
@@ -252,7 +266,6 @@ class TestMySQLConnectorDataExtraction:
         assert phone_item.metadata.column_name == "phone"
         assert phone_item.metadata.schema_name == TEST_DATABASE
 
-    # TODO: Add these tests to match SQLite connector comprehensive coverage
     def test_extracts_multiple_tables_with_metadata(self):
         """Test extraction from multiple tables with proper metadata for each."""
         # TODO: Implement to match SQLite connector test pattern
@@ -272,29 +285,197 @@ class TestMySQLConnectorDataExtraction:
 class TestMySQLConnectorEdgeCases:
     """Tests for MySQL connector edge cases and error handling."""
 
-    # TODO: Add comprehensive edge case tests to match SQLite connector
-
     def test_handles_database_with_no_tables(self):
-        """Test handling of valid MySQL database with no user-created tables."""
-        # TODO: Implement to match SQLite connector test pattern
-        pass
+        """Test handling of valid MySQL database with no user-created tables.
+
+        Business Requirement: MySQL connector must gracefully handle valid databases
+        with no user-created tables and return meaningful metadata about the empty result.
+
+        This tests the critical functionality of error handling for empty databases,
+        which commonly occurs in fresh installations or system-only databases.
+        """
+        # Arrange
+        with clear_mysql_env_vars():
+            config = MySQLConnectorConfig.from_properties(
+                {"host": TEST_HOST, "user": TEST_USER}
+            )
+            connector = MySQLConnector(config)
+
+            # Mock empty database (no tables)
+            mock_cursor = Mock()
+            mock_cursor.fetchall.return_value = []  # Empty table list
+            mock_cursor.description = None
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+
+            mock_connection = Mock()
+            mock_connection.cursor.return_value = mock_cursor
+            mock_connection.get_server_info.return_value = "8.0.0-mock"
+
+            # Act & Assert
+            with patch.object(connector, "_get_connection") as mock_get_conn:
+                mock_get_conn.return_value.__enter__.return_value = mock_connection
+                mock_get_conn.return_value.__exit__.return_value = None
+
+                result_message = connector.extract(StandardInputSchema())
+
+                # Should succeed with empty data
+                assert result_message.schema is not None
+                assert result_message.schema.name == "standard_input"
+                assert isinstance(result_message.content, dict)
+
+                # Should have empty data list
+                data = result_message.content.get("data", [])
+                assert len(data) == 0
+
+                # Should have proper metadata indicating no tables processed
+                metadata = result_message.content.get("metadata", {})
+                extraction_summary = metadata.get("extraction_summary", {})
+                assert extraction_summary.get("tables_processed") == 0
+                assert extraction_summary.get("cell_values_extracted") == 0
 
     def test_handles_tables_with_null_values(self):
-        """Test extraction properly handles NULL values in database cells."""
-        # TODO: Implement to match SQLite connector test pattern
-        pass
+        """Test extraction properly handles NULL values in database cells.
 
-    def test_skips_tables_with_unsafe_names(self):
-        """Test security validation skips tables with non-alphanumeric characters."""
-        # TODO: Implement to match SQLite connector test pattern
-        pass
+        Business Requirement: MySQL connector must properly filter NULL database values
+        during extraction to ensure only meaningful data is processed for compliance analysis.
+
+        This tests the critical functionality of NULL filtering which directly impacts
+        data quality and analysis results in downstream compliance processing.
+        """
+        # Arrange
+        with clear_mysql_env_vars():
+            config = MySQLConnectorConfig.from_properties(
+                {"host": TEST_HOST, "user": TEST_USER}
+            )
+            connector = MySQLConnector(config)
+
+            # For this test, use simplified mocking to test the NULL filtering behavior
+            # Mock minimal database metadata that triggers the NULL filtering logic
+
+            # Act & Assert - Use a simpler approach by mocking the entire extraction pipeline
+            with patch.object(connector, "_get_database_metadata") as mock_metadata:
+                mock_metadata.return_value = {
+                    "database_name": "test_db",
+                    "tables": [
+                        {
+                            "name": "users",
+                            "type": "BASE TABLE",
+                            "comment": "",
+                            "estimated_rows": 4,
+                            "columns": [],
+                        }
+                    ],
+                    "server_info": {
+                        "version": "8.0.0",
+                        "host": "localhost",
+                        "port": 3306,
+                    },
+                }
+
+                with patch.object(connector, "_get_table_data") as mock_table_data:
+                    # Mock table data with NULL values
+                    mock_table_data.return_value = [
+                        {"id": 1, "name": "John", "email": "john@test.com"},
+                        {"id": 2, "name": None, "email": "jane@test.com"},  # NULL name
+                        {"id": 3, "name": "Bob", "email": None},  # NULL email
+                        {"id": None, "name": None, "email": None},  # All NULL
+                    ]
+
+                    result_message = connector.extract(StandardInputSchema())
+
+                    # Validate the result using proper typing
+                    typed_result = StandardInputDataModel[
+                        RelationalDatabaseMetadata
+                    ].model_validate(result_message.content)
+
+                    # Should only extract non-NULL, non-empty values
+                    # Row 1: id(1), name(John), email(john@test.com) = 3 items
+                    # Row 2: id(2), email(jane@test.com) = 2 items (NULL name skipped)
+                    # Row 3: id(3), name(Bob) = 2 items (NULL email skipped)
+                    # Row 4: no items (all NULL)
+                    # Total: 7 items
+                    assert len(typed_result.data) == 7
+
+                    # Verify NULL values are not included
+                    contents = [item.content for item in typed_result.data]
+                    assert "None" not in contents
+                    assert "" not in contents
+
+                    # Verify non-NULL values are included
+                    assert "1" in contents  # id values converted to string
+                    assert "John" in contents
+                    assert "jane@test.com" in contents
+                    assert "2" in contents
+                    assert "3" in contents
+                    assert "Bob" in contents
 
     def test_returned_message_validates_against_schema(self):
-        """Test that returned Message validates against StandardInputSchema."""
-        # TODO: Implement to match SQLite connector test pattern
-        pass
+        """Test that returned Message validates against StandardInputSchema.
 
-    def test_message_content_structure_matches_standard_input(self):
-        """Test message content structure conforms to standard_input schema."""
-        # TODO: Implement to match SQLite connector test pattern
-        pass
+        Business Requirement: MySQL connector must return data that conforms to the
+        StandardInputSchema specification to ensure compatibility with downstream analysers.
+
+        This tests the critical functionality of schema compliance which is mandatory
+        for the WCT architecture. Schema validation failures break the entire analysis pipeline.
+        """
+        # Arrange
+        with clear_mysql_env_vars():
+            config = MySQLConnectorConfig.from_properties(
+                {"host": TEST_HOST, "user": TEST_USER}
+            )
+            connector = MySQLConnector(config)
+
+            # Use simplified mocking approach to test schema validation
+            # Act & Assert - Mock high-level components to test schema compliance
+            with patch.object(connector, "_get_database_metadata") as mock_metadata:
+                mock_metadata.return_value = {
+                    "database_name": "test_db",
+                    "tables": [
+                        {
+                            "name": "test_table",
+                            "type": "BASE TABLE",
+                            "comment": "Test table",
+                            "estimated_rows": 1,
+                            "columns": [],
+                        }
+                    ],
+                    "server_info": {
+                        "version": "8.0.0",
+                        "host": "localhost",
+                        "port": 3306,
+                    },
+                }
+
+                with patch.object(connector, "_get_table_data") as mock_table_data:
+                    # Mock minimal table data
+                    mock_table_data.return_value = [{"id": 1}]
+
+                    result_message = connector.extract(StandardInputSchema())
+
+                    # Assert - Message-level validation
+                    result_message.validate()  # Should not raise
+                    assert result_message.schema is not None
+                    assert result_message.schema.name == "standard_input"
+                    assert result_message.schema.version == "1.0.0"
+
+                    # Assert - Content structure validation
+                    typed_result = StandardInputDataModel[
+                        RelationalDatabaseMetadata
+                    ].model_validate(result_message.content)
+
+                    # Verify schema-compliant structure
+                    assert typed_result.schemaVersion == "1.0.0"
+                    assert typed_result.name is not None
+                    assert isinstance(typed_result.data, list)
+                    assert (
+                        len(typed_result.data) == 1
+                    )  # One data item from mocked record
+
+                    # Verify data item structure compliance
+                    data_item = typed_result.data[0]
+                    assert hasattr(data_item, "content")
+                    assert hasattr(data_item, "metadata")
+                    assert isinstance(data_item.metadata, RelationalDatabaseMetadata)
+                    assert data_item.metadata.table_name == "test_table"
+                    assert data_item.metadata.connector_type == "mysql"
