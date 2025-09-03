@@ -23,13 +23,9 @@ from .types import PersonalDataAnalyserConfig, PersonalDataFindingModel
 logger = logging.getLogger(__name__)
 
 # Schema constants
-_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
-    StandardInputSchema(),
-]
+_SUPPORTED_INPUT_SCHEMAS: tuple[Schema, ...] = (StandardInputSchema(),)
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
-    PersonalDataFindingSchema(),
-]
+_SUPPORTED_OUTPUT_SCHEMAS: tuple[Schema, ...] = (PersonalDataFindingSchema(),)
 
 
 class PersonalDataAnalyser(Analyser):
@@ -92,13 +88,13 @@ class PersonalDataAnalyser(Analyser):
 
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[Schema]:
+    def get_supported_input_schemas(cls) -> tuple[Schema, ...]:
         """Return the input schemas supported by this analyser."""
         return _SUPPORTED_INPUT_SCHEMAS
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> list[Schema]:
+    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
         """Return the output schemas supported by this analyser."""
         return _SUPPORTED_OUTPUT_SCHEMAS
 

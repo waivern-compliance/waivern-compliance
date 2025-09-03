@@ -80,12 +80,12 @@ class Analyser(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def get_supported_input_schemas(cls) -> list[Schema]:
+    def get_supported_input_schemas(cls) -> tuple[Schema, ...]:
         """Return the input schemas supported by the analyser."""
 
     @classmethod
     @abc.abstractmethod
-    def get_supported_output_schemas(cls) -> list[Schema]:
+    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
         """Return the output schemas supported by this analyser."""
 
     @staticmethod
@@ -100,7 +100,7 @@ class Analyser(abc.ABC):
             SchemaLoadError: If schema validation fails
 
         """
-        if message.schema and message.schema.name != expected_schema.name:
+        if message.schema and message.schema != expected_schema:
             raise SchemaLoadError(
                 _SCHEMA_MISMATCH_ERROR.format(
                     message_schema=message.schema.name,

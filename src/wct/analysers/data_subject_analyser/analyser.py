@@ -21,13 +21,9 @@ from .types import DataSubjectAnalyserConfig, DataSubjectFindingModel
 
 logger = logging.getLogger(__name__)
 
-_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
-    StandardInputSchema(),
-]
+_SUPPORTED_INPUT_SCHEMAS: tuple[Schema, ...] = (StandardInputSchema(),)
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
-    DataSubjectFindingSchema(),
-]
+_SUPPORTED_OUTPUT_SCHEMAS: tuple[Schema, ...] = (DataSubjectFindingSchema(),)
 
 
 class DataSubjectAnalyser(Analyser):
@@ -92,13 +88,13 @@ class DataSubjectAnalyser(Analyser):
 
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[Schema]:
+    def get_supported_input_schemas(cls) -> tuple[Schema, ...]:
         """Return the input schemas supported by this analyser."""
         return _SUPPORTED_INPUT_SCHEMAS
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> list[Schema]:
+    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
         """Return the output schemas supported by this analyser."""
         return _SUPPORTED_OUTPUT_SCHEMAS
 
@@ -118,7 +114,7 @@ class DataSubjectAnalyser(Analyser):
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
         # Process standard_input schema data
-        if input_schema.name == "standard_input":
+        if isinstance(input_schema, StandardInputSchema):
             typed_data = StandardInputDataModel[BaseMetadata].model_validate(
                 message.content
             )

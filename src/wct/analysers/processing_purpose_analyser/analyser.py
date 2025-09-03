@@ -25,14 +25,12 @@ from .types import ProcessingPurposeAnalyserConfig, ProcessingPurposeFindingMode
 
 logger = logging.getLogger(__name__)
 
-_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
+_SUPPORTED_INPUT_SCHEMAS: tuple[Schema, ...] = (
     StandardInputSchema(),
     SourceCodeSchema(),
-]
+)
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
-    ProcessingPurposeFindingSchema(),
-]
+_SUPPORTED_OUTPUT_SCHEMAS: tuple[Schema, ...] = (ProcessingPurposeFindingSchema(),)
 
 
 class ProcessingPurposeAnalyser(Analyser):
@@ -93,13 +91,13 @@ class ProcessingPurposeAnalyser(Analyser):
 
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[Schema]:
+    def get_supported_input_schemas(cls) -> tuple[Schema, ...]:
         """Return the input schemas supported by this analyser."""
         return _SUPPORTED_INPUT_SCHEMAS
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> list[Schema]:
+    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
         """Return the output schemas supported by this analyser."""
         return _SUPPORTED_OUTPUT_SCHEMAS
 
@@ -119,12 +117,12 @@ class ProcessingPurposeAnalyser(Analyser):
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
         # Validate and parse data based on schema type
-        if input_schema.name == "standard_input":
+        if isinstance(input_schema, StandardInputSchema):
             typed_data = StandardInputDataModel[BaseMetadata].model_validate(
                 message.content
             )
             findings = self._process_standard_input_data(typed_data)
-        elif input_schema.name == "source_code":
+        elif isinstance(input_schema, SourceCodeSchema):
             typed_data = parse_data_model(message.content, SourceCodeDataModel)
             findings = self._process_source_code_data(typed_data)
         else:
