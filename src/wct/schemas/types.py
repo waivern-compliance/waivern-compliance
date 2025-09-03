@@ -70,8 +70,12 @@ class BaseAnalysisOutputMetadata(BaseModel):
         default=None, description="Size of context used for evidence extraction"
     )
     analyses_chain: AnalysesChain = Field(
-        default_factory=list, description="Track the full analysis chain"
+        min_length=1, description="Track the full analysis chain"
     )
+
+    def __init__(self, **data: object) -> None:
+        """Initialize with support for extra fields."""
+        super().__init__(**data)
 
 
 class BaseFindingModel(BaseModel):

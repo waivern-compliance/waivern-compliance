@@ -11,6 +11,7 @@ from typing import Any, Self
 
 from wct.message import Message
 from wct.schemas import Schema, SchemaLoadError
+from wct.schemas.types import AnalysisChainEntry
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,41 @@ class Analyser(abc.ABC):
                 )
             )
         message.validate()
+
+    @staticmethod
+    def update_analyses_chain(
+        input_message: Message, analyser_name: str
+    ) -> list[AnalysisChainEntry]:
+        """Extract existing analysis chain and add new entry with correct order.
+
+        Args:
+            input_message: Input message that may contain existing analysis metadata
+            analyser_name: Name of the current analyser to add to the chain
+
+        Returns:
+            Updated analysis chain with the new analyser entry
+
+        """
+        existing_chain: list[AnalysisChainEntry] = []
+
+        # Extract existing analysis chain from input message if present
+        if hasattr(input_message.content, "get") and input_message.content.get(
+            "analysis_metadata"
+        ):
+            metadata = input_message.content["analysis_metadata"]
+            if "analyses_chain" in metadata:
+                existing_chain = [
+                    AnalysisChainEntry(**entry) for entry in metadata["analyses_chain"]
+                ]
+
+        # Calculate next order number
+        next_order = (
+            max(entry.order for entry in existing_chain) + 1 if existing_chain else 1
+        )
+
+        # Create new entry and extend chain
+        new_entry = AnalysisChainEntry(order=next_order, analyser=analyser_name)
+        return existing_chain + [new_entry]
 
 
 class AnalyserError(Exception):

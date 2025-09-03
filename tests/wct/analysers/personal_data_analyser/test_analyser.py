@@ -342,6 +342,58 @@ class TestPersonalDataAnalyser:
                 assert isinstance(finding["data_type"], str)
                 assert finding["data_type"] != "", "data_type should not be empty"
 
+    def test_personal_data_analyser_provides_standardised_analysis_metadata(
+        self,
+        valid_config: PersonalDataAnalyserConfig,
+        mock_pattern_matcher: Mock,
+        mock_llm_service_manager: Mock,
+        sample_input_message: Message,
+        sample_findings: list[PersonalDataFindingModel],
+    ) -> None:
+        """Test that personal data analyser provides standardised analysis metadata.
+
+        Business Logic: All analysers must provide consistent metadata for
+        downstream processing and analysis chaining capabilities.
+        """
+        # Arrange
+        analyser = PersonalDataAnalyser(
+            valid_config, mock_pattern_matcher, mock_llm_service_manager
+        )
+
+        mock_pattern_matcher.find_patterns.return_value = sample_findings
+        mock_llm_service_manager.llm_service = None  # Disable LLM validation
+
+        input_schema = StandardInputSchema()
+        output_schema = PersonalDataFindingSchema()
+
+        # Act
+        result_message = analyser.process(
+            input_schema, output_schema, sample_input_message
+        )
+
+        # Assert - Verify analysis_metadata exists and has core standardised fields
+        result_content = result_message.content
+        assert "analysis_metadata" in result_content, (
+            "Personal data analyser must provide analysis_metadata for chaining support"
+        )
+
+        analysis_metadata = result_content["analysis_metadata"]
+
+        # Core standardised fields required for analysis chaining
+        assert "ruleset_used" in analysis_metadata
+        assert "llm_validation_enabled" in analysis_metadata
+        assert "evidence_context_size" in analysis_metadata
+        assert "analyses_chain" in analysis_metadata
+
+        # Verify field types and values match business requirements
+        assert isinstance(analysis_metadata["ruleset_used"], str)
+        assert isinstance(analysis_metadata["llm_validation_enabled"], bool)
+        assert isinstance(analysis_metadata["analyses_chain"], list)
+        assert len(analysis_metadata["analyses_chain"]) >= 1, (
+            "analyses_chain must have at least one entry as it's mandatory"
+        )
+        assert analysis_metadata["ruleset_used"] == "personal_data"
+
     def test_process_includes_validation_summary_when_llm_validation_enabled(
         self,
         valid_config: PersonalDataAnalyserConfig,
@@ -699,3 +751,47 @@ class TestPersonalDataAnalyser:
                 assert finding["data_type"] == "basic_profile", (
                     f"Finding data_type should match rule.data_type, got: {finding.get('data_type')}"
                 )
+
+    def test_process_creates_analysis_chain_entry(
+        self,
+        valid_config: PersonalDataAnalyserConfig,
+        mock_pattern_matcher: Mock,
+        mock_llm_service_manager: Mock,
+        sample_input_message: Message,
+    ) -> None:
+        """Test that analyser creates proper analysis chain entry.
+
+        Business Logic: Each analyser must create a chain entry to track
+        the analysis for audit purposes and downstream processing.
+        """
+        # Arrange
+        mock_pattern_matcher.find_patterns.return_value = []
+        mock_llm_service_manager.llm_service = None
+
+        analyser = PersonalDataAnalyser(
+            config=valid_config,
+            pattern_matcher=mock_pattern_matcher,
+            llm_service_manager=mock_llm_service_manager,
+        )
+
+        # Act
+        result = analyser.process(
+            StandardInputSchema(),
+            PersonalDataFindingSchema(),
+            sample_input_message,
+        )
+
+        # Assert
+        analysis_metadata = result.content["analysis_metadata"]
+        analyses_chain = analysis_metadata["analyses_chain"]
+
+        assert len(analyses_chain) == 1, "Should create exactly one chain entry"
+
+        chain_entry = analyses_chain[0]
+        assert chain_entry["order"] == 1, "Should start with order 1 for new analysis"
+        assert chain_entry["analyser"] == "personal_data_analyser", (
+            "Should identify correct analyser"
+        )
+        assert "execution_timestamp" in chain_entry, (
+            "Should include execution timestamp"
+        )
