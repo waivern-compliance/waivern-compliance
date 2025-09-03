@@ -19,16 +19,21 @@ from wct.analysers.personal_data_analyser.types import (
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
 )
-from wct.analysers.types import EvidenceItem, LLMValidationConfig, PatternMatchingConfig
+from wct.analysers.types import (
+    LLMValidationConfig,
+    PatternMatchingConfig,
+)
 from wct.analysers.utilities import LLMServiceManager
 from wct.message import Message, MessageValidationError
 from wct.rulesets.personal_data import PersonalDataRule
+from wct.rulesets.types import RuleComplianceData
 from wct.schemas import (
     PersonalDataFindingSchema,
     StandardInputSchema,
 )
 from wct.schemas.base import SchemaLoadError
 from wct.schemas.source_code import SourceCodeSchema
+from wct.schemas.types import BaseFindingCompliance, BaseFindingEvidence
 
 
 class TestPersonalDataAnalyser:
@@ -110,8 +115,16 @@ class TestPersonalDataAnalyser:
                 data_type="basic_profile",
                 risk_level=self.MEDIUM_RISK_LEVEL,
                 special_category=False,
-                matched_pattern="support@example.com",
-                evidence=[EvidenceItem(content="Contact us at support@example.com")],
+                matched_patterns=["support@example.com"],
+                compliance=[
+                    BaseFindingCompliance(
+                        regulation="GDPR",
+                        relevance="Article 6 personal data processing",
+                    )
+                ],  # TODO: Add proper compliance framework mappings
+                evidence=[
+                    BaseFindingEvidence(content="Contact us at support@example.com")
+                ],
                 metadata=PersonalDataFindingMetadata(source="contact_form.html"),
             ),
             PersonalDataFindingModel(
@@ -119,8 +132,14 @@ class TestPersonalDataAnalyser:
                 data_type="basic_profile",
                 risk_level=self.HIGH_RISK_LEVEL,
                 special_category=False,
-                matched_pattern="123-456-7890",
-                evidence=[EvidenceItem(content="call 123-456-7890")],
+                matched_patterns=["123-456-7890"],
+                compliance=[
+                    BaseFindingCompliance(
+                        regulation="GDPR",
+                        relevance="Article 6 personal data processing",
+                    )
+                ],  # TODO: Add proper compliance framework mappings
+                evidence=[BaseFindingEvidence(content="call 123-456-7890")],
                 metadata=PersonalDataFindingMetadata(source="contact_form.html"),
             ),
             PersonalDataFindingModel(
@@ -128,8 +147,14 @@ class TestPersonalDataAnalyser:
                 data_type="basic_profile",
                 risk_level=self.MEDIUM_RISK_LEVEL,
                 special_category=False,
-                matched_pattern="john.doe@company.com",
-                evidence=[EvidenceItem(content="john.doe@company.com")],
+                matched_patterns=["john.doe@company.com"],
+                compliance=[
+                    BaseFindingCompliance(
+                        regulation="GDPR",
+                        relevance="Article 6 personal data processing",
+                    )
+                ],  # TODO: Add proper compliance framework mappings
+                evidence=[BaseFindingEvidence(content="john.doe@company.com")],
                 metadata=PersonalDataFindingMetadata(source="user_database"),
             ),
         ]
@@ -623,6 +648,12 @@ class TestPersonalDataAnalyser:
             data_type="basic_profile",  # This should appear in finding.data_type
             special_category=False,
             risk_level="medium",
+            compliance=[
+                RuleComplianceData(
+                    regulation="GDPR",
+                    relevance="Article 6 personal data processing",
+                )
+            ],
         )
 
         # Create real pattern matcher and mock its ruleset manager

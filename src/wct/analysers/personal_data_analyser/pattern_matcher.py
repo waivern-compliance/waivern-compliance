@@ -1,9 +1,10 @@
 """Pattern matcher class for personal data analysis."""
 
-from wct.analysers.types import FindingComplianceData, PatternMatchingConfig
+from wct.analysers.types import PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
 from wct.rulesets.personal_data import PersonalDataRule
 from wct.schemas import BaseMetadata
+from wct.schemas.types import BaseFindingCompliance
 
 from .types import PersonalDataFindingMetadata, PersonalDataFindingModel
 
@@ -76,7 +77,7 @@ class PersonalDataPatternMatcher:
                         )
 
                     compliance_data = [
-                        FindingComplianceData(
+                        BaseFindingCompliance(
                             regulation=comp.regulation, relevance=comp.relevance
                         )
                         for comp in rule.compliance

@@ -7,7 +7,6 @@ import json
 from datetime import datetime
 
 from wct.analysers.data_subject_analyser.analyser import DataSubjectAnalyser
-from wct.analysers.types import EvidenceItem
 from wct.message import Message
 from wct.schemas import (
     BaseMetadata,
@@ -16,6 +15,7 @@ from wct.schemas import (
     StandardInputDataModel,
     StandardInputSchema,
 )
+from wct.schemas.types import BaseFindingEvidence
 
 
 class TestDataSubjectAnalyserIdentity:
@@ -190,9 +190,9 @@ class TestDataSubjectAnalyserProcessing:
                         assert isinstance(evidence_item["collection_timestamp"], str)
 
     def test_evidence_item_datetime_serialisation(self) -> None:
-        """Test that EvidenceItem datetime fields are properly serialised to JSON."""
+        """Test that BaseFindingEvidence datetime fields are properly serialised to JSON."""
         # Arrange
-        evidence_item = EvidenceItem(content="employee record found in database")
+        evidence_item = BaseFindingEvidence(content="employee record found in database")
 
         # Act - This should not raise a TypeError about datetime serialisation
         json_output = json.dumps(evidence_item.model_dump(mode="json"))

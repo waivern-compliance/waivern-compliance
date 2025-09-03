@@ -4,6 +4,13 @@
     {
       "primary_category": "employee",
       "confidence_score": 95,
+      "risk_level": "medium",
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "Article 30(1)(c) data subject categories"
+        }
+      ],
       "evidence": [
         {
           "content": "Direct role field match: employee",
@@ -27,6 +34,17 @@
     {
       "primary_category": "customer",
       "confidence_score": 78,
+      "risk_level": "high",
+      "compliance": [
+        {
+          "regulation": "GDPR",
+          "relevance": "Article 30(1)(c) data subject categories"
+        },
+        {
+          "regulation": "CCPA",
+          "relevance": "Consumer personal information classification"
+        }
+      ],
       "evidence": [
         {
           "content": "Active subscription status",
@@ -50,6 +68,17 @@
     {
       "primary_category": "patient",
       "confidence_score": 92,
+      "risk_level": "high",
+      "compliance": [
+        {
+          "regulation": "HIPAA",
+          "relevance": "Protected health information subject classification"
+        },
+        {
+          "regulation": "GDPR",
+          "relevance": "Special category personal data - health information"
+        }
+      ],
       "evidence": [
         {
           "content": "Medical record number present",

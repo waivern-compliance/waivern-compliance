@@ -23,6 +23,7 @@
           },
           "compliance": {
             "type": "array",
+            "minItems": 1,
             "items": {
               "type": "object",
               "properties": {
@@ -42,6 +43,7 @@
           },
           "matched_patterns": {
             "type": "array",
+            "minItems": 1,
             "items": {
               "type": "string"
             },

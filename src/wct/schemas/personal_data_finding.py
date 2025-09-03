@@ -6,14 +6,14 @@ the output format for personal data analysis results.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, override
+from dataclasses import dataclass
+from typing import override
 
-from .base import JsonSchemaLoader, Schema, SchemaLoader
+from .base import BaseFindingSchema
 
 
 @dataclass(frozen=True, slots=True)
-class PersonalDataFindingSchema(Schema):
+class PersonalDataFindingSchema(BaseFindingSchema):
     """Schema for personal data finding results.
 
     This schema represents the structured format used by personal data
@@ -22,8 +22,6 @@ class PersonalDataFindingSchema(Schema):
     """
 
     _VERSION = "1.0.0"
-
-    _loader: SchemaLoader = field(default_factory=JsonSchemaLoader, init=False)
 
     @property
     @override
@@ -36,9 +34,3 @@ class PersonalDataFindingSchema(Schema):
     def version(self) -> str:
         """Return the schema version."""
         return self._VERSION
-
-    @property
-    @override
-    def schema(self) -> dict[str, Any]:
-        """Return the JSON schema definition for validation."""
-        return self._loader.load(self.name, self.version)

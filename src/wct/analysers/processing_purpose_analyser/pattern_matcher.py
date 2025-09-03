@@ -1,9 +1,10 @@
 """Pattern matcher class for processing purpose analysis."""
 
-from wct.analysers.types import FindingComplianceData, PatternMatchingConfig
+from wct.analysers.types import PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
 from wct.rulesets.processing_purposes import ProcessingPurposeRule
 from wct.schemas import BaseMetadata
+from wct.schemas.types import BaseFindingCompliance
 
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
 
@@ -78,7 +79,7 @@ class ProcessingPurposePatternMatcher:
                         )
 
                     compliance_data = [
-                        FindingComplianceData(
+                        BaseFindingCompliance(
                             regulation=comp.regulation, relevance=comp.relevance
                         )
                         for comp in rule.compliance

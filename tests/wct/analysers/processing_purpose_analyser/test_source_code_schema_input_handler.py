@@ -14,7 +14,6 @@ from wct.analysers.processing_purpose_analyser.source_code_schema_input_handler 
 from wct.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeFindingModel,
 )
-from wct.analysers.types import EvidenceItem
 from wct.schemas import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeClassModel,
@@ -24,6 +23,7 @@ from wct.schemas import (
     SourceCodeFunctionModel,
     SourceCodeImportModel,
 )
+from wct.schemas.types import BaseFindingEvidence
 
 
 class TestSourceCodeSchemaInputHandler:
@@ -509,9 +509,9 @@ class EmptyClass {
             assert isinstance(finding.compliance, list)
             assert isinstance(finding.evidence, list) and len(finding.evidence) > 0
 
-            # Verify each evidence item is an EvidenceItem
+            # Verify each evidence item is an BaseFindingEvidence
             for evidence_item in finding.evidence:
-                assert isinstance(evidence_item, EvidenceItem)
+                assert isinstance(evidence_item, BaseFindingEvidence)
                 assert (
                     isinstance(evidence_item.content, str)
                     and len(evidence_item.content) > 0

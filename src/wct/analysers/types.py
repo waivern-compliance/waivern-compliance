@@ -1,35 +1,8 @@
-"""Type definitions for analysers."""
+"""Configuration types for analysers."""
 
-from datetime import UTC, datetime
-from typing import Annotated, Literal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator
-
-
-class EvidenceItem(BaseModel):
-    """Evidence item with content and collection timestamp."""
-
-    model_config = ConfigDict(ser_json_timedelta="iso8601")
-
-    content: str = Field(description="The evidence content snippet")
-    collection_timestamp: Annotated[
-        datetime,
-        PlainSerializer(lambda v: v.isoformat(), return_type=str, when_used="json"),
-    ] = Field(
-        default_factory=lambda: datetime.now(UTC),
-        description="When the evidence was collected",
-    )
-
-
-class FindingComplianceData(BaseModel):
-    """Compliance information for findings."""
-
-    regulation: str = Field(
-        ..., min_length=1, description="Regulation name (e.g., GDPR, CCPA)"
-    )
-    relevance: str = Field(
-        ..., min_length=1, description="Specific relevance to this regulation"
-    )
+from pydantic import BaseModel, Field, field_validator
 
 
 class PatternMatchingConfig(BaseModel):

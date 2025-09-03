@@ -10,8 +10,9 @@ from wct.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeFindingMetadata,
     ProcessingPurposeFindingModel,
 )
-from wct.analysers.types import EvidenceItem, LLMValidationConfig
+from wct.analysers.types import LLMValidationConfig
 from wct.llm_service import AnthropicLLMService
+from wct.schemas.types import BaseFindingCompliance, BaseFindingEvidence
 
 
 class TestProcessingPurposeValidationStrategy:
@@ -26,7 +27,9 @@ class TestProcessingPurposeValidationStrategy:
         **kwargs,
     ) -> ProcessingPurposeFindingModel:
         """Helper to create test finding objects."""
-        evidence = kwargs.get("evidence", [EvidenceItem(content="test evidence")])
+        evidence = kwargs.get(
+            "evidence", [BaseFindingEvidence(content="test evidence")]
+        )
         source = kwargs.get("source", "test_source")
 
         metadata = ProcessingPurposeFindingMetadata(source=source) if source else None
@@ -35,7 +38,12 @@ class TestProcessingPurposeValidationStrategy:
             purpose=purpose,
             purpose_category=purpose_category,
             risk_level=risk_level,
-            matched_pattern=matched_pattern,
+            matched_patterns=[matched_pattern],
+            compliance=[
+                BaseFindingCompliance(
+                    regulation="GDPR", relevance="GDPR processing purposes"
+                )
+            ],
             evidence=evidence,
             metadata=metadata,
         )

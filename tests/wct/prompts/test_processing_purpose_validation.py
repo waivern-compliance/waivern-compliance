@@ -6,10 +6,10 @@ from wct.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeFindingMetadata,
     ProcessingPurposeFindingModel,
 )
-from wct.analysers.types import EvidenceItem
 from wct.prompts.processing_purpose_validation import (
     get_processing_purpose_validation_prompt,
 )
+from wct.schemas.types import BaseFindingCompliance, BaseFindingEvidence
 
 
 class TestProcessingPurposeValidationPrompt:
@@ -28,7 +28,7 @@ class TestProcessingPurposeValidationPrompt:
         source = kwargs.get("source", "test_source")
 
         evidence_items = [
-            EvidenceItem(content=content)  # collection_timestamp has default
+            BaseFindingEvidence(content=content)  # collection_timestamp has default
             for content in (evidence or ["test evidence"])
         ]
         metadata = ProcessingPurposeFindingMetadata(source=source) if source else None
@@ -37,7 +37,12 @@ class TestProcessingPurposeValidationPrompt:
             purpose=purpose,
             purpose_category=purpose_category,
             risk_level=risk_level,
-            matched_pattern=matched_pattern,
+            matched_patterns=[matched_pattern],
+            compliance=[
+                BaseFindingCompliance(
+                    regulation="GDPR", relevance="GDPR processing purposes"
+                )
+            ],
             evidence=evidence_items,
             metadata=metadata,
         )

@@ -2,7 +2,6 @@
 
 from pydantic import BaseModel
 
-from wct.analysers.types import EvidenceItem, FindingComplianceData
 from wct.rulesets import RulesetLoader
 from wct.rulesets.data_collection import DataCollectionRule
 from wct.rulesets.processing_purposes import ProcessingPurposeRule
@@ -11,6 +10,7 @@ from wct.schemas import (
     SourceCodeDataModel,
     SourceCodeFileDataModel,
 )
+from wct.schemas.types import BaseFindingCompliance, BaseFindingEvidence
 
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
 
@@ -85,7 +85,7 @@ class SourceCodeSchemaInputHandler:
                     pattern_lower = pattern.lower()
                     if pattern_lower in line_lower:
                         evidence = [
-                            EvidenceItem(
+                            BaseFindingEvidence(
                                 content=f"Line {i + 1}: {line.strip()}",
                             )
                         ]
@@ -105,7 +105,7 @@ class SourceCodeSchemaInputHandler:
                     pattern_lower = pattern.lower()
                     if pattern_lower in line_lower:
                         evidence = [
-                            EvidenceItem(
+                            BaseFindingEvidence(
                                 content=f"Line {i + 1}: {line.strip()}",
                             )
                         ]
@@ -125,7 +125,7 @@ class SourceCodeSchemaInputHandler:
                     pattern_lower = pattern.lower()
                     if pattern_lower in line_lower:
                         evidence = [
-                            EvidenceItem(
+                            BaseFindingEvidence(
                                 content=f"Line {i + 1}: {line.strip()}",
                             )
                         ]
@@ -156,7 +156,7 @@ class SourceCodeSchemaInputHandler:
                     pattern_lower = pattern.lower()
                     if pattern_lower in text_lower:
                         evidence = [
-                            EvidenceItem(
+                            BaseFindingEvidence(
                                 content=f"Import: {import_item.module}",
                             )
                         ]
@@ -176,7 +176,7 @@ class SourceCodeSchemaInputHandler:
                     pattern_lower = pattern.lower()
                     if pattern_lower in text_lower:
                         evidence = [
-                            EvidenceItem(
+                            BaseFindingEvidence(
                                 content=f"Function: {function.name}",
                             )
                         ]
@@ -196,7 +196,7 @@ class SourceCodeSchemaInputHandler:
                     pattern_lower = pattern.lower()
                     if pattern_lower in text_lower:
                         evidence = [
-                            EvidenceItem(
+                            BaseFindingEvidence(
                                 content=f"Class: {class_item.name}",
                             )
                         ]
@@ -214,12 +214,12 @@ class SourceCodeSchemaInputHandler:
         self,
         rule: ProcessingPurposeRule,
         matched_patterns: list[str],
-        evidence: list[EvidenceItem],
+        evidence: list[BaseFindingEvidence],
         file_metadata: SourceCodeFileMetadata,
     ) -> ProcessingPurposeFindingModel:
         """Create finding from ProcessingPurposeRule - fully type-safe."""
         compliance_data = [
-            FindingComplianceData(regulation=comp.regulation, relevance=comp.relevance)
+            BaseFindingCompliance(regulation=comp.regulation, relevance=comp.relevance)
             for comp in rule.compliance
         ]
 
@@ -239,12 +239,12 @@ class SourceCodeSchemaInputHandler:
         self,
         rule: ServiceIntegrationRule,
         matched_patterns: list[str],
-        evidence: list[EvidenceItem],
+        evidence: list[BaseFindingEvidence],
         file_metadata: SourceCodeFileMetadata,
     ) -> ProcessingPurposeFindingModel:
         """Create finding from ServiceIntegrationRule - fully type-safe."""
         compliance_data = [
-            FindingComplianceData(regulation=comp.regulation, relevance=comp.relevance)
+            BaseFindingCompliance(regulation=comp.regulation, relevance=comp.relevance)
             for comp in rule.compliance
         ]
 
@@ -265,12 +265,12 @@ class SourceCodeSchemaInputHandler:
         self,
         rule: DataCollectionRule,
         matched_patterns: list[str],
-        evidence: list[EvidenceItem],
+        evidence: list[BaseFindingEvidence],
         file_metadata: SourceCodeFileMetadata,
     ) -> ProcessingPurposeFindingModel:
         """Create finding from DataCollectionRule - fully type-safe."""
         compliance_data = [
-            FindingComplianceData(regulation=comp.regulation, relevance=comp.relevance)
+            BaseFindingCompliance(regulation=comp.regulation, relevance=comp.relevance)
             for comp in rule.compliance
         ]
 

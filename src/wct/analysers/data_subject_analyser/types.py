@@ -5,10 +5,10 @@ from typing import Any, Self
 from pydantic import BaseModel, ConfigDict, Field
 
 from wct.analysers.types import (
-    EvidenceItem,
     LLMValidationConfig,
     PatternMatchingConfig,
 )
+from wct.schemas.types import BaseFindingModel
 
 
 class DataSubjectAnalyserConfig(BaseModel):
@@ -49,22 +49,16 @@ class DataSubjectFindingMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class DataSubjectFindingModel(BaseModel):
+class DataSubjectFindingModel(BaseFindingModel):
     """Data subject finding structure."""
 
     primary_category: str = Field(description="Primary data subject category")
     confidence_score: int = Field(
         ge=0, le=100, description="Confidence score for the classification (0-100)"
     )
-    evidence: list[EvidenceItem] = Field(
-        min_length=1, description="Evidence items with content and timestamps"
-    )
     modifiers: list[str] = Field(
         default_factory=list,
         description="Cross-category regulatory modifiers from ruleset",
-    )
-    matched_patterns: list[str] = Field(
-        default_factory=list, description="Specific patterns that were matched"
     )
     metadata: DataSubjectFindingMetadata | None = Field(
         default=None, description="Additional metadata about the finding"
