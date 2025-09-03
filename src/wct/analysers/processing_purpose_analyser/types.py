@@ -2,13 +2,14 @@
 
 from typing import Any, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from wct.analysers.types import (
-    EvidenceItem,
-    FindingComplianceData,
     LLMValidationConfig,
     PatternMatchingConfig,
+)
+from wct.schemas.types import (
+    BaseFindingModel,
 )
 
 
@@ -50,23 +51,12 @@ class ProcessingPurposeFindingMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class ProcessingPurposeFindingModel(BaseModel):
+class ProcessingPurposeFindingModel(BaseFindingModel):
     """Processing purpose finding structure."""
 
     purpose: str = Field(description="Processing purpose name")
     purpose_category: str = Field(
         default="", description="Category of the processing purpose"
-    )
-    risk_level: str = Field(description="Risk level of the finding")
-    compliance: list[FindingComplianceData] = Field(
-        default_factory=list, description="Compliance information for this finding"
-    )
-    matched_patterns: list[str] = Field(
-        default_factory=list, description="Patterns that were matched"
-    )
-    evidence: list[EvidenceItem] = Field(
-        min_length=1,
-        description="Evidence items with content and timestamps for this finding",
     )
     metadata: ProcessingPurposeFindingMetadata | None = Field(
         default=None, description="Additional metadata about the finding"
@@ -83,12 +73,3 @@ class ProcessingPurposeFindingModel(BaseModel):
         default=None,
         description="Data source from DataCollectionRule (when applicable)",
     )
-
-    @field_validator("risk_level")
-    @classmethod
-    def validate_risk_level(cls, v: str) -> str:
-        """Validate risk level values."""
-        allowed = ["low", "medium", "high"]
-        if v not in allowed:
-            raise ValueError(f"risk_level must be one of {allowed}, got: {v}")
-        return v

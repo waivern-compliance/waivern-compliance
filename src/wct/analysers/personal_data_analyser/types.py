@@ -2,13 +2,14 @@
 
 from typing import Any, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from wct.analysers.types import (
-    EvidenceItem,
-    FindingComplianceData,
     LLMValidationConfig,
     PatternMatchingConfig,
+)
+from wct.schemas.types import (
+    BaseFindingModel,
 )
 
 
@@ -50,7 +51,7 @@ class PersonalDataFindingMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class PersonalDataFindingModel(BaseModel):
+class PersonalDataFindingModel(BaseFindingModel):
     """Personal data finding structure."""
 
     type: str = Field(
@@ -59,31 +60,10 @@ class PersonalDataFindingModel(BaseModel):
     data_type: str = Field(
         description="Categorical data type identifier from GDPR classification (e.g., 'basic_profile', 'health_data')"
     )
-    risk_level: str = Field(description="Risk assessment level (low, medium, high)")
     special_category: bool = Field(
         default=False,
         description="Whether this is GDPR Article 9 special category data",
     )
-    matched_patterns: list[str] = Field(
-        default_factory=list,
-        description="Specific patterns that matched in the content",
-    )
-    compliance: list[FindingComplianceData] = Field(
-        default_factory=list, description="Compliance information for this finding"
-    )
-    evidence: list[EvidenceItem] = Field(
-        min_length=1,
-        description="Evidence items with content and timestamps for this finding",
-    )
     metadata: PersonalDataFindingMetadata | None = Field(
         default=None, description="Additional metadata from the original data source"
     )
-
-    @field_validator("risk_level")
-    @classmethod
-    def validate_risk_level(cls, v: str) -> str:
-        """Validate risk level values."""
-        allowed = ["low", "medium", "high"]
-        if v not in allowed:
-            raise ValueError(f"risk_level must be one of {allowed}, got: {v}")
-        return v

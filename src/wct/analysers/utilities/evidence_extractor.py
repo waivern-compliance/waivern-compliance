@@ -1,6 +1,6 @@
 """Utility for extracting evidence snippets from content."""
 
-from wct.analysers.types import EvidenceItem
+from wct.schemas.types import BaseFindingEvidence
 
 
 class EvidenceExtractor:
@@ -28,7 +28,7 @@ class EvidenceExtractor:
         pattern: str,
         max_evidence: int = _DEFAULT_MAX_EVIDENCE,
         context_size: str = _DEFAULT_CONTEXT_SIZE,
-    ) -> list[EvidenceItem]:
+    ) -> list[BaseFindingEvidence]:
         """Extract evidence snippets where the pattern was found.
 
         Args:
@@ -49,7 +49,7 @@ class EvidenceExtractor:
             return []
 
         evidence_content_set: set[str] = set()  # Use set to avoid duplicate content
-        evidence_items: list[EvidenceItem] = []
+        evidence_items: list[BaseFindingEvidence] = []
         content_lower = content.lower()
         pattern_lower = pattern.lower()
 
@@ -66,7 +66,7 @@ class EvidenceExtractor:
 
             if evidence_snippet and evidence_snippet not in evidence_content_set:
                 evidence_content_set.add(evidence_snippet)
-                evidence_items.append(EvidenceItem(content=evidence_snippet))
+                evidence_items.append(BaseFindingEvidence(content=evidence_snippet))
 
             # Move past this match to find the next occurrence
             start_pos = match_pos + 1

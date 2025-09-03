@@ -16,6 +16,7 @@ from wct.schemas import (
     StandardInputSchema,
     parse_data_model,
 )
+from wct.schemas.types import AnalysisChainEntry, BaseAnalysisOutputMetadata
 
 from .llm_validation_strategy import processing_purpose_validation_strategy
 from .pattern_matcher import ProcessingPurposePatternMatcher
@@ -134,13 +135,18 @@ class ProcessingPurposeAnalyser(Analyser):
             findings
         )
 
+        # Update analysis chain with this analyser
+        updated_chain = self.update_analyses_chain(
+            message, "processing_purpose_analyser"
+        )
+
         # Create and validate output message
         return self._create_output_message(
             findings,
             validated_findings,
             validation_applied,
-            input_schema,
             output_schema,
+            updated_chain,
         )
 
     def _process_standard_input_data(
@@ -226,8 +232,8 @@ class ProcessingPurposeAnalyser(Analyser):
         original_findings: list[ProcessingPurposeFindingModel],
         validated_findings: list[ProcessingPurposeFindingModel],
         validation_applied: bool,
-        input_schema: Schema,
         output_schema: Schema,
+        analyses_chain: list[AnalysisChainEntry],
     ) -> Message:
         """Create and validate output message.
 
@@ -235,8 +241,8 @@ class ProcessingPurposeAnalyser(Analyser):
             original_findings: Original findings before LLM validation
             validated_findings: Findings after LLM validation
             validation_applied: Whether LLM validation was actually applied
-            input_schema: Schema that was used for input processing
             output_schema: Schema for output validation
+            analyses_chain: Updated analysis chain with proper ordering
 
         Returns:
             Validated output message
@@ -260,21 +266,28 @@ class ProcessingPurposeAnalyser(Analyser):
                 original_findings, validated_findings
             )
 
-        # Add enhanced analysis metadata
-        result_data["analysis_metadata"] = {
-            "ruleset_used": self._config.pattern_matching.ruleset,
-            "llm_validation_enabled": self._config.llm_validation.enable_llm_validation,
+        # Add enhanced analysis metadata with additional fields
+        extra_fields = {
             "llm_validation_mode": self._config.llm_validation.llm_validation_mode,
             "llm_batch_size": self._config.llm_validation.llm_batch_size,
-            "evidence_context_size": self._config.pattern_matching.evidence_context_size,
             "analyser_version": "1.0.0",
-            "input_schema": input_schema.name,
             "processing_purpose_categories_detected": len(
                 set(
                     f.purpose_category for f in validated_findings if f.purpose_category
                 )
             ),
         }
+
+        analysis_metadata = BaseAnalysisOutputMetadata(
+            ruleset_used=self._config.pattern_matching.ruleset,
+            llm_validation_enabled=self._config.llm_validation.enable_llm_validation,
+            evidence_context_size=self._config.pattern_matching.evidence_context_size,
+            analyses_chain=analyses_chain,
+            **extra_fields,
+        )
+        result_data["analysis_metadata"] = analysis_metadata.model_dump(
+            mode="json", exclude_none=True
+        )
 
         output_message = Message(
             id="Processing_purpose_analysis",

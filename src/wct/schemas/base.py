@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, override, runtime_checkable
 
 
 @runtime_checkable
@@ -147,3 +147,32 @@ class Schema(ABC):
         Future enhancement could introduce strongly typed JSON Schema
         representations if needed.
         """
+
+
+@dataclass(frozen=True, slots=True)
+class BaseFindingSchema(Schema, ABC):
+    """Base schema for all finding result types.
+
+    This abstract schema provides the common structure that all analyser
+    finding outputs share: findings array, summary object, and analysis metadata.
+    """
+
+    _loader: SchemaLoader = field(default_factory=JsonSchemaLoader, init=False)
+
+    @property
+    @abstractmethod
+    @override
+    def name(self) -> str:
+        """Return the unique identifier for this schema."""
+
+    @property
+    @abstractmethod
+    @override
+    def version(self) -> str:
+        """Return the version for this schema."""
+
+    @property
+    @override
+    def schema(self) -> dict[str, Any]:
+        """Return the JSON schema definition for validation."""
+        return self._loader.load(self.name, self.version)

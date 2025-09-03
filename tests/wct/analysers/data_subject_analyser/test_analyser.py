@@ -7,7 +7,6 @@ import json
 from datetime import datetime
 
 from wct.analysers.data_subject_analyser.analyser import DataSubjectAnalyser
-from wct.analysers.types import EvidenceItem
 from wct.message import Message
 from wct.schemas import (
     BaseMetadata,
@@ -16,6 +15,7 @@ from wct.schemas import (
     StandardInputDataModel,
     StandardInputSchema,
 )
+from wct.schemas.types import BaseFindingEvidence
 
 
 class TestDataSubjectAnalyserIdentity:
@@ -174,10 +174,12 @@ class TestDataSubjectAnalyserProcessing:
         json_output = json.dumps(result.content)
         assert isinstance(json_output, str)
 
-        # Verify analysis_metadata timestamp is properly serialised
+        # Verify analysis_metadata contains expected standardised fields
         analysis_metadata = result.content["analysis_metadata"]
-        assert "analysis_timestamp" in analysis_metadata
-        assert isinstance(analysis_metadata["analysis_timestamp"], str)
+        assert "ruleset_used" in analysis_metadata
+        assert "llm_validation_enabled" in analysis_metadata
+        assert "analyses_chain" in analysis_metadata
+        assert isinstance(analysis_metadata["analyses_chain"], list)
 
         # Verify findings contain properly serialised evidence items
         findings = result.content["findings"]
@@ -190,9 +192,9 @@ class TestDataSubjectAnalyserProcessing:
                         assert isinstance(evidence_item["collection_timestamp"], str)
 
     def test_evidence_item_datetime_serialisation(self) -> None:
-        """Test that EvidenceItem datetime fields are properly serialised to JSON."""
+        """Test that BaseFindingEvidence datetime fields are properly serialised to JSON."""
         # Arrange
-        evidence_item = EvidenceItem(content="employee record found in database")
+        evidence_item = BaseFindingEvidence(content="employee record found in database")
 
         # Act - This should not raise a TypeError about datetime serialisation
         json_output = json.dumps(evidence_item.model_dump(mode="json"))
@@ -266,3 +268,47 @@ class TestDataSubjectAnalyserProcessing:
         # Verify it doesn't contain patterns that aren't in the content
         assert "board_member" not in matched_patterns
         assert "chairman" not in matched_patterns
+
+    def test_process_creates_analysis_chain_entry(self) -> None:
+        """Test that analyser creates proper analysis chain entry.
+
+        Business Logic: Each analyser must create a chain entry to track
+        the analysis for audit purposes and downstream processing.
+        """
+        # Arrange
+        analyser = DataSubjectAnalyser.from_properties({})
+        input_schema = StandardInputSchema()
+        output_schema = DataSubjectFindingSchema()
+
+        message = Message(
+            id="test_chain",
+            content={
+                "schemaVersion": "1.0.0",
+                "name": "Test data",
+                "data": [
+                    {
+                        "content": "Employee John Smith",
+                        "metadata": {"source": "test", "connector_type": "test"},
+                    }
+                ],
+            },
+            schema=input_schema,
+        )
+
+        # Act
+        result = analyser.process(input_schema, output_schema, message)
+
+        # Assert
+        analysis_metadata = result.content["analysis_metadata"]
+        analyses_chain = analysis_metadata["analyses_chain"]
+
+        assert len(analyses_chain) == 1, "Should create exactly one chain entry"
+
+        chain_entry = analyses_chain[0]
+        assert chain_entry["order"] == 1, "Should start with order 1 for new analysis"
+        assert chain_entry["analyser"] == "data_subject_analyser", (
+            "Should identify correct analyser"
+        )
+        assert "execution_timestamp" in chain_entry, (
+            "Should include execution timestamp"
+        )

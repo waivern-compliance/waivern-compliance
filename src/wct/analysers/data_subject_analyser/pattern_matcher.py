@@ -49,6 +49,7 @@ from wct.analysers.types import PatternMatchingConfig
 from wct.analysers.utilities import EvidenceExtractor, RulesetManager
 from wct.rulesets.data_subjects import DataSubjectRule
 from wct.schemas import BaseMetadata
+from wct.schemas.types import BaseFindingCompliance
 
 from .confidence_scorer import DataSubjectConfidenceScorer
 from .types import DataSubjectFindingMetadata, DataSubjectFindingModel
@@ -147,6 +148,13 @@ class DataSubjectPatternMatcher:
                 finding = DataSubjectFindingModel(
                     primary_category=category,
                     confidence_score=confidence_score,
+                    risk_level="medium",  # TODO: Implement proper risk assessment logic for data subjects
+                    compliance=[
+                        BaseFindingCompliance(
+                            regulation="GDPR",
+                            relevance="Article 30(1)(c) data subject categories",
+                        )
+                    ],  # TODO: Add proper compliance framework mappings for data subject categories
                     evidence=evidence,
                     modifiers=[],  # TODO: Implement modifier detection logic with LLM validation (e.g., "minor" for age <18, "eu_resident" for EU location)
                     matched_patterns=matched_patterns,

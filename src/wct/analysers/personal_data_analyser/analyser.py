@@ -14,6 +14,7 @@ from wct.schemas import (
     StandardInputDataModel,
     StandardInputSchema,
 )
+from wct.schemas.types import AnalysisChainEntry, BaseAnalysisOutputMetadata
 
 from .llm_validation_strategy import personal_data_validation_strategy
 from .pattern_matcher import PersonalDataPatternMatcher
@@ -128,14 +129,20 @@ class PersonalDataAnalyser(Analyser):
         # Run LLM validation if enabled
         validated_findings = self._validate_findings_with_llm(findings)
 
+        # Update analysis chain with this analyser
+        updated_chain = self.update_analyses_chain(message, "personal_data_analyser")
+
         # Create and validate output message
-        return self._create_output_message(findings, validated_findings, output_schema)
+        return self._create_output_message(
+            findings, validated_findings, output_schema, updated_chain
+        )
 
     def _create_output_message(
         self,
         original_findings: list[PersonalDataFindingModel],
         validated_findings: list[PersonalDataFindingModel],
         output_schema: Schema,
+        analyses_chain: list[AnalysisChainEntry],
     ) -> Message:
         """Create and validate output message.
 
@@ -143,6 +150,7 @@ class PersonalDataAnalyser(Analyser):
             original_findings: Original findings before LLM validation
             validated_findings: Findings after LLM validation
             output_schema: Schema for output validation
+            analyses_chain: Updated analysis chain with proper ordering
 
         Returns:
             Validated output message
@@ -166,6 +174,17 @@ class PersonalDataAnalyser(Analyser):
             result_data["validation_summary"] = self._build_validation_summary(
                 original_findings, validated_findings
             )
+
+        # Add analysis metadata for chaining support
+        analysis_metadata = BaseAnalysisOutputMetadata(
+            ruleset_used=self._config.pattern_matching.ruleset,
+            llm_validation_enabled=self._config.llm_validation.enable_llm_validation,
+            evidence_context_size=self._config.pattern_matching.evidence_context_size,
+            analyses_chain=analyses_chain,
+        )
+        result_data["analysis_metadata"] = analysis_metadata.model_dump(
+            mode="json", exclude_none=True
+        )
 
         output_message = Message(
             id="Personal_data_analysis",

@@ -19,6 +19,31 @@
             "maximum": 100,
             "description": "Confidence score for the classification (0-100)"
           },
+          "risk_level": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "description": "Risk level associated with this data subject classification"
+          },
+          "compliance": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "regulation": {
+                  "type": "string",
+                  "description": "Regulation name (e.g., GDPR, CCPA)"
+                },
+                "relevance": {
+                  "type": "string",
+                  "description": "Specific relevance to this regulation"
+                }
+              },
+              "required": ["regulation", "relevance"],
+              "additionalProperties": false
+            },
+            "description": "Compliance information with regulation names and specific relevance"
+          },
           "evidence": {
             "type": "array",
             "items": {
@@ -48,6 +73,7 @@
           },
           "matched_patterns": {
             "type": "array",
+            "minItems": 1,
             "items": {
               "type": "string"
             },
@@ -66,7 +92,7 @@
             "required": ["source"]
           }
         },
-        "required": ["primary_category", "confidence_score", "evidence", "modifiers", "matched_patterns", "metadata"],
+        "required": ["primary_category", "confidence_score", "risk_level", "compliance", "evidence", "modifiers", "matched_patterns", "metadata"],
         "additionalProperties": false
       }
     },

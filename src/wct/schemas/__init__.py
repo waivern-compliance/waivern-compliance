@@ -17,7 +17,12 @@ Available schemas:
 - DataSubjectFindingSchema: Data subject classification results
 """
 
-from .base import JsonSchemaLoader, Schema, SchemaLoader, SchemaLoadError
+from .base import (
+    JsonSchemaLoader,
+    Schema,
+    SchemaLoader,
+    SchemaLoadError,
+)
 from .data_subject_finding import DataSubjectFindingSchema
 from .personal_data_finding import PersonalDataFindingSchema
 from .processing_purpose_finding import ProcessingPurposeFindingSchema
@@ -41,6 +46,7 @@ from .standard_input import (
     StandardInputDataModel,
     StandardInputSchema,
 )
+from .types import BaseFindingModel
 from .validation import DataParsingError, parse_data_model
 
 __all__ = [
@@ -48,6 +54,7 @@ __all__ = [
     "SchemaLoader",
     "JsonSchemaLoader",
     "SchemaLoadError",
+    "BaseFindingModel",
     "parse_data_model",
     "DataParsingError",
     "StandardInputSchema",

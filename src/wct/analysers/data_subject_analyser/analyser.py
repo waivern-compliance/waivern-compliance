@@ -14,6 +14,7 @@ from wct.schemas import (
     StandardInputDataModel,
     StandardInputSchema,
 )
+from wct.schemas.types import AnalysisChainEntry, BaseAnalysisOutputMetadata
 
 from .pattern_matcher import DataSubjectPatternMatcher
 from .types import DataSubjectAnalyserConfig, DataSubjectFindingModel
@@ -125,8 +126,13 @@ class DataSubjectAnalyser(Analyser):
         else:
             raise ValueError(f"Unsupported input schema: {input_schema.name}")
 
+        # Update analysis chain with this analyser
+        updated_chain = self.update_analyses_chain(message, "data_subject_analyser")
+
         # Create and validate output message
-        return self._create_output_message(findings, input_schema, output_schema)
+        return self._create_output_message(
+            findings, input_schema, output_schema, updated_chain
+        )
 
     def _process_standard_input_data(
         self, typed_data: StandardInputDataModel[BaseMetadata]
@@ -157,6 +163,7 @@ class DataSubjectAnalyser(Analyser):
         findings: list[DataSubjectFindingModel],
         input_schema: Schema,
         output_schema: Schema,
+        analyses_chain: list[AnalysisChainEntry],
     ) -> Message:
         """Create output message with data subject findings.
 
@@ -164,6 +171,7 @@ class DataSubjectAnalyser(Analyser):
             findings: List of data subject findings
             input_schema: Input schema used for processing
             output_schema: Output schema for validation
+            analyses_chain: Updated analysis chain with proper ordering
 
         Returns:
             Message containing data subject analysis results
@@ -173,12 +181,13 @@ class DataSubjectAnalyser(Analyser):
         total_classifications = len(findings)
         categories_identified = list(set(f.primary_category for f in findings))
 
-        # Create analysis metadata
-        analysis_metadata = {
-            "ruleset_used": self._config.pattern_matching.ruleset,
-            "llm_validation_enabled": self._config.llm_validation.enable_llm_validation,
-            "analysis_timestamp": datetime.now(UTC).isoformat(),
-        }
+        # Create analysis metadata for chaining support
+        analysis_metadata = BaseAnalysisOutputMetadata(
+            ruleset_used=self._config.pattern_matching.ruleset,
+            llm_validation_enabled=self._config.llm_validation.enable_llm_validation,
+            evidence_context_size=self._config.pattern_matching.evidence_context_size,
+            analyses_chain=analyses_chain,
+        )
 
         # Build complete output structure
         output_content = {
@@ -190,7 +199,9 @@ class DataSubjectAnalyser(Analyser):
                 "total_classifications": total_classifications,
                 "categories_identified": categories_identified,
             },
-            "analysis_metadata": analysis_metadata,
+            "analysis_metadata": analysis_metadata.model_dump(
+                mode="json", exclude_none=True
+            ),
         }
 
         return Message(

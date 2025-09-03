@@ -434,7 +434,6 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         assert "llm_validation_mode" in metadata
         assert "llm_batch_size" in metadata
         assert "analyser_version" in metadata
-        assert "input_schema" in metadata
         assert "processing_purpose_categories_detected" in metadata
 
         assert isinstance(metadata["ruleset_used"], str)
@@ -443,12 +442,10 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         assert isinstance(metadata["llm_validation_mode"], str)
         assert isinstance(metadata["llm_batch_size"], int)
         assert isinstance(metadata["analyser_version"], str)
-        assert isinstance(metadata["input_schema"], str)
         assert isinstance(metadata["processing_purpose_categories_detected"], int)
 
         assert metadata["llm_batch_size"] > 0
         assert len(metadata["analyser_version"]) > 0
-        assert metadata["input_schema"] == "standard_input"
         assert metadata["processing_purpose_categories_detected"] >= 0
 
     def test_process_standard_input_summary_handles_empty_findings(
@@ -844,6 +841,56 @@ class TestProcessingPurposeAnalyserErrorHandling:
         # Should raise validation error due to invalid configuration
         with pytest.raises((ValueError, TypeError)):
             ProcessingPurposeAnalyser.from_properties(invalid_properties)
+
+    def test_process_creates_analysis_chain_entry(self) -> None:
+        """Test that analyser creates proper analysis chain entry.
+
+        Business Logic: Each analyser must create a chain entry to track
+        the analysis for audit purposes and downstream processing.
+        """
+        # Arrange
+        analyser = ProcessingPurposeAnalyser.from_properties(
+            {
+                "llm_validation": {
+                    "enable_llm_validation": False
+                }  # Disable LLM for speed
+            }
+        )
+        input_schema = StandardInputSchema()
+        output_schema = ProcessingPurposeFindingSchema()
+
+        message = Message(
+            id="test_chain",
+            content={
+                "schemaVersion": "1.0.0",
+                "name": "Test data",
+                "data": [
+                    {
+                        "content": "Contact our support team",
+                        "metadata": {"source": "test", "connector_type": "test"},
+                    }
+                ],
+            },
+            schema=input_schema,
+        )
+
+        # Act
+        result = analyser.process(input_schema, output_schema, message)
+
+        # Assert
+        analysis_metadata = result.content["analysis_metadata"]
+        analyses_chain = analysis_metadata["analyses_chain"]
+
+        assert len(analyses_chain) == 1, "Should create exactly one chain entry"
+
+        chain_entry = analyses_chain[0]
+        assert chain_entry["order"] == 1, "Should start with order 1 for new analysis"
+        assert chain_entry["analyser"] == "processing_purpose_analyser", (
+            "Should identify correct analyser"
+        )
+        assert "execution_timestamp" in chain_entry, (
+            "Should include execution timestamp"
+        )
 
 
 class TestProcessingPurposeAnalyserOutputValidation:
