@@ -21,7 +21,9 @@ The system is designed to be extensible and configurable through YAML runbook fi
 
 ### Installation
 
-This project uses `uv` for dependency management:
+This project uses `uv` for dependency management. `uv` can be [installed](https://github.com/astral-sh/uv?tab=readme-ov-file#installation) as a standalone tool or via [`homebrew`](https://formulae.brew.sh/formula/uv).
+
+Once you have `uv` installed, run the below commands:
 
 ```bash
 # Install all dependencies
@@ -48,7 +50,7 @@ uv run pre-commit install
    uv run wct run runbooks/samples/file_content_analysis.yaml
 
    # Comprehensive LAMP stack analysis
-   uv run wct run runbooks/samples/LAMP_stack.yaml
+   uv run wct run runbooks/samples/LAMP_stack_lite.yaml
    ```
 
 2. **List available components**:
@@ -62,12 +64,36 @@ uv run pre-commit install
    uv run wct validate-runbook runbooks/samples/file_content_analysis.yaml
    ```
 
+The output JSON results will be written to the `./outputs` directory.
+
+### Enabling LLM Validation
+
+To enable AI-powered analysis features, you'll need to configure your API key:
+
+1. **Copy the environment template**:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Add your Anthropic API key** to the `.env` file:
+   ```bash
+   ANTHROPIC_API_KEY=your_api_key_here
+   ```
+
+3. **Test the configuration**:
+   ```bash
+   uv run wct test-llm
+   ```
+
+With LLM validation enabled, analysers can provide enhanced accuracy for detecting personal data and processing purposes.
+
 ### Runbooks Directory
 
 WCT organises runbook configurations in the `runbooks/` directory with samples organised in `runbooks/samples/`:
 
 - **`runbooks/samples/file_content_analysis.yaml`** - Simple file analysis demonstration using personal data analyser
-- **`runbooks/samples/LAMP_stack.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
+- **`runbooks/samples/LAMP_stack_lite.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
+- **`runbooks/samples/LAMP_stack.yaml`** - Advanced MySQL-based LAMP stack analysis
 - **`runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
 
 Run sample runbooks:
@@ -76,7 +102,7 @@ Run sample runbooks:
 uv run wct run runbooks/samples/file_content_analysis.yaml
 
 # Comprehensive LAMP stack analysis
-uv run wct run runbooks/samples/LAMP_stack.yaml
+uv run wct run runbooks/samples/LAMP_stack_lite.yaml
 
 # Run with verbose logging
 uv run wct run runbooks/samples/file_content_analysis.yaml -v
