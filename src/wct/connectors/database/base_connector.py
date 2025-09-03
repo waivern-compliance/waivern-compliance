@@ -19,10 +19,10 @@ class DatabaseConnector(Connector, abc.ABC):
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> list[Schema]:
+    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
         """Return the output schemas supported by database connectors.
 
         Default implementation returns standard_input schema.
         Subclasses can override to support additional schemas.
         """
-        return [StandardInputSchema()]
+        return (StandardInputSchema(),)

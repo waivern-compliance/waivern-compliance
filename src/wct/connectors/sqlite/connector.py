@@ -16,9 +16,7 @@ from wct.schemas import RelationalDatabaseMetadata, Schema, StandardInputSchema
 logger = logging.getLogger(__name__)
 
 # Constants
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
-    StandardInputSchema(),
-]
+_SUPPORTED_OUTPUT_SCHEMAS: tuple[Schema, ...] = (StandardInputSchema(),)
 
 
 class SQLiteConnector(DatabaseConnector):
@@ -46,7 +44,7 @@ class SQLiteConnector(DatabaseConnector):
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> list[Schema]:
+    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
         """Return the output schemas supported by this connector."""
         return _SUPPORTED_OUTPUT_SCHEMAS
 

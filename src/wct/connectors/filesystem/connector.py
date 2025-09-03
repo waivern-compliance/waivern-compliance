@@ -19,9 +19,7 @@ logger = logging.getLogger(__name__)
 # Constants
 _CONNECTOR_NAME = "filesystem"
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
-    StandardInputSchema(),
-]
+_SUPPORTED_OUTPUT_SCHEMAS: tuple[Schema, ...] = (StandardInputSchema(),)
 
 
 class FilesystemConnector(Connector):
@@ -52,7 +50,7 @@ class FilesystemConnector(Connector):
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> list[Schema]:
+    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
         """Return the output schemas supported by this connector."""
         return _SUPPORTED_OUTPUT_SCHEMAS
 

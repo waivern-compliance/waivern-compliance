@@ -40,7 +40,7 @@ class TestDataSubjectAnalyserSchemaSupport:
         """Test that analyser supports standard_input schema."""
         input_schemas = DataSubjectAnalyser.get_supported_input_schemas()
 
-        assert isinstance(input_schemas, list)
+        assert isinstance(input_schemas, tuple)
         assert len(input_schemas) > 0
 
         schema_names = {schema.name for schema in input_schemas}
@@ -50,7 +50,7 @@ class TestDataSubjectAnalyserSchemaSupport:
         """Test that analyser outputs data_subject_finding schema."""
         output_schemas = DataSubjectAnalyser.get_supported_output_schemas()
 
-        assert isinstance(output_schemas, list)
+        assert isinstance(output_schemas, tuple)
         assert len(output_schemas) == 1
         assert output_schemas[0].name == "data_subject_finding"
 

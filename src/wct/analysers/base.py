@@ -80,12 +80,12 @@ class Analyser(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def get_supported_input_schemas(cls) -> list[Schema]:
+    def get_supported_input_schemas(cls) -> tuple[Schema, ...]:
         """Return the input schemas supported by the analyser."""
 
     @classmethod
     @abc.abstractmethod
-    def get_supported_output_schemas(cls) -> list[Schema]:
+    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
         """Return the output schemas supported by this analyser."""
 
     @staticmethod

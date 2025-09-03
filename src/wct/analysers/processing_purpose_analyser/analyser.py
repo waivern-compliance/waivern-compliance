@@ -25,14 +25,12 @@ from .types import ProcessingPurposeAnalyserConfig, ProcessingPurposeFindingMode
 
 logger = logging.getLogger(__name__)
 
-_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
+_SUPPORTED_INPUT_SCHEMAS: tuple[Schema, ...] = (
     StandardInputSchema(),
     SourceCodeSchema(),
-]
+)
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
-    ProcessingPurposeFindingSchema(),
-]
+_SUPPORTED_OUTPUT_SCHEMAS: tuple[Schema, ...] = (ProcessingPurposeFindingSchema(),)
 
 
 class ProcessingPurposeAnalyser(Analyser):
@@ -93,13 +91,13 @@ class ProcessingPurposeAnalyser(Analyser):
 
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[Schema]:
+    def get_supported_input_schemas(cls) -> tuple[Schema, ...]:
         """Return the input schemas supported by this analyser."""
         return _SUPPORTED_INPUT_SCHEMAS
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> list[Schema]:
+    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
         """Return the output schemas supported by this analyser."""
         return _SUPPORTED_OUTPUT_SCHEMAS
 

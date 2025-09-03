@@ -49,11 +49,11 @@ class Connector(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def get_supported_output_schemas(cls) -> list[Schema]:
+    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
         """Return the output schemas supported by this connector.
 
         Returns:
-            List of schemas that this connector can produce as output
+            Tuple of schemas that this connector can produce as output
 
         """
 
