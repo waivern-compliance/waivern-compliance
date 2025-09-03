@@ -178,32 +178,30 @@ class Executor:
     def _resolve_step_schemas(
         self, step: ExecutionStep, analyser: Analyser
     ) -> tuple[Schema, Schema]:
-        """Resolve input and output schemas for the step."""
-        # Resolve input schema
+        """Resolve input and output schemas for the step.
+
+        Schema validation is handled during runbook loading and analyser
+        initialization, so we just need to find the matching schemas.
+        """
+        # Find input schema by name (validated during runbook loading)
         supported_input_schemas = analyser.get_supported_input_schemas()
         input_schema = next(
             (s for s in supported_input_schemas if s.name == step.input_schema),
             None,
         )
-        if not input_schema:
-            available_schemas = [s.name for s in supported_input_schemas]
-            raise ExecutorError(
-                f"Schema '{step.input_schema}' not supported. "
-                f"Available schemas: {available_schemas}"
-            )
 
-        # Resolve output schema
+        # Find output schema by name (validated during runbook loading)
         supported_output_schemas = analyser.get_supported_output_schemas()
         output_schema = next(
             (s for s in supported_output_schemas if s.name == step.output_schema),
             None,
         )
-        if not output_schema:
-            available_schemas = [s.name for s in supported_output_schemas]
-            raise ExecutorError(
-                f"Schema '{step.output_schema}' not supported. "
-                f"Available schemas: {available_schemas}"
-            )
+
+        # These should never be None due to earlier validation, but check for safety
+        if input_schema is None:
+            raise ExecutorError(f"Input schema '{step.input_schema}' not found")
+        if output_schema is None:
+            raise ExecutorError(f"Output schema '{step.output_schema}' not found")
 
         return input_schema, output_schema
 

@@ -12,7 +12,7 @@ from typing import override
 from .base import BaseFindingSchema
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class DataSubjectFindingSchema(BaseFindingSchema):
     """Schema for data subject finding results.
 

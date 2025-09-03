@@ -125,7 +125,7 @@ class SourceCodeDataModel(BaseModel):
 # JSON Schema class
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class SourceCodeSchema(Schema):
     """Schema for source code analysis data format.
 

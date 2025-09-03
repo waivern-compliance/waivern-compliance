@@ -75,7 +75,7 @@ class StandardInputDataModel[MetadataT: BaseMetadata](BaseModel):
     )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StandardInputSchema(Schema):
     """Schema for standard input data format.
 

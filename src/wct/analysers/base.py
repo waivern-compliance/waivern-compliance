@@ -100,7 +100,7 @@ class Analyser(abc.ABC):
             SchemaLoadError: If schema validation fails
 
         """
-        if message.schema and message.schema.name != expected_schema.name:
+        if message.schema and message.schema != expected_schema:
             raise SchemaLoadError(
                 _SCHEMA_MISMATCH_ERROR.format(
                     message_schema=message.schema.name,

@@ -119,12 +119,12 @@ class ProcessingPurposeAnalyser(Analyser):
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
         # Validate and parse data based on schema type
-        if input_schema.name == "standard_input":
+        if isinstance(input_schema, StandardInputSchema):
             typed_data = StandardInputDataModel[BaseMetadata].model_validate(
                 message.content
             )
             findings = self._process_standard_input_data(typed_data)
-        elif input_schema.name == "source_code":
+        elif isinstance(input_schema, SourceCodeSchema):
             typed_data = parse_data_model(message.content, SourceCodeDataModel)
             findings = self._process_source_code_data(typed_data)
         else:

@@ -119,12 +119,15 @@ class SchemaLoadError(Exception):
     pass
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Schema(ABC):
     """Base class for all WCT schemas.
 
     Each concrete schema represents a strongly typed data structure
     and provides its own name, version, and schema definition.
+
+    Schema comparison is now type-based rather than name/version based
+    for better type safety and performance.
     """
 
     @property
@@ -148,8 +151,22 @@ class Schema(ABC):
         representations if needed.
         """
 
+    @override
+    def __eq__(self, other: object) -> bool:
+        """Compare schemas based on their concrete type.
 
-@dataclass(frozen=True, slots=True)
+        This enables type-based schema comparison instead of name/version
+        comparison for better type safety and performance.
+        """
+        return type(other) is type(self)
+
+    @override
+    def __hash__(self) -> int:
+        """Hash based on schema type for use in sets and dictionaries."""
+        return hash(type(self))
+
+
+@dataclass(frozen=True, slots=True, eq=False)
 class BaseFindingSchema(Schema, ABC):
     """Base schema for all finding result types.
 

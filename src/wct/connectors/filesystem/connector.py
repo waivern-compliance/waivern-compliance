@@ -216,7 +216,7 @@ class FilesystemConnector(Connector):
             Schema-compliant transformed content
 
         """
-        if schema.name == "standard_input":
+        if isinstance(schema, StandardInputSchema):
             return self._transform_for_standard_input_schema(schema, all_file_data)
 
         raise ConnectorConfigError(f"Unsupported schema transformation: {schema.name}")

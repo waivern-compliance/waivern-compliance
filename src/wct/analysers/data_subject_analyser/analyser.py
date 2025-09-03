@@ -118,7 +118,7 @@ class DataSubjectAnalyser(Analyser):
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
         # Process standard_input schema data
-        if input_schema.name == "standard_input":
+        if isinstance(input_schema, StandardInputSchema):
             typed_data = StandardInputDataModel[BaseMetadata].model_validate(
                 message.content
             )
