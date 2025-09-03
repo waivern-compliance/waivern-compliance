@@ -132,19 +132,18 @@ connectors:
 analysers:
   - name: "content_analyser"
     type: "personal_data_analyser"
-    metadata:
-      priority: "high"
-      compliance_frameworks: ["GDPR", "CCPA"]
+    properties:
+      pattern_matching:
+        ruleset: "personal_data"
+        evidence_context_size: "medium"
+      llm_validation:
+        enable_llm_validation: true
 
 execution:
   - connector: "filesystem_reader"
     analyser: "content_analyser"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
-    context:
-      description: "Analyse file content for personal data"
-      priority: "high"
-      compliance_frameworks: ["GDPR", "CCPA"]
 ```
 
 **Key Features**:
