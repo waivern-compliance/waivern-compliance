@@ -43,8 +43,8 @@ class TestBaseDatabaseConnector:
                 return cls()
 
             @classmethod
-            def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
-                return (SourceCodeSchema(),)  # Override to support different schema
+            def get_supported_output_schemas(cls) -> list[Schema]:
+                return [SourceCodeSchema()]  # Override to support different schema
 
             def extract(self, output_schema: Schema) -> Message:
                 return Message(id="test", content={}, schema=output_schema)

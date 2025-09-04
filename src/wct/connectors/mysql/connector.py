@@ -45,7 +45,7 @@ WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
 ORDER BY ORDINAL_POSITION
 """
 
-_SUPPORTED_OUTPUT_SCHEMAS: tuple[Schema, ...] = (StandardInputSchema(),)
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [StandardInputSchema()]
 
 
 class MySQLConnector(Connector):
@@ -73,7 +73,7 @@ class MySQLConnector(Connector):
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
+    def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this connector."""
         return _SUPPORTED_OUTPUT_SCHEMAS
 
@@ -279,7 +279,7 @@ class MySQLConnector(Connector):
             logger.info(f"Extracting data from MySQL database: {self._config.database}")
 
             output_schema = DatabaseSchemaUtils.validate_output_schema(
-                output_schema, tuple(_SUPPORTED_OUTPUT_SCHEMAS)
+                output_schema, _SUPPORTED_OUTPUT_SCHEMAS
             )
 
             # Extract database metadata (connection test included)

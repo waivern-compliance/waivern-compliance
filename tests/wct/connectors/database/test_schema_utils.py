@@ -17,7 +17,7 @@ class TestDatabaseSchemaUtils:
         # Arrange - Use different instances to test type-based matching
         schema = StandardInputSchema()
         different_instance = StandardInputSchema()
-        supported_schemas = (different_instance,)
+        supported_schemas = [different_instance]
 
         # Act
         result = DatabaseSchemaUtils.validate_output_schema(schema, supported_schemas)
@@ -50,7 +50,7 @@ class TestDatabaseSchemaUtils:
                 return {"type": "object"}
 
         unsupported_schema = UnsupportedTestSchema()
-        supported_schemas = (StandardInputSchema(),)
+        supported_schemas = [StandardInputSchema()]
 
         # Act & Assert
         with pytest.raises(
@@ -67,7 +67,7 @@ class TestDatabaseSchemaUtils:
         # Arrange
         schema = None
         first_schema = StandardInputSchema()
-        supported_schemas = (first_schema,)
+        supported_schemas = [first_schema]
 
         # Act
         result = DatabaseSchemaUtils.validate_output_schema(schema, supported_schemas)
@@ -77,17 +77,22 @@ class TestDatabaseSchemaUtils:
         assert result.name == "standard_input"
         assert result.version == "1.0.0"
 
-    def test_validate_output_schema_rejects_duplicate_schema_types(self):
+    def test_validate_output_schema_handles_duplicate_schema_types(self):
         """GIVEN supported schemas with duplicate types
         WHEN validating schema
-        THEN it should raise ConnectorConfigError about duplicates"""
+        THEN it should automatically deduplicate and work correctly"""
         # Arrange
         schema = StandardInputSchema()
         duplicate_schema = StandardInputSchema()
-        supported_schemas = (schema, duplicate_schema)  # Same type - should be rejected
+        supported_schemas = [
+            schema,
+            duplicate_schema,
+        ]  # Same type - should be deduplicated
 
-        # Act & Assert
-        with pytest.raises(
-            ConnectorConfigError, match="Duplicate schema types not allowed"
-        ):
-            DatabaseSchemaUtils.validate_output_schema(schema, supported_schemas)
+        # Act
+        result = DatabaseSchemaUtils.validate_output_schema(schema, supported_schemas)
+
+        # Assert - should work fine and return the original schema
+        assert result == schema
+        assert result.name == "standard_input"
+        assert result.version == "1.0.0"

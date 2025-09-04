@@ -210,7 +210,7 @@ class TestProcessingPurposeAnalyserSchemaSupport:
         schemas = ProcessingPurposeAnalyser.get_supported_input_schemas()
 
         # Assert
-        assert isinstance(schemas, tuple)
+        assert isinstance(schemas, list)
         assert len(schemas) > 0
 
         # Verify expected schema names are present
@@ -226,7 +226,7 @@ class TestProcessingPurposeAnalyserSchemaSupport:
         schemas = ProcessingPurposeAnalyser.get_supported_output_schemas()
 
         # Assert
-        assert isinstance(schemas, tuple)
+        assert isinstance(schemas, list)
         assert len(schemas) > 0
 
         # Verify processing purpose schema is present
