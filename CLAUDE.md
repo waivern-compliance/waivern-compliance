@@ -178,9 +178,8 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 # Git and PR Requirements
 
 **Branch Management:**
-- ALWAYS create a new branch before making commits if currently on main branch
-- NEVER commit directly to main branch - always use feature/fix/docs branches
-- Use descriptive branch naming conventions:
+- ALWAYS create a new branch before making commits if currently on the `main` branch
+- NEVER commit directly to the `main` branch - always use semantic commit naming convension:
   - `feature/feature-name` - For new features
   - `fix/issue-description` - For bug fixes
   - `docs/documentation-updates` - For documentation changes
@@ -188,18 +187,14 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 
 **Pull Request Guidelines:**
 - When creating PRs, ensure proper branch naming as described above
-- Use descriptive PR titles that clearly summarize the main change
-- Write comprehensive PR descriptions that summarize all changes made
-- Include rationale for changes and any breaking changes
-- Reference related issues or previous work when applicable
+- Use descriptive PR titles that clearly summarise the main change(s)
 
 # important-instruction-reminders
-DO what has been asked—nothing more, nothing less. DO NOT overcomplicate things.
-NEVER create a 'backwards compatibility' branch of code unless explicitly instructed; always refactor.
-ALWAYS analyse and verify that every single variable, function and class is necessary after a refactoring task. Remove all unnecessary leftover code.
-DO NOT be afraid of breaking changes. Refactoring is BETTER than 'backwards compatibility'.
-When doing refactoring, DO NOT try to preserve the old context in code or comments. Just update them to reflect the current state.
-Adhere to software craftsmanship principles. Break large classes and functions into smaller ones to represent granular concepts.
-CRITICAL: NEVER attempt to bypass code quality checks. Carefully analyse errors and determine their cause.
-DO NOT attempt quick fixes for errors. If an error indicates a design flaw, advise on options to refactor the codebase.
-Use British English spelling.
+- DO what has been asked—nothing more, nothing less. DO NOT overcomplicate things.
+- NEVER create a 'backwards compatibility' branch of code unless explicitly instructed; always refactor.
+- ALWAYS analyse and verify that every single variable, function and class is necessary after a refactoring task. Remove all unnecessary leftover code.
+- When doing refactoring, DO NOT try to preserve the old context in code or comments. Just update them to reflect the current state.
+- Adhere to software craftsmanship principles. Break large classes and functions into smaller ones to represent granular concepts.
+- CRITICAL: NEVER attempt to bypass code quality checks. Carefully analyse errors and determine their cause.
+- DO NOT attempt quick fixes for errors. If an error indicates a design flaw, advise on options to refactor the codebase.
+- Use British English spelling.

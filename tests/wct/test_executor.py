@@ -35,8 +35,8 @@ class MockConnector(Connector):
         return cls()
 
     @classmethod
-    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
-        return (StandardInputSchema(),)
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        return [StandardInputSchema()]
 
     def extract(self, output_schema: Schema):
         if self.should_fail:
@@ -67,12 +67,12 @@ class MockAnalyser(Analyser):
         return cls()
 
     @classmethod
-    def get_supported_input_schemas(cls) -> tuple[Schema, ...]:
-        return (StandardInputSchema(),)
+    def get_supported_input_schemas(cls) -> list[Schema]:
+        return [StandardInputSchema()]
 
     @classmethod
-    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
-        return (PersonalDataFindingSchema(),)
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        return [PersonalDataFindingSchema()]
 
     def process(self, input_schema: Schema, output_schema: Schema, message: Any):
         if self.should_fail:

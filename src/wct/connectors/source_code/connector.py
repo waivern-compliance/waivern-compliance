@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 
-_SUPPORTED_OUTPUT_SCHEMAS: tuple[Schema, ...] = (SourceCodeSchema(),)
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [SourceCodeSchema()]
 
 
 class SourceCodeConnector(Connector):
@@ -78,7 +78,7 @@ class SourceCodeConnector(Connector):
 
     @classmethod
     @override
-    def get_supported_output_schemas(cls) -> tuple[Schema, ...]:
+    def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this connector."""
         return _SUPPORTED_OUTPUT_SCHEMAS
 
