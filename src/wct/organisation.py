@@ -51,12 +51,18 @@ class JointControllerConfig(BaseModel):
     contact_address: str = Field(description="Contact address for the joint controller")
 
 
-class EuUkRepresentativeConfig(BaseModel):
-    """EU/UK representative information for non-EU controllers."""
+class Representative(BaseModel):
+    """Representative information for controllers operating across jurisdictions."""
 
-    company_name: str = Field(description="Name of the EU/UK representative")
+    company_name: str = Field(description="Name of the representative company")
+    company_jurisdiction: str = Field(
+        description="Jurisdiction the representative serves (e.g., 'EU', 'UK')"
+    )
     contact_email: str = Field(description="Contact email for the representative")
     contact_address: str = Field(description="Contact address for the representative")
+    representative_jurisdiction: str = Field(
+        description="Jurisdiction where the representative is located (e.g., 'EU', 'UK')"
+    )
 
 
 class DpoConfig(BaseModel):
@@ -98,9 +104,9 @@ class OrganisationConfig(BaseModel):
     joint_controller: JointControllerConfig | None = Field(
         default=None, description="Joint controller information if applicable"
     )
-    eu_uk_representative: EuUkRepresentativeConfig | None = Field(
-        default=None,
-        description="EU/UK representative for controllers outside EU/UK jurisdiction",
+    representatives: list[Representative] = Field(
+        default_factory=list,
+        description="List of representatives for controllers operating across jurisdictions",
     )
     dpo: DpoConfig | None = Field(
         default=None, description="Data Protection Officer information"
@@ -165,13 +171,18 @@ class OrganisationConfig(BaseModel):
                 "contact_address": self.joint_controller.contact_address,
             }
 
-        # Add EU/UK representative if present
-        if self.eu_uk_representative:
-            export_data["eu_uk_representative"] = {
-                "company_name": self.eu_uk_representative.company_name,
-                "contact_email": self.eu_uk_representative.contact_email,
-                "contact_address": self.eu_uk_representative.contact_address,
-            }
+        # Add representatives if present
+        if self.representatives:
+            export_data["representatives"] = [
+                {
+                    "company_name": rep.company_name,
+                    "company_jurisdiction": rep.company_jurisdiction,
+                    "contact_email": rep.contact_email,
+                    "contact_address": rep.contact_address,
+                    "representative_jurisdiction": rep.representative_jurisdiction,
+                }
+                for rep in self.representatives
+            ]
 
         # Add DPO if present
         if self.dpo:
