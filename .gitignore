@@ -25,3 +25,6 @@ logs/*.log
 logs/*.log.*
 # Allow test log files
 !tests/**/logs/*.log
+
+# Local development setup
+.development
