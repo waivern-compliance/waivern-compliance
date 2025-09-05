@@ -134,11 +134,15 @@ class TestOrganisationConfig:
                 "contact_email": "joint@partner.com",
                 "contact_address": "Joint Address",
             },
-            "eu_uk_representative": {
-                "company_name": "EU Rep Ltd",
-                "contact_email": "eurep@company.com",
-                "contact_address": "EU Rep Address",
-            },
+            "representatives": [
+                {
+                    "company_name": "EU Rep Ltd",
+                    "company_jurisdiction": "EU",
+                    "contact_email": "eurep@company.com",
+                    "contact_address": "EU Rep Address",
+                    "representative_jurisdiction": "EU",
+                }
+            ],
             "dpo": {
                 "name": "DPO Name",
                 "contact_email": "dpo@company.com",
@@ -157,7 +161,7 @@ class TestOrganisationConfig:
         # Verify all sections are present
         assert "data_controller" in export_data
         assert "joint_controller" in export_data
-        assert "eu_uk_representative" in export_data
+        assert "representatives" in export_data
         assert "dpo" in export_data
         assert "privacy_contact" in export_data
         assert "data_retention" in export_data
@@ -169,7 +173,10 @@ class TestOrganisationConfig:
 
         # Verify other sections have correct data
         assert export_data["joint_controller"]["name"] == "Joint Partner"
-        assert export_data["eu_uk_representative"]["company_name"] == "EU Rep Ltd"
+        assert len(export_data["representatives"]) == 1
+        assert export_data["representatives"][0]["company_name"] == "EU Rep Ltd"
+        assert export_data["representatives"][0]["company_jurisdiction"] == "EU"
+        assert export_data["representatives"][0]["representative_jurisdiction"] == "EU"
         assert export_data["dpo"]["name"] == "DPO Name"
         assert export_data["privacy_contact"]["email"] == "privacy@company.com"
         assert export_data["data_retention"]["general_rule"] == "24 months"
