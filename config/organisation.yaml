@@ -19,11 +19,13 @@ joint_controller:
   contact_email: "jean.dow@waivern.com"
   contact_address: "Solbakken Alle 24D, 1086, Oslo, Norway"
 
-# Optional
-eu_uk_representative:
-  company_name: "John Dow"
-  contact_email: "john.dow@waivern.com"
-  contact_address: "21 East Street, London, UK"
+# Optional - List of representatives for different jurisdictions
+representatives:
+  - company_name: "John Dow"
+    company_jurisdiction: "UK"  # This representative serves UK jurisdiction
+    contact_email: "john.dow@waivern.com"
+    contact_address: "21 East Street, London, UK"
+    representative_jurisdiction: "UK"  # Representative is located in UK
 
 dpo:
   name: "Vincent G Nunan"

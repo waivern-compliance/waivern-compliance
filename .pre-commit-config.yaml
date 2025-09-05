@@ -10,6 +10,7 @@ repos:
       - id: trailing-whitespace
       - id: check-merge-conflict
       - id: check-added-large-files
+        exclude: ^src/wct/analysers/data_export_analyser/vendor-database/(consensu\.org\.v3\.vendor-list\.json|consensu_db\.db)$
 
   # Local script hooks
   - repo: local
