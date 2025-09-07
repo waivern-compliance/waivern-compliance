@@ -28,9 +28,14 @@ applicable_contexts:
   - "filesystem"
   - "source_code"
 
-modifiers:
+risk_increasing_modifiers:
   - "minor"
-  - "eu_resident"
+  - "child"
+  - "under 13 years of age"
+  - "vulnerable group"
+
+risk_decreasing_modifiers:
+  -"non-EU-resident"
 
 rules:
   # ===== EMPLOYEE CATEGORY =====
