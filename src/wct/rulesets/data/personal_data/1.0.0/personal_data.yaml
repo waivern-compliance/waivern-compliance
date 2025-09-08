@@ -277,12 +277,12 @@ rules:
       - "profiling"
       - "machine_learning"
     special_category: false
-    risk_level: "medium"
+    risk_level: "high"
     compliance:
       - regulation: "GDPR"
-        relevance: "Automated profiling and inferences under Article 22, right to explanation"
+        relevance: "Automated profiling and inferences under Articles 14 (transparency), 15 (right of access), 16 (right of rectification), 17 (right of erasure), 18-23, including right of reservation/objection and right to explanation"
       - regulation: "EU_AI_ACT"
-        relevance: "AI-generated profiles and inferences subject to high-risk AI system requirements"
+        relevance: "ML/AI-generated profiles and inferences subject to high-risk AI system requirements"
 
   - name: "User-Declared Preferences and Interests"
     description: "User-declared preferences and interests"
@@ -405,6 +405,11 @@ rules:
       - "political"
       - "trade_union"
       - "affiliation"
+      - "conservative"
+      - "liberal"
+      - "labour"
+      - "socialist"
+      - "activist"
     special_category: true
     risk_level: "high"
     compliance:
@@ -433,6 +438,7 @@ rules:
       - "belief"
       - "philosophy"
       - "faith"
+      - "creed"
     special_category: true
     risk_level: "high"
     compliance:

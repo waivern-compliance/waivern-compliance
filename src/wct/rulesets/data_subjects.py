@@ -53,8 +53,12 @@ class DataSubjectRulesetData(RulesetData[DataSubjectRule]):
     applicable_contexts: list[str] = Field(
         min_length=1, description="Master list of valid applicable contexts"
     )
-    modifiers: list[str] = Field(
-        min_length=1, description="Master list of valid cross-category modifiers"
+    risk_increasing_modifiers: list[str] = Field(
+        min_length=1,
+        description="Risk-increasing modifiers (e.g., minor, vulnerable group)",
+    )
+    risk_decreasing_modifiers: list[str] = Field(
+        min_length=1, description="Risk-decreasing modifiers (e.g., non-EU-resident)"
     )
 
     @model_validator(mode="after")

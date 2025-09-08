@@ -124,13 +124,15 @@ class TestDataSubjectRulesetData:
             description="Data subject classification ruleset",
             subject_categories=["employee", "customer", "prospect"],
             applicable_contexts=["database", "filesystem", "source_code"],
-            modifiers=["minor", "eu_resident"],
+            risk_increasing_modifiers=["minor", "vulnerable group"],
+            risk_decreasing_modifiers=["non-EU-resident"],
             rules=[rule],
         )
 
         assert len(ruleset.rules) == 1
         assert "employee" in ruleset.subject_categories
-        assert "minor" in ruleset.modifiers
+        assert "minor" in ruleset.risk_increasing_modifiers
+        assert "non-EU-resident" in ruleset.risk_decreasing_modifiers
 
     def test_data_subject_ruleset_invalid_subject_category(self):
         """Test DataSubjectRulesetData rejects rules with invalid subject categories."""
@@ -152,7 +154,8 @@ class TestDataSubjectRulesetData:
                 description="Data subject classification ruleset",
                 subject_categories=["employee", "customer"],
                 applicable_contexts=["database", "filesystem", "source_code"],
-                modifiers=["minor", "eu_resident"],
+                risk_increasing_modifiers=["minor", "vulnerable group"],
+                risk_decreasing_modifiers=["non-EU-resident"],
                 rules=[rule],
             )
 
@@ -177,11 +180,13 @@ class TestDataSubjectRulesetData:
             description="Test ruleset",
             subject_categories=["employee"],
             applicable_contexts=["database", "filesystem", "source_code"],
-            modifiers=["minor", "eu_resident"],
+            risk_increasing_modifiers=["minor", "vulnerable group"],
+            risk_decreasing_modifiers=["non-EU-resident"],
             rules=[rule],
         )
-        assert "minor" in ruleset.modifiers
-        assert "eu_resident" in ruleset.modifiers
+        assert "minor" in ruleset.risk_increasing_modifiers
+        assert "vulnerable group" in ruleset.risk_increasing_modifiers
+        assert "non-EU-resident" in ruleset.risk_decreasing_modifiers
 
     def test_data_subject_ruleset_duplicate_rule_names(self):
         """Test DataSubjectRulesetData rejects duplicate rule names."""
@@ -214,7 +219,8 @@ class TestDataSubjectRulesetData:
                 description="Test ruleset",
                 subject_categories=["employee", "customer"],
                 applicable_contexts=["database", "filesystem", "source_code"],
-                modifiers=["minor", "eu_resident"],
+                risk_increasing_modifiers=["minor", "vulnerable group"],
+                risk_decreasing_modifiers=["non-EU-resident"],
                 rules=[rule1, rule2],
             )
 
@@ -238,7 +244,8 @@ class TestDataSubjectRulesetData:
                 description="Data subject classification ruleset",
                 subject_categories=["employee", "customer"],
                 applicable_contexts=["database", "filesystem", "source_code"],
-                modifiers=["minor", "eu_resident"],
+                risk_increasing_modifiers=["minor", "vulnerable group"],
+                risk_decreasing_modifiers=["non-EU-resident"],
                 rules=[rule],
             )
 
