@@ -156,7 +156,7 @@ class DataSubjectPatternMatcher:
                         )
                     ],  # TODO: Add proper compliance framework mappings for data subject categories
                     evidence=evidence,
-                    modifiers=[],  # TODO: Implement modifier detection logic with LLM validation (e.g., "minor" for age <18, "eu_resident" for EU location)
+                    modifiers=[],  # TODO: Implement modifier detection logic using ruleset.risk_increasing_modifiers and ruleset.risk_decreasing_modifiers with LLM validation
                     matched_patterns=matched_patterns,
                     metadata=finding_metadata,
                 )
