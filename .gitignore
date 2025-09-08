@@ -13,6 +13,7 @@ CLAUDE.local.md
 
 # Git worktrees
 .worktrees
+.development
 
 # Default analyses results output directory
 outputs/
@@ -23,6 +24,7 @@ outputs/
 # System logs (but not test/mock log files)
 logs/*.log
 logs/*.log.*
+
 # Allow test log files
 !tests/**/logs/*.log
 

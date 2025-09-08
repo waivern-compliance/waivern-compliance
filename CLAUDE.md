@@ -176,18 +176,13 @@ The pre-commit hooks ensure code quality standards are enforced across the entir
 - Test both valid and invalid data to verify comprehensive validation coverage
 
 # Git and PR Requirements
-
 **Branch Management:**
-- ALWAYS create a new branch before making commits if currently on the `main` branch
-- NEVER commit directly to the `main` branch - always use semantic commit naming convension:
+- NEVER commit directly to the `main` or `master` branch. ALWAYS create a new branch before commiting changes if the current branch is `main` or `master`
+- Always use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#specification) for both branches and PRs
   - `feature/feature-name` - For new features
   - `fix/issue-description` - For bug fixes
   - `docs/documentation-updates` - For documentation changes
   - `refactor/component-name` - For refactoring work
-
-**Pull Request Guidelines:**
-- When creating PRs, ensure proper branch naming as described above
-- Use descriptive PR titles that clearly summarise the main change(s)
 
 # important-instruction-reminders
 - DO what has been asked—nothing more, nothing less. DO NOT overcomplicate things.
