@@ -417,7 +417,7 @@ This project is licensed under the **Apache License 2.0**. See the [`LICENSE`](L
 
 Join our Discord community for support, discussions, and updates:
 
-🔗 **[Discord Server]([https://discord.gg/4UUnUuZT])**
+🔗 **[Discord Server](https://discord.gg/wj2RV4zUYM)**
 
 Our Discord server provides:
 - **General Help** - Get assistance with installation, configuration, and usage
