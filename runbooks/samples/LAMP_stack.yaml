@@ -1,18 +1,10 @@
-name: "Sample Runbook for LAMP Stack"
+name: "Sample Runbook for GDPR Analysis of a LAMP Stack"
 description: >
-  Analyse database and source code for potentially sensitive information and processing purposes.
+  Analyse database and source code for GDPR.
   This runbook runs both personal data analysis and processing purpose analysis on MySQL and PHP source code.
 contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
 
 connectors:
-  - name: my_mysql_db
-    type: mysql
-    properties:
-      # MySQL credentials are first tried from environment variables:
-      # MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT
-      # You can also specify them here, but environment variables
-      # take precedence and are recommended for security reasons
-      max_rows_per_table: 5
   - name: "php_source_code"
     type: "source_code"
     properties:
@@ -20,7 +12,8 @@ connectors:
       language: "php"
       file_patterns: ["**/*.php"]
       max_file_size: 10485760  # 10MB
-      max_files: 30  # Allow up to 30 files
+      max_files: 100  # Allow up to 100 files
+
   - name: "log_files"
     type: "filesystem"
     properties:
@@ -29,35 +22,16 @@ connectors:
       max_files: 100
       encoding: "utf-8"
 
+  - name: my_mysql_db
+    type: mysql
+    properties:
+      # MySQL credentials are first tried from environment variables:
+      # MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT
+      # You can also specify them here, but environment variables
+      # take precedence and are recommended for security reasons
+      max_rows_per_table: 10  # Limit to first 10 rows per table
+
 analysers:
-  - name: "personal_data_analyser_for_mysql"
-    type: "personal_data_analyser"
-    properties:
-      # Pattern matching configuration
-      pattern_matching:
-        ruleset: "personal_data"
-        evidence_context_size: "large"
-        maximum_evidence_count: 3
-
-      # LLM validation configuration
-      llm_validation:
-        enable_llm_validation: false
-        llm_batch_size: 80
-        llm_validation_mode: "conservative"  # More careful validation for database content
-  - name: "data_subject_analyser_for_mysql"
-    type: "data_subject_analyser"
-    properties:
-      # Pattern matching configuration
-      pattern_matching:
-        ruleset: "data_subjects"
-        evidence_context_size: "medium"
-        maximum_evidence_count: 3
-
-      # LLM validation configuration
-      llm_validation:
-        enable_llm_validation: false
-        llm_batch_size: 50
-        llm_validation_mode: "conservative"
   - name: "data_subject_analyser_for_logs"
     type: "data_subject_analyser"
     properties:
@@ -69,9 +43,10 @@ analysers:
 
       # LLM validation configuration
       llm_validation:
-        enable_llm_validation: false
+        enable_llm_validation: true
         llm_batch_size: 50
         llm_validation_mode: "conservative"
+
   - name: "processing_purpose_analyser_for_source_code"
     type: "processing_purpose_analyser"
     properties:
@@ -83,27 +58,11 @@ analysers:
 
       # LLM validation configuration
       llm_validation:
-        enable_llm_validation: false
+        enable_llm_validation: true
         llm_batch_size: 50
     metadata:
       description: "Analyse PHP source code for processing purposes and service integrations"
-  - name: "processing_purpose_analyser_for_mysql"
-    type: "processing_purpose_analyser"
-    properties:
-      # Pattern matching configuration
-      pattern_matching:
-        ruleset: "processing_purposes"
-        evidence_context_size: "medium"
-        maximum_evidence_count: 3
 
-      # LLM validation configuration
-      llm_validation:
-        enable_llm_validation: false
-        llm_batch_size: 20
-        llm_validation_mode: "conservative"
-        confidence_threshold: 0.5
-    metadata:
-      description: "Identify data processing purposes from MySQL database content"
   - name: "personal_data_analyser_for_logs"
     type: "personal_data_analyser"
     properties:
@@ -120,6 +79,7 @@ analysers:
         llm_validation_mode: "conservative"  # More careful validation for log content
     metadata:
       description: "Analyse log files for personally identifiable information using pattern matching"
+
   - name: "processing_purpose_analyser_for_logs"
     type: "processing_purpose_analyser"
     properties:
@@ -138,21 +98,55 @@ analysers:
     metadata:
       description: "Identify data processing purposes and compliance frameworks from log file content"
 
+  - name: "processing_purpose_analyser_for_mysql"
+    type: "processing_purpose_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "processing_purposes"
+        evidence_context_size: "medium"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 20
+        llm_validation_mode: "conservative"
+        confidence_threshold: 0.5
+    metadata:
+      description: "Identify data processing purposes from MySQL database content"
+
+  - name: "personal_data_analyser_for_mysql"
+    type: "personal_data_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "personal_data"
+        evidence_context_size: "large"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 80
+        llm_validation_mode: "conservative"  # More careful validation for database content
+
+  - name: "data_subject_analyser_for_mysql"
+    type: "data_subject_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "data_subjects"
+        evidence_context_size: "medium"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 50
+        llm_validation_mode: "conservative"
+
 execution:
-  - name: "Personal Data Detection in MySQL Database"
-    description: "Scan MySQL database tables and columns for personally identifiable information using pattern matching"
-    contact: "Emily Chen (Database Administrator) <emily.chen@company.co.uk>"
-    connector: "my_mysql_db"
-    analyser: "personal_data_analyser_for_mysql"
-    input_schema: "standard_input"
-    output_schema: "personal_data_finding"
-  - name: "Data Subject Classification in MySQL Database"
-    description: "Identify data subject categories (employees, customers, etc.) from database content for GDPR Article 30(1)(c) compliance"
-    contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
-    connector: "my_mysql_db"
-    analyser: "data_subject_analyser_for_mysql"
-    input_schema: "standard_input"
-    output_schema: "data_subject_finding"
   - name: "Data Subject Classification in Log Files"
     description: "Identify data subject categories (employees, customers, etc.) from log file content for GDPR Article 30(1)(c) compliance"
     contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
@@ -160,12 +154,14 @@ execution:
     analyser: "data_subject_analyser_for_logs"
     input_schema: "standard_input"
     output_schema: "data_subject_finding"
+
   - name: "Processing Purpose Analysis of Database Content"
     description: "Identify GDPR and CCPA compliance processing purposes from database structure and content"
     connector: "my_mysql_db"
     analyser: "processing_purpose_analyser_for_mysql"
     input_schema: "standard_input"
     output_schema: "processing_purpose_finding"
+
   - name: "PHP Source Code Processing Purpose Detection"
     description: "Analyse PHP application code for business logic, service integrations, and data processing activities"
     contact: "James Wilson (Lead Developer) <james.wilson@company.co.uk>"
@@ -173,6 +169,7 @@ execution:
     analyser: "processing_purpose_analyser_for_source_code"
     input_schema: "source_code"
     output_schema: "processing_purpose_finding"
+
   - name: "Personal Data Detection in Log Files"
     description: "Scan log files for personally identifiable information using pattern matching and context analysis"
     contact: "Michael Brown (DevOps) <michael.brown@company.co.uk>"
@@ -180,9 +177,26 @@ execution:
     analyser: "personal_data_analyser_for_logs"
     input_schema: "standard_input"
     output_schema: "personal_data_finding"
+
   - name: "Processing Purpose Analysis of Log Content"
     description: "Identify data processing purposes and compliance frameworks from log file content and system activities"
     connector: "log_files"
     analyser: "processing_purpose_analyser_for_logs"
     input_schema: "standard_input"
     output_schema: "processing_purpose_finding"
+
+  - name: "Personal Data Detection in MySQL Database"
+    description: "Scan MySQL database tables and columns for personally identifiable information using pattern matching"
+    contact: "Emily Chen (Database Administrator) <emily.chen@company.co.uk>"
+    connector: "my_mysql_db"
+    analyser: "personal_data_analyser_for_mysql"
+    input_schema: "standard_input"
+    output_schema: "personal_data_finding"
+
+  - name: "Data Subject Classification in MySQL Database"
+    description: "Identify data subject categories (employees, customers, etc.) from database content for GDPR Article 30(1)(c) compliance"
+    contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
+    connector: "my_mysql_db"
+    analyser: "data_subject_analyser_for_mysql"
+    input_schema: "standard_input"
+    output_schema: "data_subject_finding"

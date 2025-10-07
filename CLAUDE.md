@@ -22,7 +22,7 @@ WCT supports environment variables for sensitive configuration data like databas
 
 *LLM Configuration:*
 - `ANTHROPIC_API_KEY` - Anthropic API key for AI-powered compliance analysis
-- `ANTHROPIC_MODEL` - Anthropic model name (optional, defaults to claude-sonnet-4-20250514)
+- `ANTHROPIC_MODEL` - Anthropic model name (optional, defaults to claude-sonnet-4-5-20250929)
 
 ## Development Commands
 
