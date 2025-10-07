@@ -45,7 +45,7 @@ class AnthropicLLMService:
         """Initialise the Anthropic LLM service.
 
         Args:
-            model_name: The Anthropic model to use (will use ANTHROPIC_MODEL env var or default to claude-sonnet-4-20250514)
+            model_name: The Anthropic model to use (will use ANTHROPIC_MODEL env var)
             api_key: Anthropic API key (will use ANTHROPIC_API_KEY env var if not provided)
 
         Raises:
@@ -54,7 +54,7 @@ class AnthropicLLMService:
         """
         # Get model name from parameter, environment, or default
         self.model_name = (
-            model_name or os.getenv("ANTHROPIC_MODEL") or "claude-sonnet-4-20250514"
+            model_name or os.getenv("ANTHROPIC_MODEL") or "claude-sonnet-4-5-20250929"
         )
 
         # Get API key from parameter or environment

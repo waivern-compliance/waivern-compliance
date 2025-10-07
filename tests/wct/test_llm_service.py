@@ -47,10 +47,15 @@ class TestAnthropicLLMServiceInitialisation:
 
     def test_initialisation_with_default_model(self) -> None:
         """Test service initialisation uses default model when not specified."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        # Clear both ANTHROPIC_MODEL and set ANTHROPIC_API_KEY to ensure default is used
+        with patch.dict(
+            os.environ,
+            {"ANTHROPIC_API_KEY": "test-key"},
+            clear=True,  # Clear all env vars to ensure no ANTHROPIC_MODEL is present
+        ):
             service = AnthropicLLMService()
 
-            assert service.model_name == "claude-sonnet-4-20250514"
+            assert service.model_name == "claude-sonnet-4-5-20250929"
             # API key is private - service creation without error indicates it was set
 
     def test_initialisation_parameter_overrides_environment(self) -> None:
