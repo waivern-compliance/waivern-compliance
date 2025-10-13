@@ -7,7 +7,7 @@ from wct.analysers.llm_validation import (
     LLMValidationStrategy,
 )
 from wct.analysers.types import LLMValidationConfig
-from wct.llm_service import AnthropicLLMService
+from wct.llm_service import BaseLLMService
 from wct.prompts.personal_data_validation import get_batch_validation_prompt
 
 from .types import PersonalDataFindingModel
@@ -56,7 +56,7 @@ class PersonalDataValidationStrategy(LLMValidationStrategy[PersonalDataFindingMo
 def personal_data_validation_strategy(
     findings: list[PersonalDataFindingModel],
     config: LLMValidationConfig,
-    llm_service: AnthropicLLMService,
+    llm_service: BaseLLMService,
 ) -> tuple[list[PersonalDataFindingModel], bool]:
     """LLM validation strategy for personal data findings.
 

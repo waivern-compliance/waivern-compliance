@@ -7,7 +7,7 @@ from wct.analysers.llm_validation import (
     LLMValidationStrategy,
 )
 from wct.analysers.types import LLMValidationConfig
-from wct.llm_service import AnthropicLLMService
+from wct.llm_service import BaseLLMService
 from wct.prompts.processing_purpose_validation import (
     get_processing_purpose_validation_prompt,
 )
@@ -49,7 +49,7 @@ class ProcessingPurposeValidationStrategy(
 def processing_purpose_validation_strategy(
     findings: list[ProcessingPurposeFindingModel],
     config: LLMValidationConfig,
-    llm_service: AnthropicLLMService,
+    llm_service: BaseLLMService,
 ) -> tuple[list[ProcessingPurposeFindingModel], bool]:
     """LLM validation strategy for processing purpose findings.
 
