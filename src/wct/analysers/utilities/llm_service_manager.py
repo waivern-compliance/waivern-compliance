@@ -22,10 +22,15 @@ class LLMServiceManager:
 
     @property
     def llm_service(self) -> BaseLLMService | None:
-        """Get the LLM service, creating it if necessary."""
+        """Get the LLM service, creating it if necessary.
+
+        The service is created using LLMServiceFactory.create_service() which
+        automatically selects the provider based on the LLM_PROVIDER environment
+        variable. Defaults to Anthropic if LLM_PROVIDER is not set.
+        """
         if self._llm_service is None and self._enable_llm_validation:
             try:
-                self._llm_service = LLMServiceFactory.create_anthropic_service()
+                self._llm_service = LLMServiceFactory.create_service()
                 logger.info("LLM service initialised for compliance analysis")
             except LLMServiceError as e:
                 logger.warning(
