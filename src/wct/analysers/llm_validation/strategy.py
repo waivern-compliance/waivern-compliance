@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from wct.analysers.types import LLMValidationConfig
-from wct.llm_service import AnthropicLLMService
+from wct.llm_service import BaseLLMService
 
 from .decision_engine import ValidationDecisionEngine
 from .json_utils import extract_json_from_llm_response
@@ -59,7 +59,7 @@ class LLMValidationStrategy[T](ABC):
         self,
         findings: list[T],
         config: LLMValidationConfig,
-        llm_service: AnthropicLLMService,
+        llm_service: BaseLLMService,
     ) -> tuple[list[T], bool]:
         """Validate findings using LLM with shared batch processing logic.
 
@@ -99,7 +99,7 @@ class LLMValidationStrategy[T](ABC):
         self,
         findings: list[T],
         config: LLMValidationConfig,
-        llm_service: AnthropicLLMService,
+        llm_service: BaseLLMService,
     ) -> tuple[list[T], bool]:
         """Process findings in batches for LLM validation.
 
@@ -142,7 +142,7 @@ class LLMValidationStrategy[T](ABC):
         self,
         findings_batch: list[T],
         config: LLMValidationConfig,
-        llm_service: AnthropicLLMService,
+        llm_service: BaseLLMService,
     ) -> list[T]:
         """Validate a batch of findings using LLM.
 

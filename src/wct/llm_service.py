@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
+from abc import ABC, abstractmethod
+from typing import override
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import BaseMessage
@@ -32,7 +34,33 @@ class LLMConnectionError(LLMServiceError):
     pass
 
 
-class AnthropicLLMService:
+class BaseLLMService(ABC):
+    """Abstract base class for LLM service implementations.
+
+    This class defines the interface that all LLM service providers must implement,
+    enabling support for multiple providers (Anthropic, OpenAI, Google, etc.) with
+    a unified interface for compliance analysis.
+    """
+
+    @abstractmethod
+    def analyse_data(self, text: str, analysis_prompt: str) -> str:
+        """Analyse text using the LLM with a custom prompt.
+
+        Args:
+            text: The text content to analyse
+            analysis_prompt: The prompt/instructions for analysis
+
+        Returns:
+            LLM analysis response as string
+
+        Raises:
+            LLMConnectionError: If LLM request fails
+
+        """
+        pass
+
+
+class AnthropicLLMService(BaseLLMService):
     """Service for interacting with Anthropic's Claude models via LangChain.
 
     This service provides a unified interface for AI-powered compliance analysis
@@ -68,6 +96,7 @@ class AnthropicLLMService:
         self._llm = None
         logger.info(f"Initialised Anthropic LLM service with model: {self.model_name}")
 
+    @override
     def analyse_data(self, text: str, analysis_prompt: str) -> str:
         """Analyse text using the LLM with a custom prompt.
 
