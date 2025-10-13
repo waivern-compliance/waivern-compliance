@@ -1,5 +1,19 @@
 # Multi-Provider LLM Support - Incremental TDD Implementation
 
+## Progress Tracker
+
+| Feature | Status | Branch | PR | Merged | Notes |
+|---------|--------|--------|----|----|-------|
+| Feature 1: Base LLM Service Abstraction | ✅ Complete | `refactor/base-llm-service-abstraction` | [#145](https://github.com/waivern-compliance/waivern-compliance/pull/145) | ⏳ Pending | 712 tests pass, zero behaviour change |
+| Feature 2: OpenAI Provider with Lazy Import | ✅ Complete | `feature/openai-provider-lazy-import` | - | - | 722 unit tests + 8 integration tests (4 Anthropic + 4 OpenAI) pass |
+| Feature 3: Environment-Based Provider Selection | 📋 Planned | - | - | - | - |
+| Feature 4: Add Google & Cohere Providers | 📋 Planned | - | - | - | - |
+| Feature 5: Per-Analyser LLM Configuration (Schema) | 📋 Planned | - | - | - | - |
+| Feature 6: Configuration Hierarchy Resolution | 📋 Planned | - | - | - | - |
+| Feature 7: Test-LLM CLI Command | 📋 Planned | - | - | - | - |
+| Feature 8: Multi-Provider Example Runbook | 📋 Planned | - | - | - | - |
+| Feature 9: Documentation & Migration Guide | 📋 Planned | - | - | - | - |
+
 ## Overview
 
 This document outlines the plan for adding multi-provider LLM support to WCT, broken down into small, independently mergeable features that can be implemented using TDD methodology.
@@ -40,41 +54,71 @@ This document outlines the plan for adding multi-provider LLM support to WCT, br
 
 ## Implementation Plan
 
-### Feature 1: Base LLM Service Abstraction
+### Feature 1: Base LLM Service Abstraction ✅ COMPLETE
 **Goal:** Extract interface, make current code inherit from it
 **Testing:** All existing tests pass unchanged
 **Mergeable:** ✅ Zero behaviour change, pure refactoring
+**Status:** ✅ Complete - PR #145 ready for merge
+**Actual effort:** ~1.5 hours
 
-**Changes:**
-- Create `BaseLLMService` ABC with `analyse_data()` method
-- Refactor `AnthropicLLMService` to inherit from base
-- Update `LLMServiceManager` type hint to `BaseLLMService | None`
-- Run existing tests to verify no regression
+**Changes Implemented:**
+- ✅ Create `BaseLLMService` ABC with `analyse_data()` abstract method
+- ✅ Refactor `AnthropicLLMService` to inherit from base with `@override` decorator
+- ✅ Update `LLMServiceManager` type hint to `BaseLLMService | None`
+- ✅ Update all validation strategies to accept `BaseLLMService`
+- ✅ Add test verifying `AnthropicLLMService` implements base interface
 
-**Test Strategy:**
-- Existing `test_llm_service.py` tests pass unchanged
-- Add test verifying `AnthropicLLMService` is instance of `BaseLLMService`
+**Test Results:**
+- ✅ All 712 tests pass
+- ✅ Type checking passes (basedpyright strict mode)
+- ✅ Linting passes (ruff)
+- ✅ All dev checks pass
 
-**Estimated effort:** 1-2 hours
+**Files Modified:**
+- `src/wct/llm_service.py` - Added `BaseLLMService` ABC
+- `src/wct/analysers/utilities/llm_service_manager.py` - Updated type hints
+- `src/wct/analysers/llm_validation/strategy.py` - Updated type hints
+- `src/wct/analysers/personal_data_analyser/llm_validation_strategy.py` - Updated type hints
+- `src/wct/analysers/processing_purpose_analyser/llm_validation_strategy.py` - Updated type hints
+- `tests/wct/test_llm_service.py` - Added interface verification test
 
 ---
 
-### Feature 2: OpenAI Provider with Lazy Import
+### Feature 2: OpenAI Provider with Lazy Import ✅ COMPLETE
 **Goal:** Add single alternative provider, prove the pattern works
-**Testing:** Unit tests for OpenAI service with mocks
+**Testing:** Unit tests for OpenAI service with mocks + real API integration tests
 **Mergeable:** ✅ Additive only, doesn't affect existing code
+**Status:** ✅ Complete - Ready for PR
+**Actual effort:** ~3 hours
 
-**Changes:**
-- Add `llm-openai = ["langchain-openai>=0.2.0"]` to dependency groups
-- Implement `OpenAILLMService` with lazy import + helpful error
-- Add `LLMServiceFactory.create_openai_service()` method
-- Document OpenAI setup in `.env.example`
+**Changes Implemented:**
+- ✅ Add `llm-openai = ["langchain-openai>=0.2.0"]` to dependency groups
+- ✅ Implement `OpenAILLMService` with lazy import + helpful error
+- ✅ Add `LLMServiceFactory.create_openai_service()` method
+- ✅ Document OpenAI setup in `.env.example`
+- ✅ Add pytest integration test markers and configuration
+- ✅ Implement 4 real API integration tests for Anthropic
+- ✅ Implement 4 real API integration tests for OpenAI
 
-**Test Strategy:**
-- Test `OpenAILLMService` with mocked `ChatOpenAI`
-- Test lazy import error message (without langchain-openai installed)
-- Test factory creates correct service type
-- All existing tests still pass (Anthropic unchanged)
+**Test Results:**
+- ✅ All 722 unit tests pass (including OpenAI mocked tests)
+- ✅ 4 Anthropic real API integration tests pass (8.12s)
+- ✅ 4 OpenAI real API integration tests pass (4.30s)
+- ✅ All 8 integration tests pass together (13.02s)
+- ✅ Type checking passes (basedpyright strict mode)
+- ✅ Linting passes (ruff)
+
+**Files Modified:**
+- `pyproject.toml` - Added llm-openai dependency group, pytest markers, default test exclusion
+- `src/wct/llm_service.py` - Added OpenAILLMService class
+- `.env.example` - Added OpenAI configuration
+- `tests/wct/test_llm_service.py` - Added unit tests + integration test classes
+
+**Integration Test Setup:**
+- pytest markers: `@pytest.mark.integration`
+- Default behavior: `uv run pytest` excludes integration tests (no API costs)
+- Run integration tests: `uv run pytest -m integration`
+- Integration tests skip gracefully when API keys not present
 
 **Estimated effort:** 2-3 hours
 
