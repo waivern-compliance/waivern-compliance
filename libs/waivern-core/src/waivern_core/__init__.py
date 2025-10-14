@@ -15,7 +15,6 @@ from waivern_core.errors import (
 )
 from waivern_core.message import Message
 from waivern_core.schemas import (
-    BaseFindingSchema,
     JsonSchemaLoader,
     Schema,
     SchemaLoader,
@@ -29,7 +28,6 @@ __all__ = [
     "Connector",
     "Message",
     "Schema",
-    "BaseFindingSchema",
     # Schema utilities
     "SchemaLoader",
     "JsonSchemaLoader",
