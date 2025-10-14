@@ -7,7 +7,7 @@
 | Feature 1: Base LLM Service Abstraction | ✅ Complete | `refactor/base-llm-service-abstraction` | [#145](https://github.com/waivern-compliance/waivern-compliance/pull/145) | ⏳ Pending | 712 tests pass, zero behaviour change |
 | Feature 2: OpenAI Provider with Lazy Import | ✅ Complete | `feature/openai-provider-lazy-import` | - | - | 722 unit tests + 8 integration tests (4 Anthropic + 4 OpenAI) pass |
 | Feature 3: Environment-Based Provider Selection | ✅ Complete | `feature/environment-based-provider-selection` | - | - | 726 unit tests + 8 integration tests pass |
-| Feature 4: Add Google & Cohere Providers | 📋 Planned | - | - | - | - |
+| Feature 4: Add Google Provider | ✅ Complete | `feature/google-llm-provider` | - | - | 737 unit tests + 12 integration tests (4 Anthropic + 4 OpenAI + 4 Google) pass; Cohere deferred |
 | Feature 5: Per-Analyser LLM Configuration (Schema) | 📋 Planned | - | - | - | - |
 | Feature 6: Configuration Hierarchy Resolution | 📋 Planned | - | - | - | - |
 | Feature 7: Test-LLM CLI Command | 📋 Planned | - | - | - | - |
@@ -162,25 +162,49 @@ This document outlines the plan for adding multi-provider LLM support to WCT, br
 
 ---
 
-### Feature 4: Add Google & Cohere Providers
-**Goal:** Expand provider options, validate pattern scales
-**Testing:** Unit tests for each provider
+### Feature 4: Add Google Provider ✅ COMPLETE
+**Goal:** Expand provider options, validate pattern scales (Cohere deferred)
+**Testing:** Unit tests + real API integration tests
 **Mergeable:** ✅ Additive, follows established pattern
+**Status:** ✅ Complete - Ready for PR
+**Actual effort:** ~2.5 hours
 
-**Changes:**
-- Add dependency groups: `llm-google`, `llm-cohere`, `llm-all`
-- Implement `GoogleLLMService` and `CohereLLMService`
-- Add factory methods for both providers
-- Update factory's `create_service()` to support all providers
-- Document in `.env.example`
+**Changes Implemented:**
+- ✅ Add dependency groups: `llm-google = ["langchain-google-genai>=2.0.0"]`, `llm-all` (includes OpenAI + Google)
+- ✅ Implement `GoogleLLMService` with lazy import + helpful error
+- ✅ Add `LLMServiceFactory.create_google_service()` method
+- ✅ Update `create_service()` to support "google" provider
+- ✅ Document Google configuration in `.env.example`
+- ✅ Add 4 real API integration tests for Google
+- ✅ Refactor: Extract duplicate `_extract_content()` to base class
 
-**Test Strategy:**
-- Test each service with mocked LangChain clients
-- Test lazy import errors for each
-- Test provider selection includes new options
-- Verify existing providers still work
+**Test Results:**
+- ✅ All 737 unit tests pass (11 new Google tests)
+- ✅ 4 Google real API integration tests pass
+- ✅ All 12 integration tests pass (4 Anthropic + 4 OpenAI + 4 Google)
+- ✅ Type checking passes (basedpyright strict mode)
+- ✅ Linting passes (ruff)
 
-**Estimated effort:** 2-3 hours
+**Files Modified:**
+- `pyproject.toml` - Added llm-google and llm-all dependency groups
+- `src/wct/llm_service.py` - Added GoogleLLMService class + base class refactoring
+- `.env.example` - Added Google configuration
+- `tests/wct/llm_service/test_google_service.py` (NEW) - Google service tests (2 classes, 9 tests)
+- `tests/wct/llm_service/test_factory.py` - Added Google factory tests (2 tests)
+- `tests/wct/llm_service/test_integration.py` - Added Google integration tests (1 class, 4 tests)
+
+**Implementation Details:**
+- Default model: `gemini-2.5-flash`
+- Environment variables: `GOOGLE_API_KEY`, `GOOGLE_MODEL`
+- Follows exact same pattern as OpenAI implementation
+- Integration tests skip gracefully when API key not present or package not installed
+
+**Refactoring:**
+- Extracted duplicate `_extract_content()` method from all three service classes to `BaseLLMService`
+- Eliminated ~150 lines of code duplication
+- All tests continue passing after refactoring
+
+**Note:** Cohere provider deferred per user request to focus on the three major providers (Anthropic, OpenAI, Google)
 
 ---
 
