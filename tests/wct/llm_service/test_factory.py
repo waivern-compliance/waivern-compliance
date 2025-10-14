@@ -9,6 +9,7 @@ import pytest
 
 from wct.llm_service import (
     AnthropicLLMService,
+    GoogleLLMService,
     LLMConfigurationError,
     LLMServiceFactory,
     OpenAILLMService,
@@ -26,6 +27,15 @@ class TestLLMServiceFactory:
 
         assert isinstance(service, OpenAILLMService)
         assert service.model_name == "gpt-4"
+
+    def test_factory_can_create_google_service(self) -> None:
+        """Test that factory can create Google service instance."""
+        service = LLMServiceFactory.create_google_service(
+            model_name="gemini-1.5-pro", api_key="test-key"
+        )
+
+        assert isinstance(service, GoogleLLMService)
+        assert service.model_name == "gemini-1.5-pro"
 
 
 class TestLLMServiceFactoryProviderSelection:
@@ -57,6 +67,19 @@ class TestLLMServiceFactoryProviderSelection:
 
             assert isinstance(service, OpenAILLMService)
 
+    def test_create_service_with_google_provider(self) -> None:
+        """Test create_service() creates Google service when LLM_PROVIDER=google."""
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "google",
+                "GOOGLE_API_KEY": "test-key",
+            },
+        ):
+            service = LLMServiceFactory.create_service()
+
+            assert isinstance(service, GoogleLLMService)
+
     def test_create_service_defaults_to_anthropic_when_no_provider_set(self) -> None:
         """Test create_service() defaults to Anthropic when LLM_PROVIDER not set."""
         with patch.dict(
@@ -80,3 +103,4 @@ class TestLLMServiceFactoryProviderSelection:
             assert "invalid-provider" in str(exc_info.value).lower()
             assert "anthropic" in str(exc_info.value).lower()
             assert "openai" in str(exc_info.value).lower()
+            assert "google" in str(exc_info.value).lower()

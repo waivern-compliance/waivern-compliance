@@ -59,6 +59,59 @@ class BaseLLMService(ABC):
         """
         pass
 
+    def _extract_content(self, response: BaseMessage) -> str:
+        """Extract string content from LangChain response, handling all content types.
+
+        LangChain responses can contain various content types. This method safely
+        extracts text content regardless of the underlying structure.
+
+        NOTE: LangChain's type definitions use Unknown types which cause basedpyright
+        to report type errors. The logic below is sound and handles all possible
+        content types properly, but type ignores are needed due to LangChain's
+        incomplete type definitions.
+
+        Args:
+            response: LangChain BaseMessage response
+
+        Returns:
+            Extracted text content as string
+
+        """
+        content = response.content  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
+
+        # Handle string content (most common case)
+        if isinstance(content, str):
+            return content.strip()
+
+        # Handle list content (e.g., multiple text blocks)
+        if isinstance(content, list):  # type: ignore[reportUnnecessaryIsInstance]
+            text_parts: list[str] = []
+            for item in content:  # type: ignore[reportUnknownVariableType]
+                if isinstance(item, str):
+                    text_parts.append(item)  # type: ignore[reportUnknownMemberType]
+                elif isinstance(item, dict):  # type: ignore[reportUnnecessaryIsInstance]
+                    # Extract text from dict structures (e.g., {"type": "text", "text": "content"})
+                    if "text" in item:
+                        text_parts.append(str(item["text"]))  # type: ignore[reportUnknownMemberType,reportUnknownArgumentType]
+                    else:
+                        # Fallback: convert entire dict to string
+                        text_parts.append(str(item))  # type: ignore[reportUnknownMemberType,reportUnknownArgumentType]
+                else:
+                    # Fallback for any other type
+                    text_parts.append(str(item))  # type: ignore[reportUnknownMemberType]
+            return " ".join(text_parts).strip()  # type: ignore[reportUnknownArgumentType]
+
+        # Handle dict content
+        if isinstance(content, dict):  # type: ignore[reportUnnecessaryIsInstance]
+            if "text" in content:
+                return str(content["text"]).strip()  # type: ignore[reportUnknownArgumentType]
+            else:
+                # Fallback: convert entire dict to string
+                return str(content).strip()
+
+        # Final fallback for any other type
+        return str(content).strip()
+
 
 class AnthropicLLMService(BaseLLMService):
     """Service for interacting with Anthropic's Claude models via LangChain.
@@ -157,59 +210,6 @@ class AnthropicLLMService(BaseLLMService):
             logger.debug("Created LangChain ChatAnthropic instance")
 
         return self._llm
-
-    def _extract_content(self, response: BaseMessage) -> str:
-        """Extract string content from LangChain response, handling all content types.
-
-        LangChain responses can contain various content types. This method safely
-        extracts text content regardless of the underlying structure.
-
-        NOTE: LangChain's type definitions use Unknown types which cause basedpyright
-        to report type errors. The logic below is sound and handles all possible
-        content types properly, but type ignores are needed due to LangChain's
-        incomplete type definitions.
-
-        Args:
-            response: LangChain BaseMessage response
-
-        Returns:
-            Extracted text content as string
-
-        """
-        content = response.content  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
-
-        # Handle string content (most common case)
-        if isinstance(content, str):
-            return content.strip()
-
-        # Handle list content (e.g., multiple text blocks)
-        if isinstance(content, list):  # type: ignore[reportUnnecessaryIsInstance]
-            text_parts: list[str] = []
-            for item in content:  # type: ignore[reportUnknownVariableType]
-                if isinstance(item, str):
-                    text_parts.append(item)  # type: ignore[reportUnknownMemberType]
-                elif isinstance(item, dict):  # type: ignore[reportUnnecessaryIsInstance]
-                    # Extract text from dict structures (e.g., {"type": "text", "text": "content"})
-                    if "text" in item:
-                        text_parts.append(str(item["text"]))  # type: ignore[reportUnknownMemberType,reportUnknownArgumentType]
-                    else:
-                        # Fallback: convert entire dict to string
-                        text_parts.append(str(item))  # type: ignore[reportUnknownMemberType,reportUnknownArgumentType]
-                else:
-                    # Fallback for any other type
-                    text_parts.append(str(item))  # type: ignore[reportUnknownMemberType]
-            return " ".join(text_parts).strip()  # type: ignore[reportUnknownArgumentType]
-
-        # Handle dict content
-        if isinstance(content, dict):  # type: ignore[reportUnnecessaryIsInstance]
-            if "text" in content:
-                return str(content["text"]).strip()  # type: ignore[reportUnknownArgumentType]
-            else:
-                # Fallback: convert entire dict to string
-                return str(content).strip()
-
-        # Final fallback for any other type
-        return str(content).strip()
 
 
 class OpenAILLMService(BaseLLMService):
@@ -326,54 +326,120 @@ class OpenAILLMService(BaseLLMService):
 
         return self._llm  # type: ignore[return-value]
 
-    def _extract_content(self, response: BaseMessage) -> str:
-        """Extract string content from LangChain response, handling all content types.
 
-        LangChain responses can contain various content types. This method safely
-        extracts text content regardless of the underlying structure.
+class GoogleLLMService(BaseLLMService):
+    """Service for interacting with Google's Gemini models via LangChain.
 
-        NOTE: LangChain's type definitions use Unknown types which cause basedpyright
-        to report type errors. The logic below is sound and handles all possible
-        content types properly, but type ignores are needed due to LangChain's
-        incomplete type definitions.
+    This service provides a unified interface for AI-powered compliance analysis
+    using Google's Gemini models through the LangChain framework.
+    """
+
+    def __init__(
+        self, model_name: str | None = None, api_key: str | None = None
+    ) -> None:
+        """Initialise the Google LLM service.
 
         Args:
-            response: LangChain BaseMessage response
+            model_name: The Google model to use (will use GOOGLE_MODEL env var)
+            api_key: Google API key (will use GOOGLE_API_KEY env var if not provided)
 
-        Returns:
-            Extracted text content as string
+        Raises:
+            LLMConfigurationError: If API key is not provided or found in environment
 
         """
-        content = response.content  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
+        # Get model name from parameter, environment, or default
+        self.model_name = model_name or os.getenv("GOOGLE_MODEL") or "gemini-2.5-flash"
 
-        # Handle string content (most common case)
-        if isinstance(content, str):
-            return content.strip()
+        # Get API key from parameter or environment
+        self._api_key = api_key or os.getenv("GOOGLE_API_KEY")
+        if not self._api_key:
+            raise LLMConfigurationError(
+                "Google API key is required. Set GOOGLE_API_KEY environment variable "
+                "or provide api_key parameter."
+            )
 
-        # Handle list content (e.g., multiple text blocks)
-        if isinstance(content, list):  # type: ignore[reportUnnecessaryIsInstance]
-            text_parts: list[str] = []
-            for item in content:  # type: ignore[reportUnknownVariableType]
-                if isinstance(item, str):
-                    text_parts.append(item)  # type: ignore[reportUnknownMemberType]
-                elif isinstance(item, dict):  # type: ignore[reportUnnecessaryIsInstance]
-                    if "text" in item:
-                        text_parts.append(str(item["text"]))  # type: ignore[reportUnknownMemberType,reportUnknownArgumentType]
-                    else:
-                        text_parts.append(str(item))  # type: ignore[reportUnknownMemberType,reportUnknownArgumentType]
-                else:
-                    text_parts.append(str(item))  # type: ignore[reportUnknownMemberType]
-            return " ".join(text_parts).strip()  # type: ignore[reportUnknownArgumentType]
+        self._llm = None
+        logger.info(f"Initialised Google LLM service with model: {self.model_name}")
 
-        # Handle dict content
-        if isinstance(content, dict):  # type: ignore[reportUnnecessaryIsInstance]
-            if "text" in content:
-                return str(content["text"]).strip()  # type: ignore[reportUnknownArgumentType]
-            else:
-                return str(content).strip()
+    @override
+    def analyse_data(self, text: str, analysis_prompt: str) -> str:
+        """Analyse text using the LLM with a custom prompt.
 
-        # Final fallback for any other type
-        return str(content).strip()
+        Args:
+            text: The text content to analyse
+            analysis_prompt: The prompt/instructions for analysis
+
+        Returns:
+            LLM analysis response as string
+
+        Raises:
+            LLMConnectionError: If LLM request fails
+            LLMConfigurationError: If Google provider is not installed
+
+        """
+        try:
+            logger.debug(f"Analysing text (length: {len(text)} chars)")
+
+            llm = self._get_llm()  # type: ignore[reportUnknownMemberType]
+
+            # Combine the analysis prompt with the text
+            full_prompt = f"{analysis_prompt}\n\nText to analyse:\n{text}"
+
+            response = llm.invoke(full_prompt)  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            result = self._extract_content(response).strip()  # type: ignore[reportUnknownArgumentType]
+
+            logger.debug(
+                f"LLM analysis completed (response length: {len(result)} chars)"
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Text analysis failed: {e}")
+            raise LLMConnectionError(f"LLM text analysis failed: {e}") from e
+
+    def _get_llm(self) -> ChatGoogleGenerativeAI:  # type: ignore[name-defined] # noqa: F821
+        """Get or create the LangChain LLM instance with lazy import.
+
+        NOTE: This method uses lazy imports and type ignores because langchain-google-genai
+        is an optional dependency. The type ignores are necessary due to:
+        1. ChatGoogleGenerativeAI not being available at type checking time (optional dependency)
+        2. Intentional lazy import pattern (PLC0415) for optional dependencies
+        This is the same pattern used throughout the codebase for optional dependencies.
+
+        Returns:
+            LangChain ChatGoogleGenerativeAI instance
+
+        Raises:
+            LLMConfigurationError: If langchain-google-genai is not installed
+            LLMConnectionError: If API key is not available
+
+        """
+        if self._llm is None:  # type: ignore[reportUnknownMemberType]
+            # Lazy import with helpful error message
+            try:
+                from langchain_google_genai import (  # noqa: PLC0415  # type: ignore[reportMissingImports]
+                    ChatGoogleGenerativeAI,  # type: ignore[reportUnknownVariableType]
+                )
+            except ImportError as e:
+                raise LLMConfigurationError(
+                    "Google provider is not installed.\n"
+                    "Install it with: uv sync --group llm-google\n"
+                    "Or install all providers: uv sync --group llm-all"
+                ) from e
+
+            if not self._api_key:
+                raise LLMConnectionError("API key is required but not available")
+
+            self._llm = ChatGoogleGenerativeAI(  # type: ignore[reportUnknownMemberType]
+                model=self.model_name,
+                google_api_key=self._api_key,
+                temperature=0,  # Consistent responses for compliance analysis
+                timeout=300,  # Increased timeout for LLM requests
+            )
+            logger.debug("Created LangChain ChatGoogleGenerativeAI instance")
+
+        return self._llm  # type: ignore[return-value]
 
 
 class LLMServiceFactory:
@@ -409,10 +475,14 @@ class LLMServiceFactory:
             return LLMServiceFactory.create_openai_service(
                 model_name=model_name, api_key=api_key
             )
+        elif provider == "google":
+            return LLMServiceFactory.create_google_service(
+                model_name=model_name, api_key=api_key
+            )
         else:
             raise LLMConfigurationError(
                 f"Unsupported LLM provider: '{provider}'. "
-                f"Supported providers: 'anthropic', 'openai'. "
+                f"Supported providers: 'anthropic', 'openai', 'google'. "
                 f"Set LLM_PROVIDER environment variable to one of the supported providers."
             )
 
@@ -447,3 +517,19 @@ class LLMServiceFactory:
 
         """
         return OpenAILLMService(model_name=model_name, api_key=api_key)
+
+    @staticmethod
+    def create_google_service(
+        model_name: str | None = None, api_key: str | None = None
+    ) -> GoogleLLMService:
+        """Create a Google LLM service instance.
+
+        Args:
+            model_name: The Google model to use (uses GOOGLE_MODEL env var or default if not provided)
+            api_key: Optional API key (uses GOOGLE_API_KEY env var if not provided)
+
+        Returns:
+            Configured GoogleLLMService instance
+
+        """
+        return GoogleLLMService(model_name=model_name, api_key=api_key)

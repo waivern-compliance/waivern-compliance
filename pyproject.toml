@@ -39,6 +39,12 @@ dev = [
 llm-openai = [
     "langchain-openai>=0.2.0",
 ]
+llm-google = [
+    "langchain-google-genai>=2.0.0",
+]
+llm-all = [
+    "waivern-compliance-tool[llm-openai,llm-google]",
+]
 
 [build-system]
 requires = ["hatchling"]
