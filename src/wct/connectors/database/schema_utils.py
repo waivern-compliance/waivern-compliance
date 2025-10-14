@@ -1,7 +1,7 @@
 """Database schema validation and transformation utilities."""
 
-from wct.connectors.base import ConnectorConfigError
-from wct.schemas import Schema
+from waivern_core.errors import ConnectorConfigError
+from waivern_core.schemas import Schema
 
 
 class DatabaseSchemaUtils:

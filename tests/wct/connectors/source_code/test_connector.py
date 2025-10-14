@@ -4,11 +4,11 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
+from waivern_core.message import Message
 
-from wct.connectors.base import ConnectorConfigError, ConnectorExtractionError
 from wct.connectors.source_code.config import SourceCodeConnectorConfig
 from wct.connectors.source_code.connector import SourceCodeConnector
-from wct.message import Message
 from wct.schemas import SourceCodeSchema, StandardInputSchema
 
 

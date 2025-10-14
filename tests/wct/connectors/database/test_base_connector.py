@@ -3,11 +3,12 @@
 from typing import Any, Self
 
 import pytest
+from waivern_core.base_connector import Connector
+from waivern_core.message import Message
+from waivern_core.schemas.base import Schema
 
-from wct.connectors.base import Connector
 from wct.connectors.database.base_connector import DatabaseConnector
-from wct.message import Message
-from wct.schemas import Schema, SourceCodeSchema
+from wct.schemas import SourceCodeSchema
 
 
 class TestBaseDatabaseConnector:

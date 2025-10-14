@@ -6,8 +6,9 @@ This test module focuses on testing the public API of DataSubjectAnalyser.
 import json
 from datetime import datetime
 
+from waivern_core.message import Message
+
 from wct.analysers.data_subject_analyser.analyser import DataSubjectAnalyser
-from wct.message import Message
 from wct.schemas import (
     BaseMetadata,
     DataSubjectFindingSchema,

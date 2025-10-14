@@ -4,8 +4,8 @@ import os
 from unittest.mock import patch
 
 import pytest
+from waivern_core.errors import ConnectorConfigError
 
-from wct.connectors.base import ConnectorConfigError
 from wct.connectors.mysql.config import MySQLConnectorConfig
 
 

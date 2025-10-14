@@ -11,8 +11,7 @@ from pydantic import (
     ValidationError,
     field_validator,
 )
-
-from wct.connectors.base import ConnectorConfigError
+from waivern_core.errors import ConnectorConfigError
 
 # Common file patterns to exclude from source code analysis
 _DEFAULT_EXCLUDE_PATTERNS = [

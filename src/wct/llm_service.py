@@ -10,13 +10,12 @@ from typing import override
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import BaseMessage
 from pydantic import SecretStr
-
-from wct.errors import WCTError
+from waivern_core.errors import WaivernError
 
 logger = logging.getLogger(__name__)
 
 
-class LLMServiceError(WCTError):
+class LLMServiceError(WaivernError):
     """Base exception for LLM service related errors."""
 
     pass

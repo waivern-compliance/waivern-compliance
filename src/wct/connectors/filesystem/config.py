@@ -11,8 +11,7 @@ from pydantic import (
     ValidationError,
     field_validator,
 )
-
-from wct.connectors.base import ConnectorConfigError
+from waivern_core.errors import ConnectorConfigError
 
 
 def _validate_path_required(v: str | Path | None) -> Path:

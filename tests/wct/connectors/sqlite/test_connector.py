@@ -6,8 +6,8 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from waivern_core.errors import ConnectorExtractionError
 
-from wct.connectors.base import ConnectorExtractionError
 from wct.connectors.sqlite.connector import SQLiteConnector
 from wct.schemas import (
     RelationalDatabaseMetadata,

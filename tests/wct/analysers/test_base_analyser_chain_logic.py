@@ -1,7 +1,8 @@
 """Tests for base analyser chain logic functionality."""
 
+from waivern_core.message import Message
+
 from wct.analysers.base import Analyser
-from wct.message import Message
 from wct.schemas.standard_input import StandardInputSchema
 
 

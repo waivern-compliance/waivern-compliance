@@ -10,8 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, override
 
 from pydantic import BaseModel, Field
-
-from .base import JsonSchemaLoader, Schema, SchemaLoader
+from waivern_core.schemas.base import JsonSchemaLoader, Schema, SchemaLoader
 
 
 class BaseMetadata(BaseModel):

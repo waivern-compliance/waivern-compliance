@@ -17,8 +17,8 @@ from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from waivern_core.errors import WaivernError
 
-from wct.errors import WCTError
 from wct.metadata import AnalysisMetadata
 
 logger = logging.getLogger(__name__)
@@ -278,7 +278,7 @@ class RunbookLoader:
             raise RunbookLoadError(f"Cannot read file {file_path}: {e}") from e
 
 
-class RunbookError(WCTError):
+class RunbookError(WaivernError):
     """Base exception for generic runbook-related errors."""
 
     pass

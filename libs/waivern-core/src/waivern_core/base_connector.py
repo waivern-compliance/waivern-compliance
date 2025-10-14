@@ -1,8 +1,8 @@
-"""Base classes for WCT connectors.
+"""Base classes for Waivern Compliance Framework connectors.
 
 This module provides:
-- Connector: Abstract base class for all WCT connectors
-- ConnectorError, ConnectorConfigError, ConnectorExtractionError: Exception classes
+- Connector: Abstract base class for all framework connectors
+- Connector exceptions are defined in errors.py
 
 Connector configuration is handled by ConnectorConfig in the runbook module.
 """
@@ -11,9 +11,8 @@ import abc
 import logging
 from typing import Any, Self
 
-from wct.errors import WCTError
-from wct.message import Message
-from wct.schemas import Schema
+from waivern_core.message import Message
+from waivern_core.schemas.base import Schema
 
 logger = logging.getLogger(__name__)
 
@@ -70,21 +69,3 @@ class Connector(abc.ABC):
             ConnectorExtractionError: If extraction fails
 
         """
-
-
-class ConnectorError(WCTError):
-    """Base exception for connector-related errors."""
-
-    pass
-
-
-class ConnectorConfigError(ConnectorError):
-    """Raised when connector configuration is invalid."""
-
-    pass
-
-
-class ConnectorExtractionError(ConnectorError):
-    """Raised when data extraction fails."""
-
-    pass

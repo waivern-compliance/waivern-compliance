@@ -3,8 +3,7 @@
 from dataclasses import dataclass, field
 
 import pytest
-
-from wct.message import Message, MessageValidationError, Schema
+from waivern_core.message import Message, MessageValidationError, Schema
 
 
 @dataclass(frozen=True, slots=True)

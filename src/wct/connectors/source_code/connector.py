@@ -6,11 +6,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Self, override
 
-from wct.connectors.base import (
-    Connector,
+from waivern_core.base_connector import Connector
+from waivern_core.errors import (
     ConnectorConfigError,
     ConnectorExtractionError,
 )
+from waivern_core.message import Message
+
+# Import the actual schema instances
+from waivern_core.schemas.base import Schema
+
 from wct.connectors.filesystem import FilesystemConnector
 from wct.connectors.filesystem.config import FilesystemConnectorConfig
 from wct.connectors.source_code.config import SourceCodeConnectorConfig
@@ -19,10 +24,7 @@ from wct.connectors.source_code.extractors import (
     FunctionExtractor,
 )
 from wct.connectors.source_code.parser import SourceCodeParser
-from wct.message import Message
-
-# Import the actual schema instances
-from wct.schemas import Schema, SourceCodeSchema
+from wct.schemas import SourceCodeSchema
 
 logger = logging.getLogger(__name__)
 

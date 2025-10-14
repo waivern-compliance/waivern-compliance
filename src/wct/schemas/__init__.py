@@ -17,12 +17,13 @@ Available schemas:
 - DataSubjectFindingSchema: Data subject classification results
 """
 
-from .base import (
+from waivern_core.schemas.base import (
     JsonSchemaLoader,
     Schema,
     SchemaLoader,
     SchemaLoadError,
 )
+
 from .data_subject_finding import DataSubjectFindingSchema
 from .personal_data_finding import PersonalDataFindingSchema
 from .processing_purpose_finding import ProcessingPurposeFindingSchema

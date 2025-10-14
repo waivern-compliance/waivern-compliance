@@ -5,8 +5,8 @@ from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 import pytest
+from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 
-from wct.connectors.base import ConnectorConfigError, ConnectorExtractionError
 from wct.connectors.mysql.config import MySQLConnectorConfig
 from wct.connectors.mysql.connector import MySQLConnector
 from wct.schemas import (

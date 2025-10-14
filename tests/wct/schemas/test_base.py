@@ -5,8 +5,7 @@ from typing import Any
 from unittest.mock import Mock
 
 import pytest
-
-from wct.schemas.base import JsonSchemaLoader, Schema, SchemaLoader
+from waivern_core.schemas.base import JsonSchemaLoader, Schema, SchemaLoader
 
 
 @dataclass(frozen=True, slots=True)

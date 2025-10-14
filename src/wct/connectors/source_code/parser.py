@@ -4,8 +4,7 @@ from pathlib import Path
 
 import tree_sitter_php
 from tree_sitter import Language, Node, Parser
-
-from wct.connectors.base import ConnectorConfigError
+from waivern_core.errors import ConnectorConfigError
 
 # Language registry for individual language packages
 _LANGUAGE_REGISTRY: dict[str, Language] = {}

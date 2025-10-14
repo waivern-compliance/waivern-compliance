@@ -5,12 +5,13 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Self, override
 
-from wct.connectors.base import ConnectorExtractionError
+from waivern_core.errors import ConnectorExtractionError
+from waivern_core.message import Message
+
 from wct.connectors.database.base_connector import DatabaseConnector
 from wct.connectors.database.extraction_utils import DatabaseExtractionUtils
 from wct.connectors.database.schema_utils import DatabaseSchemaUtils
 from wct.connectors.sqlite.config import SQLiteConnectorConfig
-from wct.message import Message
 from wct.schemas import RelationalDatabaseMetadata, Schema, StandardInputSchema
 
 logger = logging.getLogger(__name__)

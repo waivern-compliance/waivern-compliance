@@ -1,4 +1,4 @@
-"""Base classes for WCT schemas.
+"""Base classes for Waivern Compliance Framework schemas.
 
 This module provides the foundation for strongly typed schemas with unified interface.
 """
@@ -121,7 +121,7 @@ class SchemaLoadError(Exception):
 
 @dataclass(frozen=True, slots=True, eq=False)
 class Schema(ABC):
-    """Base class for all WCT schemas.
+    """Base class for all Waivern Compliance Framework schemas.
 
     Each concrete schema represents a strongly typed data structure
     and provides its own name, version, and schema definition.

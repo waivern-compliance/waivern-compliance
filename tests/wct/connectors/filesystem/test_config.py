@@ -1,8 +1,8 @@
 """Tests for FilesystemConnectorConfig."""
 
 import pytest
+from waivern_core.errors import ConnectorConfigError
 
-from wct.connectors.base import ConnectorConfigError
 from wct.connectors.filesystem.config import FilesystemConnectorConfig
 
 

@@ -4,8 +4,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from waivern_core.errors import ConnectorConfigError
 
-from wct.connectors.base import ConnectorConfigError
 from wct.connectors.source_code.parser import SourceCodeParser
 
 

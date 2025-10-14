@@ -4,12 +4,13 @@ This package provides various connectors for extracting data from different sour
 including files, databases, and web services.
 """
 
-from wct.connectors.base import (
-    Connector,
+from waivern_core.base_connector import Connector
+from waivern_core.errors import (
     ConnectorConfigError,
     ConnectorError,
     ConnectorExtractionError,
 )
+
 from wct.connectors.filesystem import FilesystemConnector
 from wct.connectors.mysql import MySQLConnector
 from wct.connectors.source_code import SourceCodeConnector

@@ -13,10 +13,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from waivern_core.errors import WaivernError
+from waivern_core.schemas import Schema
+
 from wct.analysers import BUILTIN_ANALYSERS, Analyser, AnalyserError
 from wct.analysis import AnalysisResult
 from wct.connectors import BUILTIN_CONNECTORS, Connector, ConnectorError
-from wct.errors import WCTError
 from wct.runbook import (
     AnalyserConfig,
     ConnectorConfig,
@@ -24,7 +26,6 @@ from wct.runbook import (
     Runbook,
     RunbookLoader,
 )
-from wct.schemas import Schema
 
 logger = logging.getLogger(__name__)
 
@@ -283,5 +284,5 @@ class Executor:
         )
 
 
-class ExecutorError(WCTError):
+class ExecutorError(WaivernError):
     """Base exception for executor errors."""

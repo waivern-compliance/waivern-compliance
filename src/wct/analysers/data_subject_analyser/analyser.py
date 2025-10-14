@@ -4,9 +4,10 @@ import logging
 from datetime import UTC, datetime
 from typing import Any, Self, override
 
+from waivern_core.message import Message
+
 from wct.analysers.base import Analyser
 from wct.analysers.utilities import LLMServiceManager
-from wct.message import Message
 from wct.schemas import (
     BaseMetadata,
     DataSubjectFindingSchema,

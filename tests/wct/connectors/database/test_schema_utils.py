@@ -1,10 +1,11 @@
 """Tests for database schema utility functions following TDD/BDD methodology."""
 
 import pytest
+from waivern_core.errors import ConnectorConfigError
+from waivern_core.schemas.base import Schema
 
-from wct.connectors.base import ConnectorConfigError
 from wct.connectors.database.schema_utils import DatabaseSchemaUtils
-from wct.schemas import Schema, StandardInputSchema
+from wct.schemas import StandardInputSchema
 
 
 class TestDatabaseSchemaUtils:

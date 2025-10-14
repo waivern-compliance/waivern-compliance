@@ -4,8 +4,7 @@ import os
 from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
-
-from wct.connectors.base import ConnectorConfigError
+from waivern_core.errors import ConnectorConfigError
 
 
 class SQLiteConnectorConfig(BaseModel):

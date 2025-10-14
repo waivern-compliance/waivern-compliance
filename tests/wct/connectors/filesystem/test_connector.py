@@ -6,11 +6,11 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
+from waivern_core.message import Message
 
-from wct.connectors.base import ConnectorConfigError, ConnectorExtractionError
 from wct.connectors.filesystem.config import FilesystemConnectorConfig
 from wct.connectors.filesystem.connector import FilesystemConnector
-from wct.message import Message
 from wct.schemas import FilesystemMetadata, StandardInputDataModel, StandardInputSchema
 
 # Test constants - expected behaviour from public interface

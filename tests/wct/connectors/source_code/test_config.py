@@ -1,8 +1,8 @@
 """Tests for SourceCodeConnectorConfig."""
 
 import pytest
+from waivern_core.errors import ConnectorConfigError
 
-from wct.connectors.base import ConnectorConfigError
 from wct.connectors.source_code.config import SourceCodeConnectorConfig
 
 

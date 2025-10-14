@@ -8,6 +8,8 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from waivern_core.message import Message, MessageValidationError
+from waivern_core.schemas.base import SchemaLoadError
 
 from wct.analysers.base import Analyser
 from wct.analysers.personal_data_analyser.analyser import PersonalDataAnalyser
@@ -24,14 +26,12 @@ from wct.analysers.types import (
     PatternMatchingConfig,
 )
 from wct.analysers.utilities import LLMServiceManager
-from wct.message import Message, MessageValidationError
 from wct.rulesets.personal_data import PersonalDataRule
 from wct.rulesets.types import RuleComplianceData
 from wct.schemas import (
     PersonalDataFindingSchema,
     StandardInputSchema,
 )
-from wct.schemas.base import SchemaLoadError
 from wct.schemas.source_code import SourceCodeSchema
 from wct.schemas.types import BaseFindingCompliance, BaseFindingEvidence
 

@@ -8,11 +8,11 @@ import json
 from unittest.mock import Mock
 
 import pytest
+from waivern_core.message import Message
 
 from wct.analysers.processing_purpose_analyser.analyser import ProcessingPurposeAnalyser
 from wct.analysers.utilities import LLMServiceManager
 from wct.llm_service import AnthropicLLMService
-from wct.message import Message
 from wct.schemas import (
     BaseMetadata,
     ProcessingPurposeFindingSchema,

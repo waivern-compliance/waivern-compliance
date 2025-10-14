@@ -5,13 +5,14 @@ import logging
 from pathlib import Path
 from typing import Any, Self, override
 
-from wct.connectors.base import (
-    Connector,
+from waivern_core.base_connector import Connector
+from waivern_core.errors import (
     ConnectorConfigError,
     ConnectorExtractionError,
 )
+from waivern_core.message import Message
+
 from wct.connectors.filesystem.config import FilesystemConnectorConfig
-from wct.message import Message
 from wct.schemas import FilesystemMetadata, Schema, StandardInputSchema
 
 logger = logging.getLogger(__name__)

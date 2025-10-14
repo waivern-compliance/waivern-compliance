@@ -3,8 +3,10 @@
 import abc
 from typing import override
 
-from wct.connectors.base import Connector
-from wct.schemas import Schema, StandardInputSchema
+from waivern_core.base_connector import Connector
+from waivern_core.schemas.base import Schema
+
+from wct.schemas import StandardInputSchema
 
 
 class DatabaseConnector(Connector, abc.ABC):

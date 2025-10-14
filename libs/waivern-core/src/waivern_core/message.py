@@ -1,7 +1,7 @@
-"""Message handling for WCT components.
+"""Message handling for Waivern Compliance Framework components.
 
 This module provides:
-- Message: dataclass for payloads between WCT components
+- Message: dataclass for payloads between framework components
 - MessageValidationError: exception for message validation failures
 """
 
@@ -10,15 +10,16 @@ from typing import Any, Self
 
 import jsonschema
 
-from .schemas.base import Schema, SchemaLoadError
+from waivern_core.errors import MessageValidationError
+from waivern_core.schemas.base import Schema, SchemaLoadError
 
 
 @dataclass(slots=True)
 class Message:
-    """Payload between WCT components.
+    """Payload between Waivern Compliance Framework components.
 
     This class represents a message that can be passed between different
-    components of the WCT system, such as connectors and analysers.
+    components of the framework, such as connectors and analysers.
     """
 
     id: str
@@ -40,7 +41,7 @@ class Message:
     def validate(self) -> Self:
         """Validate the message against its schema.
 
-        Validates the message content against the WCT schema using JSON schema validation.
+        Validates the message content against the WCF schema using JSON schema validation.
         Updates the schema_validated flag based on validation results.
 
         Returns:
@@ -82,9 +83,3 @@ class Message:
         except Exception as e:
             self.schema_validated = False
             raise MessageValidationError(f"Validation error: {e}") from e
-
-
-class MessageValidationError(Exception):
-    """Raised when message validation fails."""
-
-    pass

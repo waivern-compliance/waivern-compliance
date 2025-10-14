@@ -3,8 +3,8 @@
 import os
 
 import pytest
+from waivern_core.errors import ConnectorConfigError
 
-from wct.connectors.base import ConnectorConfigError
 from wct.connectors.sqlite.config import SQLiteConnectorConfig
 
 

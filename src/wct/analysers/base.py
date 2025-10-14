@@ -9,8 +9,9 @@ import abc
 import logging
 from typing import Any, Self
 
-from wct.message import Message
-from wct.schemas import Schema, SchemaLoadError
+from waivern_core.message import Message
+from waivern_core.schemas.base import Schema, SchemaLoadError
+
 from wct.schemas.types import AnalysisChainEntry
 
 logger = logging.getLogger(__name__)

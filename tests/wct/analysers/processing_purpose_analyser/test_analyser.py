@@ -8,6 +8,7 @@ encapsulates specific concerns and processing paths.
 from unittest.mock import Mock
 
 import pytest
+from waivern_core.message import Message
 
 from wct.analysers.processing_purpose_analyser.analyser import ProcessingPurposeAnalyser
 from wct.analysers.processing_purpose_analyser.pattern_matcher import (
@@ -18,7 +19,6 @@ from wct.analysers.processing_purpose_analyser.types import (
 )
 from wct.analysers.types import LLMValidationConfig, PatternMatchingConfig
 from wct.analysers.utilities import LLMServiceManager
-from wct.message import Message
 from wct.schemas import (
     BaseMetadata,
     FilesystemMetadata,

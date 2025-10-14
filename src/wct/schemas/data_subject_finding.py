@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import override
 
-from .base import BaseFindingSchema
+from waivern_core.schemas.base import BaseFindingSchema
 
 
 @dataclass(frozen=True, slots=True, eq=False)

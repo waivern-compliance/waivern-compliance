@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from waivern_core.message import Message
 
 from wct.analysers import BUILTIN_ANALYSERS, Analyser, AnalyserError
 from wct.connectors import BUILTIN_CONNECTORS, Connector, ConnectorError
 from wct.executor import Executor, ExecutorError
-from wct.message import Message
 from wct.schemas import PersonalDataFindingSchema, Schema, StandardInputSchema
 
 
