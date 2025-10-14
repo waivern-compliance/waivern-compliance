@@ -1,7 +1,6 @@
 """Schema modules for Waivern Compliance Framework."""
 
 from waivern_core.schemas.base import (
-    BaseFindingSchema,
     JsonSchemaLoader,
     Schema,
     SchemaLoader,
@@ -9,7 +8,6 @@ from waivern_core.schemas.base import (
 )
 
 __all__ = [
-    "BaseFindingSchema",
     "JsonSchemaLoader",
     "Schema",
     "SchemaLoadError",
