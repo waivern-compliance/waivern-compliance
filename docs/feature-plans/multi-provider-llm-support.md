@@ -6,7 +6,7 @@
 |---------|--------|--------|----|----|-------|
 | Feature 1: Base LLM Service Abstraction | ✅ Complete | `refactor/base-llm-service-abstraction` | [#145](https://github.com/waivern-compliance/waivern-compliance/pull/145) | ⏳ Pending | 712 tests pass, zero behaviour change |
 | Feature 2: OpenAI Provider with Lazy Import | ✅ Complete | `feature/openai-provider-lazy-import` | - | - | 722 unit tests + 8 integration tests (4 Anthropic + 4 OpenAI) pass |
-| Feature 3: Environment-Based Provider Selection | 📋 Planned | - | - | - | - |
+| Feature 3: Environment-Based Provider Selection | ✅ Complete | `feature/environment-based-provider-selection` | - | - | 726 unit tests + 8 integration tests pass |
 | Feature 4: Add Google & Cohere Providers | 📋 Planned | - | - | - | - |
 | Feature 5: Per-Analyser LLM Configuration (Schema) | 📋 Planned | - | - | - | - |
 | Feature 6: Configuration Hierarchy Resolution | 📋 Planned | - | - | - | - |
@@ -124,24 +124,41 @@ This document outlines the plan for adding multi-provider LLM support to WCT, br
 
 ---
 
-### Feature 3: Environment-Based Provider Selection
+### Feature 3: Environment-Based Provider Selection ✅ COMPLETE
 **Goal:** Global provider switching via `LLM_PROVIDER` env var
-**Testing:** Test provider selection logic with env var mocking
+**Testing:** Test provider selection logic with env var mocking + real API integration tests
 **Mergeable:** ✅ Opt-in via new env var, backward compatible
+**Status:** ✅ Complete - Ready for PR
+**Actual effort:** ~2 hours
 
-**Changes:**
-- Add `LLM_PROVIDER` env var support to `.env.example`
-- Implement `LLMServiceFactory.create_service()` with provider detection
-- Support env vars: `OPENAI_API_KEY`, `OPENAI_MODEL`
-- Update `LLMServiceManager` to use new factory method
+**Changes Implemented:**
+- ✅ Add `LLM_PROVIDER` env var support to `.env.example`
+- ✅ Implement `LLMServiceFactory.create_service()` with provider detection
+- ✅ Update `LLMServiceManager` to use new factory method
+- ✅ Add 4 unit tests for provider selection logic
 
-**Test Strategy:**
-- Test provider selection with different `LLM_PROVIDER` values
-- Test fallback to Anthropic when `LLM_PROVIDER` not set
-- Test error when provider specified but API key missing
-- Integration test: Run sample analyser with OpenAI config
+**Test Results:**
+- ✅ All 726 unit tests pass (4 new provider selection tests)
+- ✅ All 8 integration tests pass (from Feature 2)
+- ✅ Type checking passes (basedpyright strict mode)
+- ✅ Linting passes (ruff)
+- ✅ All dev checks pass
 
-**Estimated effort:** 2-3 hours
+**Files Modified:**
+- `.env.example` - Added LLM_PROVIDER configuration
+- `src/wct/llm_service.py` - Added create_service() method (35 lines)
+- `src/wct/analysers/utilities/llm_service_manager.py` - Updated to use create_service()
+- `tests/wct/llm_service/` - Reorganised into module structure (5 files, 24 test classes)
+  - `test_anthropic_service.py` - Anthropic service tests (3 classes, 10 tests)
+  - `test_openai_service.py` - OpenAI service tests (3 classes, 10 tests)
+  - `test_factory.py` - Factory tests (2 classes, 5 tests)
+  - `test_base_service.py` - Base service abstraction tests (1 class, 1 test)
+  - `test_integration.py` - Real API integration tests (2 classes, 8 tests)
+
+**Backward Compatibility:**
+- ✅ Defaults to Anthropic when LLM_PROVIDER not set
+- ✅ All existing code continues working unchanged
+- ✅ Zero breaking changes
 
 ---
 
