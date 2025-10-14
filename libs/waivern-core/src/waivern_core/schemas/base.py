@@ -34,11 +34,73 @@ class SchemaLoader(Protocol):
 
 
 class JsonSchemaLoader:
-    """Loads schemas from local JSON files with caching."""
+    """Loads schemas from local JSON files with caching.
 
-    def __init__(self) -> None:
-        """Initialize with empty cache."""
+    This loader can be configured with custom search paths, making it flexible
+    for different project structures. If no paths are provided, it uses sensible
+    defaults relative to the loader's location.
+    """
+
+    def __init__(self, search_paths: list[Path] | None = None) -> None:
+        """Initialize with empty cache and optional search paths.
+
+        Args:
+            search_paths: Optional list of base directories to search for schemas.
+                         If None, uses default paths relative to this file's location.
+
+        """
         self._cache: dict[str, dict[str, Any]] = {}
+        self._custom_search_paths = search_paths
+
+    def _generate_schema_paths(self, schema_name: str, version: str) -> list[Path]:
+        """Generate list of paths to search for schema files.
+
+        Args:
+            schema_name: Name of the schema
+            version: Version of the schema
+
+        Returns:
+            List of paths to try in order
+
+        """
+        if self._custom_search_paths:
+            # Use custom search paths provided by caller
+            schema_paths: list[Path] = []
+            for base_path in self._custom_search_paths:
+                # Try versioned path first
+                schema_paths.append(
+                    base_path / schema_name / version / f"{schema_name}.json"
+                )
+                # Then try direct path
+                schema_paths.append(base_path / f"{schema_name}.json")
+            return schema_paths
+        else:
+            # Use default WCT-compatible paths for backwards compatibility
+            return [
+                # Versioned paths (preferred) - WCT structure
+                Path("src/wct/schemas/json_schemas")
+                / schema_name
+                / version
+                / f"{schema_name}.json",
+                Path("./src/wct/schemas/json_schemas")
+                / schema_name
+                / version
+                / f"{schema_name}.json",
+                Path(__file__).parent.parent.parent.parent
+                / "wct"
+                / "schemas"
+                / "json_schemas"
+                / schema_name
+                / version
+                / f"{schema_name}.json",
+                # Additional fallback locations
+                Path("src/wct/schemas") / f"{schema_name}.json",
+                Path("./src/wct/schemas") / f"{schema_name}.json",
+                Path(__file__).parent.parent.parent.parent
+                / "wct"
+                / "schemas"
+                / f"{schema_name}.json",
+            ]
 
     def load(self, schema_name: str, version: str = "1.0.0") -> dict[str, Any]:
         """Load JSON schema from file with caching.
@@ -62,27 +124,8 @@ class JsonSchemaLoader:
         if cache_key in self._cache:
             return self._cache[cache_key]
 
-        # Try versioned and fallback locations for schema files
-        schema_paths = [
-            # Versioned paths (preferred)
-            Path("src/wct/schemas/json_schemas")
-            / schema_name
-            / version
-            / f"{schema_name}.json",
-            Path("./src/wct/schemas/json_schemas")
-            / schema_name
-            / version
-            / f"{schema_name}.json",
-            Path(__file__).parent
-            / "json_schemas"
-            / schema_name
-            / version
-            / f"{schema_name}.json",
-            # Additional fallback locations
-            Path("src/wct/schemas") / f"{schema_name}.json",
-            Path("./src/wct/schemas") / f"{schema_name}.json",
-            Path(__file__).parent / f"{schema_name}.json",
-        ]
+        # Generate search paths based on configuration
+        schema_paths = self._generate_schema_paths(schema_name, version)
 
         for schema_path in schema_paths:
             if schema_path.exists():
