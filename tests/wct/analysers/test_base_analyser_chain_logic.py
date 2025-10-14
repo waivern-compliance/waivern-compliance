@@ -1,9 +1,10 @@
 """Tests for base analyser chain logic functionality."""
 
+from waivern_core import Analyser
 from waivern_core.message import Message
 
-from wct.analysers.base import Analyser
 from wct.schemas.standard_input import StandardInputSchema
+from wct.schemas.types import AnalysisChainEntry
 
 
 class TestAnalyserChainLogic:
@@ -27,7 +28,11 @@ class TestAnalyserChainLogic:
         )
 
         # Act
-        result_chain = Analyser.update_analyses_chain(input_message, "test_analyser")
+        result_chain_dicts = Analyser.update_analyses_chain(
+            input_message, "test_analyser"
+        )
+        # Convert to strongly-typed models for WCT testing
+        result_chain = [AnalysisChainEntry(**entry) for entry in result_chain_dicts]
 
         # Assert
         assert len(result_chain) == 1, (
@@ -78,9 +83,11 @@ class TestAnalyserChainLogic:
         )
 
         # Act
-        result_chain = Analyser.update_analyses_chain(
+        result_chain_dicts = Analyser.update_analyses_chain(
             input_message, "processing_purpose_analyser"
         )
+        # Convert to strongly-typed models for WCT testing
+        result_chain = [AnalysisChainEntry(**entry) for entry in result_chain_dicts]
 
         # Assert
         assert len(result_chain) == 3, "Should extend existing chain with new entry"
@@ -136,7 +143,11 @@ class TestAnalyserChainLogic:
         )
 
         # Act
-        result_chain = Analyser.update_analyses_chain(input_message, "new_analyser")
+        result_chain_dicts = Analyser.update_analyses_chain(
+            input_message, "new_analyser"
+        )
+        # Convert to strongly-typed models for WCT testing
+        result_chain = [AnalysisChainEntry(**entry) for entry in result_chain_dicts]
 
         # Assert
         assert len(result_chain) == 4, "Should extend existing chain"
@@ -160,7 +171,11 @@ class TestAnalyserChainLogic:
         )
 
         # Act
-        result_chain = Analyser.update_analyses_chain(input_message, "first_analyser")
+        result_chain_dicts = Analyser.update_analyses_chain(
+            input_message, "first_analyser"
+        )
+        # Convert to strongly-typed models for WCT testing
+        result_chain = [AnalysisChainEntry(**entry) for entry in result_chain_dicts]
 
         # Assert
         assert len(result_chain) == 1, "Should create new chain"
@@ -197,9 +212,11 @@ class TestAnalyserChainLogic:
         )
 
         # Act
-        result_chain = Analyser.update_analyses_chain(
+        result_chain_dicts = Analyser.update_analyses_chain(
             input_message, "data_subject_analyser"
         )
+        # Convert to strongly-typed models for WCT testing
+        result_chain = [AnalysisChainEntry(**entry) for entry in result_chain_dicts]
 
         # Assert
         assert len(result_chain) == 2, "Should have original plus new entry"

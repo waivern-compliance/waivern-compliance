@@ -3,9 +3,9 @@
 import logging
 from typing import Any, Self, override
 
+from waivern_core import Analyser
 from waivern_core.message import Message
 
-from wct.analysers.base import Analyser
 from wct.analysers.utilities import LLMServiceManager
 from wct.schemas import (
     BaseMetadata,
@@ -135,9 +135,11 @@ class ProcessingPurposeAnalyser(Analyser):
         )
 
         # Update analysis chain with this analyser
-        updated_chain = self.update_analyses_chain(
+        updated_chain_dicts = self.update_analyses_chain(
             message, "processing_purpose_analyser"
         )
+        # Convert to strongly-typed models for WCT
+        updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
 
         # Create and validate output message
         return self._create_output_message(

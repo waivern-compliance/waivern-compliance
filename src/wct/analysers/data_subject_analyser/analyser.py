@@ -4,9 +4,9 @@ import logging
 from datetime import UTC, datetime
 from typing import Any, Self, override
 
+from waivern_core import Analyser
 from waivern_core.message import Message
 
-from wct.analysers.base import Analyser
 from wct.analysers.utilities import LLMServiceManager
 from wct.schemas import (
     BaseMetadata,
@@ -124,7 +124,11 @@ class DataSubjectAnalyser(Analyser):
             raise ValueError(f"Unsupported input schema: {input_schema.name}")
 
         # Update analysis chain with this analyser
-        updated_chain = self.update_analyses_chain(message, "data_subject_analyser")
+        updated_chain_dicts = self.update_analyses_chain(
+            message, "data_subject_analyser"
+        )
+        # Convert to strongly-typed models for WCT
+        updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
 
         # Create and validate output message
         return self._create_output_message(

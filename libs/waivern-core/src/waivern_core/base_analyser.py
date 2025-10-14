@@ -1,18 +1,17 @@
-"""WCT Analyser base classes and exceptions.
+"""Framework-level Analyser base class.
 
-Analyser configuration is handled by AnalyserConfig in the runbook module.
+Analyser configuration is handled by application-level configuration systems.
 """
 
 from __future__ import annotations
 
 import abc
 import logging
+from datetime import UTC, datetime
 from typing import Any, Self
 
 from waivern_core.message import Message
 from waivern_core.schemas.base import Schema, SchemaLoadError
-
-from wct.schemas.types import AnalysisChainEntry
 
 logger = logging.getLogger(__name__)
 
@@ -21,17 +20,17 @@ _SCHEMA_MISMATCH_ERROR = "Message schema {message_schema} does not match expecte
 
 
 class Analyser(abc.ABC):
-    """Analysis processor that accepts WCT schema-compliant data and produces results in the WCT-defined result schema.
+    """Analysis processor that accepts schema-compliant data and produces results in defined result schemas.
 
-    Analysers are the workers of WCT. They accept input data in WCT-defined
+    Analysers are processing components that accept input data in defined
     schema(s), run it against a specific analysis process (defined
-    by the analyser itself), and then produce the analysis results in the
-    WCT-defined result schema.
+    by the analyser itself), and then produce the analysis results in
+    defined result schemas.
 
     Analysers behave like pure functions - they accept data in pre-defined
     input schemas and return results in pre-defined result schemas, regardless
-    of the source of the data. This allows for flexible composition of analysers
-    in a runbook, where the output of one analyser can be used as input to another
+    of the source of the data. This allows for flexible composition of analysers,
+    where the output of one analyser can be used as input to another
     analyser, as long as the schemas match.
     """
 
@@ -49,7 +48,7 @@ class Analyser(abc.ABC):
         """Instantiate this analyser from a dictionary of properties.
 
         The `properties` dictionary is the configuration for the analyser
-        as specified in the runbook file.
+        as specified in the application's configuration system.
         """
 
     @abc.abstractmethod
@@ -113,18 +112,23 @@ class Analyser(abc.ABC):
     @staticmethod
     def update_analyses_chain(
         input_message: Message, analyser_name: str
-    ) -> list[AnalysisChainEntry]:
+    ) -> list[dict[str, Any]]:
         """Extract existing analysis chain and add new entry with correct order.
+
+        This method works with generic dictionary representations of chain entries,
+        making it independent of specific data models. Applications can define
+        their own typed models and convert to/from dicts as needed.
 
         Args:
             input_message: Input message that may contain existing analysis metadata
             analyser_name: Name of the current analyser to add to the chain
 
         Returns:
-            Updated analysis chain with the new analyser entry
+            Updated analysis chain as a list of dictionaries with the new analyser entry.
+            Each dict should contain at minimum: {"order": int, "analyser": str}
 
         """
-        existing_chain: list[AnalysisChainEntry] = []
+        existing_chain: list[dict[str, Any]] = []
 
         # Extract existing analysis chain from input message if present
         if hasattr(input_message.content, "get") and input_message.content.get(
@@ -132,33 +136,18 @@ class Analyser(abc.ABC):
         ):
             metadata = input_message.content["analysis_metadata"]
             if "analyses_chain" in metadata:
-                existing_chain = [
-                    AnalysisChainEntry(**entry) for entry in metadata["analyses_chain"]
-                ]
+                # Work with dictionaries directly for framework independence
+                existing_chain = list(metadata["analyses_chain"])
 
         # Calculate next order number
         next_order = (
-            max(entry.order for entry in existing_chain) + 1 if existing_chain else 1
+            max(entry["order"] for entry in existing_chain) + 1 if existing_chain else 1
         )
 
         # Create new entry and extend chain
-        new_entry = AnalysisChainEntry(order=next_order, analyser=analyser_name)
+        new_entry: dict[str, Any] = {
+            "order": next_order,
+            "analyser": analyser_name,
+            "execution_timestamp": datetime.now(UTC),
+        }
         return existing_chain + [new_entry]
-
-
-class AnalyserError(Exception):
-    """Base exception for analyser-related errors."""
-
-    pass
-
-
-class AnalyserInputError(AnalyserError):
-    """Raised when analyser input data is invalid."""
-
-    pass
-
-
-class AnalyserProcessingError(AnalyserError):
-    """Raised when analyser processing fails."""
-
-    pass

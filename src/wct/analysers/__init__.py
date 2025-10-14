@@ -4,12 +4,13 @@ This package provides the core analyser system and built-in analysers
 for the Waivern Compliance Tool (WCT).
 """
 
-from wct.analysers.base import (
+from waivern_core import (
     Analyser,
     AnalyserError,
     AnalyserInputError,
     AnalyserProcessingError,
 )
+
 from wct.analysers.data_subject_analyser import (
     DataSubjectAnalyser,
     DataSubjectFindingModel,

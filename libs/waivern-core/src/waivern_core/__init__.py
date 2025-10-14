@@ -5,8 +5,12 @@ This package provides the base abstractions that all Waivern components must imp
 
 __version__ = "0.1.0"
 
+from waivern_core.base_analyser import Analyser
 from waivern_core.base_connector import Connector
 from waivern_core.errors import (
+    AnalyserError,
+    AnalyserInputError,
+    AnalyserProcessingError,
     ConnectorConfigError,
     ConnectorError,
     ConnectorExtractionError,
@@ -25,6 +29,7 @@ __all__ = [
     # Version
     "__version__",
     # Base classes
+    "Analyser",
     "Connector",
     "Message",
     "Schema",
@@ -33,6 +38,9 @@ __all__ = [
     "JsonSchemaLoader",
     # Errors
     "WaivernError",
+    "AnalyserError",
+    "AnalyserInputError",
+    "AnalyserProcessingError",
     "ConnectorError",
     "ConnectorConfigError",
     "ConnectorExtractionError",

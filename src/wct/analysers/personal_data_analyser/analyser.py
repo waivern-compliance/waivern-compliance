@@ -4,9 +4,9 @@ import logging
 from pprint import pformat
 from typing import Any, Self, override
 
+from waivern_core import Analyser
 from waivern_core.message import Message
 
-from wct.analysers.base import Analyser
 from wct.analysers.utilities import LLMServiceManager
 from wct.schemas import (
     BaseMetadata,
@@ -127,7 +127,11 @@ class PersonalDataAnalyser(Analyser):
         validated_findings = self._validate_findings_with_llm(findings)
 
         # Update analysis chain with this analyser
-        updated_chain = self.update_analyses_chain(message, "personal_data_analyser")
+        updated_chain_dicts = self.update_analyses_chain(
+            message, "personal_data_analyser"
+        )
+        # Convert to strongly-typed models for WCT
+        updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
 
         # Create and validate output message
         return self._create_output_message(

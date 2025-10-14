@@ -8,10 +8,10 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from waivern_core import Analyser
 from waivern_core.message import Message, MessageValidationError
 from waivern_core.schemas.base import SchemaLoadError
 
-from wct.analysers.base import Analyser
 from wct.analysers.personal_data_analyser.analyser import PersonalDataAnalyser
 from wct.analysers.personal_data_analyser.pattern_matcher import (
     PersonalDataPatternMatcher,
