@@ -1,3 +1,11 @@
+[tool.uv.workspace]
+members = [
+    "libs/waivern-core",
+]
+
+[tool.uv.sources]
+waivern-core = { workspace = true }
+
 [project]
 name = "waivern-compliance-tool"
 version = "0.1.0"
@@ -5,6 +13,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "waivern-core",
     "annotated-types>=0.7.0",
     "jsonschema>=4.25.0",
     "pydantic>=2.11.5",
@@ -43,7 +52,8 @@ llm-google = [
     "langchain-google-genai>=2.0.0",
 ]
 llm-all = [
-    "waivern-compliance-tool[llm-openai,llm-google]",
+    "langchain-openai>=0.2.0",
+    "langchain-google-genai>=2.0.0",
 ]
 
 [build-system]

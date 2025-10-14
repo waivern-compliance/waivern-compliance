@@ -7,6 +7,12 @@ resolution-markers = [
     "python_full_version < '3.13'",
 ]
 
+[manifest]
+members = [
+    "waivern-compliance-tool",
+    "waivern-core",
+]
+
 [[package]]
 name = "annotated-types"
 version = "0.7.0"
@@ -1546,6 +1552,7 @@ dependencies = [
     { name = "tree-sitter-php" },
     { name = "typer" },
     { name = "typing-extensions" },
+    { name = "waivern-core" },
 ]
 
 [package.dev-dependencies]
@@ -1558,7 +1565,8 @@ dev = [
     { name = "ruff" },
 ]
 llm-all = [
-    { name = "waivern-compliance-tool" },
+    { name = "langchain-google-genai" },
+    { name = "langchain-openai" },
 ]
 llm-google = [
     { name = "langchain-google-genai" },
@@ -1583,6 +1591,7 @@ requires-dist = [
     { name = "tree-sitter-php", specifier = ">=0.22.0" },
     { name = "typer", specifier = ">=0.16.0" },
     { name = "typing-extensions", specifier = ">=4.14.0" },
+    { name = "waivern-core", editable = "libs/waivern-core" },
 ]
 
 [package.metadata.requires-dev]
@@ -1594,9 +1603,29 @@ dev = [
     { name = "pytest-mock", specifier = ">=3.14.1" },
     { name = "ruff", specifier = ">=0.11.12" },
 ]
-llm-all = [{ name = "waivern-compliance-tool", extras = ["llm-openai", "llm-google"] }]
+llm-all = [
+    { name = "langchain-google-genai", specifier = ">=2.0.0" },
+    { name = "langchain-openai", specifier = ">=0.2.0" },
+]
 llm-google = [{ name = "langchain-google-genai", specifier = ">=2.0.0" }]
 llm-openai = [{ name = "langchain-openai", specifier = ">=0.2.0" }]
+
+[[package]]
+name = "waivern-core"
+version = "0.1.0"
+source = { editable = "libs/waivern-core" }
+dependencies = [
+    { name = "annotated-types" },
+    { name = "jsonschema" },
+    { name = "typing-extensions" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "annotated-types", specifier = ">=0.7.0" },
+    { name = "jsonschema", specifier = ">=4.25.0" },
+    { name = "typing-extensions", specifier = ">=4.14.0" },
+]
 
 [[package]]
 name = "zstandard"
