@@ -64,7 +64,7 @@ build-backend = "hatchling.build"
 packages = ["src/wct"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "libs"]
 xfail_strict = true
 addopts = [
     # Allow test files to have the same name in different directories.
