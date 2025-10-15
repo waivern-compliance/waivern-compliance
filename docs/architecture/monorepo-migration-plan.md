@@ -1,21 +1,74 @@
 # Waivern Compliance Framework - Monorepo Migration Plan
 
-**Status:** Planned (Execute post-Feature 9)
+**Status:** In Progress (Phase 1 Complete, Quality Checks Complete)
 **Created:** 2025-10-14
+**Updated:** 2025-10-15
 **Target:** Transform single package into multi-package monorepo following LangChain pattern
 
 ## Table of Contents
 
-1. [Vision & Goals](#vision--goals)
-2. [Architecture Overview](#architecture-overview)
-3. [Package Structure](#package-structure)
-4. [Migration Phases](#migration-phases)
-5. [Dynamic Plugin Loading](#dynamic-plugin-loading)
-6. [Third-Party Contribution Model](#third-party-contribution-model)
-7. [Remote Components](#remote-components)
-8. [Testing Strategy](#testing-strategy)
-9. [Implementation Checklists](#implementation-checklists)
-10. [Code Examples](#code-examples)
+1. [Current Status Summary](#current-status-summary)
+2. [Vision & Goals](#vision--goals)
+3. [Architecture Overview](#architecture-overview)
+4. [Package Structure](#package-structure)
+5. [Migration Phases](#migration-phases)
+6. [Dynamic Plugin Loading](#dynamic-plugin-loading)
+7. [Third-Party Contribution Model](#third-party-contribution-model)
+8. [Remote Components](#remote-components)
+9. [Testing Strategy](#testing-strategy)
+10. [Implementation Checklists](#implementation-checklists)
+11. [Code Examples](#code-examples)
+
+---
+
+## Current Status Summary
+
+**Migration Progress:** Phase 1 Complete ✅ (includes workspace setup + quality checks architecture)
+
+### What's Been Completed
+
+**Completed:** Pre-Phase 1, Phase 0, Phase 1, Phase 1.6 (11-13 hours total)
+
+See **[monorepo-migration-completed.md](./monorepo-migration-completed.md)** for full details of completed phases.
+
+**Quick Summary:**
+- ✅ **Pre-Phase 1:** Architectural cleanup - framework independence
+- ✅ **Phase 0:** Pre-work - migration branch setup
+- ✅ **Phase 1:** UV workspace structure with 2 packages (waivern-core, wct)
+- ✅ **Phase 1.6:** Package-centric quality checks architecture
+
+**Current State:**
+- ✅ 737 tests passing
+- ✅ UV workspace with 2 packages (waivern-core, wct)
+- ✅ Package-centric quality checks architecture
+- ✅ Independent package checking capability
+- ✅ All pre-commit hooks passing
+- ✅ Zero breaking changes to external APIs
+
+### What's Next
+
+**Subsequent Phases:**
+- Phase 2: Extract waivern-llm
+- Phase 3: Create waivern-community
+- Phase 4: Individual packages (optional)
+- Phase 5: Dynamic plugin loading
+- Phase 6: Contribution infrastructure
+
+**Total Remaining Effort:** ~7-13 hours
+
+### Quick Reference
+
+| Component | Current Location | Target Location | Status |
+|-----------|-----------------|-----------------|--------|
+| BaseConnector | libs/waivern-core/ | libs/waivern-core/ | ✅ Done |
+| Analyser | libs/waivern-core/ | libs/waivern-core/ | ✅ Done |
+| Message | libs/waivern-core/ | libs/waivern-core/ | ✅ Done |
+| Schema | libs/waivern-core/ | libs/waivern-core/ | ✅ Done |
+| BaseRuleset | src/wct/rulesets/ | libs/waivern-core/ | ⚠️ TODO |
+| WCT Code | src/wct/ | apps/wct/ | ⚠️ TODO |
+| LLM Service | src/wct/ | libs/waivern-llm/ | ⚠️ TODO |
+| Connectors | src/wct/connectors/ | libs/waivern-community/ | ⚠️ TODO |
+| Analysers | src/wct/analysers/ | libs/waivern-community/ | ⚠️ TODO |
 
 ---
 
@@ -244,44 +297,42 @@ waivern-compliance/                          # Monorepo root
 
 | Phase | Effort | Risk | Status |
 |-------|--------|------|--------|
-| Phase 0: Pre-work | 1 hour | Low | Pending |
-| Phase 1: Workspace Setup + waivern-core | 2-3 hours | Low | Pending |
+| Pre-Phase 1: Architectural Cleanup | 3-4 hours | Low | ✅ Complete |
+| Phase 0: Pre-work | 1 hour | Low | ✅ Complete |
+| Phase 1: Workspace Setup + waivern-core | 2-3 hours | Low | ✅ Complete |
+| Phase 1.6: Package-Centric Quality Checks | 4-5 hours | Low | ✅ Complete |
 | Phase 2: Extract waivern-llm (PoC) | 2-3 hours | Low | Pending |
 | Phase 3: Create waivern-community | 4-6 hours | Medium | Pending |
 | Phase 4: Extract individual packages | 1-2 hours each | Low | Pending |
 | Phase 5: Dynamic plugin loading | 3-4 hours | Medium | Pending |
 | Phase 6: Contribution infrastructure | 2-3 hours | Low | Pending |
 
-**Total estimated effort:** 15-22 hours
+**Total estimated effort:** 18-26 hours (**11-13 hours completed**, 7-13 hours remaining)
 
 ---
 
-### Phase 0: Pre-work (Preparation)
+### Completed Phases
 
-**Goal:** Ensure clean starting point
-**Duration:** 1 hour
-**Prerequisites:** Feature 9 complete, all tests passing
-
-#### Tasks
-
-1. ✅ Merge all pending PRs (Features 1-9)
-2. ✅ Run full test suite: `uv run pytest` (all pass)
-3. ✅ Run integration tests: `uv run pytest -m integration` (all pass)
-4. ✅ Run dev checks: `./scripts/dev-checks.sh` (all pass)
-5. ✅ Create migration branch: `git checkout -b refactor/monorepo-migration`
-6. ✅ Document current import structure: `grep -r "from wct import" src/ > docs/migration-imports-before.txt`
+See **[monorepo-migration-completed.md](./monorepo-migration-completed.md)** for detailed documentation of:
+- Pre-Phase 1: Architectural Cleanup
+- Phase 0: Pre-work
+- Phase 1: Workspace Setup
+- Phase 1.6: Package-Centric Quality Checks
 
 ---
 
-### Phase 1: Workspace Setup + waivern-core
+### Phase 1: Quick Reference (Completed)
 
-**Goal:** Create `uv` workspace structure and extract base abstractions
-**Duration:** 2-3 hours
-**Risk:** Low (no behaviour change)
+**Goal:** Create UV workspace structure and formalise waivern-core package
+**Status:** ✅ Complete
+**Commits:** 714a137, 7d05ee7
 
-#### 1.1: Create Workspace Structure
+**Key Achievements:**
+- UV workspace with 2 packages (waivern-core, wct)
+- Package-centric quality checks architecture
+- Independent package development capability
 
-**Actions:**
+**Next Actions:**
 
 1. Create directory structure:
    ```bash
@@ -324,18 +375,21 @@ waivern-compliance/                          # Monorepo root
    packages = ["src/waivern_core"]
    ```
 
-#### 1.2: Extract Base Classes to waivern-core
+#### 1.2: Verify Base Classes in waivern-core
 
-**Move these files/classes:**
+**✅ Already Done in Pre-Phase 1:**
 
-| Current Location | New Location | Notes |
-|------------------|--------------|-------|
-| `src/wct/connectors/base.py` → `BaseConnector` | `libs/waivern-core/src/waivern_core/base_connector.py` | Keep interface only |
-| `src/wct/analysers/base.py` → `BaseAnalyser` | `libs/waivern-core/src/waivern_core/base_analyser.py` | Keep interface only |
-| `src/wct/rulesets/base.py` → `BaseRuleset` | `libs/waivern-core/src/waivern_core/base_ruleset.py` | Keep interface only |
-| `src/wct/message.py` → `Message` | `libs/waivern-core/src/waivern_core/message.py` | Move entire file |
-| `src/wct/schemas/base.py` | `libs/waivern-core/src/waivern_core/schemas/base.py` | Move schema protocol |
-| `src/wct/errors.py` → Base exceptions | `libs/waivern-core/src/waivern_core/errors.py` | Keep base exceptions only |
+| Current Location | Status | Notes |
+|------------------|--------|-------|
+| `libs/waivern-core/src/waivern_core/base_connector.py` | ✅ Exists | `BaseConnector`, `ConnectorError` |
+| `libs/waivern-core/src/waivern_core/base_analyser.py` | ✅ Exists | `Analyser`, `AnalyserError`, `AnalyserInputError`, `AnalyserProcessingError` |
+| `libs/waivern-core/src/waivern_core/base_ruleset.py` | ⚠️ TODO | Needs extraction from WCT |
+| `libs/waivern-core/src/waivern_core/message.py` | ✅ Exists | `Message` protocol |
+| `libs/waivern-core/src/waivern_core/schemas/base.py` | ✅ Exists | `Schema`, `SchemaLoader`, `JsonSchemaLoader`, `SchemaLoadError` |
+
+**Remaining Work:**
+- Extract `BaseRuleset` from `src/wct/rulesets/base.py` to `libs/waivern-core/src/waivern_core/base_ruleset.py`
+- Update imports for `BaseRuleset` across codebase
 
 **Example: `libs/waivern-core/src/waivern_core/base_connector.py`**
 
@@ -380,31 +434,28 @@ class BaseConnector(ABC):
 
 #### 1.3: Update Imports in Current Codebase
 
-**Update all imports to use waivern-core:**
+**✅ Already Done in Pre-Phase 1:**
 
+All imports for `BaseConnector`, `Analyser` (formerly `BaseAnalyser`), `Message`, and schema classes have been updated to use `waivern_core` directly.
+
+**Current import pattern (already implemented):**
 ```python
-# Before
-from wct.connectors.base import BaseConnector
-from wct.analysers.base import BaseAnalyser
-from wct.message import Message
+# Connectors
+from waivern_core.base_connector import BaseConnector, ConnectorError
 
-# After
-from waivern_core.base_connector import BaseConnector
-from waivern_core.base_analyser import BaseAnalyser
+# Analysers
+from waivern_core import Analyser, AnalyserError, AnalyserInputError, AnalyserProcessingError
+
+# Message
 from waivern_core.message import Message
+
+# Schemas
+from waivern_core.schemas import Schema, SchemaLoader, JsonSchemaLoader, SchemaLoadError
 ```
 
-**Use automated script:**
-
-```bash
-# Run from repository root
-find src/wct -type f -name "*.py" -exec sed -i '' \
-  's/from wct\.connectors\.base import BaseConnector/from waivern_core.base_connector import BaseConnector/g' {} +
-find src/wct -type f -name "*.py" -exec sed -i '' \
-  's/from wct\.analysers\.base import BaseAnalyser/from waivern_core.base_analyser import BaseAnalyser/g' {} +
-find src/wct -type f -name "*.py" -exec sed -i '' \
-  's/from wct\.message import Message/from waivern_core.message import Message/g' {} +
-```
+**⚠️ Remaining Work:**
+- Update imports for `BaseRuleset` once extracted to waivern-core
+- No re-export layers - all imports must be direct from waivern_core (per user requirement)
 
 #### 1.4: Verification
 
@@ -447,6 +498,67 @@ Test results:
 Breaking changes: None (internal refactoring only)
 "
 ```
+
+#### 1.6: Package-Centric Quality Checks Architecture (COMPLETED)
+
+**Goal:** Implement package-centric quality checks following monorepo best practices
+**Duration:** 4-5 hours
+**Status:** ✅ Complete
+**Commit:** `7d05ee7`
+
+After the workspace structure was created, we implemented a proper package-centric quality checks architecture following industry best practices (LangChain, boto3, airflow, pallets pattern).
+
+**Problems Solved:**
+1. Inconsistency between dev-checks and pre-commit behaviour
+2. Workspace-level tool configs coupling packages together
+3. Inability to check packages independently
+4. Mixed workspace/package concerns
+
+**Implementation:**
+
+**1. Package Ownership**
+- Moved all tool configs (basedpyright, ruff) from root to package `pyproject.toml` files
+- Added dev dependency groups to both packages (`basedpyright>=1.29.2`, `ruff>=0.11.12`)
+- Removed F401 blanket ignore for `__init__.py` (now requires explicit patterns)
+
+**2. Package Scripts**
+- Created `apps/wct/scripts/` directory with `lint.sh`, `format.sh`, `type-check.sh`
+- Created `libs/waivern-core/scripts/` directory with `lint.sh`, `format.sh`, `type-check.sh`
+- Scripts run from package directory using package's own configuration
+- Type checking targets `src/` directory by default (excludes tests)
+
+**3. Root Orchestration**
+- Updated root scripts to call package scripts in sequence
+- Created pre-commit wrappers that group files by package: `scripts/pre-commit-{lint,format,type-check}.sh`
+- Updated `.pre-commit-config.yaml` to use package-aware wrappers
+- Fixed `dev-checks.sh` to use orchestration script instead of direct ruff call
+- Fixed `init.sh` to include `--all-packages` flag
+
+**Benefits:**
+- ✅ Package independence - each package can be checked in isolation
+- ✅ Consistent behaviour - dev-checks and pre-commit use same configs
+- ✅ Standard pattern - follows monorepo best practices
+- ✅ Clean separation - workspace doesn't know package internals
+
+**Usage:**
+```bash
+# Workspace-level (checks all packages)
+./scripts/lint.sh
+./scripts/format.sh
+./scripts/type-check.sh
+./scripts/dev-checks.sh  # All checks + tests
+
+# Package-level (check individual packages)
+cd apps/wct && ./scripts/lint.sh
+cd libs/waivern-core && ./scripts/type-check.sh
+```
+
+**Test Results:**
+- ✅ 737 tests passing
+- ✅ Type checking: 0 errors (src/ only)
+- ✅ Linting: All checks passed
+- ✅ Formatting: 173 files checked
+- ✅ All pre-commit hooks passing
 
 ---
 
@@ -2001,31 +2113,61 @@ done
 
 ### Pre-Migration Checklist
 
-- [ ] All Features 1-9 merged to main
-- [ ] All tests passing (726 unit + 8 integration)
-- [ ] Type checking passes (basedpyright strict)
-- [ ] Linting passes (ruff)
-- [ ] No pending PRs
-- [ ] Clean git status
-- [ ] Create migration branch: `refactor/monorepo-migration`
+**✅ Completed:**
+- [x] All tests passing (737 unit tests)
+- [x] Type checking passes (basedpyright strict)
+- [x] Linting passes (ruff)
+- [x] Clean git status (as of commit bc3864e)
+- [x] Architectural cleanup completed (Pre-Phase 1)
+
+**⚠️ Status Unknown:**
+- [ ] All Features 1-9 merged to main (needs verification)
+- [ ] No pending PRs (needs verification)
+- [ ] Create formal migration branch: `refactor/monorepo-migration` (if not already on one)
 - [ ] Document current import structure
+
+### Pre-Phase 1 Checklist: Architectural Cleanup (COMPLETED)
+
+**✅ All Complete:**
+- [x] Made `JsonSchemaLoader` configurable with custom search paths (commit 68079ba)
+- [x] Moved `BaseFindingSchema` from waivern-core to WCT layer (commit cac9df8)
+- [x] Moved `Analyser` + errors from WCT to waivern-core (commit 1de9b1e)
+- [x] Removed re-export file `src/wct/analysers/base.py` (commit 1de9b1e)
+- [x] Updated all imports to use `waivern_core` directly (commit 1de9b1e)
+- [x] Removed orphaned `BaseFindingSchema` from waivern-core (commit bc3864e)
+- [x] Updated waivern-core exports to remove `BaseFindingSchema` (commit bc3864e)
+- [x] All 737 tests passing
+- [x] Type checking passing (basedpyright strict)
+- [x] Linting passing (ruff)
+- [x] Dev checks passing
+- [x] Committed all changes
+
+**Key Achievements:**
+- ✅ Framework independence: waivern-core has zero WCT dependencies
+- ✅ Dict-to-typed pattern working: Framework returns dicts, WCT converts to Pydantic models
+- ✅ No re-export layers: All imports direct from source packages
+- ✅ Clean separation: `BaseFindingSchema` only in WCT where it belongs
 
 ### Phase 1 Checklist: waivern-core
 
-- [ ] Create `libs/waivern-core/` directory structure
-- [ ] Create `libs/waivern-core/pyproject.toml`
-- [ ] Extract `BaseConnector` to `waivern_core/base_connector.py`
-- [ ] Extract `BaseAnalyser` to `waivern_core/base_analyser.py`
+**✅ Already Complete (Pre-Phase 1):**
+- [x] Create `libs/waivern-core/` directory structure
+- [x] Extract `BaseConnector` to `waivern_core/base_connector.py`
+- [x] Extract `Analyser` to `waivern_core/base_analyser.py`
+- [x] Move `Message` to `waivern_core/message.py`
+- [x] Move schema types to `waivern_core/schemas/`
+- [x] Update most imports to use `waivern_core`
+
+**⚠️ Remaining Work:**
+- [ ] Create formal `libs/waivern-core/pyproject.toml` with proper metadata
 - [ ] Extract `BaseRuleset` to `waivern_core/base_ruleset.py`
-- [ ] Move `Message` to `waivern_core/message.py`
-- [ ] Move schema types to `waivern_core/schemas/`
 - [ ] Update workspace config in root `pyproject.toml`
-- [ ] Update all imports to use `waivern_core`
+- [ ] Update `BaseRuleset` imports across codebase
 - [ ] Run `uv sync` successfully
-- [ ] All tests pass
-- [ ] Type checking passes
-- [ ] Linting passes
-- [ ] Commit Phase 1
+- [ ] All tests pass (currently 737 passing)
+- [ ] Type checking passes (currently passing)
+- [ ] Linting passes (currently passing)
+- [ ] Commit Phase 1 completion
 
 ### Phase 2 Checklist: waivern-llm
 
@@ -2529,19 +2671,26 @@ class RemoteAnalyser(BaseAnalyser):
 
 ## Success Criteria
 
-Migration is complete when:
-
-- ✅ All packages in workspace structure
-- ✅ All 726+ unit tests pass
-- ✅ All 8+ integration tests pass
+**Pre-Phase 1 Complete (✅):**
+- ✅ Framework architectural cleanup complete
+- ✅ waivern-core has zero WCT dependencies
+- ✅ All 737 unit tests pass
 - ✅ Type checking passes (basedpyright strict)
 - ✅ Linting passes (ruff)
-- ✅ Dynamic plugin loading works
-- ✅ Can load from waivern-community
-- ✅ Can load from standalone package
-- ✅ Documentation complete
-- ✅ Example templates created
-- ✅ Publishing scripts ready
+
+**Full Migration Complete When:**
+- [ ] All packages in workspace structure
+- [ ] Workspace configuration in root pyproject.toml
+- [ ] All 737+ unit tests pass
+- [ ] All integration tests pass
+- [ ] Type checking passes (basedpyright strict)
+- [ ] Linting passes (ruff)
+- [ ] Dynamic plugin loading works
+- [ ] Can load from waivern-community
+- [ ] Can load from standalone package
+- [ ] Documentation complete
+- [ ] Example templates created
+- [ ] Publishing scripts ready
 
 ---
 

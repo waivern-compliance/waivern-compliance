@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from wct.connectors.sqlite.connector import SQLiteConnector
 from wct.executor import Executor
 from wct.schemas import StandardInputSchema

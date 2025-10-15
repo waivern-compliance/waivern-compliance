@@ -2,7 +2,10 @@
 
 # Format code using Ruff formatter
 # Usage: bash scripts/format.sh [files/directories]
-# Applies automatic code formatting to specified files or entire project
+# Orchestrates formatting across all packages using their own scripts
 
-uv run --group dev \
-	ruff format "$@"
+set -e
+
+# Format each package using its own scripts
+(cd apps/wct && ./scripts/format.sh "$@")
+(cd libs/waivern-core && ./scripts/format.sh "$@")

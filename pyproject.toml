@@ -1,29 +1,32 @@
-[project]
-name = "waivern-compliance-tool"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "annotated-types>=0.7.0",
-    "jsonschema>=4.25.0",
-    "pydantic>=2.11.5",
-    "python-dotenv>=1.0.0",
-    "pyyaml>=6.0.2",
-    "rich>=13.0.0",
-    "typer>=0.16.0",
-    "typing-extensions>=4.14.0",
-    "langchain>=0.3.0",
-    "langchain-anthropic>=0.2.0",
-    "cryptography>=45.0.5",
-    "pymysql>=1.1.1",
-    "tree-sitter>=0.21.0",
-    "tree-sitter-php>=0.22.0",
+[tool.uv.workspace]
+members = [
+    "libs/waivern-core",
+    "apps/wct",
 ]
 
-[project.scripts]
-wct = "wct.__main__:app"
+[tool.uv.sources]
+waivern-core = { workspace = true }
+waivern-compliance-tool = { workspace = true }
 
+[project]
+name = "waivern-workspace"
+version = "0.1.0"
+description = "Waivern Compliance Framework workspace root"
+requires-python = ">=3.12"
+dependencies = [
+    "waivern-compliance-tool",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+dev-mode-dirs = ["."]
+
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
+only-include = ["pyproject.toml"]
 
 [dependency-groups]
 dev = [
@@ -35,26 +38,8 @@ dev = [
     "mypy>=1.17.0",
 ]
 
-# LLM provider dependencies (optional)
-llm-openai = [
-    "langchain-openai>=0.2.0",
-]
-llm-google = [
-    "langchain-google-genai>=2.0.0",
-]
-llm-all = [
-    "waivern-compliance-tool[llm-openai,llm-google]",
-]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/wct"]
-
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "libs", "apps"]
 xfail_strict = true
 addopts = [
     # Allow test files to have the same name in different directories.
@@ -68,61 +53,3 @@ addopts = [
 markers = [
     "integration: marks tests as integration tests requiring real API calls (deselect with '-m \"not integration\"')",
 ]
-
-[tool.basedpyright]
-include = ["src/wct"]
-typeCheckingMode = "strict"
-reportImplicitOverride = "error"
-
-[tool.mypy]
-files = ["src/"]
-plugins = ['pydantic.mypy']
-allow_redefinition = true
-enable_error_code = "possibly-undefined"
-strict = true
-warn_unreachable = true
-
-[tool.ruff.lint]
-select = [
-    "ANN",    # flake8-annotations
-    "B",      # flake8-bugbear
-    "D",      # pydocstyle
-    "F",      # pyflakes
-    "I",      # isort
-    "PL",     # pylint
-    "RUF100", # unused-noqa-directive
-    "S",      # bandit
-    "UP",     # pyupgrade
-]
-ignore = [
-    "D203",    # incorrect-blank-line-before-class (conflicts with D211)
-    "D213",    # multi-line-summary-second-line (conflicts with D212)
-]
-
-[tool.ruff.lint.per-file-ignores]
-"__init__.py" = [
-    "F401", # Unused imports
-]
-"tests/**/*.py" = [
-    "ANN", # Type annotations - not required in tests
-    "B", # flake8-bugbear - less strict in tests
-    "D", # Documentation
-    "S101", # Use of assert detected
-    "PLC0415", # Import outside top-level - acceptable for checking optional dependencies
-    "PLR2004", # Magic value used in comparison - acceptable in tests
-]
-# Connector constructors need many database/filesystem parameters
-"src/wct/connectors/*/connector.py" = [
-    "PLR0913",  # Too many arguments - acceptable for connector configuration
-]
-# Prompt functions legitimately need many string parameters
-"src/wct/prompts/*.py" = [
-    "PLR0913",  # Too many arguments - acceptable for prompt parameter functions
-]
-# Executor step analysis needs many orchestration parameters
-"src/wct/executor.py" = [
-    "PLR0913",  # Too many arguments - acceptable for analysis orchestration
-]
-
-[tool.ruff.lint.pydocstyle]
-ignore-decorators = ["typing.overload"]

@@ -1,8 +1,11 @@
 #!/bin/bash
 
 # Run code linting checks
-# Usage: bash scripts/lint.sh [--fix] [files/directories]
-# Checks code for style and quality issues using Ruff
+# Usage: bash scripts/lint.sh [--fix]
+# Orchestrates linting across all packages using their own scripts
 
-uv run --group dev \
-	ruff check "$@"
+set -e
+
+# Lint each package using its own scripts
+(cd apps/wct && ./scripts/lint.sh "$@")
+(cd libs/waivern-core && ./scripts/lint.sh "$@")

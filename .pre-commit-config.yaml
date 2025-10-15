@@ -10,33 +10,33 @@ repos:
       - id: trailing-whitespace
       - id: check-merge-conflict
       - id: check-added-large-files
-        exclude: ^src/wct/analysers/data_export_analyser/vendor-database/(consensu\.org\.v3\.vendor-list\.json|consensu_db\.db)$
+        exclude: ^apps/wct/src/wct/analysers/data_export_analyser/vendor-database/(consensu\.org\.v3\.vendor-list\.json|consensu_db\.db)$
 
-  # Local script hooks
+  # Local script hooks - package-aware wrappers
   - repo: local
     hooks:
-      # Format code using our format script
+      # Format code using package-aware wrapper
       - id: format
         name: format
-        entry: bash scripts/format.sh
+        entry: bash scripts/pre-commit-format.sh
         language: system
         types: [python]
         pass_filenames: true
 
-      # Lint code using our lint script
+      # Lint code using package-aware wrapper
       - id: lint
         name: lint
-        entry: bash scripts/lint.sh
+        entry: bash scripts/pre-commit-lint.sh
         language: system
         types: [python]
         pass_filenames: true
 
-      # Type check using our type-check script
+      # Type check using package-aware wrapper
       - id: type-check
         name: type-check
-        entry: bash scripts/type-check.sh
+        entry: bash scripts/pre-commit-type-check.sh
         language: system
         types: [python]
         # don't run on tests
-        exclude: ^tests/
+        exclude: ^(tests/|apps/wct/tests/|libs/waivern-core/tests/)
         pass_filenames: true

@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # Run static type checking
-# Usage: bash scripts/type-check.sh [files/directories]
-# Performs type checking using mypy on specified files or entire project
+# Usage: bash scripts/type-check.sh
+# Orchestrates type checking across all packages using their own scripts
 
-uv run --group dev \
-	basedpyright \
-	--level error \
-	"$@"
+set -e
+
+# Type check each package using its own scripts
+(cd apps/wct && ./scripts/type-check.sh)
+(cd libs/waivern-core && ./scripts/type-check.sh)
