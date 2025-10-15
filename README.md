@@ -256,12 +256,24 @@ uv run pytest -v                 # Verbose output
 uv run pytest tests/specific.py  # Run specific test
 ```
 
-**Code Quality**:
+**Code Quality** (Package-Centric Architecture):
+
+This monorepo uses package-centric quality checks where each package owns its configuration and can be checked independently:
+
 ```bash
-uv run ruff check               # Linting
-uv run ruff format              # Code formatting
-uv run basedpyright             # Type checking
-uv run pre-commit run --all-files  # All pre-commit hooks
+# Workspace-level (checks all packages)
+./scripts/lint.sh               # Lint all packages
+./scripts/format.sh             # Format all packages
+./scripts/type-check.sh         # Type check all packages
+./scripts/dev-checks.sh         # Run all checks + tests
+
+# Package-level (check individual packages)
+cd apps/wct && ./scripts/lint.sh
+cd libs/waivern-core && ./scripts/type-check.sh
+
+# Pre-commit hooks (automatic on commit)
+uv run pre-commit install         # Install hooks (once)
+uv run pre-commit run --all-files # Run manually
 ```
 
 **Logging Options**:
@@ -397,15 +409,19 @@ runbooks/               # YAML configuration files
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run tests and linting: `uv run pre-commit run --all-files`
+4. Run quality checks: `./scripts/dev-checks.sh` (runs all checks + tests)
 5. Submit a pull request
 
 ### Code Standards
 
-- Type annotations are required (`basedpyright`)
-- Code formatting with `ruff`
-- Security checks with `bandit`
-- Comprehensive test coverage
+This project follows a **package-centric quality architecture**:
+- Each package (`apps/wct/`, `libs/waivern-core/`) owns its quality tool configuration
+- Type annotations required (basedpyright in strict mode)
+- Code formatting with ruff
+- Security checks with bandit
+- Comprehensive test coverage (737+ tests)
+
+Run `./scripts/dev-checks.sh` before committing to ensure all standards are met.
 
 ## License
 

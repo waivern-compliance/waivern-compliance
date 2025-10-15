@@ -37,6 +37,32 @@ Minimal dependencies by design:
 - `typing-extensions` - For enhanced type hints
 - `annotated-types` - For type annotations
 
+## Development
+
+This package follows a **package-centric development approach**:
+
+```bash
+# From package directory
+cd libs/waivern-core
+
+# Run quality checks
+./scripts/lint.sh          # Lint this package
+./scripts/format.sh        # Format this package
+./scripts/type-check.sh    # Type check this package
+
+# From workspace root
+./scripts/dev-checks.sh    # Check all packages + run tests
+```
+
+### Package Configuration
+
+Each package owns its complete quality tool configuration:
+- **Type checking**: basedpyright in strict mode (`pyproject.toml`)
+- **Linting/Formatting**: ruff with compliance-focused rules (`pyproject.toml`)
+- **Scripts**: Package-specific quality check scripts (`scripts/`)
+
+This enables independent development and ensures consistent standards across all packages.
+
 ## License
 
 Same as main waivern-compliance project
