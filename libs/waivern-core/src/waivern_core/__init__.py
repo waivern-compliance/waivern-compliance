@@ -7,6 +7,7 @@ __version__ = "0.1.0"
 
 from waivern_core.base_analyser import Analyser
 from waivern_core.base_connector import Connector
+from waivern_core.base_ruleset import BaseRuleset, RulesetError
 from waivern_core.errors import (
     AnalyserError,
     AnalyserInputError,
@@ -30,6 +31,7 @@ __all__ = [
     "__version__",
     # Base classes
     "Analyser",
+    "BaseRuleset",
     "Connector",
     "Message",
     "Schema",
@@ -45,5 +47,6 @@ __all__ = [
     "ConnectorConfigError",
     "ConnectorExtractionError",
     "MessageValidationError",
+    "RulesetError",
     "SchemaLoadError",
 ]

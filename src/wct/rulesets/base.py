@@ -2,24 +2,29 @@
 
 import abc
 import logging
-from typing import Any
+from typing import Any, override
+
+from waivern_core import BaseRuleset, RulesetError
 
 from wct.rulesets.types import BaseRule
 
 logger = logging.getLogger(__name__)
 
 
-class AbstractRuleset[RuleType: BaseRule](abc.ABC):
-    """Base class for all rulesets with logging support.
+class AbstractRuleset[RuleType: BaseRule](BaseRuleset):
+    """WCT-specific ruleset implementation with Pydantic rule types.
 
-    This provides a common interface for rulesets and automatic
-    logger initialisation following WCT logging conventions.
+    This extends the framework-level BaseRuleset with WCT-specific features:
+    - Strongly typed rules using Pydantic BaseRule models
+    - Type-safe generic parameter for specific rule types
+    - Logging support following WCT conventions
 
     Each ruleset must define its canonical name via the name property.
     """
 
     @property
     @abc.abstractmethod
+    @override
     def name(self) -> str:
         """Get the canonical name of this ruleset.
 
@@ -30,6 +35,7 @@ class AbstractRuleset[RuleType: BaseRule](abc.ABC):
 
     @property
     @abc.abstractmethod
+    @override
     def version(self) -> str:
         """Get the version of this ruleset.
 
@@ -39,6 +45,7 @@ class AbstractRuleset[RuleType: BaseRule](abc.ABC):
         """
 
     @abc.abstractmethod
+    @override
     def get_rules(self) -> tuple[RuleType, ...]:
         """Get the rules defined by this ruleset.
 
@@ -46,12 +53,6 @@ class AbstractRuleset[RuleType: BaseRule](abc.ABC):
             Immutable tuple of RuleType objects
 
         """
-
-
-class RulesetError(Exception):
-    """Base exception for ruleset-related errors."""
-
-    pass
 
 
 class RulesetNotFoundError(RulesetError):
