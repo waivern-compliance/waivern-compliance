@@ -456,7 +456,7 @@ def _handle_import_error(e: Exception, json_file: Path) -> int:
     ) in error_handlers.items():
         if isinstance(e, error_type):
             print(title)
-            if error_type == KeyError:
+            if error_type is KeyError:
                 print(f"Missing field: {e}")
             else:
                 print(f"Details: {e}")

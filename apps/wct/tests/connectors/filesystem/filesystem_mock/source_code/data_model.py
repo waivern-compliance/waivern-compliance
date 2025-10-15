@@ -235,7 +235,7 @@ class User(Base):
         try:
             parsed_number = phonenumbers.parse(phone_number, None)
             return phonenumbers.is_valid_number(parsed_number)
-        except:
+        except Exception:
             return False
 
     def export_personal_data(self) -> dict[str, Any]:
@@ -547,7 +547,7 @@ def validate_personal_data_formats(user_data: dict[str, Any]) -> dict[str, bool]
         try:
             parsed = phonenumbers.parse(user_data["phone"], None)
             validations["phone"] = phonenumbers.is_valid_number(parsed)
-        except:
+        except Exception:
             validations["phone"] = False
 
     # Date of birth validation

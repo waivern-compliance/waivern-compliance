@@ -75,31 +75,20 @@ class JsonSchemaLoader:
                 schema_paths.append(base_path / f"{schema_name}.json")
             return schema_paths
         else:
-            # Use default WCT-compatible paths for backwards compatibility
+            # Use default WCT monorepo paths
             return [
-                # Versioned paths (preferred) - WCT structure
-                Path("src/wct/schemas/json_schemas")
+                # Versioned paths (preferred)
+                Path("apps/wct/src/wct/schemas/json_schemas")
                 / schema_name
                 / version
                 / f"{schema_name}.json",
-                Path("./src/wct/schemas/json_schemas")
+                Path("./apps/wct/src/wct/schemas/json_schemas")
                 / schema_name
                 / version
                 / f"{schema_name}.json",
-                Path(__file__).parent.parent.parent.parent
-                / "wct"
-                / "schemas"
-                / "json_schemas"
-                / schema_name
-                / version
-                / f"{schema_name}.json",
-                # Additional fallback locations
-                Path("src/wct/schemas") / f"{schema_name}.json",
-                Path("./src/wct/schemas") / f"{schema_name}.json",
-                Path(__file__).parent.parent.parent.parent
-                / "wct"
-                / "schemas"
-                / f"{schema_name}.json",
+                # Non-versioned fallback
+                Path("apps/wct/src/wct/schemas") / f"{schema_name}.json",
+                Path("./apps/wct/src/wct/schemas") / f"{schema_name}.json",
             ]
 
     def load(self, schema_name: str, version: str = "1.0.0") -> dict[str, Any]:

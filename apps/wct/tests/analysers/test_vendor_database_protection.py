@@ -70,7 +70,7 @@ class TestVendorDatabaseProtection:
 
         # Import the main function to test using importlib
         vendor_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -117,7 +117,7 @@ class TestVendorDatabaseProtection:
 
         # Import the main function to test using importlib
         vendor_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -171,7 +171,7 @@ class TestVendorDatabaseProtection:
         # Create an existing SQLite database file with proper schema using ConsensuDbCreator
         # Import the create_consensu_db module to create a proper database
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -206,7 +206,7 @@ class TestVendorDatabaseProtection:
 
         # Import the import_consensu_data main function using importlib
         vendor_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -287,7 +287,7 @@ class TestVendorDatabaseProtection:
         """
         # Create a proper database with existing data
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -323,7 +323,7 @@ class TestVendorDatabaseProtection:
 
         # Import the import_consensu_data main function
         vendor_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -378,7 +378,7 @@ class TestVendorDatabaseProtection:
         """
         # Create a proper database with existing data
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -407,7 +407,7 @@ class TestVendorDatabaseProtection:
 
         # Import the import_consensu_data main function
         vendor_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -492,7 +492,7 @@ class TestVendorDatabaseProtection:
         """
         # Create valid database with proper schema
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -513,7 +513,7 @@ class TestVendorDatabaseProtection:
 
         # Load the import_consensu_data module dynamically
         vendor_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -581,7 +581,7 @@ class TestVendorDatabaseProtection:
         """
         # Create database first
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -687,7 +687,7 @@ class TestVendorDatabaseProtection:
 
         # Import the data
         import_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -745,7 +745,7 @@ class TestVendorDatabaseProtection:
         """
         # Create a proper database with existing data
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -819,7 +819,7 @@ class TestVendorDatabaseProtection:
 
         # Import the import_consensu_data main function
         vendor_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -888,7 +888,7 @@ class TestVendorDatabaseProtection:
         """Helper to set up comprehensive test data across multiple tables."""
         # Create database with proper schema
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -1054,7 +1054,7 @@ class TestVendorDatabaseProtection:
 
         # Import the import_consensu_data main function
         vendor_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -1096,7 +1096,7 @@ class TestVendorDatabaseProtection:
         """
         # Create database with proper schema
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -1116,7 +1116,7 @@ class TestVendorDatabaseProtection:
 
         # Load the import_consensu_data module
         vendor_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -1278,7 +1278,7 @@ class TestVendorDatabaseProtection:
         """
         # Create database first
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -1320,7 +1320,7 @@ class TestVendorDatabaseProtection:
 
         # Import the data and capture output
         import_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -1437,7 +1437,7 @@ class TestVendorDatabaseProtection:
         """Perform vendor import and return vendor results."""
         # Always ensure database exists with proper schema
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -1483,7 +1483,7 @@ class TestVendorDatabaseProtection:
             json.dump(data, f)
 
         import_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -1585,7 +1585,7 @@ class TestVendorDatabaseProtection:
         """
         # Create database first
         create_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"
@@ -1648,7 +1648,7 @@ class TestVendorDatabaseProtection:
 
         # Import the data and expect foreign key constraint violation
         import_db_path = (
-            Path(__file__).parent.parent.parent.parent
+            Path(__file__).parent.parent.parent
             / "src"
             / "wct"
             / "analysers"

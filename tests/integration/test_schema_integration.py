@@ -18,7 +18,6 @@ from pathlib import Path
 import jsonschema
 import pytest
 import yaml
-
 from wct.runbook import RunbookLoader
 from wct.schemas.runbook import RunbookSchemaGenerator
 
@@ -93,7 +92,7 @@ class TestSchemaIntegration:
         """Test that the bundled template runbook validates with generated schema."""
         schema = RunbookSchemaGenerator.generate_schema()
         template_path = Path(
-            "src/wct/schemas/json_schemas/runbook/1.0.0/runbook.template.yaml"
+            "apps/wct/src/wct/schemas/json_schemas/runbook/1.0.0/runbook.template.yaml"
         )
 
         with open(template_path, encoding="utf-8") as f:

@@ -52,7 +52,7 @@ class TestMySQLConnectorConfig:
         assert config.password == ""  # Default
         assert config.database == ""  # Default
         assert config.charset == "utf8mb4"  # Default
-        assert config.autocommit == True  # Default
+        assert config.autocommit is True  # Default
         assert config.connect_timeout == 10  # Default
         assert config.max_rows_per_table == 10  # Default
 
@@ -78,7 +78,7 @@ class TestMySQLConnectorConfig:
         assert config.password == "testpass"  # noqa: S105
         assert config.database == "testdb"
         assert config.charset == "latin1"
-        assert config.autocommit == False
+        assert config.autocommit is False
         assert config.connect_timeout == 30
         assert config.max_rows_per_table == 2000
 

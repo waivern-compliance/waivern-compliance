@@ -8,7 +8,7 @@ connectors:
   - name: "php_source_code"
     type: "source_code"
     properties:
-      path: "./tests/wct/analysers/processing_purpose_analyser/source_code_mock_php"
+      path: "./apps/wct/tests/analysers/processing_purpose_analyser/source_code_mock_php"
       language: "php"
       file_patterns: ["**/*.php"]
       max_file_size: 10485760  # 10MB
@@ -17,7 +17,7 @@ connectors:
   - name: "log_files"
     type: "filesystem"
     properties:
-      path: "./tests/wct/connectors/filesystem/filesystem_mock/logs"
+      path: "./apps/wct/tests/connectors/filesystem/filesystem_mock/logs"
       exclude_patterns: []
       max_files: 100
       encoding: "utf-8"

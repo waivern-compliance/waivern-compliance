@@ -1,7 +1,7 @@
 """WCT Rulesets package for compliance pattern definitions."""
 
+from waivern_core import RulesetError
 from wct.rulesets.base import (
-    RulesetError,
     RulesetLoader,
     RulesetNotFoundError,
     RulesetRegistry,
