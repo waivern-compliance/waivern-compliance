@@ -80,7 +80,7 @@ markers = [
 ]
 
 [tool.basedpyright]
-include = ["src/wct"]
+include = ["src/wct", "libs/waivern-core/src"]
 typeCheckingMode = "strict"
 reportImplicitOverride = "error"
 
@@ -113,7 +113,7 @@ ignore = [
 "__init__.py" = [
     "F401", # Unused imports
 ]
-"tests/**/*.py" = [
+"**/tests/**/*.py" = [
     "ANN", # Type annotations - not required in tests
     "B", # flake8-bugbear - less strict in tests
     "D", # Documentation
