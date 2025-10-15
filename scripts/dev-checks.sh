@@ -13,7 +13,7 @@ echo "Formatting code..."
 
 # Lint with auto-fix
 echo "Linting..."
-uv run --group dev ruff check --fix .
+"$SCRIPT_DIR/lint.sh" --fix
 
 # Type check
 echo "Type checking..."

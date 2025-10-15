@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 import pytest
+
 from waivern_core.message import Message, MessageValidationError, Schema
 
 

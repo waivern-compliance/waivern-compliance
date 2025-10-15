@@ -1176,6 +1176,12 @@ dependencies = [
     { name = "waivern-core" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.7.0" },
@@ -1195,6 +1201,12 @@ requires-dist = [
     { name = "waivern-core", editable = "libs/waivern-core" },
 ]
 
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
 [[package]]
 name = "waivern-core"
 version = "0.1.0"
@@ -1205,11 +1217,23 @@ dependencies = [
     { name = "typing-extensions" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.7.0" },
     { name = "jsonschema", specifier = ">=4.25.0" },
     { name = "typing-extensions", specifier = ">=4.14.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
 ]
 
 [[package]]

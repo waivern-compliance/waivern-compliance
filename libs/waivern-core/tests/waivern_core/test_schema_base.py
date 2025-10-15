@@ -5,6 +5,7 @@ from typing import Any
 from unittest.mock import Mock
 
 import pytest
+
 from waivern_core.schemas.base import JsonSchemaLoader, Schema, SchemaLoader
 
 
