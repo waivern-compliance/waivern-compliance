@@ -1,1 +1,0 @@
-"""WCT test package."""
