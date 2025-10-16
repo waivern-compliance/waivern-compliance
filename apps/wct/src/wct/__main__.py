@@ -25,8 +25,10 @@ from wct.cli import (
     validate_runbook_command,
 )
 
-# Load environment variables from .env file if it exists
-load_dotenv()
+# Load environment variables from .env file in wct app directory if it exists
+# This allows app-specific configuration separate from workspace root
+_wct_app_dir = Path(__file__).parent.parent.parent
+load_dotenv(_wct_app_dir / ".env")
 
 app = typer.Typer(name="waivern-compliance-tool")
 

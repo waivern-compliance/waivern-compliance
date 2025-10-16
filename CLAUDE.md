@@ -4,25 +4,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Environment Configuration
 
-WCT supports environment variables for sensitive configuration data like database credentials. This keeps sensitive information out of runbook files that are committed to version control.
+WCT supports environment variables for sensitive configuration data like database credentials and API keys. This keeps sensitive information out of runbook files that are committed to version control.
 
-**Environment Variable Setup:**
-1. Copy `.env.example` to `.env`: `cp .env.example .env`
-2. Edit `.env` with your actual credentials
-3. Environment variables take precedence over runbook properties
+**Quick Start:**
+1. Copy the example configuration: `cp apps/wct/.env.example apps/wct/.env`
+2. Edit `apps/wct/.env` with your actual credentials
+3. Run WCT: `uv run wct run runbooks/samples/file_content_analysis.yaml`
 
-**Supported Environment Variables:**
+**Configuration Layers (highest to lowest priority):**
+1. System environment variables (production)
+2. Application `.env` file (`apps/wct/.env` for local development)
+3. Runbook properties (YAML configuration)
+4. Code defaults
 
-*MySQL Database:*
-- `MYSQL_HOST` - Database server hostname
-- `MYSQL_PORT` - Database server port (default: 3306)
-- `MYSQL_USER` - Database username
-- `MYSQL_PASSWORD` - Database password
-- `MYSQL_DATABASE` - Database name
+**Common Environment Variables:**
 
-*LLM Configuration:*
+*LLM Configuration (Required):*
 - `ANTHROPIC_API_KEY` - Anthropic API key for AI-powered compliance analysis
-- `ANTHROPIC_MODEL` - Anthropic model name (optional, defaults to claude-sonnet-4-5-20250929)
+- `ANTHROPIC_MODEL` - Model name (optional, defaults to claude-sonnet-4-5-20250929)
+- `LLM_PROVIDER` - Provider selection (optional, defaults to anthropic)
+
+*MySQL Database (Optional):*
+- `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`
+
+**For complete configuration documentation, see:** [docs/configuration.md](docs/configuration.md)
+
+This includes:
+- Production deployment patterns (Docker, Kubernetes)
+- Security best practices
+- Per-package configuration
+- Troubleshooting guide
+- Multi-provider LLM setup
 
 ## Development Commands
 
