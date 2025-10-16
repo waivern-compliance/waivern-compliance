@@ -18,8 +18,10 @@ from wct.utils import get_project_root
 
 logger = logging.getLogger(__name__)
 
-# Default organisation config file location
-ORGANISATION_CONFIG_PATH: Final[Path] = Path("config") / "organisation.yaml"
+# Default organisation config file location (relative to workspace root)
+ORGANISATION_CONFIG_PATH: Final[Path] = (
+    Path("apps") / "wct" / "config" / "organisation.yaml"
+)
 
 
 class DataControllerConfig(BaseModel):

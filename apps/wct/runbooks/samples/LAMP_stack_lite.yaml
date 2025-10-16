@@ -11,7 +11,7 @@ connectors:
     properties:
       # SQLite database path can be set via environment variable SQLITE_DATABASE_PATH
       # or specified directly in the runbook
-      database_path: "./tests/integration/test_data/sqlite_compliance_test.db"
+      database_path: "./apps/wct/tests/integration/test_data/sqlite_compliance_test.db"
       max_rows_per_table: 10
   - name: "filesystem_mock_lite"
     type: "filesystem"

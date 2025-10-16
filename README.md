@@ -47,10 +47,10 @@ uv run pre-commit install
 1. **Run analysis with a runbook**:
    ```bash
    # Simple file analysis demonstration
-   uv run wct run runbooks/samples/file_content_analysis.yaml
+   uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml
 
    # Comprehensive LAMP stack analysis
-   uv run wct run runbooks/samples/LAMP_stack_lite.yaml
+   uv run wct run apps/wct/runbooks/samples/LAMP_stack_lite.yaml
    ```
 
 2. **List available components**:
@@ -61,7 +61,7 @@ uv run pre-commit install
 
 3. **Validate a runbook**:
    ```bash
-   uv run wct validate-runbook runbooks/samples/file_content_analysis.yaml
+   uv run wct validate-runbook apps/wct/runbooks/samples/file_content_analysis.yaml
    ```
 
 The output JSON results will be written to the `./outputs` directory.
@@ -89,23 +89,23 @@ With LLM validation enabled, analysers can provide enhanced accuracy for detecti
 
 ### Runbooks Directory
 
-WCT organises runbook configurations in the `runbooks/` directory with samples organised in `runbooks/samples/`:
+WCT organises runbook configurations in the `apps/wct/runbooks/` directory with samples organised in `apps/wct/runbooks/samples/`:
 
-- **`runbooks/samples/file_content_analysis.yaml`** - Simple file analysis demonstration using personal data analyser
-- **`runbooks/samples/LAMP_stack_lite.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
-- **`runbooks/samples/LAMP_stack.yaml`** - Advanced MySQL-based LAMP stack analysis
-- **`runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
+- **`apps/wct/runbooks/samples/file_content_analysis.yaml`** - Simple file analysis demonstration using personal data analyser
+- **`apps/wct/runbooks/samples/LAMP_stack_lite.yaml`** - Comprehensive example demonstrating file, database, and source code analysis
+- **`apps/wct/runbooks/samples/LAMP_stack.yaml`** - Advanced MySQL-based LAMP stack analysis
+- **`apps/wct/runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
 
 Run sample runbooks:
 ```bash
 # Simple file content analysis
-uv run wct run runbooks/samples/file_content_analysis.yaml
+uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml
 
 # Comprehensive LAMP stack analysis
-uv run wct run runbooks/samples/LAMP_stack_lite.yaml
+uv run wct run apps/wct/runbooks/samples/LAMP_stack_lite.yaml
 
 # Run with verbose logging
-uv run wct run runbooks/samples/file_content_analysis.yaml -v
+uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml -v
 ```
 
 ### Example Runbook

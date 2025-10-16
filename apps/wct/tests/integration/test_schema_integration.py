@@ -18,6 +18,7 @@ from pathlib import Path
 import jsonschema
 import pytest
 import yaml
+
 from wct.runbook import RunbookLoader
 from wct.schemas.runbook import RunbookSchemaGenerator
 
@@ -30,7 +31,7 @@ class TestSchemaIntegration:
         schema = RunbookSchemaGenerator.generate_schema()
 
         # Get all sample runbooks
-        sample_dir = Path("runbooks/samples")
+        sample_dir = Path("apps/wct/runbooks/samples")
         sample_files = list(sample_dir.glob("*.yaml"))
 
         # Ensure we have samples to test
@@ -48,7 +49,7 @@ class TestSchemaIntegration:
     def test_json_schema_pydantic_validation_consistency(self) -> None:
         """Test that JSON Schema and Pydantic validation agree on sample runbooks."""
         schema = RunbookSchemaGenerator.generate_schema()
-        sample_dir = Path("runbooks/samples")
+        sample_dir = Path("apps/wct/runbooks/samples")
 
         for runbook_path in sample_dir.glob("*.yaml"):
             with open(runbook_path, encoding="utf-8") as f:
@@ -80,7 +81,7 @@ class TestSchemaIntegration:
             bundled_schema = json.load(f)
 
         # Test all sample runbooks against bundled schema
-        sample_dir = Path("runbooks/samples")
+        sample_dir = Path("apps/wct/runbooks/samples")
         for runbook_path in sample_dir.glob("*.yaml"):
             with open(runbook_path, encoding="utf-8") as f:
                 runbook_data = yaml.safe_load(f)

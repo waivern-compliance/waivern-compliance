@@ -182,19 +182,17 @@ class TestPersonalDataRuleset:
 class TestPersonalDataIntegration:
     """Integration tests for PersonalDataRuleset with other components."""
 
-    def teardown_method(self):
-        """Clear registry after each test to prevent side effects."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-
-    def test_ruleset_can_be_used_with_registry(self):
+    def test_ruleset_can_be_used_with_registry(
+        self, isolated_registry: RulesetRegistry
+    ):
         """Test that PersonalDataRuleset works with the registry pattern."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-        registry.register("test_personal_data", PersonalDataRuleset, PersonalDataRule)
+        isolated_registry.clear()
+        isolated_registry.register(
+            "test_personal_data", PersonalDataRuleset, PersonalDataRule
+        )
 
         # Should be able to retrieve and instantiate
-        ruleset_class = registry.get_ruleset_class(
+        ruleset_class = isolated_registry.get_ruleset_class(
             "test_personal_data", PersonalDataRule
         )
         assert ruleset_class is PersonalDataRuleset
@@ -203,11 +201,10 @@ class TestPersonalDataIntegration:
         assert isinstance(instance, PersonalDataRuleset)
         assert instance.name == "personal_data"
 
-    def test_ruleset_loader_integration(self):
+    def test_ruleset_loader_integration(self, isolated_registry: RulesetRegistry):
         """Test that PersonalDataRuleset works with RulesetLoader."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-        registry.register("loader_test", PersonalDataRuleset, PersonalDataRule)
+        isolated_registry.clear()
+        isolated_registry.register("loader_test", PersonalDataRuleset, PersonalDataRule)
 
         # Load via RulesetLoader
         rules = RulesetLoader.load_ruleset("loader_test", PersonalDataRule)

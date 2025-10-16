@@ -86,17 +86,6 @@ class TestRulesetClass:
 class TestRulesetRegistry:
     """Test cases for the RulesetRegistry singleton."""
 
-    def setup_method(self):
-        """Reset the singleton instance before each test."""
-        # Reset singleton instance to ensure clean state
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-
-    def teardown_method(self):
-        """Clear registry after each test to prevent side effects."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-
     def test_registry_is_singleton(self):
         """Test that RulesetRegistry implements singleton pattern."""
         registry1 = RulesetRegistry()
@@ -104,68 +93,70 @@ class TestRulesetRegistry:
 
         assert registry1 is registry2
 
-    def test_registry_initialises_empty_registry(self):
+    def test_registry_initialises_empty_registry(
+        self, isolated_registry: RulesetRegistry
+    ):
         """Test that registry starts with empty ruleset registry."""
-        registry = RulesetRegistry()
+        isolated_registry.clear()
 
         # Access private attribute for testing purposes
-        assert registry._registry == {}  # type: ignore[attr-defined]
+        assert isolated_registry._registry == {}  # type: ignore[attr-defined]
 
-    def test_register_ruleset_class(self):
+    def test_register_ruleset_class(self, isolated_registry: RulesetRegistry):
         """Test registering a ruleset class."""
-        registry = RulesetRegistry()
-        registry.register("test_ruleset", ConcreteRuleset, ProcessingPurposeRule)
+        isolated_registry.clear()
+        isolated_registry.register(
+            "test_ruleset", ConcreteRuleset, ProcessingPurposeRule
+        )
 
-        assert "test_ruleset" in registry._registry  # type: ignore[attr-defined]
-        assert registry._registry["test_ruleset"] is ConcreteRuleset  # type: ignore[attr-defined]
+        assert "test_ruleset" in isolated_registry._registry  # type: ignore[attr-defined]
+        assert isolated_registry._registry["test_ruleset"] is ConcreteRuleset  # type: ignore[attr-defined]
 
-    def test_get_registered_ruleset_class(self):
+    def test_get_registered_ruleset_class(self, isolated_registry: RulesetRegistry):
         """Test retrieving a registered ruleset class."""
-        registry = RulesetRegistry()
-        registry.register("test_ruleset", ConcreteRuleset, ProcessingPurposeRule)
+        isolated_registry.clear()
+        isolated_registry.register(
+            "test_ruleset", ConcreteRuleset, ProcessingPurposeRule
+        )
 
-        retrieved_class = registry.get_ruleset_class(
+        retrieved_class = isolated_registry.get_ruleset_class(
             "test_ruleset", ProcessingPurposeRule
         )
 
         assert retrieved_class is ConcreteRuleset
 
-    def test_get_unregistered_ruleset_raises_error(self):
+    def test_get_unregistered_ruleset_raises_error(
+        self, isolated_registry: RulesetRegistry
+    ):
         """Test that getting an unregistered ruleset raises RulesetNotFoundError."""
-        registry = RulesetRegistry()
+        isolated_registry.clear()
 
         with pytest.raises(
             RulesetNotFoundError, match="Ruleset nonexistent not registered"
         ):
-            registry.get_ruleset_class("nonexistent", ProcessingPurposeRule)
+            isolated_registry.get_ruleset_class("nonexistent", ProcessingPurposeRule)
 
-    def test_multiple_registrations_maintain_state(self):
+    def test_multiple_registrations_maintain_state(
+        self, isolated_registry: RulesetRegistry
+    ):
         """Test that multiple registrations are maintained across singleton instances."""
-        registry1 = RulesetRegistry()
-        registry1.register("ruleset1", ConcreteRuleset, ProcessingPurposeRule)
-
-        registry2 = RulesetRegistry()
-        registry2.register("ruleset2", ConcreteRuleset, ProcessingPurposeRule)
+        isolated_registry.clear()
+        isolated_registry.register("ruleset1", ConcreteRuleset, ProcessingPurposeRule)
+        isolated_registry.register("ruleset2", ConcreteRuleset, ProcessingPurposeRule)
 
         # Both should have access to all registrations
         assert (
-            registry1.get_ruleset_class("ruleset1", ProcessingPurposeRule)
+            isolated_registry.get_ruleset_class("ruleset1", ProcessingPurposeRule)
             is ConcreteRuleset
         )
         assert (
-            registry1.get_ruleset_class("ruleset2", ProcessingPurposeRule)
-            is ConcreteRuleset
-        )
-        assert (
-            registry2.get_ruleset_class("ruleset1", ProcessingPurposeRule)
-            is ConcreteRuleset
-        )
-        assert (
-            registry2.get_ruleset_class("ruleset2", ProcessingPurposeRule)
+            isolated_registry.get_ruleset_class("ruleset2", ProcessingPurposeRule)
             is ConcreteRuleset
         )
 
-    def test_registry_prevents_duplicate_registration(self):
+    def test_registry_prevents_duplicate_registration(
+        self, isolated_registry: RulesetRegistry
+    ):
         """Test that registering the same name raises RulesetAlreadyRegisteredError."""
 
         class AnotherRuleset(AbstractRuleset[ProcessingPurposeRule]):
@@ -180,38 +171,33 @@ class TestRulesetRegistry:
             def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
                 return ()
 
-        registry = RulesetRegistry()
-        registry.register("test_name", ConcreteRuleset, ProcessingPurposeRule)
+        isolated_registry.clear()
+        isolated_registry.register("test_name", ConcreteRuleset, ProcessingPurposeRule)
 
         with pytest.raises(
             RulesetAlreadyRegisteredError,
             match="Ruleset 'test_name' is already registered",
         ):
-            registry.register("test_name", AnotherRuleset, ProcessingPurposeRule)
+            isolated_registry.register(
+                "test_name", AnotherRuleset, ProcessingPurposeRule
+            )
 
         # Verify original registration is preserved
-        retrieved_class = registry.get_ruleset_class("test_name", ProcessingPurposeRule)
+        retrieved_class = isolated_registry.get_ruleset_class(
+            "test_name", ProcessingPurposeRule
+        )
         assert retrieved_class is ConcreteRuleset
 
 
 class TestRulesetLoader:
     """Test cases for the RulesetLoader."""
 
-    def setup_method(self):
-        """Reset the singleton registry before each test."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-
-    def teardown_method(self):
-        """Clear registry after each test to prevent side effects."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-
-    def test_load_ruleset_uses_registry(self):
+    def test_load_ruleset_uses_registry(self, isolated_registry: RulesetRegistry):
         """Test that load_ruleset uses the singleton registry."""
-        # Register a ruleset
-        registry = RulesetRegistry()
-        registry.register("test_ruleset", ConcreteRuleset, ProcessingPurposeRule)
+        isolated_registry.clear()
+        isolated_registry.register(
+            "test_ruleset", ConcreteRuleset, ProcessingPurposeRule
+        )
 
         # Load the ruleset
         rules = RulesetLoader.load_ruleset("test_ruleset", ProcessingPurposeRule)
@@ -220,14 +206,20 @@ class TestRulesetLoader:
         assert len(rules) == 1
         assert rules[0].name == "test_rule"
 
-    def test_load_nonexistent_ruleset_raises_error(self):
+    def test_load_nonexistent_ruleset_raises_error(
+        self, isolated_registry: RulesetRegistry
+    ):
         """Test that loading a nonexistent ruleset raises RulesetNotFoundError."""
+        isolated_registry.clear()
+
         with pytest.raises(
             RulesetNotFoundError, match="Ruleset nonexistent not registered"
         ):
             RulesetLoader.load_ruleset("nonexistent", ProcessingPurposeRule)
 
-    def test_load_ruleset_creates_instance_with_correct_name(self):
+    def test_load_ruleset_creates_instance_with_correct_name(
+        self, isolated_registry: RulesetRegistry
+    ):
         """Test that load_ruleset creates ruleset instance with correct name."""
 
         class NameTrackingRuleset(AbstractRuleset[ProcessingPurposeRule]):
@@ -251,18 +243,22 @@ class TestRulesetLoader:
                     ),
                 )
 
-        registry = RulesetRegistry()
-        registry.register("name_tracking", NameTrackingRuleset, ProcessingPurposeRule)
+        isolated_registry.clear()
+        isolated_registry.register(
+            "name_tracking", NameTrackingRuleset, ProcessingPurposeRule
+        )
 
         rules = RulesetLoader.load_ruleset("name_tracking", ProcessingPurposeRule)
 
         assert len(rules) == 1
         assert rules[0].name == "rule_from_name_tracking"
 
-    def test_load_ruleset_is_classmethod(self):
+    def test_load_ruleset_is_classmethod(self, isolated_registry: RulesetRegistry):
         """Test that load_ruleset can be called as a class method."""
-        registry = RulesetRegistry()
-        registry.register("class_method_test", ConcreteRuleset, ProcessingPurposeRule)
+        isolated_registry.clear()
+        isolated_registry.register(
+            "class_method_test", ConcreteRuleset, ProcessingPurposeRule
+        )
 
         # Should be callable without instantiating RulesetLoader
         rules = RulesetLoader.load_ruleset("class_method_test", ProcessingPurposeRule)
@@ -274,17 +270,7 @@ class TestRulesetLoader:
 class TestRulesetIntegration:
     """Integration tests for ruleset components working together."""
 
-    def setup_method(self):
-        """Reset the singleton registry before each test."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-
-    def teardown_method(self):
-        """Clear registry after each test to prevent side effects."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-
-    def test_end_to_end_ruleset_workflow(self):
+    def test_end_to_end_ruleset_workflow(self, isolated_registry: RulesetRegistry):
         """Test the complete workflow from registration to loading."""
 
         # Define a custom ruleset
@@ -315,9 +301,8 @@ class TestRulesetIntegration:
                     ),
                 )
 
-        # Register the ruleset
-        registry = RulesetRegistry()
-        registry.register("custom_rules", CustomRuleset, ProcessingPurposeRule)
+        isolated_registry.clear()
+        isolated_registry.register("custom_rules", CustomRuleset, ProcessingPurposeRule)
 
         # Load the ruleset
         rules = RulesetLoader.load_ruleset("custom_rules", ProcessingPurposeRule)
@@ -338,7 +323,9 @@ class TestRulesetIntegration:
         assert rule1.risk_level == "high"
         assert rule1.purpose_category == "OPERATIONAL"
 
-    def test_ruleset_version_accessible_through_loader(self):
+    def test_ruleset_version_accessible_through_loader(
+        self, isolated_registry: RulesetRegistry
+    ):
         """Test that ruleset version is accessible after loading."""
 
         class VersionedRuleset(AbstractRuleset[ProcessingPurposeRule]):
@@ -361,11 +348,13 @@ class TestRulesetIntegration:
                     ),
                 )
 
-        registry = RulesetRegistry()
-        registry.register("versioned_rules", VersionedRuleset, ProcessingPurposeRule)
+        isolated_registry.clear()
+        isolated_registry.register(
+            "versioned_rules", VersionedRuleset, ProcessingPurposeRule
+        )
 
         # Create an instance to check version
-        ruleset_class = registry.get_ruleset_class(
+        ruleset_class = isolated_registry.get_ruleset_class(
             "versioned_rules", ProcessingPurposeRule
         )
         ruleset_instance = ruleset_class()

@@ -235,21 +235,17 @@ class TestProcessingPurposesRuleset:
 class TestProcessingPurposesIntegration:
     """Integration tests for ProcessingPurposesRuleset with other components."""
 
-    def teardown_method(self):
-        """Clear registry after each test to prevent side effects."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-
-    def test_ruleset_can_be_used_with_registry(self):
+    def test_ruleset_can_be_used_with_registry(
+        self, isolated_registry: RulesetRegistry
+    ):
         """Test that ProcessingPurposesRuleset works with the registry pattern."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-        registry.register(
+        isolated_registry.clear()
+        isolated_registry.register(
             "test_processing_purposes", ProcessingPurposesRuleset, ProcessingPurposeRule
         )
 
         # Should be able to retrieve and instantiate
-        ruleset_class = registry.get_ruleset_class(
+        ruleset_class = isolated_registry.get_ruleset_class(
             "test_processing_purposes", ProcessingPurposeRule
         )
         assert ruleset_class is ProcessingPurposesRuleset
@@ -258,11 +254,10 @@ class TestProcessingPurposesIntegration:
         assert isinstance(instance, ProcessingPurposesRuleset)
         assert instance.name == "processing_purposes"
 
-    def test_ruleset_loader_integration(self):
+    def test_ruleset_loader_integration(self, isolated_registry: RulesetRegistry):
         """Test that ProcessingPurposesRuleset works with RulesetLoader."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-        registry.register(
+        isolated_registry.clear()
+        isolated_registry.register(
             "loader_test", ProcessingPurposesRuleset, ProcessingPurposeRule
         )
 

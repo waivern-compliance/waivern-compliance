@@ -55,6 +55,6 @@ class TestGetProjectRoot:
         """
         root = get_project_root()
 
-        # Organisation config should be at root/config/organisation.yaml
-        org_config = root / "config" / "organisation.yaml"
+        # Organisation config should be at root/apps/wct/config/organisation.yaml
+        org_config = root / "apps" / "wct" / "config" / "organisation.yaml"
         assert org_config.exists()

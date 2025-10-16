@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from waivern_community.connectors.sqlite.connector import SQLiteConnector
+
 from wct.executor import Executor
 from wct.schemas import StandardInputSchema
 
@@ -175,7 +176,7 @@ class TestSQLiteE2EPipeline:
         executor = Executor.create_with_built_ins()
 
         # Use the existing LAMP_stack_lite.yaml runbook
-        runbook_path = Path("runbooks/samples/LAMP_stack_lite.yaml")
+        runbook_path = Path("apps/wct/runbooks/samples/LAMP_stack_lite.yaml")
         assert runbook_path.exists(), f"Runbook not found: {runbook_path}"
 
         # Execute the complete pipeline
@@ -195,7 +196,7 @@ class TestSQLiteE2EPipeline:
     def test_lamp_stack_lite_finds_expected_personal_data(self) -> None:
         """Runbook detects minimum expected personal data patterns."""
         executor = Executor.create_with_built_ins()
-        runbook_path = Path("runbooks/samples/LAMP_stack_lite.yaml")
+        runbook_path = Path("apps/wct/runbooks/samples/LAMP_stack_lite.yaml")
 
         results = executor.execute_runbook(runbook_path)
 
@@ -229,7 +230,7 @@ class TestSQLiteE2EPipeline:
     def test_lamp_stack_lite_finds_expected_processing_purposes(self) -> None:
         """Runbook detects expected processing purpose patterns."""
         executor = Executor.create_with_built_ins()
-        runbook_path = Path("runbooks/samples/LAMP_stack_lite.yaml")
+        runbook_path = Path("apps/wct/runbooks/samples/LAMP_stack_lite.yaml")
 
         results = executor.execute_runbook(runbook_path)
 

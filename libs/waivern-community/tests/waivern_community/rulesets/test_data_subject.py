@@ -315,23 +315,17 @@ class TestDataSubjectsRuleset:
 class TestDataSubjectsRulesetIntegration:
     """Integration tests for DataSubjectsRuleset with other components."""
 
-    def setup_method(self):
-        """Reset the singleton registry before each test."""
-        registry = RulesetRegistry()
-        registry.clear()
-
-    def teardown_method(self):
-        """Clear registry after each test to prevent side effects."""
-        registry = RulesetRegistry()
-        registry.clear()
-
-    def test_ruleset_can_be_used_with_registry(self):
+    def test_ruleset_can_be_used_with_registry(
+        self, isolated_registry: RulesetRegistry
+    ):
         """Test that DataSubjectsRuleset works with the registry pattern."""
-        registry = RulesetRegistry()
-        registry.register("test_data_subjects", DataSubjectsRuleset, DataSubjectRule)
+        isolated_registry.clear()
+        isolated_registry.register(
+            "test_data_subjects", DataSubjectsRuleset, DataSubjectRule
+        )
 
         # Should be able to retrieve and instantiate
-        ruleset_class = registry.get_ruleset_class(
+        ruleset_class = isolated_registry.get_ruleset_class(
             "test_data_subjects", DataSubjectRule
         )
         assert ruleset_class is DataSubjectsRuleset
@@ -340,10 +334,10 @@ class TestDataSubjectsRulesetIntegration:
         assert isinstance(instance, DataSubjectsRuleset)
         assert instance.name == "data_subjects"
 
-    def test_ruleset_loader_integration(self):
+    def test_ruleset_loader_integration(self, isolated_registry: RulesetRegistry):
         """Test that DataSubjectsRuleset works with RulesetLoader."""
-        registry = RulesetRegistry()
-        registry.register("loader_test", DataSubjectsRuleset, DataSubjectRule)
+        isolated_registry.clear()
+        isolated_registry.register("loader_test", DataSubjectsRuleset, DataSubjectRule)
 
         # Load via RulesetLoader
         rules = RulesetLoader.load_ruleset("loader_test", DataSubjectRule)

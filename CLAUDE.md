@@ -9,7 +9,7 @@ WCT supports environment variables for sensitive configuration data like databas
 **Quick Start:**
 1. Copy the example configuration: `cp apps/wct/.env.example apps/wct/.env`
 2. Edit `apps/wct/.env` with your actual credentials
-3. Run WCT: `uv run wct run runbooks/samples/file_content_analysis.yaml`
+3. Run WCT: `uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml`
 
 **Configuration Layers (highest to lowest priority):**
 1. System environment variables (production)
@@ -74,8 +74,8 @@ All WCT commands support logging configuration:
 - `--verbose` or `-v` - Shortcut for `--log-level DEBUG`
 
 Examples:
-- `uv run wct run runbooks/samples/file_content_analysis.yaml --log-level DEBUG` - Detailed debugging
-- `uv run wct run runbooks/samples/LAMP_stack.yaml -v` - Verbose output
+- `uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml --log-level DEBUG` - Detailed debugging
+- `uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml -v` - Verbose output
 - `uv run wct ls-connectors --log-level WARNING` - Minimal output
 
 ## Architecture Overview
@@ -128,16 +128,16 @@ execution:
 ## Runbooks Directory
 
 **Runbook Organization:**
-- **`runbooks/` directory** - Centralized location for all runbook configurations
-- **`runbooks/samples/` directory** - Sample runbooks for demonstration and learning
+- **`apps/wct/runbooks/` directory** - Centralized location for all runbook configurations
+- **`apps/wct/runbooks/samples/` directory** - Sample runbooks for demonstration and learning
   - **`file_content_analysis.yaml`** - Simple file analysis demonstration using personal data analyser
   - **`LAMP_stack.yaml`** - Comprehensive example demonstrating personal data and processing purpose analysis on MySQL and PHP source code
-- **`runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
+- **`apps/wct/runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
 
 **Available Sample Runbooks:**
-- **File content analysis**: `runbooks/samples/file_content_analysis.yaml` - Demonstrates personal data detection
-- **LAMP stack analysis**: `runbooks/samples/LAMP_stack.yaml` - Comprehensive analysis with both personal data and processing purpose detection on MySQL database and PHP source code
-- **Quick start**: Begin with `uv run wct run runbooks/samples/file_content_analysis.yaml -v`
+- **File content analysis**: `apps/wct/runbooks/samples/file_content_analysis.yaml` - Demonstrates personal data detection
+- **LAMP stack analysis**: `apps/wct/runbooks/samples/LAMP_stack.yaml` - Comprehensive analysis with both personal data and processing purpose detection on MySQL database and PHP source code
+- **Quick start**: Begin with `uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml -v`
 
 ## Project Structure Notes
 - Uses `uv` for dependency management with all dependencies included by default
@@ -146,10 +146,10 @@ execution:
 - Main package is `wct` located in `src/wct/`
 - Schema definitions in `src/wct/schemas/` (JSON Schema format)
 - **Ruleset architecture**: `src/wct/rulesets/data/{ruleset}/{version}/{ruleset}.yaml` - Versioned YAML configuration with Pydantic validation
-- Runbook configurations: `runbooks/` directory with scenario-based runbooks organized in `samples/` subdirectory
+- Runbook configurations: `apps/wct/runbooks/` directory with scenario-based runbooks organized in `apps/wct/runbooks/samples/` subdirectory
 - Sample configurations:
-  - `runbooks/samples/file_content_analysis.yaml` - Simple demonstration using personal data analyser
-  - `runbooks/samples/LAMP_stack.yaml` - Comprehensive multi-connector analysis
+  - `apps/wct/runbooks/samples/file_content_analysis.yaml` - Simple demonstration using personal data analyser
+  - `apps/wct/runbooks/samples/LAMP_stack.yaml` - Comprehensive multi-connector analysis
 
 ## Development Setup
 

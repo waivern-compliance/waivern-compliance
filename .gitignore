@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+src/
 .claude/
 CLAUDE.local.md
 

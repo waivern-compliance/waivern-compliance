@@ -183,7 +183,7 @@ def generate_schema(
 ) -> None:
     """Generate JSON schema for WCT runbooks."""
     if output is None:
-        output = Path("runbook.schema.json")
+        output = Path("apps") / "wct" / "runbook.schema.json"
 
     generate_schema_command(output, log_level)
 

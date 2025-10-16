@@ -153,17 +153,12 @@ class TestDataCollectionRuleset:
 class TestDataCollectionIntegration:
     """Integration tests for DataCollectionRuleset with other components."""
 
-    def teardown_method(self):
-        """Clear registry after each test to prevent side effects."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-
-    def test_ruleset_loader_integration(self):
+    def test_ruleset_loader_integration(self, isolated_registry: RulesetRegistry):
         """Test that DataCollectionRuleset works with RulesetLoader."""
-        registry = RulesetRegistry()
-        registry.clear()  # Use proper public API
-
-        registry.register("loader_test", DataCollectionRuleset, DataCollectionRule)
+        isolated_registry.clear()
+        isolated_registry.register(
+            "loader_test", DataCollectionRuleset, DataCollectionRule
+        )
 
         # Load via RulesetLoader
         rules = RulesetLoader.load_ruleset("loader_test", DataCollectionRule)
@@ -175,5 +170,3 @@ class TestDataCollectionIntegration:
         # Should have the same rules as direct instantiation
         direct_rules = DataCollectionRuleset().get_rules()
         assert len(rules) == len(direct_rules)
-
-        registry.clear()  # Clean up

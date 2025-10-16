@@ -172,31 +172,27 @@ class TestServiceIntegrationsRuleset:
 class TestServiceIntegrationsIntegration:
     """Integration tests for ServiceIntegrationsRuleset."""
 
-    def test_ruleset_can_be_used_with_registry(self) -> None:
+    def test_ruleset_can_be_used_with_registry(
+        self, isolated_registry: RulesetRegistry
+    ) -> None:
         """Test that the ruleset can be registered and retrieved."""
-        registry = RulesetRegistry()
-        registry.register(
+        isolated_registry.clear()
+        isolated_registry.register(
             "test_service_integrations",
             ServiceIntegrationsRuleset,
             ServiceIntegrationRule,
         )
 
-        retrieved_class = registry.get_ruleset_class(
+        retrieved_class = isolated_registry.get_ruleset_class(
             "test_service_integrations", ServiceIntegrationRule
         )
         assert retrieved_class == ServiceIntegrationsRuleset
-        registry.clear()
 
     def test_ruleset_loader_integration(self) -> None:
         """Test that ServiceIntegrationsRuleset works with RulesetLoader."""
-        # This should work since we register it in setup_method
-        registry = RulesetRegistry()
-        registry.register(
-            "service_integrations", ServiceIntegrationsRuleset, ServiceIntegrationRule
-        )
+        # Built-in ruleset is already registered, just test loading
         rules = RulesetLoader.load_ruleset(
             "service_integrations", ServiceIntegrationRule
         )
         assert isinstance(rules, tuple)
         assert len(rules) > 0
-        registry.clear()
