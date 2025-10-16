@@ -8,7 +8,7 @@ connectors:
   - name: "file_content_connector"
     type: "filesystem"
     properties:
-      path: "./apps/wct/tests/connectors/filesystem/filesystem_mock_lite"
+      path: "./libs/waivern-community/tests/waivern_community/connectors/filesystem/filesystem_mock_lite"
       exclude_patterns: ["*.pyc", "__pycache__"]
       max_files: 50
 

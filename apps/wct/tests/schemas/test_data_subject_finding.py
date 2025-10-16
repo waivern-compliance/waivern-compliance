@@ -1,6 +1,8 @@
 """Tests for DataSubjectFindingSchema."""
 
-from wct.schemas.data_subject_finding import DataSubjectFindingSchema
+from waivern_community.analysers.data_subject_analyser.schemas import (
+    DataSubjectFindingSchema,
+)
 
 # Version constant for easy maintenance
 EXPECTED_VERSION = "1.0.0"

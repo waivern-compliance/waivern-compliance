@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
     "waivern-llm",
+    "waivern-community[all]",
     "annotated-types>=0.7.0",
     "jsonschema>=4.25.0",
     "pydantic>=2.11.5",
@@ -14,10 +15,6 @@ dependencies = [
     "rich>=13.0.0",
     "typer>=0.16.0",
     "typing-extensions>=4.14.0",
-    "cryptography>=45.0.5",
-    "pymysql>=1.1.1",
-    "tree-sitter>=0.21.0",
-    "tree-sitter-php>=0.22.0",
 ]
 
 [project.scripts]

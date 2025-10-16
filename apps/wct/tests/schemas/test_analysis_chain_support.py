@@ -1,6 +1,6 @@
 """Tests for analysis chain tracking support in metadata for audit purposes."""
 
-from wct.schemas.types import AnalysisChainEntry, BaseAnalysisOutputMetadata
+from waivern_core.schemas import AnalysisChainEntry, BaseAnalysisOutputMetadata
 
 
 class TestAnalysisChainSupport:

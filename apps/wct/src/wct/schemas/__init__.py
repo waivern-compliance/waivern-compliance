@@ -1,33 +1,28 @@
-"""WCT Schemas - Strongly typed schema system.
+"""WCT Schemas - Re-exports for backwards compatibility.
 
-This module provides strongly typed schema classes that replace the generic
-concrete, type-safe schema definitions with unified interface.
+This module re-exports schemas from their new locations in waivern-core
+and waivern-community packages.
 
-All schemas support:
-- Versioned loading from json_schemas/{name}/{version}/ directories
-- Version validation ensuring loaded JSON matches requested version
-- Dependency injection through SchemaLoader protocol
-- Comprehensive caching for performance
-
-Available schemas:
-- StandardInputSchema: General input data format
-- SourceCodeSchema: Source code analysis format
-- PersonalDataFindingSchema: Personal data analysis results
-- ProcessingPurposeFindingSchema: GDPR processing purpose results
-- DataSubjectFindingSchema: Data subject classification results
+Note: This is a compatibility layer. New code should import directly from:
+- waivern_core.schemas for core schemas (StandardInputSchema, base types)
+- waivern_community.connectors.*.schemas for connector schemas
+- waivern_community.analysers.*.schemas for analyser output schemas
 """
 
-from waivern_core.schemas.base import (
-    JsonSchemaLoader,
-    Schema,
-    SchemaLoader,
-    SchemaLoadError,
+# Core schemas and base types (from waivern-core)
+# Analyser output schemas (from waivern-community analysers)
+from waivern_community.analysers.data_subject_analyser.schemas import (
+    DataSubjectFindingSchema,
+)
+from waivern_community.analysers.personal_data_analyser.schemas import (
+    PersonalDataFindingSchema,
+)
+from waivern_community.analysers.processing_purpose_analyser.schemas import (
+    ProcessingPurposeFindingSchema,
 )
 
-from .data_subject_finding import DataSubjectFindingSchema
-from .personal_data_finding import PersonalDataFindingSchema
-from .processing_purpose_finding import ProcessingPurposeFindingSchema
-from .source_code import (
+# Source code connector schema (from waivern-community)
+from waivern_community.connectors.source_code.schemas import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeClassModel,
     SourceCodeClassPropertyModel,
@@ -39,35 +34,44 @@ from .source_code import (
     SourceCodeImportModel,
     SourceCodeSchema,
 )
-from .standard_input import (
+from waivern_core.schemas import (
+    BaseFindingModel,
     BaseMetadata,
+    DataParsingError,
     FilesystemMetadata,
+    JsonSchemaLoader,
     RelationalDatabaseMetadata,
+    Schema,
+    SchemaLoader,
+    SchemaLoadError,
     StandardInputDataItemModel,
     StandardInputDataModel,
     StandardInputSchema,
+    parse_data_model,
 )
-from .types import BaseFindingModel
-from .validation import DataParsingError, parse_data_model
 
 __all__ = [
-    "Schema",
-    "SchemaLoader",
+    # Base infrastructure (from waivern-core)
     "JsonSchemaLoader",
+    "Schema",
     "SchemaLoadError",
+    "SchemaLoader",
+    # Base types and validation (from waivern-core)
     "BaseFindingModel",
-    "parse_data_model",
     "DataParsingError",
+    "parse_data_model",
+    # StandardInputSchema (from waivern-core)
     "StandardInputSchema",
-    "SourceCodeSchema",
-    "PersonalDataFindingSchema",
-    "ProcessingPurposeFindingSchema",
-    "DataSubjectFindingSchema",
     "StandardInputDataModel",
     "StandardInputDataItemModel",
     "BaseMetadata",
     "RelationalDatabaseMetadata",
     "FilesystemMetadata",
+    # Analyser output schemas (from waivern-community)
+    "PersonalDataFindingSchema",
+    "ProcessingPurposeFindingSchema",
+    "DataSubjectFindingSchema",
+    # SourceCodeSchema (from waivern-community)
     "SourceCodeSchema",
     "SourceCodeDataModel",
     "SourceCodeFileDataModel",

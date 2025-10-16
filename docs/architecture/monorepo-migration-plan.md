@@ -219,24 +219,73 @@ Breaking changes: None (import paths updated)"
 
 ---
 
-## Phase 3: Create waivern-community
+## Phase 3: Create waivern-community + Schema Architecture
 
-**Goal:** Move all built-in connectors/analysers/rulesets to community package
+**Goal:** Move all built-in connectors/analysers/rulesets to community package and establish clean schema architecture
+
+**Key Architectural Decision - Schema Ownership:**
+
+Following the principle "components own their data contracts":
+
+**waivern-core** (shared/standard schemas):
+- `StandardInputSchema` - Universal format used by MySQL, SQLite, Filesystem connectors
+- Base types and utilities (BaseFindingModel, validation utils)
+
+**waivern-community** (component-specific schemas):
+- `SourceCodeSchema` - Belongs with SourceCodeConnector (its only producer)
+- `PersonalDataFindingSchema` - Belongs with PersonalDataAnalyser (its output contract)
+- `ProcessingPurposeFindingSchema` - Belongs with ProcessingPurposeAnalyser
+- `DataSubjectFindingSchema` - Belongs with DataSubjectAnalyser
+
+**wct** (application-specific):
+- Runbook schemas (ExecutionStep, AnalyserConfig, ConnectorConfig)
+- Output formatting (AnalysisResult JSON serialization)
+
+**Rationale:**
+- **Shared formats → core**: StandardInputSchema is used by 3+ connectors
+- **Component-specific → with component**: Each connector/analyser owns its unique data format
+- **Self-contained components**: Import analyser, get its output schema automatically
+- **Enables third-party packages**: Can depend on waivern-core for shared schemas only
 
 **Tasks:**
 
-### 3.1: Create Package
+### 3.1: Create Package Structure
 
-Similar structure to waivern-llm with:
 ```
 libs/waivern-community/src/waivern_community/
 ├── connectors/      # mysql, sqlite, filesystem, source_code
-├── analysers/       # personal_data, processing_purpose
+│   └── source_code/
+│       └── schemas/ # SourceCodeSchema lives here
+├── analysers/       # personal_data, processing_purpose, data_subject
+│   ├── personal_data_analyser/
+│   │   └── schemas/ # PersonalDataFindingSchema lives here
+│   └── processing_purpose_analyser/
+│       └── schemas/ # ProcessingPurposeFindingSchema lives here
 ├── rulesets/        # All YAML rulesets
 └── prompts/         # All prompt templates
 ```
 
-### 3.2: Move Components
+### 3.2: Move Schemas to Correct Locations
+
+**To waivern-core:**
+```bash
+# Move shared schemas
+mv apps/wct/src/wct/schemas/standard_input.py libs/waivern-core/src/waivern_core/schemas/
+mv apps/wct/src/wct/schemas/{base.py,types.py,validation.py} libs/waivern-core/src/waivern_core/schemas/
+```
+
+**To waivern-community:**
+```bash
+# SourceCodeSchema stays with its connector
+# Finding schemas stay with their analysers
+mv apps/wct/src/wct/schemas/personal_data_finding.py \
+   libs/waivern-community/src/waivern_community/analysers/personal_data_analyser/schemas/
+
+mv apps/wct/src/wct/schemas/processing_purpose_finding.py \
+   libs/waivern-community/src/waivern_community/analysers/processing_purpose_analyser/schemas/
+```
+
+### 3.3: Move Components
 
 | Current | New |
 |---------|-----|
@@ -245,21 +294,28 @@ libs/waivern-community/src/waivern_community/
 | `apps/wct/src/wct/rulesets/` | `libs/waivern-community/src/waivern_community/rulesets/` |
 | `apps/wct/src/wct/prompts/` | `libs/waivern-community/src/waivern_community/prompts/` |
 
-### 3.3: Update Imports
+### 3.4: Update Imports
 
 ```python
-# Before
-from wct.connectors.mysql import MySQLConnector
-from wct.analysers.personal_data_analyser import PersonalDataAnalyser
+# Shared schema from waivern-core
+from waivern_core.schemas import StandardInputSchema
 
-# After
+# Component-specific schema from waivern-community
+from waivern_community.connectors.source_code.schemas import SourceCodeSchema
+from waivern_community.analysers.personal_data_analyser.schemas import PersonalDataFindingSchema
+
+# Components from waivern-community
 from waivern_community.connectors.mysql import MySQLConnector
-from waivern_community.analysers.personal_data import PersonalDataAnalyser
+from waivern_community.analysers.personal_data_analyser import PersonalDataAnalyser
 ```
 
-### 3.4: Verification & Commit
+### 3.5: Verification & Commit
 
-Same verification process as Phase 2.
+```bash
+uv sync
+uv run pytest
+./scripts/dev-checks.sh
+```
 
 ---
 

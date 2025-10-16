@@ -16,7 +16,7 @@ connectors:
   - name: "filesystem_mock_lite"
     type: "filesystem"
     properties:
-      path: "./apps/wct/tests/connectors/filesystem/filesystem_mock_lite"
+      path: "./libs/waivern-community/tests/waivern_community/connectors/filesystem/filesystem_mock_lite"
       exclude_patterns: ["README_lite.md"]
       max_files: 50
       encoding: "utf-8"

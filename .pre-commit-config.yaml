@@ -38,5 +38,5 @@ repos:
         language: system
         types: [python]
         # don't run on tests
-        exclude: ^(tests/|apps/wct/tests/|libs/waivern-core/tests/)
+        exclude: ^(tests/|apps/wct/tests/|libs/waivern-core/tests/|libs/waivern-community/tests/|libs/waivern-llm/tests/)
         pass_filenames: true

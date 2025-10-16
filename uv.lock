@@ -9,6 +9,7 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "waivern-community",
     "waivern-compliance-tool",
     "waivern-core",
     "waivern-llm",
@@ -1493,22 +1494,74 @@ wheels = [
 ]
 
 [[package]]
+name = "waivern-community"
+version = "0.1.0"
+source = { editable = "libs/waivern-community" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "typing-extensions" },
+    { name = "waivern-core" },
+    { name = "waivern-llm" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "cryptography" },
+    { name = "pymysql" },
+    { name = "tree-sitter" },
+    { name = "tree-sitter-php" },
+]
+mysql = [
+    { name = "cryptography" },
+    { name = "pymysql" },
+]
+source-code = [
+    { name = "tree-sitter" },
+    { name = "tree-sitter-php" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cryptography", marker = "extra == 'mysql'", specifier = ">=45.0.5" },
+    { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "pymysql", marker = "extra == 'mysql'", specifier = ">=1.1.1" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "tree-sitter", marker = "extra == 'source-code'", specifier = ">=0.21.0" },
+    { name = "tree-sitter-php", marker = "extra == 'source-code'", specifier = ">=0.22.0" },
+    { name = "typing-extensions", specifier = ">=4.14.0" },
+    { name = "waivern-community", extras = ["mysql", "source-code"], marker = "extra == 'all'", editable = "libs/waivern-community" },
+    { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-llm", editable = "libs/waivern-llm" },
+]
+provides-extras = ["mysql", "source-code", "all"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
+[[package]]
 name = "waivern-compliance-tool"
 version = "0.1.0"
 source = { editable = "apps/wct" }
 dependencies = [
     { name = "annotated-types" },
-    { name = "cryptography" },
     { name = "jsonschema" },
     { name = "pydantic" },
-    { name = "pymysql" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "rich" },
-    { name = "tree-sitter" },
-    { name = "tree-sitter-php" },
     { name = "typer" },
     { name = "typing-extensions" },
+    { name = "waivern-community", extra = ["all"] },
     { name = "waivern-core" },
     { name = "waivern-llm" },
 ]
@@ -1522,17 +1575,14 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.7.0" },
-    { name = "cryptography", specifier = ">=45.0.5" },
     { name = "jsonschema", specifier = ">=4.25.0" },
     { name = "pydantic", specifier = ">=2.11.5" },
-    { name = "pymysql", specifier = ">=1.1.1" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "rich", specifier = ">=13.0.0" },
-    { name = "tree-sitter", specifier = ">=0.21.0" },
-    { name = "tree-sitter-php", specifier = ">=0.22.0" },
     { name = "typer", specifier = ">=0.16.0" },
     { name = "typing-extensions", specifier = ">=4.14.0" },
+    { name = "waivern-community", extras = ["all"], editable = "libs/waivern-community" },
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-llm", editable = "libs/waivern-llm" },
 ]

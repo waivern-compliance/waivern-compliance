@@ -10,6 +10,7 @@ set -e
 wct_files=()
 core_files=()
 llm_files=()
+community_files=()
 
 for file in "$@"; do
     if [[ "$file" == apps/wct/* ]]; then
@@ -19,6 +20,8 @@ for file in "$@"; do
         core_files+=("${file#libs/waivern-core/}")
     elif [[ "$file" == libs/waivern-llm/* ]]; then
         llm_files+=("${file#libs/waivern-llm/}")
+    elif [[ "$file" == libs/waivern-community/* ]]; then
+        community_files+=("${file#libs/waivern-community/}")
     fi
 done
 
@@ -33,4 +36,8 @@ fi
 
 if [ ${#llm_files[@]} -gt 0 ]; then
     (cd libs/waivern-llm && ./scripts/lint.sh "${llm_files[@]}")
+fi
+
+if [ ${#community_files[@]} -gt 0 ]; then
+    (cd libs/waivern-community && ./scripts/lint.sh "${community_files[@]}")
 fi
