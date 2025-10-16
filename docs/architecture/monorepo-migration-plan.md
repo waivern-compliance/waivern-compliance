@@ -1,6 +1,6 @@
 # Waivern Compliance Framework - Monorepo Migration Plan
 
-**Status:** Phase 1 Complete, Phase 2 In Progress
+**Status:** Phase 2 Complete, Phase 3 Next
 **Created:** 2025-10-14
 **Updated:** 2025-10-16
 
@@ -11,13 +11,13 @@
 | Pre-Phase 1: Architectural Cleanup | ✅ Complete | 3-4 hours |
 | Phase 0: Pre-work | ✅ Complete | 1 hour |
 | Phase 1: Workspace + Quality Checks | ✅ Complete | 6-8 hours |
-| **Phase 2: Extract waivern-llm** | **🔄 In Progress** | **2-3 hours** |
-| Phase 3: Create waivern-community | Pending | 4-6 hours |
+| Phase 2: Extract waivern-llm | ✅ Complete | 2-3 hours |
+| **Phase 3: Create waivern-community** | **⏭️ Next** | **4-6 hours** |
 | Phase 4: Individual packages (optional) | Pending | 1-2 hours each |
 | Phase 5: Dynamic plugin loading | Pending | 3-4 hours |
 | Phase 6: Contribution infrastructure | Pending | 2-3 hours |
 
-**Completed:** 11-13 hours | **Remaining:** 7-13 hours
+**Completed:** 13-16 hours | **Remaining:** 9-15 hours
 
 ---
 
@@ -42,23 +42,36 @@ wct                  → CLI tool application
 See **[monorepo-migration-completed.md](./monorepo-migration-completed.md)** for full details.
 
 **Summary of completed phases:**
-- ✅ UV workspace with 2 packages (waivern-core, wct)
+- ✅ UV workspace with 3 packages (waivern-core, waivern-llm, wct)
 - ✅ Package-centric quality checks architecture
-- ✅ Framework independence (waivern-core has zero WCT dependencies)
-- ✅ 737 tests passing, all checks passing
+- ✅ Framework independence (waivern-core and waivern-llm have zero WCT dependencies)
+- ✅ Multi-provider LLM abstraction with lazy imports (Anthropic, OpenAI, Google)
+- ✅ App-specific configuration architecture (`.env` in apps/wct/)
+- ✅ 749 tests passing (including 12 integration tests), all checks passing
 
 ---
 
-## Phase 2: Extract waivern-llm (IN PROGRESS)
+## Phase 2: Extract waivern-llm (COMPLETE)
 
 **Goal:** Move LLM service to standalone package
 
-**Current state:**
-- LLM service at `apps/wct/src/wct/llm_service.py` (534 lines)
-- Tests at `apps/wct/tests/llm_service/`
-- Supports Anthropic, OpenAI, Google providers
+**Completed:**
+- ✅ Created `libs/waivern-llm/` package with focused module structure
+- ✅ Split monolithic `llm_service.py` (534 lines) into 6 focused modules
+- ✅ Moved 93 tests from `apps/wct/tests/llm_service/` to `libs/waivern-llm/tests/`
+- ✅ Updated all imports across codebase (`wct.llm_service` → `waivern_llm`)
+- ✅ Configured workspace and added waivern-llm dependency to wct
+- ✅ Updated pre-commit hooks for waivern-llm package
+- ✅ Moved `.env` to app-specific location (`apps/wct/.env`)
+- ✅ Created comprehensive configuration documentation
+- ✅ All 749 tests passing (including 12 integration tests with real APIs)
 
-**Tasks:**
+**Additional work completed:**
+- **Configuration architecture refactor:** Moved environment configuration from workspace root to application directory following 12-factor app principles
+- **Documentation:** Created `docs/configuration.md` with comprehensive configuration guide
+- **VS Code integration:** Updated `.vscode/settings.json` with correct schema and .env paths
+
+**Tasks (Reference):**
 
 ### 2.1: Create Package Structure
 
@@ -307,11 +320,12 @@ connectors:
 waivern-compliance/
 ├── pyproject.toml                    # Workspace config
 ├── libs/
-│   ├── waivern-core/                 # ✅ Done
-│   ├── waivern-llm/                  # 🔄 In Progress
-│   └── waivern-community/            # Pending
+│   ├── waivern-core/                 # ✅ Complete (Phase 1)
+│   ├── waivern-llm/                  # ✅ Complete (Phase 2)
+│   └── waivern-community/            # ⏭️ Next (Phase 3)
 └── apps/
-    └── wct/                          # ✅ Done (partially)
+    └── wct/                          # ✅ Complete (CLI app)
+        └── .env                      # App-specific configuration
 ```
 
 ---
@@ -319,16 +333,18 @@ waivern-compliance/
 ## Success Criteria
 
 **Phase 2 complete when:**
-- [ ] waivern-llm package created with proper structure
-- [ ] LLM service split into focused modules
-- [ ] All tests moved and passing
-- [ ] All imports updated
-- [ ] All quality checks passing
-- [ ] Committed to git
+- [x] waivern-llm package created with proper structure
+- [x] LLM service split into focused modules
+- [x] All tests moved and passing
+- [x] All imports updated
+- [x] All quality checks passing
+- [x] Committed to git
 
 **Full migration complete when:**
-- [ ] All packages in workspace
-- [ ] All tests passing (737+)
+- [x] waivern-core package extracted (Phase 1)
+- [x] waivern-llm package extracted (Phase 2)
+- [ ] waivern-community package created (Phase 3)
+- [ ] All tests passing (749+)
 - [ ] All quality checks passing
 - [ ] Documentation updated
 - [ ] Ready for publishing (when desired)
