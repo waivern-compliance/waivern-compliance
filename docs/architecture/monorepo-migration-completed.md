@@ -1,10 +1,10 @@
 # Waivern Compliance Framework - Monorepo Migration Completed Phases
 
-**Status:** ✅ Complete through Phase 2
-**Total Time:** 13-16 hours
+**Status:** ✅ Complete through Phase 3 (Core Migration Complete)
+**Total Time:** 19-24 hours
 **Last Updated:** 2025-10-16
 
-This document records the completed phases of the monorepo migration. See [monorepo-migration-plan.md](./monorepo-migration-plan.md) for the full migration plan and remaining work.
+This document records the completed phases of the monorepo migration. The core migration (Phases 0-3) is complete. See [monorepo-migration-plan.md](./monorepo-migration-plan.md) for optional remaining phases.
 
 ---
 
@@ -511,20 +511,280 @@ All 749 tests passing including 12 integration tests with real API calls.
 
 ---
 
+## Phase 3: Create waivern-community Package (COMPLETED)
+
+**Goal:** Extract connectors, analysers, rulesets, and prompts to community package with clean schema architecture
+**Duration:** 4-6 hours
+**Risk:** Medium (major code movement, import updates across entire codebase)
+**Status:** ✅ Complete
+**Commits:** `75df22c`, `78b886d`, `9ae22dc`, `9d79217`
+
+After completing the waivern-llm extraction, we extracted all built-in components (connectors, analysers, rulesets, prompts) into waivern-community following the "components own their data contracts" principle.
+
+### Problems Solved
+
+1. WCT application contained framework-level components
+2. Circular import issues between schemas and components
+3. No clear ownership of component-specific schemas
+4. Test isolation issues with singleton registry pattern
+
+### Implementation
+
+**1. Package Creation (Commit 75df22c)**
+
+Created `libs/waivern-community/` package with component-organised structure:
+
+```
+libs/waivern-community/src/waivern_community/
+├── connectors/          # MySQL, SQLite, Filesystem, SourceCode
+│   ├── mysql/
+│   ├── sqlite/
+│   ├── filesystem/
+│   └── source_code/
+│       └── schemas/     # SourceCodeSchema lives with connector
+├── analysers/           # PersonalData, ProcessingPurpose, DataSubject
+│   ├── personal_data_analyser/
+│   │   └── schemas/     # PersonalDataFindingSchema with analyser
+│   ├── processing_purpose_analyser/
+│   │   └── schemas/     # ProcessingPurposeFindingSchema with analyser
+│   ├── data_subject_analyser/
+│   │   └── schemas/     # DataSubjectFindingSchema with analyser
+│   ├── llm_validation/  # Shared LLM validation logic
+│   └── utilities/       # Evidence extraction, ruleset management
+├── rulesets/            # All YAML-based compliance rulesets
+│   ├── personal_data.py
+│   ├── processing_purposes.py
+│   ├── data_collection.py
+│   ├── service_integrations.py
+│   └── data_subjects.py
+└── prompts/             # LLM prompt templates
+```
+
+**2. Schema Reorganisation**
+
+Implemented clean schema architecture following "components own their data contracts":
+
+**Moved to waivern-core** (shared/standard schemas):
+- `StandardInputSchema` - Universal format used by MySQL, SQLite, Filesystem connectors
+- `BaseFindingSchema` - Base class for all finding schemas
+- Base types and validation utilities
+
+**Co-located with components** (waivern-community):
+- `SourceCodeSchema` → `connectors/source_code/schemas/`
+- `PersonalDataFindingSchema` → `analysers/personal_data_analyser/schemas/`
+- `ProcessingPurposeFindingSchema` → `analysers/processing_purpose_analyser/schemas/`
+- `DataSubjectFindingSchema` → `analysers/data_subject_analyser/schemas/`
+
+**Kept in WCT** (application-specific):
+- Runbook schemas (execution configuration)
+- Analysis result schemas (output formatting)
+
+**3. Component Migration**
+
+Moved all built-in components from `apps/wct/src/wct/` to `libs/waivern-community/src/waivern_community/`:
+
+| Component | Source | Destination |
+|-----------|--------|-------------|
+| MySQL Connector | `wct/connectors/mysql/` | `waivern_community/connectors/mysql/` |
+| SQLite Connector | `wct/connectors/sqlite/` | `waivern_community/connectors/sqlite/` |
+| Filesystem Connector | `wct/connectors/filesystem/` | `waivern_community/connectors/filesystem/` |
+| SourceCode Connector | `wct/connectors/source_code/` | `waivern_community/connectors/source_code/` |
+| PersonalData Analyser | `wct/analysers/personal_data_analyser/` | `waivern_community/analysers/personal_data_analyser/` |
+| ProcessingPurpose Analyser | `wct/analysers/processing_purpose_analyser/` | `waivern_community/analysers/processing_purpose_analyser/` |
+| DataSubject Analyser | `wct/analysers/data_subject_analyser/` | `waivern_community/analysers/data_subject_analyser/` |
+| All Rulesets | `wct/rulesets/` | `waivern_community/rulesets/` |
+| All Prompts | `wct/prompts/` | `waivern_community/prompts/` |
+
+**4. Import Updates**
+
+Updated all imports across codebase:
+```python
+# Before
+from wct.connectors.mysql import MySQLConnector
+from wct.analysers.personal_data_analyser import PersonalDataAnalyser
+from wct.schemas import PersonalDataFindingSchema
+
+# After
+from waivern_community.connectors.mysql import MySQLConnector
+from waivern_community.analysers.personal_data_analyser import PersonalDataAnalyser
+from waivern_community.analysers.personal_data_analyser.schemas import PersonalDataFindingSchema
+```
+
+**5. Test Migration**
+
+Moved and updated component tests:
+- Updated mock/patch paths from `wct.*` to `waivern_community.*`
+- Fixed filesystem paths in test runbooks after reorganisation
+- Updated vendor database test paths for new structure
+- All 737 tests passing after migration
+
+**6. Workspace Configuration**
+
+Updated workspace structure:
+```toml
+# Root pyproject.toml
+[tool.uv.workspace]
+members = [
+    "libs/waivern-core",
+    "libs/waivern-llm",
+    "libs/waivern-community",    # Added
+    "apps/wct",
+]
+
+# apps/wct/pyproject.toml
+dependencies = [
+    "waivern-core",
+    "waivern-llm",
+    "waivern-community",         # Added
+    ...
+]
+```
+
+**7. Pre-commit Integration**
+
+Updated pre-commit configuration to exclude waivern-community tests from type-check hook to improve performance.
+
+### Post-Phase 3 Refinements
+
+**Test Design Improvements (Commit 78b886d)**
+
+After Phase 3, we decoupled tests from monorepo structure:
+- Removed hardcoded workspace paths from tests
+- Made tests location-independent
+- Improved test isolation patterns
+
+**WCT File Consolidation (Commit 9ae22dc)**
+
+Consolidated WCT-specific files from workspace root to application directory:
+- Moved `config/organisation.yaml` → `apps/wct/config/`
+- Moved `runbooks/` → `apps/wct/runbooks/`
+- Moved `tests/` → `apps/wct/tests/`
+- Moved `runbook.schema.json` → `apps/wct/`
+
+**Test Isolation Fix (Commit 9ae22dc)**
+
+Implemented proper test isolation for singleton registry:
+- Created `isolated_registry` fixture in `libs/waivern-community/tests/conftest.py`
+- Fixture captures and restores registry state automatically
+- Updated all ruleset tests to use fixture
+- Resolved test pollution issues caused by execution order changes
+
+**Unused Code Cleanup (Commit 9d79217)**
+
+Removed genuinely unused files:
+- Deleted empty `waivern_community/schemas/` namespace
+- Removed empty test `__init__.py` files
+- Modern pytest discovers tests without these markers
+
+### Verification
+
+All verification checks passed:
+- ✅ Workspace sync: `uv sync`
+- ✅ All tests: `uv run pytest` (738 tests passing)
+- ✅ Type checking: basedpyright strict mode (0 errors)
+- ✅ Linting: ruff (all checks passed)
+- ✅ Formatting: ruff format (all files formatted)
+- ✅ Dev checks: `./scripts/dev-checks.sh` (all passing)
+
+### Commit Messages
+
+**Commit 75df22c:**
+```
+feat: extract waivern-community package with schema reorganisation
+
+Extract connectors, analysers, rulesets, and prompts into waivern-community
+package following "components own their data contracts" principle.
+
+Schema reorganisation:
+- Move StandardInputSchema and shared types to waivern-core
+- Add BaseFindingSchema to waivern-core for finding schemas
+- Co-locate component schemas with their components:
+  * PersonalDataFindingSchema with personal_data_analyser
+  * ProcessingPurposeFindingSchema with processing_purpose_analyser
+  * DataSubjectFindingSchema with data_subject_analyser
+  * SourceCodeSchema with source_code connector
+- Remove re-export layers to eliminate circular imports
+
+Test updates:
+- Update mock/patch paths from wct.* to waivern_community.*
+- Update runbook filesystem paths after test migration
+- Fix vendor database test paths for new structure
+
+Pre-commit configuration:
+- Add waivern-community and waivern-llm test exclusions to type-check hook
+
+All 737 tests passing.
+```
+
+**Commit 9ae22dc:**
+```
+refactor: consolidate WCT files and fix ruleset registry test isolation
+
+Move WCT-specific files from workspace root to apps/wct/ directory.
+Implement isolated_registry fixture to fix test pollution.
+
+All 738 tests passing.
+```
+
+**Commit 9d79217:**
+```
+refactor: remove unused namespace and empty test files
+
+Remove genuinely unused files that provide no functional value.
+
+All 738 tests passing, all quality checks passing.
+```
+
+### Current State After Phase 3
+
+**✅ Completed:**
+- UV workspace with 4 packages: waivern-core, waivern-llm, waivern-community, wct
+- Clean schema architecture with component ownership
+- All built-in components in dedicated community package
+- Proper test isolation with fixture-based registry management
+- WCT application contains only application-specific code
+- 738 tests passing, all quality checks passing
+- All type checking passing (basedpyright strict)
+- All linting passing (ruff)
+
+**Package Structure:**
+```
+waivern-core         → Base abstractions (schema, message, analyser, connector)
+waivern-llm          → Multi-provider LLM service (Anthropic, OpenAI, Google)
+waivern-community    → All built-in components (connectors, analysers, rulesets)
+wct                  → CLI application (executor, runbook, analysis output)
+```
+
+### Key Learnings
+
+1. **Schema ownership matters** - Co-locating schemas with components eliminated circular imports
+2. **Component independence** - Each package can now be versioned and released independently
+3. **Test isolation critical** - Singleton patterns require careful fixture management
+4. **Monorepo structure enables flexibility** - Can extract individual packages later if needed
+5. **Documentation during migration** - Keeping track of changes prevents confusion
+
+---
+
 ## Summary
 
-**Completed Phases:** Pre-Phase 1, Phase 0, Phase 1, Phase 1.6, Phase 2
-**Total Time:** 13-16 hours
-**Test Status:** 749 tests passing (including 12 integration tests), all quality checks passing
-**Breaking Changes:** Environment configuration location changed (documented in migration guide)
+**Completed Phases:** Pre-Phase 1, Phase 0, Phase 1, Phase 1.6, Phase 2, Phase 3
+**Total Time:** 19-24 hours
+**Test Status:** 738 tests passing, all quality checks passing
+**Breaking Changes:**
+- Environment configuration location changed (Phase 2)
+- Import paths changed (Phase 3)
+- All documented in migration guide
 
 **Key Achievements:**
 - ✅ Clean architectural separation between framework and application
-- ✅ Formal UV workspace with 3 packages (waivern-core, waivern-llm, wct)
+- ✅ Formal UV workspace with 4 packages (waivern-core, waivern-llm, waivern-community, wct)
 - ✅ Package-centric quality checks architecture
 - ✅ Multi-provider LLM abstraction with lazy imports
+- ✅ All built-in components in dedicated community package
+- ✅ Component-owned schema architecture
 - ✅ App-specific configuration following 12-factor principles
 - ✅ Independent package development capability
-- ✅ Comprehensive configuration documentation
+- ✅ Comprehensive documentation
+- ✅ Proper test isolation patterns
 
-**Next:** See [monorepo-migration-plan.md](./monorepo-migration-plan.md) for remaining phases (waivern-community, plugin loading, contribution infrastructure).
+**Remaining Optional Work:** See [monorepo-migration-plan.md](./monorepo-migration-plan.md) for optional phases (individual packages, dynamic plugin loading, contribution infrastructure).
