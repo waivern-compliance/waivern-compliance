@@ -1,11 +1,13 @@
 [tool.uv.workspace]
 members = [
     "libs/waivern-core",
+    "libs/waivern-llm",
     "apps/wct",
 ]
 
 [tool.uv.sources]
 waivern-core = { workspace = true }
+waivern-llm = { workspace = true }
 waivern-compliance-tool = { workspace = true }
 
 [project]

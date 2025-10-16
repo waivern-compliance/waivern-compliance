@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 import pytest
 from langchain_core.messages import AIMessage
 
-from wct.llm_service import AnthropicLLMService, LLMConfigurationError
+from waivern_llm import AnthropicLLMService, LLMConfigurationError
 
 
 class TestAnthropicLLMServiceInitialisation:
@@ -104,7 +104,7 @@ class TestAnthropicLLMServiceDataAnalysis:
 
         mock_response = AIMessage(content=expected_response)
 
-        with patch("wct.llm_service.ChatAnthropic") as mock_chat:
+        with patch("waivern_llm.anthropic.ChatAnthropic") as mock_chat:
             mock_llm = Mock()
             mock_llm.invoke.return_value = mock_response
             mock_chat.return_value = mock_llm
@@ -137,7 +137,7 @@ class TestAnthropicLLMServiceDataAnalysis:
             ]
         )
 
-        with patch("wct.llm_service.ChatAnthropic") as mock_chat:
+        with patch("waivern_llm.anthropic.ChatAnthropic") as mock_chat:
             mock_llm = Mock()
             mock_llm.invoke.return_value = mock_response
             mock_chat.return_value = mock_llm
@@ -163,7 +163,7 @@ class TestAnthropicLLMServiceReusability:
         mock_response1 = AIMessage(content="First response")
         mock_response2 = AIMessage(content="Second response")
 
-        with patch("wct.llm_service.ChatAnthropic") as mock_chat:
+        with patch("waivern_llm.anthropic.ChatAnthropic") as mock_chat:
             mock_llm = Mock()
             mock_llm.invoke.side_effect = [mock_response1, mock_response2]
             mock_chat.return_value = mock_llm

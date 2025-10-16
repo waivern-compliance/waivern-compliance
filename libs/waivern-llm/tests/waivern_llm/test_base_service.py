@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from wct.llm_service import AnthropicLLMService, BaseLLMService
+from waivern_llm import AnthropicLLMService, BaseLLMService
 
 
 class TestBaseLLMServiceAbstraction:

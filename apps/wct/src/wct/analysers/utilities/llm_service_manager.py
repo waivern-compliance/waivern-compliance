@@ -2,7 +2,7 @@
 
 import logging
 
-from wct.llm_service import BaseLLMService, LLMServiceError, LLMServiceFactory
+from waivern_llm import BaseLLMService, LLMServiceError, LLMServiceFactory
 
 logger = logging.getLogger(__name__)
 

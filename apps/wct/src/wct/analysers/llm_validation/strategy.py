@@ -5,8 +5,9 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
+from waivern_llm import BaseLLMService
+
 from wct.analysers.types import LLMValidationConfig
-from wct.llm_service import BaseLLMService
 
 from .decision_engine import ValidationDecisionEngine
 from .json_utils import extract_json_from_llm_response

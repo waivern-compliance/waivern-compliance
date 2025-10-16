@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from wct.llm_service import (
+from waivern_llm import (
     AnthropicLLMService,
     GoogleLLMService,
     LLMConfigurationError,
