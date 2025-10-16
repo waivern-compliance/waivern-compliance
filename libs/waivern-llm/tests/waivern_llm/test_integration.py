@@ -10,7 +10,7 @@ import os
 
 import pytest
 
-from wct.llm_service import AnthropicLLMService, GoogleLLMService, OpenAILLMService
+from waivern_llm import AnthropicLLMService, GoogleLLMService, OpenAILLMService
 
 
 class TestAnthropicLLMServiceRealApiIntegration:
@@ -129,7 +129,9 @@ class TestOpenAILLMServiceRealApiIntegration:
 
         # Skip if langchain-openai not installed
         try:
-            from langchain_openai import ChatOpenAI  # noqa: F401
+            from langchain_openai import (
+                ChatOpenAI,  # noqa: F401  # type: ignore[reportUnusedImport]
+            )
         except ImportError:
             pytest.skip(
                 "langchain-openai not installed - run: uv sync --group llm-openai"
@@ -161,7 +163,9 @@ class TestOpenAILLMServiceRealApiIntegration:
 
         # Skip if langchain-openai not installed
         try:
-            from langchain_openai import ChatOpenAI  # noqa: F401
+            from langchain_openai import (
+                ChatOpenAI,  # noqa: F401  # type: ignore[reportUnusedImport]
+            )
         except ImportError:
             pytest.skip(
                 "langchain-openai not installed - run: uv sync --group llm-openai"
@@ -196,7 +200,9 @@ class TestOpenAILLMServiceRealApiIntegration:
 
         # Skip if langchain-openai not installed
         try:
-            from langchain_openai import ChatOpenAI  # noqa: F401
+            from langchain_openai import (
+                ChatOpenAI,  # noqa: F401  # type: ignore[reportUnusedImport]
+            )
         except ImportError:
             pytest.skip(
                 "langchain-openai not installed - run: uv sync --group llm-openai"
@@ -229,7 +235,9 @@ class TestOpenAILLMServiceRealApiIntegration:
 
         # Skip if langchain-openai not installed
         try:
-            from langchain_openai import ChatOpenAI  # noqa: F401
+            from langchain_openai import (
+                ChatOpenAI,  # noqa: F401  # type: ignore[reportUnusedImport]
+            )
         except ImportError:
             pytest.skip(
                 "langchain-openai not installed - run: uv sync --group llm-openai"
@@ -264,7 +272,9 @@ class TestGoogleLLMServiceRealApiIntegration:
 
         # Skip if langchain-google-genai not installed
         try:
-            from langchain_google_genai import ChatGoogleGenerativeAI  # noqa: F401
+            from langchain_google_genai import (
+                ChatGoogleGenerativeAI,  # noqa: F401  # type: ignore[reportUnusedImport]
+            )
         except ImportError:
             pytest.skip(
                 "langchain-google-genai not installed - run: uv sync --group llm-google"
@@ -296,7 +306,9 @@ class TestGoogleLLMServiceRealApiIntegration:
 
         # Skip if langchain-google-genai not installed
         try:
-            from langchain_google_genai import ChatGoogleGenerativeAI  # noqa: F401
+            from langchain_google_genai import (
+                ChatGoogleGenerativeAI,  # noqa: F401  # type: ignore[reportUnusedImport]
+            )
         except ImportError:
             pytest.skip(
                 "langchain-google-genai not installed - run: uv sync --group llm-google"
@@ -331,7 +343,9 @@ class TestGoogleLLMServiceRealApiIntegration:
 
         # Skip if langchain-google-genai not installed
         try:
-            from langchain_google_genai import ChatGoogleGenerativeAI  # noqa: F401
+            from langchain_google_genai import (
+                ChatGoogleGenerativeAI,  # noqa: F401  # type: ignore[reportUnusedImport]
+            )
         except ImportError:
             pytest.skip(
                 "langchain-google-genai not installed - run: uv sync --group llm-google"
@@ -364,7 +378,9 @@ class TestGoogleLLMServiceRealApiIntegration:
 
         # Skip if langchain-google-genai not installed
         try:
-            from langchain_google_genai import ChatGoogleGenerativeAI  # noqa: F401
+            from langchain_google_genai import (
+                ChatGoogleGenerativeAI,  # noqa: F401  # type: ignore[reportUnusedImport]
+            )
         except ImportError:
             pytest.skip(
                 "langchain-google-genai not installed - run: uv sync --group llm-google"

@@ -4,6 +4,7 @@ import json
 from unittest.mock import Mock
 
 import pytest
+from waivern_llm import AnthropicLLMService
 
 from wct.analysers.personal_data_analyser.llm_validation_strategy import (
     personal_data_validation_strategy,
@@ -13,7 +14,6 @@ from wct.analysers.personal_data_analyser.types import (
     PersonalDataFindingModel,
 )
 from wct.analysers.types import LLMValidationConfig
-from wct.llm_service import AnthropicLLMService
 from wct.schemas.types import BaseFindingCompliance, BaseFindingEvidence
 
 

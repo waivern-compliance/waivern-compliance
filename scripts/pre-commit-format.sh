@@ -9,6 +9,7 @@ set -e
 # Group files by package
 wct_files=()
 core_files=()
+llm_files=()
 
 for file in "$@"; do
     if [[ "$file" == apps/wct/* ]]; then
@@ -16,6 +17,8 @@ for file in "$@"; do
         wct_files+=("${file#apps/wct/}")
     elif [[ "$file" == libs/waivern-core/* ]]; then
         core_files+=("${file#libs/waivern-core/}")
+    elif [[ "$file" == libs/waivern-llm/* ]]; then
+        llm_files+=("${file#libs/waivern-llm/}")
     fi
 done
 
@@ -26,4 +29,8 @@ fi
 
 if [ ${#core_files[@]} -gt 0 ]; then
     (cd libs/waivern-core && ./scripts/format.sh "${core_files[@]}")
+fi
+
+if [ ${#llm_files[@]} -gt 0 ]; then
+    (cd libs/waivern-llm && ./scripts/format.sh "${llm_files[@]}")
 fi

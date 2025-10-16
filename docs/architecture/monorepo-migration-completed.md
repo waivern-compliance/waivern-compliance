@@ -1,8 +1,8 @@
 # Waivern Compliance Framework - Monorepo Migration Completed Phases
 
-**Status:** ✅ Complete
-**Total Time:** 11-13 hours
-**Last Updated:** 2025-10-15
+**Status:** ✅ Complete through Phase 2
+**Total Time:** 13-16 hours
+**Last Updated:** 2025-10-16
 
 This document records the completed phases of the monorepo migration. See [monorepo-migration-plan.md](./monorepo-migration-plan.md) for the full migration plan and remaining work.
 
@@ -238,18 +238,293 @@ pre-commit behaviour.
 
 ---
 
+## Phase 2: Extract waivern-llm (COMPLETED)
+
+**Goal:** Move LLM service to standalone package with multi-provider support
+**Duration:** 2-3 hours
+**Risk:** Low (comprehensive test coverage)
+**Status:** ✅ Complete
+**Commits:** `d5f9124`, `d0d2a2d`
+
+After the workspace structure and quality checks were established, we extracted the LLM service abstraction into a standalone package following the LangChain pattern (`langchain-core`, `langchain-anthropic`, `langchain-openai`, `langchain-google-genai`).
+
+### Problems Solved
+
+1. LLM service was tightly coupled to WCT application
+2. Monolithic 534-line file mixing multiple providers
+3. Tests in WCT package instead of library package
+4. Configuration files scattered across workspace root
+
+### Implementation
+
+**1. Package Creation (Commit d5f9124)**
+
+Created `libs/waivern-llm/` package with focused module structure:
+
+```
+libs/waivern-llm/src/waivern_llm/
+├── __init__.py          # Public API exports
+├── errors.py            # LLM exceptions (LLMServiceError, LLMConfigurationError, LLMConnectionError)
+├── base.py              # BaseLLMService ABC
+├── anthropic.py         # AnthropicLLMService
+├── openai.py            # OpenAILLMService (lazy import)
+├── google.py            # GoogleLLMService (lazy import)
+└── factory.py           # LLMServiceFactory
+```
+
+**Key design decisions:**
+- **Lazy imports** for optional providers (OpenAI, Google) - only imports if package installed
+- **Dependency groups** in pyproject.toml: `openai`, `google`, `all` for flexible installation
+- **Anthropic default** included by default (required dependency)
+- **Zero WCT dependencies** - pure framework library
+
+**2. Module Split**
+
+Split monolithic `llm_service.py` (534 lines) into 6 focused modules:
+- `errors.py` (17 lines) - Exception hierarchy
+- `base.py` (38 lines) - Abstract base class
+- `anthropic.py` (79 lines) - Anthropic provider
+- `openai.py` (75 lines) - OpenAI provider with lazy import
+- `google.py` (75 lines) - Google provider with lazy import
+- `factory.py` (87 lines) - Provider factory with environment detection
+
+**3. Test Migration**
+
+Moved 93 tests from `apps/wct/tests/llm_service/` to `libs/waivern-llm/tests/waivern_llm/`:
+- `test_anthropic_service.py` - Anthropic provider unit tests
+- `test_openai_service.py` - OpenAI provider unit tests
+- `test_google_service.py` - Google provider unit tests
+- `test_factory.py` - Factory and provider selection tests
+- `test_integration.py` - 12 integration tests with real APIs (marked with `@pytest.mark.integration`)
+
+**Fixed test issues:**
+- Updated mock patch paths from `wct.llm_service.ChatAnthropic` to `waivern_llm.anthropic.ChatAnthropic`
+- Added `# type: ignore[reportUnusedImport]` for optional dependency checks
+- All 749 tests passing (including 12 real API integration tests)
+
+**4. Import Updates**
+
+Updated all imports across codebase:
+```python
+# Before
+from wct.llm_service import BaseLLMService, LLMServiceFactory
+
+# After
+from waivern_llm import BaseLLMService, LLMServiceFactory
+```
+
+**Files updated:**
+- `apps/wct/src/wct/analysers/utilities/llm_service_manager.py`
+- `apps/wct/src/wct/analysers/personal_data_analyser/llm_validation_strategy.py`
+- `apps/wct/src/wct/analysers/processing_purpose_analyser/llm_validation_strategy.py`
+- `apps/wct/src/wct/analysers/llm_validation/strategy.py`
+
+**5. Workspace Configuration**
+
+Updated workspace structure:
+```toml
+# Root pyproject.toml
+[tool.uv.workspace]
+members = [
+    "libs/waivern-core",
+    "libs/waivern-llm",    # Added
+    "apps/wct",
+]
+
+# apps/wct/pyproject.toml
+dependencies = [
+    "waivern-core",
+    "waivern-llm",         # Added
+    ...
+]
+```
+
+**6. Pre-commit Integration**
+
+Updated all three pre-commit wrapper scripts to process waivern-llm files:
+- `scripts/pre-commit-format.sh`
+- `scripts/pre-commit-lint.sh`
+- `scripts/pre-commit-type-check.sh`
+
+**7. Type Safety**
+
+Added `py.typed` marker file to indicate inline type annotations are available.
+
+### Configuration Architecture Refactor (Commit d0d2a2d)
+
+During Phase 2, we also refactored the configuration management to follow 12-factor app principles:
+
+**1. Environment Configuration Move**
+
+Moved `.env` files from workspace root to application directory:
+```
+Before: .env.example, .env (workspace root)
+After:  apps/wct/.env.example, apps/wct/.env
+```
+
+**Rationale:**
+- Applications own configuration, libraries read from environment
+- Supports multiple apps in monorepo with different configurations
+- Production uses system environment variables (no .env files)
+- Libraries (waivern-core, waivern-llm) have NO .env files
+
+**2. Configuration Layers**
+
+Established clear precedence (highest to lowest):
+1. System environment variables (production)
+2. Application `.env` file (`apps/wct/.env` for local development)
+3. Runbook properties (YAML configuration)
+4. Code defaults (fallback values)
+
+**3. Code Updates**
+
+Updated `apps/wct/src/wct/__main__.py` to load from app directory:
+```python
+# Load environment variables from .env file in wct app directory
+_wct_app_dir = Path(__file__).parent.parent.parent
+load_dotenv(_wct_app_dir / ".env")
+```
+
+Updated `tests/conftest.py` to load from app directory for integration tests:
+```python
+# Load from WCT app's .env since that's where API keys live
+env_file = Path(__file__).parent.parent / "apps" / "wct" / ".env"
+if env_file.exists():
+    load_dotenv(env_file)
+```
+
+**4. Documentation**
+
+Created comprehensive `docs/configuration.md` (300+ lines) covering:
+- Quick start guide
+- Configuration architecture explanation
+- Environment variables documentation
+- Development vs production setup patterns
+- Security best practices
+- Package-specific configuration
+- Troubleshooting guide
+
+Updated `CLAUDE.md` with new configuration approach.
+
+**5. VS Code Integration**
+
+Updated `.vscode/settings.json` with correct paths after monorepo migration:
+- Schema path: `./apps/wct/src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json`
+- Env file: `${workspaceFolder}/apps/wct/.env`
+
+### Verification
+
+All verification checks passed:
+- ✅ Workspace sync: `uv sync`
+- ✅ All unit tests: `uv run pytest` (749 tests passing)
+- ✅ Integration tests: `uv run pytest -m integration` (12 real API tests passing)
+- ✅ Type checking: basedpyright strict mode (0 errors)
+- ✅ Linting: ruff (all checks passed)
+- ✅ Formatting: ruff format (all files formatted)
+- ✅ Dev checks: `./scripts/dev-checks.sh` (all passing)
+
+### Commit Messages
+
+**Commit d5f9124:**
+```
+refactor: extract waivern-llm as standalone package
+
+Move multi-provider LLM service abstraction to separate package following
+LangChain's proven monorepo pattern (langchain-core, langchain-anthropic,
+langchain-openai, langchain-google-genai).
+
+Changes:
+- Create libs/waivern-llm/ package with focused module structure
+- Split monolithic llm_service.py (534 lines) into 6 focused modules
+- Move 93 tests from apps/wct/tests/llm_service/ to libs/waivern-llm/tests/
+- Update all imports across codebase (wct.llm_service → waivern_llm)
+- Add waivern-llm to workspace members and wct dependencies
+- Update pre-commit hooks to process waivern-llm files
+- Add py.typed marker for type safety
+
+Key features:
+- Lazy imports for optional providers (OpenAI, Google)
+- Dependency groups: openai, google, all
+- Anthropic included by default
+- Zero WCT dependencies - pure framework library
+
+Test results:
+- 749 tests passing (including 12 integration tests with real APIs)
+- Type checking: 0 errors (strict mode)
+- Linting: all checks passed
+```
+
+**Commit d0d2a2d:**
+```
+refactor: move .env to app-specific location and update configuration architecture
+
+BREAKING CHANGE: Environment configuration moved from workspace root to application directory
+
+- Move .env.example and .env from root to apps/wct/ for app-specific configuration
+- Update load_dotenv() in __main__.py to load from wct app directory
+- Fix tests/conftest.py to load .env from apps/wct/ for integration tests
+- Update .vscode/settings.json with correct schema and .env paths after monorepo migration
+- Create comprehensive docs/configuration.md covering:
+  - Configuration architecture and layering (12-factor app principles)
+  - Development vs production setup patterns
+  - Security best practices
+  - Package-specific configuration documentation
+  - Troubleshooting guide
+- Update CLAUDE.md with new configuration approach and quick start guide
+
+Configuration follows industry best practices:
+1. System environment variables (production)
+2. Application .env files (local development)
+3. Runbook properties (YAML configuration)
+4. Code defaults (fallback values)
+
+Libraries (waivern-core, waivern-llm) have no .env files and read from environment,
+allowing flexible deployment patterns and clear separation of concerns.
+
+All 749 tests passing including 12 integration tests with real API calls.
+```
+
+### Current State After Phase 2
+
+**✅ Completed:**
+- UV workspace with 3 packages: waivern-core, waivern-llm, wct
+- Multi-provider LLM abstraction with lazy imports
+- App-specific configuration architecture (`.env` in apps/wct/)
+- Comprehensive configuration documentation
+- 749 tests passing (including 12 integration tests)
+- All type checking passing (basedpyright strict)
+- All linting passing (ruff)
+
+**WCT Files Still Using waivern-llm (to be moved in Phase 3):**
+- `llm_service_manager.py` - Will move to waivern-community with analysers
+- `analysers/personal_data_analyser/llm_validation_strategy.py`
+- `analysers/processing_purpose_analyser/llm_validation_strategy.py`
+- `analysers/llm_validation/strategy.py`
+
+### Key Learnings
+
+1. **Lazy imports work well** for optional providers - users can install only what they need
+2. **Configuration layering is powerful** - system env → app .env → runbook → defaults
+3. **Integration test coverage is critical** - 12 real API tests caught environment loading issues
+4. **Monorepo documentation needs structure** - created dedicated configuration guide
+5. **VS Code integration matters** - schema paths must be updated after file moves
+
+---
+
 ## Summary
 
-**Completed Phases:** Pre-Phase 1, Phase 0, Phase 1, Phase 1.6
-**Total Time:** 11-13 hours
-**Test Status:** 737 tests passing, all quality checks passing
-**Breaking Changes:** None
+**Completed Phases:** Pre-Phase 1, Phase 0, Phase 1, Phase 1.6, Phase 2
+**Total Time:** 13-16 hours
+**Test Status:** 749 tests passing (including 12 integration tests), all quality checks passing
+**Breaking Changes:** Environment configuration location changed (documented in migration guide)
 
 **Key Achievements:**
 - ✅ Clean architectural separation between framework and application
-- ✅ Formal UV workspace with 2 packages (waivern-core, wct)
+- ✅ Formal UV workspace with 3 packages (waivern-core, waivern-llm, wct)
 - ✅ Package-centric quality checks architecture
+- ✅ Multi-provider LLM abstraction with lazy imports
+- ✅ App-specific configuration following 12-factor principles
 - ✅ Independent package development capability
-- ✅ Zero breaking changes to external APIs
+- ✅ Comprehensive configuration documentation
 
-**Next:** See [monorepo-migration-plan.md](./monorepo-migration-plan.md) for remaining phases (waivern-llm, waivern-community, plugin loading).
+**Next:** See [monorepo-migration-plan.md](./monorepo-migration-plan.md) for remaining phases (waivern-community, plugin loading, contribution infrastructure).

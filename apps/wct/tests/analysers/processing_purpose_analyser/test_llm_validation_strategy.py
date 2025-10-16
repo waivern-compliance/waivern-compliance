@@ -3,6 +3,8 @@
 import json
 from unittest.mock import Mock
 
+from waivern_llm import AnthropicLLMService
+
 from wct.analysers.processing_purpose_analyser.llm_validation_strategy import (
     processing_purpose_validation_strategy,
 )
@@ -11,7 +13,6 @@ from wct.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeFindingModel,
 )
 from wct.analysers.types import LLMValidationConfig
-from wct.llm_service import AnthropicLLMService
 from wct.schemas.types import BaseFindingCompliance, BaseFindingEvidence
 
 

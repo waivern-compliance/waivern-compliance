@@ -9,8 +9,9 @@ This module tests the public API of LLMServiceManager, focusing on:
 
 from unittest.mock import Mock, patch
 
+from waivern_llm import AnthropicLLMService, LLMServiceError
+
 from wct.analysers.utilities.llm_service_manager import LLMServiceManager
-from wct.llm_service import AnthropicLLMService, LLMServiceError
 
 
 class TestLLMServiceManagerInitialisation:

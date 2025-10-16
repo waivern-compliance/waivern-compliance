@@ -3,11 +3,12 @@
 import logging
 from typing import Any, override
 
+from waivern_llm import BaseLLMService
+
 from wct.analysers.llm_validation import (
     LLMValidationStrategy,
 )
 from wct.analysers.types import LLMValidationConfig
-from wct.llm_service import BaseLLMService
 from wct.prompts.personal_data_validation import get_batch_validation_prompt
 
 from .types import PersonalDataFindingModel

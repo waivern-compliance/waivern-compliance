@@ -10,7 +10,7 @@
     "python.analysis.extraPaths": [
         "${workspaceFolder}/src"
     ],
-    "python.envFile": "${workspaceFolder}/.env",
+    "python.envFile": "${workspaceFolder}/apps/wct/.env",
     "terminal.integrated.env.osx": {
         "PYTHONPATH": "${workspaceFolder}/src"
     },
@@ -21,7 +21,7 @@
         "PYTHONPATH": "${workspaceFolder}/src"
     },
     "yaml.schemas": {
-        "./src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json": "runbooks/**/*.yaml"
+        "./apps/wct/src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json": "runbooks/**/*.yaml"
     },
     "yaml.format.enable": true,
     "yaml.validate": true,
