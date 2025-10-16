@@ -222,120 +222,14 @@ Breaking changes: None (import paths updated)"
 
 ---
 
-## Phase 3: Create waivern-community + Schema Architecture (COMPLETE)
+## Phase 3: Create waivern-community (COMPLETE)
 
 **Goal:** Move all built-in connectors/analysers/rulesets to community package and establish clean schema architecture
 **Status:** ✅ Complete
+**Duration:** 4-6 hours
 **Commits:** `75df22c`, `78b886d`, `9ae22dc`, `9d79217`
 
-See [monorepo-migration-completed.md](./monorepo-migration-completed.md#phase-3-create-waivern-community-package-completed) for full details.
-
-**Completed:**
-- ✅ Created `libs/waivern-community/` package with component-organised structure
-- ✅ Implemented "components own their data contracts" schema architecture
-- ✅ Moved all connectors, analysers, rulesets, and prompts to community package
-- ✅ Co-located component-specific schemas with their components
-- ✅ Updated all imports across codebase
-- ✅ Migrated and updated all component tests
-- ✅ Fixed test isolation issues with singleton registry
-- ✅ Consolidated WCT files from workspace root to app directory
-- ✅ All 738 tests passing, all quality checks passing
-
-**Tasks (Reference):**
-
-**Key Architectural Decision - Schema Ownership:**
-
-Following the principle "components own their data contracts":
-
-**waivern-core** (shared/standard schemas):
-- `StandardInputSchema` - Universal format used by MySQL, SQLite, Filesystem connectors
-- Base types and utilities (BaseFindingModel, validation utils)
-
-**waivern-community** (component-specific schemas):
-- `SourceCodeSchema` - Belongs with SourceCodeConnector (its only producer)
-- `PersonalDataFindingSchema` - Belongs with PersonalDataAnalyser (its output contract)
-- `ProcessingPurposeFindingSchema` - Belongs with ProcessingPurposeAnalyser
-- `DataSubjectFindingSchema` - Belongs with DataSubjectAnalyser
-
-**wct** (application-specific):
-- Runbook schemas (ExecutionStep, AnalyserConfig, ConnectorConfig)
-- Output formatting (AnalysisResult JSON serialization)
-
-**Rationale:**
-- **Shared formats → core**: StandardInputSchema is used by 3+ connectors
-- **Component-specific → with component**: Each connector/analyser owns its unique data format
-- **Self-contained components**: Import analyser, get its output schema automatically
-- **Enables third-party packages**: Can depend on waivern-core for shared schemas only
-
-**Tasks:**
-
-### 3.1: Create Package Structure
-
-```
-libs/waivern-community/src/waivern_community/
-├── connectors/      # mysql, sqlite, filesystem, source_code
-│   └── source_code/
-│       └── schemas/ # SourceCodeSchema lives here
-├── analysers/       # personal_data, processing_purpose, data_subject
-│   ├── personal_data_analyser/
-│   │   └── schemas/ # PersonalDataFindingSchema lives here
-│   └── processing_purpose_analyser/
-│       └── schemas/ # ProcessingPurposeFindingSchema lives here
-├── rulesets/        # All YAML rulesets
-└── prompts/         # All prompt templates
-```
-
-### 3.2: Move Schemas to Correct Locations
-
-**To waivern-core:**
-```bash
-# Move shared schemas
-mv apps/wct/src/wct/schemas/standard_input.py libs/waivern-core/src/waivern_core/schemas/
-mv apps/wct/src/wct/schemas/{base.py,types.py,validation.py} libs/waivern-core/src/waivern_core/schemas/
-```
-
-**To waivern-community:**
-```bash
-# SourceCodeSchema stays with its connector
-# Finding schemas stay with their analysers
-mv apps/wct/src/wct/schemas/personal_data_finding.py \
-   libs/waivern-community/src/waivern_community/analysers/personal_data_analyser/schemas/
-
-mv apps/wct/src/wct/schemas/processing_purpose_finding.py \
-   libs/waivern-community/src/waivern_community/analysers/processing_purpose_analyser/schemas/
-```
-
-### 3.3: Move Components
-
-| Current | New |
-|---------|-----|
-| `apps/wct/src/wct/connectors/` | `libs/waivern-community/src/waivern_community/connectors/` |
-| `apps/wct/src/wct/analysers/` | `libs/waivern-community/src/waivern_community/analysers/` |
-| `apps/wct/src/wct/rulesets/` | `libs/waivern-community/src/waivern_community/rulesets/` |
-| `apps/wct/src/wct/prompts/` | `libs/waivern-community/src/waivern_community/prompts/` |
-
-### 3.4: Update Imports
-
-```python
-# Shared schema from waivern-core
-from waivern_core.schemas import StandardInputSchema
-
-# Component-specific schema from waivern-community
-from waivern_community.connectors.source_code.schemas import SourceCodeSchema
-from waivern_community.analysers.personal_data_analyser.schemas import PersonalDataFindingSchema
-
-# Components from waivern-community
-from waivern_community.connectors.mysql import MySQLConnector
-from waivern_community.analysers.personal_data_analyser import PersonalDataAnalyser
-```
-
-### 3.5: Verification & Commit
-
-```bash
-uv sync
-uv run pytest
-./scripts/dev-checks.sh
-```
+See **[monorepo-migration-completed.md](./monorepo-migration-completed.md#phase-3-create-waivern-community-package-completed)** for full implementation details, schema architecture decisions, and commit messages.
 
 ---
 
