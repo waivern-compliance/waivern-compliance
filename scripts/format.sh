@@ -10,4 +10,5 @@ set -e
 (cd apps/wct && ./scripts/format.sh "$@")
 (cd libs/waivern-core && ./scripts/format.sh "$@")
 (cd libs/waivern-llm && ./scripts/format.sh "$@")
+(cd libs/waivern-connectors-database && ./scripts/format.sh "$@")
 (cd libs/waivern-community && ./scripts/format.sh "$@")

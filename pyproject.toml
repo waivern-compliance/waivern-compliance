@@ -2,6 +2,7 @@
 members = [
     "libs/waivern-core",
     "libs/waivern-llm",
+    "libs/waivern-connectors-database",
     "libs/waivern-community",
     "apps/wct",
 ]
@@ -9,6 +10,7 @@ members = [
 [tool.uv.sources]
 waivern-core = { workspace = true }
 waivern-llm = { workspace = true }
+waivern-connectors-database = { workspace = true }
 waivern-community = { workspace = true }
 waivern-compliance-tool = { workspace = true }
 

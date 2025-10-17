@@ -242,7 +242,7 @@ See **[monorepo-migration-completed.md](./monorepo-migration-completed.md#phase-
 
 **Example:** Extract `waivern-mysql` from `waivern-community`
 
-Keep community package as re-export for backward compatibility.
+**Note:** No backward compatibility needed - this is a full refactoring where import paths will be updated directly.
 
 ---
 

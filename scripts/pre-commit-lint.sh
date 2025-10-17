@@ -10,6 +10,7 @@ set -e
 wct_files=()
 core_files=()
 llm_files=()
+connectors_database_files=()
 community_files=()
 
 for file in "$@"; do
@@ -20,6 +21,8 @@ for file in "$@"; do
         core_files+=("${file#libs/waivern-core/}")
     elif [[ "$file" == libs/waivern-llm/* ]]; then
         llm_files+=("${file#libs/waivern-llm/}")
+    elif [[ "$file" == libs/waivern-connectors-database/* ]]; then
+        connectors_database_files+=("${file#libs/waivern-connectors-database/}")
     elif [[ "$file" == libs/waivern-community/* ]]; then
         community_files+=("${file#libs/waivern-community/}")
     fi
@@ -36,6 +39,10 @@ fi
 
 if [ ${#llm_files[@]} -gt 0 ]; then
     (cd libs/waivern-llm && ./scripts/lint.sh "${llm_files[@]}")
+fi
+
+if [ ${#connectors_database_files[@]} -gt 0 ]; then
+    (cd libs/waivern-connectors-database && ./scripts/lint.sh "${connectors_database_files[@]}")
 fi
 
 if [ ${#community_files[@]} -gt 0 ]; then
