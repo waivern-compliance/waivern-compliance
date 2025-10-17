@@ -2,7 +2,7 @@
 
 import dataclasses
 
-from wct.schemas.source_code import SourceCodeSchema
+from waivern_community.connectors.source_code.schemas import SourceCodeSchema
 
 # Version constant for easy maintenance
 EXPECTED_VERSION = "1.0.0"

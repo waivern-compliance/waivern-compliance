@@ -29,8 +29,8 @@ Create or update `.vscode/settings.json` in your project root:
 ```json
 {
   "yaml.schemas": {
-    "./runbook.schema.json": "runbooks/**/*.yaml",
-    "./src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json": "runbooks/**/*.yaml"
+    "./runbook.schema.json": "apps/wct/runbooks/**/*.yaml",
+    "./src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json": "apps/wct/runbooks/**/*.yaml"
   },
   "yaml.format.enable": true,
   "yaml.validate": true,
@@ -63,7 +63,7 @@ description: "Personal data detection across filesystem and database"
 ```json
 {
   "yaml.schemas": {
-    "/absolute/path/to/runbook.schema.json": "runbooks/**/*.yaml"
+    "/absolute/path/to/runbook.schema.json": "apps/wct/runbooks/**/*.yaml"
   }
 }
 ```
@@ -135,7 +135,7 @@ With [`lsp-mode`](https://github.com/emacs-lsp/lsp-mode) and [`yaml-language-ser
 ```elisp
 ;; In your Emacs configuration
 (add-to-list 'lsp-yaml-schemas
-  '("/absolute/path/to/runbook.schema.json" . ["runbooks/*.yaml" "runbooks/*.yml"]))
+  '("/absolute/path/to/runbook.schema.json" . ["apps/wct/runbooks/*.yaml" "apps/wct/runbooks/*.yml"]))
 ```
 
 ## Schema Management

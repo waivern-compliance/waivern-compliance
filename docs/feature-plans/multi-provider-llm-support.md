@@ -280,10 +280,10 @@ This document outlines the plan for adding multi-provider LLM support to WCT, br
 **Mergeable:** ✅ Documentation/example only
 
 **Changes:**
-- Create `runbooks/samples/multi_provider_example.yaml`
+- Create `apps/wct/runbooks/samples/multi_provider_example.yaml`
 - Demonstrate mixed providers (e.g., Claude + OpenAI)
 - Add comprehensive comments explaining optimization
-- Update `runbooks/README.md` with explanation
+- Update `apps/wct/runbooks/README.md` with explanation
 
 **Test Strategy:**
 - Manually run with Anthropic only (fallback works)

@@ -4,8 +4,7 @@ import unittest.mock
 
 import pytest
 from pydantic import BaseModel
-
-from wct.schemas.validation import DataParsingError, parse_data_model
+from waivern_core.schemas import DataParsingError, parse_data_model
 
 
 class SimpleTestModel(BaseModel):

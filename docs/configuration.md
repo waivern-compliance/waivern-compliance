@@ -23,7 +23,7 @@ This guide explains how to configure the Waivern Compliance Tool and its depende
 
 3. Run WCT:
    ```bash
-   uv run wct run runbooks/samples/file_content_analysis.yaml
+   uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml
    ```
 
 ## Configuration Architecture
@@ -299,7 +299,7 @@ Documentation coming in Phase 3 (after migration).
 
 ## Additional Resources
 
-- **Runbooks:** See `runbooks/README.md` for runbook configuration
+- **Runbooks:** See `apps/wct/runbooks/README.md` for runbook configuration
 - **LLM Providers:** See `libs/waivern-llm/README.md` for provider setup
 - **Database Connectors:** See connector documentation in `apps/wct/src/wct/connectors/`
 - **12-Factor App:** https://12factor.net/config

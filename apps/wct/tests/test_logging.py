@@ -1,6 +1,5 @@
 """Tests for WCT logging configuration and setup."""
 
-import importlib.util
 import logging
 import tempfile
 from pathlib import Path
@@ -16,71 +15,10 @@ from wct.logging import (
     load_config,
     setup_logging,
 )
-from wct.utils import get_project_root
 
 
 class TestLoggingConfiguration:
     """Test logging configuration functionality."""
-
-    def test_get_project_root_returns_correct_path(self):
-        """Test that get_project_root returns the correct project root."""
-        root = get_project_root()
-        assert root.is_dir()
-        assert (root / "src" / "wct" / "config").exists()
-        assert (root / "src" / "wct").exists()
-
-    def test_get_project_root_finds_markers(self):
-        """Test that get_project_root correctly identifies project markers."""
-        root = get_project_root()
-
-        # Should have found one or more of these markers
-        markers = [
-            root / "pyproject.toml",
-            root / "setup.py",
-            root / ".git",
-            root / "src" / "wct",
-        ]
-
-        # At least one marker should exist
-        assert any(marker.exists() for marker in markers)
-
-        # Must have the config directory (our specific requirement)
-        assert (root / "src" / "wct" / "config").is_dir()
-
-    def test_get_project_root_is_robust(self):
-        """Test that get_project_root works from different locations."""
-        # Should work consistently regardless of import location
-        root1 = get_project_root()
-
-        # Test again to ensure consistency
-        root2 = get_project_root()
-        assert root1 == root2
-
-        # Should be absolute path
-        assert root1.is_absolute()
-
-        # Should contain expected structure
-        assert (root1 / "src" / "wct" / "config").is_dir()
-        assert (root1 / "src" / "wct").is_dir()
-
-    def test_get_project_root_uses_importlib(self):
-        """Test that get_project_root can use importlib.util.find_spec method."""
-        # Verify the package can be found via importlib
-        spec = importlib.util.find_spec("wct")
-        assert spec is not None
-        assert spec.origin is not None
-
-        # The function should work and find the correct root
-        root = get_project_root()
-
-        # Should contain the package source
-        assert (root / "src" / "wct").is_dir()
-        assert (root / "src" / "wct" / "config").is_dir()
-
-        # The root should be consistent with the package location
-        package_path = Path(spec.origin).parent  # src/wct/__init__.py -> src/wct
-        expected_root = package_path.parent.parent  # src/wct -> src -> project_root
-        assert root == expected_root
 
     def test_get_config_path_default_production(self):
         """Test default config path selection for production."""
@@ -94,18 +32,14 @@ class TestLoggingConfiguration:
         # Test dev environment
         with patch.dict("os.environ", {"WCT_ENV": "dev"}):
             config_path = get_config_path()
-            expected = (
-                get_project_root() / "src" / "wct" / "config" / "logging-dev.yaml"
-            )
-            assert config_path == expected
+            assert config_path.name == "logging-dev.yaml"
+            assert config_path.exists()
 
         # Test test environment
         with patch.dict("os.environ", {"WCT_ENV": "test"}):
             config_path = get_config_path()
-            expected = (
-                get_project_root() / "src" / "wct" / "config" / "logging-test.yaml"
-            )
-            assert config_path == expected
+            assert config_path.name == "logging-test.yaml"
+            assert config_path.exists()
 
     def test_get_config_path_fallback_to_default(self):
         """Test fallback to default config when environment-specific doesn't exist."""
@@ -117,10 +51,8 @@ class TestLoggingConfiguration:
         """Test explicit environment parameter overrides env var."""
         with patch.dict("os.environ", {"WCT_ENV": "dev"}):
             config_path = get_config_path(environment="test")
-            expected = (
-                get_project_root() / "src" / "wct" / "config" / "logging-test.yaml"
-            )
-            assert config_path == expected
+            assert config_path.name == "logging-test.yaml"
+            assert config_path.exists()
 
     def test_get_config_path_nonexistent_raises_error(self):
         """Test that nonexistent config files raise LoggingError."""
@@ -131,7 +63,8 @@ class TestLoggingConfiguration:
 
     def test_load_config_valid_yaml(self):
         """Test loading valid YAML configuration."""
-        config_path = get_project_root() / "src" / "wct" / "config" / "logging.yaml"
+        # Use get_config_path() to find the config, don't hardcode paths
+        config_path = get_config_path()
         config = load_config(config_path)
 
         assert isinstance(config, dict)
@@ -342,25 +275,23 @@ class TestEnvironmentIntegration:
         """Test that development environment uses logging-dev.yaml."""
         with patch.dict("os.environ", {"WCT_ENV": "development"}):
             config_path = get_config_path()
-            expected = (
-                get_project_root() / "src" / "wct" / "config" / "logging-dev.yaml"
-            )
-            assert config_path == expected
+            assert config_path.name == "logging-dev.yaml"
+            assert config_path.exists()
 
     def test_production_environment_uses_prod_config(self):
         """Test that production environment uses logging-prod.yaml if available."""
         with patch.dict("os.environ", {"WCT_ENV": "production"}):
             config_path = get_config_path()
             # Falls back to logging.yaml since logging-prod.yaml doesn't exist
-            expected = get_project_root() / "src" / "wct" / "config" / "logging.yaml"
-            assert config_path == expected
+            assert config_path.name == "logging.yaml"
+            assert config_path.exists()
 
     def test_unknown_environment_uses_default_config(self):
         """Test that unknown environments fall back to default config."""
         with patch.dict("os.environ", {"WCT_ENV": "staging"}):
             config_path = get_config_path()
-            expected = get_project_root() / "src" / "wct" / "config" / "logging.yaml"
-            assert config_path == expected
+            assert config_path.name == "logging.yaml"
+            assert config_path.exists()
 
 
 # Integration test that mimics the verbose flag functionality

@@ -1,1 +1,0 @@
-"""Analysers test package."""

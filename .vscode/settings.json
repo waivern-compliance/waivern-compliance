@@ -3,7 +3,7 @@
     "python.testing.pytestEnabled": true,
     "python.testing.unittestEnabled": false,
     "python.testing.pytestArgs": [
-        "tests/",
+        "apps/wct/tests/",
         "--no-cov"
     ],
     "python.testing.cwd": "${workspaceFolder}",
@@ -21,7 +21,7 @@
         "PYTHONPATH": "${workspaceFolder}/src"
     },
     "yaml.schemas": {
-        "./apps/wct/src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json": "runbooks/**/*.yaml"
+        "./apps/wct/src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json": "apps/wct/runbooks/**/*.yaml"
     },
     "yaml.format.enable": true,
     "yaml.validate": true,

@@ -2,12 +2,11 @@
 
 import pytest
 from pydantic import ValidationError
-
-from wct.analysers.personal_data_analyser.types import (
+from waivern_community.analysers.personal_data_analyser.types import (
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
 )
-from wct.schemas.types import BaseFindingCompliance, BaseFindingEvidence
+from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
 
 
 class TestBaseFindingModelValidation:

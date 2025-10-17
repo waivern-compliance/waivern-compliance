@@ -41,7 +41,7 @@ def get_config_path(
 
     """
     project_root = get_project_root()
-    config_dir = project_root / "src" / "wct" / "config"
+    config_dir = project_root / "apps" / "wct" / "src" / "wct" / "config"
 
     # Determine config file name based on environment
     if config_name:

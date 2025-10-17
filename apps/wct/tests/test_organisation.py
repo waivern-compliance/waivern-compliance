@@ -200,8 +200,8 @@ class TestOrganisationLoader:
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            config_dir = temp_path / "config"
-            config_dir.mkdir()
+            config_dir = temp_path / "apps" / "wct" / "config"
+            config_dir.mkdir(parents=True)
 
             config_file = config_dir / "organisation.yaml"
             with config_file.open("w") as f:

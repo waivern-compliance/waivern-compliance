@@ -2,7 +2,9 @@
 
 import dataclasses
 
-from wct.schemas.processing_purpose_finding import ProcessingPurposeFindingSchema
+from waivern_community.analysers.processing_purpose_analyser.schemas import (
+    ProcessingPurposeFindingSchema,
+)
 
 # Version constant for easy maintenance
 EXPECTED_VERSION = "1.0.0"

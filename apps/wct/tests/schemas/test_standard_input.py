@@ -4,8 +4,7 @@ import dataclasses
 
 import pytest
 from pydantic import ValidationError
-
-from wct.schemas.standard_input import (
+from waivern_core.schemas import (
     BaseMetadata,
     FilesystemMetadata,
     RelationalDatabaseMetadata,

@@ -1,0 +1,38 @@
+name: "Sample Runbook - File Analysis"
+description: >
+  Analyse file content for personal data
+  This is a sample runbook to demonstrate how the system works.
+contact: "Paul Smith (HR) <paul.smith@company.co.uk>"
+
+connectors:
+  - name: "file_content_connector"
+    type: "filesystem"
+    properties:
+      path: "./libs/waivern-community/tests/waivern_community/connectors/filesystem/filesystem_mock_lite"
+      exclude_patterns: ["*.pyc", "__pycache__"]
+      max_files: 50
+
+
+analysers:
+  - name: "personal_data_analyser"
+    type: "personal_data_analyser"
+    properties:
+      # Pattern matching configuration
+      pattern_matching:
+        ruleset: "personal_data"
+        evidence_context_size: "large"
+        maximum_evidence_count: 3
+
+      # LLM validation configuration
+      llm_validation:
+        enable_llm_validation: false
+        llm_batch_size: 50
+        llm_validation_mode: "standard"
+
+execution:
+  - name: "Personal Data Detection in Filesystem (Mock)"
+    description: "Analyse file content for personal data using pattern matching and optional LLM validation"
+    connector: "file_content_connector"
+    analyser: "personal_data_analyser"
+    input_schema: "standard_input"
+    output_schema: "personal_data_finding"

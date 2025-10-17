@@ -25,7 +25,7 @@ def get_project_root() -> Path:
     2. Upward search for project markers (handles development)
 
     Returns:
-        Path to the project root directory
+        Path to the project root directory (monorepo workspace root)
 
     Raises:
         ProjectUtilsError: If project root cannot be determined
@@ -37,17 +37,20 @@ def get_project_root() -> Path:
         if spec and spec.origin:
             package_path = Path(spec.origin).parent
 
-            # For development installs, the package might be a symlink to src/wct
+            # For development installs in monorepo, the package might be a symlink
             if package_path.is_symlink():
                 real_package = package_path.resolve()
                 if real_package.name == "wct" and real_package.parent.name == "src":
-                    potential_root = real_package.parent.parent
-                    if (potential_root / "src" / "wct" / "config").is_dir():
+                    # Navigate up from apps/wct/src/wct to workspace root
+                    potential_root = real_package.parent.parent.parent
+                    if (
+                        potential_root / "apps" / "wct" / "src" / "wct" / "config"
+                    ).is_dir():
                         return potential_root
 
             # For regular installs, search upward from package location
             for path in [package_path, *package_path.parents]:
-                if (path / "src" / "wct" / "config").is_dir():
+                if (path / "apps" / "wct" / "src" / "wct" / "config").is_dir():
                     return path
     except (ImportError, AttributeError):
         # Package not found via importlib, continue to marker-based discovery
@@ -62,12 +65,12 @@ def get_project_root() -> Path:
             path / "pyproject.toml",  # Modern Python project file
             path / "setup.py",  # Legacy setup file
             path / ".git",  # Git repository root
-            path / "src" / "wct",  # Our package structure
+            path / "apps" / "wct" / "src" / "wct",  # Monorepo package structure
         ]
 
         if any(marker.exists() for marker in markers):
-            # Verify this looks like our project by checking for src/wct/config/
-            if (path / "src" / "wct" / "config").is_dir():
+            # Verify this looks like our monorepo by checking for apps/wct/src/wct/config/
+            if (path / "apps" / "wct" / "src" / "wct" / "config").is_dir():
                 return path
 
     # If both methods fail, provide clear error message
@@ -75,5 +78,5 @@ def get_project_root() -> Path:
         f"Could not determine project root. Searched:\n"
         f"1. Package location via importlib.util.find_spec('wct')\n"
         f"2. Upward from {current_path} for project markers\n"
-        f"Expected to find a directory containing 'src/wct/config/' subdirectory."
+        f"Expected to find a directory containing 'apps/wct/src/wct/config/' subdirectory."
     )

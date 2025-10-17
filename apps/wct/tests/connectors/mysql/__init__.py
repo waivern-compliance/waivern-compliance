@@ -1,1 +1,0 @@
-"""MySQL connector tests."""
