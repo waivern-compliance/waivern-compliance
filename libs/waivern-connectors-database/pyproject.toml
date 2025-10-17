@@ -29,6 +29,16 @@ packages = ["src/waivern_connectors_database"]
 typeCheckingMode = "strict"
 reportImplicitOverride = "error"
 
+# Relax type inference rules for tests while still catching real type errors
+[[tool.basedpyright.executionEnvironments]]
+root = "tests"
+reportUnknownVariableType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownParameterType = "none"
+reportUnknownMemberType = "none"
+reportMissingParameterType = "none"
+reportUnknownLambdaType = "none"
+
 [tool.ruff]
 target-version = "py312"
 src = ["src"]

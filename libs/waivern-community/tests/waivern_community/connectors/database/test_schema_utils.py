@@ -1,5 +1,7 @@
 """Tests for database schema utility functions following TDD/BDD methodology."""
 
+from typing import override
+
 import pytest
 from waivern_core.errors import ConnectorConfigError
 from waivern_core.schemas import StandardInputSchema
@@ -18,7 +20,7 @@ class TestDatabaseSchemaUtils:
         # Arrange - Use different instances to test type-based matching
         schema = StandardInputSchema()
         different_instance = StandardInputSchema()
-        supported_schemas = [different_instance]
+        supported_schemas: list[Schema] = [different_instance]
 
         # Act
         result = DatabaseSchemaUtils.validate_output_schema(schema, supported_schemas)
@@ -39,19 +41,22 @@ class TestDatabaseSchemaUtils:
         # Create a proper unsupported schema for testing
         class UnsupportedTestSchema(Schema):
             @property
+            @override
             def name(self) -> str:
                 return "unsupported_schema"
 
             @property
+            @override
             def version(self) -> str:
                 return "1.0.0"
 
             @property
-            def schema(self) -> dict:
+            @override
+            def schema(self) -> dict[str, str]:
                 return {"type": "object"}
 
         unsupported_schema = UnsupportedTestSchema()
-        supported_schemas = [StandardInputSchema()]
+        supported_schemas: list[Schema] = [StandardInputSchema()]
 
         # Act & Assert
         with pytest.raises(
@@ -68,7 +73,7 @@ class TestDatabaseSchemaUtils:
         # Arrange
         schema = None
         first_schema = StandardInputSchema()
-        supported_schemas = [first_schema]
+        supported_schemas: list[Schema] = [first_schema]
 
         # Act
         result = DatabaseSchemaUtils.validate_output_schema(schema, supported_schemas)
@@ -85,7 +90,7 @@ class TestDatabaseSchemaUtils:
         # Arrange
         schema = StandardInputSchema()
         duplicate_schema = StandardInputSchema()
-        supported_schemas = [
+        supported_schemas: list[Schema] = [
             schema,
             duplicate_schema,
         ]  # Same type - should be deduplicated

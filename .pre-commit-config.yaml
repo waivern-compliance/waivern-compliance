@@ -37,6 +37,5 @@ repos:
         entry: bash scripts/pre-commit-type-check.sh
         language: system
         types: [python]
-        # don't run on tests
-        exclude: ^(tests/|apps/wct/tests/|libs/waivern-core/tests/|libs/waivern-community/tests/|libs/waivern-llm/tests/)
         pass_filenames: true
+        exclude: ^(tests/|apps/wct/tests/|libs/waivern-community/tests/|libs/waivern-llm/tests/)

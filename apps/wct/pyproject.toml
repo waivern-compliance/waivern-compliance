@@ -78,3 +78,6 @@ ignore-decorators = ["typing.overload"]
     "PLC0415", # Import outside top-level - acceptable for checking optional dependencies
     "PLR2004", # Magic value used in comparison - acceptable in tests
 ]
+"src/wct/executor.py" = [
+    "PLR0913", # Too many arguments - executor methods need multiple parameters for orchestration
+]
