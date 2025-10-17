@@ -7,16 +7,19 @@ from waivern_core.errors import ConnectorConfigError
 from waivern_core.schemas import StandardInputSchema
 from waivern_core.schemas.base import Schema
 
-from waivern_community.connectors.database.schema_utils import DatabaseSchemaUtils
+from waivern_connectors_database import DatabaseSchemaUtils
 
 
 class TestDatabaseSchemaUtils:
     """Test suite for DatabaseSchemaUtils following BDD patterns."""
 
-    def test_validate_output_schema_accepts_supported_schema(self):
-        """GIVEN a supported output schema
+    def test_validate_output_schema_accepts_supported_schema(self) -> None:
+        """Test that validate_output_schema accepts supported schema.
+
+        GIVEN a supported output schema
         WHEN validating the schema
-        THEN it should return the schema unchanged"""
+        THEN it should return the schema unchanged.
+        """
         # Arrange - Use different instances to test type-based matching
         schema = StandardInputSchema()
         different_instance = StandardInputSchema()
@@ -32,10 +35,13 @@ class TestDatabaseSchemaUtils:
         # Verify we got back the original schema, not the supported one
         assert result is schema
 
-    def test_validate_output_schema_rejects_unsupported_schema(self):
-        """GIVEN an unsupported output schema
+    def test_validate_output_schema_rejects_unsupported_schema(self) -> None:
+        """Test that validate_output_schema rejects unsupported schema.
+
+        GIVEN an unsupported output schema
         WHEN validating the schema
-        THEN it should raise ConnectorConfigError with descriptive message"""
+        THEN it should raise ConnectorConfigError with descriptive message.
+        """
 
         # Arrange
         # Create a proper unsupported schema for testing
@@ -66,10 +72,13 @@ class TestDatabaseSchemaUtils:
                 unsupported_schema, supported_schemas
             )
 
-    def test_validate_output_schema_uses_default_when_none(self):
-        """GIVEN no schema provided (None)
+    def test_validate_output_schema_uses_default_when_none(self) -> None:
+        """Test that validate_output_schema uses default when none provided.
+
+        GIVEN no schema provided (None)
         WHEN validating the schema
-        THEN it should return the first supported schema as default"""
+        THEN it should return the first supported schema as default.
+        """
         # Arrange
         schema = None
         first_schema = StandardInputSchema()
@@ -83,10 +92,13 @@ class TestDatabaseSchemaUtils:
         assert result.name == "standard_input"
         assert result.version == "1.0.0"
 
-    def test_validate_output_schema_handles_duplicate_schema_types(self):
-        """GIVEN supported schemas with duplicate types
+    def test_validate_output_schema_handles_duplicate_schema_types(self) -> None:
+        """Test that validate_output_schema handles duplicate schema types.
+
+        GIVEN supported schemas with duplicate types
         WHEN validating schema
-        THEN it should automatically deduplicate and work correctly"""
+        THEN it should automatically deduplicate and work correctly.
+        """
         # Arrange
         schema = StandardInputSchema()
         duplicate_schema = StandardInputSchema()

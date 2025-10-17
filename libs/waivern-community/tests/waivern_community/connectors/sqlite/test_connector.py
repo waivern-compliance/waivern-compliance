@@ -189,7 +189,7 @@ class TestSQLiteConnectorPublicAPI:
             connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
 
             # Extract with None schema - should use default
-            result_message = connector.extract(None)
+            result_message = connector.extract(None)  # type: ignore[arg-type]
             assert result_message.schema is not None
             assert result_message.schema.name == "standard_input"
 
@@ -475,6 +475,7 @@ class TestSQLiteConnectorEdgeCases:
             result_message = connector.extract(StandardInputSchema())
 
             # Should succeed with empty data
+            assert result_message.schema is not None
             assert result_message.schema.name == "standard_input"
             assert isinstance(result_message.content, dict)
 
@@ -624,6 +625,7 @@ class TestSQLiteConnectorEdgeCases:
             assert result_message.schema_validated is True
 
             # Should validate against StandardInputSchema
+            assert result_message.schema is not None
             assert result_message.schema.name == "standard_input"
 
             # Content should be valid standard_input format

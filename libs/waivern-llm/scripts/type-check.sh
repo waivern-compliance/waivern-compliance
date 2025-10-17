@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Run static type checking for waivern-core package
+# Run static type checking for waivern-llm package
 # Usage: bash scripts/type-check.sh [files...]
 # Performs type checking using basedpyright with package configuration
 

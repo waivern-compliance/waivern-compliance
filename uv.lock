@@ -11,6 +11,7 @@ resolution-markers = [
 members = [
     "waivern-community",
     "waivern-compliance-tool",
+    "waivern-connectors-database",
     "waivern-core",
     "waivern-llm",
     "waivern-workspace",
@@ -1575,6 +1576,33 @@ requires-dist = [
     { name = "waivern-community", extras = ["all"], editable = "libs/waivern-community" },
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-llm", editable = "libs/waivern-llm" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
+[[package]]
+name = "waivern-connectors-database"
+version = "0.1.0"
+source = { editable = "libs/waivern-connectors-database" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "waivern-core" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "waivern-core", editable = "libs/waivern-core" },
 ]
 
 [package.metadata.requires-dev]

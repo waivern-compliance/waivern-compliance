@@ -129,7 +129,7 @@ class TestOpenAILLMServiceRealApiIntegration:
 
         # Skip if langchain-openai not installed
         try:
-            from langchain_openai import (
+            from langchain_openai import (  # pyright: ignore[reportMissingImports]
                 ChatOpenAI,  # noqa: F401  # type: ignore[reportUnusedImport]
             )
         except ImportError:
@@ -163,7 +163,7 @@ class TestOpenAILLMServiceRealApiIntegration:
 
         # Skip if langchain-openai not installed
         try:
-            from langchain_openai import (
+            from langchain_openai import (  # pyright: ignore[reportMissingImports]
                 ChatOpenAI,  # noqa: F401  # type: ignore[reportUnusedImport]
             )
         except ImportError:
@@ -200,7 +200,7 @@ class TestOpenAILLMServiceRealApiIntegration:
 
         # Skip if langchain-openai not installed
         try:
-            from langchain_openai import (
+            from langchain_openai import (  # pyright: ignore[reportMissingImports]
                 ChatOpenAI,  # noqa: F401  # type: ignore[reportUnusedImport]
             )
         except ImportError:
@@ -235,7 +235,7 @@ class TestOpenAILLMServiceRealApiIntegration:
 
         # Skip if langchain-openai not installed
         try:
-            from langchain_openai import (
+            from langchain_openai import (  # pyright: ignore[reportMissingImports]
                 ChatOpenAI,  # noqa: F401  # type: ignore[reportUnusedImport]
             )
         except ImportError:
@@ -272,7 +272,7 @@ class TestGoogleLLMServiceRealApiIntegration:
 
         # Skip if langchain-google-genai not installed
         try:
-            from langchain_google_genai import (
+            from langchain_google_genai import (  # pyright: ignore[reportMissingImports]
                 ChatGoogleGenerativeAI,  # noqa: F401  # type: ignore[reportUnusedImport]
             )
         except ImportError:
@@ -306,7 +306,7 @@ class TestGoogleLLMServiceRealApiIntegration:
 
         # Skip if langchain-google-genai not installed
         try:
-            from langchain_google_genai import (
+            from langchain_google_genai import (  # pyright: ignore[reportMissingImports]
                 ChatGoogleGenerativeAI,  # noqa: F401  # type: ignore[reportUnusedImport]
             )
         except ImportError:
@@ -343,7 +343,7 @@ class TestGoogleLLMServiceRealApiIntegration:
 
         # Skip if langchain-google-genai not installed
         try:
-            from langchain_google_genai import (
+            from langchain_google_genai import (  # pyright: ignore[reportMissingImports]
                 ChatGoogleGenerativeAI,  # noqa: F401  # type: ignore[reportUnusedImport]
             )
         except ImportError:
@@ -378,7 +378,7 @@ class TestGoogleLLMServiceRealApiIntegration:
 
         # Skip if langchain-google-genai not installed
         try:
-            from langchain_google_genai import (
+            from langchain_google_genai import (  # pyright: ignore[reportMissingImports]
                 ChatGoogleGenerativeAI,  # noqa: F401  # type: ignore[reportUnusedImport]
             )
         except ImportError:

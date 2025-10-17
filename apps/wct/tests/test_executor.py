@@ -7,7 +7,7 @@ The tests use real connectors and analysers to ensure proper integration.
 
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, override
 
 import pytest
 from waivern_community.analysers import BUILTIN_ANALYSERS, Analyser, AnalyserError
@@ -27,17 +27,21 @@ class MockConnector(Connector):
         self.should_fail = should_fail
 
     @classmethod
+    @override
     def get_name(cls) -> str:
         return "mock_connector"
 
     @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]) -> "MockConnector":
         return cls()
 
     @classmethod
+    @override
     def get_supported_output_schemas(cls) -> list[Schema]:
         return [StandardInputSchema()]
 
+    @override
     def extract(self, output_schema: Schema):
         if self.should_fail:
             raise ConnectorError("Mock connector failure")
@@ -59,21 +63,26 @@ class MockAnalyser(Analyser):
         self.should_fail = should_fail
 
     @classmethod
+    @override
     def get_name(cls) -> str:
         return "mock_analyser"
 
     @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]) -> "MockAnalyser":
         return cls()
 
     @classmethod
+    @override
     def get_supported_input_schemas(cls) -> list[Schema]:
         return [StandardInputSchema()]
 
     @classmethod
+    @override
     def get_supported_output_schemas(cls) -> list[Schema]:
         return [PersonalDataFindingSchema()]
 
+    @override
     def process(self, input_schema: Schema, output_schema: Schema, message: Any):
         if self.should_fail:
             raise AnalyserError("Mock analyser failure")
@@ -106,7 +115,7 @@ class TestExecutor:
         executor.register_available_analyser(MockAnalyser)
         return executor
 
-    def _execute_runbook_yaml(self, executor: Executor, yaml_content: str) -> list:
+    def _execute_runbook_yaml(self, executor: Executor, yaml_content: str) -> list[Any]:
         """Execute a runbook from YAML string, handling temp file creation/cleanup."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(yaml_content)
@@ -632,10 +641,12 @@ execution: []
         # Create a connector that raises a generic exception
         class BrokenConnector(MockConnector):
             @classmethod
+            @override
             def get_name(cls) -> str:
                 return "broken_connector"
 
             @classmethod
+            @override
             def from_properties(cls, properties: dict[str, Any]) -> "BrokenConnector":
                 # This will cause a generic exception during instantiation
                 raise ValueError("Generic error during instantiation")
