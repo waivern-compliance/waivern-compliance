@@ -25,9 +25,6 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build]
-dev-mode-dirs = ["."]
-
 [tool.hatch.build.targets.wheel]
 bypass-selection = true
 only-include = ["pyproject.toml"]

@@ -2,14 +2,152 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Overview
+
+This is the **Waivern Compliance Framework (WCF)** - an open-source framework for compliance analysis across any technology stack and compliance regulation (GDPR, ePrivacy, EU AI Act, NIS2, DORA, etc.).
+
+The repository is organised as a **monorepo** with framework libraries and applications.
+
+## Monorepo Structure
+
+```
+waivern-compliance/
+├── libs/                           # Framework libraries
+│   ├── waivern-core/              # Core abstractions (Connector, Analyser, Schema, Message)
+│   ├── waivern-llm/               # Multi-provider LLM abstraction (Anthropic, OpenAI, Google)
+│   └── waivern-community/         # Concrete implementations (connectors, analysers, rulesets)
+└── apps/                           # Applications
+    └── wct/                        # Waivern Compliance Tool (CLI application)
+        ├── .env                    # App-specific configuration
+        ├── config/                 # Organisation configuration
+        ├── runbooks/               # Runbook configurations
+        │   └── samples/            # Sample runbooks
+        ├── src/wct/                # WCT application code
+        └── tests/                  # Application tests
+```
+
+### Package Descriptions
+
+**Framework Libraries:**
+- **waivern-core**: Base abstractions that all components implement (Connector, Analyser, Message, Schema, Ruleset)
+- **waivern-llm**: Multi-provider LLM service with lazy loading for optional providers (zero WCT dependencies)
+- **waivern-community**: Built-in connectors (MySQL, SQLite, Filesystem, SourceCode), analysers (PersonalData, ProcessingPurpose, DataSubject), rulesets, and prompts
+
+**Applications:**
+- **wct**: CLI tool that orchestrates compliance analysis by executing YAML runbooks using framework components
+
+## How the Framework Works
+
+### Core WCF Concepts
+
+1. **Connectors** - Extract data from sources (databases, files, APIs) and transform to WCF schemas
+2. **Analysers** - Pure functions that process schema-validated data and produce compliance findings
+3. **Rulesets** - YAML-based pattern definitions for static compliance analysis
+4. **Schemas** - JSON Schema contracts that define component communication
+5. **Runbooks** - YAML configurations defining what to analyse and how (like Infrastructure as Code)
+6. **Executor** - Orchestrates runbook execution (lives in WCT application)
+
+### Data Flow
+
+```
+Runbook (YAML) → Executor → Connector → Schema Validation → Analyser → Findings (JSON)
+```
+
+1. User writes a runbook specifying connectors, analysers, and execution steps
+2. WCT Executor loads the runbook and validates configuration
+3. Connectors extract data and transform to WCF schemas
+4. Data flows through Message objects (automatic schema validation)
+5. Analysers process data using rulesets and/or LLM validation
+6. Results are output as JSON files
+
+### Schema-Driven Architecture
+
+The framework is **schema-driven**:
+- Components declare input/output schemas
+- Executor automatically matches schemas between connectors and analysers
+- Message objects provide automatic validation at runtime
+- JSON Schema files define structure and validation rules
+
+**Schema Ownership:**
+- **Shared schemas** (StandardInputSchema, BaseFindingSchema) → waivern-core
+- **Component-specific schemas** → co-located with components in waivern-community
+- **Application schemas** (runbook config, analysis output) → wct
+
+## Development Commands
+
+This project uses `uv` for dependency management.
+
+### Workspace-Level Commands
+
+**Testing:**
+```bash
+uv run pytest                       # Run all tests (738 tests)
+uv run pytest -v                    # Verbose output
+uv run pytest -m integration        # Run integration tests (requires API keys)
+```
+
+**Quality Checks (Package-Centric):**
+```bash
+./scripts/lint.sh                   # Lint all packages
+./scripts/format.sh                 # Format all packages
+./scripts/type-check.sh             # Type check all packages
+./scripts/dev-checks.sh             # Run all checks + tests
+```
+
+**Pre-commit:**
+```bash
+uv run pre-commit install           # Install hooks (once)
+uv run pre-commit run --all-files   # Run all hooks manually
+```
+
+### Package-Level Commands
+
+Each package can be checked independently:
+
+```bash
+# Check individual packages
+cd libs/waivern-core && ./scripts/lint.sh
+cd libs/waivern-llm && ./scripts/type-check.sh
+cd libs/waivern-community && ./scripts/format.sh
+cd apps/wct && ./scripts/dev-checks.sh
+```
+
+### WCT Application Commands
+
+```bash
+# Run compliance analysis
+uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml
+uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml -v
+
+# List available components
+uv run wct ls-connectors
+uv run wct ls-analysers
+
+# Validate runbook
+uv run wct validate-runbook apps/wct/runbooks/samples/file_content_analysis.yaml
+
+# Test LLM configuration
+uv run wct test-llm
+
+# Generate JSON Schema
+uv run wct generate-schema
+```
+
+**Logging Options:**
+- `--log-level DEBUG` or `-v` - Detailed debugging
+- `--log-level INFO` - Default informational messages
+- `--log-level WARNING` - Warnings and errors only
+
 ## Environment Configuration
 
-WCT supports environment variables for sensitive configuration data like database credentials and API keys. This keeps sensitive information out of runbook files that are committed to version control.
+Applications own configuration. WCT configuration is in `apps/wct/.env`.
 
 **Quick Start:**
-1. Copy the example configuration: `cp apps/wct/.env.example apps/wct/.env`
-2. Edit `apps/wct/.env` with your actual credentials
-3. Run WCT: `uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml`
+```bash
+cp apps/wct/.env.example apps/wct/.env
+# Edit apps/wct/.env with your API keys
+uv run wct test-llm  # Verify configuration
+```
 
 **Configuration Layers (highest to lowest priority):**
 1. System environment variables (production)
@@ -18,190 +156,195 @@ WCT supports environment variables for sensitive configuration data like databas
 4. Code defaults
 
 **Common Environment Variables:**
-
-*LLM Configuration (Required):*
-- `ANTHROPIC_API_KEY` - Anthropic API key for AI-powered compliance analysis
+- `ANTHROPIC_API_KEY` - Anthropic API key for LLM validation
 - `ANTHROPIC_MODEL` - Model name (optional, defaults to claude-sonnet-4-5-20250929)
-- `LLM_PROVIDER` - Provider selection (optional, defaults to anthropic)
+- `LLM_PROVIDER` - Provider selection (anthropic, openai, google)
+- `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` - MySQL connector configuration
 
-*MySQL Database (Optional):*
-- `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`
+**See:** [docs/configuration.md](docs/configuration.md) for complete documentation.
 
-**For complete configuration documentation, see:** [docs/configuration.md](docs/configuration.md)
+## Runbook Format
 
-This includes:
-- Production deployment patterns (Docker, Kubernetes)
-- Security best practices
-- Per-package configuration
-- Troubleshooting guide
-- Multi-provider LLM setup
+Runbooks are YAML files that define compliance analysis pipelines:
 
-## Development Commands
-
-This is a Python project using `uv` for dependency management. Key commands:
-
-**Testing:**
-- `uv run pytest` - Run all tests
-- `uv run pytest tests/test_specific.py` - Run specific test file
-- `uv run pytest -v` - Run tests with verbose output
-
-**Linting and Type Checking:**
-- `uv run ruff check` - Run linting
-- `uv run ruff format` - Format code
-- `uv run basedpyright` - Run type checking
-- `uv run pre-commit run --all-files` - Run all pre-commit hooks
-- `uv run pre-commit install` - Install pre-commit hooks (run once after cloning)
-
-**Running the Application:**
-- `uv run wct run runbooks/<runbook.yaml>` - Run WCT analysis with a runbook
-- `uv run wct ls-connectors` - List available connectors
-- `uv run wct ls-analysers` - List available analysers
-- `uv run wct validate-runbook runbooks/<runbook.yaml>` - Validate a runbook
-- `uv run wct generate-schema` - Generate JSON Schema for IDE support and validation
-- `uv run wct test-llm` - Test LLM connectivity and configuration
-
-**Dependencies:**
-- All connector and analyser dependencies are included by default
-- `uv sync --group dev` - Install development tools only when needed for contributing
-
-**Logging Options:**
-All WCT commands support logging configuration:
-- `--log-level DEBUG` - Show all debug information
-- `--log-level INFO` - Show informational messages (default)
-- `--log-level WARNING` - Show warnings and errors only
-- `--log-level ERROR` - Show errors only
-- `--log-level CRITICAL` - Show critical errors only
-- `--verbose` or `-v` - Shortcut for `--log-level DEBUG`
-
-Examples:
-- `uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml --log-level DEBUG` - Detailed debugging
-- `uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml -v` - Verbose output
-- `uv run wct ls-connectors --log-level WARNING` - Minimal output
-
-## Architecture Overview
-
-This codebase implements WCT (Waivern Compliance Tool), a modern compliance analysis framework with **unified schema-driven architecture**:
-
-### WCT Schema-Driven System Architecture
-- **Entry point:** `src/wct/__main__.py`
-- **Schema-aware executor:** `src/wct/executor.py`
-- **Unified schema system:** `src/wct/schema.py` - `WctSchema[T]` for type-safe data flow
-- **Schema definitions:** `src/wct/schemas/` - JSON schema files for validation
-- **Configuration:** YAML runbooks with schema-aware execution order
-- **Architecture:** Schema-compliant connectors and analysers with automatic data flow matching
-
-### Key Components
-- **Connectors:** Extract data to WCT schemas
-  - Filesystem, MySQL, Source code connectors
-- **Analysers:** Process data using modular analysis runners with dependency injection
-  - **Personal data analyser:** Detects personal data with LLM validation (supports `standard_input`, `source_code` schemas)
-  - **Processing purpose analyser:** Identifies GDPR processing purposes (supports `standard_input` schema)
-- **Executor:** Automatic schema matching between connectors and analysers
-- **Rulesets:** Versioned YAML-based pattern definitions with Pydantic validation for compliance analysis
-
-### Runbook Format
 ```yaml
 name: "Runbook Name"
-description: "Description of what this runbook does"
+description: "What this runbook analyses"
 contact: "Contact Person <email@company.com>"
 
 connectors:
-  - name: "connector_name"
-    type: "connector_type"
-    properties: {...}
+  - name: "filesystem_reader"
+    type: "filesystem"
+    properties:
+      path: "./sample_file.txt"
 
 analysers:
-  - name: "analyser_name"
-    type: "analyser_type"
-    properties: {...}
+  - name: "content_analyser"
+    type: "personal_data_analyser"
+    properties:
+      pattern_matching:
+        ruleset: "personal_data"
+        evidence_context_size: "medium"
+      llm_validation:
+        enable_llm_validation: true
 
 execution:
-  - name: "Execution Step Name"
-    description: "Description of what this step does"
-    contact: "Step Contact <email@company.com>"  # Optional
-    connector: "connector_name"
-    analyser: "analyser_name"
-    input_schema: "schema_name"
-    output_schema: "output_schema"
+  - name: "Analyse file content"
+    connector: "filesystem_reader"
+    analyser: "content_analyser"
+    input_schema: "standard_input"
+    output_schema: "personal_data_finding"
 ```
 
-## Runbooks Directory
+**Sample Runbooks:**
+- `apps/wct/runbooks/samples/file_content_analysis.yaml` - Simple file analysis
+- `apps/wct/runbooks/samples/LAMP_stack.yaml` - Comprehensive MySQL + PHP analysis
+- See `apps/wct/runbooks/README.md` for detailed documentation
 
-**Runbook Organization:**
-- **`apps/wct/runbooks/` directory** - Centralized location for all runbook configurations
-- **`apps/wct/runbooks/samples/` directory** - Sample runbooks for demonstration and learning
-  - **`file_content_analysis.yaml`** - Simple file analysis demonstration using personal data analyser
-  - **`LAMP_stack.yaml`** - Comprehensive example demonstrating personal data and processing purpose analysis on MySQL and PHP source code
-- **`apps/wct/runbooks/README.md`** - Detailed documentation on runbook usage and creation guidelines
+## Architecture Details
 
-**Available Sample Runbooks:**
-- **File content analysis**: `apps/wct/runbooks/samples/file_content_analysis.yaml` - Demonstrates personal data detection
-- **LAMP stack analysis**: `apps/wct/runbooks/samples/LAMP_stack.yaml` - Comprehensive analysis with both personal data and processing purpose detection on MySQL database and PHP source code
-- **Quick start**: Begin with `uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml -v`
+### Framework Independence
 
-## Project Structure Notes
-- Uses `uv` for dependency management with all dependencies included by default
-- **Core Dependencies:** `jsonschema` for comprehensive JSON schema validation, `langchain` and `langchain-anthropic` for AI-powered compliance analysis
-- Type annotations are enforced with `basedpyright` (schema system is fully type-safe)
-- Main package is `wct` located in `src/wct/`
-- Schema definitions in `src/wct/schemas/` (JSON Schema format)
-- **Ruleset architecture**: `src/wct/rulesets/data/{ruleset}/{version}/{ruleset}.yaml` - Versioned YAML configuration with Pydantic validation
-- Runbook configurations: `apps/wct/runbooks/` directory with scenario-based runbooks organized in `apps/wct/runbooks/samples/` subdirectory
-- Sample configurations:
-  - `apps/wct/runbooks/samples/file_content_analysis.yaml` - Simple demonstration using personal data analyser
-  - `apps/wct/runbooks/samples/LAMP_stack.yaml` - Comprehensive multi-connector analysis
+The framework libraries are independent:
+- **waivern-core** - No dependencies on WCT or other packages
+- **waivern-llm** - Depends only on waivern-core, no WCT dependencies
+- **waivern-community** - Depends on waivern-core and waivern-llm, no WCT dependencies
+- **wct** - Application that uses all framework libraries
 
-## Development Setup
+This enables:
+- Independent versioning and releases
+- Other applications can use the framework
+- Clear separation of concerns
 
-**Pre-commit hooks are configured** for the WCT schema-driven system:
-- Ruff linting and formatting
-- Basic file checks (YAML/TOML validation, trailing whitespace, etc.)
+### Package-Centric Quality Checks
+
+Each package owns its quality tool configuration:
+- Tool configs (basedpyright, ruff) in package `pyproject.toml`
+- Package-specific scripts in `{package}/scripts/`
+- Workspace scripts orchestrate package checks
+- Pre-commit hooks process files by package
+
+### Message-Based Validation
+
+All data flow uses Message objects:
+- Connectors return Message objects with schema-validated data
+- Analysers receive and return Message objects
+- Automatic validation against declared schemas
+- No manual validation needed in analyser implementations
+
+### Component Registry
+
+Components register automatically:
+- Connectors and analysers register via metaclass
+- Executor discovers components by type name
+- Tests use `isolated_registry` fixture for proper isolation
+
+## Core Concepts Documentation
+
+**See:** [docs/wcf_core_concepts.md](docs/wcf_core_concepts.md) for detailed framework concepts.
+
+**Key principles:**
+- **Schema-driven:** Components communicate through JSON Schema contracts
+- **Component ownership:** Components own their data contracts (schemas co-located)
+- **Pure functions:** Analysers behave like pure functions (input schema → output schema)
+- **Modularity:** Connectors don't know about analysers and vice versa
+- **Extensibility:** New components implement base abstractions
+
+## Development Workflow
+
+### Making Changes
+
+1. **Create feature branch:**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make changes in appropriate package:**
+   - Framework abstractions → `libs/waivern-core/`
+   - LLM functionality → `libs/waivern-llm/`
+   - Connectors/Analysers/Rulesets → `libs/waivern-community/`
+   - Application logic → `apps/wct/`
+
+3. **Run quality checks:**
+   ```bash
+   ./scripts/dev-checks.sh
+   ```
+
+4. **Commit using conventional commits:**
+   ```bash
+   git commit -m "feat: add new connector for PostgreSQL"
+   git commit -m "fix: resolve schema validation error"
+   git commit -m "docs: update runbook documentation"
+   ```
+
+### Testing Guidelines
+
+- All packages have comprehensive test coverage (738 tests total)
+- Integration tests marked with `@pytest.mark.integration` (require API keys)
+- Run `uv run pytest` before committing
+- Type checking in strict mode (basedpyright)
+- Tests use `isolated_registry` fixture for component registry isolation
+
+## Important Development Notes
+
+### Schema Implementation
+
+**When creating connectors:**
+- Implement `get_output_schema()` returning `WctSchema[T]`
+- Transform extracted data to match declared schema
+- Return Message objects from `extract()` method
+
+**When creating analysers:**
+- Implement `get_input_schema()` and `get_output_schema()`
+- Implement `process_data(message: Message) -> Message`
+- NO need to implement validation - handled by Message mechanism
+- Use `@override` decorators for abstract methods
+
+**Schema files:**
+- JSON Schema files in `{package}/schemas/json_schemas/{name}/{version}/{name}.json`
+- Versioned directory structure
+- Runtime discovery from multiple search paths
+
+### Code Quality Standards
+
+- Type annotations required (basedpyright strict mode)
+- Code formatting with ruff
 - Security checks with bandit
-- Type checking with basedpyright (fully enabled - schema system passes all type checks)
+- British English spelling
+- No unused imports or variables
+- Comprehensive docstrings
 
-The pre-commit hooks ensure code quality standards are enforced across the entire schema-compliant WCT codebase.
+### DO NOT
 
-## Important Schema Implementation Notes
+- Commit directly to `main` or `master` - always use feature branches
+- Create backwards compatibility layers unless explicitly asked
+- Preserve old context in comments during refactoring
+- Attempt to bypass quality checks
+- Use quick fixes for design flaws - advise on refactoring instead
 
-**Schema-Driven Development Guidelines:**
-- All connectors must implement `get_output_schema()` and schema-specific transform methods
-- All analysers must implement `get_input_schema()`, `get_output_schema()`, and `process_data()` with Message objects
-- Analysers no longer need to implement `validate_input()` - validation is handled by the Message mechanism
-- Use `@override` decorators for all abstract method implementations
-- Schema names must match between connector outputs and analyser inputs for automatic data flow
-- JSON schema files in `src/wct/schemas/` define the structure for runtime validation
-- Runbooks specify schema names (e.g., `input_schema: "standard_input"`) not file paths
-- The executor automatically matches schemas and uses automatic validation in `process()`
+### DO
 
-**Message-Based Validation System:**
-- All analysers now use Message objects for unified data flow between connectors and analysers
-- Input and output Messages are automatically validated against declared schemas
-- The `process()` method handles Message validation transparently
-- Analyser implementations work with Message objects in `process_data()` methods
-- Schema files are discovered dynamically across multiple search paths
-- Validation errors provide detailed messages about schema compliance failures
+- What has been asked - nothing more, nothing less
+- Analyse and remove unnecessary code after refactoring
+- Break large classes/functions into smaller, focused ones
+- Carefully analyse errors to determine root cause
+- Use conventional commits for all commits and PRs
+- Run `./scripts/dev-checks.sh` after each task
 
-**Testing Schema Components:**
-- Use `uv run wct run runbooks/sample_runbook.yaml -v` to see detailed schema matching and validation
-- The executor logs which connectors are skipped due to unneeded schemas
-- Schema validation errors provide clear messages about data structure mismatches
-- Test both valid and invalid data to verify comprehensive validation coverage
+## Git and PR Requirements
 
-# Git and PR Requirements
-**Branch Management:**
-- NEVER commit directly to the `main` or `master` branch. ALWAYS create a new branch before commiting changes if the current branch is `main` or `master`
-- Always use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#specification) for both branches and PRs
-  - `feature/feature-name` - For new features
-  - `fix/issue-description` - For bug fixes
-  - `docs/documentation-updates` - For documentation changes
-  - `refactor/component-name` - For refactoring work
+**Branch Naming (Conventional Commits):**
+- `feature/feature-name` - New features
+- `fix/issue-description` - Bug fixes
+- `docs/documentation-updates` - Documentation changes
+- `refactor/component-name` - Refactoring work
 
-# important-instruction-reminders
-- DO what has been asked—nothing more, nothing less. DO NOT overcomplicate things.
-- NEVER create a 'backwards compatibility' branch of code unless explicitly instructed; always refactor.
-- ALWAYS analyse and verify that every single variable, function and class is necessary after a refactoring task. Remove all unnecessary leftover code.
-- When doing refactoring, DO NOT try to preserve the old context in code or comments. Just update them to reflect the current state.
-- Adhere to software craftsmanship principles. Break large classes and functions into smaller ones to represent granular concepts.
-- CRITICAL: NEVER attempt to bypass code quality checks. Carefully analyse errors and determine their cause.
-- DO NOT attempt quick fixes for errors. If an error indicates a design flaw, advise on options to refactor the codebase.
-- Use British English spelling.
+**NEVER commit directly to `main` or `master`** - always create a branch first.
+
+## Additional Resources
+
+- **[README.md](README.md)** - Project overview and quick start
+- **[docs/wcf_core_concepts.md](docs/wcf_core_concepts.md)** - Framework concepts
+- **[docs/configuration.md](docs/configuration.md)** - Configuration guide
+- **[docs/architecture/monorepo-migration-completed.md](docs/architecture/monorepo-migration-completed.md)** - Migration history
+- **[apps/wct/runbooks/README.md](apps/wct/runbooks/README.md)** - Runbook documentation
