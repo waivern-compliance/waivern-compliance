@@ -11,6 +11,7 @@ wct_files=()
 core_files=()
 llm_files=()
 connectors_database_files=()
+mysql_files=()
 community_files=()
 
 for file in "$@"; do
@@ -23,16 +24,14 @@ for file in "$@"; do
         llm_files+=("${file#libs/waivern-llm/}")
     elif [[ "$file" == libs/waivern-connectors-database/* ]]; then
         connectors_database_files+=("${file#libs/waivern-connectors-database/}")
+    elif [[ "$file" == libs/waivern-mysql/* ]]; then
+        mysql_files+=("${file#libs/waivern-mysql/}")
     elif [[ "$file" == libs/waivern-community/* ]]; then
         community_files+=("${file#libs/waivern-community/}")
     fi
 done
 
-# Format each package's files using its own script
-if [ ${#wct_files[@]} -gt 0 ]; then
-    (cd apps/wct && ./scripts/format.sh "${wct_files[@]}")
-fi
-
+# Format each package's files using its own script (in dependency order)
 if [ ${#core_files[@]} -gt 0 ]; then
     (cd libs/waivern-core && ./scripts/format.sh "${core_files[@]}")
 fi
@@ -45,6 +44,14 @@ if [ ${#connectors_database_files[@]} -gt 0 ]; then
     (cd libs/waivern-connectors-database && ./scripts/format.sh "${connectors_database_files[@]}")
 fi
 
+if [ ${#mysql_files[@]} -gt 0 ]; then
+    (cd libs/waivern-mysql && ./scripts/format.sh "${mysql_files[@]}")
+fi
+
 if [ ${#community_files[@]} -gt 0 ]; then
     (cd libs/waivern-community && ./scripts/format.sh "${community_files[@]}")
+fi
+
+if [ ${#wct_files[@]} -gt 0 ]; then
+    (cd apps/wct && ./scripts/format.sh "${wct_files[@]}")
 fi

@@ -13,6 +13,10 @@ from contextlib import contextmanager
 from typing import Any, Self, override
 
 import pymysql
+from waivern_connectors_database import (
+    DatabaseExtractionUtils,
+    DatabaseSchemaUtils,
+)
 from waivern_core.base_connector import Connector
 from waivern_core.errors import (
     ConnectorExtractionError,
@@ -24,11 +28,7 @@ from waivern_core.schemas import (
     StandardInputSchema,
 )
 
-from waivern_community.connectors.database.extraction_utils import (
-    DatabaseExtractionUtils,
-)
-from waivern_community.connectors.database.schema_utils import DatabaseSchemaUtils
-from waivern_community.connectors.mysql.config import MySQLConnectorConfig
+from waivern_mysql.config import MySQLConnectorConfig
 
 logger = logging.getLogger(__name__)
 

@@ -5,6 +5,11 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Self, override
 
+from waivern_connectors_database import (
+    DatabaseConnector,
+    DatabaseExtractionUtils,
+    DatabaseSchemaUtils,
+)
 from waivern_core.errors import ConnectorExtractionError
 from waivern_core.message import Message
 from waivern_core.schemas import (
@@ -13,11 +18,6 @@ from waivern_core.schemas import (
     StandardInputSchema,
 )
 
-from waivern_community.connectors.database.base_connector import DatabaseConnector
-from waivern_community.connectors.database.extraction_utils import (
-    DatabaseExtractionUtils,
-)
-from waivern_community.connectors.database.schema_utils import DatabaseSchemaUtils
 from waivern_community.connectors.sqlite.config import SQLiteConnectorConfig
 
 logger = logging.getLogger(__name__)

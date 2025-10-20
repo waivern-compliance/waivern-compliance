@@ -1,6 +1,7 @@
 """Tests for MySQLConnector - Public API Only."""
 
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
@@ -12,8 +13,7 @@ from waivern_core.schemas import (
     StandardInputSchema,
 )
 
-from waivern_community.connectors.mysql.config import MySQLConnectorConfig
-from waivern_community.connectors.mysql.connector import MySQLConnector
+from waivern_mysql import MySQLConnector, MySQLConnectorConfig
 
 # Test constants - expected behaviour from public interface
 EXPECTED_CONNECTOR_NAME = "mysql"
@@ -37,7 +37,7 @@ TEST_MAX_ROWS = 5
 
 
 @contextmanager
-def clear_mysql_env_vars():
+def clear_mysql_env_vars() -> Generator[None, None, None]:
     """Context manager to temporarily clear MySQL environment variables for test isolation."""
     mysql_env_vars = [
         "MYSQL_HOST",
@@ -60,15 +60,15 @@ class TestMySQLConnectorPublicAPI:
     """Tests for MySQLConnector focusing only on public API."""
 
     @pytest.fixture
-    def standard_input_schema(self):
-        """Standard input schema fixture."""
+    def standard_input_schema(self) -> StandardInputSchema:
+        """Return standard input schema."""
         return StandardInputSchema()
 
-    def test_get_name_returns_correct_name(self):
+    def test_get_name_returns_correct_name(self) -> None:
         """Test get_name returns the connector name."""
         assert MySQLConnector.get_name() == EXPECTED_CONNECTOR_NAME
 
-    def test_get_supported_output_schemas_returns_standard_input(self):
+    def test_get_supported_output_schemas_returns_standard_input(self) -> None:
         """Test that the connector supports standard_input schema."""
         output_schemas = MySQLConnector.get_supported_output_schemas()
 
@@ -76,7 +76,7 @@ class TestMySQLConnectorPublicAPI:
         assert output_schemas[0].name == "standard_input"
         assert output_schemas[0].version == "1.0.0"
 
-    def test_from_properties_raises_error_without_host(self):
+    def test_from_properties_raises_error_without_host(self) -> None:
         """Test from_properties raises error when host is missing."""
         properties = {"user": TEST_USER}
 
@@ -86,7 +86,7 @@ class TestMySQLConnectorPublicAPI:
             ):
                 MySQLConnector.from_properties(properties)
 
-    def test_from_properties_raises_error_without_user(self):
+    def test_from_properties_raises_error_without_user(self) -> None:
         """Test from_properties raises error when user is missing."""
         properties = {"host": TEST_HOST}
 
@@ -96,7 +96,7 @@ class TestMySQLConnectorPublicAPI:
             ):
                 MySQLConnector.from_properties(properties)
 
-    def test_from_properties_handles_invalid_port_env_var(self):
+    def test_from_properties_handles_invalid_port_env_var(self) -> None:
         """Test from_properties raises error for invalid MYSQL_PORT environment variable."""
         properties = {"host": TEST_HOST, "user": TEST_USER}
 
@@ -106,7 +106,7 @@ class TestMySQLConnectorPublicAPI:
             ):
                 MySQLConnector.from_properties(properties)
 
-    def test_init_with_valid_parameters_succeeds(self):
+    def test_init_with_valid_parameters_succeeds(self) -> None:
         """Test initialisation with valid parameters."""
         with clear_mysql_env_vars():
             config = MySQLConnectorConfig.from_properties(
@@ -121,7 +121,7 @@ class TestMySQLConnectorPublicAPI:
             connector = MySQLConnector(config)
         assert connector is not None
 
-    def test_init_raises_error_without_host(self):
+    def test_init_raises_error_without_host(self) -> None:
         """Test initialisation raises error when host is empty."""
         with clear_mysql_env_vars():
             with pytest.raises(ConnectorConfigError, match="MySQL host is required"):
@@ -130,7 +130,7 @@ class TestMySQLConnectorPublicAPI:
                 )
                 MySQLConnector(config)
 
-    def test_init_raises_error_without_user(self):
+    def test_init_raises_error_without_user(self) -> None:
         """Test initialisation raises error when user is empty."""
         with clear_mysql_env_vars():
             with pytest.raises(ConnectorConfigError, match="MySQL user is required"):
@@ -139,7 +139,7 @@ class TestMySQLConnectorPublicAPI:
                 )
                 MySQLConnector(config)
 
-    def test_init_with_none_password_converts_to_empty_string(self):
+    def test_init_with_none_password_converts_to_empty_string(self) -> None:
         """Test initialisation with None password converts to empty string."""
         with clear_mysql_env_vars():
             config = MySQLConnectorConfig.from_properties(
@@ -148,7 +148,7 @@ class TestMySQLConnectorPublicAPI:
             connector = MySQLConnector(config)
             assert connector is not None
 
-    def test_extract_without_schema_uses_default(self):
+    def test_extract_without_schema_uses_default(self) -> None:
         """Test extract without schema uses default schema."""
         with clear_mysql_env_vars():
             config = MySQLConnectorConfig.from_properties(
@@ -176,7 +176,7 @@ class TestMySQLConnectorPublicAPI:
                 assert result_message.schema is not None
                 assert result_message.schema.name == "standard_input"
 
-    def test_extract_with_unsupported_schema_raises_error(self):
+    def test_extract_with_unsupported_schema_raises_error(self) -> None:
         """Test extract with unsupported schema raises error."""
         with clear_mysql_env_vars():
             config = MySQLConnectorConfig.from_properties(
@@ -196,7 +196,7 @@ class TestMySQLConnectorDataExtraction:
     """Tests for MySQL connector data extraction with RelationalDatabaseMetadata."""
 
     @pytest.fixture
-    def mock_connector_with_data(self):
+    def mock_connector_with_data(self) -> Generator[MySQLConnector, None, None]:
         """Create a mock connector that returns test database data."""
         with clear_mysql_env_vars():
             config = MySQLConnectorConfig.from_properties(
@@ -233,8 +233,8 @@ class TestMySQLConnectorDataExtraction:
             yield connector
 
     def test_extracts_data_with_relational_database_metadata(
-        self, mock_connector_with_data
-    ):
+        self, mock_connector_with_data: MySQLConnector
+    ) -> None:
         """Test MySQL connector creates RelationalDatabaseMetadata with accurate database context."""
         result_message = mock_connector_with_data.extract(StandardInputSchema())
 
@@ -266,17 +266,17 @@ class TestMySQLConnectorDataExtraction:
         assert phone_item.metadata.column_name == "phone"
         assert phone_item.metadata.schema_name == TEST_DATABASE
 
-    def test_extracts_multiple_tables_with_metadata(self):
+    def test_extracts_multiple_tables_with_metadata(self) -> None:
         """Test extraction from multiple tables with proper metadata for each."""
         # TODO: Implement to match SQLite connector test pattern
         pass
 
-    def test_extracts_empty_database_returns_empty_data(self):
+    def test_extracts_empty_database_returns_empty_data(self) -> None:
         """Test extraction from database with no tables returns empty data list."""
         # TODO: Implement to match SQLite connector test pattern
         pass
 
-    def test_extracts_tables_with_special_characters_in_names(self):
+    def test_extracts_tables_with_special_characters_in_names(self) -> None:
         """Test extraction handles table names with underscores and hyphens."""
         # TODO: Implement to match SQLite connector test pattern
         pass
@@ -285,7 +285,7 @@ class TestMySQLConnectorDataExtraction:
 class TestMySQLConnectorEdgeCases:
     """Tests for MySQL connector edge cases and error handling."""
 
-    def test_handles_database_with_no_tables(self):
+    def test_handles_database_with_no_tables(self) -> None:
         """Test handling of valid MySQL database with no user-created tables.
 
         Business Requirement: MySQL connector must gracefully handle valid databases
@@ -334,7 +334,7 @@ class TestMySQLConnectorEdgeCases:
                 assert extraction_summary.get("tables_processed") == 0
                 assert extraction_summary.get("cell_values_extracted") == 0
 
-    def test_handles_tables_with_null_values(self):
+    def test_handles_tables_with_null_values(self) -> None:
         """Test extraction properly handles NULL values in database cells.
 
         Business Requirement: MySQL connector must properly filter NULL database values
@@ -410,7 +410,7 @@ class TestMySQLConnectorEdgeCases:
                     assert "3" in contents
                     assert "Bob" in contents
 
-    def test_returned_message_validates_against_schema(self):
+    def test_returned_message_validates_against_schema(self) -> None:
         """Test that returned Message validates against StandardInputSchema.
 
         Business Requirement: MySQL connector must return data that conforms to the

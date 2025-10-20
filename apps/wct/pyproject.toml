@@ -6,6 +6,8 @@ requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
     "waivern-llm",
+    "waivern-connectors-database",
+    "waivern-mysql",
     "waivern-community[all]",
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",

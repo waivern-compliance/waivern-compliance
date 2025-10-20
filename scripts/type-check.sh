@@ -6,9 +6,10 @@
 
 set -e
 
-# Type check each package using its own scripts
-(cd apps/wct && ./scripts/type-check.sh)
+# Type check each package using its own scripts (in dependency order)
 (cd libs/waivern-core && ./scripts/type-check.sh)
 (cd libs/waivern-llm && ./scripts/type-check.sh)
 (cd libs/waivern-connectors-database && ./scripts/type-check.sh)
+(cd libs/waivern-mysql && ./scripts/type-check.sh)
 (cd libs/waivern-community && ./scripts/type-check.sh)
+(cd apps/wct && ./scripts/type-check.sh)

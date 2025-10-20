@@ -15,7 +15,9 @@ waivern-compliance/
 ├── libs/                           # Framework libraries
 │   ├── waivern-core/              # Core abstractions (Connector, Analyser, Schema, Message)
 │   ├── waivern-llm/               # Multi-provider LLM abstraction (Anthropic, OpenAI, Google)
-│   └── waivern-community/         # Concrete implementations (connectors, analysers, rulesets)
+│   ├── waivern-connectors-database/  # Shared SQL connector utilities
+│   ├── waivern-mysql/             # MySQL connector (standalone)
+│   └── waivern-community/         # SQLite + other connectors, analysers, rulesets
 └── apps/                           # Applications
     └── wct/                        # Waivern Compliance Tool (CLI application)
         ├── .env                    # App-specific configuration
@@ -31,7 +33,9 @@ waivern-compliance/
 **Framework Libraries:**
 - **waivern-core**: Base abstractions that all components implement (Connector, Analyser, Message, Schema, Ruleset)
 - **waivern-llm**: Multi-provider LLM service with lazy loading for optional providers (zero WCT dependencies)
-- **waivern-community**: Built-in connectors (MySQL, SQLite, Filesystem, SourceCode), analysers (PersonalData, ProcessingPurpose, DataSubject), rulesets, and prompts
+- **waivern-connectors-database**: Shared SQL connector utilities (DatabaseConnector, DatabaseExtractionUtils, DatabaseSchemaUtils)
+- **waivern-mysql**: MySQL connector (standalone package for minimal dependencies)
+- **waivern-community**: Built-in connectors (SQLite, Filesystem, SourceCode), analysers (PersonalData, ProcessingPurpose, DataSubject), rulesets, and prompts (re-exports MySQLConnector for convenience)
 
 **Applications:**
 - **wct**: CLI tool that orchestrates compliance analysis by executing YAML runbooks using framework components

@@ -10,9 +10,9 @@ from waivern_core.errors import (
     ConnectorError,
     ConnectorExtractionError,
 )
+from waivern_mysql import MySQLConnector
 
 from waivern_community.connectors.filesystem import FilesystemConnector
-from waivern_community.connectors.mysql import MySQLConnector
 from waivern_community.connectors.source_code import SourceCodeConnector
 from waivern_community.connectors.sqlite import SQLiteConnector
 
