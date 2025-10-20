@@ -802,9 +802,10 @@ Test results:
 - [x] WCT dependencies updated
 - [x] Pre-commit scripts updated (all packages)
 - [x] All tests passing (750 tests total: 738 baseline + 12 from waivern-connectors-database)
-- [x] All quality checks passing (pending final dev-checks run)
+- [x] All quality checks passing (dev-checks.sh passed)
+- [x] LAMP stack runbook fixed and verified (all 7 steps successful)
 - [x] Documentation updated (CLAUDE.md, phase4-mysql-extraction-plan.md)
-- [ ] Committed to git (pending)
+- [x] Committed to git (commit 6980e8a)
 
 ---
 
