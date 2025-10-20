@@ -6,10 +6,11 @@ the output format for processing purpose analysis results.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import override
 
-from waivern_core.schemas.base import BaseFindingSchema
+from waivern_core.schemas.base import BaseFindingSchema, JsonSchemaLoader, SchemaLoader
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -22,6 +23,14 @@ class ProcessingPurposeFindingSchema(BaseFindingSchema):
     """
 
     _VERSION = "1.0.0"
+
+    # Custom loader with package-relative search path
+    _loader: SchemaLoader = field(
+        default_factory=lambda: JsonSchemaLoader(
+            search_paths=[Path(__file__).parent / "json_schemas"]
+        ),
+        init=False,
+    )
 
     @property
     @override
