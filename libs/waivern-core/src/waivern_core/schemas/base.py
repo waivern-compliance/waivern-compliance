@@ -37,8 +37,12 @@ class JsonSchemaLoader:
     """Loads schemas from local JSON files with caching.
 
     This loader can be configured with custom search paths, making it flexible
-    for different project structures. If no paths are provided, it uses sensible
-    defaults relative to the loader's location.
+    for different project structures. If no paths are provided, it searches
+    in this order:
+    1. Package-relative paths (json_schemas/ directory alongside this file)
+    2. Legacy WCT paths (TEMPORARY - for backward compatibility during migration)
+
+    The loader caches schemas after first load to improve performance.
     """
 
     def __init__(self, search_paths: list[Path] | None = None) -> None:
@@ -46,7 +50,10 @@ class JsonSchemaLoader:
 
         Args:
             search_paths: Optional list of base directories to search for schemas.
-                         If None, uses default paths relative to this file's location.
+                         If provided, ONLY these paths are searched (overrides defaults).
+                         If None, uses default search order:
+                         1. Package-relative (json_schemas/ alongside this file)
+                         2. Legacy WCT paths (TEMPORARY - remove after migration)
 
         """
         self._cache: dict[str, dict[str, Any]] = {}
@@ -54,6 +61,11 @@ class JsonSchemaLoader:
 
     def _generate_schema_paths(self, schema_name: str, version: str) -> list[Path]:
         """Generate list of paths to search for schema files.
+
+        Search order:
+        1. Custom search paths (if provided)
+        2. Package-relative paths (json_schemas/ directory alongside this file)
+        3. Legacy WCT paths (for backward compatibility during migration)
 
         Args:
             schema_name: Name of the schema
@@ -67,28 +79,26 @@ class JsonSchemaLoader:
             # Use custom search paths provided by caller
             schema_paths: list[Path] = []
             for base_path in self._custom_search_paths:
-                # Try versioned path first
                 schema_paths.append(
                     base_path / schema_name / version / f"{schema_name}.json"
                 )
-                # Then try direct path
-                schema_paths.append(base_path / f"{schema_name}.json")
             return schema_paths
         else:
-            # Use default WCT monorepo paths
+            # Default search paths
+            # 1. Package-relative path (where this base.py file lives)
+            package_base = Path(__file__).parent / "json_schemas"
+
             return [
-                # Versioned paths (preferred)
+                # Package-relative (preferred - NEW!)
+                package_base / schema_name / version / f"{schema_name}.json",
+                # TODO: Remove this legacy WCT path after schema migration is complete (Phase 4)
+                # Legacy WCT path (backward compatibility - TEMPORARY)
+                # This allows schemas to be found in WCT during migration period
+                # Remove when all component schemas are migrated to their packages
                 Path("apps/wct/src/wct/schemas/json_schemas")
                 / schema_name
                 / version
                 / f"{schema_name}.json",
-                Path("./apps/wct/src/wct/schemas/json_schemas")
-                / schema_name
-                / version
-                / f"{schema_name}.json",
-                # Non-versioned fallback
-                Path("apps/wct/src/wct/schemas") / f"{schema_name}.json",
-                Path("./apps/wct/src/wct/schemas") / f"{schema_name}.json",
             ]
 
     def load(self, schema_name: str, version: str = "1.0.0") -> dict[str, Any]:

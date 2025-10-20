@@ -1,6 +1,7 @@
 """Tests for schema base classes and utilities."""
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, override
 from unittest.mock import Mock
 
@@ -50,19 +51,15 @@ class TestJsonSchemaLoader:
         """Test loading from file and caching behavior using real schema files."""
         loader = JsonSchemaLoader()
 
-        try:
-            # First load should read from file
-            result1 = loader.load("standard_input", "1.0.0")
-            assert isinstance(result1, dict)
-            assert "type" in result1 or "$schema" in result1
+        # First load should read from file
+        result1 = loader.load("standard_input", "1.0.0")
+        assert isinstance(result1, dict)
+        assert "type" in result1 or "$schema" in result1
 
-            # Second load should use cache (we can't directly test this without
-            # accessing internals, but at least we verify it doesn't fail)
-            result2 = loader.load("standard_input", "1.0.0")
-            assert result1 == result2
-        except FileNotFoundError:
-            # If schema files don't exist in test environment, skip
-            pytest.skip("Real schema files not available in test environment")
+        # Second load should use cache (we can't directly test this without
+        # accessing internals, but at least we verify it doesn't fail)
+        result2 = loader.load("standard_input", "1.0.0")
+        assert result1 == result2
 
     def test_load_file_not_found(self) -> None:
         """Test FileNotFoundError when schema file doesn't exist."""
@@ -91,12 +88,38 @@ class TestJsonSchemaLoader:
         """Test that loaded schema version matches requested version."""
         loader = JsonSchemaLoader()
 
-        try:
-            # Load schema and verify the version in the JSON matches what we requested
-            result = loader.load("standard_input", "1.0.0")
-            assert result["version"] == "1.0.0"
-        except FileNotFoundError:
-            pytest.skip("Schema file not found - acceptable in test environment")
+        # Load schema and verify the version in the JSON matches what we requested
+        result = loader.load("standard_input", "1.0.0")
+        assert result["version"] == "1.0.0"
+
+    def test_loader_finds_schema_in_package_relative_path(self) -> None:
+        """Test that loader finds schemas in package-relative path."""
+        # Default loader should search package-relative paths first
+        loader = JsonSchemaLoader()
+
+        # standard_input schema is in package-relative location:
+        # libs/waivern-core/src/waivern_core/schemas/json_schemas/standard_input/1.0.0/
+        result = loader.load("standard_input", "1.0.0")
+
+        assert isinstance(result, dict)
+        assert "type" in result or "$schema" in result
+        assert result["version"] == "1.0.0"
+        assert "properties" in result
+
+    def test_custom_search_paths_override_defaults(self) -> None:
+        """Test that custom search paths override default search paths."""
+        # Create a loader with custom search paths
+        custom_path = Path(__file__).parent / "fixtures"
+        loader = JsonSchemaLoader(search_paths=[custom_path])
+
+        # Should look in custom path only, not default package-relative or WCT paths
+        with pytest.raises(FileNotFoundError) as exc_info:
+            loader.load("standard_input", "1.0.0")
+
+        # Verify error message shows it looked for the schema
+        error_message = str(exc_info.value)
+        assert "standard_input" in error_message
+        assert "1.0.0" in error_message
 
 
 class TestSchemaImplementation:
