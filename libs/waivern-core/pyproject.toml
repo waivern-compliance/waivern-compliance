@@ -17,6 +17,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
+# Explicitly include JSON schema files in package distribution
+include = [
+    "src/waivern_core/**/*.py",
+    "src/waivern_core/schemas/json_schemas/**/*.json",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/waivern_core"]
 
