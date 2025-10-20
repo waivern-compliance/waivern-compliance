@@ -55,6 +55,17 @@ Pre-configured pattern libraries for:
 - GDPR processing purpose identification
 - Custom compliance patterns
 
+## Schemas
+
+This package provides component-specific schemas co-located with their owning components:
+
+- **source_code** - Source code connector output format (`connectors/source_code/schemas/json_schemas/`)
+- **personal_data_finding** - Personal data analyser findings (`analysers/personal_data_analyser/schemas/json_schemas/`)
+- **data_subject_finding** - Data subject analyser findings (`analysers/data_subject_analyser/schemas/json_schemas/`)
+- **processing_purpose_finding** - Processing purpose analyser findings (`analysers/processing_purpose_analyser/schemas/json_schemas/`)
+
+All schemas are versioned and automatically discovered by their components. For detailed schema architecture documentation, see `docs/schema-architecture.md` in the main repository.
+
 ## Usage
 
 ```python
