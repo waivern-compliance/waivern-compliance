@@ -1,16 +1,18 @@
 """Tests for MySQLConnectorConfig."""
 
 import os
+from collections.abc import Generator
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from waivern_core.errors import ConnectorConfigError
 
-from waivern_community.connectors.mysql.config import MySQLConnectorConfig
+from waivern_mysql import MySQLConnectorConfig
 
 
 @pytest.fixture
-def clear_mysql_env_vars():
+def clear_mysql_env_vars() -> Generator[None, None, None]:
     """Clear MySQL environment variables for testing."""
     env_vars_to_clear = [
         "MYSQL_HOST",
@@ -21,7 +23,7 @@ def clear_mysql_env_vars():
     ]
 
     # Store original values
-    original_values = {}
+    original_values: dict[str, str] = {}
     for var in env_vars_to_clear:
         if var in os.environ:
             original_values[var] = os.environ[var]
@@ -37,7 +39,9 @@ def clear_mysql_env_vars():
 class TestMySQLConnectorConfig:
     """Test MySQLConnectorConfig class."""
 
-    def test_from_properties_with_minimal_config(self, clear_mysql_env_vars):
+    def test_from_properties_with_minimal_config(
+        self, clear_mysql_env_vars: Any
+    ) -> None:
         """Test from_properties applies correct defaults with minimal config."""
         config = MySQLConnectorConfig.from_properties(
             {
@@ -56,7 +60,7 @@ class TestMySQLConnectorConfig:
         assert config.connect_timeout == 10  # Default
         assert config.max_rows_per_table == 10  # Default
 
-    def test_from_properties_with_full_config(self, clear_mysql_env_vars):
+    def test_from_properties_with_full_config(self, clear_mysql_env_vars: Any) -> None:
         """Test from_properties respects all provided properties."""
         config = MySQLConnectorConfig.from_properties(
             {
@@ -82,7 +86,7 @@ class TestMySQLConnectorConfig:
         assert config.connect_timeout == 30
         assert config.max_rows_per_table == 2000
 
-    def test_from_properties_uses_environment_variables(self):
+    def test_from_properties_uses_environment_variables(self) -> None:
         """Test from_properties uses environment variables with priority over properties."""
         properties = {
             "host": "runbook_host",
@@ -109,19 +113,23 @@ class TestMySQLConnectorConfig:
         assert config.password == "env_password"  # noqa: S105
         assert config.database == "env_database"
 
-    def test_from_properties_missing_host_raises_error(self, clear_mysql_env_vars):
+    def test_from_properties_missing_host_raises_error(
+        self, clear_mysql_env_vars: Any
+    ) -> None:
         """Test from_properties raises error when host is missing."""
         with pytest.raises(ConnectorConfigError, match="MySQL host info is required"):
             MySQLConnectorConfig.from_properties({"user": "testuser"})
 
-    def test_from_properties_missing_user_raises_error(self, clear_mysql_env_vars):
+    def test_from_properties_missing_user_raises_error(
+        self, clear_mysql_env_vars: Any
+    ) -> None:
         """Test from_properties raises error when user is missing."""
         with pytest.raises(ConnectorConfigError, match="MySQL user info is required"):
             MySQLConnectorConfig.from_properties({"host": "localhost"})
 
     def test_from_properties_invalid_port_env_var_raises_error(
-        self, clear_mysql_env_vars
-    ):
+        self, clear_mysql_env_vars: Any
+    ) -> None:
         """Test from_properties raises error for invalid MYSQL_PORT environment variable."""
         properties = {"host": "localhost", "user": "testuser"}
 
@@ -131,7 +139,9 @@ class TestMySQLConnectorConfig:
             ):
                 MySQLConnectorConfig.from_properties(properties)
 
-    def test_none_password_converts_to_empty_string(self, clear_mysql_env_vars):
+    def test_none_password_converts_to_empty_string(
+        self, clear_mysql_env_vars: Any
+    ) -> None:
         """Test that None password is converted to empty string."""
         config = MySQLConnectorConfig.from_properties(
             {"host": "localhost", "user": "testuser", "password": None}

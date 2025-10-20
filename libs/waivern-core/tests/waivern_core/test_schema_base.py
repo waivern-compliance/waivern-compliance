@@ -1,7 +1,7 @@
 """Tests for schema base classes and utilities."""
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, override
 from unittest.mock import Mock
 
 import pytest
@@ -18,16 +18,19 @@ class MockSchema(Schema):
     loader: SchemaLoader = field(default_factory=JsonSchemaLoader)
 
     @property
+    @override
     def name(self) -> str:
         """Return schema name."""
         return self.schema_name
 
     @property
+    @override
     def version(self) -> str:
         """Return schema version."""
         return self.schema_version
 
     @property
+    @override
     def schema(self) -> dict[str, Any]:
         """Return schema definition."""
         return self.loader.load(self.name, self.version)

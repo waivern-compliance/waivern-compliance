@@ -1,6 +1,7 @@
 """Tests for Message class with typed schemas."""
 
 from dataclasses import dataclass, field
+from typing import Any, override
 
 import pytest
 
@@ -13,7 +14,7 @@ class MockTypedSchema(Schema):
 
     _name: str = "test_schema"
     _version: str = "1.0.0"
-    _schema_definition: dict = field(
+    _schema_definition: dict[str, Any] = field(
         default_factory=lambda: {
             "type": "object",
             "properties": {"test": {"type": "string"}},
@@ -22,15 +23,18 @@ class MockTypedSchema(Schema):
     )
 
     @property
+    @override
     def name(self) -> str:
         return self._name
 
     @property
+    @override
     def version(self) -> str:
         return self._version
 
     @property
-    def schema(self) -> dict:
+    @override
+    def schema(self) -> dict[str, Any]:
         return self._schema_definition
 
 

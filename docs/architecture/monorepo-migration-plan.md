@@ -1,8 +1,8 @@
 # Waivern Compliance Framework - Monorepo Migration Plan
 
-**Status:** ✅ Core Migration Complete (Phases 0-3) - Optional Phases Remaining
+**Status:** ✅ Core Migration Complete (Phases 0-4) - Optional Phases Remaining
 **Created:** 2025-10-14
-**Updated:** 2025-10-16
+**Updated:** 2025-10-20
 
 ## Quick Status
 
@@ -13,11 +13,11 @@
 | Phase 1: Workspace + Quality Checks | ✅ Complete | 6-8 hours |
 | Phase 2: Extract waivern-llm | ✅ Complete | 2-3 hours |
 | Phase 3: Create waivern-community | ✅ Complete | 4-6 hours |
-| Phase 4: Individual packages (optional) | 🔵 Optional | 1-2 hours each |
+| Phase 4: MySQL extraction (waivern-mysql + waivern-connectors-database) | ✅ Complete | 4-5 hours |
 | Phase 5: Dynamic plugin loading (optional) | 🔵 Optional | 3-4 hours |
 | Phase 6: Contribution infrastructure (optional) | 🔵 Optional | 2-3 hours |
 
-**Core Migration Completed:** 19-24 hours | **Optional Remaining:** 6-9 hours
+**Core Migration Completed:** 23-29 hours | **Optional Remaining:** 5-7 hours
 
 ---
 
@@ -26,11 +26,13 @@
 Transform single package into multi-package framework:
 
 ```
-waivern-core         → Base abstractions (BaseConnector, Analyser, Message, Schema)
-waivern-llm          → Multi-provider LLM service (Anthropic, OpenAI, Google)
-waivern-community    → All built-in connectors/analysers/rulesets
-waivern-*            → Individual packages (optional, e.g., waivern-mysql)
-wct                  → CLI tool application
+waivern-core                → Base abstractions (BaseConnector, Analyser, Message, Schema)
+waivern-llm                 → Multi-provider LLM service (Anthropic, OpenAI, Google)
+waivern-connectors-database → Shared SQL connector utilities (Apache Airflow pattern)
+waivern-mysql               → MySQL connector (standalone package)
+waivern-community           → Built-in connectors/analysers/rulesets (includes SQLite)
+waivern-*                   → Other individual packages (optional, e.g., waivern-postgres)
+wct                         → CLI tool application
 ```
 
 **Inspired by:** LangChain's proven monorepo pattern (`langchain-core`, `langchain-community`, `langchain-openai`, `langchain`)
@@ -42,15 +44,17 @@ wct                  → CLI tool application
 See **[monorepo-migration-completed.md](./monorepo-migration-completed.md)** for full details.
 
 **Summary of completed phases:**
-- ✅ UV workspace with 4 packages (waivern-core, waivern-llm, waivern-community, wct)
+- ✅ UV workspace with 6 packages (waivern-core, waivern-llm, waivern-connectors-database, waivern-mysql, waivern-community, wct)
 - ✅ Package-centric quality checks architecture
 - ✅ Framework independence (waivern-core and waivern-llm have zero WCT dependencies)
 - ✅ Multi-provider LLM abstraction with lazy imports (Anthropic, OpenAI, Google)
 - ✅ All built-in components extracted to waivern-community package
+- ✅ Shared database utilities package (waivern-connectors-database) following Apache Airflow pattern
+- ✅ MySQL connector extracted as standalone package (waivern-mysql)
 - ✅ Component-owned schema architecture following "components own their data contracts"
 - ✅ App-specific configuration architecture (`.env` in apps/wct/)
 - ✅ Proper test isolation with fixture-based registry management
-- ✅ 738 tests passing, all quality checks passing
+- ✅ 750 tests passing, all quality checks passing
 
 ---
 
@@ -233,16 +237,57 @@ See **[monorepo-migration-completed.md](./monorepo-migration-completed.md#phase-
 
 ---
 
-## Phase 4: Individual Packages (Optional)
+## Phase 4: MySQL Extraction (COMPLETE)
+
+**Status:** ✅ Complete (2025-10-20)
+
+**Goal:** Extract MySQL connector as standalone package with shared SQL utilities
+
+**Completed:**
+- ✅ Created `waivern-connectors-database` package with shared SQL utilities (~125 lines)
+- ✅ Extracted `waivern-mysql` as standalone package (~450 lines MySQL-specific code)
+- ✅ Updated SQLite connector to use shared utilities (remains in waivern-community)
+- ✅ Maintained backward compatibility via re-exports from waivern-community
+- ✅ 90% dependency reduction for MySQL-only users
+- ✅ 750 tests passing (25 MySQL unit tests + 12 shared utility tests)
+- ✅ LAMP stack runbook verified end-to-end with real MySQL database
+- ✅ All quality checks passing
+
+**Architecture:**
+```
+waivern-core
+    ↓
+waivern-connectors-database (shared SQL utilities)
+    ↓
+├─→ waivern-mysql (standalone)
+└─→ waivern-community (includes SQLite)
+    ↓
+wct (uses MySQL via community re-export)
+```
+
+**Benefits:**
+- Minimal dependencies for MySQL-only users (pymysql + cryptography vs entire community package)
+- Independent versioning and maintenance for MySQL connector
+- Enables future database connector extractions (PostgreSQL, MariaDB, etc.)
+- Follows industry patterns (Apache Airflow's common-sql, LangChain's provider packages)
+
+**See:** [phase4-mysql-extraction-plan.md](./phase4-mysql-extraction-plan.md) for detailed implementation notes
+
+---
+
+## Future Individual Packages (Optional)
 
 **When needed:**
 - User wants minimal dependencies
 - Component becomes popular standalone
 - Third party wants to maintain separately
 
-**Example:** Extract `waivern-mysql` from `waivern-community`
+**Examples:**
+- `waivern-postgres` - PostgreSQL connector (reuses waivern-connectors-database)
+- `waivern-mongodb` - MongoDB connector (depends only on waivern-core)
+- `waivern-snowflake` - Snowflake connector
 
-Keep community package as re-export for backward compatibility.
+**Pattern established:** Phase 4 provides the template for future extractions
 
 ---
 

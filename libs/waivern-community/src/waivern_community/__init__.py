@@ -3,13 +3,14 @@
 __version__ = "0.1.0"
 
 # Connectors
+from waivern_mysql import MySQLConnector
+
 # Analysers
 from waivern_community.analysers.personal_data_analyser import PersonalDataAnalyser
 from waivern_community.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
 )
 from waivern_community.connectors.filesystem import FilesystemConnector
-from waivern_community.connectors.mysql import MySQLConnector
 from waivern_community.connectors.source_code import SourceCodeConnector
 from waivern_community.connectors.sqlite import SQLiteConnector
 
