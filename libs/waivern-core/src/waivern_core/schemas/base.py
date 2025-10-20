@@ -38,9 +38,7 @@ class JsonSchemaLoader:
 
     This loader can be configured with custom search paths, making it flexible
     for different project structures. If no paths are provided, it searches
-    in this order:
-    1. Package-relative paths (json_schemas/ directory alongside this file)
-    2. Legacy WCT paths (TEMPORARY - for backward compatibility during migration)
+    package-relative paths (json_schemas/ directory alongside this file).
 
     The loader caches schemas after first load to improve performance.
 
@@ -55,9 +53,7 @@ class JsonSchemaLoader:
         Args:
             search_paths: Optional list of base directories to search for schemas.
                          If provided, ONLY these paths are searched (overrides defaults).
-                         If None, uses default search order:
-                         1. Package-relative (json_schemas/ alongside this file)
-                         2. Legacy WCT paths (TEMPORARY - remove after migration)
+                         If None, uses package-relative path (json_schemas/ alongside this file).
 
         """
         self._cache: dict[str, dict[str, Any]] = {}
@@ -69,7 +65,6 @@ class JsonSchemaLoader:
         Search order:
         1. Custom search paths (if provided)
         2. Package-relative paths (json_schemas/ directory alongside this file)
-        3. Legacy WCT paths (for backward compatibility during migration)
 
         Args:
             schema_name: Name of the schema
@@ -89,20 +84,11 @@ class JsonSchemaLoader:
             return schema_paths
         else:
             # Default search paths
-            # 1. Package-relative path (where this base.py file lives)
+            # Package-relative path (where this base.py file lives)
             package_base = Path(__file__).parent / "json_schemas"
 
             return [
-                # Package-relative (preferred - NEW!)
                 package_base / schema_name / version / f"{schema_name}.json",
-                # TODO: Remove this legacy WCT path after schema migration is complete (Phase 4)
-                # Legacy WCT path (backward compatibility - TEMPORARY)
-                # This allows schemas to be found in WCT during migration period
-                # Remove when all component schemas are migrated to their packages
-                Path("apps/wct/src/wct/schemas/json_schemas")
-                / schema_name
-                / version
-                / f"{schema_name}.json",
             ]
 
     def load(self, schema_name: str, version: str = "1.0.0") -> dict[str, Any]:

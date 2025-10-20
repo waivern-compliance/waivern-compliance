@@ -112,7 +112,7 @@ class TestJsonSchemaLoader:
         custom_path = Path(__file__).parent / "fixtures"
         loader = JsonSchemaLoader(search_paths=[custom_path])
 
-        # Should look in custom path only, not default package-relative or WCT paths
+        # Should look in custom path only, not default package-relative paths
         with pytest.raises(FileNotFoundError) as exc_info:
             loader.load("standard_input", "1.0.0")
 
