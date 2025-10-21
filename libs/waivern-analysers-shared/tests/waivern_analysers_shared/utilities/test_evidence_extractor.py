@@ -6,7 +6,7 @@ testing of the extract_evidence method without accessing private implementation 
 
 from datetime import UTC, datetime
 
-from waivern_community.analysers.utilities import EvidenceExtractor
+from waivern_analysers_shared.utilities import EvidenceExtractor
 
 
 class TestEvidenceExtractorBasicFunctionality:
@@ -121,8 +121,8 @@ class TestEvidenceExtractorBasicFunctionality:
             content, pattern, max_evidence=5, context_size="small"
         )
 
-        # Results should be sorted alphabetically
-        assert evidence == sorted(evidence)
+        # Results should be sorted alphabetically by content
+        assert evidence == sorted(evidence, key=lambda e: e.content)
 
 
 class TestEvidenceExtractorContextSizes:

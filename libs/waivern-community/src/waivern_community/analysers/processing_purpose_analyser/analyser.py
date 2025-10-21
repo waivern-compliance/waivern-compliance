@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Self, override
 
+from waivern_analysers_shared.utilities import LLMServiceManager
 from waivern_core import Analyser
 from waivern_core.message import Message
 from waivern_core.schemas import (
@@ -15,7 +16,6 @@ from waivern_core.schemas import (
     parse_data_model,
 )
 
-from waivern_community.analysers.utilities import LLMServiceManager
 from waivern_community.connectors.source_code.schemas import (
     SourceCodeDataModel,
     SourceCodeSchema,

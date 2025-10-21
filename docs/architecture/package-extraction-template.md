@@ -114,7 +114,17 @@ Fill in all template variables and customize phases as needed.
 mkdir -p libs/{SHARED_PACKAGE}/src/{SHARED_PACKAGE_MODULE}
 mkdir -p libs/{SHARED_PACKAGE}/tests/{SHARED_PACKAGE_MODULE}
 mkdir -p libs/{SHARED_PACKAGE}/scripts
+
+# CRITICAL: Create py.typed marker INSIDE the package directory (not at package root!)
+# Location: libs/{SHARED_PACKAGE}/src/{SHARED_PACKAGE_MODULE}/py.typed
+touch libs/{SHARED_PACKAGE}/src/{SHARED_PACKAGE_MODULE}/py.typed
 ```
+
+**IMPORTANT - py.typed location:**
+- ✅ CORRECT: `libs/{SHARED_PACKAGE}/src/{SHARED_PACKAGE_MODULE}/py.typed` (inside package)
+- ❌ WRONG: `libs/{SHARED_PACKAGE}/py.typed` (at package root)
+
+The `py.typed` file MUST be inside `src/{SHARED_PACKAGE_MODULE}/` directory. Without it in the correct location, importing packages will show "Stub file not found" errors from type checkers.
 
 Package structure:
 ```
@@ -123,6 +133,7 @@ libs/{SHARED_PACKAGE}/
 │   ├── __init__.py
 │   ├── base_*.py          # Base classes
 │   ├── *_utils.py         # Shared utilities
+│   ├── py.typed           # CRITICAL: Type checking marker (inside package!)
 │   └── [other modules]
 ├── tests/{SHARED_PACKAGE_MODULE}/
 │   ├── test_base_*.py
@@ -132,11 +143,44 @@ libs/{SHARED_PACKAGE}/
 │   ├── format.sh
 │   └── type-check.sh
 ├── pyproject.toml
-├── README.md
-└── py.typed
+└── README.md
 ```
 
-### 2.2 Create pyproject.toml
+### 2.2 Copy and Update Package Scripts
+
+Copy script templates from waivern-core (uses comprehensive type checking):
+
+```bash
+cp libs/waivern-core/scripts/*.sh libs/{SHARED_PACKAGE}/scripts/
+chmod +x libs/{SHARED_PACKAGE}/scripts/*.sh
+```
+
+**Update package-specific comments in scripts:**
+
+The waivern-core scripts already check everything (`.`) for comprehensive type checking. Only update the comment header in `type-check.sh`:
+
+```bash
+# Change this:
+# Run static type checking for waivern-core package
+
+# To this:
+# Run static type checking for {SHARED_PACKAGE} package
+```
+
+**All three scripts:**
+- **`lint.sh`**: ✅ Ready to use (may need comment update)
+- **`format.sh`**: ✅ Ready to use (may need comment update)
+- **`type-check.sh`**: ⚠️ Update package name in comment
+
+**Rationale:** Copying from waivern-core ensures we get the comprehensive type checking pattern (`.`) that provides full coverage of the package, not just `src/ tests/`.
+
+Each script:
+- Changes to package root directory (implicitly via `uv run`)
+- Uses `uv run --group dev` to execute tools in the package's virtual environment
+- Uses the package's own `pyproject.toml` configuration
+- Expects standard `src/` and `tests/` directory structure
+
+### 2.3 Create pyproject.toml
 
 **IMPORTANT:** Compare with waivern-core and waivern-llm to ensure completeness.
 
@@ -166,6 +210,12 @@ build-backend = "hatchling.build"
 # CRITICAL: Required for dev-mode installation
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
+
+# CRITICAL: Include py.typed marker for type checking support
+include = [
+    "src/{SHARED_PACKAGE_MODULE}/**/*.py",
+    "src/{SHARED_PACKAGE_MODULE}/py.typed",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/{SHARED_PACKAGE_MODULE}"]
@@ -206,7 +256,7 @@ ignore = [
 # "tests/**/*.py" = ["S101"]
 ```
 
-### 2.3 Copy Shared Code
+### 2.4 Copy Shared Code
 
 **Copy (not move)** from waivern-community to shared package:
 
@@ -221,7 +271,7 @@ cp libs/waivern-community/src/waivern_community/analysers/*_utils.py \
 
 **Note:** Keep originals temporarily until all components are updated.
 
-### 2.4 Package Exports
+### 2.5 Package Exports
 
 Create `src/{SHARED_PACKAGE_MODULE}/__init__.py`:
 
@@ -237,7 +287,7 @@ __all__ = [
 ]
 ```
 
-### 2.5 Copy and Update Tests
+### 2.6 Copy and Update Tests
 
 Copy tests and update imports:
 
@@ -249,7 +299,7 @@ from waivern_community.{COMPONENT_TYPE}s.base import BaseClass
 from {SHARED_PACKAGE_MODULE} import BaseClass
 ```
 
-### 2.6 Add to Workspace
+### 2.7 Add to Workspace
 
 Update root `pyproject.toml`:
 
@@ -258,7 +308,7 @@ Update root `pyproject.toml`:
 members = [
     "libs/waivern-core",
     "libs/waivern-llm",
-    "libs/{SHARED_PACKAGE}",     # Add this
+    "libs/{SHARED_PACKAGE}",     # Add this (in dependency order)
     # ... other packages
 ]
 
@@ -269,7 +319,66 @@ waivern-llm = { workspace = true }
 # ... other sources
 ```
 
-### 2.7 Initial Package Installation
+### 2.8 Update Workspace Root Scripts
+
+**CRITICAL:** Must update all orchestration scripts immediately after workspace registration.
+
+Update `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`:
+
+```bash
+# Add in dependency order (e.g., after waivern-llm or appropriate location)
+(cd libs/{SHARED_PACKAGE} && ./scripts/lint.sh "$@")
+(cd libs/{SHARED_PACKAGE} && ./scripts/format.sh "$@")
+(cd libs/{SHARED_PACKAGE} && ./scripts/type-check.sh)
+```
+
+**Location:** Add the new package in the correct dependency order. For example:
+- `waivern-analysers-shared` goes after `waivern-rulesets` (which it depends on)
+- `waivern-connectors-database` goes after `waivern-llm`
+
+### 2.9 Update Pre-commit Wrapper Scripts
+
+**CRITICAL:** Must update all pre-commit wrapper scripts.
+
+Update `scripts/pre-commit-lint.sh`, `scripts/pre-commit-format.sh`, `scripts/pre-commit-type-check.sh`:
+
+**Step 1 - Add file grouping array:**
+```bash
+# In the "Group files by package" section
+{shared_package}_files=()
+```
+
+**Step 2 - Add pattern matching:**
+```bash
+# In the for loop that groups files
+elif [[ "$file" == libs/{SHARED_PACKAGE}/* ]]; then
+    {shared_package}_files+=("${file#libs/{SHARED_PACKAGE}/}")
+```
+
+**Step 3 - Add processing block:**
+```bash
+# Add in dependency order (e.g., after waivern-llm block)
+if [ ${#{shared_package}_files[@]} -gt 0 ]; then
+    (cd libs/{SHARED_PACKAGE} && ./scripts/lint.sh "${${shared_package}_files[@]}")
+fi
+```
+
+**Example for `waivern-analysers-shared`:**
+```bash
+# Variable declaration
+analysers_shared_files=()
+
+# Pattern matching
+elif [[ "$file" == libs/waivern-analysers-shared/* ]]; then
+    analysers_shared_files+=("${file#libs/waivern-analysers-shared/}")
+
+# Processing block
+if [ ${#analysers_shared_files[@]} -gt 0 ]; then
+    (cd libs/waivern-analysers-shared && ./scripts/lint.sh "${analysers_shared_files[@]}")
+fi
+```
+
+### 2.10 Initial Package Installation
 
 ```bash
 uv sync --package {SHARED_PACKAGE}
@@ -280,7 +389,7 @@ uv run python -c "import {SHARED_PACKAGE_MODULE}; print('✓ Package installed')
 
 **Why `--package` flag?** When creating a new workspace package with no dependents yet, `uv sync` alone won't install it.
 
-### 2.8 Run Package Tests
+### 2.11 Run Package Tests
 
 ```bash
 cd libs/{SHARED_PACKAGE}
@@ -289,36 +398,7 @@ uv run pytest tests/ -v
 # Expected: ~X tests passing
 ```
 
-### 2.9 Update Root Workspace Scripts
-
-**CRITICAL:** Must update all orchestration scripts.
-
-Update `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`:
-
-```bash
-# Add after waivern-llm (or appropriate location based on dependencies)
-(cd libs/{SHARED_PACKAGE} && ./scripts/lint.sh "$@")
-```
-
-### 2.10 Update Pre-commit Wrapper Scripts
-
-Update `scripts/pre-commit-lint.sh`, `scripts/pre-commit-format.sh`, `scripts/pre-commit-type-check.sh`:
-
-```bash
-# Add file grouping array
-{shared_package}_files=()
-
-# Add pattern matching in the loop
-elif [[ "$file" == libs/{SHARED_PACKAGE}/* ]]; then
-    {shared_package}_files+=("${file#libs/{SHARED_PACKAGE}/}")
-
-# Add processing block (in dependency order)
-if [ ${#{shared_package}_files[@]} -gt 0 ]; then
-    (cd libs/{SHARED_PACKAGE} && ./scripts/lint.sh "${${shared_package}_files[@]}")
-fi
-```
-
-### 2.11 Analyse and Fix Linting Errors
+### 2.12 Analyse and Fix Linting Errors
 
 Run dev-checks to identify quality issues:
 
@@ -326,14 +406,14 @@ Run dev-checks to identify quality issues:
 ./scripts/dev-checks.sh 2>&1 | tee /tmp/dev-checks-output.txt
 ```
 
-#### 2.11.1 Group Errors by Category
+#### 2.12.1 Group Errors by Category
 
 Common categories:
 - **ANN201**: Missing return type annotations on test methods
 - **S101**: Use of assert in tests (bandit security check)
 - **D205/D400/D415**: Docstring formatting issues
 
-#### 2.11.2 Fix Strategy
+#### 2.12.2 Fix Strategy
 
 **Fix these:**
 1. **ANN201** - Add `-> None` return type annotations
@@ -346,7 +426,7 @@ Common categories:
    "tests/**/*.py" = ["S101"]  # Allow assert statements
    ```
 
-#### 2.11.3 Verify Fixes
+#### 2.12.3 Verify Fixes
 
 ```bash
 ./scripts/dev-checks.sh
@@ -356,11 +436,108 @@ Common categories:
 
 ---
 
-## Phase 3: Extract Main Package
+## Phase 3: Update waivern-community
 
 **Status:** ⏳ Pending
 
-### 3.1 Create Package Structure
+### 3.1 Update Dependencies
+
+Update `libs/waivern-community/pyproject.toml`:
+
+```toml
+dependencies = [
+    "waivern-core",
+    "waivern-llm",
+    "{SHARED_PACKAGE}",    # Add if applicable
+    "{PACKAGE_NAME}",      # Import from standalone
+    # ... other dependencies
+]
+
+# Remove optional dependencies that moved to standalone package
+[project.optional-dependencies]
+# Remove: {old-optional-dep} = ["..."]
+```
+
+### 3.2 Update Component Imports
+
+Update files that used shared utilities:
+
+```python
+# Before
+from waivern_community.{COMPONENT_TYPE}s.shared import SharedUtility
+
+# After
+from {SHARED_PACKAGE_MODULE} import SharedUtility
+```
+
+### 3.3 Update Component Exports
+
+Update `src/waivern_community/{COMPONENT_TYPE}s/__init__.py`:
+
+```python
+from {PACKAGE_MODULE} import {COMPONENT_NAME}  # Import from standalone
+
+from waivern_community.{COMPONENT_TYPE}s.other import OtherComponent
+
+__all__ = (
+    "{COMPONENT_NAME}",  # Re-exported for convenience
+    "OtherComponent",
+    # ... other exports
+)
+
+BUILTIN_{COMPONENT_TYPE_UPPER}S = (
+    {COMPONENT_NAME},
+    OtherComponent,
+    # ...
+)
+```
+
+### 3.4 Delete Extracted Code
+
+Remove from waivern-community:
+
+```bash
+rm -rf libs/waivern-community/src/waivern_community/{CURRENT_LOCATION}
+rm -rf libs/waivern-community/tests/waivern_community/{CURRENT_LOCATION}
+```
+
+**Keep shared utilities** temporarily if other components still use them internally.
+
+### 3.5 Run Quality Checks and Fix Errors
+
+**CRITICAL:** After deleting old files and updating imports, verify everything still works.
+
+```bash
+# Run all tests for the community package
+cd libs/waivern-community
+uv run pytest tests/ -v
+
+# Run full dev-checks for entire workspace
+cd /path/to/workspace
+./scripts/dev-checks.sh 2>&1 | tee /tmp/dev-checks-phase3.txt
+```
+
+**Fix any errors:**
+1. **Import errors** - Ensure all imports updated correctly
+2. **Type errors** - Fix any type annotation issues
+3. **Lint errors** - Fix code quality issues
+4. **Test failures** - Update tests that reference old locations
+
+**Expected results:**
+- All community tests pass (count should be similar to before, minus extracted component tests)
+- All shared package tests pass (if applicable)
+- Type checking passes (0 errors)
+- Linting passes
+
+**Do not proceed to Phase 4 until all checks pass!**
+
+---
+
+## Phase 4: Extract Main Package
+
+**Status:** ⏳ Pending
+
+### 4.1 Create Package Structure
 
 ```bash
 mkdir -p libs/{PACKAGE_NAME}/src/{PACKAGE_MODULE}
@@ -393,7 +570,41 @@ libs/{PACKAGE_NAME}/
 └── py.typed
 ```
 
-### 3.2 Create pyproject.toml
+### 4.2 Copy and Update Package Scripts
+
+Copy script templates from waivern-core (uses comprehensive type checking):
+
+```bash
+cp libs/waivern-core/scripts/*.sh libs/{PACKAGE_NAME}/scripts/
+chmod +x libs/{PACKAGE_NAME}/scripts/*.sh
+```
+
+**Update package-specific comments in scripts:**
+
+The waivern-core scripts already check everything (`.`) for comprehensive type checking. Only update the comment header in `type-check.sh`:
+
+```bash
+# Change this:
+# Run static type checking for waivern-core package
+
+# To this:
+# Run static type checking for {PACKAGE_NAME} package
+```
+
+**All three scripts:**
+- **`lint.sh`**: ✅ Ready to use (may need comment update)
+- **`format.sh`**: ✅ Ready to use (may need comment update)
+- **`type-check.sh`**: ⚠️ Update package name in comment
+
+**Rationale:** Copying from waivern-core ensures we get the comprehensive type checking pattern (`.`) that provides full coverage of the package, not just `src/ tests/`.
+
+Each script:
+- Changes to package root directory (implicitly via `uv run`)
+- Uses `uv run --group dev` to execute tools in the package's virtual environment
+- Uses the package's own `pyproject.toml` configuration
+- Expects standard `src/` and `tests/` directory structure
+
+### 4.3 Create pyproject.toml
 
 ```toml
 [project]
@@ -457,7 +668,7 @@ ignore-decorators = ["typing.overload"]
 # "tests/**/*.py" = ["S101"]
 ```
 
-### 3.3 Copy Component Code
+### 4.4 Copy Component Code
 
 Copy from waivern-community:
 
@@ -466,7 +677,7 @@ cp -r libs/waivern-community/src/waivern_community/{CURRENT_LOCATION}/* \
       libs/{PACKAGE_NAME}/src/{PACKAGE_MODULE}/
 ```
 
-### 3.4 Update Imports
+### 4.5 Update Imports
 
 Update all Python files to use new imports:
 
@@ -481,7 +692,7 @@ from {SHARED_PACKAGE_MODULE} import SharedUtility
 from {PACKAGE_MODULE}.module import Component
 ```
 
-### 3.5 Package Exports
+### 4.6 Package Exports
 
 Create `src/{PACKAGE_MODULE}/__init__.py`:
 
@@ -497,7 +708,7 @@ __all__ = [
 ]
 ```
 
-### 3.6 Move Tests
+### 4.7 Move Tests
 
 Move tests and update imports:
 
@@ -516,7 +727,7 @@ from waivern_community.{old_path} import Component
 from {PACKAGE_MODULE} import Component
 ```
 
-### 3.7 Add to Workspace
+### 4.8 Add to Workspace
 
 Update root `pyproject.toml`:
 
@@ -524,7 +735,7 @@ Update root `pyproject.toml`:
 [tool.uv.workspace]
 members = [
     # ... existing packages
-    "libs/{PACKAGE_NAME}",     # Add this
+    "libs/{PACKAGE_NAME}",     # Add this (in dependency order)
     # ... rest
 ]
 
@@ -533,7 +744,66 @@ members = [
 {PACKAGE_NAME} = { workspace = true }  # Add this
 ```
 
-### 3.8 Initial Package Installation
+### 4.9 Update Workspace Root Scripts
+
+**CRITICAL:** Must update all orchestration scripts immediately after workspace registration.
+
+Update `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`:
+
+```bash
+# Add in dependency order (e.g., after {SHARED_PACKAGE} or appropriate location)
+(cd libs/{PACKAGE_NAME} && ./scripts/lint.sh "$@")
+(cd libs/{PACKAGE_NAME} && ./scripts/format.sh "$@")
+(cd libs/{PACKAGE_NAME} && ./scripts/type-check.sh)
+```
+
+**Location:** Add the new package in the correct dependency order. For example:
+- `waivern-personal-data-analyser` goes after `waivern-analysers-shared` (which it depends on)
+- Before `waivern-community` (which will re-export it)
+
+### 4.10 Update Pre-commit Wrapper Scripts
+
+**CRITICAL:** Must update all pre-commit wrapper scripts.
+
+Update `scripts/pre-commit-lint.sh`, `scripts/pre-commit-format.sh`, `scripts/pre-commit-type-check.sh`:
+
+**Step 1 - Add file grouping array:**
+```bash
+# In the "Group files by package" section
+{package_name}_files=()
+```
+
+**Step 2 - Add pattern matching:**
+```bash
+# In the for loop that groups files
+elif [[ "$file" == libs/{PACKAGE_NAME}/* ]]; then
+    {package_name}_files+=("${file#libs/{PACKAGE_NAME}/}")
+```
+
+**Step 3 - Add processing block:**
+```bash
+# Add in dependency order (e.g., after {SHARED_PACKAGE} block)
+if [ ${#{package_name}_files[@]} -gt 0 ]; then
+    (cd libs/{PACKAGE_NAME} && ./scripts/lint.sh "${${package_name}_files[@]}")
+fi
+```
+
+**Example for `waivern-personal-data-analyser`:**
+```bash
+# Variable declaration
+personal_data_analyser_files=()
+
+# Pattern matching
+elif [[ "$file" == libs/waivern-personal-data-analyser/* ]]; then
+    personal_data_analyser_files+=("${file#libs/waivern-personal-data-analyser/}")
+
+# Processing block
+if [ ${#personal_data_analyser_files[@]} -gt 0 ]; then
+    (cd libs/waivern-personal-data-analyser && ./scripts/lint.sh "${personal_data_analyser_files[@]}")
+fi
+```
+
+### 4.11 Initial Package Installation
 
 ```bash
 uv sync --package {PACKAGE_NAME}
@@ -542,7 +812,7 @@ uv sync --package {PACKAGE_NAME}
 uv run python -c "import {PACKAGE_MODULE}; print('✓ Package installed')"
 ```
 
-### 3.9 Run Package Tests
+### 4.12 Run Package Tests
 
 ```bash
 cd libs/{PACKAGE_NAME}
@@ -551,105 +821,9 @@ uv run pytest tests/ -v
 # Expected: ~{TEST_COUNT} tests passing
 ```
 
-### 3.10 Update Root Workspace Scripts
+### 4.13 Analyse and Fix Linting Errors
 
-Update `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`:
-
-```bash
-# Add after {SHARED_PACKAGE} (or appropriate location)
-(cd libs/{PACKAGE_NAME} && ./scripts/lint.sh "$@")
-```
-
-### 3.11 Update Pre-commit Wrapper Scripts
-
-Update `scripts/pre-commit-lint.sh`, `scripts/pre-commit-format.sh`, `scripts/pre-commit-type-check.sh`:
-
-```bash
-# Add file grouping array
-{package}_files=()
-
-# Add pattern matching
-elif [[ "$file" == libs/{PACKAGE_NAME}/* ]]; then
-    {package}_files+=("${file#libs/{PACKAGE_NAME}/}")
-
-# Add processing block (in dependency order)
-if [ ${#{package}_files[@]} -gt 0 ]; then
-    (cd libs/{PACKAGE_NAME} && ./scripts/lint.sh "${${package}_files[@]}")
-fi
-```
-
-### 3.12 Analyse and Fix Linting Errors
-
-Follow same process as Phase 2 (steps 2.11.1 - 2.11.3)
-
----
-
-## Phase 4: Update waivern-community
-
-**Status:** ⏳ Pending
-
-### 4.1 Update Dependencies
-
-Update `libs/waivern-community/pyproject.toml`:
-
-```toml
-dependencies = [
-    "waivern-core",
-    "waivern-llm",
-    "{SHARED_PACKAGE}",    # Add if applicable
-    "{PACKAGE_NAME}",      # Import from standalone
-    # ... other dependencies
-]
-
-# Remove optional dependencies that moved to standalone package
-[project.optional-dependencies]
-# Remove: {old-optional-dep} = ["..."]
-```
-
-### 4.2 Update Component Imports
-
-Update files that used shared utilities:
-
-```python
-# Before
-from waivern_community.{COMPONENT_TYPE}s.shared import SharedUtility
-
-# After
-from {SHARED_PACKAGE_MODULE} import SharedUtility
-```
-
-### 4.3 Update Component Exports
-
-Update `src/waivern_community/{COMPONENT_TYPE}s/__init__.py`:
-
-```python
-from {PACKAGE_MODULE} import {COMPONENT_NAME}  # Import from standalone
-
-from waivern_community.{COMPONENT_TYPE}s.other import OtherComponent
-
-__all__ = (
-    "{COMPONENT_NAME}",  # Re-exported for convenience
-    "OtherComponent",
-    # ... other exports
-)
-
-BUILTIN_{COMPONENT_TYPE_UPPER}S = (
-    {COMPONENT_NAME},
-    OtherComponent,
-    # ...
-)
-```
-
-### 4.4 Delete Extracted Code
-
-Remove from waivern-community:
-
-```bash
-rm -rf libs/waivern-community/src/waivern_community/{CURRENT_LOCATION}
-rm -rf libs/waivern-community/tests/waivern_community/{CURRENT_LOCATION}
-```
-
-**Keep shared utilities** temporarily if other components still use them internally.
+Follow same process as Phase 2 (steps 2.12.1 - 2.12.3)
 
 ---
 
@@ -880,28 +1054,31 @@ Use this abbreviated checklist during execution:
 
 ### Package Creation (Shared + Main)
 - [ ] Create directory structure (src, tests, scripts)
+- [ ] Copy script templates from waivern-core (already checks everything)
+- [ ] Update package name in script comments (type-check.sh header)
+- [ ] Make scripts executable (`chmod +x`)
 - [ ] Create complete pyproject.toml (compare with existing packages)
 - [ ] Include `[tool.hatch.build]` with `dev-mode-dirs = ["src"]`
 - [ ] Start with clean slate (no test ignores initially)
 - [ ] Copy/move source code
 - [ ] Update imports
 - [ ] Create `__init__.py` with exports
-- [ ] Copy script templates
-- [ ] Make scripts executable
 
 ### Workspace Integration
-- [ ] Add to `[tool.uv.workspace.members]`
+- [ ] Add to `[tool.uv.workspace.members]` (in dependency order)
 - [ ] Add to `[tool.uv.sources]`
+- [ ] **CRITICAL:** Update workspace root scripts (see below)
+- [ ] **CRITICAL:** Update pre-commit wrapper scripts (see below)
 - [ ] Run `uv sync --package <name>`
 - [ ] Verify import
 
-### Script Updates
-- [ ] Update `scripts/lint.sh`
-- [ ] Update `scripts/format.sh`
-- [ ] Update `scripts/type-check.sh`
-- [ ] Update `scripts/pre-commit-lint.sh`
-- [ ] Update `scripts/pre-commit-format.sh`
-- [ ] Update `scripts/pre-commit-type-check.sh`
+### Workspace Script Updates (CRITICAL - Do Immediately After Registration)
+- [ ] Update `scripts/lint.sh` (add package in dependency order)
+- [ ] Update `scripts/format.sh` (add package in dependency order)
+- [ ] Update `scripts/type-check.sh` (add package in dependency order)
+- [ ] Update `scripts/pre-commit-lint.sh` (3 edits: array, pattern, block)
+- [ ] Update `scripts/pre-commit-format.sh` (3 edits: array, pattern, block)
+- [ ] Update `scripts/pre-commit-type-check.sh` (3 edits: array, pattern, block)
 
 ### Quality Checks
 - [ ] Run package tests
@@ -924,13 +1101,14 @@ Use this abbreviated checklist during execution:
 
 See Phase 4 MySQL extraction plan (lines 848-1015) for detailed lessons learned:
 
-1. **pyproject.toml Configuration** - Always compare with existing packages
-2. **uv Workspace Installation** - Use `uv sync --package <name>` for new packages
-3. **Root Script Updates** - ALWAYS update all 6 workspace scripts
-4. **Linting Error Analysis** - Run dev-checks and analyse systematically
-5. **BDD-Style Docstrings** - Preserve GIVEN-WHEN-THEN with proper formatting
-6. **Test Count Tracking** - Verify completeness via test count increases
-7. **Package Ordering** - Process in dependency order
+1. **Package Scripts** - Copy from waivern-core (already checks everything with `.`), only update package name in comments
+2. **pyproject.toml Configuration** - Always compare with existing packages
+3. **uv Workspace Installation** - Use `uv sync --package <name>` for new packages
+4. **Root Script Updates** - ALWAYS update all 6 workspace scripts
+5. **Linting Error Analysis** - Run dev-checks and analyse systematically
+6. **BDD-Style Docstrings** - Preserve GIVEN-WHEN-THEN with proper formatting
+7. **Test Count Tracking** - Verify completeness via test count increases
+8. **Package Ordering** - Process in dependency order
 
 ---
 

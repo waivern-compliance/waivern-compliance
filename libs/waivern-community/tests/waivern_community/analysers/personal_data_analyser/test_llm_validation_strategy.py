@@ -4,6 +4,7 @@ import json
 from unittest.mock import Mock
 
 import pytest
+from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
 from waivern_llm import AnthropicLLMService
 
@@ -14,7 +15,6 @@ from waivern_community.analysers.personal_data_analyser.types import (
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
 )
-from waivern_community.analysers.types import LLMValidationConfig
 
 
 class TestPersonalDataValidationStrategy:

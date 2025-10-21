@@ -7,7 +7,7 @@ import pytest
 from waivern_rulesets.data_collection import DataCollectionRule
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
-from waivern_community.analysers.utilities import RulesetManager
+from waivern_analysers_shared.utilities import RulesetManager
 
 
 class TestRulesetManager:
@@ -36,7 +36,7 @@ class TestRulesetManager:
 
         # Act
         with patch(
-            "waivern_community.analysers.utilities.ruleset_manager.RulesetLoader.load_ruleset"
+            "waivern_analysers_shared.utilities.ruleset_manager.RulesetLoader.load_ruleset"
         ) as mock_load:
             mock_load.return_value = test_rules
             result = RulesetManager.get_rules("test_ruleset", ProcessingPurposeRule)
@@ -51,7 +51,7 @@ class TestRulesetManager:
         """Test that exceptions from RulesetLoader are propagated."""
         # Act & Assert
         with patch(
-            "waivern_community.analysers.utilities.ruleset_manager.RulesetLoader.load_ruleset"
+            "waivern_analysers_shared.utilities.ruleset_manager.RulesetLoader.load_ruleset"
         ) as mock_load:
             mock_load.side_effect = ValueError("Test error")
 
@@ -65,7 +65,7 @@ class TestRulesetManager:
 
         # Act
         with patch(
-            "waivern_community.analysers.utilities.ruleset_manager.RulesetLoader.load_ruleset"
+            "waivern_analysers_shared.utilities.ruleset_manager.RulesetLoader.load_ruleset"
         ) as mock_load:
             mock_load.return_value = empty_rules
             result = RulesetManager.get_rules("empty_ruleset", ProcessingPurposeRule)
@@ -89,7 +89,7 @@ class TestRulesetManager:
 
         # Act & Assert
         with patch(
-            "waivern_community.analysers.utilities.ruleset_manager.RulesetLoader.load_ruleset"
+            "waivern_analysers_shared.utilities.ruleset_manager.RulesetLoader.load_ruleset"
         ) as mock_load:
             mock_load.return_value = processing_rules
 
@@ -128,7 +128,7 @@ class TestRulesetManagerCaching:
 
         # Act - Make two identical calls
         with patch(
-            "waivern_community.analysers.utilities.ruleset_manager.RulesetLoader.load_ruleset"
+            "waivern_analysers_shared.utilities.ruleset_manager.RulesetLoader.load_ruleset"
         ) as mock_load:
             mock_load.return_value = test_rules
 
@@ -167,7 +167,7 @@ class TestRulesetManagerCaching:
 
         # Act - Load same ruleset name but different rule types
         with patch(
-            "waivern_community.analysers.utilities.ruleset_manager.RulesetLoader.load_ruleset"
+            "waivern_analysers_shared.utilities.ruleset_manager.RulesetLoader.load_ruleset"
         ) as mock_load:
             # Configure mock to return different rules based on rule type
             def side_effect(ruleset_name: str, rule_type: type[Any]) -> tuple[Any, ...]:
@@ -209,7 +209,7 @@ class TestRulesetManagerCaching:
 
         # Act - Load ruleset, clear cache, then load again
         with patch(
-            "waivern_community.analysers.utilities.ruleset_manager.RulesetLoader.load_ruleset"
+            "waivern_analysers_shared.utilities.ruleset_manager.RulesetLoader.load_ruleset"
         ) as mock_load:
             mock_load.return_value = test_rules
 

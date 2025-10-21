@@ -3,12 +3,12 @@
 import logging
 from typing import Any, override
 
-from waivern_llm import BaseLLMService
-
-from waivern_community.analysers.llm_validation import (
+from waivern_analysers_shared.llm_validation import (
     LLMValidationStrategy,
 )
-from waivern_community.analysers.types import LLMValidationConfig
+from waivern_analysers_shared.types import LLMValidationConfig
+from waivern_llm import BaseLLMService
+
 from waivern_community.prompts.personal_data_validation import (
     get_batch_validation_prompt,
 )

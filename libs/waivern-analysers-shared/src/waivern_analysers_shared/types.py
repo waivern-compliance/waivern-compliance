@@ -1,8 +1,17 @@
 """Configuration types for analysers."""
 
+from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
+
+
+class EvidenceContextSize(str, Enum):
+    """Evidence context size options."""
+
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE = "large"
 
 
 class PatternMatchingConfig(BaseModel):

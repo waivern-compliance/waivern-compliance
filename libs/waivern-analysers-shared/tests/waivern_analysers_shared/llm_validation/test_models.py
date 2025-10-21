@@ -2,7 +2,7 @@
 
 import pytest
 
-from waivern_community.analysers.llm_validation import LLMValidationResultModel
+from waivern_analysers_shared.llm_validation import LLMValidationResultModel
 
 
 class TestLLMValidationResultModel:

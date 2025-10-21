@@ -2,7 +2,7 @@
 
 import pytest
 
-from waivern_community.analysers.llm_validation.json_utils import (
+from waivern_analysers_shared.llm_validation.json_utils import (
     extract_json_from_llm_response,
 )
 

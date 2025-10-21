@@ -7,7 +7,7 @@ from typing import Any
 
 from waivern_llm import BaseLLMService
 
-from waivern_community.analysers.types import LLMValidationConfig
+from waivern_analysers_shared.types import LLMValidationConfig
 
 from .decision_engine import ValidationDecisionEngine
 from .json_utils import extract_json_from_llm_response

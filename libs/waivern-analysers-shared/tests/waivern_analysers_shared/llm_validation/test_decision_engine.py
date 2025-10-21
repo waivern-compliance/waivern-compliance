@@ -2,8 +2,9 @@
 
 from unittest.mock import Mock
 
-from waivern_community.analysers.llm_validation import (
+from waivern_analysers_shared.llm_validation import (
     LLMValidationResultModel,
+    RecommendedActionType,
     ValidationDecisionEngine,
 )
 
@@ -96,7 +97,7 @@ class TestValidationDecisionEngine:
         get_identifier = Mock(return_value="test_finding")
 
         # Test all valid action types
-        actions_and_expected = [
+        actions_and_expected: list[tuple[RecommendedActionType, bool]] = [
             ("keep", True),
             ("discard", False),  # Only FALSE_POSITIVE with discard should be False
             ("flag_for_review", True),

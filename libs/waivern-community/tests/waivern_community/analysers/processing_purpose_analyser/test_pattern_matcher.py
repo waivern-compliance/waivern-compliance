@@ -6,6 +6,7 @@ following black-box testing principles and proper encapsulation.
 
 import pytest
 from pydantic import BaseModel
+from waivern_analysers_shared.types import PatternMatchingConfig
 
 from waivern_community.analysers.processing_purpose_analyser.pattern_matcher import (
     ProcessingPurposePatternMatcher,
@@ -14,7 +15,6 @@ from waivern_community.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeFindingMetadata,
     ProcessingPurposeFindingModel,
 )
-from waivern_community.analysers.types import PatternMatchingConfig
 
 
 class TestProcessingPurposePatternMatcher:

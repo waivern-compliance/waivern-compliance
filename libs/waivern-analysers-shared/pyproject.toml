@@ -1,29 +1,13 @@
 [project]
-name = "waivern-community"
+name = "waivern-analysers-shared"
 version = "0.1.0"
-description = "Community-contributed connectors, analysers, and rulesets for Waivern Compliance Framework"
+description = "Shared utilities for analysers in Waivern Compliance Framework"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
     "waivern-llm",
-    "waivern-connectors-database",
-    "waivern-mysql",
     "waivern-rulesets",
-    "waivern-analysers-shared",
-    "pyyaml>=6.0.2",
-    "pydantic>=2.11.5",
-    "typing-extensions>=4.14.0",
-]
-
-[project.optional-dependencies]
-source-code = ["tree-sitter>=0.21.0", "tree-sitter-php>=0.22.0"]
-all = ["waivern-community[source-code]"]
-
-[dependency-groups]
-dev = [
-    "basedpyright>=1.29.2",
-    "ruff>=0.11.12",
 ]
 
 [build-system]
@@ -33,15 +17,24 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Explicitly include JSON schema files in package distribution
-# Includes schemas from connectors and analysers
+#  Include py.typed marker for type checking
 include = [
-    "src/waivern_community/**/*.py",
-    "src/waivern_community/**/schemas/json_schemas/**/*.json",
+    "src/waivern_analysers_shared/**/*.py",
+    "src/waivern_analysers_shared/py.typed",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/waivern_community"]
+packages = ["src/waivern_analysers_shared"]
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.29.2",
+    "ruff>=0.11.12",
+]
+
+[tool.ruff]
+target-version = "py312"
+src = ["src"]
 
 [tool.basedpyright]
 typeCheckingMode = "strict"
@@ -56,10 +49,6 @@ reportUnknownParameterType = "none"
 reportUnknownMemberType = "none"
 reportMissingParameterType = "none"
 reportUnknownLambdaType = "none"
-
-[tool.ruff]
-target-version = "py312"
-src = ["src"]
 
 [tool.ruff.lint]
 select = [
@@ -89,12 +78,4 @@ ignore-decorators = ["typing.overload"]
     "S101", # Use of assert detected
     "PLC0415", # Import outside top-level - acceptable for checking optional dependencies
     "PLR2004", # Magic value used in comparison - acceptable in tests
-]
-# Connector constructors need many database/filesystem parameters
-"src/waivern_community/connectors/*/connector.py" = [
-    "PLR0913",  # Too many arguments - acceptable for connector configuration
-]
-# Prompt functions legitimately need many string parameters
-"src/waivern_community/prompts/*.py" = [
-    "PLR0913",  # Too many arguments - acceptable for prompt parameter functions
 ]

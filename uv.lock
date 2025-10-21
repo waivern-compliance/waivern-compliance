@@ -9,6 +9,7 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "waivern-analysers-shared",
     "waivern-community",
     "waivern-compliance-tool",
     "waivern-connectors-database",
@@ -1497,6 +1498,35 @@ wheels = [
 ]
 
 [[package]]
+name = "waivern-analysers-shared"
+version = "0.1.0"
+source = { editable = "libs/waivern-analysers-shared" }
+dependencies = [
+    { name = "waivern-core" },
+    { name = "waivern-llm" },
+    { name = "waivern-rulesets" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-llm", editable = "libs/waivern-llm" },
+    { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
+[[package]]
 name = "waivern-community"
 version = "0.1.0"
 source = { editable = "libs/waivern-community" }
@@ -1504,6 +1534,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "typing-extensions" },
+    { name = "waivern-analysers-shared" },
     { name = "waivern-connectors-database" },
     { name = "waivern-core" },
     { name = "waivern-llm" },
@@ -1534,6 +1565,7 @@ requires-dist = [
     { name = "tree-sitter", marker = "extra == 'source-code'", specifier = ">=0.21.0" },
     { name = "tree-sitter-php", marker = "extra == 'source-code'", specifier = ">=0.22.0" },
     { name = "typing-extensions", specifier = ">=4.14.0" },
+    { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-community", extras = ["source-code"], marker = "extra == 'all'", editable = "libs/waivern-community" },
     { name = "waivern-connectors-database", editable = "libs/waivern-connectors-database" },
     { name = "waivern-core", editable = "libs/waivern-core" },
