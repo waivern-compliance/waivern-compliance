@@ -42,9 +42,9 @@ class JsonSchemaLoader:
 
     The loader caches schemas after first load to improve performance.
 
-    TODO: Reduce boilerplate by making loader automatically search relative to
-    calling schema's location (Phase 5). Current approach requires each schema
-    to explicitly provide custom search_paths, which is repetitive.
+    Design note: Each schema explicitly provides custom search_paths for clarity
+    and debuggability. This explicit approach was chosen over alternatives like
+    autodiscovery or automatic path detection. See ADR-0001 for detailed rationale.
     """
 
     def __init__(self, search_paths: list[Path] | None = None) -> None:
