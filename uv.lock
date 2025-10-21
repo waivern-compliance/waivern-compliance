@@ -1619,6 +1619,7 @@ source = { editable = "libs/waivern-core" }
 dependencies = [
     { name = "annotated-types" },
     { name = "jsonschema" },
+    { name = "pydantic" },
     { name = "typing-extensions" },
 ]
 
@@ -1632,6 +1633,7 @@ dev = [
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.7.0" },
     { name = "jsonschema", specifier = ">=4.25.0" },
+    { name = "pydantic", specifier = ">=2.11.5" },
     { name = "typing-extensions", specifier = ">=4.14.0" },
 ]
 
