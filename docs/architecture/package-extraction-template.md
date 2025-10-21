@@ -195,8 +195,11 @@ ignore = [
     "D213",    # multi-line-summary-second-line (conflicts with D212)
 ]
 
-[tool.ruff.lint.pydocstyle]
-ignore-decorators = ["typing.overload"]
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # Use of assert detected - standard in pytest
+    "PLR2004", # Magic value used in comparison - acceptable in tests
+]
 
 # Add after analyzing linting errors
 # [tool.ruff.lint.per-file-ignores]

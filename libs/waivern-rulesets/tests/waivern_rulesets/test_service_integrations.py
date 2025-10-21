@@ -2,8 +2,8 @@
 
 import pytest
 
-from waivern_community.rulesets.base import RulesetLoader, RulesetRegistry
-from waivern_community.rulesets.service_integrations import (
+from waivern_rulesets.base import RulesetLoader, RulesetRegistry
+from waivern_rulesets.service_integrations import (
     ServiceIntegrationRule,
     ServiceIntegrationsRuleset,
 )
@@ -12,7 +12,7 @@ from waivern_community.rulesets.service_integrations import (
 class TestServiceIntegrationRule:
     """Test cases for the ServiceIntegrationRule class."""
 
-    def test_service_integration_rule_with_all_fields(self):
+    def test_service_integration_rule_with_all_fields(self) -> None:
         """Test ServiceIntegrationRule with all fields."""
         rule = ServiceIntegrationRule(
             name="aws_integration",

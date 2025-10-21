@@ -3,8 +3,8 @@
 import logging
 from typing import Any
 
-from waivern_community.rulesets import RulesetLoader
-from waivern_community.rulesets.types import BaseRule
+from waivern_core import BaseRule
+from waivern_rulesets import RulesetLoader
 
 logger = logging.getLogger(__name__)
 

@@ -2,14 +2,14 @@
 
 import pytest
 
-from waivern_community.rulesets.base import (
+from waivern_rulesets.base import (
     AbstractRuleset,
     RulesetAlreadyRegisteredError,
     RulesetLoader,
     RulesetNotFoundError,
     RulesetRegistry,
 )
-from waivern_community.rulesets.processing_purposes import ProcessingPurposeRule
+from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
 
 class ConcreteRuleset(AbstractRuleset[ProcessingPurposeRule]):
@@ -41,18 +41,18 @@ class ConcreteRuleset(AbstractRuleset[ProcessingPurposeRule]):
 class TestRulesetClass:
     """Test cases for the Ruleset abstract base class."""
 
-    def test_ruleset_get_rules_is_abstract(self):
+    def test_ruleset_get_rules_is_abstract(self) -> None:
         """Test that Ruleset.get_rules is an abstract method."""
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
             AbstractRuleset()  # type: ignore[abstract]
 
-    def test_ruleset_initialisation_uses_name_property(self):
+    def test_ruleset_initialisation_uses_name_property(self) -> None:
         """Test Ruleset initialisation uses name property."""
         ruleset = ConcreteRuleset()
 
         assert ruleset.name == "test_ruleset"
 
-    def test_concrete_ruleset_get_rules_returns_list(self):
+    def test_concrete_ruleset_get_rules_returns_list(self) -> None:
         """Test that concrete implementation returns list of rules."""
         ruleset = ConcreteRuleset()
         rules = ruleset.get_rules()
@@ -62,7 +62,7 @@ class TestRulesetClass:
         assert isinstance(rules[0], ProcessingPurposeRule)
         assert rules[0].name == "test_rule"
 
-    def test_concrete_ruleset_has_version(self):
+    def test_concrete_ruleset_has_version(self) -> None:
         """Test that concrete implementation returns version."""
         ruleset = ConcreteRuleset()
         version = ruleset.version
@@ -70,7 +70,7 @@ class TestRulesetClass:
         assert isinstance(version, str)
         assert version == "1.0.0"
 
-    def test_ruleset_name_and_version_are_abstract(self):
+    def test_ruleset_name_and_version_are_abstract(self) -> None:
         """Test that Ruleset.name and version are abstract properties."""
 
         class IncompleteRuleset(AbstractRuleset):
@@ -86,7 +86,7 @@ class TestRulesetClass:
 class TestRulesetRegistry:
     """Test cases for the RulesetRegistry singleton."""
 
-    def test_registry_is_singleton(self):
+    def test_registry_is_singleton(self) -> None:
         """Test that RulesetRegistry implements singleton pattern."""
         registry1 = RulesetRegistry()
         registry2 = RulesetRegistry()
@@ -95,14 +95,14 @@ class TestRulesetRegistry:
 
     def test_registry_initialises_empty_registry(
         self, isolated_registry: RulesetRegistry
-    ):
+    ) -> None:
         """Test that registry starts with empty ruleset registry."""
         isolated_registry.clear()
 
         # Access private attribute for testing purposes
         assert isolated_registry._registry == {}  # type: ignore[attr-defined]
 
-    def test_register_ruleset_class(self, isolated_registry: RulesetRegistry):
+    def test_register_ruleset_class(self, isolated_registry: RulesetRegistry) -> None:
         """Test registering a ruleset class."""
         isolated_registry.clear()
         isolated_registry.register(
@@ -112,7 +112,9 @@ class TestRulesetRegistry:
         assert "test_ruleset" in isolated_registry._registry  # type: ignore[attr-defined]
         assert isolated_registry._registry["test_ruleset"] is ConcreteRuleset  # type: ignore[attr-defined]
 
-    def test_get_registered_ruleset_class(self, isolated_registry: RulesetRegistry):
+    def test_get_registered_ruleset_class(
+        self, isolated_registry: RulesetRegistry
+    ) -> None:
         """Test retrieving a registered ruleset class."""
         isolated_registry.clear()
         isolated_registry.register(
@@ -127,7 +129,7 @@ class TestRulesetRegistry:
 
     def test_get_unregistered_ruleset_raises_error(
         self, isolated_registry: RulesetRegistry
-    ):
+    ) -> None:
         """Test that getting an unregistered ruleset raises RulesetNotFoundError."""
         isolated_registry.clear()
 
@@ -138,7 +140,7 @@ class TestRulesetRegistry:
 
     def test_multiple_registrations_maintain_state(
         self, isolated_registry: RulesetRegistry
-    ):
+    ) -> None:
         """Test that multiple registrations are maintained across singleton instances."""
         isolated_registry.clear()
         isolated_registry.register("ruleset1", ConcreteRuleset, ProcessingPurposeRule)
@@ -156,7 +158,7 @@ class TestRulesetRegistry:
 
     def test_registry_prevents_duplicate_registration(
         self, isolated_registry: RulesetRegistry
-    ):
+    ) -> None:
         """Test that registering the same name raises RulesetAlreadyRegisteredError."""
 
         class AnotherRuleset(AbstractRuleset[ProcessingPurposeRule]):
@@ -192,7 +194,9 @@ class TestRulesetRegistry:
 class TestRulesetLoader:
     """Test cases for the RulesetLoader."""
 
-    def test_load_ruleset_uses_registry(self, isolated_registry: RulesetRegistry):
+    def test_load_ruleset_uses_registry(
+        self, isolated_registry: RulesetRegistry
+    ) -> None:
         """Test that load_ruleset uses the singleton registry."""
         isolated_registry.clear()
         isolated_registry.register(
@@ -208,7 +212,7 @@ class TestRulesetLoader:
 
     def test_load_nonexistent_ruleset_raises_error(
         self, isolated_registry: RulesetRegistry
-    ):
+    ) -> None:
         """Test that loading a nonexistent ruleset raises RulesetNotFoundError."""
         isolated_registry.clear()
 
@@ -219,7 +223,7 @@ class TestRulesetLoader:
 
     def test_load_ruleset_creates_instance_with_correct_name(
         self, isolated_registry: RulesetRegistry
-    ):
+    ) -> None:
         """Test that load_ruleset creates ruleset instance with correct name."""
 
         class NameTrackingRuleset(AbstractRuleset[ProcessingPurposeRule]):
@@ -253,7 +257,9 @@ class TestRulesetLoader:
         assert len(rules) == 1
         assert rules[0].name == "rule_from_name_tracking"
 
-    def test_load_ruleset_is_classmethod(self, isolated_registry: RulesetRegistry):
+    def test_load_ruleset_is_classmethod(
+        self, isolated_registry: RulesetRegistry
+    ) -> None:
         """Test that load_ruleset can be called as a class method."""
         isolated_registry.clear()
         isolated_registry.register(
@@ -270,7 +276,9 @@ class TestRulesetLoader:
 class TestRulesetIntegration:
     """Integration tests for ruleset components working together."""
 
-    def test_end_to_end_ruleset_workflow(self, isolated_registry: RulesetRegistry):
+    def test_end_to_end_ruleset_workflow(
+        self, isolated_registry: RulesetRegistry
+    ) -> None:
         """Test the complete workflow from registration to loading."""
 
         # Define a custom ruleset
@@ -325,7 +333,7 @@ class TestRulesetIntegration:
 
     def test_ruleset_version_accessible_through_loader(
         self, isolated_registry: RulesetRegistry
-    ):
+    ) -> None:
         """Test that ruleset version is accessible after loading."""
 
         class VersionedRuleset(AbstractRuleset[ProcessingPurposeRule]):

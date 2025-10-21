@@ -2,8 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
-
-from waivern_community.rulesets.types import (
+from waivern_core import (
     BaseRule,
 )
 
@@ -11,7 +10,7 @@ from waivern_community.rulesets.types import (
 class TestBaseRule:
     """Test cases for the BaseRule class."""
 
-    def test_base_rule_initialisation_with_required_parameters(self):
+    def test_base_rule_initialisation_with_required_parameters(self) -> None:
         """Test BaseRule initialisation with all required parameters."""
         rule = BaseRule(
             name="test_rule",
@@ -24,7 +23,7 @@ class TestBaseRule:
         assert rule.description == "A test rule"
         assert rule.patterns == ("pattern1", "pattern2")
 
-    def test_base_rule_must_contain_at_least_one_pattern(self):
+    def test_base_rule_must_contain_at_least_one_pattern(self) -> None:
         """Test BaseRule initialisation with empty patterns raises ValidationError."""
         with pytest.raises(
             ValidationError, match="Tuple should have at least 1 item after validation"
@@ -36,7 +35,7 @@ class TestBaseRule:
                 risk_level="low",
             )
 
-    def test_base_rule_patterns_cannot_be_empty_strings(self):
+    def test_base_rule_patterns_cannot_be_empty_strings(self) -> None:
         """Test BaseRule patterns cannot contain empty strings."""
         with pytest.raises(
             ValidationError, match="All patterns must be non-empty strings"
@@ -48,7 +47,7 @@ class TestBaseRule:
                 risk_level="low",
             )
 
-    def test_base_rule_attributes_are_immutable(self):
+    def test_base_rule_attributes_are_immutable(self) -> None:
         """Test that BaseRule attributes cannot be modified after initialisation."""
         rule = BaseRule(
             name="immutable_rule",

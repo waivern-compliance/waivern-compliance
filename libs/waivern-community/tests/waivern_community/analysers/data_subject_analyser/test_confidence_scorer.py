@@ -4,10 +4,11 @@ This test module focuses on testing the confidence scoring algorithm
 for data subject classification.
 """
 
+from waivern_rulesets.data_subjects import DataSubjectRule
+
 from waivern_community.analysers.data_subject_analyser.confidence_scorer import (
     DataSubjectConfidenceScorer,
 )
-from waivern_community.rulesets.data_subjects import DataSubjectRule
 
 
 class TestDataSubjectConfidenceScorer:

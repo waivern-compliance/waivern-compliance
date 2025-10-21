@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Run code linting checks for waivern-llm package
+# Run code linting checks for waivern-rulesets package
 # Usage: bash scripts/lint.sh [--fix]
 # Checks code for style and quality issues using Ruff
 

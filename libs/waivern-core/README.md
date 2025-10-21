@@ -12,15 +12,6 @@ This package provides the base abstractions that all Waivern components must imp
 - **Message**: Data structure for passing data between components
 - **Schema**: Base classes for schema definitions and validation
 
-## Schemas
-
-This package provides core WCF schemas:
-
-- **StandardInputSchema**: Universal input format for connectors (MySQL, SQLite, Filesystem)
-- **BaseFindingSchema**: Base class for analyser output schemas
-
-Schema JSON files are located in `src/waivern_core/schemas/json_schemas/` and are automatically discovered by the `JsonSchemaLoader`.
-
 ## Installation
 
 ```bash

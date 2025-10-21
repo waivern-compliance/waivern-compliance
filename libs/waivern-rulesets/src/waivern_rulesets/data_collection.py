@@ -11,9 +11,9 @@ from typing import Final, override
 
 import yaml
 from pydantic import Field, model_validator
+from waivern_core import BaseRule, RulesetData
 
-from waivern_community.rulesets.base import AbstractRuleset
-from waivern_community.rulesets.types import BaseRule, RulesetData
+from waivern_rulesets.base import AbstractRuleset
 
 logger = logging.getLogger(__name__)
 

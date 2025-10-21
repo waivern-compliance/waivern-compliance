@@ -4,9 +4,7 @@ import abc
 import logging
 from typing import Any, override
 
-from waivern_core import BaseRuleset, RulesetError
-
-from waivern_community.rulesets.types import BaseRule
+from waivern_core import BaseRule, BaseRuleset, RulesetError
 
 logger = logging.getLogger(__name__)
 

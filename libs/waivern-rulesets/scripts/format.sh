@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Format code for waivern-llm package
+# Format code for waivern-rulesets package
 # Usage: bash scripts/format.sh [files/directories]
 # Applies automatic code formatting using Ruff
 
