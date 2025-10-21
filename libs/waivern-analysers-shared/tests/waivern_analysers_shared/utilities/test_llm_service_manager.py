@@ -18,7 +18,7 @@ class TestLLMServiceManagerInitialisation:
     """Test LLMServiceManager initialisation behaviour."""
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_initialise_with_validation_enabled_by_default(self, mock_factory):
         """Test that LLMServiceManager initialises with validation enabled by default."""
@@ -32,7 +32,7 @@ class TestLLMServiceManagerInitialisation:
         assert result is True
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_initialise_with_validation_explicitly_enabled(self, mock_factory):
         """Test that LLMServiceManager initialises with validation explicitly enabled."""
@@ -58,7 +58,7 @@ class TestLLMServiceProperty:
     """Test the llm_service property behaviour."""
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_llm_service_creates_service_when_validation_enabled(self, mock_factory):
         """Test that llm_service property creates service when validation is enabled."""
@@ -73,7 +73,7 @@ class TestLLMServiceProperty:
         mock_factory.assert_called_once()
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_llm_service_returns_cached_service_on_subsequent_calls(self, mock_factory):
         """Test that llm_service property returns cached service on subsequent calls."""
@@ -99,7 +99,7 @@ class TestLLMServiceProperty:
         assert result is None
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_llm_service_handles_service_creation_failure(self, mock_factory):
         """Test that llm_service property handles service creation failures gracefully."""
@@ -116,7 +116,7 @@ class TestLLMServiceProperty:
         mock_factory.assert_called_once()
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_llm_service_does_not_retry_after_failure(self, mock_factory):
         """Test that llm_service property does not retry service creation after failure."""
@@ -135,7 +135,7 @@ class TestLLMServiceProperty:
         mock_factory.assert_called_once()
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_llm_service_logs_successful_initialisation(self, mock_factory, caplog):
         """Test that llm_service property logs successful service initialisation."""
@@ -150,7 +150,7 @@ class TestLLMServiceProperty:
         assert "LLM service initialised for compliance analysis" in caplog.text
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_llm_service_logs_initialisation_failure(self, mock_factory, caplog):
         """Test that llm_service property logs service initialisation failures."""
@@ -172,7 +172,7 @@ class TestLLMServiceManagerEdgeCases:
     """Test edge cases and error scenarios."""
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_manager_state_after_service_failure_recovery_attempt(self, mock_factory):
         """Test manager state remains consistent after failed service creation."""
@@ -196,7 +196,7 @@ class TestLLMServiceManagerEdgeCases:
         # Test behaviour consistency: both calls should give same result
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_multiple_managers_with_different_configurations(self, mock_factory):
         """Test multiple LLMServiceManager instances with different configurations."""
@@ -215,7 +215,7 @@ class TestLLMServiceManagerEdgeCases:
         assert disabled_manager.llm_service is None
 
     @patch(
-        "waivern_community.analysers.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
+        "waivern_analysers_shared.utilities.llm_service_manager.LLMServiceFactory.create_anthropic_service"
     )
     def test_service_creation_called_only_when_needed(self, mock_factory):
         """Test that service creation is only called when actually needed."""

@@ -3,12 +3,11 @@
 from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field
-from waivern_core.schemas import BaseFindingModel
-
-from waivern_community.analysers.types import (
+from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )
+from waivern_core.schemas import BaseFindingModel
 
 
 class DataSubjectAnalyserConfig(BaseModel):

@@ -4,6 +4,7 @@ import logging
 from pprint import pformat
 from typing import Any, Self, override
 
+from waivern_analysers_shared.utilities import LLMServiceManager
 from waivern_core import Analyser
 from waivern_core.message import Message
 from waivern_core.schemas import (
@@ -14,8 +15,6 @@ from waivern_core.schemas import (
     StandardInputDataModel,
     StandardInputSchema,
 )
-
-from waivern_community.analysers.utilities import LLMServiceManager
 
 from .llm_validation_strategy import personal_data_validation_strategy
 from .pattern_matcher import PersonalDataPatternMatcher

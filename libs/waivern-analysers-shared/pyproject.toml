@@ -17,6 +17,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
+#  Include py.typed marker for type checking
+include = [
+    "src/waivern_analysers_shared/**/*.py",
+    "src/waivern_analysers_shared/py.typed",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/waivern_analysers_shared"]
 

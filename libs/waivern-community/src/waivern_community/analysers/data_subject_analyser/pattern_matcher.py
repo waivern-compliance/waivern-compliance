@@ -45,11 +45,10 @@ Note: Context filtering happens before pattern matching, ensuring only
 relevant rules are evaluated for each data source type.
 """
 
+from waivern_analysers_shared.types import PatternMatchingConfig
+from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
 from waivern_core.schemas import BaseFindingCompliance, BaseMetadata
 from waivern_rulesets.data_subjects import DataSubjectRule
-
-from waivern_community.analysers.types import PatternMatchingConfig
-from waivern_community.analysers.utilities import EvidenceExtractor, RulesetManager
 
 from .confidence_scorer import DataSubjectConfidenceScorer
 from .types import DataSubjectFindingMetadata, DataSubjectFindingModel

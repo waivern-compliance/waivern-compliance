@@ -8,6 +8,7 @@ import json
 from unittest.mock import Mock
 
 import pytest
+from waivern_analysers_shared.utilities import LLMServiceManager
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseMetadata,
@@ -23,7 +24,6 @@ from waivern_community.analysers.processing_purpose_analyser.analyser import (
 from waivern_community.analysers.processing_purpose_analyser.schemas import (
     ProcessingPurposeFindingSchema,
 )
-from waivern_community.analysers.utilities import LLMServiceManager
 
 
 class TestProcessingPurposeAnalyserLLMValidationBehaviour:

@@ -4,6 +4,8 @@ This package provides the core analyser system and built-in analysers
 for the Waivern Compliance Tool (WCT).
 """
 
+# Re-export shared types for convenience
+from waivern_analysers_shared import LLMValidationConfig, PatternMatchingConfig
 from waivern_core import (
     Analyser,
     AnalyserError,
@@ -23,7 +25,6 @@ from waivern_community.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
     ProcessingPurposeFindingModel,
 )
-from waivern_community.analysers.types import LLMValidationConfig, PatternMatchingConfig
 
 __all__ = (
     "Analyser",

@@ -8,6 +8,8 @@ encapsulates specific concerns and processing paths.
 from unittest.mock import Mock
 
 import pytest
+from waivern_analysers_shared.types import LLMValidationConfig, PatternMatchingConfig
+from waivern_analysers_shared.utilities import LLMServiceManager
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseMetadata,
@@ -30,8 +32,6 @@ from waivern_community.analysers.processing_purpose_analyser.schemas import (
 from waivern_community.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeAnalyserConfig,
 )
-from waivern_community.analysers.types import LLMValidationConfig, PatternMatchingConfig
-from waivern_community.analysers.utilities import LLMServiceManager
 from waivern_community.connectors.source_code.schemas import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeDataModel,

@@ -1,10 +1,9 @@
 """Pattern matcher class for processing purpose analysis."""
 
+from waivern_analysers_shared.types import PatternMatchingConfig
+from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
 from waivern_core.schemas import BaseFindingCompliance, BaseMetadata
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
-
-from waivern_community.analysers.types import PatternMatchingConfig
-from waivern_community.analysers.utilities import EvidenceExtractor, RulesetManager
 
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
 

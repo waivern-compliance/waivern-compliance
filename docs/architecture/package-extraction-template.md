@@ -114,7 +114,17 @@ Fill in all template variables and customize phases as needed.
 mkdir -p libs/{SHARED_PACKAGE}/src/{SHARED_PACKAGE_MODULE}
 mkdir -p libs/{SHARED_PACKAGE}/tests/{SHARED_PACKAGE_MODULE}
 mkdir -p libs/{SHARED_PACKAGE}/scripts
+
+# CRITICAL: Create py.typed marker INSIDE the package directory (not at package root!)
+# Location: libs/{SHARED_PACKAGE}/src/{SHARED_PACKAGE_MODULE}/py.typed
+touch libs/{SHARED_PACKAGE}/src/{SHARED_PACKAGE_MODULE}/py.typed
 ```
+
+**IMPORTANT - py.typed location:**
+- ✅ CORRECT: `libs/{SHARED_PACKAGE}/src/{SHARED_PACKAGE_MODULE}/py.typed` (inside package)
+- ❌ WRONG: `libs/{SHARED_PACKAGE}/py.typed` (at package root)
+
+The `py.typed` file MUST be inside `src/{SHARED_PACKAGE_MODULE}/` directory. Without it in the correct location, importing packages will show "Stub file not found" errors from type checkers.
 
 Package structure:
 ```
@@ -123,6 +133,7 @@ libs/{SHARED_PACKAGE}/
 │   ├── __init__.py
 │   ├── base_*.py          # Base classes
 │   ├── *_utils.py         # Shared utilities
+│   ├── py.typed           # CRITICAL: Type checking marker (inside package!)
 │   └── [other modules]
 ├── tests/{SHARED_PACKAGE_MODULE}/
 │   ├── test_base_*.py
@@ -132,8 +143,7 @@ libs/{SHARED_PACKAGE}/
 │   ├── format.sh
 │   └── type-check.sh
 ├── pyproject.toml
-├── README.md
-└── py.typed
+└── README.md
 ```
 
 ### 2.2 Copy and Update Package Scripts
@@ -200,6 +210,12 @@ build-backend = "hatchling.build"
 # CRITICAL: Required for dev-mode installation
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
+
+# CRITICAL: Include py.typed marker for type checking support
+include = [
+    "src/{SHARED_PACKAGE_MODULE}/**/*.py",
+    "src/{SHARED_PACKAGE_MODULE}/py.typed",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/{SHARED_PACKAGE_MODULE}"]
@@ -486,6 +502,34 @@ rm -rf libs/waivern-community/tests/waivern_community/{CURRENT_LOCATION}
 ```
 
 **Keep shared utilities** temporarily if other components still use them internally.
+
+### 3.5 Run Quality Checks and Fix Errors
+
+**CRITICAL:** After deleting old files and updating imports, verify everything still works.
+
+```bash
+# Run all tests for the community package
+cd libs/waivern-community
+uv run pytest tests/ -v
+
+# Run full dev-checks for entire workspace
+cd /path/to/workspace
+./scripts/dev-checks.sh 2>&1 | tee /tmp/dev-checks-phase3.txt
+```
+
+**Fix any errors:**
+1. **Import errors** - Ensure all imports updated correctly
+2. **Type errors** - Fix any type annotation issues
+3. **Lint errors** - Fix code quality issues
+4. **Test failures** - Update tests that reference old locations
+
+**Expected results:**
+- All community tests pass (count should be similar to before, minus extracted component tests)
+- All shared package tests pass (if applicable)
+- Type checking passes (0 errors)
+- Linting passes
+
+**Do not proceed to Phase 4 until all checks pass!**
 
 ---
 

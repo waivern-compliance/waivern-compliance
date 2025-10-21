@@ -3,6 +3,7 @@
 import json
 from unittest.mock import Mock
 
+from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
 from waivern_llm import AnthropicLLMService
 
@@ -13,7 +14,6 @@ from waivern_community.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeFindingMetadata,
     ProcessingPurposeFindingModel,
 )
-from waivern_community.analysers.types import LLMValidationConfig
 
 
 class TestProcessingPurposeValidationStrategy:

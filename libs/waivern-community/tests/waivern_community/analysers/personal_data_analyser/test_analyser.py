@@ -8,6 +8,11 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from waivern_analysers_shared.types import (
+    LLMValidationConfig,
+    PatternMatchingConfig,
+)
+from waivern_analysers_shared.utilities import LLMServiceManager
 from waivern_core import Analyser, RuleComplianceData
 from waivern_core.message import Message, MessageValidationError
 from waivern_core.schemas import (
@@ -32,11 +37,6 @@ from waivern_community.analysers.personal_data_analyser.types import (
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
 )
-from waivern_community.analysers.types import (
-    LLMValidationConfig,
-    PatternMatchingConfig,
-)
-from waivern_community.analysers.utilities import LLMServiceManager
 from waivern_community.connectors.source_code.schemas import SourceCodeSchema
 
 
