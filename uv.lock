@@ -9,6 +9,7 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "waivern-analysers-shared",
     "waivern-community",
     "waivern-compliance-tool",
     "waivern-connectors-database",
@@ -1494,6 +1495,35 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a9/96/0834f30fa08dca3738614e6a9d42752b6420ee94e58971d702118f7cfd30/virtualenv-20.32.0.tar.gz", hash = "sha256:886bf75cadfdc964674e6e33eb74d787dff31ca314ceace03ca5810620f4ecf0", size = 6076970, upload-time = "2025-07-21T04:09:50.985Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/c6/f8f28009920a736d0df434b52e9feebfb4d702ba942f15338cb4a83eafc1/virtualenv-20.32.0-py3-none-any.whl", hash = "sha256:2c310aecb62e5aa1b06103ed7c2977b81e042695de2697d01017ff0f1034af56", size = 6057761, upload-time = "2025-07-21T04:09:48.059Z" },
+]
+
+[[package]]
+name = "waivern-analysers-shared"
+version = "0.1.0"
+source = { editable = "libs/waivern-analysers-shared" }
+dependencies = [
+    { name = "waivern-core" },
+    { name = "waivern-llm" },
+    { name = "waivern-rulesets" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-llm", editable = "libs/waivern-llm" },
+    { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
 ]
 
 [[package]]
