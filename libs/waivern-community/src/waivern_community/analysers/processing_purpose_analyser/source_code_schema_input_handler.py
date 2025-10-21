@@ -2,15 +2,15 @@
 
 from pydantic import BaseModel
 from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
+from waivern_rulesets import RulesetLoader
+from waivern_rulesets.data_collection import DataCollectionRule
+from waivern_rulesets.processing_purposes import ProcessingPurposeRule
+from waivern_rulesets.service_integrations import ServiceIntegrationRule
 
 from waivern_community.connectors.source_code.schemas import (
     SourceCodeDataModel,
     SourceCodeFileDataModel,
 )
-from waivern_community.rulesets import RulesetLoader
-from waivern_community.rulesets.data_collection import DataCollectionRule
-from waivern_community.rulesets.processing_purposes import ProcessingPurposeRule
-from waivern_community.rulesets.service_integrations import ServiceIntegrationRule
 
 from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
 

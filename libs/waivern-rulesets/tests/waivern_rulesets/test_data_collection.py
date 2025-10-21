@@ -1,17 +1,18 @@
 """Unit tests for DataCollectionRuleset class."""
 
-from waivern_community.rulesets.base import RulesetLoader, RulesetRegistry
-from waivern_community.rulesets.data_collection import (
+from waivern_core import RuleComplianceData
+
+from waivern_rulesets.base import RulesetLoader, RulesetRegistry
+from waivern_rulesets.data_collection import (
     DataCollectionRule,
     DataCollectionRuleset,
 )
-from waivern_community.rulesets.types import RuleComplianceData
 
 
 class TestDataCollectionRule:
     """Test cases for the DataCollectionRule class."""
 
-    def test_data_collection_rule_with_all_fields(self):
+    def test_data_collection_rule_with_all_fields(self) -> None:
         """Test DataCollectionRule with all fields."""
         rule = DataCollectionRule(
             name="form_data_rule",
@@ -31,17 +32,17 @@ class TestDataCollectionRule:
 class TestDataCollectionRuleset:
     """Test cases for the DataCollectionRuleset class."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test fixtures for each test method."""
         self.ruleset = DataCollectionRuleset()
 
-    def test_name_property_returns_canonical_name(self):
+    def test_name_property_returns_canonical_name(self) -> None:
         """Test DataCollectionRuleset returns canonical name."""
         ruleset = DataCollectionRuleset()
 
         assert ruleset.name == "data_collection"
 
-    def test_version_property_returns_correct_string_format(self):
+    def test_version_property_returns_correct_string_format(self) -> None:
         """Test that version property returns a non-empty string."""
         version = self.ruleset.version
 
@@ -52,7 +53,7 @@ class TestDataCollectionRuleset:
         assert len(parts) == 3
         assert all(part.isdigit() for part in parts)
 
-    def test_get_rules_returns_tuple_of_rules_with_at_least_one_rule(self):
+    def test_get_rules_returns_tuple_of_rules_with_at_least_one_rule(self) -> None:
         """Test that get_rules returns an immutable tuple of Rule objects."""
         rules = self.ruleset.get_rules()
 
@@ -60,21 +61,21 @@ class TestDataCollectionRuleset:
         assert len(rules) > 0
         assert all(isinstance(rule, DataCollectionRule) for rule in rules)
 
-    def test_get_rules_returns_consistent_count(self):
+    def test_get_rules_returns_consistent_count(self) -> None:
         """Test that get_rules returns a consistent number of rules."""
         rules1 = self.ruleset.get_rules()
         rules2 = self.ruleset.get_rules()
 
         assert len(rules1) == len(rules2)
 
-    def test_rule_names_are_unique(self):
+    def test_rule_names_are_unique(self) -> None:
         """Test that all rule names are unique."""
         rules = self.ruleset.get_rules()
         rule_names = [rule.name for rule in rules]
 
         assert len(rule_names) == len(set(rule_names))
 
-    def test_rules_have_correct_structure(self):
+    def test_rules_have_correct_structure(self) -> None:
         """Test that each rule has the correct structure and required fields."""
         rules = self.ruleset.get_rules()
 
@@ -97,7 +98,7 @@ class TestDataCollectionRuleset:
             assert len(rule.collection_type) > 0
             assert len(rule.data_source) > 0
 
-    def test_rules_have_valid_risk_levels(self):
+    def test_rules_have_valid_risk_levels(self) -> None:
         """Test that all rules have valid risk levels."""
         rules = self.ruleset.get_rules()
         valid_risk_levels = {"low", "medium", "high"}
@@ -105,7 +106,7 @@ class TestDataCollectionRuleset:
         for rule in rules:
             assert rule.risk_level in valid_risk_levels
 
-    def test_rules_have_non_empty_patterns(self):
+    def test_rules_have_non_empty_patterns(self) -> None:
         """Test that all rules have non-empty pattern tuples."""
         rules = self.ruleset.get_rules()
 
@@ -114,7 +115,7 @@ class TestDataCollectionRuleset:
             assert all(isinstance(pattern, str) for pattern in rule.patterns)
             assert all(len(pattern) > 0 for pattern in rule.patterns)
 
-    def test_rules_have_non_empty_names_and_descriptions(self):
+    def test_rules_have_non_empty_names_and_descriptions(self) -> None:
         """Test that all rules have non-empty names and descriptions."""
         rules = self.ruleset.get_rules()
 
@@ -122,7 +123,7 @@ class TestDataCollectionRuleset:
             assert len(rule.name) > 0
             assert len(rule.description) > 0
 
-    def test_rules_have_structured_compliance_data(self):
+    def test_rules_have_structured_compliance_data(self) -> None:
         """Test that rules have structured compliance data."""
         rules = self.ruleset.get_rules()
 
@@ -141,7 +142,7 @@ class TestDataCollectionRuleset:
                 assert len(compliance_entry.regulation) > 0
                 assert len(compliance_entry.relevance) > 0
 
-    def test_patterns_are_tuples_not_lists(self):
+    def test_patterns_are_tuples_not_lists(self) -> None:
         """Test that all patterns are stored as tuples, not lists."""
         rules = self.ruleset.get_rules()
 
@@ -153,7 +154,9 @@ class TestDataCollectionRuleset:
 class TestDataCollectionIntegration:
     """Integration tests for DataCollectionRuleset with other components."""
 
-    def test_ruleset_loader_integration(self, isolated_registry: RulesetRegistry):
+    def test_ruleset_loader_integration(
+        self, isolated_registry: RulesetRegistry
+    ) -> None:
         """Test that DataCollectionRuleset works with RulesetLoader."""
         isolated_registry.clear()
         isolated_registry.register(

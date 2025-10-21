@@ -8,7 +8,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-from waivern_core import Analyser
+from waivern_core import Analyser, RuleComplianceData
 from waivern_core.message import Message, MessageValidationError
 from waivern_core.schemas import (
     BaseFindingCompliance,
@@ -16,6 +16,7 @@ from waivern_core.schemas import (
     StandardInputSchema,
 )
 from waivern_core.schemas.base import SchemaLoadError
+from waivern_rulesets.personal_data import PersonalDataRule
 
 from waivern_community.analysers.personal_data_analyser.analyser import (
     PersonalDataAnalyser,
@@ -37,8 +38,6 @@ from waivern_community.analysers.types import (
 )
 from waivern_community.analysers.utilities import LLMServiceManager
 from waivern_community.connectors.source_code.schemas import SourceCodeSchema
-from waivern_community.rulesets.personal_data import PersonalDataRule
-from waivern_community.rulesets.types import RuleComplianceData
 
 
 class TestPersonalDataAnalyser:

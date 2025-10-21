@@ -1,10 +1,10 @@
 """Pattern matcher class for personal data analysis."""
 
 from waivern_core.schemas import BaseFindingCompliance, BaseMetadata
+from waivern_rulesets.personal_data import PersonalDataRule
 
 from waivern_community.analysers.types import PatternMatchingConfig
 from waivern_community.analysers.utilities import EvidenceExtractor, RulesetManager
-from waivern_community.rulesets.personal_data import PersonalDataRule
 
 from .types import PersonalDataFindingMetadata, PersonalDataFindingModel
 

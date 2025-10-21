@@ -19,6 +19,7 @@ from waivern_core.errors import (
     WaivernError,
 )
 from waivern_core.message import Message
+from waivern_core.ruleset_types import BaseRule, RuleComplianceData, RulesetData
 from waivern_core.schemas import (
     JsonSchemaLoader,
     Schema,
@@ -38,6 +39,10 @@ __all__ = [
     # Schema utilities
     "SchemaLoader",
     "JsonSchemaLoader",
+    # Ruleset types
+    "BaseRule",
+    "RuleComplianceData",
+    "RulesetData",
     # Errors
     "WaivernError",
     "AnalyserError",

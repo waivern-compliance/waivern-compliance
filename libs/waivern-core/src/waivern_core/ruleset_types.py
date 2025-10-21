@@ -1,4 +1,4 @@
-"""Pydantic-based types for structured rulesets with inheritance."""
+"""Pydantic-based types for structured rulesets."""
 
 from typing import Literal
 

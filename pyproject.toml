@@ -4,6 +4,7 @@ members = [
     "libs/waivern-llm",
     "libs/waivern-connectors-database",
     "libs/waivern-mysql",
+    "libs/waivern-rulesets",
     "libs/waivern-community",
     "apps/wct",
 ]
@@ -13,6 +14,7 @@ waivern-core = { workspace = true }
 waivern-llm = { workspace = true }
 waivern-connectors-database = { workspace = true }
 waivern-mysql = { workspace = true }
+waivern-rulesets = { workspace = true }
 waivern-community = { workspace = true }
 waivern-compliance-tool = { workspace = true }
 

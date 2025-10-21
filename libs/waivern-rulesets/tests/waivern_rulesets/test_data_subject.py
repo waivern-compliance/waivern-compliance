@@ -7,8 +7,8 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from waivern_community.rulesets.base import RulesetLoader, RulesetRegistry
-from waivern_community.rulesets.data_subjects import (
+from waivern_rulesets.base import RulesetLoader, RulesetRegistry
+from waivern_rulesets.data_subjects import (
     DataSubjectRule,
     DataSubjectRulesetData,
     DataSubjectsRuleset,
@@ -18,7 +18,7 @@ from waivern_community.rulesets.data_subjects import (
 class TestDataSubjectRule:
     """Test cases for the DataSubjectRule class."""
 
-    def test_data_subject_rule_with_all_fields(self):
+    def test_data_subject_rule_with_all_fields(self) -> None:
         """Test DataSubjectRule with all fields."""
         rule = DataSubjectRule(
             name="employee_rule",
@@ -37,7 +37,7 @@ class TestDataSubjectRule:
         assert rule.confidence_weight == 40
         assert rule.applicable_contexts == ["database", "source_code"]
 
-    def test_data_subject_rule_confidence_weight_validation(self):
+    def test_data_subject_rule_confidence_weight_validation(self) -> None:
         """Test DataSubjectRule confidence_weight constraints."""
         # Test minimum bound
         with pytest.raises(
@@ -69,7 +69,7 @@ class TestDataSubjectRule:
                 risk_level="low",
             )
 
-    def test_data_subject_rule_indicator_type_validation(self):
+    def test_data_subject_rule_indicator_type_validation(self) -> None:
         """Test DataSubjectRule indicator_type literal validation."""
         # Valid indicator types should work
         for indicator_type in ["primary", "secondary", "contextual"]:
@@ -105,7 +105,7 @@ class TestDataSubjectRule:
 class TestDataSubjectRulesetData:
     """Test cases for the DataSubjectRulesetData class."""
 
-    def test_data_subject_ruleset_with_all_fields(self):
+    def test_data_subject_ruleset_with_all_fields(self) -> None:
         """Test DataSubjectRulesetData with all fields."""
         rule = DataSubjectRule(
             name="employee_rule",
@@ -134,7 +134,7 @@ class TestDataSubjectRulesetData:
         assert "minor" in ruleset.risk_increasing_modifiers
         assert "non-EU-resident" in ruleset.risk_decreasing_modifiers
 
-    def test_data_subject_ruleset_invalid_subject_category(self):
+    def test_data_subject_ruleset_invalid_subject_category(self) -> None:
         """Test DataSubjectRulesetData rejects rules with invalid subject categories."""
         rule = DataSubjectRule(
             name="invalid_rule",
@@ -159,7 +159,7 @@ class TestDataSubjectRulesetData:
                 rules=[rule],
             )
 
-    def test_data_subject_ruleset_modifiers_validation(self):
+    def test_data_subject_ruleset_modifiers_validation(self) -> None:
         """Test DataSubjectRulesetData validates modifiers."""
         # Create dummy rule to satisfy minimum rule requirement
         rule = DataSubjectRule(
@@ -188,7 +188,7 @@ class TestDataSubjectRulesetData:
         assert "vulnerable group" in ruleset.risk_increasing_modifiers
         assert "non-EU-resident" in ruleset.risk_decreasing_modifiers
 
-    def test_data_subject_ruleset_duplicate_rule_names(self):
+    def test_data_subject_ruleset_duplicate_rule_names(self) -> None:
         """Test DataSubjectRulesetData rejects duplicate rule names."""
         rule1 = DataSubjectRule(
             name="duplicate_name",
@@ -224,7 +224,7 @@ class TestDataSubjectRulesetData:
                 rules=[rule1, rule2],
             )
 
-    def test_data_subject_ruleset_invalid_applicable_contexts(self):
+    def test_data_subject_ruleset_invalid_applicable_contexts(self) -> None:
         """Test DataSubjectRulesetData rejects rules with invalid applicable contexts."""
         rule = DataSubjectRule(
             name="invalid_context_rule",
@@ -253,16 +253,16 @@ class TestDataSubjectRulesetData:
 class TestDataSubjectsRuleset:
     """Test cases for the DataSubjectsRuleset class."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test fixtures for each test method."""
         self.ruleset = DataSubjectsRuleset()
 
-    def test_name_property_returns_canonical_name(self):
+    def test_name_property_returns_canonical_name(self) -> None:
         """Test DataSubjectsRuleset returns canonical name."""
         ruleset = DataSubjectsRuleset()
         assert ruleset.name == "data_subjects"
 
-    def test_version_property_returns_correct_string_format(self):
+    def test_version_property_returns_correct_string_format(self) -> None:
         """Test that version property returns a non-empty string."""
         version = self.ruleset.version
         assert isinstance(version, str)
@@ -272,27 +272,27 @@ class TestDataSubjectsRuleset:
         assert len(parts) == 3
         assert all(part.isdigit() for part in parts)
 
-    def test_get_rules_returns_tuple_of_rules(self):
+    def test_get_rules_returns_tuple_of_rules(self) -> None:
         """Test that get_rules returns an immutable tuple of Rule objects."""
         rules = self.ruleset.get_rules()
         assert isinstance(rules, tuple)
         assert len(rules) > 0
         assert all(isinstance(rule, DataSubjectRule) for rule in rules)
 
-    def test_get_rules_returns_consistent_count(self):
+    def test_get_rules_returns_consistent_count(self) -> None:
         """Test that get_rules returns a consistent number of rules."""
         rules1 = self.ruleset.get_rules()
         rules2 = self.ruleset.get_rules()
         assert len(rules1) == len(rules2)
 
-    def test_get_rules_returns_same_tuple_each_time(self):
+    def test_get_rules_returns_same_tuple_each_time(self) -> None:
         """Test that get_rules returns the same immutable tuple instance each time."""
         rules1 = self.ruleset.get_rules()
         rules2 = self.ruleset.get_rules()
         assert rules1 is rules2  # Same tuple instance for immutability
         assert rules1 == rules2  # Same content
 
-    def test_rules_are_immutable(self):
+    def test_rules_are_immutable(self) -> None:
         """Test that returned rules tuple cannot be modified."""
         rules = self.ruleset.get_rules()
         assert isinstance(rules, tuple)
@@ -305,7 +305,7 @@ class TestDataSubjectsRuleset:
         with pytest.raises(TypeError):
             rules[0] = None  # type: ignore[index]
 
-    def test_rule_names_are_unique(self):
+    def test_rule_names_are_unique(self) -> None:
         """Test that all rule names are unique."""
         rules = self.ruleset.get_rules()
         rule_names = [rule.name for rule in rules]
@@ -317,7 +317,7 @@ class TestDataSubjectsRulesetIntegration:
 
     def test_ruleset_can_be_used_with_registry(
         self, isolated_registry: RulesetRegistry
-    ):
+    ) -> None:
         """Test that DataSubjectsRuleset works with the registry pattern."""
         isolated_registry.clear()
         isolated_registry.register(
@@ -334,7 +334,9 @@ class TestDataSubjectsRulesetIntegration:
         assert isinstance(instance, DataSubjectsRuleset)
         assert instance.name == "data_subjects"
 
-    def test_ruleset_loader_integration(self, isolated_registry: RulesetRegistry):
+    def test_ruleset_loader_integration(
+        self, isolated_registry: RulesetRegistry
+    ) -> None:
         """Test that DataSubjectsRuleset works with RulesetLoader."""
         isolated_registry.clear()
         isolated_registry.register("loader_test", DataSubjectsRuleset, DataSubjectRule)
@@ -354,14 +356,14 @@ class TestDataSubjectsRulesetIntegration:
 class TestDataSubjectsRulesetErrorHandling:
     """Error handling tests for DataSubjectsRuleset file operations."""
 
-    def test_get_rules_missing_yaml_file_error(self):
+    def test_get_rules_missing_yaml_file_error(self) -> None:
         """Test FileNotFoundError when YAML file doesn't exist."""
         with patch("pathlib.Path.open", side_effect=FileNotFoundError("No such file")):
             ruleset = DataSubjectsRuleset()
             with pytest.raises(FileNotFoundError):
                 ruleset.get_rules()
 
-    def test_get_rules_invalid_yaml_content_error(self):
+    def test_get_rules_invalid_yaml_content_error(self) -> None:
         """Test error handling for malformed YAML syntax."""
         with tempfile.NamedTemporaryFile(mode="w+", suffix=".yaml") as f:
             f.write("invalid: yaml: content[\nbroken syntax")
@@ -371,7 +373,7 @@ class TestDataSubjectsRulesetErrorHandling:
                 with pytest.raises(yaml.YAMLError):
                     ruleset.get_rules()
 
-    def test_get_rules_yaml_validation_error(self):
+    def test_get_rules_yaml_validation_error(self) -> None:
         """Test error handling for YAML that fails Pydantic validation."""
         invalid_yaml_content = """name: "data_subjects"
 version: "1.0.0"

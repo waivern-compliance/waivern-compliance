@@ -9,6 +9,7 @@ dependencies = [
     "waivern-llm",
     "waivern-connectors-database",
     "waivern-mysql",
+    "waivern-rulesets",
     "pyyaml>=6.0.2",
     "pydantic>=2.11.5",
     "typing-extensions>=4.14.0",

@@ -4,10 +4,10 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from waivern_rulesets.data_collection import DataCollectionRule
+from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
 from waivern_community.analysers.utilities import RulesetManager
-from waivern_community.rulesets.data_collection import DataCollectionRule
-from waivern_community.rulesets.processing_purposes import ProcessingPurposeRule
 
 
 class TestRulesetManager:

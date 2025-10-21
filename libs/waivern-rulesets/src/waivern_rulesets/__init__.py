@@ -1,31 +1,31 @@
-"""WCT Rulesets package for compliance pattern definitions."""
+"""Waivern Compliance Framework - Rulesets package."""
 
 from waivern_core import RulesetError
 
-from waivern_community.rulesets.base import (
+from waivern_rulesets.base import (
     RulesetLoader,
     RulesetNotFoundError,
     RulesetRegistry,
 )
 
 # Import rule types for registration
-from waivern_community.rulesets.data_collection import (
+from waivern_rulesets.data_collection import (
     DataCollectionRule,
     DataCollectionRuleset,
 )
-from waivern_community.rulesets.data_subjects import (
+from waivern_rulesets.data_subjects import (
     DataSubjectRule,
     DataSubjectsRuleset,
 )
-from waivern_community.rulesets.personal_data import (
+from waivern_rulesets.personal_data import (
     PersonalDataRule,
     PersonalDataRuleset,
 )
-from waivern_community.rulesets.processing_purposes import (
+from waivern_rulesets.processing_purposes import (
     ProcessingPurposeRule,
     ProcessingPurposesRuleset,
 )
-from waivern_community.rulesets.service_integrations import (
+from waivern_rulesets.service_integrations import (
     ServiceIntegrationRule,
     ServiceIntegrationsRuleset,
 )

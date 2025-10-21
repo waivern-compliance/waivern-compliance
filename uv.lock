@@ -15,6 +15,7 @@ members = [
     "waivern-core",
     "waivern-llm",
     "waivern-mysql",
+    "waivern-rulesets",
     "waivern-workspace",
 ]
 
@@ -1507,6 +1508,7 @@ dependencies = [
     { name = "waivern-core" },
     { name = "waivern-llm" },
     { name = "waivern-mysql" },
+    { name = "waivern-rulesets" },
 ]
 
 [package.optional-dependencies]
@@ -1537,6 +1539,7 @@ requires-dist = [
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-mysql", editable = "libs/waivern-mysql" },
+    { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
 ]
 provides-extras = ["source-code", "all"]
 
@@ -1710,6 +1713,35 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "pymysql", specifier = ">=1.1.1" },
     { name = "waivern-connectors-database", editable = "libs/waivern-connectors-database" },
+    { name = "waivern-core", editable = "libs/waivern-core" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
+[[package]]
+name = "waivern-rulesets"
+version = "0.1.0"
+source = { editable = "libs/waivern-rulesets" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "waivern-core" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "waivern-core", editable = "libs/waivern-core" },
 ]
 

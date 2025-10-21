@@ -1,12 +1,13 @@
-"""Pytest configuration for waivern-community tests.
+"""Pytest configuration for waivern-rulesets tests.
 
-This module provides fixtures and configuration for the waivern-community test suite.
+This module provides fixtures and configuration for the waivern-rulesets test suite.
 """
 
 from typing import Any
 
 import pytest
 from waivern_core import BaseRule
+
 from waivern_rulesets import RulesetRegistry
 from waivern_rulesets.base import AbstractRuleset
 
@@ -26,6 +27,7 @@ def isolated_registry() -> RulesetRegistry:
 
     Returns:
         The singleton RulesetRegistry instance
+
     """
     registry = RulesetRegistry()
 
