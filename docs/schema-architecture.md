@@ -389,10 +389,6 @@ If truly cross-domain:
 
 Example: `standard_input` is used by MySQL, SQLite, and Filesystem connectors across multiple domains.
 
-## Future Improvements
-
-**TODO (Phase 5):** Reduce boilerplate by making `JsonSchemaLoader` automatically search relative to the calling schema's location. Current approach requires explicit custom search paths in each schema class.
-
 ## Benefits of Package-Centric Architecture
 
 - ✅ **Independent Testing**: Packages can run tests without workspace context
