@@ -272,25 +272,22 @@ Framework-wide schemas in `waivern-core` (like `StandardInputSchema`) use the de
 
 2. **Manual configuration**: Schema loading requires explicit configuration rather than automatic discovery, but this aligns with the framework's preference for explicitness
 
-### Mitigation Strategies
+### Accepted Design Pattern
 
-The boilerplate concern is acknowledged with a TODO comment in `JsonSchemaLoader`:
+While the boilerplate could theoretically be reduced through various techniques (helper functions, automatic path detection, decorators), we have chosen to keep the explicit configuration pattern as the long-term design.
+
+The `JsonSchemaLoader` docstring documents this decision:
 
 ```python
 """Loads schemas from local JSON files with caching.
 
-TODO: Reduce boilerplate by making loader automatically search relative to
-calling schema's location (Phase 5). Current approach requires each schema
-to explicitly provide custom search_paths, which is repetitive.
+Design note: Each schema explicitly provides custom search_paths for clarity
+and debuggability. This explicit approach was chosen over alternatives like
+autodiscovery or automatic path detection. See ADR-0001 for detailed rationale.
 """
 ```
 
-Future enhancements could include:
-- Helper function to generate loader configuration
-- Automatic path detection based on calling module location
-- Schema class decorator to reduce configuration
-
-However, these optimizations are deferred in favor of shipping a working, debuggable solution that solves the immediate problem of package independence.
+This pattern represents a conscious architectural choice, not technical debt to be refactored.
 
 ### Trade-offs Accepted
 
