@@ -1,17 +1,12 @@
 [tool.uv.workspace]
 members = [
-    "libs/waivern-core",
-    "libs/waivern-llm",
-    "libs/waivern-connectors-database",
-    "libs/waivern-mysql",
-    "libs/waivern-rulesets",
-    "libs/waivern-analysers-shared",
-    "libs/waivern-personal-data-analyser",
-    "libs/waivern-community",
-    "apps/wct",
+    "libs/*",
+    "apps/*",
 ]
 
 [tool.uv.sources]
+# Workspace members must be explicitly declared as sources for dependency resolution
+# These definitions are inherited by all workspace members
 waivern-core = { workspace = true }
 waivern-llm = { workspace = true }
 waivern-connectors-database = { workspace = true }

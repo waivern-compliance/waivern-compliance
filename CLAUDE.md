@@ -153,6 +153,44 @@ uv run wct generate-schema
 - `--log-level INFO` - Default informational messages
 - `--log-level WARNING` - Warnings and errors only
 
+## Workspace Configuration
+
+The monorepo uses UV workspaces with auto-discovery for package members.
+
+**Root `pyproject.toml` structure:**
+
+```toml
+[tool.uv.workspace]
+members = [
+    "libs/*",     # Auto-discovers all packages in libs/
+    "apps/*",     # Auto-discovers all packages in apps/
+]
+
+[tool.uv.sources]
+# Each workspace member used as a dependency must be explicitly declared
+# These definitions are inherited by all workspace members
+waivern-core = { workspace = true }
+waivern-llm = { workspace = true }
+# ... etc for all workspace packages
+```
+
+**Key points:**
+
+1. **Workspace members:** Use glob patterns (`libs/*`, `apps/*`) for auto-discovery
+   - Any directory with a `pyproject.toml` is automatically included
+   - No manual updates needed when adding new packages
+
+2. **Workspace sources:** Must be explicitly declared for each package
+   - Required for dependency resolution across workspace members
+   - Cannot use glob patterns (mapping structure)
+   - Must be updated manually when adding new packages
+
+**Adding a new package:**
+1. Create package directory in `libs/` or `apps/` with `pyproject.toml`
+2. Add entry to `[tool.uv.sources]` in root `pyproject.toml` (if used as dependency)
+3. Update workspace scripts if needed (`scripts/lint.sh`, `scripts/format.sh`, etc.)
+4. Update pre-commit scripts if needed (`scripts/pre-commit-*.sh`)
+
 ## Environment Configuration
 
 Applications own configuration. WCT configuration is in `apps/wct/.env`.
