@@ -2,9 +2,7 @@
 
 import dataclasses
 
-from waivern_community.analysers.personal_data_analyser.schemas import (
-    PersonalDataFindingSchema,
-)
+from waivern_personal_data_analyser.schemas import PersonalDataFindingSchema
 
 # Version constant for easy maintenance
 EXPECTED_VERSION = "1.0.0"

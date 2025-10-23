@@ -7,11 +7,10 @@ from waivern_analysers_shared.llm_validation import (
     LLMValidationStrategy,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_llm import BaseLLMService
-
 from waivern_community.prompts.personal_data_validation import (
     get_batch_validation_prompt,
 )
+from waivern_llm import BaseLLMService
 
 from .types import PersonalDataFindingModel
 

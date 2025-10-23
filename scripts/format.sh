@@ -13,5 +13,6 @@ set -e
 (cd libs/waivern-mysql && ./scripts/format.sh "$@")
 (cd libs/waivern-rulesets && ./scripts/format.sh "$@")
 (cd libs/waivern-analysers-shared && ./scripts/format.sh "$@")
+(cd libs/waivern-personal-data-analyser && ./scripts/format.sh "$@")
 (cd libs/waivern-community && ./scripts/format.sh "$@")
 (cd apps/wct && ./scripts/format.sh "$@")

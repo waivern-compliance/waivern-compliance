@@ -17,7 +17,10 @@ waivern-compliance/
 │   ├── waivern-llm/               # Multi-provider LLM abstraction (Anthropic, OpenAI, Google)
 │   ├── waivern-connectors-database/  # Shared SQL connector utilities
 │   ├── waivern-mysql/             # MySQL connector (standalone)
-│   └── waivern-community/         # SQLite + other connectors, analysers, rulesets
+│   ├── waivern-rulesets/          # Shared rulesets (standalone)
+│   ├── waivern-analysers-shared/  # Shared analyser utilities (standalone)
+│   ├── waivern-personal-data-analyser/  # Personal data analyser (standalone)
+│   └── waivern-community/         # SQLite + other connectors, analysers, prompts
 └── apps/                           # Applications
     └── wct/                        # Waivern Compliance Tool (CLI application)
         ├── .env                    # App-specific configuration
@@ -35,7 +38,10 @@ waivern-compliance/
 - **waivern-llm**: Multi-provider LLM service with lazy loading for optional providers (zero WCT dependencies)
 - **waivern-connectors-database**: Shared SQL connector utilities (DatabaseConnector, DatabaseExtractionUtils, DatabaseSchemaUtils)
 - **waivern-mysql**: MySQL connector (standalone package for minimal dependencies)
-- **waivern-community**: Built-in connectors (SQLite, Filesystem, SourceCode), analysers (PersonalData, ProcessingPurpose, DataSubject), rulesets, and prompts (re-exports MySQLConnector for convenience)
+- **waivern-rulesets**: Shared rulesets for pattern-based analysis (PersonalDataRuleset, ProcessingPurposesRuleset, etc.)
+- **waivern-analysers-shared**: Shared utilities for analysers (LLMServiceManager, RulesetManager, EvidenceExtractor, etc.)
+- **waivern-personal-data-analyser**: Personal data analyser (standalone package for minimal dependencies)
+- **waivern-community**: Built-in connectors (SQLite, Filesystem, SourceCode), analysers (ProcessingPurpose, DataSubject), and prompts (re-exports standalone packages for convenience)
 
 **Applications:**
 - **wct**: CLI tool that orchestrates compliance analysis by executing YAML runbooks using framework components
@@ -74,8 +80,13 @@ The framework is **schema-driven**:
 
 **Schema Ownership:**
 - **Shared schemas** (StandardInputSchema, BaseFindingSchema) → waivern-core
-- **Component-specific schemas** → co-located with components in waivern-community
+- **Component-specific schemas** → co-located with components (standalone packages or waivern-community)
 - **Application schemas** (runbook config, analysis output) → wct
+
+**Examples:**
+- PersonalDataFindingSchema → waivern-personal-data-analyser (standalone)
+- ProcessingPurposeFindingSchema → waivern-community
+- DataSubjectFindingSchema → waivern-community
 
 ## Development Commands
 
@@ -85,7 +96,7 @@ This project uses `uv` for dependency management.
 
 **Testing:**
 ```bash
-uv run pytest                       # Run all tests (738 tests)
+uv run pytest                       # Run all tests (752 tests)
 uv run pytest -v                    # Verbose output
 uv run pytest -m integration        # Run integration tests (requires API keys)
 ```
@@ -266,7 +277,10 @@ Components register automatically:
 2. **Make changes in appropriate package:**
    - Framework abstractions → `libs/waivern-core/`
    - LLM functionality → `libs/waivern-llm/`
-   - Connectors/Analysers/Rulesets → `libs/waivern-community/`
+   - Rulesets → `libs/waivern-rulesets/`
+   - Shared analyser utilities → `libs/waivern-analysers-shared/`
+   - Standalone components → `libs/waivern-{component-name}/`
+   - Community components → `libs/waivern-community/`
    - Application logic → `apps/wct/`
 
 3. **Run quality checks:**
@@ -283,7 +297,7 @@ Components register automatically:
 
 ### Testing Guidelines
 
-- All packages have comprehensive test coverage (738 tests total)
+- All packages have comprehensive test coverage (752 tests total)
 - Integration tests marked with `@pytest.mark.integration` (require API keys)
 - Run `uv run pytest` before committing
 - Type checking in strict mode (basedpyright)

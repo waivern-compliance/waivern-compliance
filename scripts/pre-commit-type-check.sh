@@ -14,6 +14,7 @@ connectors_database_files=()
 mysql_files=()
 rulesets_files=()
 analysers_shared_files=()
+personal_data_analyser_files=()
 community_files=()
 
 for file in "$@"; do
@@ -32,6 +33,8 @@ for file in "$@"; do
         rulesets_files+=("${file#libs/waivern-rulesets/}")
     elif [[ "$file" == libs/waivern-analysers-shared/* ]]; then
         analysers_shared_files+=("${file#libs/waivern-analysers-shared/}")
+    elif [[ "$file" == libs/waivern-personal-data-analyser/* ]]; then
+        personal_data_analyser_files+=("${file#libs/waivern-personal-data-analyser/}")
     elif [[ "$file" == libs/waivern-community/* ]]; then
         community_files+=("${file#libs/waivern-community/}")
     fi
@@ -60,6 +63,10 @@ fi
 
 if [ ${#analysers_shared_files[@]} -gt 0 ]; then
     (cd libs/waivern-analysers-shared && ./scripts/type-check.sh "${analysers_shared_files[@]}")
+fi
+
+if [ ${#personal_data_analyser_files[@]} -gt 0 ]; then
+    (cd libs/waivern-personal-data-analyser && ./scripts/type-check.sh "${personal_data_analyser_files[@]}")
 fi
 
 if [ ${#community_files[@]} -gt 0 ]; then

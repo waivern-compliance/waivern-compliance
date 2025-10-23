@@ -13,5 +13,6 @@ set -e
 (cd libs/waivern-mysql && ./scripts/type-check.sh)
 (cd libs/waivern-rulesets && ./scripts/type-check.sh)
 (cd libs/waivern-analysers-shared && ./scripts/type-check.sh)
+(cd libs/waivern-personal-data-analyser && ./scripts/type-check.sh)
 (cd libs/waivern-community && ./scripts/type-check.sh)
 (cd apps/wct && ./scripts/type-check.sh)

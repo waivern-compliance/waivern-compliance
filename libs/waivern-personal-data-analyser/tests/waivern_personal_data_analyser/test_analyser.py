@@ -13,8 +13,10 @@ from waivern_analysers_shared.types import (
     PatternMatchingConfig,
 )
 from waivern_analysers_shared.utilities import LLMServiceManager
+from waivern_community.connectors.source_code.schemas import SourceCodeSchema
 from waivern_core import Analyser, RuleComplianceData
-from waivern_core.message import Message, MessageValidationError
+from waivern_core.errors import MessageValidationError
+from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseFindingCompliance,
     BaseFindingEvidence,
@@ -23,21 +25,20 @@ from waivern_core.schemas import (
 from waivern_core.schemas.base import SchemaLoadError
 from waivern_rulesets.personal_data import PersonalDataRule
 
-from waivern_community.analysers.personal_data_analyser.analyser import (
+from waivern_personal_data_analyser.analyser import (
     PersonalDataAnalyser,
 )
-from waivern_community.analysers.personal_data_analyser.pattern_matcher import (
+from waivern_personal_data_analyser.pattern_matcher import (
     PersonalDataPatternMatcher,
 )
-from waivern_community.analysers.personal_data_analyser.schemas import (
+from waivern_personal_data_analyser.schemas import (
     PersonalDataFindingSchema,
 )
-from waivern_community.analysers.personal_data_analyser.types import (
+from waivern_personal_data_analyser.types import (
     PersonalDataAnalyserConfig,
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
 )
-from waivern_community.connectors.source_code.schemas import SourceCodeSchema
 
 
 class TestPersonalDataAnalyser:
@@ -268,7 +269,7 @@ class TestPersonalDataAnalyser:
         # Mock LLM service manager
         mock_llm_service_manager.llm_service = Mock()
         with patch(
-            "waivern_community.analysers.personal_data_analyser.analyser.personal_data_validation_strategy",
+            "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
             input_schema = StandardInputSchema()
@@ -319,7 +320,7 @@ class TestPersonalDataAnalyser:
 
         mock_llm_service_manager.llm_service = Mock()
         with patch(
-            "waivern_community.analysers.personal_data_analyser.analyser.personal_data_validation_strategy",
+            "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
             input_schema = StandardInputSchema()
@@ -422,7 +423,7 @@ class TestPersonalDataAnalyser:
         mock_llm_service_manager.llm_service = Mock()
         filtered_findings = [sample_findings[0]]  # Remove one finding
         with patch(
-            "waivern_community.analysers.personal_data_analyser.analyser.personal_data_validation_strategy",
+            "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(filtered_findings, True),
         ):
             input_schema = StandardInputSchema()
@@ -559,7 +560,6 @@ class TestPersonalDataAnalyser:
         mock_llm_service_manager: Mock,
     ) -> None:
         """Test that process raises error when message schema doesn't match expected."""
-
         # Arrange
         analyser = PersonalDataAnalyser(
             valid_config, mock_pattern_matcher, mock_llm_service_manager
@@ -653,7 +653,7 @@ class TestPersonalDataAnalyser:
     ) -> None:
         """Test that validate_input_message raises error when message content is invalid."""
         # Arrange - create message with invalid content (missing required fields)
-        invalid_content = {
+        invalid_content: dict[str, Any] = {
             "schemaVersion": "1.0.0",
             # Missing required 'name' field
             "data": [],

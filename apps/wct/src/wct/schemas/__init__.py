@@ -10,12 +10,9 @@ Note: This is a compatibility layer. New code should import directly from:
 """
 
 # Core schemas and base types (from waivern-core)
-# Analyser output schemas (from waivern-community analysers)
+# Analyser output schemas (from standalone packages and waivern-community)
 from waivern_community.analysers.data_subject_analyser.schemas import (
     DataSubjectFindingSchema,
-)
-from waivern_community.analysers.personal_data_analyser.schemas import (
-    PersonalDataFindingSchema,
 )
 from waivern_community.analysers.processing_purpose_analyser.schemas import (
     ProcessingPurposeFindingSchema,
@@ -49,6 +46,7 @@ from waivern_core.schemas import (
     StandardInputSchema,
     parse_data_model,
 )
+from waivern_personal_data_analyser.schemas import PersonalDataFindingSchema
 
 __all__ = [
     # Base infrastructure (from waivern-core)
