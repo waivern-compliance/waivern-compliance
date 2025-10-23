@@ -153,6 +153,54 @@ uv run wct generate-schema
 - `--log-level INFO` - Default informational messages
 - `--log-level WARNING` - Warnings and errors only
 
+## Workspace Configuration
+
+The monorepo uses UV workspaces with auto-discovery for package members.
+
+**Root `pyproject.toml` structure:**
+
+```toml
+[tool.uv.workspace]
+members = [
+    "libs/*",     # Auto-discovers all packages in libs/
+    "apps/*",     # Auto-discovers all packages in apps/
+]
+
+[tool.uv.sources]
+# Each workspace member used as a dependency must be explicitly declared
+# These definitions are inherited by all workspace members
+waivern-core = { workspace = true }
+waivern-llm = { workspace = true }
+# ... etc for all workspace packages
+```
+
+**Key points:**
+
+1. **Workspace members:** Use glob patterns (`libs/*`, `apps/*`) for auto-discovery
+   - Any directory with a `pyproject.toml` is automatically included
+   - No manual updates needed when adding new packages
+
+2. **Workspace sources:** Must be explicitly declared for each package
+   - Required for dependency resolution across workspace members
+   - Cannot use glob patterns (mapping structure)
+   - Must be updated manually when adding new packages
+
+3. **Workspace scripts:** Auto-discover packages and run in parallel
+   - `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh` discover all packages
+   - Run package checks in parallel (packages are truly independent!)
+   - No manual updates needed when adding new packages
+
+4. **Pre-commit scripts:** Auto-discover packages and group changed files
+   - `scripts/pre-commit-*.sh` dynamically find packages and group files
+   - No manual updates needed when adding new packages
+
+**Adding a new package:**
+1. Create package directory in `libs/` or `apps/` with `pyproject.toml`
+2. Ensure package has standard scripts: `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`
+3. Add entry to `[tool.uv.sources]` in root `pyproject.toml` (if used as dependency)
+4. Run `uv sync` to register the new package
+5. That's it! Workspace and pre-commit scripts will auto-discover it
+
 ## Environment Configuration
 
 Applications own configuration. WCT configuration is in `apps/wct/.env`.

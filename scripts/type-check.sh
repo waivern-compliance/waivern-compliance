@@ -2,17 +2,36 @@
 
 # Run static type checking
 # Usage: bash scripts/type-check.sh
-# Orchestrates type checking across all packages using their own scripts
+# Auto-discovers and type checks all packages in parallel
 
 set -e
 
-# Type check each package using its own scripts (in dependency order)
-(cd libs/waivern-core && ./scripts/type-check.sh)
-(cd libs/waivern-llm && ./scripts/type-check.sh)
-(cd libs/waivern-connectors-database && ./scripts/type-check.sh)
-(cd libs/waivern-mysql && ./scripts/type-check.sh)
-(cd libs/waivern-rulesets && ./scripts/type-check.sh)
-(cd libs/waivern-analysers-shared && ./scripts/type-check.sh)
-(cd libs/waivern-personal-data-analyser && ./scripts/type-check.sh)
-(cd libs/waivern-community && ./scripts/type-check.sh)
-(cd apps/wct && ./scripts/type-check.sh)
+# Auto-discover all packages with pyproject.toml
+packages=()
+for dir in libs/* apps/*; do
+    if [ -d "$dir" ] && [ -f "$dir/pyproject.toml" ] && [ -f "$dir/scripts/type-check.sh" ]; then
+        packages+=("$dir")
+    fi
+done
+
+# Run type checking in parallel for all packages
+pids=()
+failed_packages=()
+
+for package in "${packages[@]}"; do
+    (cd "$package" && ./scripts/type-check.sh) &
+    pids+=($!)
+done
+
+# Wait for all packages to complete and collect failures
+for i in "${!pids[@]}"; do
+    if ! wait "${pids[$i]}"; then
+        failed_packages+=("${packages[$i]}")
+    fi
+done
+
+# Report failures if any
+if [ ${#failed_packages[@]} -gt 0 ]; then
+    echo "Type checking failed in: ${failed_packages[*]}"
+    exit 1
+fi

@@ -337,36 +337,21 @@ uv run pytest tests/ -v
 # Expected: ~{TEST_COUNT} tests passing
 ```
 
-#### 1.12 Update Root Workspace Scripts
+#### 1.12 Workspace Scripts Auto-Discovery ✅
 
-Update `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`:
+**No action needed!** Workspace scripts now auto-discover packages:
 
-```bash
-# Add in correct dependency order (after {SHARED_PACKAGE} if applicable)
-(cd libs/{PACKAGE_NAME} && ./scripts/lint.sh "$@")
-(cd libs/{PACKAGE_NAME} && ./scripts/format.sh "$@")
-(cd libs/{PACKAGE_NAME} && ./scripts/type-check.sh)
-```
+- `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh` automatically find all packages in `libs/*` and `apps/*`
+- Scripts run package checks in parallel for improved performance
+- Pre-commit scripts (`scripts/pre-commit-*.sh`) dynamically group files by package
 
-#### 1.13 Update Pre-commit Wrapper Scripts
+Your new package will be automatically discovered as long as:
+1. It has a `pyproject.toml` file
+2. It has the standard scripts: `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`
 
-Update `scripts/pre-commit-lint.sh`, `scripts/pre-commit-format.sh`, `scripts/pre-commit-type-check.sh`:
+No manual script updates required!
 
-```bash
-# Add file grouping array
-{package_name}_files=()
-
-# Add pattern matching
-elif [[ "$file" == libs/{PACKAGE_NAME}/* ]]; then
-    {package_name}_files+=("${file#libs/{PACKAGE_NAME}/}")
-
-# Add processing block (in dependency order)
-if [ ${#{package_name}_files[@]} -gt 0 ]; then
-    (cd libs/{PACKAGE_NAME} && ./scripts/lint.sh "${${package_name}_files[@]}")
-fi
-```
-
-#### 1.14 Run Dev-Checks and Fix Linting Errors
+#### 1.13 Run Dev-Checks and Fix Linting Errors
 
 ```bash
 ./scripts/dev-checks.sh 2>&1 | tee /tmp/dev-checks-component.txt

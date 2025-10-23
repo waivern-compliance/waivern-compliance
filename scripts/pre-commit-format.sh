@@ -1,78 +1,43 @@
 #!/bin/bash
 
 # Pre-commit wrapper for formatting
-# Groups files by package and runs each package's format script
+# Auto-discovers packages and groups files by package
 # Usage: Called by pre-commit with list of changed files
 
 set -e
 
-# Group files by package
-wct_files=()
-core_files=()
-llm_files=()
-connectors_database_files=()
-mysql_files=()
-rulesets_files=()
-analysers_shared_files=()
-personal_data_analyser_files=()
-community_files=()
+# Auto-discover all packages
+declare -A package_files
+packages=()
 
-for file in "$@"; do
-    if [[ "$file" == apps/wct/* ]]; then
-        # Remove package prefix to get relative path within package
-        wct_files+=("${file#apps/wct/}")
-    elif [[ "$file" == libs/waivern-core/* ]]; then
-        core_files+=("${file#libs/waivern-core/}")
-    elif [[ "$file" == libs/waivern-llm/* ]]; then
-        llm_files+=("${file#libs/waivern-llm/}")
-    elif [[ "$file" == libs/waivern-connectors-database/* ]]; then
-        connectors_database_files+=("${file#libs/waivern-connectors-database/}")
-    elif [[ "$file" == libs/waivern-mysql/* ]]; then
-        mysql_files+=("${file#libs/waivern-mysql/}")
-    elif [[ "$file" == libs/waivern-rulesets/* ]]; then
-        rulesets_files+=("${file#libs/waivern-rulesets/}")
-    elif [[ "$file" == libs/waivern-analysers-shared/* ]]; then
-        analysers_shared_files+=("${file#libs/waivern-analysers-shared/}")
-    elif [[ "$file" == libs/waivern-personal-data-analyser/* ]]; then
-        personal_data_analyser_files+=("${file#libs/waivern-personal-data-analyser/}")
-    elif [[ "$file" == libs/waivern-community/* ]]; then
-        community_files+=("${file#libs/waivern-community/}")
+for dir in libs/* apps/*; do
+    if [ -d "$dir" ] && [ -f "$dir/pyproject.toml" ] && [ -f "$dir/scripts/format.sh" ]; then
+        packages+=("$dir")
+        package_files["$dir"]=""
     fi
 done
 
-# Format each package's files using its own script (in dependency order)
-if [ ${#core_files[@]} -gt 0 ]; then
-    (cd libs/waivern-core && ./scripts/format.sh "${core_files[@]}")
-fi
+# Group changed files by package
+for file in "$@"; do
+    for package in "${packages[@]}"; do
+        if [[ "$file" == "$package"/* ]]; then
+            # Remove package prefix to get relative path within package
+            relative_file="${file#$package/}"
+            if [ -z "${package_files[$package]}" ]; then
+                package_files["$package"]="$relative_file"
+            else
+                package_files["$package"]+=" $relative_file"
+            fi
+            break
+        fi
+    done
+done
 
-if [ ${#llm_files[@]} -gt 0 ]; then
-    (cd libs/waivern-llm && ./scripts/format.sh "${llm_files[@]}")
-fi
-
-if [ ${#connectors_database_files[@]} -gt 0 ]; then
-    (cd libs/waivern-connectors-database && ./scripts/format.sh "${connectors_database_files[@]}")
-fi
-
-if [ ${#mysql_files[@]} -gt 0 ]; then
-    (cd libs/waivern-mysql && ./scripts/format.sh "${mysql_files[@]}")
-fi
-
-if [ ${#rulesets_files[@]} -gt 0 ]; then
-    (cd libs/waivern-rulesets && ./scripts/format.sh "${rulesets_files[@]}")
-fi
-
-if [ ${#analysers_shared_files[@]} -gt 0 ]; then
-    (cd libs/waivern-analysers-shared && ./scripts/format.sh "${analysers_shared_files[@]}")
-fi
-
-if [ ${#personal_data_analyser_files[@]} -gt 0 ]; then
-    (cd libs/waivern-personal-data-analyser && ./scripts/format.sh "${personal_data_analyser_files[@]}")
-fi
-
-if [ ${#community_files[@]} -gt 0 ]; then
-    (cd libs/waivern-community && ./scripts/format.sh "${community_files[@]}")
-fi
-
-if [ ${#wct_files[@]} -gt 0 ]; then
-    (cd apps/wct && ./scripts/format.sh "${wct_files[@]}")
-fi
+# Run formatting for packages with changed files
+for package in "${packages[@]}"; do
+    if [ -n "${package_files[$package]}" ]; then
+        # Convert space-separated string back to array for proper quoting
+        read -ra files <<< "${package_files[$package]}"
+        (cd "$package" && ./scripts/format.sh "${files[@]}")
+    fi
+done
