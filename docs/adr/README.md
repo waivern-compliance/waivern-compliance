@@ -49,3 +49,4 @@ Create an ADR when making decisions about:
 ## Index
 
 - [ADR-0001](0001-explicit-schema-loading-over-autodiscovery.md) - Use Explicit Configuration for Schema Loading
+- [ADR-0002](0002-dependency-injection-for-service-management.md) - Dependency Injection Container for Service Management
