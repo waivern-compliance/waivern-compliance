@@ -393,31 +393,40 @@ rm -rf libs/waivern-community/tests/waivern_community/{SHARED_CODE_LOCATION}
 - ✅ All components using {SHARED_MODULE}
 - ✅ Components ready for further extraction if needed
 
-#### 2.4 Run Quality Checks and Fix Errors
+#### 2.4 Run Quality Checks and Fix All Errors
 
-**CRITICAL:** After deleting old files and updating imports, verify everything still works.
+**CRITICAL:** Run dev-checks and fix ALL errors immediately, including downstream errors in WCT or other packages. Do not leave broken tests for later phases.
 
 ```bash
-# Run all tests
-cd libs/waivern-community
-uv run pytest tests/ -v
-
-# Run full dev-checks
-cd /path/to/workspace
+# Run full workspace dev-checks
 ./scripts/dev-checks.sh 2>&1 | tee /tmp/dev-checks-phase2.txt
 ```
 
-**Fix any errors:**
-1. **Import errors** - Ensure all imports updated correctly
-2. **Type errors** - Fix any type annotation issues
-3. **Lint errors** - Fix code quality issues
-4. **Test failures** - Update tests that reference old locations
+**Fix errors as they appear:**
+
+1. **waivern-community errors:**
+   - Import errors - Ensure all imports updated correctly to use {SHARED_MODULE}
+   - Type errors - Fix any type annotation issues
+   - Lint errors - Fix code quality issues
+   - Test failures - Update tests that reference old locations
+
+2. **WCT errors (if dev-checks reveals them):**
+   - Update any imports in `apps/wct/` that reference old shared utility paths
+   - Update any WCT test files that import from old paths
+   - Fix any patch paths in tests
+
+3. **Re-run dev-checks until all pass:**
+   ```bash
+   ./scripts/dev-checks.sh
+   # Expected: All tests passing, 0 type errors, all lint checks passed
+   ```
 
 **Expected results:**
-- All community tests pass
-- All shared package tests pass
-- Type checking passes (0 errors)
-- Linting passes
+- ✅ All shared package tests pass
+- ✅ All community tests pass
+- ✅ All WCT tests pass (if affected)
+- ✅ Type checking passes (0 errors)
+- ✅ Linting passes
 
 **Do not proceed to component extraction until all checks pass!**
 

@@ -1540,6 +1540,7 @@ dependencies = [
     { name = "waivern-core" },
     { name = "waivern-llm" },
     { name = "waivern-mysql" },
+    { name = "waivern-personal-data-analyser" },
     { name = "waivern-rulesets" },
 ]
 
@@ -1572,6 +1573,7 @@ requires-dist = [
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-mysql", editable = "libs/waivern-mysql" },
+    { name = "waivern-personal-data-analyser", editable = "libs/waivern-personal-data-analyser" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
 ]
 provides-extras = ["source-code", "all"]

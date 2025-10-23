@@ -269,7 +269,7 @@ class TestPersonalDataAnalyser:
         # Mock LLM service manager
         mock_llm_service_manager.llm_service = Mock()
         with patch(
-            "waivern_community.analysers.personal_data_analyser.analyser.personal_data_validation_strategy",
+            "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
             input_schema = StandardInputSchema()
@@ -320,7 +320,7 @@ class TestPersonalDataAnalyser:
 
         mock_llm_service_manager.llm_service = Mock()
         with patch(
-            "waivern_community.analysers.personal_data_analyser.analyser.personal_data_validation_strategy",
+            "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
             input_schema = StandardInputSchema()

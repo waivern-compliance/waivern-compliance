@@ -11,6 +11,7 @@ dependencies = [
     "waivern-mysql",
     "waivern-rulesets",
     "waivern-analysers-shared",
+    "waivern-personal-data-analyser",
     "pyyaml>=6.0.2",
     "pydantic>=2.11.5",
     "typing-extensions>=4.14.0",

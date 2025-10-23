@@ -431,34 +431,71 @@ rm -rf libs/waivern-community/src/waivern_community/{CURRENT_LOCATION}
 rm -rf libs/waivern-community/tests/waivern_community/{CURRENT_LOCATION}
 ```
 
-#### 2.4 Run Quality Checks
+#### 2.4 Run Quality Checks and Fix All Errors
+
+**CRITICAL:** Run dev-checks and fix ALL errors immediately, including downstream errors in WCT or other packages. Do not leave broken tests for later phases.
 
 ```bash
-cd libs/waivern-community
-uv run pytest tests/ -v
-
-cd /path/to/workspace
-./scripts/dev-checks.sh
+# Run full workspace dev-checks
+./scripts/dev-checks.sh 2>&1 | tee /tmp/dev-checks-phase2.txt
 ```
+
+**Fix errors as they appear:**
+
+1. **waivern-community errors:**
+   - Update any remaining imports in `src/waivern_community/__init__.py`
+   - Fix any references to old package paths
+
+2. **WCT errors (if dev-checks reveals them):**
+   - Update `apps/wct/src/wct/schemas/__init__.py` to import from standalone package
+   - Update any WCT test files that import from old paths
+   - Fix any patch paths in tests (replace old module paths with new package paths)
+
+3. **Re-run dev-checks until all pass:**
+   ```bash
+   ./scripts/dev-checks.sh
+   # Expected: All tests passing, 0 type errors, all lint checks passed
+   ```
+
+**Expected results:**
+- ✅ All waivern-community tests pass
+- ✅ All WCT tests pass
+- ✅ Type checking passes (0 errors)
+- ✅ Linting passes
+
+**Do not proceed to Phase 3 if any errors remain!**
 
 ---
 
 ### Phase 3: Update WCT Application
 
-#### 3.1 Update Dependencies
+**Note:** If you followed Phase 2.4 correctly, WCT imports and tests were already fixed during quality checks. This phase is primarily for adding dependencies if not already done.
 
-Update `apps/wct/pyproject.toml`:
+#### 3.1 Update Dependencies (if needed)
+
+Check if `apps/wct/pyproject.toml` needs updating:
 
 ```toml
 dependencies = [
     "waivern-core",
     "waivern-llm",
-    # If using shared package:
+    # If using shared package (may already be present):
     # "{SHARED_PACKAGE}",
-    "{PACKAGE_NAME}",  # ADD THIS
+    "{PACKAGE_NAME}",  # ADD if not present
     "waivern-community",
     # ... rest
 ]
+```
+
+**Note:** waivern-community already depends on {PACKAGE_NAME}, so WCT gets it transitively. Only add explicit dependency if needed for direct imports.
+
+#### 3.2 Verify WCT Still Works
+
+```bash
+# Verify component is registered
+uv run wct ls-{COMPONENT_TYPE}s | grep {component}
+
+# Expected output shows component is available
 ```
 
 ---

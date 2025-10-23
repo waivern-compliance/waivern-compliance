@@ -5,6 +5,9 @@ __version__ = "0.1.0"
 # Connectors
 from waivern_mysql import MySQLConnector
 
+# Analysers - re-export from standalone packages and waivern_community
+from waivern_personal_data_analyser import PersonalDataAnalyser
+
 # Rulesets - re-export from waivern-rulesets for convenience
 from waivern_rulesets import (
     PersonalDataRuleset,
@@ -12,8 +15,6 @@ from waivern_rulesets import (
     RulesetLoader,
 )
 
-# Analysers
-from waivern_community.analysers.personal_data_analyser import PersonalDataAnalyser
 from waivern_community.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
 )
