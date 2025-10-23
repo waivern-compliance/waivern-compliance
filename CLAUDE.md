@@ -185,11 +185,21 @@ waivern-llm = { workspace = true }
    - Cannot use glob patterns (mapping structure)
    - Must be updated manually when adding new packages
 
+3. **Workspace scripts:** Auto-discover packages and run in parallel
+   - `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh` discover all packages
+   - Run package checks in parallel (packages are truly independent!)
+   - No manual updates needed when adding new packages
+
+4. **Pre-commit scripts:** Auto-discover packages and group changed files
+   - `scripts/pre-commit-*.sh` dynamically find packages and group files
+   - No manual updates needed when adding new packages
+
 **Adding a new package:**
 1. Create package directory in `libs/` or `apps/` with `pyproject.toml`
-2. Add entry to `[tool.uv.sources]` in root `pyproject.toml` (if used as dependency)
-3. Update workspace scripts if needed (`scripts/lint.sh`, `scripts/format.sh`, etc.)
-4. Update pre-commit scripts if needed (`scripts/pre-commit-*.sh`)
+2. Ensure package has standard scripts: `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`
+3. Add entry to `[tool.uv.sources]` in root `pyproject.toml` (if used as dependency)
+4. Run `uv sync` to register the new package
+5. That's it! Workspace and pre-commit scripts will auto-discover it
 
 ## Environment Configuration
 
