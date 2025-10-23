@@ -8,7 +8,11 @@
 
 This document outlines the implementation plan for introducing a **Dependency Injection (DI) system** into the Waivern Compliance Framework. The DI system will replace the current `LLMServiceManager` with a generic, extensible service management solution that can handle LLM services, databases, caches, and any future services.
 
-**Key Principle:** `waivern-llm` stays clean as a pure service library with NO DI knowledge. The DI layer lives in `waivern-core` as foundational infrastructure available to all components (connectors, analysers, tools).
+**Key Principles:**
+- Generic DI infrastructure (container, protocols) lives in `waivern-core`
+- Service-specific DI adapters live with their services (e.g., `waivern-llm/di/`)
+- Pure services remain DI-agnostic (e.g., `waivern-llm/services/`)
+- Optional import pattern: use services directly OR via DI adapters
 
 ---
 
@@ -31,7 +35,6 @@ This document outlines the implementation plan for introducing a **Dependency In
 ### 1.1 Create Package Structure
 - [ ] Create `libs/waivern-core/src/waivern_core/services/` directory
 - [ ] Create `__init__.py` with public API exports
-- [ ] Create `libs/waivern-core/src/waivern_core/services/llm/` directory
 
 ### 1.2 Implement Service Protocols
 - [ ] Create `services/protocols.py`
@@ -70,31 +73,36 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ## Phase 2: LLM Service Integration
 
-### 2.1 Implement LLM Service Factory
-- [ ] Create `services/llm/factory.py`
+### 2.1 Create LLM DI Package Structure
+- [ ] Create `libs/waivern-llm/src/waivern_llm/di/` directory
+- [ ] Create `__init__.py` with public API exports
+- [ ] Add dependency on `waivern-core` for DI protocols
+
+### 2.2 Implement LLM Service Factory
+- [ ] Create `di/factory.py` in waivern-llm
 - [ ] Implement `LLMServiceFactory(ServiceFactory[BaseLLMService])`
-- [ ] Wrap `waivern_llm.LLMServiceFactory.create_service()`
+- [ ] Wrap existing `waivern_llm.services.factory.LLMServiceFactory.create_service()`
 - [ ] Add `can_create()` validation logic
 - [ ] Handle provider, model, api_key configuration
 - [ ] Add detailed logging
 - [ ] Write unit tests (8+ test cases)
 
-### 2.2 Implement LLM Service Provider
-- [ ] Create `services/llm/provider.py`
+### 2.3 Implement LLM Service Provider
+- [ ] Create `di/provider.py` in waivern-llm
 - [ ] Implement `LLMServiceProvider(ServiceProvider)`
 - [ ] Provide `get_llm_service()` convenience method
 - [ ] Add `is_available` property
 - [ ] Implement generic `get_service()` and `is_available()` from protocol
 - [ ] Write unit tests (6+ test cases)
 
-### 2.3 Implement LLM Configuration
-- [ ] Create `services/llm/configuration.py`
+### 2.4 Implement LLM Configuration
+- [ ] Create `di/configuration.py` in waivern-llm
 - [ ] Implement `LLMServiceConfiguration` dataclass
 - [ ] Add `from_dict()` factory method with validation
 - [ ] Support health_check_enabled and health_check_interval
 - [ ] Write unit tests (5+ test cases)
 
-### 2.4 Integration Tests
+### 2.5 Integration Tests
 - [ ] Write integration tests for full LLM service flow
 - [ ] Test container + factory + provider working together
 - [ ] Test with mock BaseLLMService
@@ -248,23 +256,25 @@ This document outlines the implementation plan for introducing a **Dependency In
 ### Package Responsibilities
 
 ```
-waivern-llm                          # Infrastructure Layer (UNCHANGED)
-├── BaseLLMService                   # Abstract interface
-├── AnthropicLLMService             # Concrete implementations
-├── LLMServiceFactory               # Simple provider selection
-└── Errors (LLMServiceError, etc)   # Error types
-
-waivern-core                         # Core Framework (NEW DI SYSTEM)
+waivern-core                         # Core Framework
 ├── abstractions/                    # Existing: Connector, Analyser
 ├── schemas/                         # Existing: Schema, Message
-└── services/                        # NEW: Generic DI framework
-    ├── protocols.py                 # Service abstractions
+└── services/                        # NEW: Generic DI infrastructure ONLY
+    ├── protocols.py                 # ServiceFactory, ServiceProvider protocols
     ├── container.py                 # ServiceContainer (DI core)
     ├── lifecycle.py                 # ServiceDescriptor, lifecycle management
-    ├── llm/                         # LLM-specific adapters
-    │   ├── factory.py               # LLMServiceFactory (DI adapter)
-    │   ├── provider.py              # LLMServiceProvider (high-level API)
-    │   └── configuration.py         # LLMServiceConfiguration
+    └── __init__.py                  # Public API exports
+
+waivern-llm                          # LLM Services Package
+├── services/                        # Pure LLM services (no DI knowledge)
+│   ├── base.py                      # BaseLLMService
+│   ├── anthropic.py                 # AnthropicLLMService
+│   ├── factory.py                   # Simple provider selection
+│   └── errors.py                    # LLM errors
+└── di/                              # NEW: Optional DI integration
+    ├── factory.py                   # ServiceFactory[BaseLLMService] adapter
+    ├── provider.py                  # LLMServiceProvider (high-level API)
+    ├── configuration.py             # LLMServiceConfiguration
     └── __init__.py                  # Public API exports
 
 waivern-analysers-shared             # Analyser utilities
@@ -272,11 +282,19 @@ waivern-analysers-shared             # Analyser utilities
     └── llm_service_manager.py       # Current location (will be replaced)
 ```
 
-**Why `waivern-core`?**
+**Architecture Benefits:**
+
+**Generic DI in `waivern-core`:**
 - Service management is foundational infrastructure, like schemas/messages
 - Available to all components: connectors, analysers, future tools
 - Connectors may need services (database pools, caches, HTTP clients)
-- Clean dependency: all components already depend on `waivern-core`
+- Core stays clean with only generic abstractions
+
+**Service-specific DI in service packages:**
+- Co-location: Each service package provides its own DI adapters
+- Optional: Use pure service OR DI-integrated version
+- Pattern scales: `waivern-database/di/`, `waivern-cache/di/`, etc.
+- No coupling between service implementations and DI framework
 
 ### Layered Interaction
 
@@ -302,16 +320,16 @@ waivern-analysers-shared             # Analyser utilities
                │ factory.create()
                ↓
 ┌──────────────────────────────────────────┐
-│ LLMServiceFactory (DI Adapter)          │
-│  - Wraps: waivern-llm factory            │
+│ LLMServiceFactory (waivern-llm/di)      │
+│  - DI adapter for waivern-llm            │
 │  - Adds: retry, config, validation       │
 └──────────────┬───────────────────────────┘
-               │ WaivernLLMFactory.create_service()
+               │ delegates to
                ↓
 ┌──────────────────────────────────────────┐
-│ waivern-llm (Infrastructure)            │
+│ waivern-llm/services                     │
+│  - Pure LLM services (no DI knowledge)   │
 │  - Creates: AnthropicLLMService          │
-│  - NO DI KNOWLEDGE                       │
 └──────────────────────────────────────────┘
 ```
 
@@ -350,9 +368,9 @@ waivern-analysers-shared             # Analyser utilities
 
 ### Registration (New DI System)
 ```python
-from waivern_llm import BaseLLMService
+from waivern_llm.services import BaseLLMService
 from waivern_core.services import ServiceContainer
-from waivern_core.services.llm import LLMServiceFactory, LLMServiceProvider
+from waivern_llm.di import LLMServiceFactory, LLMServiceProvider
 
 # Create container
 container = ServiceContainer()

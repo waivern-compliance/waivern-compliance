@@ -341,25 +341,38 @@ class LLMServiceProvider(ServiceProvider):
 ### 4. Architecture
 
 ```
-waivern-llm (Infrastructure)         # UNCHANGED - no DI knowledge
-└── BaseLLMService, implementations
-
-waivern-core (Core Framework)        # NEW DI SYSTEM
-└── services/                        # Generic service management
-    ├── protocols.py                 # ServiceFactory, ServiceProvider
+waivern-core (Core Framework)        # NEW: Generic DI infrastructure
+└── services/                        # Service management abstractions
+    ├── protocols.py                 # ServiceFactory, ServiceProvider protocols
     ├── container.py                 # ServiceContainer (DI core)
-    ├── lifecycle.py                 # ServiceDescriptor
-    └── llm/                         # LLM-specific adapters
-        ├── factory.py               # Wraps waivern-llm
-        ├── provider.py              # High-level API
-        └── configuration.py         # Config types
+    └── lifecycle.py                 # ServiceDescriptor, lifecycle management
+
+waivern-llm (LLM Services)           # LLM services + DI adapters
+├── services/                        # Pure LLM services (no DI knowledge)
+│   ├── base.py                      # BaseLLMService
+│   ├── anthropic.py                 # AnthropicLLMService
+│   ├── factory.py                   # Simple provider selection
+│   └── errors.py                    # LLM errors
+└── di/                              # Optional DI integration
+    ├── factory.py                   # ServiceFactory[BaseLLMService] adapter
+    ├── provider.py                  # LLMServiceProvider (high-level API)
+    └── configuration.py             # LLM service configuration
 ```
 
-**Rationale for `waivern-core` location:**
+**Architecture Rationale:**
+
+**Generic DI in `waivern-core`:**
 - Service management is foundational infrastructure, like schemas and messages
 - Available to all components: connectors, analysers, and future tools
 - Connectors may need services (database pools, caches, HTTP clients)
 - Clean dependency: all components depend on `waivern-core` anyway
+- Core stays clean with only generic abstractions
+
+**LLM DI adapters in `waivern-llm`:**
+- Co-location: LLM service + DI adapter together
+- Optional: Use `waivern_llm.services` directly OR `waivern_llm.di` for DI integration
+- Single source of truth for LLM service creation
+- Other service libraries follow same pattern (e.g., `waivern-database/di/`)
 
 ---
 
