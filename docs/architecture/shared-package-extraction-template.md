@@ -306,36 +306,21 @@ uv run pytest tests/ -v
 # Expected: ~{TEST_COUNT} tests passing
 ```
 
-#### 1.11 Update Root Workspace Scripts
+#### 1.11 Workspace Scripts Auto-Discovery ✅
 
-Update `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`:
+**No action needed!** Workspace scripts now auto-discover packages:
 
-```bash
-# Add in correct dependency order
-(cd libs/{SHARED_PACKAGE} && ./scripts/lint.sh "$@")
-(cd libs/{SHARED_PACKAGE} && ./scripts/format.sh "$@")
-(cd libs/{SHARED_PACKAGE} && ./scripts/type-check.sh)
-```
+- `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh` automatically find all packages in `libs/*` and `apps/*`
+- Scripts run package checks in parallel for improved performance
+- Pre-commit scripts (`scripts/pre-commit-*.sh`) dynamically group files by package
 
-#### 1.12 Update Pre-commit Wrapper Scripts
+Your new package will be automatically discovered as long as:
+1. It has a `pyproject.toml` file
+2. It has the standard scripts: `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`
 
-Update `scripts/pre-commit-lint.sh`, `scripts/pre-commit-format.sh`, `scripts/pre-commit-type-check.sh`:
+No manual script updates required!
 
-```bash
-# Add file grouping array
-{shared_package}_files=()
-
-# Add pattern matching in the loop
-elif [[ "$file" == libs/{SHARED_PACKAGE}/* ]]; then
-    {shared_package}_files+=("${file#libs/{SHARED_PACKAGE}/}")
-
-# Add processing block (in dependency order)
-if [ ${#{shared_package}_files[@]} -gt 0 ]; then
-    (cd libs/{SHARED_PACKAGE} && ./scripts/lint.sh "${${shared_package}_files[@]}")
-fi
-```
-
-#### 1.13 Run Dev-Checks and Fix Linting Errors
+#### 1.12 Run Dev-Checks and Fix Linting Errors
 
 ```bash
 ./scripts/dev-checks.sh 2>&1 | tee /tmp/dev-checks-shared.txt
