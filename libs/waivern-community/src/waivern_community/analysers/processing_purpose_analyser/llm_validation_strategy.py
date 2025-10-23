@@ -13,7 +13,7 @@ from waivern_community.prompts.processing_purpose_validation import (
     get_processing_purpose_validation_prompt,
 )
 
-from .types import ProcessingPurposeFindingModel
+from .schemas.types import ProcessingPurposeFindingModel
 
 logger = logging.getLogger(__name__)
 

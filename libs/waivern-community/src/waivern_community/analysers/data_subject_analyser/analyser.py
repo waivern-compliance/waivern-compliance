@@ -18,7 +18,8 @@ from waivern_core.schemas import (
 
 from .pattern_matcher import DataSubjectPatternMatcher
 from .schemas import DataSubjectFindingSchema
-from .types import DataSubjectAnalyserConfig, DataSubjectFindingModel
+from .schemas.types import DataSubjectFindingModel
+from .types import DataSubjectAnalyserConfig
 
 logger = logging.getLogger(__name__)
 

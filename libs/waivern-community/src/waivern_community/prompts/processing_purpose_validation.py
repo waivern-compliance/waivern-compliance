@@ -1,6 +1,6 @@
 """LLM validation prompts for processing purpose findings validation."""
 
-from waivern_community.analysers.processing_purpose_analyser.types import (
+from waivern_community.analysers.processing_purpose_analyser.schemas import (
     ProcessingPurposeFindingModel,
 )
 

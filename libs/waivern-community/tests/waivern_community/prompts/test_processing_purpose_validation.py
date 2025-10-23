@@ -3,7 +3,7 @@
 import pytest
 from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
 
-from waivern_community.analysers.processing_purpose_analyser.types import (
+from waivern_community.analysers.processing_purpose_analyser.schemas.types import (
     ProcessingPurposeFindingMetadata,
     ProcessingPurposeFindingModel,
 )

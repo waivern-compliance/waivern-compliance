@@ -5,7 +5,10 @@ from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
 from waivern_core.schemas import BaseFindingCompliance, BaseMetadata
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
-from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
+from .schemas.types import (
+    ProcessingPurposeFindingMetadata,
+    ProcessingPurposeFindingModel,
+)
 
 
 class ProcessingPurposePatternMatcher:

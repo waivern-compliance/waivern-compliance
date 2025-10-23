@@ -51,7 +51,7 @@ from waivern_core.schemas import BaseFindingCompliance, BaseMetadata
 from waivern_rulesets.data_subjects import DataSubjectRule
 
 from .confidence_scorer import DataSubjectConfidenceScorer
-from .types import DataSubjectFindingMetadata, DataSubjectFindingModel
+from .schemas.types import DataSubjectFindingMetadata, DataSubjectFindingModel
 
 
 class DataSubjectPatternMatcher:

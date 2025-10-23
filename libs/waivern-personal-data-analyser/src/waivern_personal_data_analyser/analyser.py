@@ -19,7 +19,8 @@ from waivern_core.schemas import (
 from .llm_validation_strategy import personal_data_validation_strategy
 from .pattern_matcher import PersonalDataPatternMatcher
 from .schemas import PersonalDataFindingSchema
-from .types import PersonalDataAnalyserConfig, PersonalDataFindingModel
+from .schemas.types import PersonalDataFindingModel
+from .types import PersonalDataAnalyserConfig
 
 logger = logging.getLogger(__name__)
 

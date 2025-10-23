@@ -9,11 +9,11 @@ from datetime import UTC, datetime
 import pytest
 from waivern_core.schemas import BaseFindingEvidence
 
+from waivern_community.analysers.processing_purpose_analyser.schemas.types import (
+    ProcessingPurposeFindingModel,
+)
 from waivern_community.analysers.processing_purpose_analyser.source_code_schema_input_handler import (
     SourceCodeSchemaInputHandler,
-)
-from waivern_community.analysers.processing_purpose_analyser.types import (
-    ProcessingPurposeFindingModel,
 )
 from waivern_community.connectors.source_code.schemas import (
     SourceCodeAnalysisMetadataModel,

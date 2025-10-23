@@ -24,8 +24,9 @@ from waivern_community.connectors.source_code.schemas import (
 from .llm_validation_strategy import processing_purpose_validation_strategy
 from .pattern_matcher import ProcessingPurposePatternMatcher
 from .schemas import ProcessingPurposeFindingSchema
+from .schemas.types import ProcessingPurposeFindingModel
 from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
-from .types import ProcessingPurposeAnalyserConfig, ProcessingPurposeFindingModel
+from .types import ProcessingPurposeAnalyserConfig
 
 logger = logging.getLogger(__name__)
 
