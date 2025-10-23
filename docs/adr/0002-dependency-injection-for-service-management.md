@@ -10,6 +10,8 @@ Proposed
 
 The Waivern Compliance Framework currently uses `LLMServiceManager` in `waivern-analysers-shared/utilities/` to manage LLM service lifecycle. This utility class provides lazy initialisation and basic caching for LLM services used across all analysers.
 
+**Note:** While currently in `waivern-analysers-shared`, service management is core infrastructure that should be available to all components (connectors, analysers, etc.), not just analysers.
+
 **Current implementation:**
 ```python
 class LLMServiceManager:
@@ -265,7 +267,7 @@ class LLMService(ServiceBase):
 
 ## Decision
 
-We will implement a **Dependency Injection Container** in `waivern-analysers-shared/services/` that provides:
+We will implement a **Dependency Injection Container** in `waivern-core/services/` that provides:
 
 ### 1. Generic Service Management Abstractions
 
@@ -342,8 +344,8 @@ class LLMServiceProvider(ServiceProvider):
 waivern-llm (Infrastructure)         # UNCHANGED - no DI knowledge
 └── BaseLLMService, implementations
 
-waivern-analysers-shared (DI Layer)  # NEW
-└── services/
+waivern-core (Core Framework)        # NEW DI SYSTEM
+└── services/                        # Generic service management
     ├── protocols.py                 # ServiceFactory, ServiceProvider
     ├── container.py                 # ServiceContainer (DI core)
     ├── lifecycle.py                 # ServiceDescriptor
@@ -352,6 +354,12 @@ waivern-analysers-shared (DI Layer)  # NEW
         ├── provider.py              # High-level API
         └── configuration.py         # Config types
 ```
+
+**Rationale for `waivern-core` location:**
+- Service management is foundational infrastructure, like schemas and messages
+- Available to all components: connectors, analysers, and future tools
+- Connectors may need services (database pools, caches, HTTP clients)
+- Clean dependency: all components depend on `waivern-core` anyway
 
 ---
 
@@ -393,8 +401,9 @@ waivern-analysers-shared (DI Layer)  # NEW
 
 **Clean Separation:**
 - `waivern-llm` remains pure service library
-- DI concerns isolated in `waivern-analysers-shared`
+- DI concerns isolated in `waivern-core` as foundational infrastructure
 - Infrastructure layer doesn't know about application layer
+- Available to all components (connectors, analysers, tools)
 
 **Industry Alignment:**
 - Follows .NET Core DI, Spring Framework patterns

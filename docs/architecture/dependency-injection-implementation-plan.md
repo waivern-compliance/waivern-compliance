@@ -8,7 +8,7 @@
 
 This document outlines the implementation plan for introducing a **Dependency Injection (DI) system** into the Waivern Compliance Framework. The DI system will replace the current `LLMServiceManager` with a generic, extensible service management solution that can handle LLM services, databases, caches, and any future services.
 
-**Key Principle:** `waivern-llm` stays clean as a pure service library with NO DI knowledge. The DI layer lives in `waivern-analysers-shared` as an **adapter**.
+**Key Principle:** `waivern-llm` stays clean as a pure service library with NO DI knowledge. The DI layer lives in `waivern-core` as foundational infrastructure available to all components (connectors, analysers, tools).
 
 ---
 
@@ -29,9 +29,9 @@ This document outlines the implementation plan for introducing a **Dependency In
 ## Phase 1: Core DI Infrastructure
 
 ### 1.1 Create Package Structure
-- [ ] Create `libs/waivern-analysers-shared/src/waivern_analysers_shared/services/` directory
+- [ ] Create `libs/waivern-core/src/waivern_core/services/` directory
 - [ ] Create `__init__.py` with public API exports
-- [ ] Create `libs/waivern-analysers-shared/src/waivern_analysers_shared/services/llm/` directory
+- [ ] Create `libs/waivern-core/src/waivern_core/services/llm/` directory
 
 ### 1.2 Implement Service Protocols
 - [ ] Create `services/protocols.py`
@@ -154,10 +154,11 @@ This document outlines the implementation plan for introducing a **Dependency In
 - [ ] **Target: 60+ new tests for DI system**
 
 ### 4.2 Update Package Documentation
-- [ ] Update `waivern-analysers-shared/README.md`:
+- [ ] Update `waivern-core/README.md`:
   - Add Services section
   - Document DI system overview
   - Provide usage examples
+  - Document that services are available to all components
 - [ ] Update inline documentation:
   - Comprehensive docstrings for all classes
   - Type hints with explanations
@@ -253,20 +254,29 @@ waivern-llm                          # Infrastructure Layer (UNCHANGED)
 ├── LLMServiceFactory               # Simple provider selection
 └── Errors (LLMServiceError, etc)   # Error types
 
-waivern-analysers-shared            # Application Layer (NEW DI SYSTEM)
-└── services/                       # NEW: Generic DI framework
-    ├── protocols.py                # Service abstractions
-    ├── container.py                # ServiceContainer (DI core)
-    ├── lifecycle.py                # ServiceDescriptor, lifecycle management
-    ├── llm/                        # LLM-specific adapters
-    │   ├── factory.py              # LLMServiceFactory (DI adapter)
-    │   ├── provider.py             # LLMServiceProvider (high-level API)
-    │   └── configuration.py        # LLMServiceConfiguration
-    └── __init__.py                 # Public API exports
+waivern-core                         # Core Framework (NEW DI SYSTEM)
+├── abstractions/                    # Existing: Connector, Analyser
+├── schemas/                         # Existing: Schema, Message
+└── services/                        # NEW: Generic DI framework
+    ├── protocols.py                 # Service abstractions
+    ├── container.py                 # ServiceContainer (DI core)
+    ├── lifecycle.py                 # ServiceDescriptor, lifecycle management
+    ├── llm/                         # LLM-specific adapters
+    │   ├── factory.py               # LLMServiceFactory (DI adapter)
+    │   ├── provider.py              # LLMServiceProvider (high-level API)
+    │   └── configuration.py         # LLMServiceConfiguration
+    └── __init__.py                  # Public API exports
 
-utilities/                          # Existing utilities
-└── llm_service_manager.py         # DEPRECATED: Becomes compatibility facade
+waivern-analysers-shared             # Analyser utilities
+└── utilities/
+    └── llm_service_manager.py       # Current location (will be replaced)
 ```
+
+**Why `waivern-core`?**
+- Service management is foundational infrastructure, like schemas/messages
+- Available to all components: connectors, analysers, future tools
+- Connectors may need services (database pools, caches, HTTP clients)
+- Clean dependency: all components already depend on `waivern-core`
 
 ### Layered Interaction
 
@@ -341,7 +351,8 @@ utilities/                          # Existing utilities
 ### Registration (New DI System)
 ```python
 from waivern_llm import BaseLLMService
-from waivern_analysers_shared.services import ServiceContainer, LLMServiceFactory, LLMServiceProvider
+from waivern_core.services import ServiceContainer
+from waivern_core.services.llm import LLMServiceFactory, LLMServiceProvider
 
 # Create container
 container = ServiceContainer()
