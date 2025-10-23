@@ -170,14 +170,59 @@ target-version = "py312"
 src = ["src"]
 
 [tool.ruff.lint]
-select = ["ANN", "B", "D", "F", "I", "PL", "RUF100", "S", "UP"]
-ignore = ["D203", "D213"]
+select = [
+    "ANN",    # flake8-annotations - enforce type annotations
+    "B",      # flake8-bugbear - find likely bugs and design problems
+    "D",      # pydocstyle - docstring style checking
+    "F",      # pyflakes - detect various errors
+    "I",      # isort - import sorting
+    "PL",     # pylint - comprehensive code analysis
+    "RUF100", # ruff-specific - detect unused noqa directives
+    "S",      # flake8-bandit - security issue detection
+    "UP",     # pyupgrade - upgrade syntax for newer Python versions
+]
+ignore = [
+    "D203",    # one-blank-line-before-class - conflicts with D211 (no-blank-line-before-class)
+    "D213",    # multi-line-summary-second-line - conflicts with D212 (multi-line-summary-first-line)
+]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "PLR2004"]
+"tests/**/*.py" = [
+    "S101",    # assert-used - assert statements are standard in pytest
+    "PLR2004", # magic-value-comparison - magic values are acceptable in tests
+]
 ```
 
-#### 1.4 Copy Shared Code
+#### 1.4 Create README.md
+
+```markdown
+# {SHARED_PACKAGE}
+
+{DESCRIPTION}
+
+## Overview
+
+This package provides common utilities used by all WCF {COMPONENT_TYPE}s:
+- [List key utilities]
+- [List key classes]
+
+## Installation
+
+```bash
+pip install {SHARED_PACKAGE}
+```
+
+## Components
+
+- **[UtilityClass]**: [Description]
+- **[AnotherClass]**: [Description]
+
+## Development
+
+See [CLAUDE.md](../../CLAUDE.md) for development guidelines.
+```
+
+#### 1.5 Copy Shared Code
 
 **Copy (not move)** from waivern-community:
 
@@ -188,7 +233,7 @@ cp -r libs/waivern-community/src/waivern_community/{SHARED_CODE_LOCATION}/* \
 
 **Note:** Keep originals temporarily until all components are updated.
 
-#### 1.5 Create Package Exports
+#### 1.6 Create Package Exports
 
 `src/{SHARED_MODULE}/__init__.py`:
 ```python
@@ -204,7 +249,7 @@ __all__ = [
 ]
 ```
 
-#### 1.6 Copy and Update Tests
+#### 1.7 Copy and Update Tests
 
 Copy tests from waivern-community and update imports:
 
@@ -225,7 +270,7 @@ from {SHARED_MODULE} import Utility
 **Update patch paths in tests:**
 Replace `waivern_community.{COMPONENT_TYPE}.` with `{SHARED_MODULE}.` in `@patch` decorators.
 
-#### 1.7 Add to Workspace
+#### 1.8 Add to Workspace
 
 Update root `pyproject.toml`:
 
@@ -246,14 +291,14 @@ waivern-core = { workspace = true }
 waivern-community = { workspace = true }
 ```
 
-#### 1.8 Initial Package Installation
+#### 1.9 Initial Package Installation
 
 ```bash
 uv sync --package {SHARED_PACKAGE}
 uv run python -c "import {SHARED_MODULE}; print('✓ Package installed')"
 ```
 
-#### 1.9 Run Package Tests
+#### 1.10 Run Package Tests
 
 ```bash
 cd libs/{SHARED_PACKAGE}
@@ -261,7 +306,7 @@ uv run pytest tests/ -v
 # Expected: ~{TEST_COUNT} tests passing
 ```
 
-#### 1.10 Update Root Workspace Scripts
+#### 1.11 Update Root Workspace Scripts
 
 Update `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`:
 
@@ -272,7 +317,7 @@ Update `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`:
 (cd libs/{SHARED_PACKAGE} && ./scripts/type-check.sh)
 ```
 
-#### 1.11 Update Pre-commit Wrapper Scripts
+#### 1.12 Update Pre-commit Wrapper Scripts
 
 Update `scripts/pre-commit-lint.sh`, `scripts/pre-commit-format.sh`, `scripts/pre-commit-type-check.sh`:
 
@@ -290,7 +335,7 @@ if [ ${#{shared_package}_files[@]} -gt 0 ]; then
 fi
 ```
 
-#### 1.12 Run Dev-Checks and Fix Linting Errors
+#### 1.13 Run Dev-Checks and Fix Linting Errors
 
 ```bash
 ./scripts/dev-checks.sh 2>&1 | tee /tmp/dev-checks-shared.txt

@@ -13,5 +13,6 @@ set -e
 (cd libs/waivern-mysql && ./scripts/lint.sh "$@")
 (cd libs/waivern-rulesets && ./scripts/lint.sh "$@")
 (cd libs/waivern-analysers-shared && ./scripts/lint.sh "$@")
+(cd libs/waivern-personal-data-analyser && ./scripts/lint.sh "$@")
 (cd libs/waivern-community && ./scripts/lint.sh "$@")
 (cd apps/wct && ./scripts/lint.sh "$@")

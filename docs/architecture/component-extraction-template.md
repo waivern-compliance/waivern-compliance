@@ -186,24 +186,70 @@ target-version = "py312"
 src = ["src"]
 
 [tool.ruff.lint]
-select = ["ANN", "B", "D", "F", "I", "PL", "RUF100", "S", "UP"]
-ignore = ["D203", "D213"]
+select = [
+    "ANN",    # flake8-annotations - enforce type annotations
+    "B",      # flake8-bugbear - find likely bugs and design problems
+    "D",      # pydocstyle - docstring style checking
+    "F",      # pyflakes - detect various errors
+    "I",      # isort - import sorting
+    "PL",     # pylint - comprehensive code analysis
+    "RUF100", # ruff-specific - detect unused noqa directives
+    "S",      # flake8-bandit - security issue detection
+    "UP",     # pyupgrade - upgrade syntax for newer Python versions
+]
+ignore = [
+    "D203",    # one-blank-line-before-class - conflicts with D211 (no-blank-line-before-class)
+    "D213",    # multi-line-summary-second-line - conflicts with D212 (multi-line-summary-first-line)
+]
 
 [tool.ruff.lint.pydocstyle]
 ignore-decorators = ["typing.overload"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "PLR2004"]
+"tests/**/*.py" = [
+    "S101",    # assert-used - assert statements are standard in pytest
+    "PLR2004", # magic-value-comparison - magic values are acceptable in tests
+]
 ```
 
-#### 1.4 Copy Component Code
+#### 1.4 Create README.md
+
+```markdown
+# {PACKAGE_NAME}
+
+{DESCRIPTION}
+
+## Overview
+
+[Describe what the component does]
+
+## Installation
+
+```bash
+pip install {PACKAGE_NAME}
+```
+
+## Usage
+
+```python
+from {PACKAGE_MODULE} import {COMPONENT_NAME}
+
+# Usage example
+```
+
+## Development
+
+See [CLAUDE.md](../../CLAUDE.md) for development guidelines.
+```
+
+#### 1.5 Copy Component Code
 
 ```bash
 cp -r libs/waivern-community/src/waivern_community/{CURRENT_LOCATION}/* \
       libs/{PACKAGE_NAME}/src/{PACKAGE_MODULE}/
 ```
 
-#### 1.5 Update Imports
+#### 1.6 Update Imports
 
 Update all Python files to use new imports:
 
@@ -223,7 +269,7 @@ from {PACKAGE_MODULE}.module import Something
 - All .py files in the component directory
 - Update imports from old waivern_community paths to new package paths
 
-#### 1.6 Package Exports
+#### 1.7 Package Exports
 
 `src/{PACKAGE_MODULE}/__init__.py`:
 ```python
@@ -240,7 +286,7 @@ __all__ = [
 ]
 ```
 
-#### 1.7 Move Tests
+#### 1.8 Move Tests
 
 ```bash
 mv libs/waivern-community/tests/waivern_community/{CURRENT_LOCATION}/* \
@@ -256,7 +302,7 @@ from waivern_community.{COMPONENT_TYPE}s.{component} import {COMPONENT_NAME}
 from {PACKAGE_MODULE} import {COMPONENT_NAME}
 ```
 
-#### 1.8 Add to Workspace
+#### 1.9 Add to Workspace
 
 Update root `pyproject.toml`:
 
@@ -276,14 +322,14 @@ members = [
 {PACKAGE_NAME} = { workspace = true }  # ADD THIS
 ```
 
-#### 1.9 Initial Package Installation
+#### 1.10 Initial Package Installation
 
 ```bash
 uv sync --package {PACKAGE_NAME}
 uv run python -c "import {PACKAGE_MODULE}; print('✓ Package installed')"
 ```
 
-#### 1.10 Run Package Tests
+#### 1.11 Run Package Tests
 
 ```bash
 cd libs/{PACKAGE_NAME}
@@ -291,7 +337,7 @@ uv run pytest tests/ -v
 # Expected: ~{TEST_COUNT} tests passing
 ```
 
-#### 1.11 Update Root Workspace Scripts
+#### 1.12 Update Root Workspace Scripts
 
 Update `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`:
 
@@ -302,7 +348,7 @@ Update `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`:
 (cd libs/{PACKAGE_NAME} && ./scripts/type-check.sh)
 ```
 
-#### 1.12 Update Pre-commit Wrapper Scripts
+#### 1.13 Update Pre-commit Wrapper Scripts
 
 Update `scripts/pre-commit-lint.sh`, `scripts/pre-commit-format.sh`, `scripts/pre-commit-type-check.sh`:
 
@@ -320,7 +366,7 @@ if [ ${#{package_name}_files[@]} -gt 0 ]; then
 fi
 ```
 
-#### 1.13 Run Dev-Checks and Fix Linting Errors
+#### 1.14 Run Dev-Checks and Fix Linting Errors
 
 ```bash
 ./scripts/dev-checks.sh 2>&1 | tee /tmp/dev-checks-component.txt

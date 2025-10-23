@@ -8,10 +8,10 @@ from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
 from waivern_llm import AnthropicLLMService
 
-from waivern_community.analysers.personal_data_analyser.llm_validation_strategy import (
+from waivern_personal_data_analyser.llm_validation_strategy import (
     personal_data_validation_strategy,
 )
-from waivern_community.analysers.personal_data_analyser.types import (
+from waivern_personal_data_analyser.types import (
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
 )
@@ -475,6 +475,7 @@ class TestPersonalDataValidationStrategy:
         assert len(result[0].evidence) == 1
         assert result[0].evidence[0].content == "Contact us at test@example.com"
         assert result[1].type == "phone"
+        assert result[1].metadata is not None
         assert result[1].metadata.source == "customer_db"
 
     def test_handles_mismatched_result_count(
