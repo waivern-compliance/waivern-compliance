@@ -3,9 +3,11 @@
 import pytest
 from pydantic import ValidationError
 from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
-from waivern_personal_data_analyser.types import (
-    PersonalDataFindingMetadata,
+from waivern_personal_data_analyser.schemas import (
     PersonalDataFindingModel,
+)
+from waivern_personal_data_analyser.schemas.types import (
+    PersonalDataFindingMetadata,
 )
 
 

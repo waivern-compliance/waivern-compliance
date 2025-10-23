@@ -12,7 +12,10 @@ from waivern_community.connectors.source_code.schemas import (
     SourceCodeFileDataModel,
 )
 
-from .types import ProcessingPurposeFindingMetadata, ProcessingPurposeFindingModel
+from .schemas.types import (
+    ProcessingPurposeFindingMetadata,
+    ProcessingPurposeFindingModel,
+)
 
 
 class SourceCodeFileMetadata(BaseModel):

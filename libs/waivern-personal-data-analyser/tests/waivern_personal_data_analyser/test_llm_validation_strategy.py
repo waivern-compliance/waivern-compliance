@@ -11,7 +11,7 @@ from waivern_llm import AnthropicLLMService
 from waivern_personal_data_analyser.llm_validation_strategy import (
     personal_data_validation_strategy,
 )
-from waivern_personal_data_analyser.types import (
+from waivern_personal_data_analyser.schemas.types import (
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
 )

@@ -34,10 +34,12 @@ from waivern_personal_data_analyser.pattern_matcher import (
 from waivern_personal_data_analyser.schemas import (
     PersonalDataFindingSchema,
 )
-from waivern_personal_data_analyser.types import (
-    PersonalDataAnalyserConfig,
+from waivern_personal_data_analyser.schemas.types import (
     PersonalDataFindingMetadata,
     PersonalDataFindingModel,
+)
+from waivern_personal_data_analyser.types import (
+    PersonalDataAnalyserConfig,
 )
 
 

@@ -5,7 +5,7 @@ from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
 from waivern_core.schemas import BaseFindingCompliance, BaseMetadata
 from waivern_rulesets.personal_data import PersonalDataRule
 
-from .types import PersonalDataFindingMetadata, PersonalDataFindingModel
+from .schemas.types import PersonalDataFindingMetadata, PersonalDataFindingModel
 
 
 class PersonalDataPatternMatcher:

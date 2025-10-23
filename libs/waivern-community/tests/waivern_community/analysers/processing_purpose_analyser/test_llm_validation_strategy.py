@@ -10,7 +10,7 @@ from waivern_llm import AnthropicLLMService
 from waivern_community.analysers.processing_purpose_analyser.llm_validation_strategy import (
     processing_purpose_validation_strategy,
 )
-from waivern_community.analysers.processing_purpose_analyser.types import (
+from waivern_community.analysers.processing_purpose_analyser.schemas.types import (
     ProcessingPurposeFindingMetadata,
     ProcessingPurposeFindingModel,
 )

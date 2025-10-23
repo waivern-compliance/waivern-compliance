@@ -12,7 +12,7 @@ from waivern_community.prompts.personal_data_validation import (
 )
 from waivern_llm import BaseLLMService
 
-from .types import PersonalDataFindingModel
+from .schemas.types import PersonalDataFindingModel
 
 logger = logging.getLogger(__name__)
 
