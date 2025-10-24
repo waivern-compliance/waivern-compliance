@@ -374,6 +374,165 @@ waivern-llm (LLM Services)           # LLM services + DI adapters
 - Single source of truth for LLM service creation
 - Other service libraries follow same pattern (e.g., `waivern-database/di/`)
 
+### 5. Component Factories as DI Services
+
+**Extending DI to Analysers and Connectors:**
+
+Analysers and connectors are also services from WCT's perspective:
+- Well-defined interfaces (input/output schemas)
+- May depend on infrastructure services (LLM, database pools)
+- Can be local or remote (SaaS wrappers)
+- Need to be discoverable by AI agents and plugin systems
+
+**Three-Tier Service Architecture:**
+
+```
+┌───────────────────────────────────────────────────┐
+│ Tier 1: Infrastructure Services (Singleton)       │
+│  - LLMService, DatabasePool, CacheService         │
+│  - Created once at WCT startup                    │
+└───────────────────────────────────────────────────┘
+                    ↓ injected into
+┌───────────────────────────────────────────────────┐
+│ Tier 2: Component Factories (Singleton)           │
+│  - PersonalDataAnalyserFactory(llm_service)       │
+│  - MySQLConnectorFactory(db_pool)                 │
+│  - Registered in executor factory registries      │
+└───────────────────────────────────────────────────┘
+                    ↓ create
+┌───────────────────────────────────────────────────┐
+│ Tier 3: Component Instances (Transient)           │
+│  - PersonalDataAnalyser(config, llm_service)      │
+│  - Created per execution step, disposed after use │
+└───────────────────────────────────────────────────┘
+```
+
+**ComponentFactory Abstraction:**
+
+```python
+# waivern-core/component_factory.py
+
+class ComponentFactory(ABC, Generic[T]):
+    """Factory for creating framework components (analysers, connectors)."""
+
+    @abstractmethod
+    def create(self, config: dict[str, Any]) -> T:
+        """Create component with execution-specific config."""
+
+    @abstractmethod
+    def get_component_name(self) -> str:
+        """Get component type name (e.g., 'personal_data')."""
+
+    @abstractmethod
+    def get_input_schemas(self) -> list[Schema]:
+        """Get supported input schemas."""
+
+    @abstractmethod
+    def get_output_schemas(self) -> list[Schema]:
+        """Get supported output schemas."""
+
+    @abstractmethod
+    def can_create(self, config: dict[str, Any]) -> bool:
+        """Health check: can factory create component with config?"""
+```
+
+**Example: PersonalDataAnalyser Factory**
+
+```python
+# waivern-personal-data-analyser/factory.py
+
+class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
+    def __init__(self, llm_service: BaseLLMService | None = None):
+        """Infrastructure dependencies injected by DI container."""
+        self._llm_service = llm_service
+
+    def create(self, config: dict) -> PersonalDataAnalyser:
+        """Create analyser with execution-specific config."""
+        return PersonalDataAnalyser(
+            config=PersonalDataAnalyserConfig.from_dict(config),
+            llm_service=self._llm_service
+        )
+
+    def can_create(self, config: dict) -> bool:
+        """Validate config and check dependencies."""
+        if config.get("llm_validation") and not self._llm_service:
+            return False  # LLM required but unavailable
+        return True
+```
+
+**Example: Remote SaaS Analyser Factory**
+
+```python
+# third-party-package/remote_analyser.py
+
+class RemotePDAnalyserFactory(ComponentFactory[RemotePDAnalyser]):
+    def __init__(self, http_client: HTTPClient):
+        self._http = http_client
+
+    def can_create(self, config: dict) -> bool:
+        """Health check remote service."""
+        try:
+            response = self._http.get(f"{config['endpoint']}/health")
+            return response.status_code == 200
+        except:
+            return False  # Service unavailable
+
+    def create(self, config: dict) -> RemotePDAnalyser:
+        return RemotePDAnalyser(
+            endpoint=config["endpoint"],
+            http_client=self._http
+        )
+```
+
+**Updated Package Architecture:**
+
+```
+waivern-core/
+├── services/                      # Generic DI infrastructure
+│   ├── protocols.py
+│   ├── container.py
+│   └── lifecycle.py
+└── component_factory.py           # NEW: Factory abstraction
+
+waivern-llm/
+├── services/                      # Pure LLM services
+└── di/                            # LLM DI adapters
+
+waivern-personal-data-analyser/
+├── analyser.py                    # PersonalDataAnalyser
+└── factory.py                     # NEW: PersonalDataAnalyserFactory
+
+waivern-mysql/
+├── connector.py                   # MySQLConnector
+└── factory.py                     # NEW: MySQLConnectorFactory
+```
+
+**Benefits:**
+
+**AI Agent Discovery:**
+```python
+# Agent queries: "Which analysers produce personal data findings?"
+factories = [f for f in executor.analyser_factories.values()
+             if "personal_data_finding" in [s.name for s in f.get_output_schemas()]]
+# Returns: [PersonalDataAnalyserFactory, ThirdPartyPDAnalyserFactory, ...]
+```
+
+**Health Checking:**
+```python
+# Before execution, check if remote service available
+if not factory.can_create(config):
+    logger.warning("Service unavailable, using fallback")
+    factory = fallback_factory
+```
+
+**Plugin Architecture:**
+```python
+# Third-party plugin registers seamlessly
+llm_service = container.get_service(BaseLLMService)
+factory = ThirdPartyAnalyserFactory(llm_service=llm_service)
+executor.register_analyser_factory(factory)
+```
+
 ---
 
 ## Consequences
@@ -423,21 +582,56 @@ waivern-llm (LLM Services)           # LLM services + DI adapters
 - Well-understood in enterprise Python
 - Easier onboarding for experienced developers
 
+**Component Discovery (NEW):**
+- AI agents can query analysers by capability/schema
+- Executor can list all available components
+- Plugin system can discover third-party components
+- Dynamic component selection at runtime
+
+**Health Checking (NEW):**
+- `can_create()` validates remote service availability
+- Graceful degradation when services unavailable
+- Pre-execution validation (fail fast with clear errors)
+- Enables fallback strategies
+
+**Plugin Architecture (NEW):**
+- Third-party factories register seamlessly
+- Same pattern for built-in and external components
+- Auto-discovery and auto-injection support
+- Enables marketplace of compliance components
+
+**Unified Pattern (NEW):**
+- Analysers and connectors follow same DI approach
+- Consistent learning curve for component development
+- Reduces cognitive load (one pattern for all services)
+- Scales to future component types
+
 ---
 
 ### Negative ⚠️
 
 **Additional Complexity:**
-- 3 new abstractions (Factory, Container, Provider)
+- New abstractions (Factory, Container, Provider, ComponentFactory)
 - Contributors must understand DI pattern
-- More code to maintain (~500 lines vs ~40 for old manager)
+- More code to maintain (~800 lines vs ~40 for old manager)
 - Learning curve for Python developers unfamiliar with DI
+- Two-level abstraction (factories + instances)
 
 **Implementation Effort:**
-- Update all 3 analysers (PersonalData, ProcessingPurpose, DataSubject)
-- Update test files
+- Update all 3 analysers + all connectors (7 components total)
+- Create factory for each component
+- Update executor integration
+- Update test files (60+ new tests)
 - Write comprehensive tests for DI system
-- Documentation updates
+- Documentation updates across multiple files
+
+**Breaking Changes (Pre-1.0):**
+- Remove `Analyser.from_properties()` classmethod
+- Remove `Connector.from_properties()` classmethod
+- Remove `BUILTIN_ANALYSERS` and `BUILTIN_CONNECTORS` lists
+- Replace with `BUILTIN_ANALYSER_FACTORIES` and `BUILTIN_CONNECTOR_FACTORIES`
+- Executor initialization pattern changes
+- Component constructors require explicit service injection
 
 **Potential Misuse:**
 - Developers might over-engineer simple scenarios
