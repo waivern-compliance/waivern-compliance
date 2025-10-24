@@ -51,16 +51,20 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ### 1.1 Create Package Structure
 
-- [ ] Create `libs/waivern-core/src/waivern_core/services/` directory
-- [ ] Create `__init__.py` with public API exports
+- [x] Create `libs/waivern-core/src/waivern_core/services/` directory
+- [x] Create `__init__.py` with public API exports
 
 ### 1.2 Implement Service Protocols
 
-- [ ] Create `services/protocols.py`
-- [ ] Define `ServiceFactory[T]` protocol with `create()` and `can_create()`
-- [ ] Define `ServiceProvider` protocol with `get_service()` and `is_available()`
-- [ ] Add comprehensive docstrings
-- [ ] Write unit tests for protocol compliance (5+ tests)
+- [x] Create `services/protocols.py`
+- [x] Define `ServiceFactory[T]` protocol with `create()` and `can_create()`
+- [x] Add comprehensive docstrings
+- [x] Write integration tests for protocol (3 tests):
+  - Container works with protocol-compliant factory
+  - Factory availability indication through container
+  - Container handles unavailable factory gracefully
+
+**Note:** `ServiceProvider` protocol deferred - not needed for initial implementation
 
 ### 1.3 Implement Service Lifecycle
 
