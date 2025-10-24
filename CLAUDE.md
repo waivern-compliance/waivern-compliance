@@ -380,6 +380,14 @@ Components register automatically:
 - No unused imports or variables
 - Comprehensive docstrings
 
+**Modern Python Features (Python 3.12+):**
+- Use PEP 695 generic syntax: `def func[T](x: T) -> T:` instead of `TypeVar`
+- Use PEP 695 for generic classes: `class Container[T]:` instead of `Generic[T]`
+- Use `type` statement for type aliases: `type Point[T] = tuple[T, T]`
+- Use structural pattern matching (match/case) where appropriate
+- Use modern syntax features when they improve readability and type safety
+- Always consider the latest Python best practices and idioms
+
 ### DO NOT
 
 - Commit directly to `main` or `master` - always use feature branches

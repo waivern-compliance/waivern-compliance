@@ -1,6 +1,7 @@
 """Waivern Compliance Framework - Core Abstractions.
 
-This package provides the base abstractions that all Waivern components must implement.
+This package provides the base abstractions that all Waivern components must implement,
+including dependency injection infrastructure for service management.
 """
 
 __version__ = "0.1.0"
@@ -26,6 +27,7 @@ from waivern_core.schemas import (
     SchemaLoader,
     SchemaLoadError,
 )
+from waivern_core.services import ServiceContainer, ServiceDescriptor, ServiceFactory
 
 __all__ = [
     # Version
@@ -43,6 +45,10 @@ __all__ = [
     "BaseRule",
     "RuleComplianceData",
     "RulesetData",
+    # Dependency Injection
+    "ServiceContainer",
+    "ServiceDescriptor",
+    "ServiceFactory",
     # Errors
     "WaivernError",
     "AnalyserError",
