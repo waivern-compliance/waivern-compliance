@@ -76,15 +76,15 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ### 1.4 Implement Service Container
 
-- [ ] Create `services/container.py`
-- [ ] Implement `ServiceContainer` class:
+- [x] Create `services/container.py`
+- [x] Implement `ServiceContainer` class:
   - `register(service_type, factory, lifetime)` method
   - `get_service(service_type)` method with lazy creation
   - Singleton caching
   - Type-safe generics
-- [ ] Add error handling (service not found, creation failures)
-- [ ] Add logging for service lifecycle events
-- [ ] Write comprehensive unit tests (20+ tests):
+- [x] Add error handling (service not found, creation failures)
+- [x] Add logging for service lifecycle events
+- [x] Write comprehensive unit tests (10 tests):
   - Service registration
   - Singleton caching
   - Transient creation
@@ -93,10 +93,10 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ### 1.5 Export from waivern-core
 
-- [ ] Update `waivern_core/__init__.py` with service exports
-- [ ] Add comprehensive module docstrings
-- [ ] Run type checker (basedpyright strict)
-- [ ] Run linter (ruff)
+- [x] Update `waivern_core/__init__.py` with service exports
+- [x] Add comprehensive module docstrings
+- [x] Run type checker (basedpyright strict)
+- [x] Run linter (ruff)
 
 **Deliverable:** Generic DI container that works for any service type
 
