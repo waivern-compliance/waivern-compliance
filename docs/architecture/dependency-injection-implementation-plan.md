@@ -68,11 +68,11 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ### 1.3 Implement Service Lifecycle
 
-- [ ] Create `services/lifecycle.py`
-- [ ] Implement `ServiceDescriptor[T]` dataclass
-- [ ] Add lifetime management (singleton, transient)
-- [ ] Add health check configuration
-- [ ] Write unit tests (5+ tests)
+- [x] Create `services/lifecycle.py`
+- [x] Implement `ServiceDescriptor[T]` dataclass
+- [x] Add lifetime management (singleton, transient)
+
+**Note:** Health check configuration deferred - `ServiceFactory.can_create()` provides health checking. Tests not needed - dataclass has no business logic to test.
 
 ### 1.4 Implement Service Container
 
@@ -169,7 +169,6 @@ This document outlines the implementation plan for introducing a **Dependency In
 - [ ] Create `di/configuration.py`
 - [ ] Implement `LLMServiceConfiguration` dataclass
 - [ ] Add `from_dict()` factory method with validation
-- [ ] Support health_check_enabled and health_check_interval
 - [ ] Write unit tests (5+ test cases)
 
 ### 3.5 Integration Tests
@@ -373,7 +372,7 @@ This document outlines the implementation plan for introducing a **Dependency In
       if not connector_factory:
           raise ExecutorError(f"Unknown connector type: {connector_type}")
 
-      # Check availability (health check for remote services)
+      # Check availability
       if not analyser_factory.can_create(analyser_config.properties):
           raise ExecutorError(f"Analyser unavailable with given config")
 
@@ -388,7 +387,7 @@ This document outlines the implementation plan for introducing a **Dependency In
   ```
 
 - [ ] Remove all direct `from_properties()` calls
-- [ ] Add health checking via `can_create()`
+- [ ] Add availability checking via `can_create()`
 - [ ] Add detailed logging for component creation
 
 ### 6.3 Update Executor Tests
@@ -396,7 +395,7 @@ This document outlines the implementation plan for introducing a **Dependency In
 - [ ] Update all executor tests to use factory pattern
 - [ ] Test factory registration
 - [ ] Test component creation via factories
-- [ ] Test health checking (`can_create()`)
+- [ ] Test availability checking (`can_create()`)
 - [ ] Test error handling (unknown type, creation failure)
 - [ ] Mock factories for unit tests
 - [ ] Integration tests with real factories

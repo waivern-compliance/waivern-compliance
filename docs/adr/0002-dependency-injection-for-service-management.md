@@ -51,9 +51,8 @@ class LLMServiceManager:
    - No explicit dependency declaration
 
 4. **No Extensibility**: Pattern doesn't scale
-   - Adding health checking would complicate property getter further
    - No support for different service lifetimes (singleton vs transient)
-   - Retry logic would make property getter even more complex
+   - Adding retry logic would make property getter even more complex
 
 5. **Implicit Dependencies**: Analysers don't declare requirements
    - Looking at analyser constructor doesn't show it needs LLM service
@@ -89,7 +88,7 @@ A proper service management solution must:
 - ✅ Handle service lifecycle (creation, caching, disposal)
 - ✅ Support graceful degradation when services unavailable
 - ✅ Maintain separation of concerns (waivern-llm stays clean)
-- ✅ Enable future health checking and retry logic
+- ✅ Enable future retry logic and advanced lifecycle features
 - ✅ Scale to dozens of service types without code duplication
 
 ---
@@ -292,8 +291,6 @@ class ServiceContainer:
     ) -> None: ...
 
     def get_service[T](self, service_type: type[T]) -> T | None: ...
-
-    def is_healthy[T](self, service_type: type[T]) -> bool: ...
 ```
 
 **ServiceProvider Protocol:**
@@ -470,7 +467,7 @@ class RemotePDAnalyserFactory(ComponentFactory[RemotePDAnalyser]):
         self._http = http_client
 
     def can_create(self, config: dict) -> bool:
-        """Health check remote service."""
+        """Check if remote service is available."""
         try:
             response = self._http.get(f"{config['endpoint']}/health")
             return response.status_code == 200
@@ -558,7 +555,7 @@ executor.register_analyser_factory(factory)
 **Extensibility:**
 - Add new service types without changing core container
 - Support third-party services easily
-- Future features (health checking, retry logic) slot in naturally
+- Future features (retry logic, advanced lifecycle management) slot in naturally
 
 **Type Safety:**
 - Full generic type support (`ServiceFactory[T]`, `get_service[T]()`)
@@ -678,8 +675,7 @@ container.register(
 container.register(
     CacheService,
     RedisCacheFactory(host="localhost", port=6379),
-    lifetime="singleton",
-    health_check_interval=timedelta(minutes=1)
+    lifetime="singleton"
 )
 
 # HTTP client
