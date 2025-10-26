@@ -4,23 +4,30 @@ This directory contains configuration files for the Waivern Compliance Tool.
 
 ## Logging Configuration
 
-WCT uses Python's standard `logging.config.dictConfig()` with YAML configuration files:
+WCT uses Python's standard `logging.config.dictConfig()` with a single YAML configuration file for console-only logging.
 
-- **`logging.yaml`** - Default logging configuration for production
-- **`logging-dev.yaml`** - Development configuration with debug logging and Rich formatting
-- **`logging-test.yaml`** - Minimal logging for test environments
+### Configuration File
 
-### Environment Selection
+- **`logging.yaml`** - Console-only logging configuration using Rich formatting
 
-The logging system automatically selects configuration based on:
+### Log Level Control
 
-1. **`WCT_ENV` environment variable**: Set to `dev`, `test`, or `prod`
-2. **Explicit config**: Pass config path to `setup_logging()`
-3. **Default fallback**: Uses `logging.yaml` if no environment specified
+Control logging verbosity using CLI flags:
+
+```bash
+# Default (INFO level)
+wct run runbook.yaml
+
+# Debug output (DEBUG level)
+wct run runbook.yaml -v
+
+# Custom log level
+wct run runbook.yaml --log-level WARNING
+```
 
 ### Configuration Structure
 
-Each logging config follows Python's standard logging configuration format:
+The logging config follows Python's standard logging configuration format:
 
 ```yaml
 version: 1
@@ -31,34 +38,35 @@ formatters:
     format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
 handlers:
-  console:
-    class: logging.StreamHandler
+  rich_console:
+    class: rich.logging.RichHandler
     level: INFO
     formatter: standard
+    markup: true
+    rich_tracebacks: true
 
 loggers:
   wct:
     level: INFO
-    handlers: [console]
+    handlers: [rich_console]
     propagate: false
 
 root:
   level: WARNING
-  handlers: [console]
+  handlers: [rich_console]
 ```
 
-### Adding New Configurations
+### Cloud-Native Logging
 
-To add environment-specific logging:
-
-1. Create `src/wct/config/logging-{environment}.yaml`
-2. Set `WCT_ENV={environment}` in your environment
-3. The logging system will automatically use your configuration
+WCT follows cloud-native principles:
+- Logs to **stdout/stderr** (not files)
+- Execution environment handles persistence (CI captures output, AWS CloudWatch auto-collects, etc.)
+- Users can redirect if needed: `wct run ... 2>&1 | tee output.log`
 
 ### Rich Console Output
 
-Development and default configurations use Rich formatting for enhanced console output with:
+The configuration uses Rich formatting for enhanced console output with:
 - Syntax highlighting
-- Progress bars
-- Better tracebacks
-- Timestamps and paths
+- Auto-detection of terminal vs pipe (plain text when piped)
+- Pretty tracebacks with context
+- Formatted timestamps

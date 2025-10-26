@@ -10,7 +10,6 @@ import yaml
 
 from wct.logging import (
     LoggingError,
-    create_log_directories,
     get_config_path,
     load_config,
     setup_logging,
@@ -27,31 +26,28 @@ class TestLoggingConfiguration:
             assert config_path.name == "logging.yaml"
             assert config_path.exists()
 
-    def test_get_config_path_environment_specific(self):
-        """Test environment-specific config path selection."""
-        # Test dev environment
+    def test_get_config_path_uses_default_for_all_environments(self):
+        """Test that all environments use the same default logging.yaml config.
+
+        Since environment-specific configs were removed, all environments
+        (dev, test, prod, etc.) should use the single logging.yaml file.
+        """
+        # Test dev environment - should use logging.yaml
         with patch.dict("os.environ", {"WCT_ENV": "dev"}):
-            config_path = get_config_path()
-            assert config_path.name == "logging-dev.yaml"
-            assert config_path.exists()
-
-        # Test test environment
-        with patch.dict("os.environ", {"WCT_ENV": "test"}):
-            config_path = get_config_path()
-            assert config_path.name == "logging-test.yaml"
-            assert config_path.exists()
-
-    def test_get_config_path_fallback_to_default(self):
-        """Test fallback to default config when environment-specific doesn't exist."""
-        with patch.dict("os.environ", {"WCT_ENV": "nonexistent"}):
             config_path = get_config_path()
             assert config_path.name == "logging.yaml"
+            assert config_path.exists()
 
-    def test_get_config_path_explicit_environment(self):
-        """Test explicit environment parameter overrides env var."""
-        with patch.dict("os.environ", {"WCT_ENV": "dev"}):
-            config_path = get_config_path(environment="test")
-            assert config_path.name == "logging-test.yaml"
+        # Test test environment - should also use logging.yaml
+        with patch.dict("os.environ", {"WCT_ENV": "test"}):
+            config_path = get_config_path()
+            assert config_path.name == "logging.yaml"
+            assert config_path.exists()
+
+        # Test prod environment - should also use logging.yaml
+        with patch.dict("os.environ", {"WCT_ENV": "prod"}):
+            config_path = get_config_path()
+            assert config_path.name == "logging.yaml"
             assert config_path.exists()
 
     def test_get_config_path_nonexistent_raises_error(self):
@@ -88,36 +84,6 @@ class TestLoggingConfiguration:
         """Test that nonexistent file raises LoggingError."""
         with pytest.raises(LoggingError, match="Failed to read config file"):
             load_config(Path("/nonexistent/config.yaml"))
-
-    def test_create_log_directories_creates_missing_dirs(self):
-        """Test that log directories are created when missing."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            config = {
-                "handlers": {
-                    "file_handler": {"filename": str(temp_path / "logs" / "test.log")}
-                }
-            }
-
-            # Directory doesn't exist initially
-            log_dir = temp_path / "logs"
-            assert not log_dir.exists()
-
-            create_log_directories(config)
-
-            # Directory should now exist
-            assert log_dir.exists()
-            assert log_dir.is_dir()
-
-    def test_create_log_directories_handles_absolute_paths(self):
-        """Test that absolute log paths are handled correctly."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            abs_log_path = Path(temp_dir) / "absolute" / "test.log"
-            config = {"handlers": {"file_handler": {"filename": str(abs_log_path)}}}
-
-            create_log_directories(config)
-
-            assert abs_log_path.parent.exists()
 
 
 class TestLoggingSetup:
@@ -272,10 +238,10 @@ class TestEnvironmentIntegration:
     """Test environment-specific logging behavior."""
 
     def test_development_environment_uses_dev_config(self):
-        """Test that development environment uses logging-dev.yaml."""
+        """Test that development environment uses logging.yaml."""
         with patch.dict("os.environ", {"WCT_ENV": "development"}):
             config_path = get_config_path()
-            assert config_path.name == "logging-dev.yaml"
+            assert config_path.name == "logging.yaml"
             assert config_path.exists()
 
     def test_production_environment_uses_prod_config(self):

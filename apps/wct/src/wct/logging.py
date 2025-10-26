@@ -104,28 +104,6 @@ def load_config(config_path: Path) -> dict[str, Any]:
         raise LoggingError(f"Failed to read config file {config_path}: {e}") from e
 
 
-def create_log_directories(config: dict[str, Any]) -> None:
-    """Create log directories referenced in the configuration.
-
-    Args:
-        config: Logging configuration dictionary
-
-    """
-    handlers = config.get("handlers", {})
-    project_root = get_project_root()
-
-    for handler_config in handlers.values():
-        if isinstance(handler_config, dict) and "filename" in handler_config:
-            # Make log file paths relative to project root
-            log_file_path = cast(str, handler_config["filename"])
-            if not os.path.isabs(log_file_path):
-                log_file = project_root / log_file_path
-            else:
-                log_file = Path(log_file_path)
-
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-
-
 def setup_logging(
     config_path: Path | str | None = None,
     level: str | None = None,
@@ -185,9 +163,6 @@ def setup_logging(
                     )
                     if numeric_level < current_handler_level:
                         config["handlers"][handler_name]["level"] = level
-
-        # Create necessary directories
-        create_log_directories(config)
 
         # Apply configuration
         logging.config.dictConfig(config)
