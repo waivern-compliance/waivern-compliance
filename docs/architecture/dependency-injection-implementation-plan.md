@@ -4,7 +4,7 @@
 **Created:** 2025-10-23
 **Updated:** 2025-10-24
 **Related ADR:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
-**Related Document:** [Component Factory DI Plan](./component-factory-di-plan.md)
+**Related Document:** [DI Factory Patterns](./di-factory-patterns.md)
 
 ## Executive Summary
 
@@ -38,7 +38,7 @@ This document outlines the implementation plan for introducing a **Dependency In
 - [x] Document context, alternatives, decision, and consequences
 - [x] Add component factory pattern section
 - [x] Update `docs/adr/README.md` index
-- [x] Create comprehensive reference: `docs/architecture/component-factory-di-plan.md`
+- [x] Create comprehensive reference: `docs/architecture/di-factory-patterns.md`
 - [x] Update this implementation plan with component factory phases
 
 **Deliverable:** ADR approved and comprehensive documentation complete
@@ -715,6 +715,6 @@ analyser = factory.create(config)
 ## References
 
 - [ADR-0002: Dependency Injection for Service Management](../adr/0002-dependency-injection-for-service-management.md)
-- [Component Factory DI Plan](./component-factory-di-plan.md) - Comprehensive reference
+- [DI Factory Patterns](./di-factory-patterns.md) - Comprehensive reference
 - [Monorepo Migration Plan - Phase 5](./monorepo-migration-plan.md#phase-5-dynamic-plugin-loading)
 - [WCF Core Concepts](../wcf_core_concepts.md)
