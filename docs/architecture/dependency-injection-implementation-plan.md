@@ -1,8 +1,8 @@
 # Dependency Injection System Implementation Plan
 
-**Status:** Approved
+**Status:** In Progress (Phase 3 Complete)
 **Created:** 2025-10-23
-**Updated:** 2025-10-24
+**Updated:** 2025-10-27
 **Related ADR:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
 **Related Document:** [DI Factory Patterns](./di-factory-patterns.md)
 
@@ -137,51 +137,52 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ---
 
-## Phase 3: LLM Service Integration
+## Phase 3: LLM Service Integration ✅
 
 **Goal:** LLM as DI-managed service in waivern-llm/di/
 
 ### 3.1 Create LLM DI Package Structure
 
-- [ ] Create `libs/waivern-llm/src/waivern_llm/di/` directory
-- [ ] Create `__init__.py` with public API exports
-- [ ] Add dependency on `waivern-core` in `pyproject.toml`
+- [x] Create `libs/waivern-llm/src/waivern_llm/di/` directory
+- [x] Create `__init__.py` with public API exports
+- [x] Add dependency on `waivern-core` in `pyproject.toml`
 
 ### 3.2 Implement LLM Service Factory
 
-- [ ] Create `di/factory.py`
-- [ ] Implement `LLMServiceFactory(ServiceFactory[BaseLLMService])`
-- [ ] Wrap existing `waivern_llm.services.factory.LLMServiceFactory.create_service()`
-- [ ] Implement `can_create()` validation logic
-- [ ] Handle provider, model, api_key configuration
-- [ ] Add detailed logging
-- [ ] Write unit tests (8+ test cases)
+- [x] Create `di/factory.py`
+- [x] Implement `LLMServiceFactory(ServiceFactory[BaseLLMService])`
+- [x] Wrap existing `waivern_llm.factory.LLMServiceFactory.create_service()`
+- [x] Implement `can_create()` validation logic
+- [x] Handle provider, model, api_key configuration
+- [x] Add detailed logging
+- [x] Write unit tests (8 tests)
 
 ### 3.3 Implement LLM Service Provider
 
-- [ ] Create `di/provider.py`
-- [ ] Implement `LLMServiceProvider(ServiceProvider)`
-- [ ] Provide `get_llm_service()` convenience method
-- [ ] Add `is_available` property
-- [ ] Implement generic `get_service()` from protocol
-- [ ] Write unit tests (6+ test cases)
+- [x] Create `di/provider.py`
+- [x] Implement `LLMServiceProvider(ServiceProvider)`
+- [x] Provide `get_llm_service()` convenience method
+- [x] Add `is_available` property
+- [x] Implement generic `get_service()` from protocol
+- [x] Write unit tests (6 tests)
 
 ### 3.4 Implement LLM Configuration
 
-- [ ] Create `di/configuration.py`
-- [ ] Implement `LLMServiceConfiguration` dataclass
-- [ ] Add `from_dict()` factory method with validation
-- [ ] Write unit tests (5+ test cases)
+- [x] Create `di/configuration.py`
+- [x] Implement `LLMServiceConfiguration` (Pydantic BaseModel)
+- [x] Add `from_properties()` factory method with validation
+- [x] Write unit tests (10 tests)
+- [x] Refactor LLMServiceFactory to use configuration (eliminate duplication)
 
 ### 3.5 Integration Tests
 
-- [ ] Write integration tests for full LLM service flow
-- [ ] Test container + factory + provider working together
-- [ ] Test with mock BaseLLMService
-- [ ] Test graceful degradation when service unavailable
-- [ ] Test singleton caching across multiple provider instances
+- [x] Write integration tests for full LLM service flow (8 tests)
+- [x] Test container + factory + provider working together
+- [x] Test with real BaseLLMService
+- [x] Test graceful degradation when service unavailable
+- [x] Test singleton caching across multiple provider instances
 
-**Deliverable:** LLM services managed via DI
+**Deliverable:** LLM services managed via DI (32 tests, all passing)
 
 ---
 

@@ -7,7 +7,7 @@
 # If specific files are provided, check those
 # Otherwise check everything in the package directory
 if [ $# -gt 0 ]; then
-    uv run --group dev basedpyright --level error "$@"
+    uv run --group dev basedpyright "$@"
 else
-    uv run --group dev basedpyright --level error .
+    uv run --group dev basedpyright .
 fi

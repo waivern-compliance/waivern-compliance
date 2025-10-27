@@ -28,7 +28,13 @@ from waivern_core.schemas import (
     SchemaLoader,
     SchemaLoadError,
 )
-from waivern_core.services import ServiceContainer, ServiceDescriptor, ServiceFactory
+from waivern_core.services import (
+    BaseServiceConfiguration,
+    ServiceContainer,
+    ServiceDescriptor,
+    ServiceFactory,
+    ServiceProvider,
+)
 
 __all__ = [
     # Version
@@ -47,11 +53,13 @@ __all__ = [
     "RuleComplianceData",
     "RulesetData",
     # Dependency Injection
+    "BaseServiceConfiguration",
     "ComponentConfig",
     "ComponentFactory",
     "ServiceContainer",
     "ServiceDescriptor",
     "ServiceFactory",
+    "ServiceProvider",
     # Errors
     "WaivernError",
     "AnalyserError",
