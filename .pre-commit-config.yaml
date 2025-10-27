@@ -38,4 +38,4 @@ repos:
         language: system
         types: [python]
         pass_filenames: true
-        exclude: ^(tests/|apps/wct/tests/|libs/waivern-community/tests/|libs/waivern-llm/tests/)
+        exclude: ^(tests/|apps/wct/tests/|libs/waivern-community/tests/)
