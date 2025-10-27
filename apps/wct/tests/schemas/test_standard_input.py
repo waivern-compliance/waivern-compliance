@@ -146,12 +146,12 @@ class TestBaseMetadata:
 
     def test_requires_source(self) -> None:
         with pytest.raises(ValidationError) as exc_info:
-            BaseMetadata(connector_type="test")
+            BaseMetadata(connector_type="test")  # type: ignore[call-arg]
         assert "source" in str(exc_info.value)
 
     def test_requires_connector_type(self) -> None:
         with pytest.raises(ValidationError) as exc_info:
-            BaseMetadata(source="test")
+            BaseMetadata(source="test")  # type: ignore[call-arg]
         assert "connector_type" in str(exc_info.value)
 
 
@@ -170,7 +170,7 @@ class TestRelationalDatabaseMetadata:
 
     def test_requires_database_fields(self) -> None:
         with pytest.raises(ValidationError) as exc_info:
-            RelationalDatabaseMetadata(source="db", connector_type="mysql")
+            RelationalDatabaseMetadata(source="db", connector_type="mysql")  # type: ignore[call-arg]
         error_msg = str(exc_info.value)
         assert "table_name" in error_msg
         assert "column_name" in error_msg
@@ -188,5 +188,5 @@ class TestFilesystemMetadata:
 
     def test_requires_file_path(self) -> None:
         with pytest.raises(ValidationError) as exc_info:
-            FilesystemMetadata(source="file", connector_type="filesystem")
+            FilesystemMetadata(source="file", connector_type="filesystem")  # type: ignore[call-arg]
         assert "file_path" in str(exc_info.value)
