@@ -1,4 +1,4 @@
-# Component Factory Pattern - DI Integration Plan
+# DI Factory Patterns - Service and Component Factories
 
 **Status:** Proposed
 **Created:** 2025-10-24
@@ -6,12 +6,144 @@
 
 ## Executive Summary
 
-This document outlines the plan to integrate analysers and connectors into the Dependency Injection (DI) system using a **component factory pattern**. This enables:
+This document outlines the plan to integrate infrastructure services and WCF components into the Dependency Injection (DI) system using **two distinct factory patterns**. This enables:
 
 - **AI agent discovery:** Agents can query available analysers by capability/schema
 - **Plugin architecture:** Third-party components register seamlessly
 - **Remote services:** Health checking and SaaS analyser integration
-- **Unified pattern:** Same approach for analysers, connectors, and future components
+- **Unified DI pattern:** Consistent dependency injection across infrastructure and components
+
+## Two Factory Abstractions
+
+The DI system uses **two distinct factory abstractions** with different purposes:
+
+### ServiceFactory[T] - For Infrastructure Services
+
+**Protocol** (simple, lightweight interface) for creating infrastructure services.
+
+```python
+from waivern_core.services import ServiceFactory
+
+class ServiceFactory[T](Protocol):
+    """Protocol for factories that create infrastructure service instances."""
+
+    def create(self) -> T | None:
+        """Create a service instance, or None if unavailable."""
+        ...
+
+    def can_create(self) -> bool:
+        """Check if service is available and can be created."""
+        ...
+```
+
+**Used for:**
+- LLM services (Anthropic, OpenAI, Google)
+- Database connection pools (MySQL, PostgreSQL)
+- HTTP clients (shared API clients)
+- Cache services (Redis, Memcached)
+- Any infrastructure service
+
+**Key characteristics:**
+- Simple protocol (not ABC - lightweight)
+- No schema declarations (services don't have schemas)
+- No runbook integration (not visible in YAML)
+- No configuration validation (handled by service constructors)
+- Singleton lifecycle managed by ServiceContainer
+
+**Example:**
+```python
+from waivern_llm.di import LLMServiceFactory
+from waivern_core.services import ServiceContainer
+
+container = ServiceContainer()
+container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
+
+llm_service = container.get_service(BaseLLMService)  # Singleton instance
+```
+
+### ComponentFactory[T] - For WCF Components ONLY
+
+**Abstract Base Class** (rich interface) for creating WCF components (analysers and connectors).
+
+```python
+from waivern_core import ComponentFactory
+
+class ComponentFactory[T](ABC):
+    """Abstract factory for creating WCF component instances."""
+
+    @abstractmethod
+    def create(self, config: dict) -> T:
+        """Create component with execution-specific configuration."""
+        ...
+
+    @abstractmethod
+    def get_component_name(self) -> str:
+        """Return unique name for runbook type field."""
+        ...
+
+    @abstractmethod
+    def get_input_schemas(self) -> list[Schema]:
+        """Return schemas this component can process."""
+        ...
+
+    @abstractmethod
+    def get_output_schemas(self) -> list[Schema]:
+        """Return schemas this component produces."""
+        ...
+
+    @abstractmethod
+    def can_create(self, config: dict) -> bool:
+        """Validate config and check service availability."""
+        ...
+
+    def get_service_dependencies(self) -> dict[str, type]:
+        """Optional: Declare infrastructure service dependencies."""
+        return {}
+```
+
+**Used for:**
+- **Analysers** (PersonalDataAnalyser, ProcessingPurposeAnalyser, DataSubjectAnalyser)
+- **Connectors** (MySQLConnector, FilesystemConnector, SQLiteConnector, SourceCodeConnector)
+- **Nothing else** - strictly WCF components that appear in runbooks
+
+**Key characteristics:**
+- Rich ABC (enforces complete implementation)
+- Schema declarations (for component discovery and matching)
+- Runbook integration (component name maps to YAML `type:` field)
+- Configuration validation (validates before component creation)
+- Health checking (especially for remote/SaaS components)
+- Transient component lifecycle (new instance per execution)
+
+**Example:**
+```python
+from waivern_personal_data_analyser import PersonalDataAnalyserFactory
+
+# Factory holds infrastructure service (singleton)
+factory = PersonalDataAnalyserFactory(llm_service=llm_service)
+
+# Create component instance (transient)
+config = {"pattern_matching": {"ruleset": "personal_data"}}
+analyser = factory.create(config)
+```
+
+### Why Two Factory Abstractions?
+
+| Aspect | ServiceFactory[T] | ComponentFactory[T] |
+|--------|-------------------|---------------------|
+| **Purpose** | Infrastructure services | WCF components only |
+| **Type** | Protocol (lightweight) | ABC (rich interface) |
+| **Used for** | LLM, DB, HTTP, Cache | Analysers, Connectors |
+| **Schemas** | No schemas | Input/output schemas |
+| **Runbook visible** | No | Yes (`type:` field) |
+| **Config validation** | Service handles it | Factory validates first |
+| **Lifecycle** | Singleton | Transient instances |
+| **Create signature** | `create() -> T` | `create(config: dict) -> T` |
+
+**Design rationale:**
+- Infrastructure services are simpler (no schemas, no runbook integration needed)
+- WCF components need richer metadata (schemas for matching, names for runbooks, config validation)
+- Different abstractions prevent confusion (LLM service is NOT a WCF "component")
+- Protocol vs ABC reflects complexity (services are simple, components are complex)
 
 ## Rationale
 

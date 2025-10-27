@@ -9,6 +9,7 @@ __version__ = "0.1.0"
 from waivern_core.base_analyser import Analyser
 from waivern_core.base_connector import Connector
 from waivern_core.base_ruleset import BaseRuleset, RulesetError
+from waivern_core.component_factory import ComponentConfig, ComponentFactory
 from waivern_core.errors import (
     AnalyserError,
     AnalyserInputError,
@@ -46,6 +47,8 @@ __all__ = [
     "RuleComplianceData",
     "RulesetData",
     # Dependency Injection
+    "ComponentConfig",
+    "ComponentFactory",
     "ServiceContainer",
     "ServiceDescriptor",
     "ServiceFactory",

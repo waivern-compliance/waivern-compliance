@@ -4,7 +4,7 @@
 **Created:** 2025-10-23
 **Updated:** 2025-10-24
 **Related ADR:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
-**Related Document:** [Component Factory DI Plan](./component-factory-di-plan.md)
+**Related Document:** [DI Factory Patterns](./di-factory-patterns.md)
 
 ## Executive Summary
 
@@ -38,7 +38,7 @@ This document outlines the implementation plan for introducing a **Dependency In
 - [x] Document context, alternatives, decision, and consequences
 - [x] Add component factory pattern section
 - [x] Update `docs/adr/README.md` index
-- [x] Create comprehensive reference: `docs/architecture/component-factory-di-plan.md`
+- [x] Create comprehensive reference: `docs/architecture/di-factory-patterns.md`
 - [x] Update this implementation plan with component factory phases
 
 **Deliverable:** ADR approved and comprehensive documentation complete
@@ -102,36 +102,38 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ---
 
-## Phase 2: Component Factory Abstraction
+## Phase 2: Component Factory Abstraction ✅
 
 **Goal:** Add ComponentFactory to waivern-core for analysers/connectors
 
 ### 2.1 Create ComponentFactory ABC
 
-- [ ] Create `waivern_core/component_factory.py`
-- [ ] Implement `ComponentFactory[T]` abstract base class:
+- [x] Create `waivern_core/component_factory.py`
+- [x] Implement `ComponentFactory[T]` abstract base class:
   - `create(config: dict) -> T` - Create component with execution-specific config
   - `get_component_name() -> str` - Component type name for runbooks
   - `get_input_schemas() -> list[Schema]` - Supported input schemas
   - `get_output_schemas() -> list[Schema]` - Supported output schemas
   - `can_create(config: dict) -> bool` - Health check/validation
   - `get_service_dependencies() -> dict[str, type]` - Optional dependency declaration
-- [ ] Add comprehensive docstrings with examples
-- [ ] Add type hints with Generic[T]
+- [x] Add comprehensive docstrings with examples
+- [x] Add type hints with Generic[T] (using PEP 695 syntax)
+- [x] Add ComponentConfig type alias
 
 ### 2.2 Export from waivern-core
 
-- [ ] Add to `waivern_core/__init__.py`
-- [ ] Export ComponentFactory in public API
+- [x] Add to `waivern_core/__init__.py`
+- [x] Export ComponentFactory and ComponentConfig in public API
 
-### 2.3 Unit Tests
+### 2.3 Contract Testing Pattern
 
-- [ ] Create `tests/test_component_factory.py`
-- [ ] Test ABC structure
-- [ ] Test generic type handling
-- [ ] Mock implementations for testing (5+ tests)
+- [x] Create `tests/test_component_factory.py`
+- [x] Implement `ComponentFactoryContractTests[T]` abstract test class
+- [x] Define 7 behavioral contract tests for factory implementations
+- [x] Test default `get_service_dependencies()` implementation
+- [x] Add comprehensive documentation explaining contract testing pattern
 
-**Deliverable:** ComponentFactory abstraction available framework-wide
+**Deliverable:** ComponentFactory abstraction available framework-wide with contract testing pattern
 
 ---
 
@@ -715,6 +717,6 @@ analyser = factory.create(config)
 ## References
 
 - [ADR-0002: Dependency Injection for Service Management](../adr/0002-dependency-injection-for-service-management.md)
-- [Component Factory DI Plan](./component-factory-di-plan.md) - Comprehensive reference
+- [DI Factory Patterns](./di-factory-patterns.md) - Comprehensive reference
 - [Monorepo Migration Plan - Phase 5](./monorepo-migration-plan.md#phase-5-dynamic-plugin-loading)
 - [WCF Core Concepts](../wcf_core_concepts.md)
