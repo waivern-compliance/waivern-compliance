@@ -25,7 +25,7 @@ class TestAnalysisResultBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": [{"pattern": "email", "value": "test@example.com"}]},
-            metadata=AnalysisMetadata(version="1.0", priority="high"),
+            metadata=AnalysisMetadata(description="Personal data detection analysis"),
             success=True,
         )
 
@@ -35,8 +35,8 @@ class TestAnalysisResultBehaviour:
         assert result.data == {
             "findings": [{"pattern": "email", "value": "test@example.com"}]
         }
-        assert result.metadata.version == "1.0"
-        assert result.metadata.priority == "high"
+        assert result.metadata is not None
+        assert result.metadata.description == "Personal data detection analysis"
         assert result.success is True
         assert result.error_message is None
 
@@ -83,14 +83,17 @@ class TestAnalysisResultBehaviour:
             output_schema="personal_data_finding",
             data=complex_data,
             metadata=AnalysisMetadata(
-                analysis_depth="detailed", confidence_threshold=0.8
+                description="Comprehensive analysis with complex structures"
             ),
             success=True,
         )
 
         assert result.data == complex_data
-        assert result.metadata.analysis_depth == "detailed"
-        assert result.metadata.confidence_threshold == 0.8
+        assert result.metadata is not None
+        assert (
+            result.metadata.description
+            == "Comprehensive analysis with complex structures"
+        )
 
     def test_result_with_empty_data(self) -> None:
         """Test AnalysisResult works with empty data."""
@@ -115,7 +118,7 @@ class TestAnalysisResultBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": [{"pattern": "email", "value": "test@example.com"}]},
-            metadata=AnalysisMetadata(version="1.0"),
+            metadata=AnalysisMetadata(description="Analysis with contact information"),
             contact="Jane Austin <jane.austin@company.com>",
             success=True,
         )
@@ -132,7 +135,7 @@ class TestAnalysisResultBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": []},
-            metadata=AnalysisMetadata(version="1.0"),
+            metadata=AnalysisMetadata(description="Analysis without contact"),
             success=True,
         )
 
@@ -152,7 +155,7 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": [{"pattern": "email", "count": 3}]},
-            metadata={"version": "1.0"},
+            metadata=AnalysisMetadata(description="Personal data detection"),
             success=True,
         )
 
@@ -187,7 +190,7 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": []},
-            metadata={},
+            metadata=AnalysisMetadata(),
             success=True,
         )
 
@@ -197,7 +200,7 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
             input_schema="source_code",
             output_schema="processing_purpose_finding",
             data={},
-            metadata={},
+            metadata=AnalysisMetadata(),
             success=False,
             error_message="Analysis failed due to invalid input format",
         )
@@ -225,7 +228,7 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
-            metadata={},
+            metadata=AnalysisMetadata(),
             success=True,
         )
 
@@ -249,7 +252,7 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
-            metadata={},
+            metadata=AnalysisMetadata(),
             success=True,
         )
 
@@ -286,7 +289,7 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
-            metadata={},
+            metadata=AnalysisMetadata(),
             success=True,
         )
 
@@ -313,7 +316,7 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": [{"pattern": "name", "value": "José García"}]},
-            metadata={"description": "Análisis de datos personales"},
+            metadata=AnalysisMetadata(description="Análisis de datos personales"),
             success=True,
         )
 
@@ -339,7 +342,7 @@ class TestAnalysisResultsExporterSaveToJsonBehaviour:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": []},
-            metadata={},
+            metadata=AnalysisMetadata(),
             success=True,
         )
 
@@ -397,7 +400,7 @@ execution:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={"findings": []},
-            metadata={},
+            metadata=AnalysisMetadata(),
             success=True,
         )
 
@@ -475,7 +478,7 @@ class TestAnalysisResultsExporterOrganisationMetadata:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
-            metadata={},
+            metadata=AnalysisMetadata(),
             success=True,
         )
 
@@ -515,7 +518,7 @@ class TestAnalysisResultsExporterOrganisationMetadata:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
-            metadata={},
+            metadata=AnalysisMetadata(),
             success=True,
         )
 
@@ -546,7 +549,7 @@ class TestAnalysisResultsExporterOrganisationMetadata:
             input_schema="standard_input",
             output_schema="personal_data_finding",
             data={},
-            metadata={},
+            metadata=AnalysisMetadata(),
             success=True,
         )
 

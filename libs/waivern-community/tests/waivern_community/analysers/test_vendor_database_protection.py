@@ -12,6 +12,7 @@ import sqlite3
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -605,7 +606,7 @@ class TestVendorDatabaseProtection:
 
         # Create a very large JSON file (simulate oversized data)
         # We'll create a JSON with thousands of vendors to test memory handling
-        oversized_data = {
+        oversized_data: dict[str, Any] = {
             "gvlSpecificationVersion": 3,
             "vendorListVersion": 999,
             "tcfPolicyVersion": 5,
@@ -1133,7 +1134,7 @@ class TestVendorDatabaseProtection:
         main = import_consensu_data_module.main
 
         # Initial import with original data
-        initial_data = {
+        initial_data: dict[str, Any] = {
             "gvlSpecificationVersion": 3,
             "vendorListVersion": 100,
             "tcfPolicyVersion": 5,

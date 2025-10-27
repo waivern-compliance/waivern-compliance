@@ -1,8 +1,13 @@
 #!/bin/bash
 
 # Run type checking for waivern-community package
-# Usage: bash scripts/type-check.sh [PATH]
-# Checks types using basedpyright with strict mode
-# Defaults to checking src directory (excluding tests)
+# Usage: bash scripts/type-check.sh [files...]
+# Performs type checking using basedpyright with package configuration
 
-uv run --group dev basedpyright "${@:-src}"
+# If specific files are provided, check those
+# Otherwise check entire package (src and tests)
+if [ $# -gt 0 ]; then
+    uv run --group dev basedpyright "$@"
+else
+    uv run --group dev basedpyright .
+fi

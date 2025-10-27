@@ -1,6 +1,6 @@
 """Tests for base database connector functionality."""
 
-from typing import Any, Self
+from typing import Any, Self, override
 
 import pytest
 from waivern_core.base_connector import Connector
@@ -36,17 +36,21 @@ class TestBaseDatabaseConnector:
         # Arrange
         class TestDatabaseConnector(DatabaseConnector):
             @classmethod
+            @override
             def get_name(cls) -> str:
                 return "test_db"
 
             @classmethod
+            @override
             def from_properties(cls, properties: dict[str, Any]) -> Self:
                 return cls()
 
             @classmethod
+            @override
             def get_supported_output_schemas(cls) -> list[Schema]:
                 return [SourceCodeSchema()]  # Override to support different schema
 
+            @override
             def extract(self, output_schema: Schema) -> Message:
                 return Message(id="test", content={}, schema=output_schema)
 

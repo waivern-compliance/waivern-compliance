@@ -5,8 +5,8 @@ following black-box testing principles and proper encapsulation.
 """
 
 import pytest
-from pydantic import BaseModel
 from waivern_analysers_shared.types import PatternMatchingConfig
+from waivern_core.schemas import BaseMetadata
 
 from waivern_community.analysers.processing_purpose_analyser.pattern_matcher import (
     ProcessingPurposePatternMatcher,
@@ -33,13 +33,9 @@ class TestProcessingPurposePatternMatcher:
         )
 
     @pytest.fixture
-    def sample_metadata(self) -> BaseModel:
+    def sample_metadata(self) -> BaseMetadata:
         """Create sample metadata for testing."""
-
-        class SampleMetadata(BaseModel):
-            source: str = "test_file.php"
-
-        return SampleMetadata()
+        return BaseMetadata(source="test_file.php", connector_type="test")
 
     def test_init_creates_pattern_matcher_with_valid_config(
         self, valid_config: PatternMatchingConfig
@@ -57,7 +53,7 @@ class TestProcessingPurposePatternMatcher:
     def test_find_patterns_returns_empty_list_when_no_patterns_match(
         self,
         valid_config: PatternMatchingConfig,
-        sample_metadata: BaseModel,
+        sample_metadata: BaseMetadata,
     ) -> None:
         """Test that find_patterns returns empty list when no patterns match."""
         # Arrange
@@ -77,7 +73,7 @@ class TestProcessingPurposePatternMatcher:
     def test_find_patterns_creates_findings_for_matched_patterns(
         self,
         valid_config: PatternMatchingConfig,
-        sample_metadata: BaseModel,
+        sample_metadata: BaseMetadata,
     ) -> None:
         """Test that find_patterns creates findings for matched patterns."""
         # Arrange
@@ -105,7 +101,7 @@ class TestProcessingPurposePatternMatcher:
     def test_find_patterns_creates_multiple_findings_for_multiple_matches(
         self,
         valid_config: PatternMatchingConfig,
-        sample_metadata: BaseModel,
+        sample_metadata: BaseMetadata,
     ) -> None:
         """Test that find_patterns creates multiple findings for multiple pattern matches."""
         # Arrange
@@ -134,7 +130,7 @@ class TestProcessingPurposePatternMatcher:
     def test_find_patterns_handles_case_insensitive_matching(
         self,
         valid_config: PatternMatchingConfig,
-        sample_metadata: BaseModel,
+        sample_metadata: BaseMetadata,
     ) -> None:
         """Test that find_patterns performs case-insensitive pattern matching."""
         # Arrange
@@ -159,7 +155,7 @@ class TestProcessingPurposePatternMatcher:
     def test_find_patterns_creates_metadata_from_input_metadata(
         self,
         valid_config: PatternMatchingConfig,
-        sample_metadata: BaseModel,
+        sample_metadata: BaseMetadata,
     ) -> None:
         """Test that find_patterns creates finding metadata from input metadata."""
         # Arrange
@@ -198,7 +194,7 @@ class TestProcessingPurposePatternMatcher:
     def test_find_patterns_returns_valid_finding_structure(
         self,
         valid_config: PatternMatchingConfig,
-        sample_metadata: BaseModel,
+        sample_metadata: BaseMetadata,
     ) -> None:
         """Test that find_patterns returns properly structured findings."""
         # Arrange

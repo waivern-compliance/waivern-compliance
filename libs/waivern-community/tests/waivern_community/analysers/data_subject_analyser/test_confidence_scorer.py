@@ -24,7 +24,7 @@ class TestDataSubjectConfidenceScorer:
             DataSubjectRule(
                 name="primary_rule",
                 description="Primary indicator",
-                patterns=["employee"],
+                patterns=("employee",),
                 subject_category="employee",
                 indicator_type="primary",
                 confidence_weight=45,
@@ -34,7 +34,7 @@ class TestDataSubjectConfidenceScorer:
             DataSubjectRule(
                 name="secondary_rule",
                 description="Secondary indicator",
-                patterns=["staff"],
+                patterns=("staff",),
                 subject_category="employee",
                 indicator_type="secondary",
                 confidence_weight=25,
@@ -44,7 +44,7 @@ class TestDataSubjectConfidenceScorer:
             DataSubjectRule(
                 name="contextual_rule",
                 description="Contextual indicator",
-                patterns=["personnel"],
+                patterns=("personnel",),
                 subject_category="employee",
                 indicator_type="contextual",
                 confidence_weight=15,

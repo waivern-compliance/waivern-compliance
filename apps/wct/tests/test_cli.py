@@ -20,7 +20,7 @@ from unittest.mock import patch
 import pytest
 import typer
 
-from wct.analysis import AnalysisResult
+from wct.analysis import AnalysisMetadata, AnalysisResult
 from wct.cli import (
     CLIError,
     OutputFormatter,
@@ -566,7 +566,7 @@ class TestOutputFormatter:
                 input_schema="standard_input",
                 output_schema="test_output",
                 data={},
-                metadata={},
+                metadata=AnalysisMetadata(),
             )
         ]
 

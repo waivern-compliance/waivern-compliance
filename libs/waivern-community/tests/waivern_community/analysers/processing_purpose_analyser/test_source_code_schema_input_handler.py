@@ -62,7 +62,6 @@ class TestSourceCodeSchemaInputHandler:
             total_files=1,
             total_lines=50,
             analysis_timestamp="2024-01-01T00:00:00Z",
-            parser_version="1.0.0",
         )
 
     @pytest.fixture

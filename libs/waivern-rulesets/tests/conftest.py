@@ -3,6 +3,7 @@
 This module provides fixtures and configuration for the waivern-rulesets test suite.
 """
 
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
@@ -13,7 +14,7 @@ from waivern_rulesets.base import AbstractRuleset
 
 
 @pytest.fixture
-def isolated_registry() -> RulesetRegistry:
+def isolated_registry() -> Iterator[RulesetRegistry]:
     """Provide isolated registry that auto-restores state after test.
 
     This fixture captures the current registry state before the test runs,

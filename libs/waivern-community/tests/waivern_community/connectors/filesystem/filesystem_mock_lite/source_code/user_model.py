@@ -67,8 +67,12 @@ class User(Base):
     nationality = Column(String(100), comment="Nationality - personal data")
 
     # Audit fields
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(tz=None))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(tz=None),
+        onupdate=lambda: datetime.now(tz=None),
+    )
 
     @property
     def full_name(self) -> str:
@@ -97,7 +101,7 @@ def search_users_by_email(email_pattern: str) -> list[User]:
     return User.query.filter(User.email.ilike(f"%{email_pattern}%")).all()
 
 
-def generate_user_report(user_id: int) -> dict[str, Any]:
+def generate_user_report(user_id: int) -> dict[str, Any] | None:
     """Generate comprehensive user report - accesses all personal data"""
     user = User.query.get(user_id)
     if not user:

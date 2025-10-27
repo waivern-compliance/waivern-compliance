@@ -1,5 +1,7 @@
 """Unit tests for ruleset base classes and utilities."""
 
+from typing import override
+
 import pytest
 
 from waivern_rulesets.base import (
@@ -16,15 +18,18 @@ class ConcreteRuleset(AbstractRuleset[ProcessingPurposeRule]):
     """Concrete implementation of Ruleset for testing."""
 
     @property
+    @override
     def name(self) -> str:
         """Return test name."""
         return "test_ruleset"
 
     @property
+    @override
     def version(self) -> str:
         """Return test version."""
         return "1.0.0"
 
+    @override
     def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
         """Return a test rule."""
         return (
@@ -73,7 +78,8 @@ class TestRulesetClass:
     def test_ruleset_name_and_version_are_abstract(self) -> None:
         """Test that Ruleset.name and version are abstract properties."""
 
-        class IncompleteRuleset(AbstractRuleset):
+        class IncompleteRuleset(AbstractRuleset[ProcessingPurposeRule]):
+            @override
             def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
                 return ()
 
@@ -163,13 +169,16 @@ class TestRulesetRegistry:
 
         class AnotherRuleset(AbstractRuleset[ProcessingPurposeRule]):
             @property
+            @override
             def name(self) -> str:
                 return "another_test"
 
             @property
+            @override
             def version(self) -> str:
                 return "1.0.0"
 
+            @override
             def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
                 return ()
 
@@ -228,13 +237,16 @@ class TestRulesetLoader:
 
         class NameTrackingRuleset(AbstractRuleset[ProcessingPurposeRule]):
             @property
+            @override
             def name(self) -> str:
                 return "name_tracking"
 
             @property
+            @override
             def version(self) -> str:
                 return "1.0.0"
 
+            @override
             def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
                 # Return rule that includes the ruleset name for verification
                 return (
@@ -284,13 +296,16 @@ class TestRulesetIntegration:
         # Define a custom ruleset
         class CustomRuleset(AbstractRuleset[ProcessingPurposeRule]):
             @property
+            @override
             def name(self) -> str:
                 return "custom_rules"
 
             @property
+            @override
             def version(self) -> str:
                 return "1.0.0"
 
+            @override
             def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
                 return (
                     ProcessingPurposeRule(
@@ -338,13 +353,16 @@ class TestRulesetIntegration:
 
         class VersionedRuleset(AbstractRuleset[ProcessingPurposeRule]):
             @property
+            @override
             def name(self) -> str:
                 return "versioned_rules"
 
             @property
+            @override
             def version(self) -> str:
                 return "3.2.1"
 
+            @override
             def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
                 return (
                     ProcessingPurposeRule(
