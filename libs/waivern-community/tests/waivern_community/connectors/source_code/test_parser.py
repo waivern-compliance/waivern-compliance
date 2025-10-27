@@ -463,7 +463,7 @@ class TestParserErrorHandling:
                     # but verify the parser works normally
                     file_path.chmod(0o644)  # Restore permissions
                     parser = SourceCodeParser("php")
-                    root_node, source_code = parser.parse_file(file_path)
+                    root_node, _ = parser.parse_file(file_path)
                     assert root_node is not None
 
             finally:

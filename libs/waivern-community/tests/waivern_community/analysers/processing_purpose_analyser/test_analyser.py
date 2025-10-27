@@ -598,7 +598,6 @@ class TestProcessingPurposeAnalyserSourceCodeProcessing:
                 total_files=0,
                 total_lines=0,
                 analysis_timestamp="2024-01-01T00:00:00Z",
-                parser_version="1.0.0",
             ),
             data=[],
         )
@@ -644,7 +643,6 @@ class PaymentService {
                 total_files=1,
                 total_lines=8,
                 analysis_timestamp="2024-01-01T00:00:00Z",
-                parser_version="1.0.0",
             ),
             data=[file_data],
         )
@@ -753,7 +751,6 @@ class PaymentService {
                 total_files=2,
                 total_lines=8,
                 analysis_timestamp="2024-01-01T00:00:00Z",
-                parser_version="1.0.0",
             ),
             data=[file1, file2],
         )
@@ -1061,7 +1058,6 @@ class TestProcessingPurposeAnalyserOutputValidation:
                 total_files=1,
                 total_lines=1,
                 analysis_timestamp="2024-01-01T00:00:00Z",
-                parser_version="1.0.0",
             ),
             data=[file_data],
         )
@@ -1123,7 +1119,6 @@ class TestProcessingPurposeAnalyserOutputValidation:
                 total_files=1,
                 total_lines=1,
                 analysis_timestamp="2024-01-01T00:00:00Z",
-                parser_version="1.0.0",
             ),
             data=[file_data],
         )

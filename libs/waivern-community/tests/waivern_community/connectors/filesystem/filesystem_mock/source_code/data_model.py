@@ -13,15 +13,27 @@ Contains personal data fields:
 - Date of birth and age calculation
 - National identifiers and sensitive data
 """
+# pyright: reportMissingImports=false, reportDeprecated=false
+# pyright: reportGeneralTypeIssues=false, reportArgumentType=false
+# pyright: reportAttributeAccessIssue=false, reportCallIssue=false
+# Test mock file - SQLAlchemy Column types have known type stub issues:
+# - Column.__bool__() returns Never (can't use in conditionals)
+# - Column types can't be passed to functions expecting Python types
+# - Missing type stubs for .ilike() and other SQLAlchemy query methods
+# Also imports third-party libs (phonenumbers, email_validator, cryptography)
+# that aren't actual dependencies. These targeted ignores are necessary for test fixture code.
 
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
-import phonenumbers
-from cryptography.fernet import Fernet
-from email_validator import EmailNotValidError, validate_email
+import phonenumbers  # pyright: ignore[reportMissingImports]
+from cryptography.fernet import Fernet  # pyright: ignore[reportMissingImports]
+from email_validator import (  # pyright: ignore[reportMissingImports]
+    EmailNotValidError,
+    validate_email,
+)
 from sqlalchemy import (
     Boolean,
     Column,
@@ -78,13 +90,13 @@ class EncryptionService:
     def __init__(self, encryption_key: str):
         self.fernet = Fernet(encryption_key.encode())
 
-    def encrypt_personal_data(self, data: str) -> str:
+    def encrypt_personal_data(self, data: str) -> str | None:
         """Encrypt personal data field"""
         if not data:
             return None
         return self.fernet.encrypt(data.encode()).decode()
 
-    def decrypt_personal_data(self, encrypted_data: str) -> str:
+    def decrypt_personal_data(self, encrypted_data: str) -> str | None:
         """Decrypt personal data field"""
         if not encrypted_data:
             return None
@@ -506,7 +518,7 @@ def find_users_by_phone(phone_number: str) -> list[User]:
     return User.query.filter(User.phone == encrypted_phone).all()
 
 
-def generate_user_report(user_id: int) -> dict[str, Any]:
+def generate_user_report(user_id: int) -> dict[str, Any] | None:
     """Generate comprehensive user report - accesses all personal data"""
     user = User.query.get(user_id)
     if not user:

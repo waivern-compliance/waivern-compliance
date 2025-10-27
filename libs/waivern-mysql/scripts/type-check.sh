@@ -1,4 +1,13 @@
-#!/usr/bin/env bash
-set -euo pipefail
-cd "$(dirname "$0")/.."
-uv run basedpyright src/ tests/
+#!/bin/bash
+
+# Run static type checking for waivern-mysql package
+# Usage: bash scripts/type-check.sh [files...]
+# Performs type checking using basedpyright with package configuration
+
+# If specific files are provided, check those
+# Otherwise check entire package (src and tests)
+if [ $# -gt 0 ]; then
+    uv run --group dev basedpyright "$@"
+else
+    uv run --group dev basedpyright .
+fi
