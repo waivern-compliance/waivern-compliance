@@ -5,4 +5,4 @@
 # Checks types using basedpyright with strict mode
 # Defaults to checking src directory (excluding tests)
 
-uv run --group dev basedpyright --level error "${@:-src}"
+uv run --group dev basedpyright "${@:-src}"

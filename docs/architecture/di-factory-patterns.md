@@ -1,7 +1,8 @@
 # DI Factory Patterns - Service and Component Factories
 
-**Status:** Proposed
+**Status:** In Progress (Phase 3 - Service Configuration Architecture Implemented)
 **Created:** 2025-10-24
+**Updated:** 2025-10-27
 **Related:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
 
 ## Executive Summary
@@ -47,18 +48,118 @@ class ServiceFactory[T](Protocol):
 - Simple protocol (not ABC - lightweight)
 - No schema declarations (services don't have schemas)
 - No runbook integration (not visible in YAML)
-- No configuration validation (handled by service constructors)
+- Optional configuration support (constructor parameter, not create() parameter)
 - Singleton lifecycle managed by ServiceContainer
+
+**Configuration Pattern:**
+
+Services support two configuration modes:
+
+1. **Environment-only (zero-config):**
+   ```python
+   factory = LLMServiceFactory()  # Reads from environment variables
+   ```
+
+2. **Explicit config with env fallback:**
+   ```python
+   from waivern_llm.di import LLMServiceConfiguration
+
+   config = LLMServiceConfiguration(provider="anthropic", api_key="sk-...")
+   factory = LLMServiceFactory(config)  # Uses config, falls back to env
+   ```
+
+**Key distinction:** Configuration goes in **factory constructor**, NOT in `create()` method. The `create()` and `can_create()` methods take NO parameters.
 
 **Example:**
 ```python
-from waivern_llm.di import LLMServiceFactory
+from waivern_llm.di import LLMServiceFactory, LLMServiceConfiguration
 from waivern_core.services import ServiceContainer
 
 container = ServiceContainer()
+
+# Option 1: Zero-config (reads from environment)
 container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
 
+# Option 2: Explicit config (overrides environment)
+config = LLMServiceConfiguration.from_properties({
+    "provider": "anthropic",
+    "api_key": "sk-..."
+})
+container.register(BaseLLMService, LLMServiceFactory(config), lifetime="singleton")
+
 llm_service = container.get_service(BaseLLMService)  # Singleton instance
+```
+
+#### BaseServiceConfiguration Pattern
+
+All service configurations inherit from `BaseServiceConfiguration`, providing:
+- **Pydantic validation** for type safety
+- **Immutability** (frozen dataclass) for configuration integrity
+- **from_properties() factory method** for dictionary-based creation
+- **Environment variable support** with explicit config precedence
+
+**Example implementation:**
+```python
+from waivern_core.services import BaseServiceConfiguration
+from pydantic import Field, field_validator
+import os
+
+class LLMServiceConfiguration(BaseServiceConfiguration):
+    """Configuration for LLM service with environment fallback."""
+
+    provider: str = Field(description="LLM provider: anthropic, openai, google")
+    api_key: str = Field(description="API key for the provider")
+    model: str | None = Field(default=None, description="Model name (optional)")
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, v: str) -> str:
+        allowed = {"anthropic", "openai", "google"}
+        if v.lower() not in allowed:
+            raise ValueError(f"Provider must be one of {allowed}")
+        return v.lower()
+
+    @classmethod
+    def from_properties(cls, properties: dict) -> Self:
+        """Create configuration from properties with environment fallback."""
+        config_data = properties.copy()
+
+        # Environment fallback for provider
+        if "provider" not in config_data:
+            config_data["provider"] = os.getenv("LLM_PROVIDER", "anthropic")
+
+        # Environment fallback for API key (provider-specific)
+        if "api_key" not in config_data:
+            provider = config_data["provider"]
+            env_key_map = {
+                "anthropic": "ANTHROPIC_API_KEY",
+                "openai": "OPENAI_API_KEY",
+                "google": "GOOGLE_API_KEY"
+            }
+            config_data["api_key"] = os.getenv(env_key_map.get(provider, ""), "")
+
+        return cls.model_validate(config_data)
+```
+
+**Usage patterns:**
+```python
+# Pattern 1: Explicit configuration
+config = LLMServiceConfiguration(provider="anthropic", api_key="sk-...")
+
+# Pattern 2: From properties dict (runbook-style)
+config = LLMServiceConfiguration.from_properties({
+    "provider": "anthropic",
+    "api_key": "sk-..."
+})
+
+# Pattern 3: Environment fallback (zero-config)
+config = LLMServiceConfiguration.from_properties({})  # Reads env vars
+
+# Pattern 4: Mixed (properties override env)
+os.environ["LLM_PROVIDER"] = "openai"
+config = LLMServiceConfiguration.from_properties({
+    "provider": "anthropic"  # Overrides environment
+})
 ```
 
 ### ComponentFactory[T] - For WCF Components ONLY
@@ -135,9 +236,11 @@ analyser = factory.create(config)
 | **Used for** | LLM, DB, HTTP, Cache | Analysers, Connectors |
 | **Schemas** | No schemas | Input/output schemas |
 | **Runbook visible** | No | Yes (`type:` field) |
-| **Config validation** | Service handles it | Factory validates first |
+| **Configuration** | Optional, in **constructor** | Required, in **create()** parameter |
+| **Config timing** | Startup (factory creation) | Per-execution (component creation) |
+| **Config source** | Env vars OR explicit config | Runbook properties |
 | **Lifecycle** | Singleton | Transient instances |
-| **Create signature** | `create() -> T` | `create(config: dict) -> T` |
+| **Create signature** | `create() -> T` (no params) | `create(config: dict) -> T` (has params) |
 
 **Design rationale:**
 - Infrastructure services are simpler (no schemas, no runbook integration needed)
