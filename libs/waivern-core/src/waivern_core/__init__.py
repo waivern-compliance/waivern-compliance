@@ -29,6 +29,7 @@ from waivern_core.schemas import (
     SchemaLoadError,
 )
 from waivern_core.services import (
+    BaseComponentConfiguration,
     BaseServiceConfiguration,
     ServiceContainer,
     ServiceDescriptor,
@@ -53,6 +54,7 @@ __all__ = [
     "RuleComplianceData",
     "RulesetData",
     # Dependency Injection
+    "BaseComponentConfiguration",
     "BaseServiceConfiguration",
     "ComponentConfig",
     "ComponentFactory",

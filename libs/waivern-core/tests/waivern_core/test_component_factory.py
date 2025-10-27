@@ -60,7 +60,12 @@ from typing import override
 
 import pytest
 
-from waivern_core import ComponentConfig, ComponentFactory, Schema
+from waivern_core import (
+    BaseComponentConfiguration,
+    ComponentConfig,
+    ComponentFactory,
+    Schema,
+)
 
 
 class ComponentFactoryContractTests[T]:
@@ -267,7 +272,8 @@ class ComponentFactoryContractTests[T]:
             Exceptions would break discovery process; False enables graceful skip.
 
         """
-        invalid_config = {}  # Empty config should be invalid for most factories
+        # Empty config should be invalid for most factories
+        invalid_config = BaseComponentConfiguration()
         result = factory.can_create(invalid_config)
         assert isinstance(result, bool), (
             "can_create() must return boolean even for invalid config, "

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from waivern_core.services import BaseServiceConfiguration
+from waivern_core.services import BaseComponentConfiguration, BaseServiceConfiguration
 
 
 class TestBaseServiceConfiguration:
@@ -67,6 +67,78 @@ class TestBaseServiceConfiguration:
 
         try:
             TestServiceConfig.from_properties(properties)
+            assert False, "Should have raised ValidationError for extra field"
+        except ValidationError as e:
+            # Pydantic raises ValidationError with extra fields forbidden message
+            error_msg = str(e).lower()
+            assert (
+                "extra" in error_msg
+                or "forbidden" in error_msg
+                or "unexpected" in error_msg
+            )
+
+
+class TestBaseComponentConfiguration:
+    """Test BaseComponentConfiguration base class."""
+
+    def test_base_configuration_can_be_instantiated_directly_for_testing(self) -> None:
+        """Test that BaseComponentConfiguration can be used directly."""
+        # BaseComponentConfiguration should be instantiable with no fields
+        config = BaseComponentConfiguration()
+
+        # Verify it's the correct type
+        assert isinstance(config, BaseComponentConfiguration)
+
+    def test_configuration_is_immutable_frozen(self) -> None:
+        """Test that configuration fields cannot be modified after creation."""
+        from pydantic import ValidationError
+
+        # Create a test subclass with a field to modify
+        class TestComponentConfig(BaseComponentConfiguration):
+            ruleset: str
+
+        # Create instance
+        config = TestComponentConfig(ruleset="personal_data")
+        assert config.ruleset == "personal_data"
+
+        # Attempt to modify the field - should raise ValidationError (frozen instance)
+        try:
+            config.ruleset = "modified"  # type: ignore[misc]
+            assert False, "Should have raised ValidationError for frozen instance"
+        except ValidationError as e:
+            # Pydantic raises ValidationError with frozen/immutable message
+            assert "frozen" in str(e).lower() or "immutable" in str(e).lower()
+
+    def test_from_properties_creates_configuration_from_valid_dictionary(self) -> None:
+        """Test from_properties() factory method with valid dictionary."""
+
+        # Create a test subclass with fields matching typical component config
+        class TestComponentConfig(BaseComponentConfiguration):
+            ruleset: str
+            evidence_context_size: str
+
+        # Create configuration from properties dictionary (simulating runbook properties)
+        properties = {"ruleset": "personal_data", "evidence_context_size": "medium"}
+        config = TestComponentConfig.from_properties(properties)
+
+        # Verify configuration was created correctly
+        assert isinstance(config, TestComponentConfig)
+        assert config.ruleset == "personal_data"
+        assert config.evidence_context_size == "medium"
+
+    def test_from_properties_rejects_extra_fields_not_in_model(self) -> None:
+        """Test from_properties() rejects unknown/extra fields."""
+        from pydantic import ValidationError
+
+        # Create a test subclass with specific fields
+        class TestComponentConfig(BaseComponentConfiguration):
+            ruleset: str
+
+        # Attempt to create configuration with extra/unknown field
+        properties = {"ruleset": "personal_data", "unknown_field": "value"}
+
+        try:
+            TestComponentConfig.from_properties(properties)
             assert False, "Should have raised ValidationError for extra field"
         except ValidationError as e:
             # Pydantic raises ValidationError with extra fields forbidden message
