@@ -15,20 +15,24 @@ Example:
     >>> # Component factory (singleton) with injected dependencies
     >>> factory = PersonalDataAnalyserFactory(llm_service=llm_service)
     >>>
+    >>> # Component configuration (from runbook properties)
+    >>> config = BaseComponentConfiguration.from_properties(
+    ...     {"pattern_matching": {"ruleset": "personal_data"}}
+    ... )
+    >>>
     >>> # Component instance (transient) created by factory
-    >>> analyser = factory.create({"pattern_matching": {"ruleset": "personal_data"}})
+    >>> analyser = factory.create(config)
 
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
 
 from waivern_core.schemas import Schema
+from waivern_core.services.configuration import BaseComponentConfiguration
 
-# Type alias for component configuration dictionaries
-type ComponentConfig = dict[str, Any]
+type ComponentConfig = BaseComponentConfiguration
 
 
 class ComponentFactory[T](ABC):
@@ -61,8 +65,8 @@ class ComponentFactory[T](ABC):
         ...     def __init__(self, llm_service: BaseLLMService | None = None):
         ...         self._llm_service = llm_service
         ...
-        ...     def create(self, config: dict) -> PersonalDataAnalyser:
-        ...         analyser_config = PersonalDataAnalyserConfig.from_dict(config)
+        ...     def create(self, config: ComponentConfig) -> PersonalDataAnalyser:
+        ...         analyser_config = PersonalDataAnalyserConfig.from_properties(config)
         ...         return PersonalDataAnalyser(analyser_config, self._llm_service)
         ...
         ...     def get_component_name(self) -> str:
@@ -74,14 +78,17 @@ class ComponentFactory[T](ABC):
         ...     def get_output_schemas(self) -> list[Schema]:
         ...         return [PersonalDataFindingSchema()]
         ...
-        ...     def can_create(self, config: dict) -> bool:
-        ...         # Validate config structure
-        ...         if "pattern_matching" not in config:
+        ...     def can_create(self, config: ComponentConfig) -> bool:
+        ...         # Validate config has required fields
+        ...         try:
+        ...             PersonalDataAnalyserConfig.from_properties(config.model_dump())
+        ...             # Check LLM service available if LLM validation enabled
+        ...             config_dict = config.model_dump()
+        ...             if config_dict.get("llm_validation", {}).get("enable_llm_validation"):
+        ...                 return self._llm_service is not None
+        ...             return True
+        ...         except Exception:
         ...             return False
-        ...         # Check LLM service available if LLM validation enabled
-        ...         if config.get("llm_validation", {}).get("enable_llm_validation"):
-        ...             return self._llm_service is not None
-        ...         return True
 
     """
 
@@ -106,10 +113,10 @@ class ComponentFactory[T](ABC):
 
         Example:
             >>> factory = PersonalDataAnalyserFactory(llm_service)
-            >>> config = {
+            >>> config = BaseComponentConfiguration.from_properties({
             ...     "pattern_matching": {"ruleset": "personal_data"},
             ...     "llm_validation": {"enable_llm_validation": True}
-            ... }
+            ... })
             >>> analyser = factory.create(config)
 
         """
@@ -187,10 +194,12 @@ class ComponentFactory[T](ABC):
             True if component can be created with this config, False otherwise
 
         Example:
-            >>> config = {"pattern_matching": {"ruleset": "personal_data"}}
+            >>> config = BaseComponentConfiguration.from_properties(
+            ...     {"pattern_matching": {"ruleset": "personal_data"}}
+            ... )
             >>> factory.can_create(config)
             True
-            >>> bad_config = {}
+            >>> bad_config = BaseComponentConfiguration()
             >>> factory.can_create(bad_config)
             False
 

@@ -446,7 +446,7 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
     def create(self, config: dict) -> PersonalDataAnalyser:
         """Create analyser with execution-specific config."""
         return PersonalDataAnalyser(
-            config=PersonalDataAnalyserConfig.from_dict(config),
+            config=PersonalDataAnalyserConfig.from_properties(config),
             llm_service=self._llm_service
         )
 

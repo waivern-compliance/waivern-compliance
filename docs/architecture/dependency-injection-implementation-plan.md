@@ -110,15 +110,15 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 - [x] Create `waivern_core/component_factory.py`
 - [x] Implement `ComponentFactory[T]` abstract base class:
-  - `create(config: dict) -> T` - Create component with execution-specific config
+  - `create(config: ComponentConfig) -> T` - Create component with execution-specific config
   - `get_component_name() -> str` - Component type name for runbooks
   - `get_input_schemas() -> list[Schema]` - Supported input schemas
   - `get_output_schemas() -> list[Schema]` - Supported output schemas
-  - `can_create(config: dict) -> bool` - Health check/validation
+  - `can_create(config: ComponentConfig) -> bool` - Health check/validation
   - `get_service_dependencies() -> dict[str, type]` - Optional dependency declaration
 - [x] Add comprehensive docstrings with examples
 - [x] Add type hints with Generic[T] (using PEP 695 syntax)
-- [x] Add ComponentConfig type alias
+- [x] Add ComponentConfig type alias (`type ComponentConfig = BaseComponentConfiguration`)
 
 ### 2.2 Export from waivern-core
 
@@ -182,7 +182,18 @@ This document outlines the implementation plan for introducing a **Dependency In
 - [x] Test graceful degradation when service unavailable
 - [x] Test singleton caching across multiple provider instances
 
-**Deliverable:** LLM services managed via DI (32 tests, all passing)
+### 3.6 Component Configuration Base Class
+
+- [x] Create `BaseComponentConfiguration` in `waivern_core/services/configuration.py`
+- [x] Implement with Pydantic BaseModel (frozen, extra="forbid")
+- [x] Add `from_properties()` factory method for dictionary-based creation
+- [x] Mirror same design pattern as `BaseServiceConfiguration`
+- [x] Update `ComponentConfig` type alias to point to `BaseComponentConfiguration`
+- [x] Export from `waivern_core/services/__init__.py` and `waivern_core/__init__.py`
+- [x] Write unit tests (4 tests for instantiation, immutability, validation, from_properties)
+- [x] Update ComponentFactory contract tests to use typed configs
+
+**Deliverable:** LLM services managed via DI + BaseComponentConfiguration implemented (36 tests, all passing)
 
 ---
 

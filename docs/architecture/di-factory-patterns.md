@@ -162,18 +162,79 @@ config = LLMServiceConfiguration.from_properties({
 })
 ```
 
+#### BaseComponentConfiguration Pattern
+
+All component configurations inherit from `BaseComponentConfiguration`, providing:
+- **Pydantic validation** for type safety
+- **Immutability** (frozen dataclass) for configuration integrity
+- **from_properties() factory method** for dictionary-based creation from runbook properties
+- **Strict validation** (no extra fields allowed)
+
+The `ComponentConfig` type alias points to `BaseComponentConfiguration`, allowing it to serve dual purposes:
+1. **Base class** for component-specific configs (e.g., `PersonalDataAnalyserConfig(BaseComponentConfiguration)`)
+2. **Type annotation** for factory method signatures (providing strong typing at the interface level)
+
+**Type alias definition:**
+```python
+from waivern_core.services.configuration import BaseComponentConfiguration
+
+type ComponentConfig = BaseComponentConfiguration
+```
+
+**Example component-specific configuration:**
+```python
+from waivern_core import BaseComponentConfiguration
+from pydantic import Field
+
+class PersonalDataAnalyserConfig(BaseComponentConfiguration):
+    """Configuration for PersonalDataAnalyser component."""
+
+    pattern_matching: dict = Field(description="Pattern matching settings")
+    llm_validation: dict | None = Field(default=None, description="LLM validation settings")
+
+    @classmethod
+    def from_properties(cls, properties: dict) -> Self:
+        """Create configuration from runbook properties with validation."""
+        # Add any preprocessing, defaults, or environment variable support here
+        return cls.model_validate(properties)
+```
+
+**Usage patterns:**
+```python
+# Pattern 1: Generic base configuration (simple components)
+config = BaseComponentConfiguration.from_properties({
+    "pattern_matching": {"ruleset": "personal_data"}
+})
+
+# Pattern 2: Component-specific configuration (complex components)
+config = PersonalDataAnalyserConfig.from_properties({
+    "pattern_matching": {"ruleset": "personal_data"},
+    "llm_validation": {"enable_llm_validation": True}
+})
+
+# Pattern 3: Factory receives either base or specific config (type-safe)
+analyser = factory.create(config)  # config: ComponentConfig (BaseComponentConfiguration)
+```
+
+**Key benefits:**
+- **Strong typing:** No raw dicts passed to factories
+- **Validation:** Pydantic catches configuration errors early
+- **Immutability:** Configurations cannot be modified after creation
+- **Flexibility:** Factories can accept base config or specific subclass
+- **Consistency:** Same pattern as BaseServiceConfiguration
+
 ### ComponentFactory[T] - For WCF Components ONLY
 
 **Abstract Base Class** (rich interface) for creating WCF components (analysers and connectors).
 
 ```python
-from waivern_core import ComponentFactory
+from waivern_core import ComponentFactory, ComponentConfig
 
 class ComponentFactory[T](ABC):
     """Abstract factory for creating WCF component instances."""
 
     @abstractmethod
-    def create(self, config: dict) -> T:
+    def create(self, config: ComponentConfig) -> T:
         """Create component with execution-specific configuration."""
         ...
 
@@ -193,7 +254,7 @@ class ComponentFactory[T](ABC):
         ...
 
     @abstractmethod
-    def can_create(self, config: dict) -> bool:
+    def can_create(self, config: ComponentConfig) -> bool:
         """Validate config and check service availability."""
         ...
 
@@ -218,12 +279,17 @@ class ComponentFactory[T](ABC):
 **Example:**
 ```python
 from waivern_personal_data_analyser import PersonalDataAnalyserFactory
+from waivern_core import BaseComponentConfiguration
 
 # Factory holds infrastructure service (singleton)
 factory = PersonalDataAnalyserFactory(llm_service=llm_service)
 
+# Create component configuration from runbook properties
+config = BaseComponentConfiguration.from_properties({
+    "pattern_matching": {"ruleset": "personal_data"}
+})
+
 # Create component instance (transient)
-config = {"pattern_matching": {"ruleset": "personal_data"}}
 analyser = factory.create(config)
 ```
 
@@ -240,7 +306,7 @@ analyser = factory.create(config)
 | **Config timing** | Startup (factory creation) | Per-execution (component creation) |
 | **Config source** | Env vars OR explicit config | Runbook properties |
 | **Lifecycle** | Singleton | Transient instances |
-| **Create signature** | `create() -> T` (no params) | `create(config: dict) -> T` (has params) |
+| **Create signature** | `create() -> T` (no params) | `create(config: ComponentConfig) -> T` (has params) |
 
 **Design rationale:**
 - Infrastructure services are simpler (no schemas, no runbook integration needed)
@@ -385,12 +451,12 @@ The DI system manages three distinct tiers of services:
 # waivern-core/src/waivern_core/component_factory.py
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Any
 from waivern_core.schemas import Schema
+from waivern_core.services.configuration import BaseComponentConfiguration
 
-T = TypeVar('T')
+type ComponentConfig = BaseComponentConfiguration
 
-class ComponentFactory(ABC, Generic[T]):
+class ComponentFactory[T](ABC):
     """Factory for creating framework components (analysers, connectors).
 
     Factories are registered in the executor and have infrastructure
@@ -402,7 +468,7 @@ class ComponentFactory(ABC, Generic[T]):
     """
 
     @abstractmethod
-    def create(self, config: dict[str, Any]) -> T:
+    def create(self, config: ComponentConfig) -> T:
         """Create component instance with given configuration.
 
         This method is called by the executor for each execution step.
@@ -410,17 +476,17 @@ class ComponentFactory(ABC, Generic[T]):
         properties and varies per execution.
 
         Args:
-            config: Execution-specific configuration from runbook
+            config: Execution-specific configuration from runbook (BaseComponentConfiguration)
 
         Returns:
             Configured component instance ready to process data
 
         Example:
             ```python
-            config = {
+            config = BaseComponentConfiguration.from_properties({
                 "llm_validation": True,
                 "evidence_context_size": "medium"
-            }
+            })
             analyser = factory.create(config)
             ```
         """
@@ -468,7 +534,7 @@ class ComponentFactory(ABC, Generic[T]):
         """
 
     @abstractmethod
-    def can_create(self, config: dict[str, Any]) -> bool:
+    def can_create(self, config: ComponentConfig) -> bool:
         """Check if factory can create component with given config.
 
         This method enables:
@@ -487,8 +553,9 @@ class ComponentFactory(ABC, Generic[T]):
 
         Example (remote service):
             ```python
-            def can_create(self, config: dict) -> bool:
-                endpoint = config.get("endpoint")
+            def can_create(self, config: ComponentConfig) -> bool:
+                config_dict = config.model_dump()
+                endpoint = config_dict.get("endpoint")
                 try:
                     response = self._http.get(f"{endpoint}/health")
                     return response.status_code == 200
@@ -498,8 +565,9 @@ class ComponentFactory(ABC, Generic[T]):
 
         Example (local service):
             ```python
-            def can_create(self, config: dict) -> bool:
-                if config.get("llm_validation") and not self._llm_service:
+            def can_create(self, config: ComponentConfig) -> bool:
+                config_dict = config.model_dump()
+                if config_dict.get("llm_validation") and not self._llm_service:
                     return False  # LLM required but unavailable
                 return True
             ```
@@ -567,13 +635,14 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
         self._llm_service = llm_service
         self._default_config = default_config or {}
 
-    def create(self, config: dict) -> PersonalDataAnalyser:
+    def create(self, config: ComponentConfig) -> PersonalDataAnalyser:
         """Create analyser with execution-specific config."""
-        # Merge factory defaults with execution config
-        merged_config = {**self._default_config, **config}
+        # Convert to dict and merge with factory defaults
+        config_dict = config.model_dump()
+        merged_config = {**self._default_config, **config_dict}
 
         # Parse into typed config object
-        config_obj = PersonalDataAnalyserConfig.from_dict(merged_config)
+        config_obj = PersonalDataAnalyserConfig.from_properties(merged_config)
 
         # Create analyser with injected LLM service
         return PersonalDataAnalyser(
@@ -590,16 +659,18 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
     def get_output_schemas(self) -> list[Schema]:
         return [PersonalDataFindingSchema()]
 
-    def can_create(self, config: dict) -> bool:
+    def can_create(self, config: ComponentConfig) -> bool:
         """Validate config and check dependencies."""
+        config_dict = config.model_dump()
+
         # Check if LLM validation requested but service unavailable
-        if config.get("llm_validation", {}).get("enable_llm_validation"):
+        if config_dict.get("llm_validation", {}).get("enable_llm_validation"):
             if not self._llm_service:
                 return False
 
         # Validate config structure
         try:
-            PersonalDataAnalyserConfig.from_dict(config)
+            PersonalDataAnalyserConfig.from_properties(config_dict)
             return True
         except Exception:
             return False
@@ -632,12 +703,13 @@ class RemotePDAnalyserFactory(ComponentFactory[RemotePDAnalyser]):
         """
         self._http = http_client
 
-    def create(self, config: dict) -> RemotePDAnalyser:
+    def create(self, config: ComponentConfig) -> RemotePDAnalyser:
         """Create remote analyser wrapper."""
+        config_dict = config.model_dump()
         return RemotePDAnalyser(
-            api_key=config["api_key"],
-            endpoint=config["endpoint"],
-            timeout=config.get("timeout", 30),
+            api_key=config_dict["api_key"],
+            endpoint=config_dict["endpoint"],
+            timeout=config_dict.get("timeout", 30),
             http_client=self._http
         )
 
@@ -650,9 +722,10 @@ class RemotePDAnalyserFactory(ComponentFactory[RemotePDAnalyser]):
     def get_output_schemas(self) -> list[Schema]:
         return [PersonalDataFindingSchema()]
 
-    def can_create(self, config: dict) -> bool:
+    def can_create(self, config: ComponentConfig) -> bool:
         """Health check remote service before creating wrapper."""
-        endpoint = config.get("endpoint")
+        config_dict = config.model_dump()
+        endpoint = config_dict.get("endpoint")
         if not endpoint:
             return False
 
@@ -693,9 +766,10 @@ class MySQLConnectorFactory(ComponentFactory[MySQLConnector]):
         """
         self._db_pool = db_pool
 
-    def create(self, config: dict) -> MySQLConnector:
+    def create(self, config: ComponentConfig) -> MySQLConnector:
         """Create MySQL connector with execution-specific config."""
-        config_obj = MySQLConfig.from_dict(config)
+        config_dict = config.model_dump()
+        config_obj = MySQLConfig.from_properties(config_dict)
 
         return MySQLConnector(
             config=config_obj,
@@ -711,10 +785,11 @@ class MySQLConnectorFactory(ComponentFactory[MySQLConnector]):
     def get_output_schemas(self) -> list[Schema]:
         return [MySQLDataSchema(), StandardInputSchema()]
 
-    def can_create(self, config: dict) -> bool:
+    def can_create(self, config: ComponentConfig) -> bool:
         """Validate MySQL config and test connection."""
         try:
-            config_obj = MySQLConfig.from_dict(config)
+            config_dict = config.model_dump()
+            config_obj = MySQLConfig.from_properties(config_dict)
             # Could test connection here
             return True
         except Exception:
