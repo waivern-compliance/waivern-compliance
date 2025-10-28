@@ -7,11 +7,9 @@ from waivern_analysers_shared.llm_validation import (
     LLMValidationStrategy,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_community.prompts.personal_data_validation import (
-    get_batch_validation_prompt,
-)
 from waivern_llm import BaseLLMService
 
+from .prompts.personal_data_validation import get_batch_validation_prompt
 from .schemas.types import PersonalDataFindingModel
 
 logger = logging.getLogger(__name__)

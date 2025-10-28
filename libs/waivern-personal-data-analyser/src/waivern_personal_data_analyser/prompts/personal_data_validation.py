@@ -3,7 +3,7 @@
 from typing import Any
 
 
-def get_personal_data_validation_prompt(
+def get_personal_data_validation_prompt(  # noqa: PLR0913
     finding_type: str,
     risk_level: str,
     special_category: str | None,
@@ -141,7 +141,7 @@ Respond with valid JSON array only (no markdown formatting):
 Validate all {len(findings)} findings:"""
 
 
-def get_conservative_validation_prompt(
+def get_conservative_validation_prompt(  # noqa: PLR0913
     finding_type: str,
     risk_level: str,
     special_category: str | None,
