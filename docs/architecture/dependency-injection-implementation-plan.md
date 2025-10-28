@@ -203,23 +203,68 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ### 4.1 PersonalDataAnalyser
 
+**Location:** `libs/waivern-personal-data-analyser/`
+
+**Key Changes:**
+- Migrate from `LLMServiceManager` to direct `BaseLLMService` injection
+- Update config to inherit from `BaseComponentConfiguration`
+- Pattern matchers remain as-is (factory-instantiated, not DI services)
+
 **Create factory:**
-- [ ] Create `libs/waivern-personal-data-analyser/src/.../factory.py`
+- [ ] Create `src/waivern_personal_data_analyser/factory.py`
 - [ ] Implement `PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser])`
-- [ ] Constructor accepts `llm_service: BaseLLMService | None`
-- [ ] Implement all abstract methods (create, get_component_name, get_schemas, can_create)
-- [ ] Add `get_service_dependencies()` returning `{"llm_service": BaseLLMService}`
+- [ ] Constructor signature: `def __init__(self, llm_service: BaseLLMService | None = None)`
+  - Accepts LLM service from DI container (replaces LLMServiceManager)
+- [ ] Implement all abstract methods:
+  - `create(config: ComponentConfig)` - Creates analyser with injected LLM service and pattern matcher
+  - `get_component_name()` - Returns `"personal_data_analyser"`
+  - `get_input_schemas()` - Returns `[StandardInputSchema()]`
+  - `get_output_schemas()` - Returns `[PersonalDataFindingSchema()]`
+  - `can_create(config: ComponentConfig)` - Validates config and checks LLM availability if needed
+  - `get_service_dependencies()` - Returns `{"llm_service": BaseLLMService}`
+- [ ] Factory instantiates `PersonalDataPatternMatcher(config.pattern_matching)` in `create()`
+
+**Update configuration:**
+- [ ] Update `src/waivern_personal_data_analyser/types.py`
+- [ ] Change `PersonalDataAnalyserConfig` to inherit from `BaseComponentConfiguration` instead of `BaseModel`
+- [ ] Keep same fields (`pattern_matching`, `llm_validation`)
+- [ ] Keep `from_properties()` classmethod behavior (now inherited from base)
 
 **Update analyser:**
+- [ ] Update `src/waivern_personal_data_analyser/analyser.py`
 - [ ] Update `PersonalDataAnalyser.__init__()` signature:
-  - `def __init__(self, config: PersonalDataAnalyserConfig, llm_service: BaseLLMService | None = None)`
-- [ ] Remove `from_properties()` classmethod
-- [ ] Update all internal references
+  - OLD: `def __init__(self, config: PersonalDataAnalyserConfig, pattern_matcher: PersonalDataPatternMatcher, llm_service_manager: LLMServiceManager)`
+  - NEW: `def __init__(self, config: PersonalDataAnalyserConfig, pattern_matcher: PersonalDataPatternMatcher, llm_service: BaseLLMService | None = None)`
+- [ ] Update internal references from `self.llm_service_manager.llm_service` to `self._llm_service`
+- [ ] Remove `from_properties()` classmethod (factory replaces this)
+- [ ] Update `_validate_findings_with_llm()` to use `self._llm_service` directly
+
+**Update exports:**
+- [ ] Update `src/waivern_personal_data_analyser/__init__.py`
+- [ ] Add `PersonalDataAnalyserFactory` to `__all__`
+- [ ] Keep existing exports for backwards compatibility
 
 **Update tests:**
-- [ ] Update tests to use factory pattern
-- [ ] Add factory unit tests
+- [ ] Create `tests/waivern_personal_data_analyser/test_factory.py`
+- [ ] Add factory unit tests (10+ tests):
+  - Test factory implements ComponentFactory interface
+  - Test `get_component_name()` returns correct name
+  - Test `get_input_schemas()` and `get_output_schemas()`
+  - Test `get_service_dependencies()` declares LLM service
+  - Test `create()` with valid config creates analyser
+  - Test `create()` injects LLM service correctly
+  - Test `can_create()` validates config
+  - Test `can_create()` returns False when LLM required but unavailable
+  - Test factory contract compliance using `ComponentFactoryContractTests`
+- [ ] Update `tests/waivern_personal_data_analyser/test_analyser.py`
+- [ ] Update existing tests to mock `BaseLLMService` instead of `LLMServiceManager`
+- [ ] Update fixtures to use factory pattern
 - [ ] Verify all existing tests still pass
+
+**Breaking Changes:**
+- `from_properties()` removed from analyser (use factory instead)
+- `LLMServiceManager` dependency replaced with `BaseLLMService`
+- Config inherits from `BaseComponentConfiguration` (stricter validation)
 
 ### 4.2 ProcessingPurposeAnalyser
 

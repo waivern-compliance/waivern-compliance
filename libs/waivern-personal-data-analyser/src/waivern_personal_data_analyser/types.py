@@ -1,19 +1,24 @@
 """Configuration types for personal data analysis analyser."""
 
-from typing import Any, Self
-
-from pydantic import BaseModel, Field
+from pydantic import Field
 from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )
+from waivern_core import BaseComponentConfiguration
 
 
-class PersonalDataAnalyserConfig(BaseModel):
-    """Configuration for PersonalDataAnalyser with nested runner configs.
+class PersonalDataAnalyserConfig(BaseComponentConfiguration):
+    """Configuration for PersonalDataAnalyser with DI support.
 
     This provides clear separation of concerns where each runner has its own
     configuration section in the runbook properties.
+
+    Inherits from BaseComponentConfiguration to support:
+    - Pydantic validation for type safety
+    - Immutability (frozen dataclass)
+    - from_properties() factory method (inherited)
+    - Strict validation (no extra fields)
     """
 
     pattern_matching: PatternMatchingConfig = Field(
@@ -25,15 +30,4 @@ class PersonalDataAnalyserConfig(BaseModel):
         description="LLM validation configuration for filtering false positives",
     )
 
-    @classmethod
-    def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create configuration from runbook properties with nested structure.
-
-        Args:
-            properties: Raw properties from runbook with nested configuration
-
-        Returns:
-            Validated configuration object
-
-        """
-        return cls.model_validate(properties)
+    # from_properties() inherited from BaseComponentConfiguration
