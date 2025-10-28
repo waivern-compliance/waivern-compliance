@@ -28,7 +28,7 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ---
 
-## Phase 0: Architecture Decision Record
+## Phase 0: Architecture Decision Record ✅
 
 **Goal:** Document decision and design before implementation
 
@@ -45,7 +45,7 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ---
 
-## Phase 1: Core DI Infrastructure
+## Phase 1: Core DI Infrastructure ✅
 
 **Goal:** Generic DI container in waivern-core
 
