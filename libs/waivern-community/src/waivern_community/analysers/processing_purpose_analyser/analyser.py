@@ -3,7 +3,6 @@
 import logging
 from typing import Any, Self, override
 
-from waivern_analysers_shared.utilities import LLMServiceManager
 from waivern_core import Analyser
 from waivern_core.message import Message
 from waivern_core.schemas import (
@@ -15,6 +14,7 @@ from waivern_core.schemas import (
     StandardInputSchema,
     parse_data_model,
 )
+from waivern_llm import BaseLLMService
 
 from waivern_community.connectors.source_code.schemas import (
     SourceCodeDataModel,
@@ -48,21 +48,19 @@ class ProcessingPurposeAnalyser(Analyser):
     def __init__(
         self,
         config: ProcessingPurposeAnalyserConfig,
-        pattern_matcher: ProcessingPurposePatternMatcher,
-        llm_service_manager: LLMServiceManager,
+        llm_service: BaseLLMService | None = None,
     ) -> None:
-        """Initialise the processing purpose analyser with specified configuration and pattern matcher.
+        """Initialise the processing purpose analyser with dependency injection.
 
         Args:
             config: Configuration object with analysis settings
-            pattern_matcher: Pattern matcher for processing purpose detection
-            llm_service_manager: LLM service manager for validation
+            llm_service: Optional LLM service for validation (injected by factory)
 
         """
         # Store strongly-typed configuration
         self._config: ProcessingPurposeAnalyserConfig = config
-        self._pattern_matcher = pattern_matcher
-        self.llm_service_manager = llm_service_manager
+        self._pattern_matcher = ProcessingPurposePatternMatcher(config.pattern_matching)
+        self._llm_service = llm_service
 
         # Initialise source code handler for SourceCodeSchema processing
         self._source_code_handler = SourceCodeSchemaInputHandler()
@@ -76,23 +74,14 @@ class ProcessingPurposeAnalyser(Analyser):
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create analyser instance from properties."""
-        # Create and validate config using ProcessingPurposeAnalyserConfig
+        """Create analyser instance from properties.
+
+        TODO: Remove this method once Executor is refactored to use ComponentFactory.
+        This is a temporary backward compatibility wrapper that creates the analyser
+        without dependency injection (llm_service=None).
+        """
         config = ProcessingPurposeAnalyserConfig.from_properties(properties)
-
-        # Create pattern matcher with processing purpose specific strategy
-        pattern_matcher = ProcessingPurposePatternMatcher(config.pattern_matching)
-
-        # Create LLM service manager
-        llm_service_manager = LLMServiceManager(
-            config.llm_validation.enable_llm_validation
-        )
-
-        return cls(
-            config=config,
-            pattern_matcher=pattern_matcher,
-            llm_service_manager=llm_service_manager,
-        )
+        return cls(config=config, llm_service=None)
 
     @classmethod
     @override
@@ -215,15 +204,14 @@ class ProcessingPurposeAnalyser(Analyser):
         if not findings:
             return findings, False
 
-        llm_service = self.llm_service_manager.llm_service
-        if not llm_service:
+        if not self._llm_service:
             logger.warning("LLM service unavailable, returning original findings")
             return findings, False
 
         try:
             validated_findings, validation_succeeded = (
                 processing_purpose_validation_strategy(
-                    findings, self._config.llm_validation, llm_service
+                    findings, self._config.llm_validation, self._llm_service
                 )
             )
             return validated_findings, validation_succeeded
