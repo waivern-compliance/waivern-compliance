@@ -7,7 +7,6 @@ framework packages for consistent test patterns and contract validation.
 import pytest
 
 from waivern_core import (
-    BaseComponentConfiguration,
     ComponentConfig,
     ComponentFactory,
     Schema,
@@ -31,8 +30,7 @@ class ComponentFactoryContractTests[T]:
         3. get_input_schemas() must return list of Schema objects
         4. get_output_schemas() must return list of Schema objects
         5. can_create() must return boolean for valid config
-        6. can_create() must return boolean for invalid config
-        7. get_service_dependencies() must return dict
+        6. get_service_dependencies() must return dict
 
     Usage Pattern:
         class TestMyFactory(ComponentFactoryContractTests[MyComponent]):
@@ -204,29 +202,6 @@ class ComponentFactoryContractTests[T]:
         )
 
     # CONTRACT TEST 6
-    def test_can_create_returns_bool_for_invalid_config(
-        self, factory: ComponentFactory[T]
-    ) -> None:
-        """Verify factory.can_create() returns boolean for invalid configuration.
-
-        Contract Requirement:
-            Must return bool (True/False), even for invalid config.
-            Must not raise exceptions (validation errors returned as False).
-
-        Why This Matters:
-            Executor needs to check multiple factories to find compatible ones.
-            Exceptions would break discovery process; False enables graceful skip.
-
-        """
-        # Empty config should be invalid for most factories
-        invalid_config = BaseComponentConfiguration()
-        result = factory.can_create(invalid_config)
-        assert isinstance(result, bool), (
-            "can_create() must return boolean even for invalid config, "
-            "not raise exception"
-        )
-
-    # CONTRACT TEST 7
     def test_get_service_dependencies_returns_dict(
         self, factory: ComponentFactory[T]
     ) -> None:
