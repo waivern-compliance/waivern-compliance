@@ -13,7 +13,6 @@ CLAUDE.local.md
 
 # Git worktrees
 .worktrees
-.development
 
 # Default analyses results output directory
 outputs/
@@ -22,4 +21,4 @@ outputs/
 .env
 
 # Local development setup
-.development
+.d
