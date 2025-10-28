@@ -36,6 +36,7 @@ from waivern_core.services import (
     ServiceFactory,
     ServiceProvider,
 )
+from waivern_core.testing import ComponentFactoryContractTests
 
 __all__ = [
     # Version
@@ -58,6 +59,7 @@ __all__ = [
     "BaseServiceConfiguration",
     "ComponentConfig",
     "ComponentFactory",
+    "ComponentFactoryContractTests",
     "ServiceContainer",
     "ServiceDescriptor",
     "ServiceFactory",

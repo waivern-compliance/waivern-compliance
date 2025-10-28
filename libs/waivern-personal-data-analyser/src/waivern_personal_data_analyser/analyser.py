@@ -4,7 +4,6 @@ import logging
 from pprint import pformat
 from typing import Any, Self, override
 
-from waivern_analysers_shared.utilities import LLMServiceManager
 from waivern_core import Analyser
 from waivern_core.message import Message
 from waivern_core.schemas import (
@@ -15,6 +14,7 @@ from waivern_core.schemas import (
     StandardInputDataModel,
     StandardInputSchema,
 )
+from waivern_llm import BaseLLMService
 
 from .llm_validation_strategy import personal_data_validation_strategy
 from .pattern_matcher import PersonalDataPatternMatcher
@@ -41,20 +41,18 @@ class PersonalDataAnalyser(Analyser):
     def __init__(
         self,
         config: PersonalDataAnalyserConfig,
-        pattern_matcher: PersonalDataPatternMatcher,
-        llm_service_manager: LLMServiceManager,
+        llm_service: BaseLLMService | None = None,
     ) -> None:
-        """Initialise the analyser with configuration and utilities.
+        """Initialise the analyser with dependency injection.
 
         Args:
-            config: Strongly typed configuration
-            pattern_matcher: Pattern matcher for personal data detection
-            llm_service_manager: LLM service manager for validation
+            config: Validated configuration object
+            llm_service: Optional LLM service for validation (injected by factory)
 
         """
         self._config = config
-        self.pattern_matcher = pattern_matcher
-        self.llm_service_manager = llm_service_manager
+        self._pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
+        self._llm_service = llm_service
 
     @classmethod
     @override
@@ -65,28 +63,33 @@ class PersonalDataAnalyser(Analyser):
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create analyser instance from properties with self-configuring runners."""
-        try:
-            # Validate and parse properties using strong typing
-            config = PersonalDataAnalyserConfig.from_properties(properties)
+        """Create analyser from properties (legacy method for Executor compatibility).
 
-            # Create utilities with their specific configurations
-            pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
-            llm_service_manager = LLMServiceManager(
-                config.llm_validation.enable_llm_validation
-            )
+        This is a thin wrapper over the DI factory pattern that creates an LLM service
+        internally when needed. This maintains backward compatibility with the executor
+        until Phase 6 (Executor Integration) is complete.
 
-            return cls(
-                config=config,
-                pattern_matcher=pattern_matcher,
-                llm_service_manager=llm_service_manager,
+        Will be removed when Executor uses factories directly (Phase 6).
+
+        TODO: Remove this method in Phase 6 when Executor uses factories directly
+        """
+        from waivern_core.services import ServiceContainer  # noqa: PLC0415
+        from waivern_llm import BaseLLMService  # noqa: PLC0415
+        from waivern_llm.di import LLMServiceFactory  # noqa: PLC0415
+
+        config = PersonalDataAnalyserConfig.from_properties(properties)
+
+        # Check if LLM validation is enabled
+        llm_service = None
+        if config.llm_validation and config.llm_validation.enable_llm_validation:
+            # Create LLM service using DI factory
+            container = ServiceContainer()
+            container.register(
+                BaseLLMService, LLMServiceFactory(), lifetime="singleton"
             )
-        except Exception as e:
-            logger.error(f"Failed to create PersonalDataAnalyser from properties: {e}")
-            logger.debug(f"Properties provided: {properties}")
-            raise ValueError(
-                f"Invalid configuration for PersonalDataAnalyser: {e}"
-            ) from e
+            llm_service = container.get_service(BaseLLMService)
+
+        return cls(config=config, llm_service=llm_service)
 
     @classmethod
     @override
@@ -121,7 +124,7 @@ class PersonalDataAnalyser(Analyser):
             content = data_item.content
             item_metadata = data_item.metadata
 
-            item_findings = self.pattern_matcher.find_patterns(content, item_metadata)
+            item_findings = self._pattern_matcher.find_patterns(content, item_metadata)
             findings.extend(item_findings)
 
         # Run LLM validation if enabled
@@ -225,17 +228,16 @@ class PersonalDataAnalyser(Analyser):
         if not findings:
             return findings
 
-        if self.llm_service_manager.llm_service is None:
+        if self._llm_service is None:
             logger.warning("LLM service not available, skipping validation")
             return findings
 
         try:
             logger.info(f"Starting LLM validation of {len(findings)} findings")
 
-            llm_service = self.llm_service_manager.llm_service
             validated_findings, validation_succeeded = (
                 personal_data_validation_strategy(
-                    findings, self._config.llm_validation, llm_service
+                    findings, self._config.llm_validation, self._llm_service
                 )
             )
 
