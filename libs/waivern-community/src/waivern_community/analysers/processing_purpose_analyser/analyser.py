@@ -74,14 +74,30 @@ class ProcessingPurposeAnalyser(Analyser):
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create analyser instance from properties.
+        """Create analyser from properties (legacy method for Executor compatibility).
 
-        TODO: Remove this method once Executor is refactored to use ComponentFactory.
-        This is a temporary backward compatibility wrapper that creates the analyser
-        without dependency injection (llm_service=None).
+        This is a thin wrapper over the DI factory pattern that creates an LLM service
+        internally when needed. This maintains backward compatibility with the executor
+        until the executor is migrated to use factories directly.
+
+        TODO: Remove this method when Executor uses factories directly
         """
+        from waivern_core.services import ServiceContainer  # noqa: PLC0415
+        from waivern_llm.di import LLMServiceFactory  # noqa: PLC0415
+
         config = ProcessingPurposeAnalyserConfig.from_properties(properties)
-        return cls(config=config, llm_service=None)
+
+        # Check if LLM validation is enabled
+        llm_service = None
+        if config.llm_validation.enable_llm_validation:
+            # Create LLM service using DI factory
+            container = ServiceContainer()
+            container.register(
+                BaseLLMService, LLMServiceFactory(), lifetime="singleton"
+            )
+            llm_service = container.get_service(BaseLLMService)
+
+        return cls(config=config, llm_service=llm_service)
 
     @classmethod
     @override
