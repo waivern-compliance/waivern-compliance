@@ -206,62 +206,196 @@ This document outlines the implementation plan for introducing a **Dependency In
 **Status:** ✅ Complete (807 tests passing)
 **Location:** `libs/waivern-personal-data-analyser/`
 
-**Implementation Summary:**
+**Implementation Steps (Template for 4.2 and 4.3):**
 
-**Circular import resolution:**
+#### Step 1: Resolve Circular Dependencies (if applicable)
 - [x] Moved `personal_data_validation.py` from `waivern-community/prompts/` to `waivern-personal-data-analyser/prompts/`
 - [x] Fixed architectural violation: standalone packages must not depend on aggregator packages
-- [x] Verified 802 tests passing after move
+- [x] Verified tests passing after move
 
-**Configuration migration:**
-- [x] Updated `PersonalDataAnalyserConfig` to inherit from `BaseComponentConfiguration`
-- [x] Verified all 21 existing analyser tests still pass
+#### Step 2: Update Configuration Class
+- [x] Migrate `PersonalDataAnalyserConfig` to inherit from `BaseComponentConfiguration`
+- [x] Keep existing config structure and validation logic
+- [x] Verify analyser tests still pass with new config
 
-**Factory implementation:**
-- [x] Created `PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser])`
-- [x] Constructor: `__init__(llm_service: BaseLLMService | None = None)`
-- [x] Implemented all abstract methods (`create`, `can_create`, `get_component_name`, etc.)
-- [x] Created 8 factory tests (6 contract + 2 specific)
-- [x] All factory tests passing
+**Old pattern:**
+```python
+class PersonalDataAnalyserConfig(BaseModel):
+    pattern_matching: PatternMatchingConfig
+    llm_validation: LLMValidationConfig
+```
 
-**Analyser updates:**
-- [x] Updated constructor to `__init__(config, llm_service)` (2 parameters)
-- [x] Pattern matcher now created internally (not injected)
-- [x] Migrated from `LLMServiceManager` to direct `BaseLLMService` injection
-- [x] All internal attributes private: `_config`, `_pattern_matcher`, `_llm_service`
-- [x] Added temporary `from_properties()` for backward compatibility (TODO: Remove in Phase 4.2)
-- [x] All 18 analyser tests passing
+**New pattern:**
+```python
+from waivern_core import BaseComponentConfiguration
 
-**Exports:**
-- [x] Added `PersonalDataAnalyserFactory` to public API
+class PersonalDataAnalyserConfig(BaseComponentConfiguration):
+    pattern_matching: PatternMatchingConfig
+    llm_validation: LLMValidationConfig
+```
 
-**Final verification:**
-- [x] All 807 tests passing (type checking, linting, tests)
+#### Step 3: Update Analyser Constructor
+- [x] Change from 3 parameters to 2 parameters
+- [x] Remove `pattern_matcher` from constructor (create internally)
+- [x] Replace `llm_service_manager: LLMServiceManager` with `llm_service: BaseLLMService | None`
+- [x] Make all attributes private (`_config`, `_pattern_matcher`, `_llm_service`)
+
+**Old pattern:**
+```python
+def __init__(
+    self,
+    config: PersonalDataAnalyserConfig,
+    pattern_matcher: PersonalDataPatternMatcher,
+    llm_service_manager: LLMServiceManager,
+):
+    self._config = config
+    self._pattern_matcher = pattern_matcher
+    self.llm_service_manager = llm_service_manager
+```
+
+**New pattern:**
+```python
+def __init__(
+    self,
+    config: PersonalDataAnalyserConfig,
+    llm_service: BaseLLMService | None = None,
+):
+    self._config = config
+    self._pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
+    self._llm_service = llm_service
+```
+
+#### Step 4: Update `from_properties()` to DI-Aware Wrapper
+- [x] Make `from_properties()` create LLM service via DI when validation enabled
+- [x] This maintains backward compatibility until Phase 6 (Executor Integration)
+- [x] Add inline `noqa` comments for import linting warnings
+
+**Implementation:**
+```python
+@classmethod
+@override
+def from_properties(cls, properties: dict[str, Any]) -> Self:
+    """Create analyser from properties (legacy method for Executor compatibility).
+
+    This is a thin wrapper over the DI factory pattern that creates an LLM service
+    internally when needed. This maintains backward compatibility with the executor
+    until Phase 6 (Executor Integration) is complete.
+
+    TODO: Remove this method in Phase 6 when Executor uses factories directly
+    """
+    from waivern_core.services import ServiceContainer  # noqa: PLC0415
+    from waivern_llm import BaseLLMService  # noqa: PLC0415
+    from waivern_llm.di import LLMServiceFactory  # noqa: PLC0415
+
+    config = PersonalDataAnalyserConfig.from_properties(properties)
+
+    # Check if LLM validation is enabled
+    llm_service = None
+    if config.llm_validation and config.llm_validation.enable_llm_validation:
+        # Create LLM service using DI factory
+        container = ServiceContainer()
+        container.register(
+            BaseLLMService, LLMServiceFactory(), lifetime="singleton"
+        )
+        llm_service = container.get_service(BaseLLMService)
+
+    return cls(config=config, llm_service=llm_service)
+```
+
+#### Step 5: Update LLM Validation Logic
+- [x] Replace `self.llm_service_manager.llm_service` with `self._llm_service`
+- [x] Update validation methods to use injected service directly
+- [x] Verify LLM validation works with runbooks
+
+#### Step 6: Create ComponentFactory
+- [x] Create `PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser])` in package
+- [x] Constructor: `__init__(self, llm_service: BaseLLMService | None = None)`
+- [x] Implement all abstract methods:
+  - `create(config: ComponentConfig) -> PersonalDataAnalyser`
+  - `get_component_name() -> str` (returns "personal_data_analyser")
+  - `get_input_schemas() -> list[Schema]`
+  - `get_output_schemas() -> list[Schema]`
+  - `can_create(config: ComponentConfig) -> bool`
+  - `get_service_dependencies() -> dict[str, type]` (optional)
+- [x] Add to package public API exports
+
+**Factory implementation pattern:**
+```python
+class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
+    def __init__(self, llm_service: BaseLLMService | None = None):
+        self._llm_service = llm_service
+
+    def create(self, config: ComponentConfig) -> PersonalDataAnalyser:
+        config_obj = PersonalDataAnalyserConfig.from_properties(
+            config.model_dump()
+        )
+        return PersonalDataAnalyser(
+            config=config_obj,
+            llm_service=self._llm_service
+        )
+```
+
+#### Step 7: Create Factory Tests
+- [x] Create test file: `tests/test_factory.py`
+- [x] Inherit from `ComponentFactoryContractTests[PersonalDataAnalyser]`
+- [x] Implement required fixtures:
+  - `factory_class()` - Return factory class
+  - `valid_config()` - Return valid ComponentConfig
+  - `llm_service()` - Return mock LLM service
+- [x] Add factory-specific tests (at least 2):
+  - Test factory with LLM service injection
+  - Test factory without LLM service
+- [x] Target: 6 contract tests + 2 specific = 8 total tests
+
+#### Step 8: Update Analyser Tests
+- [x] Update all analyser tests to use new constructor signature
+- [x] Replace `LLMServiceManager` mocks with `BaseLLMService` mocks
+- [x] Verify all existing tests still pass
+- [x] No new analyser tests needed (behavior unchanged)
+
+#### Step 9: Export Factory from Package
+- [x] Add `PersonalDataAnalyserFactory` to `__init__.py` exports
+- [x] Add docstring indicating it's part of DI system
+
+#### Step 10: Final Verification
+- [x] Run `./scripts/dev-checks.sh` (all checks must pass)
+- [x] Verify sample runbooks work with LLM validation enabled
+- [x] All 807+ tests passing
 - [x] No regressions in existing functionality
 
 **Key Design Decisions:**
 
-1. **Constructor signature:** Pass whole `PersonalDataAnalyserConfig` object, not decomposed fields
-2. **Pattern matcher:** Created internally from config (implementation detail, not dependency)
-3. **LLM service:** Injected as `BaseLLMService | None` (true dependency)
-4. **from_properties():** Temporarily retained for Executor compatibility (remove in Phase 4.2)
+1. **Constructor signature:** Pass whole config object, not decomposed fields (cleaner, more maintainable)
+2. **Pattern matcher:** Created internally from config (implementation detail, not true dependency)
+3. **LLM service:** Injected as `BaseLLMService | None` (shared infrastructure service)
+4. **from_properties():** DI-aware wrapper for backward compatibility (remove in Phase 6)
 
 **Critical Lessons Learned:**
 
-1. **Circular imports:** Standalone packages depending on aggregator packages violate architecture. Move domain logic to standalone package.
+1. **Circular imports:** Standalone packages depending on aggregator packages violate architecture. Move domain logic to standalone package first.
 
-2. **Contract test limitation:** `BaseComponentConfiguration()` is valid Pydantic instance. Cannot test "invalid config" generically - use factory-specific tests.
+2. **Contract test limitation:** `BaseComponentConfiguration()` is valid Pydantic instance. Cannot test "invalid config" generically - use factory-specific tests for config validation.
 
-3. **Test private implementation:** Don't test private attributes directly. Test public behavior. For mocking internal components: `analyser._component = mock` after construction.
+3. **Test private implementation:** Don't test private attributes directly. Test public behavior. For mocking internal components after construction: `analyser._component = mock`.
 
 4. **Dependency vs implementation detail:**
-   - **Inject:** Shared infrastructure services (LLMService, DatabasePool)
+   - **Inject:** Shared infrastructure services (LLMService, DatabasePool) used across multiple instances
    - **Create internally:** Config-derived components not shared across instances (PatternMatcher)
+
+5. **from_properties() must work:** Update it to create DI services internally to maintain backward compatibility with executor until Phase 6.
+
+**Differences for Community Analysers (4.2 and 4.3):**
+
+- **Location:** `libs/waivern-community/src/waivern_community/analysers/{analyser_name}/`
+- **No circular imports:** Community analysers don't have this issue
+- **Factory location:** Create factory in same package as analyser
+- **No prompt migration:** ProcessingPurposeAnalyser and DataSubjectAnalyser use shared prompts
 
 **Breaking Changes:**
 - `LLMServiceManager` replaced with direct `BaseLLMService` injection
+- Constructor signature changed from 3 params to 2 params
+- Pattern matcher parameter removed (created internally)
 - All internal attributes now private (`_config`, `_pattern_matcher`, `_llm_service`)
-- Config stricter validation (inherits from `BaseComponentConfiguration`)
 
 ### 4.2 ProcessingPurposeAnalyser
 
