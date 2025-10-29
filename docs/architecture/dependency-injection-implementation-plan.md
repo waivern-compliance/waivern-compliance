@@ -1,8 +1,8 @@
 # Dependency Injection System Implementation Plan
 
-**Status:** In Progress (Phase 4.1 and 4.2 Complete)
+**Status:** In Progress (Phase 4 Complete - All 3 Analysers DI-Enabled)
 **Created:** 2025-10-23
-**Updated:** 2025-10-28
+**Updated:** 2025-10-29
 **Related ADR:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
 **Related Document:** [DI Factory Patterns](./di-factory-patterns.md)
 
@@ -197,378 +197,60 @@ This document outlines the implementation plan for introducing a **Dependency In
 
 ---
 
-## Phase 4: Analyser Factory Implementation
+## Phase 4: Analyser Factory Implementation ✅
 
+**Status:** ✅ Complete (All 3 Analysers DI-Enabled)
 **Goal:** All analysers have DI-enabled factories
 
-### 4.1 PersonalDataAnalyser ✅ **COMPLETED**
+### Common Implementation Pattern
 
-**Status:** ✅ Complete (807 tests passing)
+All three analysers followed these steps:
+
+1. **Configuration Migration** - Inherit from `BaseComponentConfiguration` (from Pydantic `BaseModel`)
+2. **Constructor Update** - Change from 3 params (config, pattern_matcher, llm_service_manager) to 2 params (config, llm_service)
+3. **Pattern Matcher** - Create internally from config (not a service dependency)
+4. **LLM Service** - Direct `BaseLLMService | None` injection (replaces `LLMServiceManager`)
+5. **from_properties()** - Update to DI-aware wrapper for backward compatibility (removed in Phase 6)
+6. **Factory Creation** - Implement `ComponentFactory[T]` with 6 abstract methods
+7. **Factory Tests** - 8 tests (6 contract + 2 factory-specific)
+8. **Analyser Tests** - Update to use direct DI constructor instead of `from_properties()`
+9. **Export** - Add factory to package `__init__.py`
+
+**Key Lessons Learned:**
+- **Standalone package architecture** - PersonalDataAnalyser required moving prompts from waivern-community
+- **Test DI constructors directly** - Don't use `from_properties()` in tests (Phase 4.3 discovery)
+- **Pattern matcher is not a dependency** - Created from config, not shared across instances
+- **LLM service is a shared dependency** - Injected as singleton infrastructure service
+
+### 4.1 PersonalDataAnalyser ✅
+
 **Location:** `libs/waivern-personal-data-analyser/`
+**Unique Aspects:** Resolved circular dependency by moving prompts from waivern-community to standalone package
+**Tests:** 807 tests passing + 8 factory tests
+**Commits:** Multiple commits during Phase 4.1
 
-**Implementation Steps (Template for 4.2 and 4.3):**
+### 4.2 ProcessingPurposeAnalyser ✅
 
-#### Step 1: Resolve Circular Dependencies (if applicable)
-- [x] Moved `personal_data_validation.py` from `waivern-community/prompts/` to `waivern-personal-data-analyser/prompts/`
-- [x] Fixed architectural violation: standalone packages must not depend on aggregator packages
-- [x] Verified tests passing after move
-
-#### Step 2: Update Configuration Class
-- [x] Migrate `PersonalDataAnalyserConfig` to inherit from `BaseComponentConfiguration`
-- [x] Keep existing config structure and validation logic
-- [x] Verify analyser tests still pass with new config
-
-**Old pattern:**
-```python
-class PersonalDataAnalyserConfig(BaseModel):
-    pattern_matching: PatternMatchingConfig
-    llm_validation: LLMValidationConfig
-```
-
-**New pattern:**
-```python
-from waivern_core import BaseComponentConfiguration
-
-class PersonalDataAnalyserConfig(BaseComponentConfiguration):
-    pattern_matching: PatternMatchingConfig
-    llm_validation: LLMValidationConfig
-```
-
-#### Step 3: Update Analyser Constructor
-- [x] Change from 3 parameters to 2 parameters
-- [x] Remove `pattern_matcher` from constructor (create internally)
-- [x] Replace `llm_service_manager: LLMServiceManager` with `llm_service: BaseLLMService | None`
-- [x] Make all attributes private (`_config`, `_pattern_matcher`, `_llm_service`)
-
-**Old pattern:**
-```python
-def __init__(
-    self,
-    config: PersonalDataAnalyserConfig,
-    pattern_matcher: PersonalDataPatternMatcher,
-    llm_service_manager: LLMServiceManager,
-):
-    self._config = config
-    self._pattern_matcher = pattern_matcher
-    self.llm_service_manager = llm_service_manager
-```
-
-**New pattern:**
-```python
-def __init__(
-    self,
-    config: PersonalDataAnalyserConfig,
-    llm_service: BaseLLMService | None = None,
-):
-    self._config = config
-    self._pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
-    self._llm_service = llm_service
-```
-
-#### Step 4: Update `from_properties()` to DI-Aware Wrapper
-- [x] Make `from_properties()` create LLM service via DI when validation enabled
-- [x] This maintains backward compatibility until Phase 6 (Executor Integration)
-- [x] Add inline `noqa` comments for import linting warnings
-
-**Implementation:**
-```python
-@classmethod
-@override
-def from_properties(cls, properties: dict[str, Any]) -> Self:
-    """Create analyser from properties (legacy method for Executor compatibility).
-
-    This is a thin wrapper over the DI factory pattern that creates an LLM service
-    internally when needed. This maintains backward compatibility with the executor
-    until Phase 6 (Executor Integration) is complete.
-
-    TODO: Remove this method in Phase 6 when Executor uses factories directly
-    """
-    from waivern_core.services import ServiceContainer  # noqa: PLC0415
-    from waivern_llm import BaseLLMService  # noqa: PLC0415
-    from waivern_llm.di import LLMServiceFactory  # noqa: PLC0415
-
-    config = PersonalDataAnalyserConfig.from_properties(properties)
-
-    # Check if LLM validation is enabled
-    llm_service = None
-    if config.llm_validation and config.llm_validation.enable_llm_validation:
-        # Create LLM service using DI factory
-        container = ServiceContainer()
-        container.register(
-            BaseLLMService, LLMServiceFactory(), lifetime="singleton"
-        )
-        llm_service = container.get_service(BaseLLMService)
-
-    return cls(config=config, llm_service=llm_service)
-```
-
-#### Step 5: Update LLM Validation Logic
-- [x] Replace `self.llm_service_manager.llm_service` with `self._llm_service`
-- [x] Update validation methods to use injected service directly
-- [x] Verify LLM validation works with runbooks
-
-#### Step 6: Create ComponentFactory
-- [x] Create `PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser])` in package
-- [x] Constructor: `__init__(self, llm_service: BaseLLMService | None = None)`
-- [x] Implement all abstract methods:
-  - `create(config: ComponentConfig) -> PersonalDataAnalyser`
-  - `get_component_name() -> str` (returns "personal_data_analyser")
-  - `get_input_schemas() -> list[Schema]`
-  - `get_output_schemas() -> list[Schema]`
-  - `can_create(config: ComponentConfig) -> bool`
-  - `get_service_dependencies() -> dict[str, type]` (optional)
-- [x] Add to package public API exports
-
-**Factory implementation pattern:**
-```python
-class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
-    def __init__(self, llm_service: BaseLLMService | None = None):
-        self._llm_service = llm_service
-
-    def create(self, config: ComponentConfig) -> PersonalDataAnalyser:
-        config_obj = PersonalDataAnalyserConfig.from_properties(
-            config.model_dump()
-        )
-        return PersonalDataAnalyser(
-            config=config_obj,
-            llm_service=self._llm_service
-        )
-```
-
-#### Step 7: Create Factory Tests
-- [x] Create test file: `tests/test_factory.py`
-- [x] Inherit from `ComponentFactoryContractTests[PersonalDataAnalyser]`
-- [x] Implement required fixtures:
-  - `factory_class()` - Return factory class
-  - `valid_config()` - Return valid ComponentConfig
-  - `llm_service()` - Return mock LLM service
-- [x] Add factory-specific tests (at least 2):
-  - Test factory with LLM service injection
-  - Test factory without LLM service
-- [x] Target: 6 contract tests + 2 specific = 8 total tests
-
-#### Step 8: Update Analyser Tests
-- [x] Update all analyser tests to use new constructor signature
-- [x] Replace `LLMServiceManager` mocks with `BaseLLMService` mocks
-- [x] Verify all existing tests still pass
-- [x] No new analyser tests needed (behavior unchanged)
-
-#### Step 9: Export Factory from Package
-- [x] Add `PersonalDataAnalyserFactory` to `__init__.py` exports
-- [x] Add docstring indicating it's part of DI system
-
-#### Step 10: Final Verification
-- [x] Run `./scripts/dev-checks.sh` (all checks must pass)
-- [x] Verify sample runbooks work with LLM validation enabled
-- [x] All 807+ tests passing
-- [x] No regressions in existing functionality
-
-**Key Design Decisions:**
-
-1. **Constructor signature:** Pass whole config object, not decomposed fields (cleaner, more maintainable)
-2. **Pattern matcher:** Created internally from config (implementation detail, not true dependency)
-3. **LLM service:** Injected as `BaseLLMService | None` (shared infrastructure service)
-4. **from_properties():** DI-aware wrapper for backward compatibility (remove in Phase 6)
-
-**Critical Lessons Learned:**
-
-1. **Circular imports:** Standalone packages depending on aggregator packages violate architecture. Move domain logic to standalone package first.
-
-2. **Contract test limitation:** `BaseComponentConfiguration()` is valid Pydantic instance. Cannot test "invalid config" generically - use factory-specific tests for config validation.
-
-3. **Test private implementation:** Don't test private attributes directly. Test public behavior. For mocking internal components after construction: `analyser._component = mock`.
-
-4. **Dependency vs implementation detail:**
-   - **Inject:** Shared infrastructure services (LLMService, DatabasePool) used across multiple instances
-   - **Create internally:** Config-derived components not shared across instances (PatternMatcher)
-
-5. **from_properties() must work:** Update it to create DI services internally to maintain backward compatibility with executor until Phase 6.
-
-**Differences for Community Analysers (4.2 and 4.3):**
-
-- **Location:** `libs/waivern-community/src/waivern_community/analysers/{analyser_name}/`
-- **No circular imports:** Community analysers don't have this issue
-- **Factory location:** Create factory in same package as analyser
-- **No prompt migration:** ProcessingPurposeAnalyser and DataSubjectAnalyser use shared prompts
-
-**Breaking Changes:**
-- `LLMServiceManager` replaced with direct `BaseLLMService` injection
-- Constructor signature changed from 3 params to 2 params
-- Pattern matcher parameter removed (created internally)
-- All internal attributes now private (`_config`, `_pattern_matcher`, `_llm_service`)
-
-### 4.2 ProcessingPurposeAnalyser ✅ **COMPLETED**
-
-**Status:** ✅ Complete (815 tests passing + 2 integration tests)
 **Location:** `libs/waivern-community/analysers/processing_purpose_analyser/`
-
-**Implementation Steps:**
-
-#### Step 1: Update Configuration Class
-- [x] Migrate `ProcessingPurposeAnalyserConfig` to inherit from `BaseComponentConfiguration`
-- [x] Keep existing config structure and validation logic
-- [x] Verify analyser tests still pass with new config
-
-**Pattern change:**
-```python
-# OLD
-class ProcessingPurposeAnalyserConfig(BaseModel):
-    pattern_matching: PatternMatchingConfig
-    llm_validation: LLMValidationConfig
-
-# NEW
-from waivern_core import BaseComponentConfiguration
-
-class ProcessingPurposeAnalyserConfig(BaseComponentConfiguration):
-    pattern_matching: PatternMatchingConfig
-    llm_validation: LLMValidationConfig
-```
-
-#### Step 2: Update Analyser Constructor
-- [x] Change from 3 parameters to 2 parameters
-- [x] Remove `pattern_matcher` from constructor (create internally from config)
-- [x] Replace `llm_service_manager: LLMServiceManager` with `llm_service: BaseLLMService | None`
-- [x] Make all attributes private (`_config`, `_pattern_matcher`, `_llm_service`)
-
-**Constructor pattern change:**
-```python
-# OLD
-def __init__(
-    self,
-    config: ProcessingPurposeAnalyserConfig,
-    pattern_matcher: ProcessingPurposePatternMatcher,
-    llm_service_manager: LLMServiceManager,
-):
-    self._config = config
-    self._pattern_matcher = pattern_matcher
-    self.llm_service_manager = llm_service_manager
-
-# NEW
-def __init__(
-    self,
-    config: ProcessingPurposeAnalyserConfig,
-    llm_service: BaseLLMService | None = None,
-):
-    self._config = config
-    self._pattern_matcher = ProcessingPurposePatternMatcher(config.pattern_matching)
-    self._llm_service = llm_service
-```
-
-#### Step 3: Update `from_properties()` to DI-Aware Wrapper
-- [x] Make `from_properties()` create LLM service via DI when validation enabled
-- [x] This maintains backward compatibility until Phase 6 (Executor Integration)
-- [x] Add TODO comment for removal in Phase 6
-
-**Implementation:**
-```python
-@classmethod
-@override
-def from_properties(cls, properties: dict[str, Any]) -> Self:
-    """Create analyser from properties (legacy method for Executor compatibility).
-
-    TODO: Remove this method when Executor uses factories directly
-    """
-    from waivern_core.services import ServiceContainer  # noqa: PLC0415
-    from waivern_llm.di import LLMServiceFactory  # noqa: PLC0415
-
-    config = ProcessingPurposeAnalyserConfig.from_properties(properties)
-
-    llm_service = None
-    if config.llm_validation.enable_llm_validation:
-        container = ServiceContainer()
-        container.register(
-            BaseLLMService, LLMServiceFactory(), lifetime="singleton"
-        )
-        llm_service = container.get_service(BaseLLMService)
-
-    return cls(config=config, llm_service=llm_service)
-```
-
-#### Step 4: Update LLM Validation Logic
-- [x] Replace `self.llm_service_manager.llm_service` with `self._llm_service`
-- [x] Update `_validate_findings_with_llm()` method to use injected service directly
-- [x] Verify LLM validation works with runbooks
-
-#### Step 5: Create ComponentFactory
-- [x] Create `ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyser])`
-- [x] Constructor: `__init__(self, llm_service: BaseLLMService | None = None)`
-- [x] Implement all 6 abstract methods:
-  - `create(config: ComponentConfig) -> ProcessingPurposeAnalyser`
-  - `get_component_name() -> str` (returns "processing_purpose_analyser")
-  - `get_input_schemas() -> list[Schema]`
-  - `get_output_schemas() -> list[Schema]`
-  - `can_create(config: ComponentConfig) -> bool`
-  - `get_service_dependencies() -> dict[str, type]`
-- [x] Export factory from package `__init__.py`
-
-#### Step 6: Create Factory Tests
-- [x] Create test file: `tests/processing_purpose_analyser/test_factory.py`
-- [x] Inherit from `ComponentFactoryContractTests[ProcessingPurposeAnalyser]`
-- [x] Implement required fixtures:
-  - `factory()` - Return factory instance with mock LLM service
-  - `valid_config()` - Return valid ProcessingPurposeAnalyserConfig
-- [x] Add 2 factory-specific tests:
-  - `test_can_create_returns_false_when_llm_required_but_unavailable()`
-  - `test_get_service_dependencies_declares_llm_service()`
-- [x] Result: 8 tests total (6 contract + 2 specific) - all passing ✅
-
-#### Step 7: Update Analyser Tests
-- [x] Update 14 test instances to use new constructor signature
-- [x] Replace `LLMServiceManager` mocks with `BaseLLMService` mocks
-- [x] Fix test pattern from:
-  ```python
-  analyser = ProcessingPurposeAnalyser.from_properties(properties)
-  analyser._llm_service = mock_llm_service  # Wrong!
-  ```
-  To:
-  ```python
-  config = ProcessingPurposeAnalyserConfig.from_properties(properties)
-  analyser = ProcessingPurposeAnalyser(config, mock_llm_service)  # Correct!
-  ```
-- [x] Add missing import: `ProcessingPurposeAnalyserConfig` in test files
-- [x] Verify all 815 tests pass
-
-#### Step 8: Add Integration Tests
-- [x] Create `test_integration.py` with real LLM API tests
-- [x] Add 2 integration tests marked with `@pytest.mark.integration`:
-  - `test_real_llm_validation_filters_false_positives()` - Tests LLM validation with real API
-  - `test_real_llm_validation_disabled_returns_all_findings()` - Tests without LLM (pattern matching only)
-- [x] Tests skip if `ANTHROPIC_API_KEY` not set
-- [x] Run with: `ANTHROPIC_API_KEY=key uv run pytest -m integration`
-- [x] Both integration tests verified passing with real API ✅
-
+**Unique Aspects:**
+- Supports 2 input schemas (StandardInputSchema, SourceCodeSchema)
+- Added integration tests with real LLM API (2 tests marked `@pytest.mark.integration`)
+**Tests:** 815 tests passing + 8 factory tests + 2 integration tests
 **Commits:**
 - `feat: complete ProcessingPurposeAnalyser DI migration` (aeb6601)
 - `fix: implement proper DI-aware from_properties() wrapper` (95fedbb)
-- `test: add integration tests for ProcessingPurposeAnalyser with real LLM` (3af9bf8)
+- `test: add integration tests with real LLM` (3af9bf8)
 
-**Test Results:**
-- ✅ 815 unit tests passing
-- ✅ 8 factory tests passing (6 contract + 2 specific)
-- ✅ 2 integration tests passing with real LLM API
-- ✅ All dev-checks passing (linting, type-checking, formatting)
+### 4.3 DataSubjectAnalyser ✅
 
-### 4.3 DataSubjectAnalyser
+**Location:** `libs/waivern-community/analysers/data_subject_analyser/`
+**Unique Aspects:**
+- Only supports StandardInputSchema (simpler than ProcessingPurposeAnalyser)
+- Discovered and fixed test quality issue: 6 analyser tests + 1 ProcessingPurposeAnalyser test were using `from_properties()` instead of direct DI constructor
+**Tests:** 823 tests passing + 8 factory tests
+**Commits:** `feat: migrate DataSubjectAnalyser to DI with ComponentFactory pattern` (548d2b5)
 
-- [ ] Same steps as PersonalDataAnalyser
-- [ ] Create factory in waivern-community package
-- [ ] Update analyser constructor
-- [ ] Remove `from_properties()`
-- [ ] Update tests
-
-### 4.4 Export Factories
-
-- [ ] Update `waivern-community/analysers/__init__.py`:
-  ```python
-  BUILTIN_ANALYSER_FACTORIES = [
-      PersonalDataAnalyserFactory,
-      ProcessingPurposeAnalyserFactory,
-      DataSubjectAnalyserFactory,
-  ]
-  ```
-- [ ] Remove old `BUILTIN_ANALYSERS` list
-
-**Deliverable:** All 3 analysers DI-enabled with factories
+**Phase 4 Deliverable:** All 3 analysers DI-enabled with factories, backward compatible via `from_properties()` (removed in Phase 6)
 
 ---
 
@@ -611,24 +293,12 @@ def from_properties(cls, properties: dict[str, Any]) -> Self:
 
 ### 5.5 Export Factories
 
-- [ ] Update `waivern-community/connectors/__init__.py`:
-  ```python
-  BUILTIN_CONNECTOR_FACTORIES = [
-      FilesystemConnectorFactory,
-      SourceCodeConnectorFactory,
-      SQLiteConnectorFactory,
-  ]
-  ```
-- [ ] Update `waivern-mysql` to export `MySQLConnectorFactory`
-- [ ] Remove old `BUILTIN_CONNECTORS` list
-
-### 5.6 Update Base Classes
-
-- [ ] Remove `from_properties()` from `waivern_core.Connector` base class
+- [ ] Export each connector factory from its package `__init__.py`
 - [ ] Update docstrings to reference factory pattern
-- [ ] Update type hints
 
-**Deliverable:** All connectors DI-enabled with factories
+**Note:** Similar to Phase 4, no intermediate `BUILTIN_CONNECTOR_FACTORIES` list will be created. Phase 6 will handle factory registration directly or via dynamic discovery.
+
+**Deliverable:** All connectors DI-enabled with factories, backward compatible via `from_properties()`
 
 ---
 
@@ -663,13 +333,30 @@ def from_properties(cls, properties: dict[str, Any]) -> Self:
       llm_service = container.get_service(BaseLLMService)
 
       # Register component factories with dependencies injected
-      for factory_class in BUILTIN_ANALYSER_FACTORIES:
-          factory = factory_class(llm_service=llm_service)
-          executor.register_analyser_factory(factory)
+      # Option 1: Direct registration (simpler, explicit)
+      from waivern_personal_data_analyser import PersonalDataAnalyserFactory
+      from waivern_community.analysers.processing_purpose_analyser import ProcessingPurposeAnalyserFactory
+      from waivern_community.analysers.data_subject_analyser import DataSubjectAnalyserFactory
 
-      for factory_class in BUILTIN_CONNECTOR_FACTORIES:
-          factory = factory_class()
-          executor.register_connector_factory(factory)
+      executor.register_analyser_factory(PersonalDataAnalyserFactory(llm_service))
+      executor.register_analyser_factory(ProcessingPurposeAnalyserFactory(llm_service))
+      executor.register_analyser_factory(DataSubjectAnalyserFactory(llm_service))
+
+      # Option 2: Dynamic discovery (future enhancement)
+      # factories = discover_component_factories()
+      # for factory in factories:
+      #     executor.register_factory(factory, inject_services=True)
+
+      # Register connector factories (no LLM service needed)
+      from waivern_community.connectors.filesystem import FilesystemConnectorFactory
+      from waivern_community.connectors.source_code import SourceCodeConnectorFactory
+      from waivern_community.connectors.sqlite import SQLiteConnectorFactory
+      from waivern_mysql import MySQLConnectorFactory
+
+      executor.register_connector_factory(FilesystemConnectorFactory())
+      executor.register_connector_factory(SourceCodeConnectorFactory())
+      executor.register_connector_factory(SQLiteConnectorFactory())
+      executor.register_connector_factory(MySQLConnectorFactory())
 
       return executor
   ```
@@ -937,25 +624,25 @@ waivern-community/
 ├── analysers/
 │   ├── processing_purpose_analyser/
 │   │   ├── analyser.py
-│   │   └── factory.py             # NEW
+│   │   └── factory.py             # NEW: Exported from package __init__.py
 │   ├── data_subject_analyser/
 │   │   ├── analyser.py
-│   │   └── factory.py             # NEW
-│   └── __init__.py                # Export BUILTIN_ANALYSER_FACTORIES
+│   │   └── factory.py             # NEW: Exported from package __init__.py
+│   └── __init__.py                # No BUILTIN_ANALYSER_FACTORIES list
 └── connectors/
     ├── filesystem/
     │   ├── connector.py
-    │   └── factory.py             # NEW
+    │   └── factory.py             # NEW: Exported from package __init__.py
     ├── source_code/
     │   ├── connector.py
-    │   └── factory.py             # NEW
+    │   └── factory.py             # NEW: Exported from package __init__.py
     ├── sqlite/
     │   ├── connector.py
-    │   └── factory.py             # NEW
-    └── __init__.py                # Export BUILTIN_CONNECTOR_FACTORIES
+    │   └── factory.py             # NEW: Exported from package __init__.py
+    └── __init__.py                # No BUILTIN_CONNECTOR_FACTORIES list
 
 apps/wct/src/wct/
-└── executor.py                    # UPDATED: Uses DI container + factories
+└── executor.py                    # UPDATED: Direct factory imports + registration
 ```
 
 ---
@@ -993,13 +680,15 @@ apps/wct/src/wct/
    - New: `connector = factory.create(config)`
 
 3. **`BUILTIN_ANALYSERS` list**
-   - Replaced with `BUILTIN_ANALYSER_FACTORIES`
+   - Replaced with direct factory registration in executor
 
 4. **`BUILTIN_CONNECTORS` list**
-   - Replaced with `BUILTIN_CONNECTOR_FACTORIES`
+   - Replaced with direct factory registration in executor
 
 5. **Direct component instantiation in executor**
    - Now uses factory pattern
+
+**Note:** No intermediate `BUILTIN_ANALYSER_FACTORIES` or `BUILTIN_CONNECTOR_FACTORIES` lists are created. The executor uses direct imports and registration or dynamic discovery.
 
 ### Migration Path
 
@@ -1016,19 +705,28 @@ analyser = analyser_class.from_properties(config)
 
 **After:**
 ```python
-from waivern_community.analysers import BUILTIN_ANALYSER_FACTORIES
 from waivern_core.services import ServiceContainer
+from waivern_llm.di import LLMServiceFactory
+from waivern_llm import BaseLLMService
+from waivern_personal_data_analyser import PersonalDataAnalyserFactory
+from waivern_community.analysers.processing_purpose_analyser import ProcessingPurposeAnalyserFactory
+from waivern_community.analysers.data_subject_analyser import DataSubjectAnalyserFactory
 
+# Create DI container and register services
 container = ServiceContainer()
 container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
-
 llm_service = container.get_service(BaseLLMService)
-for factory_class in BUILTIN_ANALYSER_FACTORIES:
-    factory = factory_class(llm_service=llm_service)
-    executor.register_analyser_factory(factory)
 
-# Later
-analyser = factory.create(config)
+# Create executor
+executor = Executor(container)
+
+# Register factories directly (no intermediate list)
+executor.register_analyser_factory(PersonalDataAnalyserFactory(llm_service))
+executor.register_analyser_factory(ProcessingPurposeAnalyserFactory(llm_service))
+executor.register_analyser_factory(DataSubjectAnalyserFactory(llm_service))
+
+# Later - executor gets factory by component name and creates instance
+analyser = executor.create_analyser("personal_data", config)
 ```
 
 ---
