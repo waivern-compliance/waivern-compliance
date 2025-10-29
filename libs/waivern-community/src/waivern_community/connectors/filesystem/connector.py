@@ -18,7 +18,7 @@ from waivern_community.connectors.filesystem.config import FilesystemConnectorCo
 logger = logging.getLogger(__name__)
 
 # Constants
-_CONNECTOR_NAME = "filesystem"
+_CONNECTOR_NAME = "filesystem_connector"
 
 _SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [StandardInputSchema()]
 
@@ -58,40 +58,22 @@ class FilesystemConnector(Connector):
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create a filesystem connector instance from configuration properties.
+        """Create connector from properties (legacy method for Executor compatibility).
 
-        This factory method creates a FilesystemConnector instance using configuration
-        properties typically loaded from a YAML configuration file.
+        TODO: Remove this method in Phase 6 when Executor uses factories directly.
+
+        This is a backward-compatibility wrapper. New code should use:
+            config = FilesystemConnectorConfig.from_properties(properties)
+            connector = FilesystemConnector(config)
 
         Args:
-            properties (dict[str, Any]): Configuration properties dictionary containing:
-                - path (str): Required. The file or directory path to read from.
-                - chunk_size (int, optional): Size of chunks to read at a time.
-                Defaults to 8192 bytes.
-                - encoding (str, optional): Text encoding to use when reading files.
-                Defaults to "utf-8".
-                - errors (str, optional): How to handle encoding errors.
-                "strict" (default) skips binary files, "replace" converts to garbled text.
-                - exclude_patterns (list[str], optional): Glob patterns to exclude.
-                Defaults to empty list.
-                - max_files (int, optional): Maximum number of files to process.
-                Defaults to 1000.
+            properties: Raw properties from runbook configuration
 
         Returns:
-            Self: A new FilesystemConnector instance configured with the provided properties.
+            Configured FilesystemConnector instance
 
         Raises:
-            ConnectorConfigError: If the required 'path' property is missing from
-                the properties dictionary.
-
-        Example:
-            >>> properties = {
-            ...     "path": "/path/to/directory",
-            ...     "chunk_size": 4096,
-            ...     "encoding": "utf-8",
-            ...     "exclude_patterns": ["*.log", "__pycache__"]
-            ... }
-            >>> connector = FilesystemConnector.from_properties(properties)
+            ConnectorConfigError: If validation fails or required properties are missing
 
         """
         config = FilesystemConnectorConfig.from_properties(properties)

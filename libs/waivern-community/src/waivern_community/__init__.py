@@ -18,7 +18,10 @@ from waivern_rulesets import (
 from waivern_community.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
 )
-from waivern_community.connectors.filesystem import FilesystemConnector
+from waivern_community.connectors.filesystem import (
+    FilesystemConnector,
+    FilesystemConnectorFactory,
+)
 from waivern_community.connectors.source_code import SourceCodeConnector
 from waivern_community.connectors.sqlite import SQLiteConnector
 
@@ -26,6 +29,7 @@ __all__ = [
     "__version__",
     # Connectors
     "FilesystemConnector",
+    "FilesystemConnectorFactory",
     "MySQLConnector",
     "SourceCodeConnector",
     "SQLiteConnector",

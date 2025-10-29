@@ -43,7 +43,7 @@ name: "Test Runbook"
 description: "Test runbook for CLI testing"
 connectors:
   - name: "test_filesystem"
-    type: "filesystem"
+    type: "filesystem_connector"
     properties:
       root_path: "tests/wct/connectors/filesystem/filesystem_mock"
       include_patterns: ["*.txt"]
@@ -135,7 +135,7 @@ name: "Test Runbook"
 description: "Test runbook for CLI testing"
 connectors:
   - name: "test_filesystem"
-    type: "filesystem"
+    type: "filesystem_connector"
     properties:
       root_path: "tests/wct/connectors/filesystem/filesystem_mock"
       include_patterns: ["*.txt"]
@@ -184,7 +184,7 @@ name: "Test Runbook"
 description: "Test runbook for CLI testing"
 connectors:
   - name: "test_filesystem"
-    type: "filesystem"
+    type: "filesystem_connector"
     properties:
       root_path: "tests/wct/connectors/filesystem/filesystem_mock"
       include_patterns: ["*.txt"]
@@ -231,7 +231,7 @@ name: "Test Runbook"
 description: "Test runbook for CLI testing"
 connectors:
   - name: "test_filesystem"
-    type: "filesystem"
+    type: "filesystem_connector"
     properties:
       root_path: "tests/wct/connectors/filesystem/filesystem_mock"
       include_patterns: ["*.txt"]
@@ -329,7 +329,7 @@ name: "Valid Test Runbook"
 description: "A valid runbook for testing validation"
 connectors:
   - name: "test_filesystem"
-    type: "filesystem"
+    type: "filesystem_connector"
     properties:
       root_path: "/tmp"
       include_patterns: ["*.txt"]
@@ -386,7 +386,7 @@ name: "Valid Test Runbook"
 description: "A valid runbook for testing validation"
 connectors:
   - name: "test_filesystem"
-    type: "filesystem"
+    type: "filesystem_connector"
     properties:
       root_path: "/tmp"
 

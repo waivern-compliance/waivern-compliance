@@ -4,7 +4,7 @@
   "connectors": [
     {
       "name": "sample_filesystem",
-      "type": "filesystem",
+      "type": "filesystem_connector",
       "properties": {
         "root_path": "/path/to/your/files",
         "include_patterns": [

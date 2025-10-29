@@ -9,7 +9,7 @@ description: "Template runbook demonstrating personal data analysis across files
 connectors:
   # Filesystem connector for analysing files
   - name: "sample_filesystem"
-    type: "filesystem"
+    type: "filesystem_connector"
     properties:
       root_path: "/path/to/your/files"
       include_patterns:

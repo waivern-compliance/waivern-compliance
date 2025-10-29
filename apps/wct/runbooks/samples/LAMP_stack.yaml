@@ -15,7 +15,7 @@ connectors:
       max_files: 100  # Allow up to 100 files
 
   - name: "log_files"
-    type: "filesystem"
+    type: "filesystem_connector"
     properties:
       path: "./libs/waivern-community/tests/waivern_community/connectors/filesystem/filesystem_mock/logs"
       exclude_patterns: []

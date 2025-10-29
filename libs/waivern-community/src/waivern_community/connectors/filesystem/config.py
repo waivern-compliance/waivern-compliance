@@ -1,16 +1,15 @@
 """Configuration for FilesystemConnector."""
 
 from pathlib import Path
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, Self, override
 
 from pydantic import (
-    BaseModel,
     BeforeValidator,
-    ConfigDict,
     Field,
     ValidationError,
     field_validator,
 )
+from waivern_core import BaseComponentConfiguration
 from waivern_core.errors import ConnectorConfigError
 
 
@@ -37,9 +36,10 @@ def _validate_path_required(v: str | Path | None) -> Path:
     return path_obj
 
 
-class FilesystemConnectorConfig(BaseModel):
+class FilesystemConnectorConfig(BaseComponentConfiguration):
     """Configuration for FilesystemConnector with Pydantic validation.
 
+    Inherits from BaseComponentConfiguration for DI system integration.
     This provides strong typing and validation for filesystem connector
     configuration parameters with sensible defaults.
     """
@@ -70,13 +70,6 @@ class FilesystemConnectorConfig(BaseModel):
         gt=0,
     )
 
-    model_config = ConfigDict(
-        # Allow extra fields for future extensibility
-        extra="forbid",
-        # Validate assignment to catch errors early
-        validate_assignment=True,
-    )
-
     @field_validator("errors")
     @classmethod
     def validate_error_handling(cls, v: str) -> str:
@@ -87,6 +80,7 @@ class FilesystemConnectorConfig(BaseModel):
         return v
 
     @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
         """Create configuration from runbook properties.
 

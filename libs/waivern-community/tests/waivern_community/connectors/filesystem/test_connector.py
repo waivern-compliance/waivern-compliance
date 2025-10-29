@@ -18,7 +18,7 @@ from waivern_community.connectors.filesystem.config import FilesystemConnectorCo
 from waivern_community.connectors.filesystem.connector import FilesystemConnector
 
 # Test constants - expected behaviour from public interface
-EXPECTED_CONNECTOR_NAME = "filesystem"
+EXPECTED_CONNECTOR_NAME = "filesystem_connector"
 EXPECTED_DEFAULT_CHUNK_SIZE = 8192
 EXPECTED_DEFAULT_ENCODING = "utf-8"
 EXPECTED_DEFAULT_ERROR_HANDLING = "strict"
@@ -331,6 +331,6 @@ class TestFilesystemConnector:
 
         # Verify data item has proper FilesystemMetadata
         data_item = typed_result.data[0]
-        assert data_item.metadata.connector_type == "filesystem"
+        assert data_item.metadata.connector_type == "filesystem_connector"
         assert data_item.metadata.file_path == str(sample_file)
         assert str(sample_file) in data_item.metadata.source
