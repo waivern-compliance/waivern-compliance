@@ -8,7 +8,6 @@ import json
 from unittest.mock import Mock
 
 import pytest
-from waivern_analysers_shared.utilities import LLMServiceManager
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseMetadata,
@@ -16,13 +15,16 @@ from waivern_core.schemas import (
     StandardInputDataModel,
     StandardInputSchema,
 )
-from waivern_llm import AnthropicLLMService
+from waivern_llm import BaseLLMService
 
 from waivern_community.analysers.processing_purpose_analyser.analyser import (
     ProcessingPurposeAnalyser,
 )
 from waivern_community.analysers.processing_purpose_analyser.schemas import (
     ProcessingPurposeFindingSchema,
+)
+from waivern_community.analysers.processing_purpose_analyser.types import (
+    ProcessingPurposeAnalyserConfig,
 )
 
 
@@ -32,21 +34,12 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
         """Create mock LLM service."""
-        return Mock(spec=AnthropicLLMService)
+        return Mock(spec=BaseLLMService)
 
     @pytest.fixture
-    def mock_llm_service_manager_with_service(self, mock_llm_service: Mock) -> Mock:
-        """Create mock LLM service manager with available service."""
-        mock_manager = Mock(spec=LLMServiceManager)
-        mock_manager.llm_service = mock_llm_service
-        return mock_manager
-
-    @pytest.fixture
-    def mock_llm_service_manager_unavailable(self) -> Mock:
-        """Create mock LLM service manager with unavailable service."""
-        mock_manager = Mock(spec=LLMServiceManager)
-        mock_manager.llm_service = None
-        return mock_manager
+    def mock_llm_service_unavailable(self) -> None:
+        """Create unavailable LLM service (None)."""
+        return None
 
     @pytest.fixture
     def test_message_with_patterns(self) -> Message:
@@ -78,7 +71,6 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
     def test_llm_validation_enabled_calls_llm_service_when_findings_exist(
         self,
-        mock_llm_service_manager_with_service: Mock,
         mock_llm_service: Mock,
         test_message_with_patterns: Message,
     ) -> None:
@@ -106,9 +98,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
             ]
         )
 
-        analyser = ProcessingPurposeAnalyser.from_properties(properties)
-        # Replace the auto-created LLM service manager with our mock
-        analyser.llm_service_manager = mock_llm_service_manager_with_service
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+        analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
         # Act
         analyser.process(
@@ -127,7 +118,6 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
     def test_llm_validation_filters_out_false_positives(
         self,
-        mock_llm_service_manager_with_service: Mock,
         mock_llm_service: Mock,
         test_message_with_patterns: Message,
     ) -> None:
@@ -155,8 +145,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
             ]
         )
 
-        analyser = ProcessingPurposeAnalyser.from_properties(properties)
-        analyser.llm_service_manager = mock_llm_service_manager_with_service
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+        analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
         # Act
         result = analyser.process(
@@ -207,7 +197,6 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
     def test_llm_validation_disabled_skips_validation(
         self,
-        mock_llm_service_manager_with_service: Mock,
         mock_llm_service: Mock,
         test_message_with_patterns: Message,
     ) -> None:
@@ -215,8 +204,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": False}}
 
-        analyser = ProcessingPurposeAnalyser.from_properties(properties)
-        analyser.llm_service_manager = mock_llm_service_manager_with_service
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+        analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
         # Act
         result = analyser.process(
@@ -233,15 +222,15 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
     def test_llm_validation_unavailable_service_returns_original_findings(
         self,
-        mock_llm_service_manager_unavailable: Mock,
+        mock_llm_service_unavailable: None,
         test_message_with_patterns: Message,
     ) -> None:
         """Test that unavailable LLM service returns original findings safely."""
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
-        analyser = ProcessingPurposeAnalyser.from_properties(properties)
-        analyser.llm_service_manager = mock_llm_service_manager_unavailable
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+        analyser = ProcessingPurposeAnalyser(config, mock_llm_service_unavailable)
 
         # Act
         result = analyser.process(
@@ -259,7 +248,6 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
     def test_llm_validation_error_returns_original_findings(
         self,
-        mock_llm_service_manager_with_service: Mock,
         mock_llm_service: Mock,
         test_message_with_patterns: Message,
     ) -> None:
@@ -270,8 +258,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Mock LLM service to raise an exception
         mock_llm_service.analyse_data.side_effect = Exception("LLM service error")
 
-        analyser = ProcessingPurposeAnalyser.from_properties(properties)
-        analyser.llm_service_manager = mock_llm_service_manager_with_service
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+        analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
         # Act
         result = analyser.process(
@@ -289,7 +277,6 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
     def test_no_findings_skips_llm_validation(
         self,
-        mock_llm_service_manager_with_service: Mock,
         mock_llm_service: Mock,
     ) -> None:
         """Test that no findings means no LLM validation is attempted."""
@@ -315,8 +302,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
             schema=StandardInputSchema(),
         )
 
-        analyser = ProcessingPurposeAnalyser.from_properties(properties)
-        analyser.llm_service_manager = mock_llm_service_manager_with_service
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+        analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
         # Act
         result = analyser.process(

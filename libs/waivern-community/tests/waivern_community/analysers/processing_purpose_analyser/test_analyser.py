@@ -9,7 +9,6 @@ from unittest.mock import Mock
 
 import pytest
 from waivern_analysers_shared.types import LLMValidationConfig, PatternMatchingConfig
-from waivern_analysers_shared.utilities import LLMServiceManager
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseMetadata,
@@ -19,6 +18,7 @@ from waivern_core.schemas import (
     StandardInputDataModel,
     StandardInputSchema,
 )
+from waivern_llm import BaseLLMService
 
 from waivern_community.analysers.processing_purpose_analyser.analyser import (
     ProcessingPurposeAnalyser,
@@ -71,21 +71,18 @@ class TestProcessingPurposeAnalyserInitialisation:
         return ProcessingPurposePatternMatcher(valid_pattern_matching_config)
 
     @pytest.fixture
-    def mock_llm_service_manager(self) -> Mock:
-        """Create mock LLM service manager for testing."""
-        return Mock(spec=LLMServiceManager)
+    def mock_llm_service(self) -> Mock:
+        """Create mock LLM service for testing."""
+        return Mock(spec=BaseLLMService)
 
     def test_init_creates_analyser_with_valid_configuration(
         self,
         valid_config: ProcessingPurposeAnalyserConfig,
-        pattern_matcher: ProcessingPurposePatternMatcher,
-        mock_llm_service_manager: Mock,
+        mock_llm_service: Mock,
     ) -> None:
         """Test that __init__ creates analyser with valid configuration."""
         # Act
-        analyser = ProcessingPurposeAnalyser(
-            valid_config, pattern_matcher, mock_llm_service_manager
-        )
+        analyser = ProcessingPurposeAnalyser(valid_config, mock_llm_service)
 
         # Assert - only verify object creation and public method availability
         assert analyser is not None
@@ -95,7 +92,7 @@ class TestProcessingPurposeAnalyserInitialisation:
         assert callable(getattr(analyser, "get_name"))
 
     def test_from_properties_creates_analyser_from_dict(
-        self, mock_llm_service_manager: Mock
+        self, mock_llm_service: Mock
     ) -> None:
         """Test that from_properties creates analyser from dictionary properties."""
         # Arrange
@@ -109,38 +106,38 @@ class TestProcessingPurposeAnalyserInitialisation:
         }
 
         # Act
-        analyser = ProcessingPurposeAnalyser.from_properties(properties)
-        analyser.llm_service_manager = mock_llm_service_manager
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+        analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
         # Assert
         assert analyser is not None
         assert isinstance(analyser, ProcessingPurposeAnalyser)
 
     def test_from_properties_handles_minimal_configuration(
-        self, mock_llm_service_manager: Mock
+        self, mock_llm_service: Mock
     ) -> None:
         """Test that from_properties handles minimal configuration with defaults."""
         # Arrange
         properties: dict[str, dict[str, str]] = {}
 
         # Act
-        analyser = ProcessingPurposeAnalyser.from_properties(properties)
-        analyser.llm_service_manager = mock_llm_service_manager
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+        analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
         # Assert
         assert analyser is not None
         assert isinstance(analyser, ProcessingPurposeAnalyser)
 
     def test_from_properties_enables_llm_validation_by_default(
-        self, mock_llm_service_manager: Mock
+        self, mock_llm_service: Mock
     ) -> None:
         """Test that from_properties enables LLM validation by default."""
         # Arrange
         properties: dict[str, dict[str, str]] = {}
 
         # Act
-        analyser = ProcessingPurposeAnalyser.from_properties(properties)
-        analyser.llm_service_manager = mock_llm_service_manager
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+        analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
         # Assert
         # Create a test message to verify LLM validation is enabled in metadata
@@ -165,15 +162,15 @@ class TestProcessingPurposeAnalyserInitialisation:
         assert metadata["llm_validation_enabled"] is True
 
     def test_from_properties_respects_explicit_llm_validation_config(
-        self, mock_llm_service_manager: Mock
+        self, mock_llm_service: Mock
     ) -> None:
         """Test that from_properties respects explicit LLM validation configuration."""
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": False}}
 
         # Act
-        analyser = ProcessingPurposeAnalyser.from_properties(properties)
-        analyser.llm_service_manager = mock_llm_service_manager
+        config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+        analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
         # Assert
         # Create a test message to verify LLM validation is disabled in metadata
@@ -244,16 +241,15 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     """Test class for standard_input schema processing path."""
 
     @pytest.fixture
-    def mock_llm_service_manager(self) -> Mock:
-        """Create mock LLM service manager for testing."""
-        return Mock(spec=LLMServiceManager)
+    def mock_llm_service(self) -> Mock:
+        """Create mock LLM service for testing."""
+        return Mock(spec=BaseLLMService)
 
     @pytest.fixture
-    def analyser(self, mock_llm_service_manager: Mock) -> ProcessingPurposeAnalyser:
+    def analyser(self, mock_llm_service: Mock) -> ProcessingPurposeAnalyser:
         """Create analyser instance for testing."""
-        analyser = ProcessingPurposeAnalyser.from_properties({})
-        analyser.llm_service_manager = mock_llm_service_manager
-        return analyser
+        config = ProcessingPurposeAnalyserConfig.from_properties({})
+        return ProcessingPurposeAnalyser(config, mock_llm_service)
 
     @pytest.fixture
     def standard_input_schema(self) -> StandardInputSchema:
@@ -562,16 +558,15 @@ class TestProcessingPurposeAnalyserSourceCodeProcessing:
     """Test class for source_code schema processing path."""
 
     @pytest.fixture
-    def mock_llm_service_manager(self) -> Mock:
-        """Create mock LLM service manager for testing."""
-        return Mock(spec=LLMServiceManager)
+    def mock_llm_service(self) -> Mock:
+        """Create mock LLM service for testing."""
+        return Mock(spec=BaseLLMService)
 
     @pytest.fixture
-    def analyser(self, mock_llm_service_manager: Mock) -> ProcessingPurposeAnalyser:
+    def analyser(self, mock_llm_service: Mock) -> ProcessingPurposeAnalyser:
         """Create analyser instance for testing."""
-        analyser = ProcessingPurposeAnalyser.from_properties({})
-        analyser.llm_service_manager = mock_llm_service_manager
-        return analyser
+        config = ProcessingPurposeAnalyserConfig.from_properties({})
+        return ProcessingPurposeAnalyser(config, mock_llm_service)
 
     @pytest.fixture
     def source_code_schema(self) -> SourceCodeSchema:
@@ -774,16 +769,15 @@ class TestProcessingPurposeAnalyserErrorHandling:
     """Test class for error handling and validation."""
 
     @pytest.fixture
-    def mock_llm_service_manager(self) -> Mock:
-        """Create mock LLM service manager for testing."""
-        return Mock(spec=LLMServiceManager)
+    def mock_llm_service(self) -> Mock:
+        """Create mock LLM service for testing."""
+        return Mock(spec=BaseLLMService)
 
     @pytest.fixture
-    def analyser(self, mock_llm_service_manager: Mock) -> ProcessingPurposeAnalyser:
+    def analyser(self, mock_llm_service: Mock) -> ProcessingPurposeAnalyser:
         """Create analyser instance for testing."""
-        analyser = ProcessingPurposeAnalyser.from_properties({})
-        analyser.llm_service_manager = mock_llm_service_manager
-        return analyser
+        config = ProcessingPurposeAnalyserConfig.from_properties({})
+        return ProcessingPurposeAnalyser(config, mock_llm_service)
 
     @pytest.fixture
     def standard_input_schema(self) -> StandardInputSchema:
@@ -900,16 +894,15 @@ class TestProcessingPurposeAnalyserOutputValidation:
     """Test class for output message validation and structure."""
 
     @pytest.fixture
-    def mock_llm_service_manager(self) -> Mock:
-        """Create mock LLM service manager for testing."""
-        return Mock(spec=LLMServiceManager)
+    def mock_llm_service(self) -> Mock:
+        """Create mock LLM service for testing."""
+        return Mock(spec=BaseLLMService)
 
     @pytest.fixture
-    def analyser(self, mock_llm_service_manager: Mock) -> ProcessingPurposeAnalyser:
+    def analyser(self, mock_llm_service: Mock) -> ProcessingPurposeAnalyser:
         """Create analyser instance for testing."""
-        analyser = ProcessingPurposeAnalyser.from_properties({})
-        analyser.llm_service_manager = mock_llm_service_manager
-        return analyser
+        config = ProcessingPurposeAnalyserConfig.from_properties({})
+        return ProcessingPurposeAnalyser(config, mock_llm_service)
 
     @pytest.fixture
     def standard_input_schema(self) -> StandardInputSchema:

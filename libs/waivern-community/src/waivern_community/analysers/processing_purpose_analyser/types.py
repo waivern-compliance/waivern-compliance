@@ -1,19 +1,24 @@
 """Configuration types for processing purpose analyser."""
 
-from typing import Any, Self
-
-from pydantic import BaseModel, Field
+from pydantic import Field
 from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )
+from waivern_core import BaseComponentConfiguration
 
 
-class ProcessingPurposeAnalyserConfig(BaseModel):
+class ProcessingPurposeAnalyserConfig(BaseComponentConfiguration):
     """Configuration for ProcessingPurposeAnalyser.
 
     Groups related configuration parameters to reduce constructor complexity.
     Uses Pydantic for validation and default values.
+
+    Inherits from BaseComponentConfiguration to support:
+    - Pydantic validation for type safety
+    - Immutability (frozen dataclass)
+    - from_properties() factory method (inherited)
+    - Strict validation (no extra fields)
     """
 
     pattern_matching: PatternMatchingConfig = Field(
@@ -25,15 +30,4 @@ class ProcessingPurposeAnalyserConfig(BaseModel):
         description="LLM validation configuration for filtering false positives",
     )
 
-    @classmethod
-    def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create configuration from runbook properties.
-
-        Args:
-            properties: Raw properties from runbook configuration
-
-        Returns:
-            Validated configuration object
-
-        """
-        return cls.model_validate(properties)
+    # from_properties() inherited from BaseComponentConfiguration

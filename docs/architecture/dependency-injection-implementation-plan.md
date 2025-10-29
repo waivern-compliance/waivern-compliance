@@ -1,8 +1,8 @@
 # Dependency Injection System Implementation Plan
 
-**Status:** In Progress (Phase 3 Complete)
+**Status:** In Progress (Phase 4.1 and 4.2 Complete)
 **Created:** 2025-10-23
-**Updated:** 2025-10-27
+**Updated:** 2025-10-28
 **Related ADR:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
 **Related Document:** [DI Factory Patterns](./di-factory-patterns.md)
 
@@ -397,13 +397,156 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
 - Pattern matcher parameter removed (created internally)
 - All internal attributes now private (`_config`, `_pattern_matcher`, `_llm_service`)
 
-### 4.2 ProcessingPurposeAnalyser
+### 4.2 ProcessingPurposeAnalyser ✅ **COMPLETED**
 
-- [ ] Same steps as PersonalDataAnalyser
-- [ ] Create factory in waivern-community package
-- [ ] Update analyser constructor
-- [ ] Remove `from_properties()`
-- [ ] Update tests
+**Status:** ✅ Complete (815 tests passing + 2 integration tests)
+**Location:** `libs/waivern-community/analysers/processing_purpose_analyser/`
+
+**Implementation Steps:**
+
+#### Step 1: Update Configuration Class
+- [x] Migrate `ProcessingPurposeAnalyserConfig` to inherit from `BaseComponentConfiguration`
+- [x] Keep existing config structure and validation logic
+- [x] Verify analyser tests still pass with new config
+
+**Pattern change:**
+```python
+# OLD
+class ProcessingPurposeAnalyserConfig(BaseModel):
+    pattern_matching: PatternMatchingConfig
+    llm_validation: LLMValidationConfig
+
+# NEW
+from waivern_core import BaseComponentConfiguration
+
+class ProcessingPurposeAnalyserConfig(BaseComponentConfiguration):
+    pattern_matching: PatternMatchingConfig
+    llm_validation: LLMValidationConfig
+```
+
+#### Step 2: Update Analyser Constructor
+- [x] Change from 3 parameters to 2 parameters
+- [x] Remove `pattern_matcher` from constructor (create internally from config)
+- [x] Replace `llm_service_manager: LLMServiceManager` with `llm_service: BaseLLMService | None`
+- [x] Make all attributes private (`_config`, `_pattern_matcher`, `_llm_service`)
+
+**Constructor pattern change:**
+```python
+# OLD
+def __init__(
+    self,
+    config: ProcessingPurposeAnalyserConfig,
+    pattern_matcher: ProcessingPurposePatternMatcher,
+    llm_service_manager: LLMServiceManager,
+):
+    self._config = config
+    self._pattern_matcher = pattern_matcher
+    self.llm_service_manager = llm_service_manager
+
+# NEW
+def __init__(
+    self,
+    config: ProcessingPurposeAnalyserConfig,
+    llm_service: BaseLLMService | None = None,
+):
+    self._config = config
+    self._pattern_matcher = ProcessingPurposePatternMatcher(config.pattern_matching)
+    self._llm_service = llm_service
+```
+
+#### Step 3: Update `from_properties()` to DI-Aware Wrapper
+- [x] Make `from_properties()` create LLM service via DI when validation enabled
+- [x] This maintains backward compatibility until Phase 6 (Executor Integration)
+- [x] Add TODO comment for removal in Phase 6
+
+**Implementation:**
+```python
+@classmethod
+@override
+def from_properties(cls, properties: dict[str, Any]) -> Self:
+    """Create analyser from properties (legacy method for Executor compatibility).
+
+    TODO: Remove this method when Executor uses factories directly
+    """
+    from waivern_core.services import ServiceContainer  # noqa: PLC0415
+    from waivern_llm.di import LLMServiceFactory  # noqa: PLC0415
+
+    config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+
+    llm_service = None
+    if config.llm_validation.enable_llm_validation:
+        container = ServiceContainer()
+        container.register(
+            BaseLLMService, LLMServiceFactory(), lifetime="singleton"
+        )
+        llm_service = container.get_service(BaseLLMService)
+
+    return cls(config=config, llm_service=llm_service)
+```
+
+#### Step 4: Update LLM Validation Logic
+- [x] Replace `self.llm_service_manager.llm_service` with `self._llm_service`
+- [x] Update `_validate_findings_with_llm()` method to use injected service directly
+- [x] Verify LLM validation works with runbooks
+
+#### Step 5: Create ComponentFactory
+- [x] Create `ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyser])`
+- [x] Constructor: `__init__(self, llm_service: BaseLLMService | None = None)`
+- [x] Implement all 6 abstract methods:
+  - `create(config: ComponentConfig) -> ProcessingPurposeAnalyser`
+  - `get_component_name() -> str` (returns "processing_purpose_analyser")
+  - `get_input_schemas() -> list[Schema]`
+  - `get_output_schemas() -> list[Schema]`
+  - `can_create(config: ComponentConfig) -> bool`
+  - `get_service_dependencies() -> dict[str, type]`
+- [x] Export factory from package `__init__.py`
+
+#### Step 6: Create Factory Tests
+- [x] Create test file: `tests/processing_purpose_analyser/test_factory.py`
+- [x] Inherit from `ComponentFactoryContractTests[ProcessingPurposeAnalyser]`
+- [x] Implement required fixtures:
+  - `factory()` - Return factory instance with mock LLM service
+  - `valid_config()` - Return valid ProcessingPurposeAnalyserConfig
+- [x] Add 2 factory-specific tests:
+  - `test_can_create_returns_false_when_llm_required_but_unavailable()`
+  - `test_get_service_dependencies_declares_llm_service()`
+- [x] Result: 8 tests total (6 contract + 2 specific) - all passing ✅
+
+#### Step 7: Update Analyser Tests
+- [x] Update 14 test instances to use new constructor signature
+- [x] Replace `LLMServiceManager` mocks with `BaseLLMService` mocks
+- [x] Fix test pattern from:
+  ```python
+  analyser = ProcessingPurposeAnalyser.from_properties(properties)
+  analyser._llm_service = mock_llm_service  # Wrong!
+  ```
+  To:
+  ```python
+  config = ProcessingPurposeAnalyserConfig.from_properties(properties)
+  analyser = ProcessingPurposeAnalyser(config, mock_llm_service)  # Correct!
+  ```
+- [x] Add missing import: `ProcessingPurposeAnalyserConfig` in test files
+- [x] Verify all 815 tests pass
+
+#### Step 8: Add Integration Tests
+- [x] Create `test_integration.py` with real LLM API tests
+- [x] Add 2 integration tests marked with `@pytest.mark.integration`:
+  - `test_real_llm_validation_filters_false_positives()` - Tests LLM validation with real API
+  - `test_real_llm_validation_disabled_returns_all_findings()` - Tests without LLM (pattern matching only)
+- [x] Tests skip if `ANTHROPIC_API_KEY` not set
+- [x] Run with: `ANTHROPIC_API_KEY=key uv run pytest -m integration`
+- [x] Both integration tests verified passing with real API ✅
+
+**Commits:**
+- `feat: complete ProcessingPurposeAnalyser DI migration` (aeb6601)
+- `fix: implement proper DI-aware from_properties() wrapper` (95fedbb)
+- `test: add integration tests for ProcessingPurposeAnalyser with real LLM` (3af9bf8)
+
+**Test Results:**
+- ✅ 815 unit tests passing
+- ✅ 8 factory tests passing (6 contract + 2 specific)
+- ✅ 2 integration tests passing with real LLM API
+- ✅ All dev-checks passing (linting, type-checking, formatting)
 
 ### 4.3 DataSubjectAnalyser
 
@@ -424,12 +567,6 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
   ]
   ```
 - [ ] Remove old `BUILTIN_ANALYSERS` list
-
-### 4.5 Update Base Classes
-
-- [ ] Remove `from_properties()` from `waivern_core.Analyser` base class
-- [ ] Update docstrings to reference factory pattern
-- [ ] Update type hints
 
 **Deliverable:** All 3 analysers DI-enabled with factories
 
@@ -590,7 +727,28 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
 - [ ] Mock factories for unit tests
 - [ ] Integration tests with real factories
 
-**Deliverable:** Executor fully DI-integrated
+### 6.4 Remove Backward Compatibility Wrappers
+
+**Note:** This step executes AFTER 6.1-6.3 are complete and executor uses factories directly.
+
+- [ ] Remove `from_properties()` from all analyser implementations:
+  - [ ] Remove from `PersonalDataAnalyser` (waivern-personal-data-analyser)
+  - [ ] Remove from `ProcessingPurposeAnalyser` (waivern-community)
+  - [ ] Remove from `DataSubjectAnalyser` (waivern-community)
+- [ ] Remove `from_properties()` from all connector implementations:
+  - [ ] Remove from `FilesystemConnector` (waivern-community)
+  - [ ] Remove from `SourceCodeConnector` (waivern-community)
+  - [ ] Remove from `SQLiteConnector` (waivern-community)
+  - [ ] Remove from `MySQLConnector` (waivern-mysql)
+- [ ] Remove `from_properties()` abstract method from base classes:
+  - [ ] Remove from `waivern_core.Analyser` base class
+  - [ ] Remove from `waivern_core.Connector` base class
+- [ ] Update base class docstrings to reference factory pattern only
+- [ ] Update base class type hints
+- [ ] Verify all tests still pass (should be 807+ tests)
+- [ ] Run full integration test suite
+
+**Deliverable:** Executor fully DI-integrated, all backward compatibility removed
 
 ---
 
