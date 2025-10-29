@@ -550,25 +550,16 @@ def from_properties(cls, properties: dict[str, Any]) -> Self:
 
 ### 4.3 DataSubjectAnalyser
 
-- [ ] Same steps as PersonalDataAnalyser
+- [ ] Same steps as PersonalDataAnalyser and ProcessingPurposeAnalyser
 - [ ] Create factory in waivern-community package
-- [ ] Update analyser constructor
-- [ ] Remove `from_properties()`
-- [ ] Update tests
+- [ ] Update analyser constructor to use DI pattern
+- [ ] Keep `from_properties()` wrapper for backward compatibility (removed in Phase 6)
+- [ ] Update tests to use new constructor
+- [ ] Export factory from package `__init__.py`
 
-### 4.4 Export Factories
+**Note:** Phase 4.4 (Export Factories) is skipped. No intermediate `BUILTIN_ANALYSER_FACTORIES` list will be created. Phase 6 (Executor Integration) will refactor the executor to use factories directly or implement dynamic component discovery, eliminating the need for hardcoded factory lists.
 
-- [ ] Update `waivern-community/analysers/__init__.py`:
-  ```python
-  BUILTIN_ANALYSER_FACTORIES = [
-      PersonalDataAnalyserFactory,
-      ProcessingPurposeAnalyserFactory,
-      DataSubjectAnalyserFactory,
-  ]
-  ```
-- [ ] Remove old `BUILTIN_ANALYSERS` list
-
-**Deliverable:** All 3 analysers DI-enabled with factories
+**Deliverable:** All 3 analysers DI-enabled with factories, backward compatible via `from_properties()`
 
 ---
 
@@ -611,24 +602,12 @@ def from_properties(cls, properties: dict[str, Any]) -> Self:
 
 ### 5.5 Export Factories
 
-- [ ] Update `waivern-community/connectors/__init__.py`:
-  ```python
-  BUILTIN_CONNECTOR_FACTORIES = [
-      FilesystemConnectorFactory,
-      SourceCodeConnectorFactory,
-      SQLiteConnectorFactory,
-  ]
-  ```
-- [ ] Update `waivern-mysql` to export `MySQLConnectorFactory`
-- [ ] Remove old `BUILTIN_CONNECTORS` list
-
-### 5.6 Update Base Classes
-
-- [ ] Remove `from_properties()` from `waivern_core.Connector` base class
+- [ ] Export each connector factory from its package `__init__.py`
 - [ ] Update docstrings to reference factory pattern
-- [ ] Update type hints
 
-**Deliverable:** All connectors DI-enabled with factories
+**Note:** Similar to Phase 4, no intermediate `BUILTIN_CONNECTOR_FACTORIES` list will be created. Phase 6 will handle factory registration directly or via dynamic discovery.
+
+**Deliverable:** All connectors DI-enabled with factories, backward compatible via `from_properties()`
 
 ---
 
@@ -663,13 +642,30 @@ def from_properties(cls, properties: dict[str, Any]) -> Self:
       llm_service = container.get_service(BaseLLMService)
 
       # Register component factories with dependencies injected
-      for factory_class in BUILTIN_ANALYSER_FACTORIES:
-          factory = factory_class(llm_service=llm_service)
-          executor.register_analyser_factory(factory)
+      # Option 1: Direct registration (simpler, explicit)
+      from waivern_personal_data_analyser import PersonalDataAnalyserFactory
+      from waivern_community.analysers.processing_purpose_analyser import ProcessingPurposeAnalyserFactory
+      from waivern_community.analysers.data_subject_analyser import DataSubjectAnalyserFactory
 
-      for factory_class in BUILTIN_CONNECTOR_FACTORIES:
-          factory = factory_class()
-          executor.register_connector_factory(factory)
+      executor.register_analyser_factory(PersonalDataAnalyserFactory(llm_service))
+      executor.register_analyser_factory(ProcessingPurposeAnalyserFactory(llm_service))
+      executor.register_analyser_factory(DataSubjectAnalyserFactory(llm_service))
+
+      # Option 2: Dynamic discovery (future enhancement)
+      # factories = discover_component_factories()
+      # for factory in factories:
+      #     executor.register_factory(factory, inject_services=True)
+
+      # Register connector factories (no LLM service needed)
+      from waivern_community.connectors.filesystem import FilesystemConnectorFactory
+      from waivern_community.connectors.source_code import SourceCodeConnectorFactory
+      from waivern_community.connectors.sqlite import SQLiteConnectorFactory
+      from waivern_mysql import MySQLConnectorFactory
+
+      executor.register_connector_factory(FilesystemConnectorFactory())
+      executor.register_connector_factory(SourceCodeConnectorFactory())
+      executor.register_connector_factory(SQLiteConnectorFactory())
+      executor.register_connector_factory(MySQLConnectorFactory())
 
       return executor
   ```
@@ -937,25 +933,25 @@ waivern-community/
 ├── analysers/
 │   ├── processing_purpose_analyser/
 │   │   ├── analyser.py
-│   │   └── factory.py             # NEW
+│   │   └── factory.py             # NEW: Exported from package __init__.py
 │   ├── data_subject_analyser/
 │   │   ├── analyser.py
-│   │   └── factory.py             # NEW
-│   └── __init__.py                # Export BUILTIN_ANALYSER_FACTORIES
+│   │   └── factory.py             # NEW: Exported from package __init__.py
+│   └── __init__.py                # No BUILTIN_ANALYSER_FACTORIES list
 └── connectors/
     ├── filesystem/
     │   ├── connector.py
-    │   └── factory.py             # NEW
+    │   └── factory.py             # NEW: Exported from package __init__.py
     ├── source_code/
     │   ├── connector.py
-    │   └── factory.py             # NEW
+    │   └── factory.py             # NEW: Exported from package __init__.py
     ├── sqlite/
     │   ├── connector.py
-    │   └── factory.py             # NEW
-    └── __init__.py                # Export BUILTIN_CONNECTOR_FACTORIES
+    │   └── factory.py             # NEW: Exported from package __init__.py
+    └── __init__.py                # No BUILTIN_CONNECTOR_FACTORIES list
 
 apps/wct/src/wct/
-└── executor.py                    # UPDATED: Uses DI container + factories
+└── executor.py                    # UPDATED: Direct factory imports + registration
 ```
 
 ---
@@ -993,13 +989,15 @@ apps/wct/src/wct/
    - New: `connector = factory.create(config)`
 
 3. **`BUILTIN_ANALYSERS` list**
-   - Replaced with `BUILTIN_ANALYSER_FACTORIES`
+   - Replaced with direct factory registration in executor
 
 4. **`BUILTIN_CONNECTORS` list**
-   - Replaced with `BUILTIN_CONNECTOR_FACTORIES`
+   - Replaced with direct factory registration in executor
 
 5. **Direct component instantiation in executor**
    - Now uses factory pattern
+
+**Note:** No intermediate `BUILTIN_ANALYSER_FACTORIES` or `BUILTIN_CONNECTOR_FACTORIES` lists are created. The executor uses direct imports and registration or dynamic discovery.
 
 ### Migration Path
 
@@ -1016,19 +1014,28 @@ analyser = analyser_class.from_properties(config)
 
 **After:**
 ```python
-from waivern_community.analysers import BUILTIN_ANALYSER_FACTORIES
 from waivern_core.services import ServiceContainer
+from waivern_llm.di import LLMServiceFactory
+from waivern_llm import BaseLLMService
+from waivern_personal_data_analyser import PersonalDataAnalyserFactory
+from waivern_community.analysers.processing_purpose_analyser import ProcessingPurposeAnalyserFactory
+from waivern_community.analysers.data_subject_analyser import DataSubjectAnalyserFactory
 
+# Create DI container and register services
 container = ServiceContainer()
 container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
-
 llm_service = container.get_service(BaseLLMService)
-for factory_class in BUILTIN_ANALYSER_FACTORIES:
-    factory = factory_class(llm_service=llm_service)
-    executor.register_analyser_factory(factory)
 
-# Later
-analyser = factory.create(config)
+# Create executor
+executor = Executor(container)
+
+# Register factories directly (no intermediate list)
+executor.register_analyser_factory(PersonalDataAnalyserFactory(llm_service))
+executor.register_analyser_factory(ProcessingPurposeAnalyserFactory(llm_service))
+executor.register_analyser_factory(DataSubjectAnalyserFactory(llm_service))
+
+# Later - executor gets factory by component name and creates instance
+analyser = executor.create_analyser("personal_data", config)
 ```
 
 ---
