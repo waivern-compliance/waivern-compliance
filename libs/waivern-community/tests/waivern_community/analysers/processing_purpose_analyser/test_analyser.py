@@ -846,13 +846,14 @@ class TestProcessingPurposeAnalyserErrorHandling:
         the analysis for audit purposes and downstream processing.
         """
         # Arrange
-        analyser = ProcessingPurposeAnalyser.from_properties(
+        config = ProcessingPurposeAnalyserConfig.from_properties(
             {
                 "llm_validation": {
                     "enable_llm_validation": False
                 }  # Disable LLM for speed
             }
         )
+        analyser = ProcessingPurposeAnalyser(config, llm_service=None)
         input_schema = StandardInputSchema()
         output_schema = ProcessingPurposeFindingSchema()
 

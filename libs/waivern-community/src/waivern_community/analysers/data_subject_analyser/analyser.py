@@ -4,7 +4,6 @@ import logging
 from datetime import UTC, datetime
 from typing import Any, Self, override
 
-from waivern_analysers_shared.utilities import LLMServiceManager
 from waivern_core import Analyser
 from waivern_core.message import Message
 from waivern_core.schemas import (
@@ -15,6 +14,7 @@ from waivern_core.schemas import (
     StandardInputDataModel,
     StandardInputSchema,
 )
+from waivern_llm import BaseLLMService
 
 from .pattern_matcher import DataSubjectPatternMatcher
 from .schemas import DataSubjectFindingSchema
@@ -38,20 +38,18 @@ class DataSubjectAnalyser(Analyser):
     def __init__(
         self,
         config: DataSubjectAnalyserConfig,
-        pattern_matcher: DataSubjectPatternMatcher,
-        llm_service_manager: LLMServiceManager,
+        llm_service: BaseLLMService | None = None,
     ) -> None:
         """Initialise the data subject analyser with configuration and dependencies.
 
         Args:
             config: Analyser configuration
-            pattern_matcher: Pattern matcher for data subject detection
-            llm_service_manager: LLM service manager for validation
+            llm_service: Optional LLM service for validation (injected by DI)
 
         """
         self._config = config
-        self._pattern_matcher = pattern_matcher
-        self.llm_service_manager = llm_service_manager
+        self._pattern_matcher = DataSubjectPatternMatcher(config.pattern_matching)
+        self._llm_service = llm_service
 
     @classmethod
     @override
@@ -62,7 +60,13 @@ class DataSubjectAnalyser(Analyser):
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create analyser instance from runbook properties.
+        """Create analyser from properties (legacy method for Executor compatibility).
+
+        This is a thin wrapper over the DI factory pattern that creates an LLM service
+        internally when needed. This maintains backward compatibility with the executor
+        until Phase 6 (Executor Integration) is complete.
+
+        TODO: Remove this method in Phase 6 when Executor uses factories directly
 
         Args:
             properties: Configuration properties from runbook
@@ -71,22 +75,22 @@ class DataSubjectAnalyser(Analyser):
             Configured analyser instance
 
         """
-        # Parse and validate configuration
+        from waivern_core.services import ServiceContainer  # noqa: PLC0415
+        from waivern_llm.di import LLMServiceFactory  # noqa: PLC0415
+
         config = DataSubjectAnalyserConfig.from_properties(properties)
 
-        # Create pattern matcher
-        pattern_matcher = DataSubjectPatternMatcher(config.pattern_matching)
+        # Check if LLM validation is enabled
+        llm_service = None
+        if config.llm_validation.enable_llm_validation:
+            # Create LLM service using DI factory
+            container = ServiceContainer()
+            container.register(
+                BaseLLMService, LLMServiceFactory(), lifetime="singleton"
+            )
+            llm_service = container.get_service(BaseLLMService)
 
-        # Create LLM service manager
-        llm_service_manager = LLMServiceManager(
-            config.llm_validation.enable_llm_validation
-        )
-
-        return cls(
-            config=config,
-            pattern_matcher=pattern_matcher,
-            llm_service_manager=llm_service_manager,
-        )
+        return cls(config=config, llm_service=llm_service)
 
     @classmethod
     @override

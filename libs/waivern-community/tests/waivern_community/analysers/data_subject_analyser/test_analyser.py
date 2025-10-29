@@ -21,6 +21,9 @@ from waivern_community.analysers.data_subject_analyser.analyser import (
 from waivern_community.analysers.data_subject_analyser.schemas import (
     DataSubjectFindingSchema,
 )
+from waivern_community.analysers.data_subject_analyser.types import (
+    DataSubjectAnalyserConfig,
+)
 
 
 class TestDataSubjectAnalyserIdentity:
@@ -33,8 +36,9 @@ class TestDataSubjectAnalyserIdentity:
         assert isinstance(name, str)
 
     def test_from_properties_creates_instance_with_defaults(self) -> None:
-        """Test that from_properties creates working instance."""
-        analyser = DataSubjectAnalyser.from_properties({})
+        """Test that analyser can be created with default configuration."""
+        config = DataSubjectAnalyserConfig.from_properties({})
+        analyser = DataSubjectAnalyser(config, llm_service=None)
         assert analyser is not None
 
 
@@ -66,7 +70,8 @@ class TestDataSubjectAnalyserProcessing:
     def test_process_returns_valid_structure(self) -> None:
         """Test that process returns valid structure for empty data."""
         # Arrange
-        analyser = DataSubjectAnalyser.from_properties({})
+        config = DataSubjectAnalyserConfig.from_properties({})
+        analyser = DataSubjectAnalyser(config, llm_service=None)
         input_schema = StandardInputSchema()
         output_schema = DataSubjectFindingSchema()
 
@@ -102,7 +107,8 @@ class TestDataSubjectAnalyserProcessing:
     def test_process_standard_input_with_pattern_matches(self) -> None:
         """Test that process creates findings for pattern matches."""
         # Arrange
-        analyser = DataSubjectAnalyser.from_properties({})
+        config = DataSubjectAnalyserConfig.from_properties({})
+        analyser = DataSubjectAnalyser(config, llm_service=None)
         input_schema = StandardInputSchema()
         output_schema = DataSubjectFindingSchema()
 
@@ -147,7 +153,8 @@ class TestDataSubjectAnalyserProcessing:
     def test_process_serialises_datetime_objects_correctly(self) -> None:
         """Test that datetime objects in findings are properly serialised to JSON."""
         # Arrange
-        analyser = DataSubjectAnalyser.from_properties({})
+        config = DataSubjectAnalyserConfig.from_properties({})
+        analyser = DataSubjectAnalyser(config, llm_service=None)
         input_schema = StandardInputSchema()
         output_schema = DataSubjectFindingSchema()
 
@@ -222,7 +229,8 @@ class TestDataSubjectAnalyserProcessing:
     def test_matched_patterns_only_includes_actual_matches(self) -> None:
         """Test that matched_patterns only contains patterns that actually matched, not all patterns from matched rules."""
         # Arrange
-        analyser = DataSubjectAnalyser.from_properties({})
+        config = DataSubjectAnalyserConfig.from_properties({})
+        analyser = DataSubjectAnalyser(config, llm_service=None)
         input_schema = StandardInputSchema()
         output_schema = DataSubjectFindingSchema()
 
@@ -281,7 +289,8 @@ class TestDataSubjectAnalyserProcessing:
         the analysis for audit purposes and downstream processing.
         """
         # Arrange
-        analyser = DataSubjectAnalyser.from_properties({})
+        config = DataSubjectAnalyserConfig.from_properties({})
+        analyser = DataSubjectAnalyser(config, llm_service=None)
         input_schema = StandardInputSchema()
         output_schema = DataSubjectFindingSchema()
 
