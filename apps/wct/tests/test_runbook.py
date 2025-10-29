@@ -70,7 +70,7 @@ name: Valid Test Runbook
 description: A valid runbook for testing
 connectors:
   - name: test_connector
-    type: filesystem
+    type: filesystem_connector
     properties:
       path: ./test
 analysers:
@@ -107,7 +107,7 @@ name: Duplicate Names Test
 description: Test duplicate validation
 connectors:
   - name: duplicate_name
-    type: filesystem
+    type: filesystem_connector
     properties: {}
   - name: duplicate_name
     type: mysql
@@ -144,7 +144,7 @@ description: Testing runbook with contact property
 contact: "Paul Smith <paul.smith@company.com>"
 connectors:
   - name: test_connector
-    type: filesystem
+    type: filesystem_connector
     properties:
       path: ./test
 analysers:
@@ -176,7 +176,7 @@ name: No Contact Test Runbook
 description: Testing runbook without contact property
 connectors:
   - name: test_connector
-    type: filesystem
+    type: filesystem_connector
     properties:
       path: ./test
 analysers:
@@ -211,7 +211,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "test_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "test_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -246,7 +250,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "test_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "test_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -282,7 +290,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "test_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "test_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -319,7 +331,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "test_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "test_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -351,7 +367,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "test_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "test_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -386,7 +406,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "duplicate_name", "type": "filesystem", "properties": {}},
+                {
+                    "name": "duplicate_name",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                },
                 {"name": "duplicate_name", "type": "mysql", "properties": {}},
             ],
             "analysers": [
@@ -420,7 +444,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "test_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "test_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -458,7 +486,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "existing_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "existing_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -491,7 +523,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "test_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "test_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -524,7 +560,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "test_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "test_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -556,7 +596,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "test_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "test_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -587,7 +631,11 @@ class TestRunbookValidation:
             "name": "Test Runbook",
             "description": "A test runbook",
             "connectors": [
-                {"name": "test_connector", "type": "filesystem", "properties": {}}
+                {
+                    "name": "test_connector",
+                    "type": "filesystem_connector",
+                    "properties": {},
+                }
             ],
             "analysers": [
                 {
@@ -633,7 +681,7 @@ class TestRunbookSummary:
             "name": "Test Runbook",
             "description": "A comprehensive test runbook",
             "connectors": [
-                {"name": "conn1", "type": "filesystem", "properties": {}},
+                {"name": "conn1", "type": "filesystem_connector", "properties": {}},
                 {"name": "conn2", "type": "mysql", "properties": {}},
             ],
             "analysers": [
@@ -673,7 +721,7 @@ class TestRunbookSummary:
         assert summary.connector_count == 2
         assert summary.analyser_count == 3
         assert summary.execution_steps == 2
-        assert set(summary.connector_types) == {"filesystem", "mysql"}
+        assert set(summary.connector_types) == {"filesystem_connector", "mysql"}
         assert set(summary.analyser_types) == {
             "personal_data_analyser",
             "processing_purpose_analyser",
@@ -692,7 +740,7 @@ class TestRunbookIntegration:
             "connectors": [
                 {
                     "name": "filesystem_connector",
-                    "type": "filesystem",
+                    "type": "filesystem_connector",
                     "properties": {
                         "path": "./data",
                         "exclude_patterns": ["*.pyc", "__pycache__"],

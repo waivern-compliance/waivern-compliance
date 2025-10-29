@@ -6,11 +6,11 @@ contact: "Paul Smith (HR) <paul.smith@company.co.uk>"
 
 connectors:
   - name: "file_content_connector"
-    type: "filesystem"
+    type: "filesystem_connector"
     properties:
       path: "./libs/waivern-community/tests/waivern_community/connectors/filesystem/filesystem_mock_lite"
       exclude_patterns: ["*.pyc", "__pycache__"]
-      max_files: 10
+      max_files: 100
 
 
 analysers:
@@ -25,7 +25,7 @@ analysers:
 
       # LLM validation configuration
       llm_validation:
-        enable_llm_validation: true
+        enable_llm_validation: false
         llm_batch_size: 50
         llm_validation_mode: "standard"
 

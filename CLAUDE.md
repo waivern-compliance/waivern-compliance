@@ -388,6 +388,19 @@ Components register automatically:
 - Use modern syntax features when they improve readability and type safety
 - Always consider the latest Python best practices and idioms
 
+### Task Completion Requirements
+
+**CRITICAL: You MUST run `./scripts/dev-checks.sh` before marking ANY task as completed.**
+
+When using TodoWrite to track tasks:
+1. Mark task as `in_progress` when you start working on it
+2. Make your code changes
+3. **ALWAYS run `./scripts/dev-checks.sh` to verify all checks pass**
+4. **ONLY AFTER dev-checks pass**, mark task as `completed`
+5. Move to next task
+
+**NEVER mark a task as completed without running dev-checks first.** This is non-negotiable.
+
 ### DO NOT
 
 - Commit directly to `main` or `master` - always use feature branches
@@ -395,6 +408,7 @@ Components register automatically:
 - Preserve old context in comments during refactoring
 - Attempt to bypass quality checks
 - Use quick fixes for design flaws - advise on refactoring instead
+- **Mark any task as completed without running dev-checks first**
 
 ### DO
 
@@ -403,7 +417,7 @@ Components register automatically:
 - Break large classes/functions into smaller, focused ones
 - Carefully analyse errors to determine root cause
 - Use conventional commits for all commits and PRs
-- Run `./scripts/dev-checks.sh` after each task
+- **Run `./scripts/dev-checks.sh` before marking each task as completed**
 
 ## Git and PR Requirements
 

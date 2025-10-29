@@ -14,7 +14,7 @@ connectors:
       database_path: "./apps/wct/tests/integration/test_data/sqlite_compliance_test.db"
       max_rows_per_table: 10
   - name: "filesystem_mock_lite"
-    type: "filesystem"
+    type: "filesystem_connector"
     properties:
       path: "./libs/waivern-community/tests/waivern_community/connectors/filesystem/filesystem_mock_lite"
       exclude_patterns: ["README_lite.md"]
