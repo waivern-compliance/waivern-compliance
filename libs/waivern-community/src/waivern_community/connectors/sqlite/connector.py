@@ -47,7 +47,7 @@ class SQLiteConnector(DatabaseConnector):
     @override
     def get_name(cls) -> str:
         """Return the name of the connector."""
-        return "sqlite"
+        return "sqlite_connector"
 
     @classmethod
     @override
@@ -58,7 +58,13 @@ class SQLiteConnector(DatabaseConnector):
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create connector from configuration properties.
+        """Create connector from properties (legacy method for Executor compatibility).
+
+        TODO: Remove this method in Phase 6 when Executor uses factories directly.
+
+        This is a backward-compatibility wrapper. New code should use:
+            config = SQLiteConnectorConfig.from_properties(properties)
+            connector = SQLiteConnector(config)
 
         Args:
             properties: Raw properties from runbook configuration
@@ -294,7 +300,7 @@ class SQLiteConnector(DatabaseConnector):
             "source": database_source,
             # Top-level metadata includes complete database schema for reference
             "metadata": {
-                "connector_type": "sqlite",  # Standard connector type field
+                "connector_type": "sqlite_connector",  # Standard connector type field
                 "connection_info": {
                     "database_path": self._config.database_path,
                 },
@@ -335,7 +341,7 @@ class SQLiteConnector(DatabaseConnector):
                         # Create RelationalDatabaseMetadata for the cell
                         cell_metadata = RelationalDatabaseMetadata(
                             source=f"sqlite_database_({Path(self._config.database_path).stem})_table_({table_name})_column_({column_name})_row_({row_index + 1})",
-                            connector_type="sqlite",
+                            connector_type="sqlite_connector",
                             table_name=table_name,
                             column_name=column_name,
                             schema_name=Path(self._config.database_path).stem,

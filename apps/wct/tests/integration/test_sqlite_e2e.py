@@ -47,7 +47,7 @@ class TestSQLiteE2EIntegration:
         # Assert - Verify database metadata
         assert "metadata" in message.content
         metadata = message.content["metadata"]
-        assert metadata["connector_type"] == "sqlite"
+        assert metadata["connector_type"] == "sqlite_connector"
         assert "database_schema" in metadata
         assert metadata["database_schema"]["database_name"] == "sqlite_compliance_test"
 
@@ -66,7 +66,7 @@ class TestSQLiteE2EIntegration:
 
         # Assert - Verify data item metadata structure
         item_metadata = first_item["metadata"]
-        assert item_metadata["connector_type"] == "sqlite"
+        assert item_metadata["connector_type"] == "sqlite_connector"
         assert "table_name" in item_metadata
         assert "column_name" in item_metadata
         assert "schema_name" in item_metadata

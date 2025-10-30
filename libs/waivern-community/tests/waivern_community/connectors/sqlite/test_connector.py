@@ -13,6 +13,7 @@ from waivern_core.schemas import (
     StandardInputSchema,
 )
 
+from waivern_community.connectors.sqlite.config import SQLiteConnectorConfig
 from waivern_community.connectors.sqlite.connector import SQLiteConnector
 
 
@@ -27,11 +28,14 @@ class TestSQLiteConnector:
 
         try:
             # Act - Create connector from properties
-            connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+            config = SQLiteConnectorConfig.from_properties(
+                {"database_path": temp_db_path}
+            )
+            connector = SQLiteConnector(config)
 
             # Assert - Connector is created successfully
             assert connector is not None
-            assert connector.get_name() == "sqlite"
+            assert connector.get_name() == "sqlite_connector"
 
             # Assert - Supports standard_input schema
             schemas = connector.get_supported_output_schemas()
@@ -76,9 +80,10 @@ class TestSQLiteConnector:
             conn.close()
 
             # Act - Create connector with row limit of 2
-            connector = SQLiteConnector.from_properties(
+            config = SQLiteConnectorConfig.from_properties(
                 {"database_path": temp_db_path, "max_rows_per_table": 2}
             )
+            connector = SQLiteConnector(config)
 
             schema = StandardInputSchema()
             message = connector.extract(schema)
@@ -119,9 +124,10 @@ class TestSQLiteConnector:
     def test_sqlite_connector_handles_missing_database_file(self):
         """SQLite connector raises appropriate error when database file doesn't exist."""
         # Arrange - Create connector with non-existent database path
-        connector = SQLiteConnector.from_properties(
+        config = SQLiteConnectorConfig.from_properties(
             {"database_path": "/nonexistent/path/database.db"}
         )
+        connector = SQLiteConnector(config)
 
         # Act & Assert - Extraction should raise appropriate error
         schema = StandardInputSchema()
@@ -138,9 +144,10 @@ class TestSQLiteConnector:
 
         try:
             # Act - Create connector with corrupted database file
-            connector = SQLiteConnector.from_properties(
+            config = SQLiteConnectorConfig.from_properties(
                 {"database_path": temp_file_path}
             )
+            connector = SQLiteConnector(config)
 
             # Act & Assert - Extraction should raise appropriate error
             schema = StandardInputSchema()
@@ -164,7 +171,7 @@ class TestSQLiteConnectorPublicAPI:
 
     def test_get_name_returns_correct_name(self):
         """Test get_name returns the connector name."""
-        assert SQLiteConnector.get_name() == "sqlite"
+        assert SQLiteConnector.get_name() == "sqlite_connector"
 
     def test_get_supported_output_schemas_returns_standard_input(self):
         """Test that the connector supports standard_input schema."""
@@ -186,7 +193,10 @@ class TestSQLiteConnectorPublicAPI:
             conn.close()
 
             # Create connector
-            connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+            config = SQLiteConnectorConfig.from_properties(
+                {"database_path": temp_db_path}
+            )
+            connector = SQLiteConnector(config)
 
             # Extract with None schema - should use default
             result_message = connector.extract(None)  # type: ignore[arg-type]
@@ -208,7 +218,10 @@ class TestSQLiteConnectorPublicAPI:
             conn.close()
 
             # Create connector
-            connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+            config = SQLiteConnectorConfig.from_properties(
+                {"database_path": temp_db_path}
+            )
+            connector = SQLiteConnector(config)
 
             # Create mock unsupported schema
             mock_schema = Mock()
@@ -253,7 +266,8 @@ class TestSQLiteConnectorDataExtraction:
         conn.close()
 
         # Create connector
-        connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+        config = SQLiteConnectorConfig.from_properties({"database_path": temp_db_path})
+        connector = SQLiteConnector(config)
 
         yield connector
 
@@ -297,7 +311,8 @@ class TestSQLiteConnectorDataExtraction:
         conn.close()
 
         # Create connector
-        connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+        config = SQLiteConnectorConfig.from_properties({"database_path": temp_db_path})
+        connector = SQLiteConnector(config)
 
         yield connector
 
@@ -328,19 +343,19 @@ class TestSQLiteConnectorDataExtraction:
         id_item = next(item for item in typed_result.data if "1" == item.content)
 
         # Test email metadata
-        assert email_item.metadata.connector_type == "sqlite"
+        assert email_item.metadata.connector_type == "sqlite_connector"
         assert email_item.metadata.table_name == "customers"
         assert email_item.metadata.column_name == "email"
         # SQLite uses filename stem as schema_name
         assert email_item.metadata.schema_name.startswith("tmp")  # temp file name
 
         # Test phone metadata
-        assert phone_item.metadata.connector_type == "sqlite"
+        assert phone_item.metadata.connector_type == "sqlite_connector"
         assert phone_item.metadata.table_name == "customers"
         assert phone_item.metadata.column_name == "phone"
 
         # Test id metadata
-        assert id_item.metadata.connector_type == "sqlite"
+        assert id_item.metadata.connector_type == "sqlite_connector"
         assert id_item.metadata.table_name == "customers"
         assert id_item.metadata.column_name == "id"
 
@@ -384,7 +399,7 @@ class TestSQLiteConnectorDataExtraction:
 
         # Verify all items have correct connector type
         for item in typed_result.data:
-            assert item.metadata.connector_type == "sqlite"
+            assert item.metadata.connector_type == "sqlite_connector"
 
     def test_extracts_empty_database_returns_empty_data(self):
         """Test extraction from database with no tables returns empty data list."""
@@ -398,7 +413,10 @@ class TestSQLiteConnectorDataExtraction:
             conn.close()
 
             # Create connector
-            connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+            config = SQLiteConnectorConfig.from_properties(
+                {"database_path": temp_db_path}
+            )
+            connector = SQLiteConnector(config)
             result_message = connector.extract(StandardInputSchema())
 
             # Validate the result conforms to RelationalDatabaseMetadata expectations
@@ -437,7 +455,10 @@ class TestSQLiteConnectorDataExtraction:
             conn.close()
 
             # Create connector
-            connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+            config = SQLiteConnectorConfig.from_properties(
+                {"database_path": temp_db_path}
+            )
+            connector = SQLiteConnector(config)
             result_message = connector.extract(StandardInputSchema())
 
             # Validate the result
@@ -471,7 +492,10 @@ class TestSQLiteConnectorEdgeCases:
             conn.close()
 
             # Create connector
-            connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+            config = SQLiteConnectorConfig.from_properties(
+                {"database_path": temp_db_path}
+            )
+            connector = SQLiteConnector(config)
             result_message = connector.extract(StandardInputSchema())
 
             # Should succeed with empty data
@@ -521,7 +545,10 @@ class TestSQLiteConnectorEdgeCases:
             conn.close()
 
             # Create connector
-            connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+            config = SQLiteConnectorConfig.from_properties(
+                {"database_path": temp_db_path}
+            )
+            connector = SQLiteConnector(config)
             result_message = connector.extract(StandardInputSchema())
 
             # Validate the result
@@ -576,7 +603,10 @@ class TestSQLiteConnectorEdgeCases:
             conn.close()
 
             # Create connector
-            connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+            config = SQLiteConnectorConfig.from_properties(
+                {"database_path": temp_db_path}
+            )
+            connector = SQLiteConnector(config)
             result_message = connector.extract(StandardInputSchema())
 
             # Validate the result
@@ -618,7 +648,10 @@ class TestSQLiteConnectorEdgeCases:
             conn.close()
 
             # Create connector
-            connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+            config = SQLiteConnectorConfig.from_properties(
+                {"database_path": temp_db_path}
+            )
+            connector = SQLiteConnector(config)
             result_message = connector.extract(StandardInputSchema())
 
             # Message should validate successfully (this is called internally in extract)
@@ -665,7 +698,10 @@ class TestSQLiteConnectorEdgeCases:
             conn.close()
 
             # Create connector
-            connector = SQLiteConnector.from_properties({"database_path": temp_db_path})
+            config = SQLiteConnectorConfig.from_properties(
+                {"database_path": temp_db_path}
+            )
+            connector = SQLiteConnector(config)
             result_message = connector.extract(StandardInputSchema())
 
             # Verify top-level structure matches standard_input schema
@@ -680,7 +716,7 @@ class TestSQLiteConnectorEdgeCases:
 
             # Metadata structure
             metadata = content["metadata"]
-            assert metadata["connector_type"] == "sqlite"
+            assert metadata["connector_type"] == "sqlite_connector"
             assert "connection_info" in metadata
             assert "database_schema" in metadata
             assert "total_data_items" in metadata
