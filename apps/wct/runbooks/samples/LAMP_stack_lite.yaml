@@ -7,7 +7,7 @@ contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
 
 connectors:
   - name: compliance_sqlite_db
-    type: sqlite
+    type: sqlite_connector
     properties:
       # SQLite database path can be set via environment variable SQLITE_DATABASE_PATH
       # or specified directly in the runbook

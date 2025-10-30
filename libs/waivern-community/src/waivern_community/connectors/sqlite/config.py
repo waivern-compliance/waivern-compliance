@@ -1,13 +1,14 @@
 """Configuration for SQLiteConnector."""
 
 import os
-from typing import Any, Self
+from typing import Any, Self, override
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import Field, ValidationError, field_validator
+from waivern_core import BaseComponentConfiguration
 from waivern_core.errors import ConnectorConfigError
 
 
-class SQLiteConnectorConfig(BaseModel):
+class SQLiteConnectorConfig(BaseComponentConfiguration):
     """Configuration for SQLiteConnector with Pydantic validation.
 
     This provides strong typing and validation for SQLite connector
@@ -21,13 +22,6 @@ class SQLiteConnectorConfig(BaseModel):
         gt=0,
     )
 
-    model_config = ConfigDict(
-        # Forbid extra fields for strict validation
-        extra="forbid",
-        # Validate assignment to catch errors early
-        validate_assignment=True,
-    )
-
     @field_validator("database_path", mode="before")
     @classmethod
     def validate_database_path_not_empty(cls, v: str | None) -> str:
@@ -37,6 +31,7 @@ class SQLiteConnectorConfig(BaseModel):
         return str(v).strip()
 
     @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
         """Create configuration from runbook properties with environment variable support.
 
