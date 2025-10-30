@@ -8,7 +8,7 @@ from __future__ import annotations
 import abc
 import logging
 from datetime import UTC, datetime
-from typing import Any, Self
+from typing import Any
 
 from waivern_core.message import Message
 from waivern_core.schemas.base import Schema, SchemaLoadError
@@ -40,15 +40,6 @@ class Analyser(abc.ABC):
         """Get the name of the analyser.
 
         This is used to identify the analyser in the system.
-        """
-
-    @classmethod
-    @abc.abstractmethod
-    def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Instantiate this analyser from a dictionary of properties.
-
-        The `properties` dictionary is the configuration for the analyser
-        as specified in the application's configuration system.
         """
 
     @abc.abstractmethod

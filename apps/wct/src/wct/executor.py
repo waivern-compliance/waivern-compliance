@@ -13,11 +13,26 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from waivern_community.analysers import BUILTIN_ANALYSERS
-from waivern_community.connectors import BUILTIN_CONNECTORS
+from waivern_community.analysers.data_subject_analyser import (
+    DataSubjectAnalyserFactory,
+)
+from waivern_community.analysers.processing_purpose_analyser import (
+    ProcessingPurposeAnalyserFactory,
+)
+from waivern_community.connectors import (
+    FilesystemConnectorFactory,
+    SourceCodeConnectorFactory,
+    SQLiteConnectorFactory,
+)
 from waivern_core import Analyser, AnalyserError, Connector, ConnectorError
+from waivern_core.component_factory import ComponentFactory
 from waivern_core.errors import WaivernError
 from waivern_core.schemas import Schema
+from waivern_core.services.container import ServiceContainer
+from waivern_llm import BaseLLMService
+from waivern_llm.di.factory import LLMServiceFactory
+from waivern_mysql import MySQLConnectorFactory
+from waivern_personal_data_analyser import PersonalDataAnalyserFactory
 
 from wct.analysis import AnalysisResult
 from wct.runbook import (
@@ -41,58 +56,112 @@ class Executor:
     workflow defined within the runbooks.
     """
 
-    def __init__(self) -> None:
-        """Initialise the executor with empty connector and analyser registries."""
-        self.connectors: dict[str, type[Connector]] = {}
-        self.analysers: dict[str, type[Analyser]] = {}
+    def __init__(self, container: ServiceContainer) -> None:
+        """Initialise the executor with DI container and empty factory registries.
+
+        Args:
+            container: DI container managing infrastructure services
+
+        """
+        self._container = container
+        self.connector_factories: dict[str, ComponentFactory[Connector]] = {}
+        self.analyser_factories: dict[str, ComponentFactory[Analyser]] = {}
 
     @classmethod
     def create_with_built_ins(cls) -> Executor:
         """Create an executor pre-configured with all built-in connectors and analysers.
 
+        This method:
+        1. Creates and configures the DI container with infrastructure services
+        2. Instantiates all component factories with injected dependencies
+        3. Registers factories with the executor
+
         Returns:
-            Configured executor with all built-in components registered
+            Configured executor with all built-in component factories registered
 
         """
-        executor = cls()
+        # Create and configure DI container
+        container = ServiceContainer()
+        container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
+        logger.debug("ServiceContainer configured with infrastructure services")
 
-        # Register built-in connectors
-        for connector_class in BUILTIN_CONNECTORS:
-            executor.register_available_connector(connector_class)
-            logger.debug("Available built-in connector: %s", connector_class.get_name())
+        # Create executor with container
+        executor = cls(container)
 
-        # Register built-in analysers
-        for analyser_class in BUILTIN_ANALYSERS:
-            executor.register_available_analyser(analyser_class)
-            logger.debug("Available built-in analyser: %s", analyser_class.get_name())
+        # Get infrastructure services from container (may be None if unavailable)
+        try:
+            llm_service = container.get_service(BaseLLMService)
+            logger.debug("Retrieved LLM service from container")
+        except ValueError:
+            llm_service = None
+            logger.warning(
+                "LLM service unavailable - analysers will run without LLM validation"
+            )
+
+        # Register analyser factories with LLM service dependency
+        executor.register_analyser_factory(PersonalDataAnalyserFactory(llm_service))
+        executor.register_analyser_factory(
+            ProcessingPurposeAnalyserFactory(llm_service)
+        )
+        executor.register_analyser_factory(DataSubjectAnalyserFactory(llm_service))
+
+        # Register connector factories (no service dependencies)
+        executor.register_connector_factory(FilesystemConnectorFactory())
+        executor.register_connector_factory(SourceCodeConnectorFactory())
+        executor.register_connector_factory(SQLiteConnectorFactory())
+        executor.register_connector_factory(MySQLConnectorFactory())
 
         logger.info(
-            "Executor initialised with %d connectors and %d analysers",
-            len(BUILTIN_CONNECTORS),
-            len(BUILTIN_ANALYSERS),
+            "Executor initialised with %d connector factories and %d analyser factories",
+            len(executor.connector_factories),
+            len(executor.analyser_factories),
         )
 
         return executor
 
-    # The following four methods allow for dynamic registration of connectors and analysers.
-    # They are for system-wide registration of available connectors and analysers,
-    # not for holding the configured connectors and analysers for individual runbooks.
+    # The following four methods allow for dynamic registration of factories.
+    # They are for system-wide registration of available component factories,
+    # not for holding the configured component instances for individual runbooks.
 
-    def register_available_connector(self, connector_class: type[Connector]) -> None:
-        """Register a connector class."""
-        self.connectors[connector_class.get_name()] = connector_class
+    def register_connector_factory(self, factory: ComponentFactory[Connector]) -> None:
+        """Register a connector factory.
 
-    def register_available_analyser(self, analyser_class: type[Analyser]) -> None:
-        """Register an analyser class."""
-        self.analysers[analyser_class.get_name()] = analyser_class
+        Args:
+            factory: ComponentFactory that creates connector instances
 
-    def list_available_connectors(self) -> dict[str, type[Connector]]:
-        """Get available built-in connectors."""
-        return self.connectors.copy()
+        """
+        component_name = factory.get_component_name()
+        self.connector_factories[component_name] = factory
+        logger.debug("Registered connector factory: %s", component_name)
 
-    def list_available_analysers(self) -> dict[str, type[Analyser]]:
-        """Get all available built-in analysers."""
-        return self.analysers.copy()
+    def register_analyser_factory(self, factory: ComponentFactory[Analyser]) -> None:
+        """Register an analyser factory.
+
+        Args:
+            factory: ComponentFactory that creates analyser instances
+
+        """
+        component_name = factory.get_component_name()
+        self.analyser_factories[component_name] = factory
+        logger.debug("Registered analyser factory: %s", component_name)
+
+    def list_available_connectors(self) -> dict[str, ComponentFactory[Connector]]:
+        """Get available connector factories.
+
+        Returns:
+            Dictionary mapping component names to connector factories
+
+        """
+        return self.connector_factories.copy()
+
+    def list_available_analysers(self) -> dict[str, ComponentFactory[Analyser]]:
+        """Get all available analyser factories.
+
+        Returns:
+            Dictionary mapping component names to analyser factories
+
+        """
+        return self.analyser_factories.copy()
 
     def execute_runbook(self, runbook_path: Path) -> list[AnalysisResult]:
         """Load and execute a runbook file."""
@@ -117,13 +186,13 @@ class Executor:
         try:
             # Get configurations and validate types
             analyser_config, connector_config = self._get_step_configs(step, runbook)
-            analyser_class, connector_class = self._validate_step_types(
+            analyser_type, connector_type = self._validate_step_types(
                 step, analyser_config, connector_config
             )
 
             # Set up components and schemas
             analyser, connector = self._instantiate_components(
-                analyser_class, connector_class, analyser_config, connector_config
+                analyser_type, connector_type, analyser_config, connector_config
             )
             input_schema, output_schema = self._resolve_step_schemas(step, analyser)
 
@@ -153,28 +222,81 @@ class Executor:
         step: ExecutionStep,
         analyser_config: AnalyserConfig,
         connector_config: ConnectorConfig,
-    ) -> tuple[type[Analyser], type[Connector]]:
-        """Validate that analyser and connector types are registered with executor."""
-        analyser_class = self.analysers.get(analyser_config.type)
-        if not analyser_class:
+    ) -> tuple[str, str]:
+        """Validate that analyser and connector types are registered with executor.
+
+        Returns:
+            Tuple of (analyser_type_name, connector_type_name)
+
+        Raises:
+            ExecutorError: If analyser or connector type not registered
+
+        """
+        if analyser_config.type not in self.analyser_factories:
             raise ExecutorError(f"Unknown analyser type: {analyser_config.type}")
 
-        connector_class = self.connectors.get(connector_config.type)
-        if not connector_class:
+        if connector_config.type not in self.connector_factories:
             raise ExecutorError(f"Unknown connector type: {connector_config.type}")
 
-        return analyser_class, connector_class
+        return analyser_config.type, connector_config.type
 
     def _instantiate_components(
         self,
-        analyser_class: type[Analyser],
-        connector_class: type[Connector],
+        analyser_type: str,
+        connector_type: str,
         analyser_config: AnalyserConfig,
         connector_config: ConnectorConfig,
     ) -> tuple[Analyser, Connector]:
-        """Instantiate analyser and connector from their configurations."""
-        analyser = analyser_class.from_properties(analyser_config.properties or {})
-        connector = connector_class.from_properties(connector_config.properties)
+        """Instantiate analyser and connector from their configurations using factories.
+
+        Args:
+            analyser_type: Analyser type name (registered factory key)
+            connector_type: Connector type name (registered factory key)
+            analyser_config: Analyser configuration from runbook
+            connector_config: Connector configuration from runbook
+
+        Returns:
+            Tuple of (analyser_instance, connector_instance)
+
+        Raises:
+            ExecutorError: If factory not found or component cannot be created
+
+        """
+        # Get factories from registries
+        analyser_factory = self.analyser_factories.get(analyser_type)
+        if not analyser_factory:
+            raise ExecutorError(f"Unknown analyser type: {analyser_type}")
+
+        connector_factory = self.connector_factories.get(connector_type)
+        if not connector_factory:
+            raise ExecutorError(f"Unknown connector type: {connector_type}")
+
+        # Pass raw properties dict to factories - they convert to their specific config types
+        analyser_properties = analyser_config.properties or {}
+        connector_properties = connector_config.properties
+
+        # Check availability before creation
+        if not analyser_factory.can_create(analyser_properties):
+            error_msg = f"Analyser '{analyser_type}' cannot be created with given configuration. "
+            # Add helpful context if LLM validation might be the issue
+            if analyser_config.properties and analyser_config.properties.get(
+                "llm_validation", {}
+            ).get("enable_llm_validation"):
+                error_msg += "LLM service may be unavailable (required when LLM validation is enabled)."
+            raise ExecutorError(error_msg)
+
+        if not connector_factory.can_create(connector_properties):
+            raise ExecutorError(
+                f"Connector '{connector_type}' cannot be created with given configuration"
+            )
+
+        # Create component instances (transient lifecycle)
+        logger.debug("Creating analyser instance: %s", analyser_type)
+        analyser = analyser_factory.create(analyser_properties)
+
+        logger.debug("Creating connector instance: %s", connector_type)
+        connector = connector_factory.create(connector_properties)
+
         return analyser, connector
 
     def _resolve_step_schemas(

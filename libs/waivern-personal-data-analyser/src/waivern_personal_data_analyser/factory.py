@@ -37,28 +37,29 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
         """Create PersonalDataAnalyser instance with injected dependencies.
 
         Args:
-            config: Component configuration (must be PersonalDataAnalyserConfig)
+            config: Configuration dict from runbook properties
 
         Returns:
             Configured PersonalDataAnalyser instance
 
         Raises:
-            TypeError: If config is not PersonalDataAnalyserConfig
             ValueError: If configuration is invalid or requirements cannot be met
 
         """
-        if not isinstance(config, PersonalDataAnalyserConfig):
-            msg = f"Expected PersonalDataAnalyserConfig, got {type(config).__name__}"
-            raise TypeError(msg)
+        # Parse and validate configuration
+        analyser_config = PersonalDataAnalyserConfig.from_properties(config)
 
         # Validate that LLM validation requirements can be met
-        if config.llm_validation.enable_llm_validation and self._llm_service is None:
+        if (
+            analyser_config.llm_validation.enable_llm_validation
+            and self._llm_service is None
+        ):
             msg = "LLM validation enabled but no LLM service available"
             raise ValueError(msg)
 
         # Create analyser with injected LLM service
         return PersonalDataAnalyser(
-            config=config,
+            config=analyser_config,
             llm_service=self._llm_service,
         )
 
@@ -67,18 +68,24 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
         """Check if factory can create analyser with given configuration.
 
         Args:
-            config: Component configuration to validate
+            config: Configuration dict to validate
 
         Returns:
             True if factory can create analyser, False otherwise
 
         """
-        # Must be correct config type
-        if not isinstance(config, PersonalDataAnalyserConfig):
+        # Try to parse and validate configuration
+        try:
+            analyser_config = PersonalDataAnalyserConfig.from_properties(config)
+        except Exception:
+            # Config validation failed
             return False
 
         # If LLM validation enabled, must have LLM service
-        if config.llm_validation.enable_llm_validation and self._llm_service is None:
+        if (
+            analyser_config.llm_validation.enable_llm_validation
+            and self._llm_service is None
+        ):
             return False
 
         return True

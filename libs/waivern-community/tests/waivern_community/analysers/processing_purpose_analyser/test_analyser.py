@@ -824,21 +824,6 @@ class TestProcessingPurposeAnalyserErrorHandling:
         with pytest.raises(ValueError, match="Unsupported input schema"):
             analyser.process(unsupported_schema, output_schema, message)  # type: ignore
 
-    def test_from_properties_handles_invalid_configuration_gracefully(self) -> None:
-        """Test that from_properties handles invalid configuration data."""
-        # Arrange
-        invalid_properties = {
-            "pattern_matching": {
-                "ruleset": 123,  # Invalid type - should be string
-                "evidence_context_size": "invalid_size",
-            }
-        }
-
-        # Act & Assert
-        # Should raise validation error due to invalid configuration
-        with pytest.raises((ValueError, TypeError)):
-            ProcessingPurposeAnalyser.from_properties(invalid_properties)
-
     def test_process_creates_analysis_chain_entry(self) -> None:
         """Test that analyser creates proper analysis chain entry.
 

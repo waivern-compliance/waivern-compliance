@@ -14,9 +14,6 @@ from waivern_community.analysers.data_subject_analyser import DataSubjectAnalyse
 from waivern_community.analysers.data_subject_analyser.factory import (
     DataSubjectAnalyserFactory,
 )
-from waivern_community.analysers.data_subject_analyser.types import (
-    DataSubjectAnalyserConfig,
-)
 
 
 class TestDataSubjectAnalyserFactory(
@@ -34,12 +31,10 @@ class TestDataSubjectAnalyserFactory(
     @pytest.fixture
     def valid_config(self) -> ComponentConfig:
         """Create valid configuration for testing."""
-        return DataSubjectAnalyserConfig.from_properties(
-            {
-                "pattern_matching": {"ruleset": "data_subjects"},
-                "llm_validation": {"enable_llm_validation": False},
-            }
-        )
+        return {
+            "pattern_matching": {"ruleset": "data_subjects"},
+            "llm_validation": {"enable_llm_validation": False},
+        }
 
     # Factory-specific tests
     def test_can_create_returns_false_when_llm_required_but_unavailable(self) -> None:

@@ -18,17 +18,42 @@ class SQLiteConnectorFactory(ComponentFactory[SQLiteConnector]):
 
     @override
     def create(self, config: ComponentConfig) -> SQLiteConnector:
-        """Create a SQLiteConnector instance from configuration."""
-        if not isinstance(config, SQLiteConnectorConfig):
-            msg = f"Expected SQLiteConnectorConfig, got {type(config).__name__}"
-            raise TypeError(msg)
+        """Create a SQLiteConnector instance from configuration.
 
-        return SQLiteConnector(config)
+        Args:
+            config: Configuration dict from runbook properties
+
+        Returns:
+            Configured SQLiteConnector instance
+
+        Raises:
+            ValueError: If configuration is invalid
+
+        """
+        # Parse and validate configuration
+        connector_config = SQLiteConnectorConfig.from_properties(config)
+
+        return SQLiteConnector(connector_config)
 
     @override
     def can_create(self, config: ComponentConfig) -> bool:
-        """Check if this factory can create a connector with the given config."""
-        return isinstance(config, SQLiteConnectorConfig)
+        """Check if this factory can create a connector with the given config.
+
+        Args:
+            config: Configuration dict to validate
+
+        Returns:
+            True if factory can create connector, False otherwise
+
+        """
+        # Try to parse and validate configuration
+        try:
+            SQLiteConnectorConfig.from_properties(config)
+        except Exception:
+            # Config validation failed
+            return False
+
+        return True
 
     @override
     def get_component_name(self) -> str:

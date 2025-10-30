@@ -15,10 +15,8 @@ Example:
     >>> # Component factory (singleton) with injected dependencies
     >>> factory = PersonalDataAnalyserFactory(llm_service=llm_service)
     >>>
-    >>> # Component configuration (from runbook properties)
-    >>> config = BaseComponentConfiguration.from_properties(
-    ...     {"pattern_matching": {"ruleset": "personal_data"}}
-    ... )
+    >>> # Component configuration dict (from runbook properties)
+    >>> config = {"pattern_matching": {"ruleset": "personal_data"}}
     >>>
     >>> # Component instance (transient) created by factory
     >>> analyser = factory.create(config)
@@ -28,11 +26,11 @@ Example:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 from waivern_core.schemas import Schema
-from waivern_core.services.configuration import BaseComponentConfiguration
 
-type ComponentConfig = BaseComponentConfiguration
+type ComponentConfig = dict[str, Any]
 
 
 class ComponentFactory[T](ABC):
@@ -79,12 +77,10 @@ class ComponentFactory[T](ABC):
         ...         return [PersonalDataFindingSchema()]
         ...
         ...     def can_create(self, config: ComponentConfig) -> bool:
-        ...         # Validate config has required fields
+        ...         # Validate config and check service availability
         ...         try:
-        ...             PersonalDataAnalyserConfig.from_properties(config.model_dump())
-        ...             # Check LLM service available if LLM validation enabled
-        ...             config_dict = config.model_dump()
-        ...             if config_dict.get("llm_validation", {}).get("enable_llm_validation"):
+        ...             analyser_config = PersonalDataAnalyserConfig.from_properties(config)
+        ...             if analyser_config.llm_validation.enable_llm_validation:
         ...                 return self._llm_service is not None
         ...             return True
         ...         except Exception:
@@ -101,8 +97,8 @@ class ComponentFactory[T](ABC):
         infrastructure services (LLM, database, cache) into the component.
 
         Args:
-            config: Execution-specific configuration from runbook properties.
-                   This is validated against the component's configuration schema.
+            config: Configuration dict from runbook properties.
+                   Factory validates and converts to typed config internally.
 
         Returns:
             Configured component instance ready for execution.
@@ -113,10 +109,10 @@ class ComponentFactory[T](ABC):
 
         Example:
             >>> factory = PersonalDataAnalyserFactory(llm_service)
-            >>> config = BaseComponentConfiguration.from_properties({
+            >>> config = {
             ...     "pattern_matching": {"ruleset": "personal_data"},
             ...     "llm_validation": {"enable_llm_validation": True}
-            ... })
+            ... }
             >>> analyser = factory.create(config)
 
         """
@@ -194,12 +190,10 @@ class ComponentFactory[T](ABC):
             True if component can be created with this config, False otherwise
 
         Example:
-            >>> config = BaseComponentConfiguration.from_properties(
-            ...     {"pattern_matching": {"ruleset": "personal_data"}}
-            ... )
+            >>> config = {"pattern_matching": {"ruleset": "personal_data"}}
             >>> factory.can_create(config)
             True
-            >>> bad_config = BaseComponentConfiguration()
+            >>> bad_config = {}
             >>> factory.can_create(bad_config)
             False
 

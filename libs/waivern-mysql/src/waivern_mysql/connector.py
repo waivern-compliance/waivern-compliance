@@ -10,7 +10,7 @@ This module provides:
 import logging
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Self, override
+from typing import Any, override
 
 import pymysql
 from waivern_connectors_database import (
@@ -82,30 +82,6 @@ class MySQLConnector(Connector):
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this connector."""
         return _SUPPORTED_OUTPUT_SCHEMAS
-
-    @classmethod
-    @override
-    def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create connector from properties (legacy method for Executor compatibility).
-
-        TODO: Remove this method in Phase 6 when Executor uses factories directly.
-
-        This is a backward-compatibility wrapper. New code should use:
-            config = MySQLConnectorConfig.from_properties(properties)
-            connector = MySQLConnector(config)
-
-        Args:
-            properties: Raw properties from runbook configuration
-
-        Returns:
-            Configured MySQLConnector instance
-
-        Raises:
-            ConnectorConfigError: If validation fails or required properties are missing
-
-        """
-        config = MySQLConnectorConfig.from_properties(properties)
-        return cls(config)
 
     @contextmanager
     def _get_connection(self) -> Generator[Any, None, None]:

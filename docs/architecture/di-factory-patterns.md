@@ -1,1296 +1,167 @@
-# DI Factory Patterns - Service and Component Factories
+# DI Factory Patterns
 
-**Status:** In Progress (Phase 3 - Service Configuration Architecture Implemented)
-**Created:** 2025-10-24
-**Updated:** 2025-10-27
+**Status:** Complete
+**Updated:** 2025-10-30
 **Related:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
 
-## Executive Summary
+## Overview
 
-This document outlines the plan to integrate infrastructure services and WCF components into the Dependency Injection (DI) system using **two distinct factory patterns**. This enables:
+WCF uses dependency injection with two factory patterns: one for infrastructure services, one for framework components.
 
-- **AI agent discovery:** Agents can query available analysers by capability/schema
-- **Plugin architecture:** Third-party components register seamlessly
-- **Remote services:** Health checking and SaaS analyser integration
-- **Unified DI pattern:** Consistent dependency injection across infrastructure and components
+## ServiceFactory[T] - Infrastructure Services
 
-## Two Factory Abstractions
-
-The DI system uses **two distinct factory abstractions** with different purposes:
-
-### ServiceFactory[T] - For Infrastructure Services
-
-**Protocol** (simple, lightweight interface) for creating infrastructure services.
+Lightweight protocol for creating singleton services (LLM providers, database pools, HTTP clients).
 
 ```python
-from waivern_core.services import ServiceFactory
-
 class ServiceFactory[T](Protocol):
-    """Protocol for factories that create infrastructure service instances."""
-
-    def create(self) -> T | None:
-        """Create a service instance, or None if unavailable."""
-        ...
-
-    def can_create(self) -> bool:
-        """Check if service is available and can be created."""
-        ...
+    def create(self) -> T | None: ...
+    def can_create(self) -> bool: ...
 ```
 
-**Used for:**
-- LLM services (Anthropic, OpenAI, Google)
-- Database connection pools (MySQL, PostgreSQL)
-- HTTP clients (shared API clients)
-- Cache services (Redis, Memcached)
-- Any infrastructure service
-
-**Key characteristics:**
-- Simple protocol (not ABC - lightweight)
-- No schema declarations (services don't have schemas)
-- No runbook integration (not visible in YAML)
-- Optional configuration support (constructor parameter, not create() parameter)
-- Singleton lifecycle managed by ServiceContainer
-
-**Configuration Pattern:**
-
-Services support two configuration modes:
-
-1. **Environment-only (zero-config):**
-   ```python
-   factory = LLMServiceFactory()  # Reads from environment variables
-   ```
-
-2. **Explicit config with env fallback:**
-   ```python
-   from waivern_llm.di import LLMServiceConfiguration
-
-   config = LLMServiceConfiguration(provider="anthropic", api_key="sk-...")
-   factory = LLMServiceFactory(config)  # Uses config, falls back to env
-   ```
-
-**Key distinction:** Configuration goes in **factory constructor**, NOT in `create()` method. The `create()` and `can_create()` methods take NO parameters.
+**Characteristics:**
+- Configuration in factory constructor (not `create()`)
+- No parameters in `create()` or `can_create()`
+- Singleton lifecycle via ServiceContainer
+- Not visible in runbooks
 
 **Example:**
 ```python
-from waivern_llm.di import LLMServiceFactory, LLMServiceConfiguration
-from waivern_core.services import ServiceContainer
-
-container = ServiceContainer()
-
-# Option 1: Zero-config (reads from environment)
+# Zero-config (reads environment)
 container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
 
-# Option 2: Explicit config (overrides environment)
-config = LLMServiceConfiguration.from_properties({
-    "provider": "anthropic",
-    "api_key": "sk-..."
-})
+# With explicit config
+config = LLMServiceConfiguration(provider="anthropic", api_key="...")
 container.register(BaseLLMService, LLMServiceFactory(config), lifetime="singleton")
-
-llm_service = container.get_service(BaseLLMService)  # Singleton instance
 ```
 
-#### BaseServiceConfiguration Pattern
+## ComponentFactory[T] - WCF Components
 
-All service configurations inherit from `BaseServiceConfiguration`, providing:
-- **Pydantic validation** for type safety
-- **Immutability** (frozen dataclass) for configuration integrity
-- **from_properties() factory method** for dictionary-based creation
-- **Environment variable support** with explicit config precedence
-
-**Example implementation:**
-```python
-from waivern_core.services import BaseServiceConfiguration
-from pydantic import Field, field_validator
-import os
-
-class LLMServiceConfiguration(BaseServiceConfiguration):
-    """Configuration for LLM service with environment fallback."""
-
-    provider: str = Field(description="LLM provider: anthropic, openai, google")
-    api_key: str = Field(description="API key for the provider")
-    model: str | None = Field(default=None, description="Model name (optional)")
-
-    @field_validator("provider")
-    @classmethod
-    def validate_provider(cls, v: str) -> str:
-        allowed = {"anthropic", "openai", "google"}
-        if v.lower() not in allowed:
-            raise ValueError(f"Provider must be one of {allowed}")
-        return v.lower()
-
-    @classmethod
-    def from_properties(cls, properties: dict) -> Self:
-        """Create configuration from properties with environment fallback."""
-        config_data = properties.copy()
-
-        # Environment fallback for provider
-        if "provider" not in config_data:
-            config_data["provider"] = os.getenv("LLM_PROVIDER", "anthropic")
-
-        # Environment fallback for API key (provider-specific)
-        if "api_key" not in config_data:
-            provider = config_data["provider"]
-            env_key_map = {
-                "anthropic": "ANTHROPIC_API_KEY",
-                "openai": "OPENAI_API_KEY",
-                "google": "GOOGLE_API_KEY"
-            }
-            config_data["api_key"] = os.getenv(env_key_map.get(provider, ""), "")
-
-        return cls.model_validate(config_data)
-```
-
-**Usage patterns:**
-```python
-# Pattern 1: Explicit configuration
-config = LLMServiceConfiguration(provider="anthropic", api_key="sk-...")
-
-# Pattern 2: From properties dict (runbook-style)
-config = LLMServiceConfiguration.from_properties({
-    "provider": "anthropic",
-    "api_key": "sk-..."
-})
-
-# Pattern 3: Environment fallback (zero-config)
-config = LLMServiceConfiguration.from_properties({})  # Reads env vars
-
-# Pattern 4: Mixed (properties override env)
-os.environ["LLM_PROVIDER"] = "openai"
-config = LLMServiceConfiguration.from_properties({
-    "provider": "anthropic"  # Overrides environment
-})
-```
-
-#### BaseComponentConfiguration Pattern
-
-All component configurations inherit from `BaseComponentConfiguration`, providing:
-- **Pydantic validation** for type safety
-- **Immutability** (frozen dataclass) for configuration integrity
-- **from_properties() factory method** for dictionary-based creation from runbook properties
-- **Strict validation** (no extra fields allowed)
-
-The `ComponentConfig` type alias points to `BaseComponentConfiguration`, allowing it to serve dual purposes:
-1. **Base class** for component-specific configs (e.g., `PersonalDataAnalyserConfig(BaseComponentConfiguration)`)
-2. **Type annotation** for factory method signatures (providing strong typing at the interface level)
-
-**Type alias definition:**
-```python
-from waivern_core.services.configuration import BaseComponentConfiguration
-
-type ComponentConfig = BaseComponentConfiguration
-```
-
-**Example component-specific configuration:**
-```python
-from waivern_core import BaseComponentConfiguration
-from pydantic import Field
-
-class PersonalDataAnalyserConfig(BaseComponentConfiguration):
-    """Configuration for PersonalDataAnalyser component."""
-
-    pattern_matching: dict = Field(description="Pattern matching settings")
-    llm_validation: dict | None = Field(default=None, description="LLM validation settings")
-
-    @classmethod
-    def from_properties(cls, properties: dict) -> Self:
-        """Create configuration from runbook properties with validation."""
-        # Add any preprocessing, defaults, or environment variable support here
-        return cls.model_validate(properties)
-```
-
-**Usage patterns:**
-```python
-# Pattern 1: Generic base configuration (simple components)
-config = BaseComponentConfiguration.from_properties({
-    "pattern_matching": {"ruleset": "personal_data"}
-})
-
-# Pattern 2: Component-specific configuration (complex components)
-config = PersonalDataAnalyserConfig.from_properties({
-    "pattern_matching": {"ruleset": "personal_data"},
-    "llm_validation": {"enable_llm_validation": True}
-})
-
-# Pattern 3: Factory receives either base or specific config (type-safe)
-analyser = factory.create(config)  # config: ComponentConfig (BaseComponentConfiguration)
-```
-
-**Key benefits:**
-- **Strong typing:** No raw dicts passed to factories
-- **Validation:** Pydantic catches configuration errors early
-- **Immutability:** Configurations cannot be modified after creation
-- **Flexibility:** Factories can accept base config or specific subclass
-- **Consistency:** Same pattern as BaseServiceConfiguration
-
-### ComponentFactory[T] - For WCF Components ONLY
-
-**Abstract Base Class** (rich interface) for creating WCF components (analysers and connectors).
+Abstract base class for creating analysers and connectors with rich metadata.
 
 ```python
-from waivern_core import ComponentFactory, ComponentConfig
-
 class ComponentFactory[T](ABC):
-    """Abstract factory for creating WCF component instances."""
-
-    @abstractmethod
-    def create(self, config: ComponentConfig) -> T:
-        """Create component with execution-specific configuration."""
-        ...
-
-    @abstractmethod
-    def get_component_name(self) -> str:
-        """Return unique name for runbook type field."""
-        ...
-
-    @abstractmethod
-    def get_input_schemas(self) -> list[Schema]:
-        """Return schemas this component can process."""
-        ...
-
-    @abstractmethod
-    def get_output_schemas(self) -> list[Schema]:
-        """Return schemas this component produces."""
-        ...
-
-    @abstractmethod
-    def can_create(self, config: ComponentConfig) -> bool:
-        """Validate config and check service availability."""
-        ...
-
-    def get_service_dependencies(self) -> dict[str, type]:
-        """Optional: Declare infrastructure service dependencies."""
-        return {}
+    def create(self, config: dict) -> T: ...
+    def can_create(self, config: dict) -> bool: ...
+    def get_component_name(self) -> str: ...
+    def get_input_schemas(self) -> list[Schema]: ...
+    def get_output_schemas(self) -> list[Schema]: ...
 ```
 
-**Used for:**
-- **Analysers** (PersonalDataAnalyser, ProcessingPurposeAnalyser, DataSubjectAnalyser)
-- **Connectors** (MySQLConnector, FilesystemConnector, SQLiteConnector, SourceCodeConnector)
-- **Nothing else** - strictly WCF components that appear in runbooks
-
-**Key characteristics:**
-- Rich ABC (enforces complete implementation)
-- Schema declarations (for component discovery and matching)
-- Runbook integration (component name maps to YAML `type:` field)
-- Configuration validation (validates before component creation)
-- Health checking (especially for remote/SaaS components)
-- Transient component lifecycle (new instance per execution)
+**Characteristics:**
+- Configuration passed to `create()` method (per-execution)
+- Schema declarations for component discovery
+- Component name maps to runbook `type:` field
+- Transient component instances
 
 **Example:**
 ```python
-from waivern_personal_data_analyser import PersonalDataAnalyserFactory
-from waivern_core import BaseComponentConfiguration
-
-# Factory holds infrastructure service (singleton)
-factory = PersonalDataAnalyserFactory(llm_service=llm_service)
-
-# Create component configuration from runbook properties
-config = BaseComponentConfiguration.from_properties({
-    "pattern_matching": {"ruleset": "personal_data"}
-})
-
-# Create component instance (transient)
-analyser = factory.create(config)
-```
-
-### Why Two Factory Abstractions?
-
-| Aspect | ServiceFactory[T] | ComponentFactory[T] |
-|--------|-------------------|---------------------|
-| **Purpose** | Infrastructure services | WCF components only |
-| **Type** | Protocol (lightweight) | ABC (rich interface) |
-| **Used for** | LLM, DB, HTTP, Cache | Analysers, Connectors |
-| **Schemas** | No schemas | Input/output schemas |
-| **Runbook visible** | No | Yes (`type:` field) |
-| **Configuration** | Optional, in **constructor** | Required, in **create()** parameter |
-| **Config timing** | Startup (factory creation) | Per-execution (component creation) |
-| **Config source** | Env vars OR explicit config | Runbook properties |
-| **Lifecycle** | Singleton | Transient instances |
-| **Create signature** | `create() -> T` (no params) | `create(config: ComponentConfig) -> T` (has params) |
-
-**Design rationale:**
-- Infrastructure services are simpler (no schemas, no runbook integration needed)
-- WCF components need richer metadata (schemas for matching, names for runbooks, config validation)
-- Different abstractions prevent confusion (LLM service is NOT a WCF "component")
-- Protocol vs ABC reflects complexity (services are simple, components are complex)
-
-## Rationale
-
-### Why Analysers & Connectors as DI Services?
-
-#### 1. WCT Orchestration Context
-
-WCT is a middleware/orchestrator that:
-- Doesn't need intimate knowledge of how components work internally
-- Communicates through schema contracts (Message objects)
-- Needs to swap components in/out dynamically
-- Should support third-party components
-
-Analysers and connectors behave like **services** from WCT's perspective:
-- Well-defined interfaces (input/output schemas)
-- Configurable via properties
-- May depend on infrastructure services (LLM, database pools)
-- Can be local or remote
-
-#### 2. AI Agent Integration
-
-Future AI agents will use analysers as **tools** to complete atomic tasks:
-- Agent queries: "Which analysers can produce personal data findings?"
-- Framework responds: PersonalDataAnalyser, ThirdPartyPDAnalyser, RemotePDAnalyser
-- Agent selects best option based on availability, cost, latency
-- Agent executes analyser with specific config
-
-**Requirements:**
-- Analysers must be discoverable (query by schema/capability)
-- Analysers must declare dependencies (LLM service required?)
-- Health checking (is remote service available?)
-
-#### 3. Remote/SaaS Analysers
-
-Some analysers will be **wrappers for external services**:
-- Analyser receives input data
-- Forwards to SaaS API (e.g., compliance-analysis-as-a-service)
-- Returns results in WCF schema format
-- Main task: Configuration management + data pass-through
-
-**Requirements:**
-- Health checking before execution (is service available?)
-- Graceful degradation (use fallback if primary unavailable)
-- Dynamic registration (service URL configured at runtime)
-
-#### 4. Plugin Architecture (Phase 5 Monorepo Plan)
-
-Future plugin system needs:
-- Auto-discovery of third-party components
-- Automatic dependency injection for plugins
-- Registration without modifying WCT core
-- Type-safe component interfaces
-
-**DI enables:**
-```python
-# Plugin package
-from waivern_core import ComponentFactory
-
-class MyCustomAnalyserFactory(ComponentFactory[MyCustomAnalyser]):
-    def __init__(self, llm_service: BaseLLMService):
-        self._llm = llm_service
-
-# WCT automatically discovers and registers
-executor.register_plugin_package("acme-custom-analyser")
-# Factory gets LLM service injected automatically
-```
-
-## Three-Tier Service Architecture
-
-The DI system manages three distinct tiers of services:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ Tier 1: Infrastructure Services (Singleton)             │
-│                                                          │
-│  - LLMService       (Anthropic/OpenAI/Google)          │
-│  - DatabasePool     (MySQL/PostgreSQL connection pools) │
-│  - CacheService     (Redis/Memcached)                   │
-│  - HTTPClient       (Shared HTTP client for APIs)       │
-│                                                          │
-│  Created once at WCT startup                            │
-│  Managed by ServiceContainer                            │
-│  Expensive to create, shared across all components      │
-└─────────────────────────────────────────────────────────┘
-                          ↓ injected into
-┌─────────────────────────────────────────────────────────┐
-│ Tier 2: Component Factories (Singleton)                 │
-│                                                          │
-│  - PersonalDataAnalyserFactory(llm_service)             │
-│  - MySQLConnectorFactory(db_pool)                       │
-│  - ProcessingPurposeAnalyserFactory(llm_service)        │
-│                                                          │
-│  Created once per executor initialisation               │
-│  Have infrastructure dependencies injected              │
-│  Registered in executor factory registries              │
-│  Implement ComponentFactory[T] interface                │
-└─────────────────────────────────────────────────────────┘
-                          ↓ create
-┌─────────────────────────────────────────────────────────┐
-│ Tier 3: Component Instances (Transient)                 │
-│                                                          │
-│  - PersonalDataAnalyser(config, llm_service)            │
-│  - MySQLConnector(config, db_pool)                      │
-│                                                          │
-│  Created per execution step (new instance each time)    │
-│  Configured with execution-specific config from runbook │
-│  Disposed after execution completes                     │
-│  Safe for stateful processing                           │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Key Benefits
-
-**Infrastructure Services:**
-- Singleton lifecycle eliminates expensive recreation
-- Shared across all components (connection pooling, LLM API clients)
-- Managed by DI container (lazy creation, graceful degradation)
-
-**Component Factories:**
-- Single source of truth for component metadata (schemas, capabilities)
-- Pre-wired with infrastructure dependencies
-- Cached and reused (lightweight objects)
-- Enable health checking and discovery
-
-**Component Instances:**
-- Transient lifecycle matches current behavior
-- Execution-specific configuration per step
-- No cross-execution state pollution
-- Easy to test (new instance per test)
-
-## ComponentFactory Abstraction
-
-### Core Interface
-
-```python
-# waivern-core/src/waivern_core/component_factory.py
-
-from abc import ABC, abstractmethod
-from waivern_core.schemas import Schema
-from waivern_core.services.configuration import BaseComponentConfiguration
-
-type ComponentConfig = BaseComponentConfiguration
-
-class ComponentFactory[T](ABC):
-    """Factory for creating framework components (analysers, connectors).
-
-    Factories are registered in the executor and have infrastructure
-    services injected via constructor. They create component instances
-    with execution-specific configuration from runbooks.
-
-    Type parameter T is the component type this factory creates
-    (e.g., PersonalDataAnalyser, MySQLConnector).
-    """
-
-    @abstractmethod
-    def create(self, config: ComponentConfig) -> T:
-        """Create component instance with given configuration.
-
-        This method is called by the executor for each execution step.
-        The config parameter comes from the runbook's analyser/connector
-        properties and varies per execution.
-
-        Args:
-            config: Execution-specific configuration from runbook (BaseComponentConfiguration)
-
-        Returns:
-            Configured component instance ready to process data
-
-        Example:
-            ```python
-            config = BaseComponentConfiguration.from_properties({
-                "llm_validation": True,
-                "evidence_context_size": "medium"
-            })
-            analyser = factory.create(config)
-            ```
-        """
-
-    @abstractmethod
-    def get_component_name(self) -> str:
-        """Get the component type name used in runbooks.
-
-        This name is used in runbook YAML to identify the component:
-
-        ```yaml
-        analysers:
-          - name: "pd_analyser"
-            type: "personal_data"  # <-- This value
-        ```
-
-        Returns:
-            Component type identifier (e.g., "personal_data", "mysql")
-        """
-
-    @abstractmethod
-    def get_input_schemas(self) -> list[Schema]:
-        """Get schemas this component can accept as input.
-
-        Used for:
-        - Runbook validation (does connector output match analyser input?)
-        - AI agent discovery (which analysers accept this schema?)
-        - Type checking in executor
-
-        Returns:
-            List of supported input schemas
-        """
-
-    @abstractmethod
-    def get_output_schemas(self) -> list[Schema]:
-        """Get schemas this component produces as output.
-
-        Used for:
-        - Runbook validation
-        - AI agent discovery (which analysers produce this schema?)
-        - Chaining analysers (output of A → input of B)
-
-        Returns:
-            List of supported output schemas
-        """
-
-    @abstractmethod
-    def can_create(self, config: ComponentConfig) -> bool:
-        """Check if factory can create component with given config.
-
-        This method enables:
-        - **Health checking:** For remote services, ping endpoint
-        - **Config validation:** Ensure required properties present
-        - **Dependency checking:** Verify required services available
-        - **Graceful degradation:** Fail fast with clear error
-
-        Called by executor before attempting to create component instance.
-
-        Args:
-            config: Configuration that would be passed to create()
-
-        Returns:
-            True if factory can create component, False otherwise
-
-        Example (remote service):
-            ```python
-            def can_create(self, config: ComponentConfig) -> bool:
-                config_dict = config.model_dump()
-                endpoint = config_dict.get("endpoint")
-                try:
-                    response = self._http.get(f"{endpoint}/health")
-                    return response.status_code == 200
-                except:
-                    return False
-            ```
-
-        Example (local service):
-            ```python
-            def can_create(self, config: ComponentConfig) -> bool:
-                config_dict = config.model_dump()
-                if config_dict.get("llm_validation") and not self._llm_service:
-                    return False  # LLM required but unavailable
-                return True
-            ```
-        """
-
-    @classmethod
-    def get_service_dependencies(cls) -> dict[str, type]:
-        """Declare infrastructure service dependencies (optional).
-
-        This class method documents what services the factory needs.
-        Used for:
-        - **Documentation:** Generate dependency graphs
-        - **Validation:** Warn if services unavailable
-        - **Auto-injection:** Plugin loader knows what to inject
-
-        Returns:
-            Mapping of parameter name → service type
-
-        Example:
-            ```python
-            @classmethod
-            def get_service_dependencies(cls) -> dict[str, type]:
-                return {
-                    "llm_service": BaseLLMService,
-                    "db_pool": DatabasePool,
-                }
-            ```
-
-        Default implementation returns empty dict (no dependencies).
-        """
-        return {}
-```
-
-## Implementation Examples
-
-### Example 1: Local Analyser Factory
-
-```python
-# waivern-personal-data-analyser/src/.../factory.py
-
-from waivern_core import ComponentFactory, Schema
-from waivern_llm.services import BaseLLMService
-from .analyser import PersonalDataAnalyser, PersonalDataAnalyserConfig
-from .schemas import PersonalDataFindingSchema
-from waivern_core.schemas import StandardInputSchema
-
 class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
-    """Factory for creating PersonalDataAnalyser instances.
-
-    This factory has LLM service injected and creates analysers
-    configured for specific execution contexts.
-    """
-
-    def __init__(
-        self,
-        llm_service: BaseLLMService | None = None,
-        default_config: dict | None = None
-    ):
-        """Initialise factory with infrastructure dependencies.
-
-        Args:
-            llm_service: Optional LLM service (injected by DI container)
-            default_config: Factory-level defaults (timeouts, retries, etc.)
-        """
+    def __init__(self, llm_service: BaseLLMService | None = None):
         self._llm_service = llm_service
-        self._default_config = default_config or {}
 
-    def create(self, config: ComponentConfig) -> PersonalDataAnalyser:
-        """Create analyser with execution-specific config."""
-        # Convert to dict and merge with factory defaults
-        config_dict = config.model_dump()
-        merged_config = {**self._default_config, **config_dict}
-
-        # Parse into typed config object
-        config_obj = PersonalDataAnalyserConfig.from_properties(merged_config)
-
-        # Create analyser with injected LLM service
-        return PersonalDataAnalyser(
-            config=config_obj,
-            llm_service=self._llm_service
-        )
+    def create(self, config: dict) -> PersonalDataAnalyser:
+        config_obj = PersonalDataAnalyserConfig.from_properties(config)
+        return PersonalDataAnalyser(config_obj, self._llm_service)
 
     def get_component_name(self) -> str:
         return "personal_data"
-
-    def get_input_schemas(self) -> list[Schema]:
-        return [StandardInputSchema()]
-
-    def get_output_schemas(self) -> list[Schema]:
-        return [PersonalDataFindingSchema()]
-
-    def can_create(self, config: ComponentConfig) -> bool:
-        """Validate config and check dependencies."""
-        config_dict = config.model_dump()
-
-        # Check if LLM validation requested but service unavailable
-        if config_dict.get("llm_validation", {}).get("enable_llm_validation"):
-            if not self._llm_service:
-                return False
-
-        # Validate config structure
-        try:
-            PersonalDataAnalyserConfig.from_properties(config_dict)
-            return True
-        except Exception:
-            return False
-
-    @classmethod
-    def get_service_dependencies(cls) -> dict[str, type]:
-        return {"llm_service": BaseLLMService}
 ```
 
-### Example 2: Remote SaaS Analyser Factory
+## Why Two Patterns?
 
-```python
-# third-party-package/remote_pd_analyser.py
+| Aspect | ServiceFactory | ComponentFactory |
+|--------|----------------|------------------|
+| **Purpose** | Infrastructure | WCF components |
+| **Type** | Protocol | ABC |
+| **Config timing** | Factory creation | Component creation |
+| **Lifecycle** | Singleton | Transient |
+| **Runbook visible** | No | Yes |
+| **Schemas** | None | Input/output |
 
-from waivern_core import ComponentFactory, Schema
-from waivern_core.http import HTTPClient  # Hypothetical
+## Three-Tier Architecture
 
-class RemotePDAnalyserFactory(ComponentFactory[RemotePDAnalyser]):
-    """Factory for remote SaaS personal data analyser.
-
-    This analyser is a wrapper for an external compliance analysis service.
-    The factory handles health checking and service availability.
-    """
-
-    def __init__(self, http_client: HTTPClient):
-        """Initialise with HTTP client for API communication.
-
-        Args:
-            http_client: Shared HTTP client (injected by DI)
-        """
-        self._http = http_client
-
-    def create(self, config: ComponentConfig) -> RemotePDAnalyser:
-        """Create remote analyser wrapper."""
-        config_dict = config.model_dump()
-        return RemotePDAnalyser(
-            api_key=config_dict["api_key"],
-            endpoint=config_dict["endpoint"],
-            timeout=config_dict.get("timeout", 30),
-            http_client=self._http
-        )
-
-    def get_component_name(self) -> str:
-        return "remote_personal_data"
-
-    def get_input_schemas(self) -> list[Schema]:
-        return [StandardInputSchema()]
-
-    def get_output_schemas(self) -> list[Schema]:
-        return [PersonalDataFindingSchema()]
-
-    def can_create(self, config: ComponentConfig) -> bool:
-        """Health check remote service before creating wrapper."""
-        config_dict = config.model_dump()
-        endpoint = config_dict.get("endpoint")
-        if not endpoint:
-            return False
-
-        try:
-            # Ping health endpoint
-            response = self._http.get(
-                f"{endpoint}/health",
-                timeout=5
-            )
-            return response.status_code == 200
-        except Exception:
-            return False  # Service unavailable
-
-    @classmethod
-    def get_service_dependencies(cls) -> dict[str, type]:
-        return {"http_client": HTTPClient}
+```
+Infrastructure Services (Singleton)
+  ↓ injected into
+Component Factories (Singleton)
+  ↓ create
+Component Instances (Transient)
 ```
 
-### Example 3: MySQL Connector Factory
+**Tier 1: Infrastructure Services**
+- Created once at startup
+- Managed by ServiceContainer
+- Examples: LLMService, DatabasePool
+
+**Tier 2: Component Factories**
+- Created once per executor
+- Hold infrastructure dependencies
+- Registered in executor registries
+
+**Tier 3: Component Instances**
+- Created per execution step
+- Configured from runbook properties
+- Disposed after execution
+
+## Executor Integration
 
 ```python
-# waivern-mysql/src/waivern_mysql/factory.py
-
-from waivern_core import ComponentFactory, Schema
-from waivern_core.database import DatabasePool  # Hypothetical
-from .connector import MySQLConnector, MySQLConfig
-from .schemas import MySQLDataSchema
-
-class MySQLConnectorFactory(ComponentFactory[MySQLConnector]):
-    """Factory for creating MySQLConnector instances."""
-
-    def __init__(self, db_pool: DatabasePool | None = None):
-        """Initialise with optional database connection pool.
-
-        Args:
-            db_pool: Shared database connection pool (injected by DI)
-                    If None, connector creates its own connections
-        """
-        self._db_pool = db_pool
-
-    def create(self, config: ComponentConfig) -> MySQLConnector:
-        """Create MySQL connector with execution-specific config."""
-        config_dict = config.model_dump()
-        config_obj = MySQLConfig.from_properties(config_dict)
-
-        return MySQLConnector(
-            config=config_obj,
-            db_pool=self._db_pool
-        )
-
-    def get_component_name(self) -> str:
-        return "mysql"
-
-    def get_input_schemas(self) -> list[Schema]:
-        return []  # Connectors typically don't have input schemas
-
-    def get_output_schemas(self) -> list[Schema]:
-        return [MySQLDataSchema(), StandardInputSchema()]
-
-    def can_create(self, config: ComponentConfig) -> bool:
-        """Validate MySQL config and test connection."""
-        try:
-            config_dict = config.model_dump()
-            config_obj = MySQLConfig.from_properties(config_dict)
-            # Could test connection here
-            return True
-        except Exception:
-            return False
-
-    @classmethod
-    def get_service_dependencies(cls) -> dict[str, type]:
-        return {"db_pool": DatabasePool}
-```
-
-## WCT Executor Integration
-
-### Updated Executor Class
-
-```python
-# apps/wct/src/wct/executor.py
-
-from waivern_core import Analyser, Connector, ComponentFactory
-from waivern_core.services import ServiceContainer
-from waivern_llm.services import BaseLLMService
-from waivern_llm.di import LLMServiceFactory
-
-from waivern_community.analysers import BUILTIN_ANALYSER_FACTORIES
-from waivern_community.connectors import BUILTIN_CONNECTOR_FACTORIES
-
 class Executor:
-    """WCT executor with DI-managed component factories."""
-
     def __init__(self, container: ServiceContainer):
-        """Initialise executor with DI container.
-
-        Args:
-            container: Service container managing infrastructure services
-        """
         self._container = container
         self.analyser_factories: dict[str, ComponentFactory[Analyser]] = {}
         self.connector_factories: dict[str, ComponentFactory[Connector]] = {}
 
     @classmethod
     def create_with_built_ins(cls) -> "Executor":
-        """Create executor with built-in components and infrastructure.
-
-        This method:
-        1. Creates DI container
-        2. Registers infrastructure services (LLM, DB pools, etc.)
-        3. Creates executor with container
-        4. Registers component factories with injected dependencies
-
-        Returns:
-            Configured executor ready to execute runbooks
-        """
-        # Create DI container
+        # Create container and register services
         container = ServiceContainer()
+        container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
 
-        # Register infrastructure services (singleton)
-        container.register(
-            BaseLLMService,
-            LLMServiceFactory(),
-            lifetime="singleton"
-        )
-
-        # Could register database pools, cache services, etc.
-        # container.register(DatabasePool, DatabasePoolFactory(), ...)
-
-        # Create executor
         executor = cls(container)
-
-        # Get infrastructure services from container
         llm_service = container.get_service(BaseLLMService)
-        # db_pool = container.get_service(DatabasePool)
 
-        # Register analyser factories with dependencies injected
+        # Register component factories with dependencies
         for factory_class in BUILTIN_ANALYSER_FACTORIES:
             factory = factory_class(llm_service=llm_service)
             executor.register_analyser_factory(factory)
-            logger.debug("Registered analyser factory: %s", factory.get_component_name())
-
-        # Register connector factories
-        for factory_class in BUILTIN_CONNECTOR_FACTORIES:
-            factory = factory_class()  # Connectors may have different deps
-            executor.register_connector_factory(factory)
-            logger.debug("Registered connector factory: %s", factory.get_component_name())
-
-        logger.info(
-            "Executor initialised with %d analyser factories and %d connector factories",
-            len(executor.analyser_factories),
-            len(executor.connector_factories)
-        )
 
         return executor
-
-    def register_analyser_factory(self, factory: ComponentFactory[Analyser]) -> None:
-        """Register an analyser factory.
-
-        Args:
-            factory: Factory instance (already has dependencies injected)
-        """
-        self.analyser_factories[factory.get_component_name()] = factory
-
-    def register_connector_factory(self, factory: ComponentFactory[Connector]) -> None:
-        """Register a connector factory.
-
-        Args:
-            factory: Factory instance (already has dependencies injected)
-        """
-        self.connector_factories[factory.get_component_name()] = factory
-
-    def list_available_analysers(self) -> dict[str, ComponentFactory[Analyser]]:
-        """Get all registered analyser factories."""
-        return self.analyser_factories.copy()
-
-    def list_available_connectors(self) -> dict[str, ComponentFactory[Connector]]:
-        """Get all registered connector factories."""
-        return self.connector_factories.copy()
-
-    def _instantiate_components(
-        self,
-        analyser_type: str,
-        connector_type: str,
-        analyser_config: AnalyserConfig,
-        connector_config: ConnectorConfig,
-    ) -> tuple[Analyser, Connector]:
-        """Instantiate analyser and connector via factories.
-
-        This replaces the old approach of calling `from_properties()` directly.
-        Now we:
-        1. Get factory from registry
-        2. Check health/availability with can_create()
-        3. Create instance with factory.create()
-
-        Args:
-            analyser_type: Analyser type name from runbook
-            connector_type: Connector type name from runbook
-            analyser_config: Analyser configuration from runbook
-            connector_config: Connector configuration from runbook
-
-        Returns:
-            Tuple of (analyser instance, connector instance)
-
-        Raises:
-            ExecutorError: If factory not found or cannot create component
-        """
-        # Get factories from registries
-        analyser_factory = self.analyser_factories.get(analyser_type)
-        if not analyser_factory:
-            raise ExecutorError(f"Unknown analyser type: {analyser_type}")
-
-        connector_factory = self.connector_factories.get(connector_type)
-        if not connector_factory:
-            raise ExecutorError(f"Unknown connector type: {connector_type}")
-
-        # Check availability (health check for remote services)
-        if not analyser_factory.can_create(analyser_config.properties):
-            raise ExecutorError(
-                f"Analyser '{analyser_type}' cannot be created with given config. "
-                "Possible reasons: missing dependencies, invalid config, remote service unavailable"
-            )
-
-        if not connector_factory.can_create(connector_config.properties):
-            raise ExecutorError(
-                f"Connector '{connector_type}' cannot be created with given config"
-            )
-
-        # Create instances (transient lifecycle)
-        analyser = analyser_factory.create(analyser_config.properties)
-        connector = connector_factory.create(connector_config.properties)
-
-        return analyser, connector
 ```
 
-### Updated Component Constructor Pattern
+## Configuration Flow
 
-**Old pattern (removed):**
+1. User writes runbook with component properties (YAML dict)
+2. Executor reads runbook configuration
+3. Executor calls `factory.create(properties_dict)`
+4. Factory converts dict to typed Config class
+5. Factory creates component with validated config
+
+## Component Pattern
+
+Components receive dependencies via constructor:
+
 ```python
 class PersonalDataAnalyser:
-    @classmethod
-    def from_properties(cls, properties: dict) -> Self:
-        """Old instantiation method - REMOVED."""
-        config = PersonalDataAnalyserConfig.from_dict(properties)
-        # Had to create LLM service internally
-        llm_service = LLMServiceManager().llm_service
-        return cls(config, llm_service)
-```
-
-**New pattern (DI-enabled):**
-```python
-class PersonalDataAnalyser:
-    """Analyser with explicit service dependencies."""
-
     def __init__(
         self,
         config: PersonalDataAnalyserConfig,
         llm_service: BaseLLMService | None = None
     ):
-        """Initialise analyser with config and injected services.
-
-        Args:
-            config: Typed configuration object
-            llm_service: LLM service (injected by factory)
-        """
         self._config = config
         self._llm_service = llm_service
-
-    # process() method unchanged
-    def process(self, input_schema, output_schema, message):
-        # Use self._llm_service if needed
-        ...
 ```
 
-## AI Agent Discovery
-
-With the factory pattern, AI agents can discover and query analysers:
+Factories handle instantiation:
 
 ```python
-# Agent: Find all analysers that can produce personal data findings
-
-def find_analysers_by_output_schema(
-    executor: Executor,
-    schema_name: str
-) -> list[ComponentFactory[Analyser]]:
-    """Find analysers that produce given output schema."""
-    matching = []
-    for factory in executor.list_available_analysers().values():
-        if any(s.name == schema_name for s in factory.get_output_schemas()):
-            matching.append(factory)
-    return matching
-
-# Usage
-pd_analysers = find_analysers_by_output_schema(executor, "personal_data_finding")
-# Returns: [PersonalDataAnalyserFactory, ThirdPartyPDAnalyserFactory, ...]
-
-# Agent selects best based on availability
-available = [f for f in pd_analysers if f.can_create(config)]
-selected = available[0]  # Or use cost/latency heuristics
-
-# Agent executes
-analyser = selected.create(config)
-result = analyser.process(input_schema, output_schema, message)
+# In factory.create()
+config_obj = PersonalDataAnalyserConfig.from_properties(properties)
+return PersonalDataAnalyser(config_obj, self._llm_service)
 ```
-
-## Plugin Architecture (Phase 5 Monorepo)
-
-Third-party plugins register factories:
-
-```python
-# third-party-package/__init__.py
-
-from waivern_core import ComponentFactory, Analyser
-
-class AcmeComplianceAnalyserFactory(ComponentFactory[AcmeComplianceAnalyser]):
-    """Third-party factory following same pattern."""
-
-    def __init__(self, llm_service, http_client):
-        self._llm = llm_service
-        self._http = http_client
-
-    # Implement all abstract methods...
-
-# Plugin registration (auto-discovery in Phase 5)
-def register_plugin(executor: Executor, container: ServiceContainer):
-    """Called by WCT plugin loader."""
-    llm = container.get_service(BaseLLMService)
-    http = container.get_service(HTTPClient)
-
-    factory = AcmeComplianceAnalyserFactory(
-        llm_service=llm,
-        http_client=http
-    )
-
-    executor.register_analyser_factory(factory)
-```
-
-**Auto-injection pattern (future):**
-```python
-# Executor inspects constructor signature, injects automatically
-def register_analyser_factory_class(
-    executor: Executor,
-    factory_class: type[ComponentFactory[Analyser]]
-):
-    """Register factory class - executor handles dependency injection."""
-    # Inspect constructor to find required services
-    deps = factory_class.get_service_dependencies()
-
-    # Resolve dependencies from container
-    kwargs = {}
-    for param_name, service_type in deps.items():
-        kwargs[param_name] = executor._container.get_service(service_type)
-
-    # Create factory with auto-injected dependencies
-    factory = factory_class(**kwargs)
-    executor.register_analyser_factory(factory)
-```
-
-## Implementation Phases
-
-### Phase 0: Update Documentation
-
-**Goal:** Document decision and design before implementation
-
-**Tasks:**
-- Update ADR-0002 with component factory section
-- Create this reference document
-- Update implementation plan with new phases
-
-**Deliverable:** Complete documentation approved
-
-### Phase 1: Core DI Infrastructure
-
-**Goal:** Generic DI container in waivern-core
-
-**Tasks:**
-- Create `services/protocols.py` with ServiceFactory, ServiceProvider
-- Create `services/container.py` with ServiceContainer
-- Create `services/lifecycle.py` with ServiceDescriptor
-- Write comprehensive unit tests (20+ tests)
-
-**Deliverable:** Generic DI container working for any service type
-
-### Phase 2: Component Factory Abstraction
-
-**Goal:** Add ComponentFactory to waivern-core
-
-**Tasks:**
-- Create `component_factory.py` with ComponentFactory ABC
-- Implement all abstract methods with comprehensive docstrings
-- Add to waivern-core public API exports
-- Write unit tests for ABC structure
-
-**Files:**
-- `waivern-core/src/waivern_core/component_factory.py`
-- `waivern-core/tests/test_component_factory.py`
-
-**Deliverable:** ComponentFactory available framework-wide
-
-### Phase 3: LLM Service Integration
-
-**Goal:** LLM as DI-managed service in waivern-llm/di/
-
-**Tasks:**
-- Create `di/factory.py` with LLMServiceFactory(ServiceFactory[BaseLLMService])
-- Create `di/provider.py` with LLMServiceProvider
-- Create `di/configuration.py` with config types
-- Write integration tests
-
-**Deliverable:** LLM services managed via DI
-
-### Phase 4: Analyser Factory Implementation
-
-**Goal:** All analysers have DI-enabled factories
-
-**4.1 PersonalDataAnalyser:**
-- Create PersonalDataAnalyserFactory in package
-- Update PersonalDataAnalyser.__init__() with explicit service injection
-- Remove `from_properties()` classmethod
-- Update all tests to use factory pattern
-
-**4.2 ProcessingPurposeAnalyser:**
-- Same steps as PersonalDataAnalyser
-
-**4.3 DataSubjectAnalyser:**
-- Same steps as PersonalDataAnalyser
-
-**4.4 Export factories:**
-```python
-# waivern-community/analysers/__init__.py
-BUILTIN_ANALYSER_FACTORIES = [
-    PersonalDataAnalyserFactory,
-    ProcessingPurposeAnalyserFactory,
-    DataSubjectAnalyserFactory,
-]
-```
-
-**Deliverable:** All 3 analysers DI-enabled with factories
-
-### Phase 5: Connector Factory Implementation
-
-**Goal:** All connectors have DI-enabled factories
-
-**Tasks:**
-- Create FilesystemConnectorFactory
-- Create SourceCodeConnectorFactory
-- Create MySQLConnectorFactory (in waivern-mysql package)
-- Create SQLiteConnectorFactory
-- Update connector constructors
-- Export BUILTIN_CONNECTOR_FACTORIES
-
-**Deliverable:** All connectors DI-enabled with factories
-
-### Phase 6: Executor Integration
-
-**Goal:** Executor uses DI container and factories
-
-**Critical tasks:**
-- Update Executor.__init__() to accept ServiceContainer
-- Update create_with_built_ins() to setup DI + register factories
-- Update _instantiate_components() to use factories
-- Add health checking via can_create()
-- Remove all direct from_properties() calls
-- Update all executor tests
-
-**Deliverable:** Executor fully DI-integrated
-
-### Phase 7: Testing & Documentation
-
-**Goal:** Comprehensive tests and updated docs
-
-**Tasks:**
-- Unit tests for all factories (60+ new tests)
-- Integration tests for full flow
-- Update CLAUDE.md with factory pattern
-- Update package READMEs
-- Create architecture diagrams
-
-**Deliverable:** Complete test coverage and documentation
-
-### Phase 8: Cleanup & Finalization
-
-**Goal:** Remove deprecated code, final verification
-
-**Tasks:**
-- Remove from_properties() from Analyser/Connector base classes
-- Remove old BUILTIN_ANALYSERS/BUILTIN_CONNECTORS lists
-- Run all quality checks
-- Verify all sample runbooks work
-- Document breaking changes
-
-**Deliverable:** Production-ready DI system
-
-## Success Criteria
-
-✅ **Infrastructure services managed by DI container** (LLM, DB pools)
-✅ **Component factories registered in executor** (analysers + connectors)
-✅ **Factories have dependencies injected** (constructor injection)
-✅ **Executor creates instances via factories** (transient lifecycle)
-✅ **Health checking works** (can_create() validates availability)
-✅ **AI agents can discover components** (query by schema/capability)
-✅ **Plugin architecture ready** (third-party factories register seamlessly)
-✅ **All tests passing** (752+ existing + 60+ new factory tests)
-✅ **Sample runbooks working** (LAMP stack, file analysis, etc.)
-✅ **Type checking passes** (strict mode, full type safety)
-✅ **Documentation complete** (ADR, guides, API docs)
-
-## Breaking Changes
-
-### Removed
-
-1. **`Analyser.from_properties()` classmethod**
-   - Old: `analyser = AnalyserClass.from_properties(config)`
-   - New: `analyser = factory.create(config)`
-
-2. **`Connector.from_properties()` classmethod**
-   - Old: `connector = ConnectorClass.from_properties(config)`
-   - New: `connector = factory.create(config)`
-
-3. **`BUILTIN_ANALYSERS` list** (replaced with `BUILTIN_ANALYSER_FACTORIES`)
-
-4. **`BUILTIN_CONNECTORS` list** (replaced with `BUILTIN_CONNECTOR_FACTORIES`)
-
-5. **Direct component instantiation in executor**
-
-### Migration Path
-
-**Before (old code):**
-```python
-from waivern_community.analysers import BUILTIN_ANALYSERS
-
-for analyser_class in BUILTIN_ANALYSERS:
-    executor.register_available_analyser(analyser_class)
-
-# Later
-analyser = analyser_class.from_properties(config)
-```
-
-**After (new code):**
-```python
-from waivern_community.analysers import BUILTIN_ANALYSER_FACTORIES
-
-llm_service = container.get_service(BaseLLMService)
-for factory_class in BUILTIN_ANALYSER_FACTORIES:
-    factory = factory_class(llm_service=llm_service)
-    executor.register_analyser_factory(factory)
-
-# Later
-analyser = factory.create(config)
-```
-
-## Design Decisions Summary
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **Registration** | Hybrid (factories are singleton, create transient instances) | Matches current transient behavior, factories cached |
-| **Lifecycle** | Transient instances per execution step | Safe for stateful analysers, matches current behavior |
-| **Pattern scope** | Unified (analysers AND connectors) | Consistency, both have same needs (deps, plugins, remote) |
-| **Dependency injection** | Constructor injection with explicit types | Type-safe, clear, testable, IDE-friendly |
-| **Container access** | Limited (specific services injected, not full container) | Clear interfaces, explicit dependencies |
-| **Backwards compatibility** | None (clean break, pre-1.0) | Simpler migration, no technical debt |
-| **Factory abstraction** | ABC (Abstract Base Class) | Provides base implementations, clear inheritance |
-| **Dependency declaration** | Optional class method get_service_dependencies() | Documentation, validation, auto-injection for plugins |
 
 ## References
 
 - [ADR-0002: Dependency Injection for Service Management](../adr/0002-dependency-injection-for-service-management.md)
 - [DI Implementation Plan](./dependency-injection-implementation-plan.md)
-- [Monorepo Migration Plan - Phase 5](./monorepo-migration-plan.md#phase-5-dynamic-plugin-loading)
+- [Dependency Injection Core Concepts](../core-concepts/dependency-injection.md)

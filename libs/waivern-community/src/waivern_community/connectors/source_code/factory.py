@@ -18,17 +18,42 @@ class SourceCodeConnectorFactory(ComponentFactory[SourceCodeConnector]):
 
     @override
     def create(self, config: ComponentConfig) -> SourceCodeConnector:
-        """Create a SourceCodeConnector instance from configuration."""
-        if not isinstance(config, SourceCodeConnectorConfig):
-            msg = f"Expected SourceCodeConnectorConfig, got {type(config).__name__}"
-            raise TypeError(msg)
+        """Create a SourceCodeConnector instance from configuration.
 
-        return SourceCodeConnector(config)
+        Args:
+            config: Configuration dict from runbook properties
+
+        Returns:
+            Configured SourceCodeConnector instance
+
+        Raises:
+            ValueError: If configuration is invalid
+
+        """
+        # Parse and validate configuration
+        connector_config = SourceCodeConnectorConfig.from_properties(config)
+
+        return SourceCodeConnector(connector_config)
 
     @override
     def can_create(self, config: ComponentConfig) -> bool:
-        """Check if this factory can create a connector with the given config."""
-        return isinstance(config, SourceCodeConnectorConfig)
+        """Check if this factory can create a connector with the given config.
+
+        Args:
+            config: Configuration dict to validate
+
+        Returns:
+            True if factory can create connector, False otherwise
+
+        """
+        # Try to parse and validate configuration
+        try:
+            SourceCodeConnectorConfig.from_properties(config)
+        except Exception:
+            # Config validation failed
+            return False
+
+        return True
 
     @override
     def get_component_name(self) -> str:

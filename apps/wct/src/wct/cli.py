@@ -11,6 +11,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
+from waivern_core.component_factory import ComponentFactory
 
 from wct.analysis import AnalysisResult, AnalysisResultsExporter
 from wct.executor import Executor
@@ -144,13 +145,13 @@ class OutputFormatter:
                     console.print(tree)
                     logger.debug("Analysis %s succeeded.", result.analysis_name)
 
-    def format_component_list(
-        self, components: dict[str, type], component_type: str
+    def format_component_list[T](
+        self, components: dict[str, ComponentFactory[T]], component_type: str
     ) -> None:
         """Format and print component list.
 
         Args:
-            components: Dictionary of component names to classes
+            components: Dictionary of component names to factories
             component_type: Type name for display (e.g., "connectors", "analysers")
 
         """
@@ -163,20 +164,23 @@ class OutputFormatter:
             )
             table.add_column("Name", style="cyan", no_wrap=True)
             table.add_column("Description", style="white")
-            table.add_column("Class", style="dim")
+            table.add_column("Factory", style="dim")
 
-            for name, component_class in components.items():
-                doc = component_class.__doc__ or "No description available"
+            for name, factory in components.items():
+                # Get factory docstring for description
+                doc = factory.__class__.__doc__ or "No description available"
                 # Take first line of docstring
                 description = doc.split("\n")[0].strip()
-                class_name = f"{component_class.__module__}.{component_class.__name__}"
+                factory_name = (
+                    f"{factory.__class__.__module__}.{factory.__class__.__name__}"
+                )
 
-                table.add_row(name, description, class_name)
+                table.add_row(name, description, factory_name)
                 logger.debug(
                     "%s %s: %s",
                     component_type.rstrip("s").title(),
                     name,
-                    component_class,
+                    factory.__class__.__name__,
                 )
 
             console.print(table)

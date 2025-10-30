@@ -19,9 +19,9 @@ The Waivern Compliance Framework provides:
 - **Runbooks** - YAML configurations defining analysis pipelines
 - **Executor** - Orchestrates runbook execution with automatic schema matching
 
-📋 **[Development Roadmap](docs/development_roadmap.md)** - Current progress and planned features
+📋 **[Development Roadmap](https://github.com/orgs/waivern-compliance/projects/3)** - Current progress and planned features
 
-🚀 **[Contribution Opportunities](docs/development_roadmap.md#contribution-opportunities)** - Browse [good first issues](https://github.com/waivern-compliance/waivern-compliance/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+🚀 Browse [good first issues](https://github.com/waivern-compliance/waivern-compliance/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
 ## Quick Start
 
@@ -160,14 +160,14 @@ Runbook (YAML) → Executor → Connector → Schema Validation → Analyser →
 - Runtime validation through Message objects
 - Type-safe interfaces throughout
 
-**See:** [WCF Core Concepts](docs/wcf_core_concepts.md) for detailed framework documentation.
+**See:** [WCF Core Concepts](docs/core-concepts/wcf-core-componens.md) for detailed framework documentation.
 
 ## Development
 
 ### Testing
 
 ```bash
-uv run pytest                       # Run all tests (738 tests)
+uv run pytest                       # Run all tests
 uv run pytest -v                    # Verbose output
 uv run pytest -m integration        # Integration tests (requires API keys)
 ```
@@ -194,15 +194,25 @@ uv run pre-commit run --all-files # Run manually
 
 ### Creating Components
 
+Components use the ComponentFactory pattern with dependency injection:
+
 #### Connector Example
 
 ```python
-from typing import Any
-from typing_extensions import Self, override
-from waivern_core import Connector, Message
-from waivern_core.schemas.base import WctSchema
+from typing import override
+from pydantic import BaseModel
+from waivern_core import Connector, Message, Schema, ComponentFactory
+from waivern_core.schemas import StandardInputSchema
 
-class MyConnector(Connector[dict[str, Any]]):
+class MyConnectorConfig(BaseModel):
+    """Configuration for MyConnector."""
+    path: str
+    encoding: str = "utf-8"
+
+class MyConnector(Connector):
+    def __init__(self, config: MyConnectorConfig):
+        self.config = config
+
     @classmethod
     @override
     def get_name(cls) -> str:
@@ -210,32 +220,41 @@ class MyConnector(Connector[dict[str, Any]]):
 
     @classmethod
     @override
-    def from_properties(cls, properties: dict[str, Any]) -> Self:
-        return cls(**properties)
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        return [StandardInputSchema()]
 
     @override
-    def extract(self, schema: WctSchema[dict[str, Any]]) -> Message:
-        data = {"data": "extracted_content"}
+    def extract(self, output_schema: Schema) -> Message:
+        data = {"text": "extracted_content"}
         return Message(
             id="connector_output",
             content=data,
-            schema=self.get_output_schema()
+            schema=StandardInputSchema()
         )
 
+class MyConnectorFactory(ComponentFactory[MyConnector]):
     @override
-    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
-        return WctSchema(name="my_data", type=dict[str, Any])
+    def create(self, properties: dict) -> MyConnector:
+        config = MyConnectorConfig.from_properties(properties)
+        return MyConnector(config)
 ```
 
 #### Analyser Example
 
 ```python
-from typing import Any
-from typing_extensions import Self, override
-from waivern_core import Analyser, Message
-from waivern_core.schemas.base import WctSchema
+from typing import override
+from pydantic import BaseModel
+from waivern_core import Analyser, Message, Schema, ComponentFactory
+from waivern_core.schemas import StandardInputSchema, BaseFindingSchema
+
+class MyAnalyserConfig(BaseModel):
+    """Configuration for MyAnalyser."""
+    threshold: float = 0.8
 
 class MyAnalyser(Analyser):
+    def __init__(self, config: MyAnalyserConfig):
+        self.config = config
+
     @classmethod
     @override
     def get_name(cls) -> str:
@@ -243,38 +262,38 @@ class MyAnalyser(Analyser):
 
     @classmethod
     @override
-    def from_properties(cls, properties: dict[str, Any]) -> Self:
-        return cls(**properties)
+    def get_supported_input_schemas(cls) -> list[Schema]:
+        return [StandardInputSchema()]
+
+    @classmethod
+    @override
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        return [MyFindingSchema()]
 
     @override
     def process_data(self, message: Message) -> Message:
-        # Input is automatically validated
-        input_data = message.content
+        # Input automatically validated
+        findings = self._analyse(message.content)
 
-        # Perform analysis
-        findings = self._analyse(input_data)
-
-        # Return validated output
         return Message(
             id=f"results_{message.id}",
             content={"findings": findings},
-            schema=self.get_output_schema()
+            schema=MyFindingSchema()
         )
 
+class MyAnalyserFactory(ComponentFactory[MyAnalyser]):
     @override
-    def get_input_schema(self) -> WctSchema[dict[str, Any]]:
-        return WctSchema(name="my_data", type=dict[str, Any])
-
-    @override
-    def get_output_schema(self) -> WctSchema[dict[str, Any]]:
-        return WctSchema(name="my_results", type=dict[str, Any])
+    def create(self, properties: dict) -> MyAnalyser:
+        config = MyAnalyserConfig.from_properties(properties)
+        return MyAnalyser(config)
 ```
 
 **Key Features:**
-- Automatic validation via Message objects
-- No manual validation needed
+- ComponentFactory pattern for instantiation
+- Configuration via Pydantic models
+- Dependency injection support
+- Automatic schema validation
 - Type-safe interfaces
-- Schema-aware processing
 
 ## IDE Support
 
@@ -284,7 +303,7 @@ Runbooks support JSON Schema validation for:
 - Documentation on hover
 - Structure guidance
 
-📖 **Setup:** [IDE Integration Guide](docs/ide-integration.md)
+📖 **Setup:** [IDE Integration Guide](docs/how-tos/ide-integration.md)
 
 ## Contributing
 
@@ -299,18 +318,16 @@ Runbooks support JSON Schema validation for:
 - Type annotations required (basedpyright strict mode)
 - Code formatting with ruff
 - Security checks with bandit
-- Comprehensive test coverage (738 tests)
-- British English spelling
+- Comprehensive test coverage
 
 Run `./scripts/dev-checks.sh` before committing.
 
 ## Documentation
 
 - **[CLAUDE.md](CLAUDE.md)** - Development guide for AI assistants
-- **[WCF Core Concepts](docs/wcf_core_concepts.md)** - Framework architecture
-- **[Configuration Guide](docs/configuration.md)** - Environment configuration
+- **[WCF Core Concepts](docs/core-concepts/wcf-core-componens.md)** - Framework architecture
+- **[Configuration Guide](docs/how-tos/configuration.md)** - Environment configuration
 - **[Runbook Documentation](apps/wct/runbooks/README.md)** - Runbook usage
-- **[Migration History](docs/architecture/monorepo-migration-completed.md)** - Monorepo migration
 
 ## License
 

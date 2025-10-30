@@ -29,7 +29,6 @@ from waivern_llm import BaseLLMService
 
 from waivern_personal_data_analyser import PersonalDataAnalyser
 from waivern_personal_data_analyser.factory import PersonalDataAnalyserFactory
-from waivern_personal_data_analyser.types import PersonalDataAnalyserConfig
 
 
 class TestPersonalDataAnalyserFactory(
@@ -59,20 +58,18 @@ class TestPersonalDataAnalyserFactory(
         This fixture is required by ComponentFactoryContractTests.
         Configuration includes all required fields for PersonalDataAnalyser.
         """
-        return PersonalDataAnalyserConfig.from_properties(
-            {
-                "pattern_matching": {
-                    "ruleset": "personal_data",
-                    "evidence_context_size": "medium",
-                    "maximum_evidence_count": 5,
-                },
-                "llm_validation": {
-                    "enable_llm_validation": True,
-                    "llm_batch_size": 10,
-                    "llm_validation_mode": "standard",
-                },
-            }
-        )
+        return {
+            "pattern_matching": {
+                "ruleset": "personal_data",
+                "evidence_context_size": "medium",
+                "maximum_evidence_count": 5,
+            },
+            "llm_validation": {
+                "enable_llm_validation": True,
+                "llm_batch_size": 10,
+                "llm_validation_mode": "standard",
+            },
+        }
 
     # Factory-specific tests
 
@@ -80,12 +77,10 @@ class TestPersonalDataAnalyserFactory(
         """Test graceful degradation when LLM validation enabled but service unavailable."""
         factory = PersonalDataAnalyserFactory(llm_service=None)
 
-        config_requiring_llm = PersonalDataAnalyserConfig.from_properties(
-            {
-                "pattern_matching": {"ruleset": "personal_data"},
-                "llm_validation": {"enable_llm_validation": True},
-            }
-        )
+        config_requiring_llm = {
+            "pattern_matching": {"ruleset": "personal_data"},
+            "llm_validation": {"enable_llm_validation": True},
+        }
 
         result = factory.can_create(config_requiring_llm)
 

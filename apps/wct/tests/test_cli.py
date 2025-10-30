@@ -15,7 +15,7 @@ Following black-box testing principles:
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import typer
@@ -30,6 +30,23 @@ from wct.cli import (
     list_connectors_command,
     validate_runbook_command,
 )
+
+
+@pytest.fixture(autouse=True)
+def _mock_llm_service(monkeypatch: pytest.MonkeyPatch) -> None:  # pyright: ignore[reportUnusedFunction]
+    """Mock LLM service factory for all CLI tests to avoid requiring API keys.
+
+    This fixture is automatically used by all tests in this module via autouse=True.
+    """
+    # Create a mock LLM service
+    mock_llm = MagicMock()
+    mock_llm.is_available.return_value = True
+
+    # Patch LLMServiceFactory.create() to return our mock
+    def mock_create(self):
+        return mock_llm
+
+    monkeypatch.setattr("waivern_llm.di.factory.LLMServiceFactory.create", mock_create)
 
 
 class TestExecuteRunbookCommand:

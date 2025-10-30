@@ -18,27 +18,58 @@ class DataSubjectAnalyserFactory(ComponentFactory[DataSubjectAnalyser]):
 
     @override
     def create(self, config: ComponentConfig) -> DataSubjectAnalyser:
-        """Create DataSubjectAnalyser instance with injected dependencies."""
-        if not isinstance(config, DataSubjectAnalyserConfig):
-            msg = f"Expected DataSubjectAnalyserConfig, got {type(config).__name__}"
-            raise TypeError(msg)
+        """Create DataSubjectAnalyser instance with injected dependencies.
 
-        if config.llm_validation.enable_llm_validation and self._llm_service is None:
+        Args:
+            config: Configuration dict from runbook properties
+
+        Returns:
+            Configured DataSubjectAnalyser instance
+
+        Raises:
+            ValueError: If configuration is invalid or requirements cannot be met
+
+        """
+        # Parse and validate configuration
+        analyser_config = DataSubjectAnalyserConfig.from_properties(config)
+
+        # Validate that LLM validation requirements can be met
+        if (
+            analyser_config.llm_validation.enable_llm_validation
+            and self._llm_service is None
+        ):
             msg = "LLM validation enabled but no LLM service available"
             raise ValueError(msg)
 
+        # Create analyser with injected LLM service
         return DataSubjectAnalyser(
-            config=config,
+            config=analyser_config,
             llm_service=self._llm_service,
         )
 
     @override
     def can_create(self, config: ComponentConfig) -> bool:
-        """Check if factory can create analyser with given configuration."""
-        if not isinstance(config, DataSubjectAnalyserConfig):
+        """Check if factory can create analyser with given configuration.
+
+        Args:
+            config: Configuration dict to validate
+
+        Returns:
+            True if factory can create analyser, False otherwise
+
+        """
+        # Try to parse and validate configuration
+        try:
+            analyser_config = DataSubjectAnalyserConfig.from_properties(config)
+        except Exception:
+            # Config validation failed
             return False
 
-        if config.llm_validation.enable_llm_validation and self._llm_service is None:
+        # If LLM validation enabled, must have LLM service
+        if (
+            analyser_config.llm_validation.enable_llm_validation
+            and self._llm_service is None
+        ):
             return False
 
         return True

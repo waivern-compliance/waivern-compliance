@@ -2,7 +2,7 @@
 
 import logging
 from pprint import pformat
-from typing import Any, Self, override
+from typing import Any, override
 
 from waivern_core import Analyser
 from waivern_core.message import Message
@@ -59,37 +59,6 @@ class PersonalDataAnalyser(Analyser):
     def get_name(cls) -> str:
         """Return the name of the analyser."""
         return "personal_data_analyser"
-
-    @classmethod
-    @override
-    def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create analyser from properties (legacy method for Executor compatibility).
-
-        This is a thin wrapper over the DI factory pattern that creates an LLM service
-        internally when needed. This maintains backward compatibility with the executor
-        until Phase 6 (Executor Integration) is complete.
-
-        Will be removed when Executor uses factories directly (Phase 6).
-
-        TODO: Remove this method in Phase 6 when Executor uses factories directly
-        """
-        from waivern_core.services import ServiceContainer  # noqa: PLC0415
-        from waivern_llm import BaseLLMService  # noqa: PLC0415
-        from waivern_llm.di import LLMServiceFactory  # noqa: PLC0415
-
-        config = PersonalDataAnalyserConfig.from_properties(properties)
-
-        # Check if LLM validation is enabled
-        llm_service = None
-        if config.llm_validation and config.llm_validation.enable_llm_validation:
-            # Create LLM service using DI factory
-            container = ServiceContainer()
-            container.register(
-                BaseLLMService, LLMServiceFactory(), lifetime="singleton"
-            )
-            llm_service = container.get_service(BaseLLMService)
-
-        return cls(config=config, llm_service=llm_service)
 
     @classmethod
     @override

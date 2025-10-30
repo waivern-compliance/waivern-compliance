@@ -1,8 +1,8 @@
 # Dependency Injection System Implementation Plan
 
-**Status:** In Progress (Phase 4 Complete - All 3 Analysers DI-Enabled)
+**Status:** Complete (All Phases 0-6 Complete - Framework Fully DI-Enabled)
 **Created:** 2025-10-23
-**Updated:** 2025-10-29
+**Updated:** 2025-10-30
 **Related ADR:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
 **Related Document:** [DI Factory Patterns](./di-factory-patterns.md)
 
@@ -118,7 +118,7 @@ This document outlines the implementation plan for introducing a **Dependency In
   - `get_service_dependencies() -> dict[str, type]` - Optional dependency declaration
 - [x] Add comprehensive docstrings with examples
 - [x] Add type hints with Generic[T] (using PEP 695 syntax)
-- [x] Add ComponentConfig type alias (`type ComponentConfig = BaseComponentConfiguration`)
+- [x] Add ComponentConfig type alias (`type ComponentConfig = dict[str, Any]`)
 
 ### 2.2 Export from waivern-core
 
@@ -188,7 +188,7 @@ This document outlines the implementation plan for introducing a **Dependency In
 - [x] Implement with Pydantic BaseModel (frozen, extra="forbid")
 - [x] Add `from_properties()` factory method for dictionary-based creation
 - [x] Mirror same design pattern as `BaseServiceConfiguration`
-- [x] Update `ComponentConfig` type alias to point to `BaseComponentConfiguration`
+- [x] Update `ComponentConfig` type alias to `dict[str, Any]` (factories parse internally)
 - [x] Export from `waivern_core/services/__init__.py` and `waivern_core/__init__.py`
 - [x] Write unit tests (4 tests for instantiation, immutability, validation, from_properties)
 - [x] Update ComponentFactory contract tests to use typed configs
@@ -316,140 +316,86 @@ All three analysers followed these steps:
 
 ---
 
-## Phase 6: Executor Integration
+## Phase 6: Executor Integration ✅
 
+**Status:** ✅ Complete (Executor DI-Enabled)
 **Goal:** Executor uses DI container and factories
 
-### 6.1 Update Executor Class
+### 6.1 Update Executor Class ✅
 
-- [ ] Update `Executor.__init__()` to accept `ServiceContainer`:
-  ```python
-  def __init__(self, container: ServiceContainer):
-      self._container = container
-      self.analyser_factories: dict[str, ComponentFactory[Analyser]] = {}
-      self.connector_factories: dict[str, ComponentFactory[Connector]] = {}
-  ```
+- [x] Update `Executor.__init__()` to accept `ServiceContainer`
+- [x] Update `create_with_built_ins()` to use DI container
+- [x] Add `register_analyser_factory()` and `register_connector_factory()`
+- [x] Update `list_available_analysers()` and `list_available_connectors()` to return factories
+- [x] Direct factory registration with injected dependencies
 
-- [ ] Update `create_with_built_ins()`:
-  ```python
-  @classmethod
-  def create_with_built_ins(cls) -> Executor:
-      # Create DI container
-      container = ServiceContainer()
+### 6.2 Update Component Instantiation ✅
 
-      # Register infrastructure services
-      container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
+- [x] Update `_instantiate_components()` to use factory pattern
+- [x] Pass raw dict properties to factory `create()` and `can_create()`
+- [x] Add availability checking via `can_create()`
+- [x] Factories parse config internally using `from_properties()`
+- [x] Add detailed error messages and logging
 
-      # Create executor
-      executor = cls(container)
+### 6.3 Update Executor Tests ✅
 
-      # Get infrastructure services
-      llm_service = container.get_service(BaseLLMService)
+- [x] Update all 34 executor and integration tests
+- [x] Add LLM service mocking to avoid requiring API keys
+- [x] Test factory registration and component creation
+- [x] Test availability checking and error handling
+- [x] All 847 tests passing, 0 type errors
 
-      # Register component factories with dependencies injected
-      # Option 1: Direct registration (simpler, explicit)
-      from waivern_personal_data_analyser import PersonalDataAnalyserFactory
-      from waivern_community.analysers.processing_purpose_analyser import ProcessingPurposeAnalyserFactory
-      from waivern_community.analysers.data_subject_analyser import DataSubjectAnalyserFactory
+### 6.4 Remove Backward Compatibility Wrappers ✅
 
-      executor.register_analyser_factory(PersonalDataAnalyserFactory(llm_service))
-      executor.register_analyser_factory(ProcessingPurposeAnalyserFactory(llm_service))
-      executor.register_analyser_factory(DataSubjectAnalyserFactory(llm_service))
+**Status:** ✅ Complete
 
-      # Option 2: Dynamic discovery (future enhancement)
-      # factories = discover_component_factories()
-      # for factory in factories:
-      #     executor.register_factory(factory, inject_services=True)
+- [x] Remove `from_properties()` from all analyser implementations:
+  - [x] Remove from `PersonalDataAnalyser` (waivern-personal-data-analyser)
+  - [x] Remove from `ProcessingPurposeAnalyser` (waivern-community)
+  - [x] Remove from `DataSubjectAnalyser` (waivern-community)
+- [x] Remove `from_properties()` from all connector implementations:
+  - [x] Remove from `FilesystemConnector` (waivern-community)
+  - [x] Remove from `SourceCodeConnector` (waivern-community)
+  - [x] Remove from `SQLiteConnector` (waivern-community)
+  - [x] Remove from `MySQLConnector` (waivern-mysql)
+- [x] Remove `from_properties()` abstract method from base classes:
+  - [x] Remove from `waivern_core.Analyser` base class
+  - [x] Remove from `waivern_core.Connector` base class
+- [x] Update base class docstrings to reference factory pattern only
+- [x] Update base class type hints
+- [x] Verify all tests still pass (845 tests passing)
+- [x] Run full integration test suite
+- [x] Add config validation tests to close coverage gap (8 new tests)
 
-      # Register connector factories (no LLM service needed)
-      from waivern_community.connectors.filesystem import FilesystemConnectorFactory
-      from waivern_community.connectors.source_code import SourceCodeConnectorFactory
-      from waivern_community.connectors.sqlite import SQLiteConnectorFactory
-      from waivern_mysql import MySQLConnectorFactory
+**Deliverable:** Breaking change complete. All `from_properties()` methods removed. Framework fully DI-enabled. Test coverage maintained (845 tests passing, coverage improved through better organization).
 
-      executor.register_connector_factory(FilesystemConnectorFactory())
-      executor.register_connector_factory(SourceCodeConnectorFactory())
-      executor.register_connector_factory(SQLiteConnectorFactory())
-      executor.register_connector_factory(MySQLConnectorFactory())
+### Phase 6 Summary
 
-      return executor
-  ```
+**Status:** ✅ **COMPLETE**
 
-- [ ] Add `register_analyser_factory(factory: ComponentFactory[Analyser])`
-- [ ] Add `register_connector_factory(factory: ComponentFactory[Connector])`
-- [ ] Update `list_available_analysers()` to return factories
-- [ ] Update `list_available_connectors()` to return factories
+Phase 6 successfully migrated the Executor to use DI container and ComponentFactory pattern, then removed all backward compatibility wrappers. This was the final integration step.
 
-### 6.2 Update Component Instantiation
+**Commits:**
+1. `c285104` - docs: update the DI implementation plan
+2. `548d2b5` - feat: migrate DataSubjectAnalyser to DI with ComponentFactory pattern (Phases 6.1-6.3)
+3. `9ddd67b` - feat!: remove from_properties() backward compatibility layer (Phase 6.4)
+4. `328a0a4` - test: add config validation tests for ProcessingPurposeAnalyserConfig
 
-- [ ] Update `_instantiate_components()` method:
-  ```python
-  def _instantiate_components(
-      self,
-      analyser_type: str,
-      connector_type: str,
-      analyser_config: AnalyserConfig,
-      connector_config: ConnectorConfig,
-  ) -> tuple[Analyser, Connector]:
-      # Get factories from registries
-      analyser_factory = self.analyser_factories.get(analyser_type)
-      if not analyser_factory:
-          raise ExecutorError(f"Unknown analyser type: {analyser_type}")
+**Test Results:**
+- All 845 tests passing (837 existing + 8 new config tests)
+- 10 obsolete tests removed (validated at wrong layer)
+- 4 tests updated to use factory pattern
+- Coverage gap analysis: 100% of requirements from deleted tests still covered
 
-      connector_factory = self.connector_factories.get(connector_type)
-      if not connector_factory:
-          raise ExecutorError(f"Unknown connector type: {connector_type}")
+**Key Achievements:**
+- Executor fully DI-integrated
+- All 7 component factories registered and working
+- ServiceContainer managing singleton LLM service
+- ComponentFactory pattern enforced throughout
+- No `from_properties()` methods remaining
+- Config validation moved to dedicated test files (better organization)
 
-      # Check availability
-      if not analyser_factory.can_create(analyser_config.properties):
-          raise ExecutorError(f"Analyser unavailable with given config")
-
-      if not connector_factory.can_create(connector_config.properties):
-          raise ExecutorError(f"Connector unavailable with given config")
-
-      # Create instances (transient lifecycle)
-      analyser = analyser_factory.create(analyser_config.properties)
-      connector = connector_factory.create(connector_config.properties)
-
-      return analyser, connector
-  ```
-
-- [ ] Remove all direct `from_properties()` calls
-- [ ] Add availability checking via `can_create()`
-- [ ] Add detailed logging for component creation
-
-### 6.3 Update Executor Tests
-
-- [ ] Update all executor tests to use factory pattern
-- [ ] Test factory registration
-- [ ] Test component creation via factories
-- [ ] Test availability checking (`can_create()`)
-- [ ] Test error handling (unknown type, creation failure)
-- [ ] Mock factories for unit tests
-- [ ] Integration tests with real factories
-
-### 6.4 Remove Backward Compatibility Wrappers
-
-**Note:** This step executes AFTER 6.1-6.3 are complete and executor uses factories directly.
-
-- [ ] Remove `from_properties()` from all analyser implementations:
-  - [ ] Remove from `PersonalDataAnalyser` (waivern-personal-data-analyser)
-  - [ ] Remove from `ProcessingPurposeAnalyser` (waivern-community)
-  - [ ] Remove from `DataSubjectAnalyser` (waivern-community)
-- [ ] Remove `from_properties()` from all connector implementations:
-  - [ ] Remove from `FilesystemConnector` (waivern-community)
-  - [ ] Remove from `SourceCodeConnector` (waivern-community)
-  - [ ] Remove from `SQLiteConnector` (waivern-community)
-  - [ ] Remove from `MySQLConnector` (waivern-mysql)
-- [ ] Remove `from_properties()` abstract method from base classes:
-  - [ ] Remove from `waivern_core.Analyser` base class
-  - [ ] Remove from `waivern_core.Connector` base class
-- [ ] Update base class docstrings to reference factory pattern only
-- [ ] Update base class type hints
-- [ ] Verify all tests still pass (should be 807+ tests)
-- [ ] Run full integration test suite
-
-**Deliverable:** Executor fully DI-integrated, all backward compatibility removed
+**Branch:** `feature/executor-di-integration` (ready for PR)
 
 ---
 
