@@ -12,9 +12,18 @@ from waivern_core.errors import (
 )
 from waivern_mysql import MySQLConnector
 
-from waivern_community.connectors.filesystem import FilesystemConnector
-from waivern_community.connectors.source_code import SourceCodeConnector
-from waivern_community.connectors.sqlite import SQLiteConnector
+from waivern_community.connectors.filesystem import (
+    FilesystemConnector,
+    FilesystemConnectorFactory,
+)
+from waivern_community.connectors.source_code import (
+    SourceCodeConnector,
+    SourceCodeConnectorFactory,
+)
+from waivern_community.connectors.sqlite import (
+    SQLiteConnector,
+    SQLiteConnectorFactory,
+)
 
 __all__ = (
     "Connector",
@@ -22,9 +31,12 @@ __all__ = (
     "ConnectorError",
     "ConnectorExtractionError",
     "FilesystemConnector",
+    "FilesystemConnectorFactory",
     "MySQLConnector",
     "SourceCodeConnector",
+    "SourceCodeConnectorFactory",
     "SQLiteConnector",
+    "SQLiteConnectorFactory",
     "BUILTIN_CONNECTORS",
 )
 

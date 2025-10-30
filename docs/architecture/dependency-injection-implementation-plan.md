@@ -260,43 +260,59 @@ All three analysers followed these steps:
 
 ### 5.1 FilesystemConnector
 
-- [ ] Create `FilesystemConnectorFactory` in waivern-community
-- [ ] Implement ComponentFactory[FilesystemConnector]
-- [ ] Update connector constructor (no services needed currently)
-- [ ] Remove `from_properties()`
-- [ ] Update tests
+- [x] Create `FilesystemConnectorFactory` in waivern-community
+- [x] Implement ComponentFactory[FilesystemConnector]
+- [x] Update connector constructor (no services needed currently)
+- [ ] Remove `from_properties()` (deferred to Phase 6.4)
+- [x] Update tests
+
+**Completed:** Issue #176, PR #177 (merged Oct 29, 2025)
 
 ### 5.2 SourceCodeConnector
 
-- [ ] Create `SourceCodeConnectorFactory` in waivern-community
-- [ ] Implement ComponentFactory[SourceCodeConnector]
-- [ ] Update connector constructor
-- [ ] Remove `from_properties()`
-- [ ] Update tests
+- [x] Create `SourceCodeConnectorFactory` in waivern-community
+- [x] Implement ComponentFactory[SourceCodeConnector]
+- [x] Update connector constructor
+- [ ] Remove `from_properties()` (deferred to Phase 6.4)
+- [x] Update tests
+
+**Completed:** Issue #180, PR #181 (merged Oct 30, 2025)
 
 ### 5.3 MySQLConnector
 
-- [ ] Create `MySQLConnectorFactory` in waivern-mysql package
-- [ ] Implement ComponentFactory[MySQLConnector]
-- [ ] Constructor could accept `db_pool: DatabasePool | None` (future)
-- [ ] Update connector constructor
-- [ ] Remove `from_properties()`
-- [ ] Update tests
+- [x] Create `MySQLConnectorFactory` in waivern-mysql package
+- [x] Implement ComponentFactory[MySQLConnector]
+- [x] Constructor could accept `db_pool: DatabasePool | None` (future)
+- [x] Update connector constructor
+- [ ] Remove `from_properties()` (deferred to Phase 6.4)
+- [x] Update tests
+
+**Completed:** Issue #178, PR #179 (merged Oct 30, 2025)
 
 ### 5.4 SQLiteConnector
 
-- [ ] Create `SQLiteConnectorFactory` in waivern-community
-- [ ] Implement ComponentFactory[SQLiteConnector]
-- [ ] Update connector constructor
-- [ ] Remove `from_properties()`
-- [ ] Update tests
+- [x] Create `SQLiteConnectorFactory` in waivern-community
+- [x] Implement ComponentFactory[SQLiteConnector]
+- [x] Update connector constructor
+- [ ] Remove `from_properties()` (deferred to Phase 6.4)
+- [x] Update tests
+
+**Completed:** Issue #182, PR #183 (merged Oct 30, 2025)
 
 ### 5.5 Export Factories
 
-- [ ] Export each connector factory from its package `__init__.py`
-- [ ] Update docstrings to reference factory pattern
+- [x] Export each connector factory from its package `__init__.py`
+  - [x] MySQLConnectorFactory exported from waivern-mysql
+  - [x] FilesystemConnectorFactory, SourceCodeConnectorFactory, SQLiteConnectorFactory exported from waivern-community
+- [x] Update docstrings to reference factory pattern
+
+**Completed:** All factories exported and documented
 
 **Deliverable:** All connectors DI-enabled with factories, backward compatible via `from_properties()`
+
+---
+
+**Phase 5 Status: ✅ Complete** - All 4 connectors have DI-enabled factories with contract tests. Backward compatibility maintained via `from_properties()` wrappers (to be removed in Phase 6.4).
 
 ---
 
