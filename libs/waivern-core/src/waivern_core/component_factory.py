@@ -15,10 +15,8 @@ Example:
     >>> # Component factory (singleton) with injected dependencies
     >>> factory = PersonalDataAnalyserFactory(llm_service=llm_service)
     >>>
-    >>> # Component configuration (from runbook properties)
-    >>> config = BaseComponentConfiguration.from_properties(
-    ...     {"pattern_matching": {"ruleset": "personal_data"}}
-    ... )
+    >>> # Component configuration dict (from runbook properties)
+    >>> config = {"pattern_matching": {"ruleset": "personal_data"}}
     >>>
     >>> # Component instance (transient) created by factory
     >>> analyser = factory.create(config)
@@ -79,12 +77,10 @@ class ComponentFactory[T](ABC):
         ...         return [PersonalDataFindingSchema()]
         ...
         ...     def can_create(self, config: ComponentConfig) -> bool:
-        ...         # Validate config has required fields
+        ...         # Validate config and check service availability
         ...         try:
-        ...             PersonalDataAnalyserConfig.from_properties(config.model_dump())
-        ...             # Check LLM service available if LLM validation enabled
-        ...             config_dict = config.model_dump()
-        ...             if config_dict.get("llm_validation", {}).get("enable_llm_validation"):
+        ...             analyser_config = PersonalDataAnalyserConfig.from_properties(config)
+        ...             if analyser_config.llm_validation.enable_llm_validation:
         ...                 return self._llm_service is not None
         ...             return True
         ...         except Exception:

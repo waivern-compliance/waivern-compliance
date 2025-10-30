@@ -170,15 +170,11 @@ All component configurations inherit from `BaseComponentConfiguration`, providin
 - **from_properties() factory method** for dictionary-based creation from runbook properties
 - **Strict validation** (no extra fields allowed)
 
-The `ComponentConfig` type alias points to `BaseComponentConfiguration`, allowing it to serve dual purposes:
-1. **Base class** for component-specific configs (e.g., `PersonalDataAnalyserConfig(BaseComponentConfiguration)`)
-2. **Type annotation** for factory method signatures (providing strong typing at the interface level)
+The `ComponentConfig` type alias is a dict representing unstructured configuration from runbooks. Factories receive this dict and parse it internally to their specific config types.
 
 **Type alias definition:**
 ```python
-from waivern_core.services.configuration import BaseComponentConfiguration
-
-type ComponentConfig = BaseComponentConfiguration
+type ComponentConfig = dict[str, Any]
 ```
 
 **Example component-specific configuration:**
@@ -195,33 +191,30 @@ class PersonalDataAnalyserConfig(BaseComponentConfiguration):
     @classmethod
     def from_properties(cls, properties: dict) -> Self:
         """Create configuration from runbook properties with validation."""
-        # Add any preprocessing, defaults, or environment variable support here
         return cls.model_validate(properties)
 ```
 
-**Usage patterns:**
+**Factory usage pattern:**
 ```python
-# Pattern 1: Generic base configuration (simple components)
-config = BaseComponentConfiguration.from_properties({
-    "pattern_matching": {"ruleset": "personal_data"}
-})
-
-# Pattern 2: Component-specific configuration (complex components)
-config = PersonalDataAnalyserConfig.from_properties({
+# Executor passes raw dict to factory
+config_dict = {
     "pattern_matching": {"ruleset": "personal_data"},
     "llm_validation": {"enable_llm_validation": True}
-})
+}
 
-# Pattern 3: Factory receives either base or specific config (type-safe)
-analyser = factory.create(config)  # config: ComponentConfig (BaseComponentConfiguration)
+# Factory receives dict and parses internally
+analyser = factory.create(config_dict)
+
+# Inside factory.create():
+analyser_config = PersonalDataAnalyserConfig.from_properties(config_dict)
+return PersonalDataAnalyser(config=analyser_config, llm_service=self._llm_service)
 ```
 
 **Key benefits:**
-- **Strong typing:** No raw dicts passed to factories
-- **Validation:** Pydantic catches configuration errors early
-- **Immutability:** Configurations cannot be modified after creation
-- **Flexibility:** Factories can accept base config or specific subclass
-- **Consistency:** Same pattern as BaseServiceConfiguration
+- **Clean boundaries:** Executor handles orchestration, factories handle parsing
+- **Industry standard:** Follows Django, FastAPI, Kubernetes patterns
+- **Validation ownership:** Factories own their config validation logic
+- **Flexibility:** Each factory can parse config differently as needed
 
 ### ComponentFactory[T] - For WCF Components ONLY
 
@@ -279,18 +272,16 @@ class ComponentFactory[T](ABC):
 **Example:**
 ```python
 from waivern_personal_data_analyser import PersonalDataAnalyserFactory
-from waivern_core import BaseComponentConfiguration
 
 # Factory holds infrastructure service (singleton)
 factory = PersonalDataAnalyserFactory(llm_service=llm_service)
 
-# Create component configuration from runbook properties
-config = BaseComponentConfiguration.from_properties({
-    "pattern_matching": {"ruleset": "personal_data"}
-})
+# Create component instance from dict (transient)
+config_dict = {"pattern_matching": {"ruleset": "personal_data"}}
+analyser = factory.create(config_dict)
 
-# Create component instance (transient)
-analyser = factory.create(config)
+# Factory parses internally:
+# analyser_config = PersonalDataAnalyserConfig.from_properties(config_dict)
 ```
 
 ### Why Two Factory Abstractions?
@@ -451,10 +442,10 @@ The DI system manages three distinct tiers of services:
 # waivern-core/src/waivern_core/component_factory.py
 
 from abc import ABC, abstractmethod
+from typing import Any
 from waivern_core.schemas import Schema
-from waivern_core.services.configuration import BaseComponentConfiguration
 
-type ComponentConfig = BaseComponentConfiguration
+type ComponentConfig = dict[str, Any]
 
 class ComponentFactory[T](ABC):
     """Factory for creating framework components (analysers, connectors).
@@ -476,17 +467,17 @@ class ComponentFactory[T](ABC):
         properties and varies per execution.
 
         Args:
-            config: Execution-specific configuration from runbook (BaseComponentConfiguration)
+            config: Execution-specific configuration dict from runbook properties
 
         Returns:
             Configured component instance ready to process data
 
         Example:
             ```python
-            config = BaseComponentConfiguration.from_properties({
-                "llm_validation": True,
-                "evidence_context_size": "medium"
-            })
+            config = {
+                "llm_validation": {"enable_llm_validation": True},
+                "pattern_matching": {"evidence_context_size": "medium"}
+            }
             analyser = factory.create(config)
             ```
         """

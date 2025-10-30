@@ -1,8 +1,8 @@
 # Dependency Injection System Implementation Plan
 
-**Status:** In Progress (Phase 4 Complete - All 3 Analysers DI-Enabled)
+**Status:** In Progress (Phase 6 Complete - Executor DI-Enabled)
 **Created:** 2025-10-23
-**Updated:** 2025-10-29
+**Updated:** 2025-10-30
 **Related ADR:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
 **Related Document:** [DI Factory Patterns](./di-factory-patterns.md)
 
@@ -118,7 +118,7 @@ This document outlines the implementation plan for introducing a **Dependency In
   - `get_service_dependencies() -> dict[str, type]` - Optional dependency declaration
 - [x] Add comprehensive docstrings with examples
 - [x] Add type hints with Generic[T] (using PEP 695 syntax)
-- [x] Add ComponentConfig type alias (`type ComponentConfig = BaseComponentConfiguration`)
+- [x] Add ComponentConfig type alias (`type ComponentConfig = dict[str, Any]`)
 
 ### 2.2 Export from waivern-core
 
@@ -188,7 +188,7 @@ This document outlines the implementation plan for introducing a **Dependency In
 - [x] Implement with Pydantic BaseModel (frozen, extra="forbid")
 - [x] Add `from_properties()` factory method for dictionary-based creation
 - [x] Mirror same design pattern as `BaseServiceConfiguration`
-- [x] Update `ComponentConfig` type alias to point to `BaseComponentConfiguration`
+- [x] Update `ComponentConfig` type alias to `dict[str, Any]` (factories parse internally)
 - [x] Export from `waivern_core/services/__init__.py` and `waivern_core/__init__.py`
 - [x] Write unit tests (4 tests for instantiation, immutability, validation, from_properties)
 - [x] Update ComponentFactory contract tests to use typed configs
@@ -316,117 +316,34 @@ All three analysers followed these steps:
 
 ---
 
-## Phase 6: Executor Integration
+## Phase 6: Executor Integration ✅
 
+**Status:** ✅ Complete (Executor DI-Enabled)
 **Goal:** Executor uses DI container and factories
 
-### 6.1 Update Executor Class
+### 6.1 Update Executor Class ✅
 
-- [ ] Update `Executor.__init__()` to accept `ServiceContainer`:
-  ```python
-  def __init__(self, container: ServiceContainer):
-      self._container = container
-      self.analyser_factories: dict[str, ComponentFactory[Analyser]] = {}
-      self.connector_factories: dict[str, ComponentFactory[Connector]] = {}
-  ```
+- [x] Update `Executor.__init__()` to accept `ServiceContainer`
+- [x] Update `create_with_built_ins()` to use DI container
+- [x] Add `register_analyser_factory()` and `register_connector_factory()`
+- [x] Update `list_available_analysers()` and `list_available_connectors()` to return factories
+- [x] Direct factory registration with injected dependencies
 
-- [ ] Update `create_with_built_ins()`:
-  ```python
-  @classmethod
-  def create_with_built_ins(cls) -> Executor:
-      # Create DI container
-      container = ServiceContainer()
+### 6.2 Update Component Instantiation ✅
 
-      # Register infrastructure services
-      container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
+- [x] Update `_instantiate_components()` to use factory pattern
+- [x] Pass raw dict properties to factory `create()` and `can_create()`
+- [x] Add availability checking via `can_create()`
+- [x] Factories parse config internally using `from_properties()`
+- [x] Add detailed error messages and logging
 
-      # Create executor
-      executor = cls(container)
+### 6.3 Update Executor Tests ✅
 
-      # Get infrastructure services
-      llm_service = container.get_service(BaseLLMService)
-
-      # Register component factories with dependencies injected
-      # Option 1: Direct registration (simpler, explicit)
-      from waivern_personal_data_analyser import PersonalDataAnalyserFactory
-      from waivern_community.analysers.processing_purpose_analyser import ProcessingPurposeAnalyserFactory
-      from waivern_community.analysers.data_subject_analyser import DataSubjectAnalyserFactory
-
-      executor.register_analyser_factory(PersonalDataAnalyserFactory(llm_service))
-      executor.register_analyser_factory(ProcessingPurposeAnalyserFactory(llm_service))
-      executor.register_analyser_factory(DataSubjectAnalyserFactory(llm_service))
-
-      # Option 2: Dynamic discovery (future enhancement)
-      # factories = discover_component_factories()
-      # for factory in factories:
-      #     executor.register_factory(factory, inject_services=True)
-
-      # Register connector factories (no LLM service needed)
-      from waivern_community.connectors.filesystem import FilesystemConnectorFactory
-      from waivern_community.connectors.source_code import SourceCodeConnectorFactory
-      from waivern_community.connectors.sqlite import SQLiteConnectorFactory
-      from waivern_mysql import MySQLConnectorFactory
-
-      executor.register_connector_factory(FilesystemConnectorFactory())
-      executor.register_connector_factory(SourceCodeConnectorFactory())
-      executor.register_connector_factory(SQLiteConnectorFactory())
-      executor.register_connector_factory(MySQLConnectorFactory())
-
-      return executor
-  ```
-
-- [ ] Add `register_analyser_factory(factory: ComponentFactory[Analyser])`
-- [ ] Add `register_connector_factory(factory: ComponentFactory[Connector])`
-- [ ] Update `list_available_analysers()` to return factories
-- [ ] Update `list_available_connectors()` to return factories
-
-### 6.2 Update Component Instantiation
-
-- [ ] Update `_instantiate_components()` method:
-  ```python
-  def _instantiate_components(
-      self,
-      analyser_type: str,
-      connector_type: str,
-      analyser_config: AnalyserConfig,
-      connector_config: ConnectorConfig,
-  ) -> tuple[Analyser, Connector]:
-      # Get factories from registries
-      analyser_factory = self.analyser_factories.get(analyser_type)
-      if not analyser_factory:
-          raise ExecutorError(f"Unknown analyser type: {analyser_type}")
-
-      connector_factory = self.connector_factories.get(connector_type)
-      if not connector_factory:
-          raise ExecutorError(f"Unknown connector type: {connector_type}")
-
-      # Check availability
-      if not analyser_factory.can_create(analyser_config.properties):
-          raise ExecutorError(f"Analyser unavailable with given config")
-
-      if not connector_factory.can_create(connector_config.properties):
-          raise ExecutorError(f"Connector unavailable with given config")
-
-      # Create instances (transient lifecycle)
-      analyser = analyser_factory.create(analyser_config.properties)
-      connector = connector_factory.create(connector_config.properties)
-
-      return analyser, connector
-  ```
-
-- [ ] Remove all direct `from_properties()` calls
-- [ ] Add availability checking via `can_create()`
-- [ ] Add detailed logging for component creation
-
-### 6.3 Update Executor Tests
-
-- [ ] Update all executor tests to use factory pattern
-- [ ] Test factory registration
-- [ ] Test component creation via factories
-- [ ] Test availability checking (`can_create()`)
-- [ ] Test error handling (unknown type, creation failure)
-- [ ] Mock factories for unit tests
-- [ ] Integration tests with real factories
+- [x] Update all 34 executor and integration tests
+- [x] Add LLM service mocking to avoid requiring API keys
+- [x] Test factory registration and component creation
+- [x] Test availability checking and error handling
+- [x] All 847 tests passing, 0 type errors
 
 ### 6.4 Remove Backward Compatibility Wrappers
 
@@ -449,7 +366,7 @@ All three analysers followed these steps:
 - [ ] Verify all tests still pass (should be 807+ tests)
 - [ ] Run full integration test suite
 
-**Deliverable:** Executor fully DI-integrated, all backward compatibility removed
+**Deliverable:** Executor fully DI-integrated with factory pattern. ComponentConfig uses dict-only approach following industry standards (Django, FastAPI, Kubernetes). Backward compatibility wrappers remain (to be removed in Phase 6.4).
 
 ---
 
