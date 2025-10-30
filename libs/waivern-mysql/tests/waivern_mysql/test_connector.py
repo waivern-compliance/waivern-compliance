@@ -16,7 +16,7 @@ from waivern_core.schemas import (
 from waivern_mysql import MySQLConnector, MySQLConnectorConfig
 
 # Test constants - expected behaviour from public interface
-EXPECTED_CONNECTOR_NAME = "mysql"
+EXPECTED_CONNECTOR_NAME = "mysql_connector"
 EXPECTED_DEFAULT_PORT = 3306
 EXPECTED_DEFAULT_CHARSET = "utf8mb4"
 EXPECTED_DEFAULT_AUTOCOMMIT = True
@@ -255,13 +255,13 @@ class TestMySQLConnectorDataExtraction:
         )
 
         # Test email metadata
-        assert email_item.metadata.connector_type == "mysql"
+        assert email_item.metadata.connector_type == "mysql_connector"
         assert email_item.metadata.table_name == "customers"
         assert email_item.metadata.column_name == "email"
         assert email_item.metadata.schema_name == TEST_DATABASE
 
         # Test phone metadata
-        assert phone_item.metadata.connector_type == "mysql"
+        assert phone_item.metadata.connector_type == "mysql_connector"
         assert phone_item.metadata.table_name == "customers"
         assert phone_item.metadata.column_name == "phone"
         assert phone_item.metadata.schema_name == TEST_DATABASE
@@ -478,4 +478,4 @@ class TestMySQLConnectorEdgeCases:
                     assert hasattr(data_item, "metadata")
                     assert isinstance(data_item.metadata, RelationalDatabaseMetadata)
                     assert data_item.metadata.table_name == "test_table"
-                    assert data_item.metadata.connector_type == "mysql"
+                    assert data_item.metadata.connector_type == "mysql_connector"

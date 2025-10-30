@@ -3,7 +3,7 @@
 __version__ = "0.1.0"
 
 # Connectors
-from waivern_mysql import MySQLConnector
+from waivern_mysql import MySQLConnector, MySQLConnectorFactory
 
 # Analysers - re-export from standalone packages and waivern_community
 from waivern_personal_data_analyser import PersonalDataAnalyser
@@ -31,6 +31,7 @@ __all__ = [
     "FilesystemConnector",
     "FilesystemConnectorFactory",
     "MySQLConnector",
+    "MySQLConnectorFactory",
     "SourceCodeConnector",
     "SQLiteConnector",
     # Analysers

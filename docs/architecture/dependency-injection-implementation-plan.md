@@ -296,8 +296,6 @@ All three analysers followed these steps:
 - [ ] Export each connector factory from its package `__init__.py`
 - [ ] Update docstrings to reference factory pattern
 
-**Note:** Similar to Phase 4, no intermediate `BUILTIN_CONNECTOR_FACTORIES` list will be created. Phase 6 will handle factory registration directly or via dynamic discovery.
-
 **Deliverable:** All connectors DI-enabled with factories, backward compatible via `from_properties()`
 
 ---

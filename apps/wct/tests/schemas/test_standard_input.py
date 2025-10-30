@@ -94,7 +94,7 @@ class TestGenericStandardInputModel:
             content="john@example.com",
             metadata=RelationalDatabaseMetadata(
                 source="db_source",
-                connector_type="mysql",
+                connector_type="mysql_connector",
                 table_name="users",
                 column_name="email",
                 schema_name="public",
@@ -125,7 +125,7 @@ class TestGenericStandardInputModel:
                     content="test@example.com",
                     metadata=RelationalDatabaseMetadata(
                         source="test_db",
-                        connector_type="mysql",
+                        connector_type="mysql_connector",
                         table_name="users",
                         column_name="email",
                         schema_name="public",
