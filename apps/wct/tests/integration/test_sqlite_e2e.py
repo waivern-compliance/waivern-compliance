@@ -1,12 +1,33 @@
 """End-to-end integration tests for SQLite connector with compliance data."""
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from waivern_community.connectors.sqlite.connector import SQLiteConnector
 
 from wct.executor import Executor
 from wct.schemas import StandardInputSchema
+
+
+@pytest.fixture(autouse=True)
+def _mock_llm_service(monkeypatch: pytest.MonkeyPatch) -> None:  # pyright: ignore[reportUnusedFunction]
+    """Mock LLM service factory for integration tests.
+
+    These tests use runbooks with enable_llm_validation: false, so LLM service
+    is not actually needed. This fixture allows tests to run without API keys.
+
+    This fixture is automatically used by all tests in this module via autouse=True.
+    """
+    # Create a mock LLM service
+    mock_llm = MagicMock()
+    mock_llm.is_available.return_value = True
+
+    # Patch LLMServiceFactory.create() to return our mock
+    def mock_create(self):
+        return mock_llm
+
+    monkeypatch.setattr("waivern_llm.di.factory.LLMServiceFactory.create", mock_create)
 
 
 class TestSQLiteE2EIntegration:

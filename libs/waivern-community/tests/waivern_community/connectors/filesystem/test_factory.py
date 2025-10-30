@@ -6,7 +6,6 @@ from waivern_core.testing import ComponentFactoryContractTests
 
 from waivern_community.connectors.filesystem import (
     FilesystemConnector,
-    FilesystemConnectorConfig,
     FilesystemConnectorFactory,
 )
 
@@ -37,4 +36,4 @@ class TestFilesystemConnectorFactory(
         test_file = tmp_path / "test.txt"
         test_file.write_text("test content")
 
-        return FilesystemConnectorConfig.from_properties({"path": str(test_file)})
+        return {"path": str(test_file)}

@@ -6,7 +6,6 @@ from waivern_core.testing import ComponentFactoryContractTests
 
 from waivern_community.connectors.sqlite import (
     SQLiteConnector,
-    SQLiteConnectorConfig,
     SQLiteConnectorFactory,
 )
 
@@ -29,6 +28,4 @@ class TestSQLiteConnectorFactory(ComponentFactoryContractTests[SQLiteConnector])
         db_file = tmp_path / "test.db"
         db_file.touch()
 
-        return SQLiteConnectorConfig.from_properties(
-            {"database_path": str(db_file), "max_rows_per_table": 10}
-        )
+        return {"database_path": str(db_file), "max_rows_per_table": 10}

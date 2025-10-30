@@ -8,7 +8,7 @@ import pytest
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.testing import ComponentFactoryContractTests
 
-from waivern_mysql import MySQLConnector, MySQLConnectorConfig, MySQLConnectorFactory
+from waivern_mysql import MySQLConnector, MySQLConnectorFactory
 
 
 @contextmanager
@@ -46,9 +46,7 @@ class TestMySQLConnectorFactory(ComponentFactoryContractTests[MySQLConnector]):
     def valid_config(self) -> ComponentConfig:
         """Provide valid configuration for contract tests."""
         with clear_mysql_env_vars():
-            return MySQLConnectorConfig.from_properties(
-                {
-                    "host": "test.mysql.com",
-                    "user": "test_user",
-                }
-            )
+            return {
+                "host": "test.mysql.com",
+                "user": "test_user",
+            }

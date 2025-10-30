@@ -8,11 +8,17 @@ The tests use real connectors and analysers to ensure proper integration.
 import tempfile
 from pathlib import Path
 from typing import Any, override
+from unittest.mock import MagicMock
 
 import pytest
-from waivern_community.analysers import BUILTIN_ANALYSERS, Analyser, AnalyserError
-from waivern_community.connectors import BUILTIN_CONNECTORS, Connector, ConnectorError
+from waivern_community.analysers import Analyser, AnalyserError
+from waivern_community.connectors import (
+    Connector,
+    ConnectorError,
+)
+from waivern_core.component_factory import ComponentConfig, ComponentFactory
 from waivern_core.message import Message
+from waivern_core.services.container import ServiceContainer
 
 from wct.executor import Executor, ExecutorError
 from wct.schemas import PersonalDataFindingSchema, Schema, StandardInputSchema
@@ -94,25 +100,75 @@ class MockAnalyser(Analyser):
         )
 
 
+class MockConnectorFactory(ComponentFactory[MockConnector]):
+    """Factory for creating MockConnector instances."""
+
+    @override
+    def create(self, config: ComponentConfig) -> MockConnector:
+        return MockConnector()
+
+    @override
+    def can_create(self, config: ComponentConfig) -> bool:
+        return True
+
+    @override
+    def get_component_name(self) -> str:
+        return "mock_connector"
+
+    @override
+    def get_input_schemas(self) -> list[Schema]:
+        return []
+
+    @override
+    def get_output_schemas(self) -> list[Schema]:
+        return [StandardInputSchema()]
+
+    @override
+    def get_service_dependencies(self) -> dict[str, type]:
+        return {}
+
+
+class MockAnalyserFactory(ComponentFactory[MockAnalyser]):
+    """Factory for creating MockAnalyser instances."""
+
+    @override
+    def create(self, config: ComponentConfig) -> MockAnalyser:
+        return MockAnalyser()
+
+    @override
+    def can_create(self, config: ComponentConfig) -> bool:
+        return True
+
+    @override
+    def get_component_name(self) -> str:
+        return "mock_analyser"
+
+    @override
+    def get_input_schemas(self) -> list[Schema]:
+        return [StandardInputSchema()]
+
+    @override
+    def get_output_schemas(self) -> list[Schema]:
+        return [PersonalDataFindingSchema()]
+
+    @override
+    def get_service_dependencies(self) -> dict[str, type]:
+        return {}
+
+
 class TestExecutor:
     """Tests for Executor class."""
 
-    def setup_method(self) -> None:
-        """Set up test fixtures."""
-        self.executor = Executor()
-
-        # Register built-in connectors and analysers
-        for connector_cls in BUILTIN_CONNECTORS:
-            self.executor.register_available_connector(connector_cls)
-
-        for analyser_cls in BUILTIN_ANALYSERS:
-            self.executor.register_available_analyser(analyser_cls)
-
     def _create_executor_with_mocks(self) -> Executor:
-        """Create executor with mock components registered."""
-        executor = Executor()
-        executor.register_available_connector(MockConnector)
-        executor.register_available_analyser(MockAnalyser)
+        """Create executor with mock factories registered."""
+        # Create minimal container (mocks don't need services)
+        container = ServiceContainer()
+        executor = Executor(container)
+
+        # Register mock factories
+        executor.register_connector_factory(MockConnectorFactory())
+        executor.register_analyser_factory(MockAnalyserFactory())
+
         return executor
 
     def _execute_runbook_yaml(self, executor: Executor, yaml_content: str) -> list[Any]:
@@ -127,81 +183,93 @@ class TestExecutor:
             runbook_path.unlink()
 
     def test_executor_initialisation(self) -> None:
-        """Test executor initialises correctly."""
-        executor = Executor()
+        """Test executor initialises correctly with empty factory registries."""
+        container = ServiceContainer()
+        executor = Executor(container)
 
-        assert executor.connectors == {}
-        assert executor.analysers == {}
+        assert executor.connector_factories == {}
+        assert executor.analyser_factories == {}
 
     def test_register_available_connector(self) -> None:
-        """Test registering a connector."""
-        executor = Executor()
+        """Test registering a connector factory."""
+        container = ServiceContainer()
+        executor = Executor(container)
 
-        executor.register_available_connector(MockConnector)
+        mock_factory = MockConnectorFactory()
+        executor.register_connector_factory(mock_factory)
 
-        assert "mock_connector" in executor.connectors
-        assert executor.connectors["mock_connector"] == MockConnector
+        assert "mock_connector" in executor.connector_factories
+        assert executor.connector_factories["mock_connector"] == mock_factory
 
     def test_register_available_analyser(self) -> None:
-        """Test registering an analyser."""
-        executor = Executor()
+        """Test registering an analyser factory."""
+        container = ServiceContainer()
+        executor = Executor(container)
 
-        executor.register_available_analyser(MockAnalyser)
+        mock_factory = MockAnalyserFactory()
+        executor.register_analyser_factory(mock_factory)
 
-        assert "mock_analyser" in executor.analysers
-        assert executor.analysers["mock_analyser"] == MockAnalyser
+        assert "mock_analyser" in executor.analyser_factories
+        assert executor.analyser_factories["mock_analyser"] == mock_factory
 
     def test_list_available_connectors(self) -> None:
-        """Test listing available connectors."""
-        executor = Executor()
-        executor.register_available_connector(MockConnector)
+        """Test listing available connector factories."""
+        container = ServiceContainer()
+        executor = Executor(container)
+        mock_factory = MockConnectorFactory()
+        executor.register_connector_factory(mock_factory)
 
         connectors = executor.list_available_connectors()
 
         assert "mock_connector" in connectors
-        assert connectors["mock_connector"] == MockConnector
+        assert connectors["mock_connector"] == mock_factory
 
         # Ensure returned dict is a copy
         connectors.clear()
-        assert "mock_connector" in executor.connectors
+        assert "mock_connector" in executor.connector_factories
 
     def test_list_available_analysers(self) -> None:
-        """Test listing available analysers."""
-        executor = Executor()
-        executor.register_available_analyser(MockAnalyser)
+        """Test listing available analyser factories."""
+        container = ServiceContainer()
+        executor = Executor(container)
+        mock_factory = MockAnalyserFactory()
+        executor.register_analyser_factory(mock_factory)
 
         analysers = executor.list_available_analysers()
 
         assert "mock_analyser" in analysers
-        assert analysers["mock_analyser"] == MockAnalyser
+        assert analysers["mock_analyser"] == mock_factory
 
         # Ensure returned dict is a copy
         analysers.clear()
-        assert "mock_analyser" in executor.analysers
+        assert "mock_analyser" in executor.analyser_factories
 
     def test_execute_runbook_file_not_found(self) -> None:
         """Test executing a non-existent runbook file."""
+        executor = self._create_executor_with_mocks()
         non_existent_path = Path("/path/that/does/not/exist.yaml")
 
         with pytest.raises(ExecutorError, match="Failed to load runbook"):
-            self.executor.execute_runbook(non_existent_path)
+            executor.execute_runbook(non_existent_path)
 
     def test_execute_runbook_invalid_yaml(self) -> None:
         """Test executing a runbook with invalid YAML."""
+        executor = self._create_executor_with_mocks()
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("invalid: yaml: content:")
             invalid_yaml_path = Path(f.name)
 
         try:
             with pytest.raises(ExecutorError, match="Failed to load runbook"):
-                self.executor.execute_runbook(invalid_yaml_path)
+                executor.execute_runbook(invalid_yaml_path)
         finally:
             invalid_yaml_path.unlink()
 
     def test_execute_runbook_unknown_analyser_type(self) -> None:
         """Test execution fails gracefully with unknown analyser type."""
-        executor = Executor()
-        executor.register_available_connector(MockConnector)
+        container = ServiceContainer()
+        executor = Executor(container)
+        executor.register_connector_factory(MockConnectorFactory())
 
         # Create a valid runbook with unknown analyser type
         runbook_content = """
@@ -235,8 +303,9 @@ execution:
 
     def test_execute_runbook_unknown_connector_type(self) -> None:
         """Test execution fails gracefully with unknown connector type."""
-        executor = Executor()
-        executor.register_available_analyser(MockAnalyser)
+        container = ServiceContainer()
+        executor = Executor(container)
+        executor.register_analyser_factory(MockAnalyserFactory())
 
         # Create a valid runbook with unknown connector type
         runbook_content = """
@@ -341,9 +410,10 @@ execution:
 
     def test_execute_runbook_connector_failure(self) -> None:
         """Test execution handles connector failures gracefully."""
-        executor = Executor()
+        container = ServiceContainer()
+        executor = Executor(container)
 
-        # Register mock connector that will fail
+        # Create mock connector that will fail
         failing_connector = type(
             "FailingConnector",
             (MockConnector,),
@@ -353,8 +423,22 @@ execution:
             },
         )
 
-        executor.register_available_connector(failing_connector)
-        executor.register_available_analyser(MockAnalyser)
+        # Create factory for failing connector
+        failing_connector_factory = type(
+            "FailingConnectorFactory",
+            (ComponentFactory,),
+            {
+                "create": lambda self, config: failing_connector(),
+                "can_create": lambda self, config: True,
+                "get_component_name": lambda self: "failing_connector",
+                "get_input_schemas": lambda self: [],
+                "get_output_schemas": lambda self: [StandardInputSchema()],
+                "get_service_dependencies": lambda self: {},
+            },
+        )()
+
+        executor.register_connector_factory(failing_connector_factory)
+        executor.register_analyser_factory(MockAnalyserFactory())
 
         # Create a valid runbook
         runbook_content = """
@@ -395,9 +479,10 @@ execution:
 
     def test_execute_runbook_analyser_failure(self) -> None:
         """Test execution handles analyser failures gracefully."""
-        executor = Executor()
+        container = ServiceContainer()
+        executor = Executor(container)
 
-        # Register mock analyser that will fail
+        # Create mock analyser that will fail
         failing_analyser = type(
             "FailingAnalyser",
             (MockAnalyser,),
@@ -407,8 +492,22 @@ execution:
             },
         )
 
-        executor.register_available_connector(MockConnector)
-        executor.register_available_analyser(failing_analyser)
+        # Create factory for failing analyser
+        failing_analyser_factory = type(
+            "FailingAnalyserFactory",
+            (ComponentFactory,),
+            {
+                "create": lambda self, config: failing_analyser(),
+                "can_create": lambda self, config: True,
+                "get_component_name": lambda self: "failing_analyser",
+                "get_input_schemas": lambda self: [StandardInputSchema()],
+                "get_output_schemas": lambda self: [PersonalDataFindingSchema()],
+                "get_service_dependencies": lambda self: {},
+            },
+        )()
+
+        executor.register_connector_factory(MockConnectorFactory())
+        executor.register_analyser_factory(failing_analyser_factory)
 
         # Create a valid runbook
         runbook_content = """
@@ -539,11 +638,12 @@ execution:
 
     def test_execute_runbook_mixed_success_failure(self) -> None:
         """Test execution continues even when some steps fail."""
-        executor = Executor()
+        container = ServiceContainer()
+        executor = Executor(container)
 
         # Register one working and one failing analyser
-        executor.register_available_connector(MockConnector)
-        executor.register_available_analyser(MockAnalyser)
+        executor.register_connector_factory(MockConnectorFactory())
+        executor.register_analyser_factory(MockAnalyserFactory())
 
         failing_analyser = type(
             "FailingAnalyser",
@@ -553,7 +653,22 @@ execution:
                 "__init__": lambda self: MockAnalyser.__init__(self, should_fail=True),
             },
         )
-        executor.register_available_analyser(failing_analyser)
+
+        # Create factory for failing analyser
+        failing_analyser_factory = type(
+            "FailingAnalyserFactory",
+            (ComponentFactory,),
+            {
+                "create": lambda self, config: failing_analyser(),
+                "can_create": lambda self, config: True,
+                "get_component_name": lambda self: "failing_analyser",
+                "get_input_schemas": lambda self: [StandardInputSchema()],
+                "get_output_schemas": lambda self: [PersonalDataFindingSchema()],
+                "get_service_dependencies": lambda self: {},
+            },
+        )()
+
+        executor.register_analyser_factory(failing_analyser_factory)
 
         # Create a runbook with mixed success/failure
         runbook_content = """
@@ -636,23 +751,38 @@ execution: []
 
     def test_execute_runbook_generic_exception_handling(self) -> None:
         """Test that generic exceptions are handled gracefully."""
-        executor = Executor()
+        container = ServiceContainer()
+        executor = Executor(container)
 
-        # Create a connector that raises a generic exception
-        class BrokenConnector(MockConnector):
-            @classmethod
+        # Create a factory that raises a generic exception during create()
+        class BrokenConnectorFactory(ComponentFactory[MockConnector]):
             @override
-            def get_name(cls) -> str:
-                return "broken_connector"
-
-            @classmethod
-            @override
-            def from_properties(cls, properties: dict[str, Any]) -> "BrokenConnector":
+            def create(self, config: ComponentConfig) -> MockConnector:
                 # This will cause a generic exception during instantiation
                 raise ValueError("Generic error during instantiation")
 
-        executor.register_available_connector(BrokenConnector)
-        executor.register_available_analyser(MockAnalyser)
+            @override
+            def can_create(self, config: ComponentConfig) -> bool:
+                return True
+
+            @override
+            def get_component_name(self) -> str:
+                return "broken_connector"
+
+            @override
+            def get_input_schemas(self) -> list[Schema]:
+                return []
+
+            @override
+            def get_output_schemas(self) -> list[Schema]:
+                return [StandardInputSchema()]
+
+            @override
+            def get_service_dependencies(self) -> dict[str, type]:
+                return {}
+
+        executor.register_connector_factory(BrokenConnectorFactory())
+        executor.register_analyser_factory(MockAnalyserFactory())
 
         # Create a runbook that uses the broken connector
         runbook_content = """
@@ -731,72 +861,96 @@ execution:
         # Analyser metadata is included in AnalysisResult
 
     def test_register_duplicate_connector_overrides(self) -> None:
-        """Test that registering a connector with the same name overrides the previous one."""
-        executor = Executor()
+        """Test that registering a factory with the same name overrides the previous one."""
+        container = ServiceContainer()
+        executor = Executor(container)
 
-        # Register initial connector
-        executor.register_available_connector(MockConnector)
-        assert executor.connectors["mock_connector"] == MockConnector
+        # Register initial connector factory
+        initial_factory = MockConnectorFactory()
+        executor.register_connector_factory(initial_factory)
+        assert executor.connector_factories["mock_connector"] == initial_factory
 
-        # Create a different connector with the same name
-        class AlternateMockConnector(MockConnector):
-            pass
+        # Create a different factory with the same component name
+        alternate_factory = MockConnectorFactory()  # Same name, different instance
 
-        # Register the alternate connector - should override
-        executor.register_available_connector(AlternateMockConnector)
-        assert executor.connectors["mock_connector"] == AlternateMockConnector
-        assert executor.connectors["mock_connector"] != MockConnector
+        # Register the alternate factory - should override
+        executor.register_connector_factory(alternate_factory)
+        assert executor.connector_factories["mock_connector"] == alternate_factory
+        assert executor.connector_factories["mock_connector"] != initial_factory
 
     def test_register_duplicate_analyser_overrides(self) -> None:
-        """Test that registering an analyser with the same name overrides the previous one."""
-        executor = Executor()
+        """Test that registering a factory with the same name overrides the previous one."""
+        container = ServiceContainer()
+        executor = Executor(container)
 
-        # Register initial analyser
-        executor.register_available_analyser(MockAnalyser)
-        assert executor.analysers["mock_analyser"] == MockAnalyser
+        # Register initial analyser factory
+        initial_factory = MockAnalyserFactory()
+        executor.register_analyser_factory(initial_factory)
+        assert executor.analyser_factories["mock_analyser"] == initial_factory
 
-        # Create a different analyser with the same name
-        class AlternateMockAnalyser(MockAnalyser):
-            pass
+        # Create a different factory with the same component name
+        alternate_factory = MockAnalyserFactory()  # Same name, different instance
 
-        # Register the alternate analyser - should override
-        executor.register_available_analyser(AlternateMockAnalyser)
-        assert executor.analysers["mock_analyser"] == AlternateMockAnalyser
-        assert executor.analysers["mock_analyser"] != MockAnalyser
+        # Register the alternate factory - should override
+        executor.register_analyser_factory(alternate_factory)
+        assert executor.analyser_factories["mock_analyser"] == alternate_factory
+        assert executor.analyser_factories["mock_analyser"] != initial_factory
 
 
 class TestExecutorCreateWithBuiltIns:
     """Tests for Executor.create_with_built_ins() class method ✔️."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_llm_service(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Mock LLM service factory to avoid requiring API keys in tests."""
+        # Create a mock LLM service
+        mock_llm = MagicMock()
+        mock_llm.is_available.return_value = True
+
+        # Patch LLMServiceFactory.create() to return our mock
+        def mock_create(self):
+            return mock_llm
+
+        monkeypatch.setattr(
+            "waivern_llm.di.factory.LLMServiceFactory.create", mock_create
+        )
+
     def test_creates_executor_with_all_built_in_connectors(self) -> None:
         """Test that create_with_built_ins registers all built-in connectors."""
         executor = Executor.create_with_built_ins()
 
-        # Verify all built-in connectors are registered
+        # Verify all built-in connector factories are registered
         registered_connectors = executor.list_available_connectors()
 
-        # Check that all built-in connector names are present
-        built_in_names = {
-            connector_cls.get_name() for connector_cls in BUILTIN_CONNECTORS
+        # Check that all expected connector factories are present
+        expected_connectors = {
+            "filesystem_connector",
+            "source_code_connector",
+            "sqlite_connector",
+            "mysql_connector",
         }
         registered_names = set(registered_connectors.keys())
 
-        assert built_in_names == registered_names
-        assert len(registered_connectors) == len(BUILTIN_CONNECTORS)
+        assert expected_connectors == registered_names
+        assert len(registered_connectors) == 4
 
     def test_creates_executor_with_all_built_in_analysers(self) -> None:
         """Test that create_with_built_ins registers all built-in analysers."""
         executor = Executor.create_with_built_ins()
 
-        # Verify all built-in analysers are registered
+        # Verify all built-in analyser factories are registered
         registered_analysers = executor.list_available_analysers()
 
-        # Check that all built-in analyser names are present
-        built_in_names = {analyser_cls.get_name() for analyser_cls in BUILTIN_ANALYSERS}
+        # Check that all expected analyser factories are present
+        expected_analysers = {
+            "personal_data_analyser",
+            "processing_purpose_analyser",
+            "data_subject_analyser",
+        }
         registered_names = set(registered_analysers.keys())
 
-        assert built_in_names == registered_names
-        assert len(registered_analysers) == len(BUILTIN_ANALYSERS)
+        assert expected_analysers == registered_names
+        assert len(registered_analysers) == 3
 
     def test_creates_independent_executor_instances(self) -> None:
         """Test that multiple calls create independent executor instances."""
@@ -806,17 +960,19 @@ class TestExecutorCreateWithBuiltIns:
         # Verify they are different instances
         assert executor1 is not executor2
 
-        # Verify they have the same registrations initially
+        # Verify they have the same factory types registered initially
+        # (Each executor gets new factory instances, so we compare keys not objects)
         assert (
-            executor1.list_available_connectors()
-            == executor2.list_available_connectors()
+            executor1.list_available_connectors().keys()
+            == executor2.list_available_connectors().keys()
         )
         assert (
-            executor1.list_available_analysers() == executor2.list_available_analysers()
+            executor1.list_available_analysers().keys()
+            == executor2.list_available_analysers().keys()
         )
 
         # Verify changes to one don't affect the other
-        executor1.register_available_connector(MockConnector)
+        executor1.register_connector_factory(MockConnectorFactory())
 
         # executor1 should have the mock connector, executor2 should not
         assert "mock_connector" in executor1.list_available_connectors()

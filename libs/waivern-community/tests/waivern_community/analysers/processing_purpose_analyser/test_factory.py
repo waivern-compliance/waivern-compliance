@@ -33,9 +33,6 @@ from waivern_community.analysers.processing_purpose_analyser import (
 from waivern_community.analysers.processing_purpose_analyser.factory import (
     ProcessingPurposeAnalyserFactory,
 )
-from waivern_community.analysers.processing_purpose_analyser.types import (
-    ProcessingPurposeAnalyserConfig,
-)
 
 
 class TestProcessingPurposeAnalyserFactory(
@@ -65,20 +62,18 @@ class TestProcessingPurposeAnalyserFactory(
         This fixture is required by ComponentFactoryContractTests.
         Configuration includes all required fields for ProcessingPurposeAnalyser.
         """
-        return ProcessingPurposeAnalyserConfig.from_properties(
-            {
-                "pattern_matching": {
-                    "ruleset": "processing_purposes",
-                    "evidence_context_size": "medium",
-                    "maximum_evidence_count": 5,
-                },
-                "llm_validation": {
-                    "enable_llm_validation": True,
-                    "llm_batch_size": 10,
-                    "llm_validation_mode": "standard",
-                },
-            }
-        )
+        return {
+            "pattern_matching": {
+                "ruleset": "processing_purposes",
+                "evidence_context_size": "medium",
+                "maximum_evidence_count": 5,
+            },
+            "llm_validation": {
+                "enable_llm_validation": True,
+                "llm_batch_size": 10,
+                "llm_validation_mode": "standard",
+            },
+        }
 
     # Factory-specific tests
 
@@ -86,12 +81,10 @@ class TestProcessingPurposeAnalyserFactory(
         """Test graceful degradation when LLM validation enabled but service unavailable."""
         factory = ProcessingPurposeAnalyserFactory(llm_service=None)
 
-        config_requiring_llm = ProcessingPurposeAnalyserConfig.from_properties(
-            {
-                "pattern_matching": {"ruleset": "processing_purposes"},
-                "llm_validation": {"enable_llm_validation": True},
-            }
-        )
+        config_requiring_llm = {
+            "pattern_matching": {"ruleset": "processing_purposes"},
+            "llm_validation": {"enable_llm_validation": True},
+        }
 
         result = factory.can_create(config_requiring_llm)
 

@@ -6,7 +6,6 @@ from waivern_core.testing import ComponentFactoryContractTests
 
 from waivern_community.connectors.source_code import (
     SourceCodeConnector,
-    SourceCodeConnectorConfig,
     SourceCodeConnectorFactory,
 )
 
@@ -31,9 +30,7 @@ class TestSourceCodeConnectorFactory(
         test_file = tmp_path / "test.php"
         test_file.write_text("<?php\nfunction hello() {\n    return 'world';\n}\n")
 
-        return SourceCodeConnectorConfig.from_properties(
-            {
-                "path": str(test_file),
-                "language": "php",
-            }
-        )
+        return {
+            "path": str(test_file),
+            "language": "php",
+        }

@@ -18,17 +18,42 @@ class MySQLConnectorFactory(ComponentFactory[MySQLConnector]):
 
     @override
     def create(self, config: ComponentConfig) -> MySQLConnector:
-        """Create a MySQLConnector instance from configuration."""
-        if not isinstance(config, MySQLConnectorConfig):
-            msg = f"Expected MySQLConnectorConfig, got {type(config).__name__}"
-            raise TypeError(msg)
+        """Create a MySQLConnector instance from configuration.
 
-        return MySQLConnector(config)
+        Args:
+            config: Configuration dict from runbook properties
+
+        Returns:
+            Configured MySQLConnector instance
+
+        Raises:
+            ValueError: If configuration is invalid
+
+        """
+        # Parse and validate configuration
+        connector_config = MySQLConnectorConfig.from_properties(config)
+
+        return MySQLConnector(connector_config)
 
     @override
     def can_create(self, config: ComponentConfig) -> bool:
-        """Check if this factory can create a connector with the given config."""
-        return isinstance(config, MySQLConnectorConfig)
+        """Check if this factory can create a connector with the given config.
+
+        Args:
+            config: Configuration dict to validate
+
+        Returns:
+            True if factory can create connector, False otherwise
+
+        """
+        # Try to parse and validate configuration
+        try:
+            MySQLConnectorConfig.from_properties(config)
+        except Exception:
+            # Config validation failed
+            return False
+
+        return True
 
     @override
     def get_component_name(self) -> str:
