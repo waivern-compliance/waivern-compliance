@@ -3,7 +3,7 @@
 import fnmatch
 import logging
 from pathlib import Path
-from typing import Any, Self, override
+from typing import Any, override
 
 from waivern_core.base_connector import Connector
 from waivern_core.errors import (
@@ -54,30 +54,6 @@ class FilesystemConnector(Connector):
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this connector."""
         return _SUPPORTED_OUTPUT_SCHEMAS
-
-    @classmethod
-    @override
-    def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create connector from properties (legacy method for Executor compatibility).
-
-        TODO: Remove this method in Phase 6 when Executor uses factories directly.
-
-        This is a backward-compatibility wrapper. New code should use:
-            config = FilesystemConnectorConfig.from_properties(properties)
-            connector = FilesystemConnector(config)
-
-        Args:
-            properties: Raw properties from runbook configuration
-
-        Returns:
-            Configured FilesystemConnector instance
-
-        Raises:
-            ConnectorConfigError: If validation fails or required properties are missing
-
-        """
-        config = FilesystemConnectorConfig.from_properties(properties)
-        return cls(config)
 
     @override
     def extract(

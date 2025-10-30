@@ -4,7 +4,7 @@ import logging
 from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Self, override
+from typing import Any, override
 
 from waivern_core.base_connector import Connector
 from waivern_core.errors import (
@@ -83,38 +83,6 @@ class SourceCodeConnector(Connector):
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this connector."""
         return _SUPPORTED_OUTPUT_SCHEMAS
-
-    @classmethod
-    @override
-    def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create connector from properties (legacy method for Executor compatibility).
-
-        TODO: Remove this method in Phase 6 when Executor uses factories directly.
-
-        This is a backward-compatibility wrapper. New code should use:
-            config = SourceCodeConnectorConfig.from_properties(properties)
-            connector = SourceCodeConnector(config)
-
-        Args:
-            properties: Configuration properties dictionary containing:
-                - path (str): Required. Path to source code file or directory.
-                - language (str, optional): Programming language.
-                - file_patterns (list[str], optional): File inclusion patterns.
-                - max_file_size (int, optional): Maximum file size to process.
-                - max_files (int, optional): Maximum number of files to process.
-                - exclude_patterns (list[str], optional): Glob patterns to exclude.
-                  Defaults to common exclusions (*.pyc, __pycache__, etc.).
-                  Specify custom patterns to override defaults, or [] to disable exclusions.
-
-        Returns:
-            Self: A new SourceCodeConnector instance.
-
-        Raises:
-            ConnectorConfigError: If required properties are missing.
-
-        """
-        config = SourceCodeConnectorConfig.from_properties(properties)
-        return cls(config)
 
     @override
     def extract(

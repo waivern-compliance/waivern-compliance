@@ -76,36 +76,6 @@ class TestMySQLConnectorPublicAPI:
         assert output_schemas[0].name == "standard_input"
         assert output_schemas[0].version == "1.0.0"
 
-    def test_from_properties_raises_error_without_host(self) -> None:
-        """Test from_properties raises error when host is missing."""
-        properties = {"user": TEST_USER}
-
-        with clear_mysql_env_vars():
-            with pytest.raises(
-                ConnectorConfigError, match="MySQL host info is required"
-            ):
-                MySQLConnector.from_properties(properties)
-
-    def test_from_properties_raises_error_without_user(self) -> None:
-        """Test from_properties raises error when user is missing."""
-        properties = {"host": TEST_HOST}
-
-        with clear_mysql_env_vars():
-            with pytest.raises(
-                ConnectorConfigError, match="MySQL user info is required"
-            ):
-                MySQLConnector.from_properties(properties)
-
-    def test_from_properties_handles_invalid_port_env_var(self) -> None:
-        """Test from_properties raises error for invalid MYSQL_PORT environment variable."""
-        properties = {"host": TEST_HOST, "user": TEST_USER}
-
-        with patch.dict(os.environ, {"MYSQL_PORT": "invalid_port"}):
-            with pytest.raises(
-                ConnectorConfigError, match="Invalid MYSQL_PORT environment variable"
-            ):
-                MySQLConnector.from_properties(properties)
-
     def test_init_with_valid_parameters_succeeds(self) -> None:
         """Test initialisation with valid parameters."""
         with clear_mysql_env_vars():

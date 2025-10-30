@@ -87,13 +87,6 @@ class TestFilesystemConnector:
         assert output_schemas[0].name == "standard_input"
         assert output_schemas[0].version == "1.0.0"
 
-    def test_from_properties_raises_error_without_path(self):
-        """Test from_properties raises error when path is missing."""
-        properties = {}
-
-        with pytest.raises(ConnectorConfigError, match="path property is required"):
-            FilesystemConnector.from_properties(properties)
-
     def test_init_with_nonexistent_path_raises_error(self):
         """Test initialisation with nonexistent path raises error."""
         nonexistent_path = "/this/path/does/not/exist"

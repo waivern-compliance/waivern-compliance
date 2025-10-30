@@ -39,11 +39,6 @@ class MockConnector(Connector):
 
     @classmethod
     @override
-    def from_properties(cls, properties: dict[str, Any]) -> "MockConnector":
-        return cls()
-
-    @classmethod
-    @override
     def get_supported_output_schemas(cls) -> list[Schema]:
         return [StandardInputSchema()]
 
@@ -72,11 +67,6 @@ class MockAnalyser(Analyser):
     @override
     def get_name(cls) -> str:
         return "mock_analyser"
-
-    @classmethod
-    @override
-    def from_properties(cls, properties: dict[str, Any]) -> "MockAnalyser":
-        return cls()
 
     @classmethod
     @override

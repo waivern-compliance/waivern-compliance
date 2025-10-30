@@ -9,7 +9,6 @@ Connector configuration is handled by ConnectorConfig in the runbook module.
 
 import abc
 import logging
-from typing import Any, Self
 
 from waivern_core.message import Message
 from waivern_core.schemas.base import Schema
@@ -29,22 +28,6 @@ class Connector(abc.ABC):
     @abc.abstractmethod
     def get_name(cls) -> str:
         """Return the name of the connector."""
-
-    @classmethod
-    @abc.abstractmethod
-    def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Instantiate this connector from a dictionary of properties.
-
-        The `properties` dictionary is the configuration for the connector
-        as specified in the runbook file.
-
-        Returns:
-            The connector instance
-
-        Raises:
-            ConnectorConfigError: If the configured properties are invalid
-
-        """
 
     @classmethod
     @abc.abstractmethod

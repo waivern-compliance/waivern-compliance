@@ -103,57 +103,6 @@ class TestSourceCodeConnectorClassMethods:
         assert output_schemas[0].name == "source_code"
         assert output_schemas[0].version == "1.0.0"
 
-    def test_from_properties_with_minimal_config(self):
-        """Test creating connector from properties with minimal configuration."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            php_file = Path(temp_dir) / "test.php"
-            php_file.write_text("<?php echo 'test'; ?>")
-
-            properties = {"path": temp_dir}
-
-            connector = SourceCodeConnector.from_properties(properties)
-
-            assert connector is not None
-
-    def test_from_properties_with_full_config(self):
-        """Test creating connector from properties with full configuration."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            php_file = Path(temp_dir) / "test.php"
-            php_file.write_text("<?php echo 'test'; ?>")
-
-            properties = {
-                "path": temp_dir,
-                "language": "php",
-                "file_patterns": ["*.php"],
-                "max_file_size": 2 * 1024 * 1024,  # 2MB
-                "max_files": 500,
-            }
-
-            connector = SourceCodeConnector.from_properties(properties)
-
-            assert connector is not None
-
-    def test_from_properties_missing_path(self):
-        """Test error handling when path property is missing."""
-        properties = {"language": "php"}
-
-        with pytest.raises(ConnectorConfigError, match="path property is required"):
-            SourceCodeConnector.from_properties(properties)
-
-    def test_from_properties_empty_path(self):
-        """Test error handling when path property is empty."""
-        properties = {"path": ""}
-
-        with pytest.raises(ConnectorConfigError, match="path property is required"):
-            SourceCodeConnector.from_properties(properties)
-
-    def test_from_properties_none_path(self):
-        """Test error handling when path property is None."""
-        properties = {"path": None}
-
-        with pytest.raises(ConnectorConfigError, match="path property is required"):
-            SourceCodeConnector.from_properties(properties)
-
 
 class TestSourceCodeConnectorExtraction:
     """Test source code extraction functionality."""
