@@ -20,7 +20,7 @@
     },
     {
       "name": "sample_database",
-      "type": "mysql",
+      "type": "mysql_connector",
       "properties": {
         "host": "${MYSQL_HOST}",
         "port": "${MYSQL_PORT}",

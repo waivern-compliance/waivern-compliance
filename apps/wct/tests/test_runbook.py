@@ -411,7 +411,7 @@ class TestRunbookValidation:
                     "type": "filesystem_connector",
                     "properties": {},
                 },
-                {"name": "duplicate_name", "type": "mysql", "properties": {}},
+                {"name": "duplicate_name", "type": "mysql_connector", "properties": {}},
             ],
             "analysers": [
                 {
@@ -682,7 +682,7 @@ class TestRunbookSummary:
             "description": "A comprehensive test runbook",
             "connectors": [
                 {"name": "conn1", "type": "filesystem_connector", "properties": {}},
-                {"name": "conn2", "type": "mysql", "properties": {}},
+                {"name": "conn2", "type": "mysql_connector", "properties": {}},
             ],
             "analysers": [
                 {"name": "anal1", "type": "personal_data_analyser", "properties": {}},
@@ -721,7 +721,10 @@ class TestRunbookSummary:
         assert summary.connector_count == 2
         assert summary.analyser_count == 3
         assert summary.execution_steps == 2
-        assert set(summary.connector_types) == {"filesystem_connector", "mysql"}
+        assert set(summary.connector_types) == {
+            "filesystem_connector",
+            "mysql_connector",
+        }
         assert set(summary.analyser_types) == {
             "personal_data_analyser",
             "processing_purpose_analyser",
@@ -749,7 +752,7 @@ class TestRunbookIntegration:
                 },
                 {
                     "name": "database_connector",
-                    "type": "mysql",
+                    "type": "mysql_connector",
                     "properties": {
                         "max_rows_per_table": 50,
                     },

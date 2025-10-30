@@ -33,7 +33,7 @@ from waivern_mysql.config import MySQLConnectorConfig
 logger = logging.getLogger(__name__)
 
 # Constants
-_CONNECTOR_NAME = "mysql"
+_CONNECTOR_NAME = "mysql_connector"
 
 # SQL Queries
 _TABLES_QUERY = """
@@ -86,20 +86,23 @@ class MySQLConnector(Connector):
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create connector from configuration properties.
+        """Create connector from properties (legacy method for Executor compatibility).
 
-        Required properties:
-        - host: MySQL server hostname (or MYSQL_HOST env var)
-        - user: Database username (or MYSQL_USER env var)
+        TODO: Remove this method in Phase 6 when Executor uses factories directly.
 
-        Optional properties:
-        - port: Server port (default: 3306, or MYSQL_PORT env var)
-        - password: Database password (or MYSQL_PASSWORD env var)
-        - database: Database name (or MYSQL_DATABASE env var)
-        - charset: Character set (default: "utf8mb4")
-        - autocommit: Enable autocommit (default: True)
-        - connect_timeout: Connection timeout (default: 10)
-        - max_rows_per_table: Maximum rows per table (default: 10)
+        This is a backward-compatibility wrapper. New code should use:
+            config = MySQLConnectorConfig.from_properties(properties)
+            connector = MySQLConnector(config)
+
+        Args:
+            properties: Raw properties from runbook configuration
+
+        Returns:
+            Configured MySQLConnector instance
+
+        Raises:
+            ConnectorConfigError: If validation fails or required properties are missing
+
         """
         config = MySQLConnectorConfig.from_properties(properties)
         return cls(config)

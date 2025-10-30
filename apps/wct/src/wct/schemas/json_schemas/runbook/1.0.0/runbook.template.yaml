@@ -22,7 +22,7 @@ connectors:
 
   # MySQL database connector for analysing database content
   - name: "sample_database"
-    type: "mysql"
+    type: "mysql_connector"
     properties:
       host: "${MYSQL_HOST}"           # Use environment variables for sensitive data
       port: ${MYSQL_PORT}             # Defaults to 3306 if not specified

@@ -1,13 +1,14 @@
 """Configuration for MySQLConnector."""
 
 import os
-from typing import Any, Self
+from typing import Any, Self, override
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import Field, field_validator
+from waivern_core import BaseComponentConfiguration
 from waivern_core.errors import ConnectorConfigError
 
 
-class MySQLConnectorConfig(BaseModel):
+class MySQLConnectorConfig(BaseComponentConfiguration):
     """Configuration for MySQLConnector with Pydantic validation.
 
     This provides strong typing and validation for MySQL connector
@@ -49,13 +50,6 @@ class MySQLConnectorConfig(BaseModel):
         gt=0,
     )
 
-    model_config = ConfigDict(
-        # Allow extra fields for future extensibility
-        extra="forbid",
-        # Validate assignment to catch errors early
-        validate_assignment=True,
-    )
-
     @field_validator("host")
     @classmethod
     def validate_host_not_empty(cls, v: str) -> str:
@@ -81,6 +75,7 @@ class MySQLConnectorConfig(BaseModel):
         return str(v)
 
     @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
         """Create configuration from runbook properties with environment variable support.
 

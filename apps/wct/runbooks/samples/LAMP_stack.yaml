@@ -23,7 +23,7 @@ connectors:
       encoding: "utf-8"
 
   - name: my_mysql_db
-    type: mysql
+    type: mysql_connector
     properties:
       # MySQL credentials are first tried from environment variables:
       # MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT
