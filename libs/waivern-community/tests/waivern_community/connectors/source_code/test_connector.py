@@ -25,7 +25,8 @@ class TestSourceCodeConnectorInitialisation:
             f.flush()
 
             try:
-                connector = SourceCodeConnector.from_properties({"path": f.name})
+                config = SourceCodeConnectorConfig.from_properties({"path": f.name})
+                connector = SourceCodeConnector(config)
                 assert connector is not None
 
             finally:
@@ -91,7 +92,7 @@ class TestSourceCodeConnectorClassMethods:
         """Test that get_name returns correct connector name."""
         name = SourceCodeConnector.get_name()
 
-        assert name == "source_code"
+        assert name == "source_code_connector"
         assert isinstance(name, str)
 
     def test_get_supported_output_schemas_returns_source_code(self):
@@ -185,7 +186,8 @@ class UserManager {
             f.flush()
 
             try:
-                connector = SourceCodeConnector.from_properties({"path": f.name})
+                config = SourceCodeConnectorConfig.from_properties({"path": f.name})
+                connector = SourceCodeConnector(config)
                 message = connector.extract()
 
                 # Verify Message structure
@@ -276,7 +278,8 @@ class UserManager {
             # Create non-PHP file (should be ignored)
             (temp_path / "readme.txt").write_text("This is not PHP")
 
-            connector = SourceCodeConnector.from_properties({"path": temp_dir})
+            config = SourceCodeConnectorConfig.from_properties({"path": temp_dir})
+            connector = SourceCodeConnector(config)
             message = connector.extract()
 
             # Verify Message structure
@@ -303,7 +306,8 @@ class UserManager {
             f.flush()
 
             try:
-                connector = SourceCodeConnector.from_properties({"path": f.name})
+                config = SourceCodeConnectorConfig.from_properties({"path": f.name})
+                connector = SourceCodeConnector(config)
                 explicit_schema = SourceCodeSchema()
 
                 message = connector.extract(output_schema=explicit_schema)
@@ -334,9 +338,10 @@ class UserManager {
 
             try:
                 # Set a very small max file size
-                connector = SourceCodeConnector.from_properties(
+                config = SourceCodeConnectorConfig.from_properties(
                     {"path": f.name, "max_file_size": 100}
-                )  # 100 bytes
+                )
+                connector = SourceCodeConnector(config)
                 message = connector.extract()
 
                 # Should handle gracefully (file may be skipped)
@@ -367,12 +372,13 @@ class UserManager {
             )
 
             # Test with specific pattern
-            connector = SourceCodeConnector.from_properties(
+            config = SourceCodeConnectorConfig.from_properties(
                 {
                     "path": temp_dir,
                     "file_patterns": ["*.php"],  # Only .php files
                 }
             )
+            connector = SourceCodeConnector(config)
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -417,7 +423,8 @@ class UserManager {
             (temp_path / "node_modules").mkdir()
             (temp_path / "node_modules" / "package.json").write_text("{}")
 
-            connector = SourceCodeConnector.from_properties({"path": temp_dir})
+            config = SourceCodeConnectorConfig.from_properties({"path": temp_dir})
+            connector = SourceCodeConnector(config)
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -467,7 +474,7 @@ class UserManager {
             (temp_path / "test.log").write_text("log content")  # Normally excluded
 
             # Test with patterns that only include specific files
-            connector = SourceCodeConnector.from_properties(
+            config = SourceCodeConnectorConfig.from_properties(
                 {
                     "path": temp_dir,
                     "file_patterns": [
@@ -475,6 +482,7 @@ class UserManager {
                     ],  # Only files starting with "include_me"
                 }
             )
+            connector = SourceCodeConnector(config)
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -520,7 +528,8 @@ class UserManager {
                 "<?php class UserController {} ?>"
             )
 
-            connector = SourceCodeConnector.from_properties({"path": temp_dir})
+            config = SourceCodeConnectorConfig.from_properties({"path": temp_dir})
+            connector = SourceCodeConnector(config)
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -550,7 +559,8 @@ class TestSourceCodeConnectorEdgeCases:
     def test_extract_from_empty_directory(self):
         """Test extraction from empty directory."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            connector = SourceCodeConnector.from_properties({"path": temp_dir})
+            config = SourceCodeConnectorConfig.from_properties({"path": temp_dir})
+            connector = SourceCodeConnector(config)
 
             # Empty directory should raise ConnectorExtractionError
             with pytest.raises(ConnectorExtractionError, match="No files found"):
@@ -566,7 +576,8 @@ class TestSourceCodeConnectorEdgeCases:
             (temp_path / "config.json").write_text('{"key": "value"}')
             (temp_path / "script.py").write_text("print('hello')")
 
-            connector = SourceCodeConnector.from_properties({"path": temp_dir})
+            config = SourceCodeConnectorConfig.from_properties({"path": temp_dir})
+            connector = SourceCodeConnector(config)
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -585,7 +596,8 @@ class TestSourceCodeConnectorEdgeCases:
             f.flush()
 
             try:
-                connector = SourceCodeConnector.from_properties({"path": f.name})
+                config = SourceCodeConnectorConfig.from_properties({"path": f.name})
+                connector = SourceCodeConnector(config)
                 # Should not raise exception - tree-sitter handles invalid syntax
                 message = connector.extract()
 
@@ -610,7 +622,8 @@ class TestSourceCodeConnectorEdgeCases:
             f.flush()
 
             try:
-                connector = SourceCodeConnector.from_properties({"path": f.name})
+                config = SourceCodeConnectorConfig.from_properties({"path": f.name})
+                connector = SourceCodeConnector(config)
 
                 # Should handle gracefully or raise appropriate exception
                 try:
@@ -633,7 +646,8 @@ class TestSourceCodeConnectorEdgeCases:
             f.flush()
 
             try:
-                connector = SourceCodeConnector.from_properties({"path": f.name})
+                config = SourceCodeConnectorConfig.from_properties({"path": f.name})
+                connector = SourceCodeConnector(config)
                 unsupported_schema = StandardInputSchema()
 
                 with pytest.raises(
@@ -671,7 +685,8 @@ class TestClass{i} {{
 ?>"""
                 (temp_path / f"file{i}.php").write_text(file_content)
 
-            connector = SourceCodeConnector.from_properties({"path": temp_dir})
+            config = SourceCodeConnectorConfig.from_properties({"path": temp_dir})
+            connector = SourceCodeConnector(config)
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -697,9 +712,10 @@ class TestClass{i} {{
                 (temp_path / f"file{i}.php").write_text(file_content)
 
             # Set low max_files limit
-            connector = SourceCodeConnector.from_properties(
+            config = SourceCodeConnectorConfig.from_properties(
                 {"path": temp_dir, "max_files": 5}
             )
+            connector = SourceCodeConnector(config)
             message = connector.extract()
 
             assert isinstance(message, Message)
@@ -742,7 +758,8 @@ class PrivacyManager {
             f.flush()
 
             try:
-                connector = SourceCodeConnector.from_properties({"path": f.name})
+                config = SourceCodeConnectorConfig.from_properties({"path": f.name})
+                connector = SourceCodeConnector(config)
                 message = connector.extract()
 
                 content = message.content
@@ -793,7 +810,8 @@ class PrivacyManager {
             f.flush()
 
             try:
-                connector = SourceCodeConnector.from_properties({"path": f.name})
+                config = SourceCodeConnectorConfig.from_properties({"path": f.name})
+                connector = SourceCodeConnector(config)
                 message = connector.extract()
 
                 # Message should be pre-validated by connector
@@ -824,7 +842,8 @@ class PrivacyManager {
                 "<?php class UserController { public function index() { return true; } } ?>"
             )
 
-            connector = SourceCodeConnector.from_properties({"path": temp_dir})
+            config = SourceCodeConnectorConfig.from_properties({"path": temp_dir})
+            connector = SourceCodeConnector(config)
             message = connector.extract()
 
             content = message.content
@@ -865,12 +884,13 @@ class TestSourceCodeConnectorExcludePatterns:
             (build_dir / "BuildScript.php").write_text("<?php class BuildScript {} ?>")
 
             # Exclude specific directories
-            connector = SourceCodeConnector.from_properties(
+            config = SourceCodeConnectorConfig.from_properties(
                 {
                     "path": temp_dir,
                     "exclude_patterns": ["tests/*", "vendor/*", "build/*"],
                 }
             )
+            connector = SourceCodeConnector(config)
             message = connector.extract()
 
             assert isinstance(message, Message)

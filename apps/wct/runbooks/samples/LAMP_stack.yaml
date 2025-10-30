@@ -6,7 +6,7 @@ contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
 
 connectors:
   - name: "php_source_code"
-    type: "source_code"
+    type: "source_code_connector"
     properties:
       path: "./libs/waivern-community/tests/waivern_community/analysers/processing_purpose_analyser/source_code_mock_php"
       language: "php"
