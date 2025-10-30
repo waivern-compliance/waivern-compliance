@@ -96,7 +96,7 @@ This project uses `uv` for dependency management.
 
 **Testing:**
 ```bash
-uv run pytest                       # Run all tests (752 tests)
+uv run pytest                       # Run all tests
 uv run pytest -v                    # Verbose output
 uv run pytest -m integration        # Run integration tests (requires API keys)
 ```
@@ -224,7 +224,7 @@ uv run wct test-llm  # Verify configuration
 - `LLM_PROVIDER` - Provider selection (anthropic, openai, google)
 - `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` - MySQL connector configuration
 
-**See:** [docs/configuration.md](docs/configuration.md) for complete documentation.
+**See:** [docs/how-tos/configuration.md](docs/how-tos/configuration.md) for complete documentation.
 
 ## Runbook Format
 
@@ -295,16 +295,22 @@ All data flow uses Message objects:
 - Automatic validation against declared schemas
 - No manual validation needed in analyser implementations
 
-### Component Registry
+### Component Architecture
 
-Components register automatically:
-- Connectors and analysers register via metaclass
-- Executor discovers components by type name
+**Dependency Injection System:**
+- Components instantiated via `ComponentFactory` pattern
+- `ServiceContainer` manages singleton services (e.g., LLM services)
+- Executor holds factories, not component classes
+- Configuration via dedicated Config classes (Pydantic models)
+
+**Component Registry:**
+- Components register automatically via metaclass
+- Executor discovers component factories by type name
 - Tests use `isolated_registry` fixture for proper isolation
 
 ## Core Concepts Documentation
 
-**See:** [docs/wcf_core_concepts.md](docs/wcf_core_concepts.md) for detailed framework concepts.
+**See:** [docs/core-concepts/wcf-core-componens.md](docs/core-concepts/wcf-core-componens.md) for detailed framework concepts.
 
 **Key principles:**
 - **Schema-driven:** Components communicate through JSON Schema contracts
@@ -345,7 +351,7 @@ Components register automatically:
 
 ### Testing Guidelines
 
-- All packages have comprehensive test coverage (752 tests total)
+- All packages have comprehensive test coverage
 - Integration tests marked with `@pytest.mark.integration` (require API keys)
 - Run `uv run pytest` before committing
 - Type checking in strict mode (basedpyright)
@@ -353,17 +359,21 @@ Components register automatically:
 
 ## Important Development Notes
 
-### Schema Implementation
+### Component Implementation
 
 **When creating connectors:**
-- Implement `get_output_schema()` returning `WctSchema[T]`
+- Implement `get_supported_output_schemas()` returning `list[Schema]`
 - Transform extracted data to match declared schema
 - Return Message objects from `extract()` method
+- Create a `ComponentFactory[Connector]` for instantiation
+- Configuration via dedicated Config class (Pydantic model)
 
 **When creating analysers:**
-- Implement `get_input_schema()` and `get_output_schema()`
+- Implement `get_supported_input_schemas()` and `get_supported_output_schemas()` returning `list[Schema]`
 - Implement `process_data(message: Message) -> Message`
 - NO need to implement validation - handled by Message mechanism
+- Create a `ComponentFactory[Analyser]` for instantiation
+- Configuration via dedicated Config class (Pydantic model)
 - Use `@override` decorators for abstract methods
 
 **Schema files:**
@@ -432,7 +442,7 @@ When using TodoWrite to track tasks:
 ## Additional Resources
 
 - **[README.md](README.md)** - Project overview and quick start
-- **[docs/wcf_core_concepts.md](docs/wcf_core_concepts.md)** - Framework concepts
-- **[docs/configuration.md](docs/configuration.md)** - Configuration guide
-- **[docs/architecture/monorepo-migration-completed.md](docs/architecture/monorepo-migration-completed.md)** - Migration history
+- **[docs/core-concepts/wcf-core-componens.md](docs/core-concepts/wcf-core-componens.md)** - Framework concepts
+- **[docs/how-tos/configuration.md](docs/how-tos/configuration.md)** - Configuration guide
+- **[docs/roadmaps/monorepo-migration/monorepo-migration-completed.md](docs/roadmaps/monorepo-migration/monorepo-migration-completed.md)** - Migration history
 - **[apps/wct/runbooks/README.md](apps/wct/runbooks/README.md)** - Runbook documentation
