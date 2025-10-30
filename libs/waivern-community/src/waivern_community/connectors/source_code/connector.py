@@ -76,7 +76,7 @@ class SourceCodeConnector(Connector):
     @override
     def get_name(cls) -> str:
         """Return the name of the connector."""
-        return "source_code"
+        return "source_code_connector"
 
     @classmethod
     @override
@@ -87,7 +87,13 @@ class SourceCodeConnector(Connector):
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
-        """Create a source code connector instance from configuration properties.
+        """Create connector from properties (legacy method for Executor compatibility).
+
+        TODO: Remove this method in Phase 6 when Executor uses factories directly.
+
+        This is a backward-compatibility wrapper. New code should use:
+            config = SourceCodeConnectorConfig.from_properties(properties)
+            connector = SourceCodeConnector(config)
 
         Args:
             properties: Configuration properties dictionary containing:

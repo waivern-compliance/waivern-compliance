@@ -1,16 +1,15 @@
 """Configuration for SourceCodeConnector."""
 
 from pathlib import Path
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, Self, override
 
 from pydantic import (
-    BaseModel,
     BeforeValidator,
-    ConfigDict,
     Field,
     ValidationError,
     field_validator,
 )
+from waivern_core import BaseComponentConfiguration
 from waivern_core.errors import ConnectorConfigError
 
 # Common file patterns to exclude from source code analysis
@@ -55,7 +54,7 @@ def _validate_path_required(v: str | Path | None) -> Path:
     return path_obj
 
 
-class SourceCodeConnectorConfig(BaseModel):
+class SourceCodeConnectorConfig(BaseComponentConfiguration):
     """Configuration for SourceCodeConnector with Pydantic validation.
 
     This provides strong typing and validation for source code connector
@@ -88,13 +87,6 @@ class SourceCodeConnectorConfig(BaseModel):
         description="Glob patterns to exclude from processing. Defaults to common exclusions (*.pyc, __pycache__, etc.). Specify custom patterns to override defaults, or empty list [] to disable all exclusions",
     )
 
-    model_config = ConfigDict(
-        # Allow extra fields for future extensibility
-        extra="forbid",
-        # Validate assignment to catch errors early
-        validate_assignment=True,
-    )
-
     @field_validator("language")
     @classmethod
     def validate_language_if_provided(cls, v: str | None) -> str | None:
@@ -116,6 +108,7 @@ class SourceCodeConnectorConfig(BaseModel):
         return v
 
     @classmethod
+    @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
         """Create configuration from runbook properties.
 
