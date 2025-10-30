@@ -1,6 +1,6 @@
 # Dependency Injection System Implementation Plan
 
-**Status:** In Progress (Phase 6 Complete - Executor DI-Enabled)
+**Status:** Complete (All Phases 0-6 Complete - Framework Fully DI-Enabled)
 **Created:** 2025-10-23
 **Updated:** 2025-10-30
 **Related ADR:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
@@ -345,28 +345,57 @@ All three analysers followed these steps:
 - [x] Test availability checking and error handling
 - [x] All 847 tests passing, 0 type errors
 
-### 6.4 Remove Backward Compatibility Wrappers
+### 6.4 Remove Backward Compatibility Wrappers ✅
 
-**Note:** This step executes AFTER 6.1-6.3 are complete and executor uses factories directly.
+**Status:** ✅ Complete
 
-- [ ] Remove `from_properties()` from all analyser implementations:
-  - [ ] Remove from `PersonalDataAnalyser` (waivern-personal-data-analyser)
-  - [ ] Remove from `ProcessingPurposeAnalyser` (waivern-community)
-  - [ ] Remove from `DataSubjectAnalyser` (waivern-community)
-- [ ] Remove `from_properties()` from all connector implementations:
-  - [ ] Remove from `FilesystemConnector` (waivern-community)
-  - [ ] Remove from `SourceCodeConnector` (waivern-community)
-  - [ ] Remove from `SQLiteConnector` (waivern-community)
-  - [ ] Remove from `MySQLConnector` (waivern-mysql)
-- [ ] Remove `from_properties()` abstract method from base classes:
-  - [ ] Remove from `waivern_core.Analyser` base class
-  - [ ] Remove from `waivern_core.Connector` base class
-- [ ] Update base class docstrings to reference factory pattern only
-- [ ] Update base class type hints
-- [ ] Verify all tests still pass (should be 807+ tests)
-- [ ] Run full integration test suite
+- [x] Remove `from_properties()` from all analyser implementations:
+  - [x] Remove from `PersonalDataAnalyser` (waivern-personal-data-analyser)
+  - [x] Remove from `ProcessingPurposeAnalyser` (waivern-community)
+  - [x] Remove from `DataSubjectAnalyser` (waivern-community)
+- [x] Remove `from_properties()` from all connector implementations:
+  - [x] Remove from `FilesystemConnector` (waivern-community)
+  - [x] Remove from `SourceCodeConnector` (waivern-community)
+  - [x] Remove from `SQLiteConnector` (waivern-community)
+  - [x] Remove from `MySQLConnector` (waivern-mysql)
+- [x] Remove `from_properties()` abstract method from base classes:
+  - [x] Remove from `waivern_core.Analyser` base class
+  - [x] Remove from `waivern_core.Connector` base class
+- [x] Update base class docstrings to reference factory pattern only
+- [x] Update base class type hints
+- [x] Verify all tests still pass (845 tests passing)
+- [x] Run full integration test suite
+- [x] Add config validation tests to close coverage gap (8 new tests)
 
-**Deliverable:** Executor fully DI-integrated with factory pattern. ComponentConfig uses dict-only approach following industry standards (Django, FastAPI, Kubernetes). Backward compatibility wrappers remain (to be removed in Phase 6.4).
+**Deliverable:** Breaking change complete. All `from_properties()` methods removed. Framework fully DI-enabled. Test coverage maintained (845 tests passing, coverage improved through better organization).
+
+### Phase 6 Summary
+
+**Status:** ✅ **COMPLETE**
+
+Phase 6 successfully migrated the Executor to use DI container and ComponentFactory pattern, then removed all backward compatibility wrappers. This was the final integration step.
+
+**Commits:**
+1. `c285104` - docs: update the DI implementation plan
+2. `548d2b5` - feat: migrate DataSubjectAnalyser to DI with ComponentFactory pattern (Phases 6.1-6.3)
+3. `9ddd67b` - feat!: remove from_properties() backward compatibility layer (Phase 6.4)
+4. `328a0a4` - test: add config validation tests for ProcessingPurposeAnalyserConfig
+
+**Test Results:**
+- All 845 tests passing (837 existing + 8 new config tests)
+- 10 obsolete tests removed (validated at wrong layer)
+- 4 tests updated to use factory pattern
+- Coverage gap analysis: 100% of requirements from deleted tests still covered
+
+**Key Achievements:**
+- Executor fully DI-integrated
+- All 7 component factories registered and working
+- ServiceContainer managing singleton LLM service
+- ComponentFactory pattern enforced throughout
+- No `from_properties()` methods remaining
+- Config validation moved to dedicated test files (better organization)
+
+**Branch:** `feature/executor-di-integration` (ready for PR)
 
 ---
 
