@@ -88,9 +88,15 @@ class Executor:
         # Create executor with container
         executor = cls(container)
 
-        # Get infrastructure services from container
-        llm_service = container.get_service(BaseLLMService)
-        logger.debug("Retrieved LLM service from container")
+        # Get infrastructure services from container (may be None if unavailable)
+        try:
+            llm_service = container.get_service(BaseLLMService)
+            logger.debug("Retrieved LLM service from container")
+        except ValueError:
+            llm_service = None
+            logger.warning(
+                "LLM service unavailable - analysers will run without LLM validation"
+            )
 
         # Register analyser factories with LLM service dependency
         executor.register_analyser_factory(PersonalDataAnalyserFactory(llm_service))
