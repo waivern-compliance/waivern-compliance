@@ -25,4 +25,4 @@ from waivern_personal_data_analyser import PersonalDataAnalyser
 
 ## Development
 
-See [CLAUDE.md](../../CLAUDE.md) for development guidelines.
+See [docs](../../docs/) for development guidelines.

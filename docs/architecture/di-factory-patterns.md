@@ -1,12 +1,11 @@
-# DI Factory Patterns
+# Dependency Injection Factory Patterns
 
-**Status:** Complete
 **Updated:** 2025-10-30
 **Related:** [ADR-0002](../adr/0002-dependency-injection-for-service-management.md)
 
 ## Overview
 
-WCF uses dependency injection with two factory patterns: one for infrastructure services, one for framework components.
+WCF uses dependency injection with two factory patterns: one for infrastructure services, one for WCF [components](../core-concepts/wcf-core-components.md).
 
 ## ServiceFactory[T] - Infrastructure Services
 
@@ -163,5 +162,4 @@ return PersonalDataAnalyser(config_obj, self._llm_service)
 ## References
 
 - [ADR-0002: Dependency Injection for Service Management](../adr/0002-dependency-injection-for-service-management.md)
-- [DI Implementation Plan](./dependency-injection-implementation-plan.md)
 - [Dependency Injection Core Concepts](../core-concepts/dependency-injection.md)

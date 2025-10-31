@@ -310,7 +310,7 @@ All data flow uses Message objects:
 
 ## Core Concepts Documentation
 
-**See:** [docs/core-concepts/wcf-core-componens.md](docs/core-concepts/wcf-core-componens.md) for detailed framework concepts.
+**See:** [docs/core-concepts/wcf-core-components.md](docs/core-concepts/wcf-core-components.md) for detailed framework concepts.
 
 **Key principles:**
 - **Schema-driven:** Components communicate through JSON Schema contracts
@@ -442,7 +442,7 @@ When using TodoWrite to track tasks:
 ## Additional Resources
 
 - **[README.md](README.md)** - Project overview and quick start
-- **[docs/core-concepts/wcf-core-componens.md](docs/core-concepts/wcf-core-componens.md)** - Framework concepts
+- **[docs/core-concepts/wcf-core-components.md](docs/core-concepts/wcf-core-components.md)** - Framework concepts
 - **[docs/how-tos/configuration.md](docs/how-tos/configuration.md)** - Configuration guide
 - **[docs/roadmaps/monorepo-migration/monorepo-migration-completed.md](docs/roadmaps/monorepo-migration/monorepo-migration-completed.md)** - Migration history
 - **[apps/wct/runbooks/README.md](apps/wct/runbooks/README.md)** - Runbook documentation
