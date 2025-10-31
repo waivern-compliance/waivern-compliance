@@ -160,7 +160,7 @@ Runbook (YAML) → Executor → Connector → Schema Validation → Analyser →
 - Runtime validation through Message objects
 - Type-safe interfaces throughout
 
-**See:** [WCF Core Concepts](docs/core-concepts/wcf-core-componens.md) for detailed framework documentation.
+**See:** [WCF Core Concepts](docs/core-concepts/wcf-core-components.md) for detailed framework documentation.
 
 ## Development
 
@@ -324,8 +324,7 @@ Run `./scripts/dev-checks.sh` before committing.
 
 ## Documentation
 
-- **[CLAUDE.md](CLAUDE.md)** - Development guide for AI assistants
-- **[WCF Core Concepts](docs/core-concepts/wcf-core-componens.md)** - Framework architecture
+- **[WCF Core Concepts](docs/core-concepts/wcf-core-components.md)** - Framework architecture
 - **[Configuration Guide](docs/how-tos/configuration.md)** - Environment configuration
 - **[Runbook Documentation](apps/wct/runbooks/README.md)** - Runbook usage
 
