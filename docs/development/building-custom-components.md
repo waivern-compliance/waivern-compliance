@@ -470,6 +470,8 @@ class MyRulesetAnalyser(Analyser[MyAnalyserConfig]):
         )
 ```
 
+> **Note:** Rulesets can also be hosted remotely as HTTP services, allowing analysers to access premium, expert-curated patterns via API key. See [Remote Rulesets](extending-wcf.md#remote-rulesets) for details.
+
 ### Multi-Schema Support
 
 ```python

@@ -228,6 +228,126 @@ GET /v1/analysers
 }
 ```
 
+## Remote Rulesets
+
+### Overview
+
+In addition to remote analysers, WCF supports **remote rulesets** - pattern-based detection rules hosted as HTTP services. This enables:
+- Expert-curated compliance patterns (legal, regulatory, industry-specific)
+- Regularly updated pattern libraries without package reinstalls
+- Monetisation of compliance expertise by legal and regulatory professionals
+- Hybrid approach: run analysers locally with premium patterns
+
+### Use Case
+
+OSS analysers (e.g., `personal_data_analyser`) can use either:
+- **Local rulesets**: Free, community-maintained patterns installed via pip packages
+- **Remote rulesets**: Premium, expert-curated patterns accessed via API key
+
+This provides a **low-friction upgrade path** - users keep their local setup but gain access to professional-grade patterns.
+
+### Configuration
+
+Configure analysers to use remote rulesets:
+
+```yaml
+# runbook.yaml
+analysers:
+  - name: "personal_data_checker"
+    type: "personal_data_analyser"
+    properties:
+      ruleset:
+        source: "remote"
+        endpoint: "https://api.example.com/v1/rulesets"
+        ruleset_name: "gdpr_personal_data_patterns"
+        version: "2024.11"
+        authentication:
+          type: "api_key"
+          key: "${PATTERNS_API_KEY}"
+        cache:
+          enabled: true
+          ttl_seconds: 3600
+```
+
+### Remote Ruleset Protocol
+
+Remote ruleset services should implement a simple HTTP API:
+
+```http
+GET /v1/rulesets/{ruleset_name}
+Authorization: Bearer {api_key}
+Accept: application/json
+
+→ Response:
+{
+  "name": "gdpr_personal_data_patterns",
+  "version": "2024.11",
+  "description": "GDPR personal data detection patterns curated by legal experts",
+  "patterns": [
+    {
+      "pattern": "email_address",
+      "regex": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
+      "category": "contact_information",
+      "confidence": 0.95
+    },
+    {
+      "pattern": "uk_national_insurance",
+      "regex": "[A-Z]{2}\\d{6}[A-D]",
+      "category": "government_identifier",
+      "confidence": 0.98
+    }
+  ],
+  "metadata": {
+    "last_updated": "2024-11-01",
+    "jurisdiction": "EU",
+    "regulation": "GDPR"
+  }
+}
+```
+
+### Value Proposition
+
+**For Legal/Compliance Professionals:**
+- Monetise regulatory expertise without building full analysers
+- Maintain authoritative pattern libraries
+- Provide jurisdiction-specific compliance patterns
+- Regular updates as regulations evolve
+
+**For Users:**
+- Access expert-curated patterns with minimal setup
+- No package reinstalls for pattern updates
+- Pay only for what you use
+- Run locally (no data leaves your infrastructure)
+
+**For Third-Party Service Providers:**
+- Offer industry-specific pattern libraries (healthcare, financial services, etc.)
+- Build subscription-based compliance pattern services
+- Integrate with existing compliance tools
+
+### Example: Upgrading OSS Analyser with Premium Patterns
+
+```yaml
+# Before: Using free community patterns
+analysers:
+  - name: "basic_checker"
+    type: "personal_data_analyser"
+    # Uses built-in OSS rulesets
+
+# After: Upgrade to expert patterns with API key
+analysers:
+  - name: "expert_checker"
+    type: "personal_data_analyser"
+    properties:
+      ruleset:
+        source: "remote"
+        endpoint: "https://legal-patterns.example.com/v1/rulesets"
+        ruleset_name: "gdpr_legal_expert_patterns"
+        authentication:
+          api_key: "${LEGAL_PATTERNS_KEY}"
+```
+
+Same analyser, better patterns - no code changes required!
+
 ## Deployment Models for Custom Components
 
 ### Local Development
