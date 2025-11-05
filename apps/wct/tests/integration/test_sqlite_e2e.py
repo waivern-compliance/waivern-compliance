@@ -7,7 +7,7 @@ import pytest
 from waivern_community.connectors.sqlite import SQLiteConnectorFactory
 
 from wct.executor import Executor
-from wct.schemas import StandardInputSchema
+from wct.schemas import Schema
 
 
 @pytest.fixture(autouse=True)
@@ -55,7 +55,7 @@ class TestSQLiteE2EIntegration:
         }
         factory = SQLiteConnectorFactory()
         connector = factory.create(properties)
-        schema = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
 
         # Act
         message = connector.extract(schema)
@@ -149,7 +149,7 @@ class TestSQLiteE2EIntegration:
         }
         factory = SQLiteConnectorFactory()
         connector = factory.create(properties)
-        schema = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
 
         # Act
         message = connector.extract(schema)

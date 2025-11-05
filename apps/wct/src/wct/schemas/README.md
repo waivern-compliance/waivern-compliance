@@ -70,10 +70,11 @@ All schemas follow WCT's versioned architecture:
 
 Example:
 ```python
-from wct.schemas import StandardInputSchema
+from wct.schemas import Schema
 
+# Instantiate schema by name and version
 # Loads JSON schema from json_schemas/standard_input/1.0.0/standard_input.json
-schema = StandardInputSchema()
+schema = Schema("standard_input", "1.0.0")
 data = schema.schema  # Returns JSON Schema dict for validation
 ```
 
@@ -82,11 +83,11 @@ data = schema.schema  # Returns JSON Schema dict for validation
 ### Data Flow Validation (Connectors & Analysers)
 
 ```python
-from wct.schemas import StandardInputSchema
+from wct.schemas import Schema
 from wct.message import Message
 
 # Connector extracts data and creates validated message
-schema = StandardInputSchema()
+schema = Schema("standard_input", "1.0.0")
 message = Message(content=extracted_data, schema=schema)
 message.validate()  # Ensures data matches schema
 

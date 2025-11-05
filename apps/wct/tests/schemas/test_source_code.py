@@ -2,7 +2,7 @@
 
 import dataclasses
 
-from waivern_community.connectors.source_code.schemas import SourceCodeSchema
+from waivern_core.schemas import Schema
 
 # Version constant for easy maintenance
 EXPECTED_VERSION = "1.0.0"
@@ -13,7 +13,7 @@ class TestSourceCodeSchema:
 
     def test_init_creates_working_schema(self) -> None:
         """Test initialization creates a working schema instance."""
-        schema = SourceCodeSchema()
+        schema = Schema("source_code", "1.0.0")
         # Test that the schema instance has the expected public interface
         assert hasattr(schema, "name")
         assert hasattr(schema, "version")
@@ -24,17 +24,17 @@ class TestSourceCodeSchema:
 
     def test_name_property(self) -> None:
         """Test name property returns correct value."""
-        schema = SourceCodeSchema()
+        schema = Schema("source_code", "1.0.0")
         assert schema.name == "source_code"
 
     def test_correct_version_is_loaded(self) -> None:
         """Test version property returns correct value."""
-        schema = SourceCodeSchema()
+        schema = Schema("source_code", "1.0.0")
         assert schema.version == EXPECTED_VERSION
 
     def test_schema_property_returns_dict(self) -> None:
         """Test that schema property returns a dictionary structure."""
-        schema = SourceCodeSchema()
+        schema = Schema("source_code", "1.0.0")
 
         result = schema.schema
         # Test that it returns a dictionary (the expected format)
@@ -42,7 +42,7 @@ class TestSourceCodeSchema:
 
     def test_schema_integration(self) -> None:
         """Test schema loading integration with real files."""
-        schema = SourceCodeSchema()
+        schema = Schema("source_code", "1.0.0")
 
         result = schema.schema
         # Verify it's a valid schema structure
@@ -54,7 +54,7 @@ class TestSourceCodeSchema:
 
     def test_schema_immutability(self) -> None:
         """Test that schema instances behave as immutable objects."""
-        schema = SourceCodeSchema()
+        schema = Schema("source_code", "1.0.0")
 
         # Test that core properties return consistent values
         name1 = schema.name

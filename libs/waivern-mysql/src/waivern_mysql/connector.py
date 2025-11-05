@@ -25,7 +25,6 @@ from waivern_core.message import Message
 from waivern_core.schemas import (
     RelationalDatabaseMetadata,
     Schema,
-    StandardInputSchema,
 )
 
 from waivern_mysql.config import MySQLConnectorConfig
@@ -51,7 +50,7 @@ WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
 ORDER BY ORDINAL_POSITION
 """
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [StandardInputSchema()]
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [Schema("standard_input", "1.0.0")]
 
 
 class MySQLConnector(Connector):

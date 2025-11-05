@@ -8,9 +8,9 @@ from waivern_core.schemas import (
     BaseMetadata,
     FilesystemMetadata,
     RelationalDatabaseMetadata,
+    Schema,
     StandardInputDataItemModel,
     StandardInputDataModel,
-    StandardInputSchema,
 )
 
 # Version constant for easy maintenance
@@ -22,7 +22,7 @@ class TestStandardInputSchema:
 
     def test_init_creates_working_schema(self) -> None:
         """Test initialization creates a working schema instance."""
-        schema = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
         # Test that the schema instance has the expected public interface
         assert hasattr(schema, "name")
         assert hasattr(schema, "version")
@@ -33,17 +33,17 @@ class TestStandardInputSchema:
 
     def test_name_property(self) -> None:
         """Test name property returns correct value."""
-        schema = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
         assert schema.name == "standard_input"
 
     def test_correct_version_is_loaded(self) -> None:
         """Test version property returns correct value."""
-        schema = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
         assert schema.version == EXPECTED_VERSION
 
     def test_schema_property_returns_dict(self) -> None:
         """Test that schema property returns a dictionary structure."""
-        schema = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
 
         result = schema.schema
         # Test that it returns a dictionary (the expected format)
@@ -51,7 +51,7 @@ class TestStandardInputSchema:
 
     def test_schema_integration(self) -> None:
         """Test schema loading integration with real files."""
-        schema = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
 
         result = schema.schema
         # Verify it's a valid schema structure
@@ -63,7 +63,7 @@ class TestStandardInputSchema:
 
     def test_schema_immutability(self) -> None:
         """Test that schema instances behave as immutable objects."""
-        schema = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
 
         # Test that core properties return consistent values
         name1 = schema.name

@@ -10,15 +10,7 @@ Note: This is a compatibility layer. New code should import directly from:
 """
 
 # Core schemas and base types (from waivern-core)
-# Analyser output schemas (from standalone packages and waivern-community)
-from waivern_community.analysers.data_subject_analyser.schemas import (
-    DataSubjectFindingSchema,
-)
-from waivern_community.analysers.processing_purpose_analyser.schemas import (
-    ProcessingPurposeFindingSchema,
-)
-
-# Source code connector schema (from waivern-community)
+# Type models from standalone packages and waivern-community
 from waivern_community.connectors.source_code.schemas import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeClassModel,
@@ -29,7 +21,6 @@ from waivern_community.connectors.source_code.schemas import (
     SourceCodeFunctionModel,
     SourceCodeFunctionParameterModel,
     SourceCodeImportModel,
-    SourceCodeSchema,
 )
 from waivern_core.schemas import (
     BaseFindingModel,
@@ -43,10 +34,8 @@ from waivern_core.schemas import (
     SchemaLoadError,
     StandardInputDataItemModel,
     StandardInputDataModel,
-    StandardInputSchema,
     parse_data_model,
 )
-from waivern_personal_data_analyser.schemas import PersonalDataFindingSchema
 
 __all__ = [
     # Base infrastructure (from waivern-core)
@@ -58,19 +47,13 @@ __all__ = [
     "BaseFindingModel",
     "DataParsingError",
     "parse_data_model",
-    # StandardInputSchema (from waivern-core)
-    "StandardInputSchema",
+    # Standard input schema types (from waivern-core)
     "StandardInputDataModel",
     "StandardInputDataItemModel",
     "BaseMetadata",
     "RelationalDatabaseMetadata",
     "FilesystemMetadata",
-    # Analyser output schemas (from waivern-community)
-    "PersonalDataFindingSchema",
-    "ProcessingPurposeFindingSchema",
-    "DataSubjectFindingSchema",
-    # SourceCodeSchema (from waivern-community)
-    "SourceCodeSchema",
+    # Source code schema types (from waivern-community)
     "SourceCodeDataModel",
     "SourceCodeFileDataModel",
     "SourceCodeAnalysisMetadataModel",

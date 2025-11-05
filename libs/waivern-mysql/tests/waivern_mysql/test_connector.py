@@ -9,8 +9,8 @@ import pytest
 from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 from waivern_core.schemas import (
     RelationalDatabaseMetadata,
+    Schema,
     StandardInputDataModel,
-    StandardInputSchema,
 )
 
 from waivern_mysql import MySQLConnector, MySQLConnectorConfig
@@ -60,9 +60,9 @@ class TestMySQLConnectorPublicAPI:
     """Tests for MySQLConnector focusing only on public API."""
 
     @pytest.fixture
-    def standard_input_schema(self) -> StandardInputSchema:
+    def standard_input_schema(self) -> Schema:
         """Return standard input schema."""
-        return StandardInputSchema()
+        return Schema("standard_input", "1.0.0")
 
     def test_get_name_returns_correct_name(self) -> None:
         """Test get_name returns the connector name."""
@@ -142,7 +142,7 @@ class TestMySQLConnectorPublicAPI:
                 mock_get_conn.return_value.__exit__.return_value = None
 
                 # Extract with StandardInputSchema - should use default
-                result_message = connector.extract(StandardInputSchema())
+                result_message = connector.extract(Schema("standard_input", "1.0.0"))
                 assert result_message.schema is not None
                 assert result_message.schema.name == "standard_input"
 
@@ -206,7 +206,9 @@ class TestMySQLConnectorDataExtraction:
         self, mock_connector_with_data: MySQLConnector
     ) -> None:
         """Test MySQL connector creates RelationalDatabaseMetadata with accurate database context."""
-        result_message = mock_connector_with_data.extract(StandardInputSchema())
+        result_message = mock_connector_with_data.extract(
+            Schema("standard_input", "1.0.0")
+        )
 
         # Validate the result conforms to RelationalDatabaseMetadata expectations
         typed_result = StandardInputDataModel[
@@ -287,7 +289,7 @@ class TestMySQLConnectorEdgeCases:
                 mock_get_conn.return_value.__enter__.return_value = mock_connection
                 mock_get_conn.return_value.__exit__.return_value = None
 
-                result_message = connector.extract(StandardInputSchema())
+                result_message = connector.extract(Schema("standard_input", "1.0.0"))
 
                 # Should succeed with empty data
                 assert result_message.schema is not None
@@ -352,7 +354,9 @@ class TestMySQLConnectorEdgeCases:
                         {"id": None, "name": None, "email": None},  # All NULL
                     ]
 
-                    result_message = connector.extract(StandardInputSchema())
+                    result_message = connector.extract(
+                        Schema("standard_input", "1.0.0")
+                    )
 
                     # Validate the result using proper typing
                     typed_result = StandardInputDataModel[
@@ -421,7 +425,9 @@ class TestMySQLConnectorEdgeCases:
                     # Mock minimal table data
                     mock_table_data.return_value = [{"id": 1}]
 
-                    result_message = connector.extract(StandardInputSchema())
+                    result_message = connector.extract(
+                        Schema("standard_input", "1.0.0")
+                    )
 
                     # Assert - Message-level validation
                     result_message.validate()  # Should not raise
