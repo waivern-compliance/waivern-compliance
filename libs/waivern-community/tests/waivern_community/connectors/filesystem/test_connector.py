@@ -10,8 +10,8 @@ from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 from waivern_core.message import Message
 from waivern_core.schemas import (
     FilesystemMetadata,
+    Schema,
     StandardInputDataModel,
-    StandardInputSchema,
 )
 
 from waivern_community.connectors.filesystem.config import FilesystemConnectorConfig
@@ -73,7 +73,7 @@ class TestFilesystemConnector:
     @pytest.fixture
     def standard_input_schema(self):
         """Standard input schema fixture."""
-        return StandardInputSchema()
+        return Schema("standard_input", "1.0.0")
 
     def test_get_name_returns_correct_name(self):
         """Test get_name returns the connector name."""
@@ -265,7 +265,7 @@ class TestFilesystemConnector:
 
             config = FilesystemConnectorConfig.from_properties({"path": str(temp_path)})
             connector = FilesystemConnector(config)
-            schema = StandardInputSchema()
+            schema = Schema("standard_input", "1.0.0")
 
             with pytest.raises(
                 ConnectorExtractionError, match="No readable files found"

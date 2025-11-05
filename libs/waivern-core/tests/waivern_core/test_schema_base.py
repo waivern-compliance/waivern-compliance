@@ -336,15 +336,17 @@ class TestSchemaDependencyInjection:
 class TestSchemaRegistry:
     """Tests for SchemaRegistry."""
 
-    def teardown_method(self) -> None:
-        """Restore default state after each test."""
-        SchemaRegistry.clear_search_paths()
-
     def test_default_search_paths_include_waivern_core(self) -> None:
-        """Registry includes default waivern-core schema directory."""
+        """Registry includes default waivern-core schema directory.
+
+        Note: Other packages may have registered paths, so we verify waivern-core's
+        path is present and is the first (default) path, not that it's the ONLY path.
+        """
         paths = SchemaRegistry.get_search_paths()
 
-        assert len(paths) == 1
+        # At minimum, waivern-core's default path should be present
+        assert len(paths) >= 1
+        # First path should always be waivern-core's default
         assert paths[0].name == "json_schemas"
         assert "waivern_core" in str(paths[0])
 
@@ -352,21 +354,25 @@ class TestSchemaRegistry:
         """Users can register additional schema directories."""
         custom_path = Path("/custom/schemas")
 
+        initial_count = len(SchemaRegistry.get_search_paths())
         SchemaRegistry.register_search_path(custom_path)
         paths = SchemaRegistry.get_search_paths()
 
-        assert len(paths) == 2
-        assert paths[1] == custom_path
+        # Should have one more path than before
+        assert len(paths) == initial_count + 1
+        assert custom_path in paths
 
     def test_register_duplicate_path_ignored(self) -> None:
         """Registering the same path twice doesn't create duplicates."""
         custom_path = Path("/custom/schemas")
 
+        initial_count = len(SchemaRegistry.get_search_paths())
         SchemaRegistry.register_search_path(custom_path)
         SchemaRegistry.register_search_path(custom_path)
         paths = SchemaRegistry.get_search_paths()
 
-        assert len(paths) == 2  # Default + custom (no duplicate)
+        # Should only add one path, not two
+        assert len(paths) == initial_count + 1
         assert paths.count(custom_path) == 1
 
     def test_get_search_paths_returns_copy(self) -> None:
@@ -375,10 +381,11 @@ class TestSchemaRegistry:
         paths2 = SchemaRegistry.get_search_paths()
 
         # Modifying returned list shouldn't affect registry
+        original_len = len(paths2)
         paths1.append(Path("/external/modification"))
 
         assert paths1 != paths2
-        assert len(paths2) == 1  # Only default path
+        assert len(paths2) == original_len  # Unchanged
 
     def test_clear_search_paths_removes_all(self) -> None:
         """clear_search_paths removes all paths including defaults."""
@@ -390,6 +397,7 @@ class TestSchemaRegistry:
         paths = SchemaRegistry.get_search_paths()
 
         assert len(paths) == 1  # Only default after reinitialisation
+        assert "waivern_core" in str(paths[0])
 
     def test_schema_uses_registry_paths(self) -> None:
         """Schema class queries registry for search paths."""

@@ -6,7 +6,6 @@ from waivern_core import ComponentConfig, ComponentFactory, Schema
 
 from .config import SourceCodeConnectorConfig
 from .connector import SourceCodeConnector
-from .schemas import SourceCodeSchema
 
 
 class SourceCodeConnectorFactory(ComponentFactory[SourceCodeConnector]):
@@ -68,7 +67,7 @@ class SourceCodeConnectorFactory(ComponentFactory[SourceCodeConnector]):
     @override
     def get_output_schemas(self) -> list[Schema]:
         """Get the output schemas this connector produces."""
-        return [SourceCodeSchema()]
+        return [Schema("source_code", "1.0.0")]
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:

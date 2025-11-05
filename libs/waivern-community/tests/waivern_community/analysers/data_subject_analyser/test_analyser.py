@@ -10,16 +10,13 @@ from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseFindingEvidence,
     BaseMetadata,
+    Schema,
     StandardInputDataItemModel,
     StandardInputDataModel,
-    StandardInputSchema,
 )
 
 from waivern_community.analysers.data_subject_analyser.analyser import (
     DataSubjectAnalyser,
-)
-from waivern_community.analysers.data_subject_analyser.schemas import (
-    DataSubjectFindingSchema,
 )
 from waivern_community.analysers.data_subject_analyser.types import (
     DataSubjectAnalyserConfig,
@@ -72,8 +69,8 @@ class TestDataSubjectAnalyserProcessing:
         # Arrange
         config = DataSubjectAnalyserConfig.from_properties({})
         analyser = DataSubjectAnalyser(config, llm_service=None)
-        input_schema = StandardInputSchema()
-        output_schema = DataSubjectFindingSchema()
+        input_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("data_subject_finding", "1.0.0")
 
         empty_data = StandardInputDataModel(
             schemaVersion="1.0.0",
@@ -109,8 +106,8 @@ class TestDataSubjectAnalyserProcessing:
         # Arrange
         config = DataSubjectAnalyserConfig.from_properties({})
         analyser = DataSubjectAnalyser(config, llm_service=None)
-        input_schema = StandardInputSchema()
-        output_schema = DataSubjectFindingSchema()
+        input_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("data_subject_finding", "1.0.0")
 
         # Create test data with employee patterns
         test_metadata = BaseMetadata(source="test_hr_table", connector_type="mysql")
@@ -155,8 +152,8 @@ class TestDataSubjectAnalyserProcessing:
         # Arrange
         config = DataSubjectAnalyserConfig.from_properties({})
         analyser = DataSubjectAnalyser(config, llm_service=None)
-        input_schema = StandardInputSchema()
-        output_schema = DataSubjectFindingSchema()
+        input_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("data_subject_finding", "1.0.0")
 
         # Create test data with employee patterns
         test_metadata = BaseMetadata(source="test_hr_table", connector_type="mysql")
@@ -231,8 +228,8 @@ class TestDataSubjectAnalyserProcessing:
         # Arrange
         config = DataSubjectAnalyserConfig.from_properties({})
         analyser = DataSubjectAnalyser(config, llm_service=None)
-        input_schema = StandardInputSchema()
-        output_schema = DataSubjectFindingSchema()
+        input_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("data_subject_finding", "1.0.0")
 
         # Create test data with multiple director patterns that should all match
         # Test content contains director, ceo, and executive patterns
@@ -291,8 +288,8 @@ class TestDataSubjectAnalyserProcessing:
         # Arrange
         config = DataSubjectAnalyserConfig.from_properties({})
         analyser = DataSubjectAnalyser(config, llm_service=None)
-        input_schema = StandardInputSchema()
-        output_schema = DataSubjectFindingSchema()
+        input_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("data_subject_finding", "1.0.0")
 
         message = Message(
             id="test_chain",

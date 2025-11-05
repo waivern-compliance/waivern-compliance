@@ -1,7 +1,5 @@
 """Tests for SourceCodeSchema."""
 
-import dataclasses
-
 from waivern_core.schemas import Schema
 
 # Version constant for easy maintenance
@@ -64,6 +62,3 @@ class TestSourceCodeSchema:
         version1 = schema.version
         version2 = schema.version
         assert version1 == version2 == EXPECTED_VERSION
-
-        # Verify it's a dataclass (public API)
-        assert dataclasses.is_dataclass(schema)

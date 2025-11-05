@@ -9,8 +9,8 @@ import pytest
 from waivern_core.errors import ConnectorExtractionError
 from waivern_core.schemas import (
     RelationalDatabaseMetadata,
+    Schema,
     StandardInputDataModel,
-    StandardInputSchema,
 )
 
 from waivern_community.connectors.sqlite.config import SQLiteConnectorConfig
@@ -85,7 +85,7 @@ class TestSQLiteConnector:
             )
             connector = SQLiteConnector(config)
 
-            schema = StandardInputSchema()
+            schema = Schema("standard_input", "1.0.0")
             message = connector.extract(schema)
 
             # Assert - Should respect row limit
@@ -130,7 +130,7 @@ class TestSQLiteConnector:
         connector = SQLiteConnector(config)
 
         # Act & Assert - Extraction should raise appropriate error
-        schema = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
         with pytest.raises(ConnectorExtractionError, match="database file not found"):
             connector.extract(schema)
 
@@ -150,7 +150,7 @@ class TestSQLiteConnector:
             connector = SQLiteConnector(config)
 
             # Act & Assert - Extraction should raise appropriate error
-            schema = StandardInputSchema()
+            schema = Schema("standard_input", "1.0.0")
             with pytest.raises(
                 ConnectorExtractionError, match="file is not a database"
             ):
@@ -167,7 +167,7 @@ class TestSQLiteConnectorPublicAPI:
     @pytest.fixture
     def standard_input_schema(self):
         """Standard input schema fixture."""
-        return StandardInputSchema()
+        return Schema("standard_input", "1.0.0")
 
     def test_get_name_returns_correct_name(self):
         """Test get_name returns the connector name."""
@@ -323,7 +323,9 @@ class TestSQLiteConnectorDataExtraction:
         self, mock_connector_with_single_table
     ):
         """Test SQLite connector creates RelationalDatabaseMetadata with accurate database context."""
-        result_message = mock_connector_with_single_table.extract(StandardInputSchema())
+        result_message = mock_connector_with_single_table.extract(
+            Schema("standard_input", "1.0.0")
+        )
 
         # Validate the result conforms to RelationalDatabaseMetadata expectations
         typed_result = StandardInputDataModel[
@@ -364,7 +366,7 @@ class TestSQLiteConnectorDataExtraction:
     ):
         """Test extraction from multiple tables with proper metadata for each."""
         result_message = mock_connector_with_multiple_tables.extract(
-            StandardInputSchema()
+            Schema("standard_input", "1.0.0")
         )
 
         # Validate the result conforms to RelationalDatabaseMetadata expectations
@@ -417,7 +419,7 @@ class TestSQLiteConnectorDataExtraction:
                 {"database_path": temp_db_path}
             )
             connector = SQLiteConnector(config)
-            result_message = connector.extract(StandardInputSchema())
+            result_message = connector.extract(Schema("standard_input", "1.0.0"))
 
             # Validate the result conforms to RelationalDatabaseMetadata expectations
             typed_result = StandardInputDataModel[
@@ -459,7 +461,7 @@ class TestSQLiteConnectorDataExtraction:
                 {"database_path": temp_db_path}
             )
             connector = SQLiteConnector(config)
-            result_message = connector.extract(StandardInputSchema())
+            result_message = connector.extract(Schema("standard_input", "1.0.0"))
 
             # Validate the result
             typed_result = StandardInputDataModel[
@@ -496,7 +498,7 @@ class TestSQLiteConnectorEdgeCases:
                 {"database_path": temp_db_path}
             )
             connector = SQLiteConnector(config)
-            result_message = connector.extract(StandardInputSchema())
+            result_message = connector.extract(Schema("standard_input", "1.0.0"))
 
             # Should succeed with empty data
             assert result_message.schema is not None
@@ -549,7 +551,7 @@ class TestSQLiteConnectorEdgeCases:
                 {"database_path": temp_db_path}
             )
             connector = SQLiteConnector(config)
-            result_message = connector.extract(StandardInputSchema())
+            result_message = connector.extract(Schema("standard_input", "1.0.0"))
 
             # Validate the result
             typed_result = StandardInputDataModel[
@@ -607,7 +609,7 @@ class TestSQLiteConnectorEdgeCases:
                 {"database_path": temp_db_path}
             )
             connector = SQLiteConnector(config)
-            result_message = connector.extract(StandardInputSchema())
+            result_message = connector.extract(Schema("standard_input", "1.0.0"))
 
             # Validate the result
             typed_result = StandardInputDataModel[
@@ -652,7 +654,7 @@ class TestSQLiteConnectorEdgeCases:
                 {"database_path": temp_db_path}
             )
             connector = SQLiteConnector(config)
-            result_message = connector.extract(StandardInputSchema())
+            result_message = connector.extract(Schema("standard_input", "1.0.0"))
 
             # Message should validate successfully (this is called internally in extract)
             assert result_message.schema_validated is True
@@ -702,7 +704,7 @@ class TestSQLiteConnectorEdgeCases:
                 {"database_path": temp_db_path}
             )
             connector = SQLiteConnector(config)
-            result_message = connector.extract(StandardInputSchema())
+            result_message = connector.extract(Schema("standard_input", "1.0.0"))
 
             # Verify top-level structure matches standard_input schema
             content = result_message.content

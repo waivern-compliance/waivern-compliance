@@ -14,9 +14,9 @@ from waivern_core.schemas import (
     BaseMetadata,
     FilesystemMetadata,
     RelationalDatabaseMetadata,
+    Schema,
     StandardInputDataItemModel,
     StandardInputDataModel,
-    StandardInputSchema,
 )
 from waivern_llm import BaseLLMService
 
@@ -26,9 +26,6 @@ from waivern_community.analysers.processing_purpose_analyser.analyser import (
 from waivern_community.analysers.processing_purpose_analyser.pattern_matcher import (
     ProcessingPurposePatternMatcher,
 )
-from waivern_community.analysers.processing_purpose_analyser.schemas import (
-    ProcessingPurposeFindingSchema,
-)
 from waivern_community.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeAnalyserConfig,
 )
@@ -37,7 +34,6 @@ from waivern_community.connectors.source_code.schemas import (
     SourceCodeDataModel,
     SourceCodeFileDataModel,
     SourceCodeFileMetadataModel,
-    SourceCodeSchema,
 )
 
 
@@ -152,11 +148,13 @@ class TestProcessingPurposeAnalyserInitialisation:
         message = Message(
             id="test_llm_default",
             content=test_data.model_dump(exclude_none=True),
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
         result = analyser.process(
-            StandardInputSchema(), ProcessingPurposeFindingSchema(), message
+            Schema("standard_input", "1.0.0"),
+            Schema("processing_purpose_finding", "1.0.0"),
+            message,
         )
         metadata = result.content["analysis_metadata"]
         assert metadata["llm_validation_enabled"] is True
@@ -185,11 +183,13 @@ class TestProcessingPurposeAnalyserInitialisation:
         message = Message(
             id="test_llm_disabled",
             content=test_data.model_dump(exclude_none=True),
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
         result = analyser.process(
-            StandardInputSchema(), ProcessingPurposeFindingSchema(), message
+            Schema("standard_input", "1.0.0"),
+            Schema("processing_purpose_finding", "1.0.0"),
+            message,
         )
         metadata = result.content["analysis_metadata"]
         assert metadata["llm_validation_enabled"] is False
@@ -252,19 +252,17 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         return ProcessingPurposeAnalyser(config, mock_llm_service)
 
     @pytest.fixture
-    def standard_input_schema(self) -> StandardInputSchema:
+    def standard_input_schema(self) -> Schema:
         """Create standard input schema."""
-        return StandardInputSchema()
+        return Schema("standard_input", "1.0.0")
 
     @pytest.fixture
-    def output_schema(self) -> ProcessingPurposeFindingSchema:
+    def output_schema(self) -> Schema:
         """Create output schema."""
-        return ProcessingPurposeFindingSchema()
+        return Schema("processing_purpose_finding", "1.0.0")
 
     @pytest.fixture
-    def empty_standard_input_message(
-        self, standard_input_schema: StandardInputSchema
-    ) -> Message:
+    def empty_standard_input_message(self, standard_input_schema: Schema) -> Message:
         """Create empty standard input message."""
         data = StandardInputDataModel(
             schemaVersion="1.0.0",
@@ -281,9 +279,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         )
 
     @pytest.fixture
-    def simple_standard_input_message(
-        self, standard_input_schema: StandardInputSchema
-    ) -> Message:
+    def simple_standard_input_message(self, standard_input_schema: Schema) -> Message:
         """Create simple standard input message with processing purpose patterns."""
         data = StandardInputDataModel(
             schemaVersion="1.0.0",
@@ -307,8 +303,8 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     def test_process_standard_input_returns_valid_message_for_empty_data(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: StandardInputSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        standard_input_schema: Schema,
+        output_schema: Schema,
         empty_standard_input_message: Message,
     ) -> None:
         """Test that process returns valid message for empty standard input data."""
@@ -331,8 +327,8 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     def test_process_standard_input_creates_findings_for_pattern_matches(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: StandardInputSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        standard_input_schema: Schema,
+        output_schema: Schema,
         simple_standard_input_message: Message,
     ) -> None:
         """Test that process creates findings for pattern matches in standard input."""
@@ -360,8 +356,8 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     def test_process_standard_input_creates_valid_summary(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: StandardInputSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        standard_input_schema: Schema,
+        output_schema: Schema,
         simple_standard_input_message: Message,
     ) -> None:
         """Test that process creates valid summary for standard input processing."""
@@ -416,8 +412,8 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     def test_process_standard_input_creates_valid_analysis_metadata(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: StandardInputSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        standard_input_schema: Schema,
+        output_schema: Schema,
         simple_standard_input_message: Message,
     ) -> None:
         """Test that process creates valid analysis metadata for standard input."""
@@ -453,8 +449,8 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     def test_process_standard_input_summary_handles_empty_findings(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: StandardInputSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        standard_input_schema: Schema,
+        output_schema: Schema,
     ) -> None:
         """Test that summary handles empty findings correctly."""
         # Arrange
@@ -502,8 +498,8 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     def test_process_standard_input_summary_handles_duplicate_purposes_correctly(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: StandardInputSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        standard_input_schema: Schema,
+        output_schema: Schema,
     ) -> None:
         """Test that summary counts unique purposes correctly when findings have duplicate purposes."""
         # Arrange - content that should generate multiple findings but potentially same purposes
@@ -569,19 +565,17 @@ class TestProcessingPurposeAnalyserSourceCodeProcessing:
         return ProcessingPurposeAnalyser(config, mock_llm_service)
 
     @pytest.fixture
-    def source_code_schema(self) -> SourceCodeSchema:
+    def source_code_schema(self) -> Schema:
         """Create source code schema."""
-        return SourceCodeSchema()
+        return Schema("source_code", "1.0.0")
 
     @pytest.fixture
-    def output_schema(self) -> ProcessingPurposeFindingSchema:
+    def output_schema(self) -> Schema:
         """Create output schema."""
-        return ProcessingPurposeFindingSchema()
+        return Schema("processing_purpose_finding", "1.0.0")
 
     @pytest.fixture
-    def empty_source_code_message(
-        self, source_code_schema: SourceCodeSchema
-    ) -> Message:
+    def empty_source_code_message(self, source_code_schema: Schema) -> Message:
         """Create empty source code message."""
         data = SourceCodeDataModel(
             schemaVersion="1.0.0",
@@ -603,9 +597,7 @@ class TestProcessingPurposeAnalyserSourceCodeProcessing:
         )
 
     @pytest.fixture
-    def simple_source_code_message(
-        self, source_code_schema: SourceCodeSchema
-    ) -> Message:
+    def simple_source_code_message(self, source_code_schema: Schema) -> Message:
         """Create simple source code message with processing purpose patterns."""
         file_data = SourceCodeFileDataModel(
             file_path="/src/PaymentService.php",
@@ -650,8 +642,8 @@ class PaymentService {
     def test_process_source_code_returns_valid_message_for_empty_data(
         self,
         analyser: ProcessingPurposeAnalyser,
-        source_code_schema: SourceCodeSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        source_code_schema: Schema,
+        output_schema: Schema,
         empty_source_code_message: Message,
     ) -> None:
         """Test that process returns valid message for empty source code data."""
@@ -674,8 +666,8 @@ class PaymentService {
     def test_process_source_code_creates_findings_for_pattern_matches(
         self,
         analyser: ProcessingPurposeAnalyser,
-        source_code_schema: SourceCodeSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        source_code_schema: Schema,
+        output_schema: Schema,
         simple_source_code_message: Message,
     ) -> None:
         """Test that process creates findings for pattern matches in source code."""
@@ -703,8 +695,8 @@ class PaymentService {
     def test_process_source_code_handles_multiple_files(
         self,
         analyser: ProcessingPurposeAnalyser,
-        source_code_schema: SourceCodeSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        source_code_schema: Schema,
+        output_schema: Schema,
     ) -> None:
         """Test that process handles multiple source code files correctly."""
         # Arrange
@@ -780,24 +772,24 @@ class TestProcessingPurposeAnalyserErrorHandling:
         return ProcessingPurposeAnalyser(config, mock_llm_service)
 
     @pytest.fixture
-    def standard_input_schema(self) -> StandardInputSchema:
+    def standard_input_schema(self) -> Schema:
         """Create standard input schema."""
-        return StandardInputSchema()
+        return Schema("standard_input", "1.0.0")
 
     @pytest.fixture
-    def source_code_schema(self) -> SourceCodeSchema:
+    def source_code_schema(self) -> Schema:
         """Create source code schema."""
-        return SourceCodeSchema()
+        return Schema("source_code", "1.0.0")
 
     @pytest.fixture
-    def output_schema(self) -> ProcessingPurposeFindingSchema:
+    def output_schema(self) -> Schema:
         """Create output schema."""
-        return ProcessingPurposeFindingSchema()
+        return Schema("processing_purpose_finding", "1.0.0")
 
     def test_process_raises_value_error_for_unsupported_input_schema(
         self,
         analyser: ProcessingPurposeAnalyser,
-        output_schema: ProcessingPurposeFindingSchema,
+        output_schema: Schema,
     ) -> None:
         """Test that process raises ValueError for unsupported input schema."""
 
@@ -839,8 +831,8 @@ class TestProcessingPurposeAnalyserErrorHandling:
             }
         )
         analyser = ProcessingPurposeAnalyser(config, llm_service=None)
-        input_schema = StandardInputSchema()
-        output_schema = ProcessingPurposeFindingSchema()
+        input_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("processing_purpose_finding", "1.0.0")
 
         message = Message(
             id="test_chain",
@@ -891,17 +883,17 @@ class TestProcessingPurposeAnalyserOutputValidation:
         return ProcessingPurposeAnalyser(config, mock_llm_service)
 
     @pytest.fixture
-    def standard_input_schema(self) -> StandardInputSchema:
+    def standard_input_schema(self) -> Schema:
         """Create standard input schema."""
-        return StandardInputSchema()
+        return Schema("standard_input", "1.0.0")
 
     @pytest.fixture
-    def output_schema(self) -> ProcessingPurposeFindingSchema:
+    def output_schema(self) -> Schema:
         """Create output schema."""
-        return ProcessingPurposeFindingSchema()
+        return Schema("processing_purpose_finding", "1.0.0")
 
     @pytest.fixture
-    def test_message(self, standard_input_schema: StandardInputSchema) -> Message:
+    def test_message(self, standard_input_schema: Schema) -> Message:
         """Create test message for validation testing."""
         data = StandardInputDataModel(
             schemaVersion="1.0.0",
@@ -929,8 +921,8 @@ class TestProcessingPurposeAnalyserOutputValidation:
     def test_process_output_message_validates_against_schema(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: StandardInputSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        standard_input_schema: Schema,
+        output_schema: Schema,
         test_message: Message,
     ) -> None:
         """Test that process creates output message that validates against schema."""
@@ -947,8 +939,8 @@ class TestProcessingPurposeAnalyserOutputValidation:
     def test_process_output_has_consistent_message_id(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: StandardInputSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        standard_input_schema: Schema,
+        output_schema: Schema,
         test_message: Message,
     ) -> None:
         """Test that process creates output with consistent message ID."""
@@ -963,8 +955,8 @@ class TestProcessingPurposeAnalyserOutputValidation:
     def test_process_output_summary_reflects_findings_count(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: StandardInputSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        standard_input_schema: Schema,
+        output_schema: Schema,
         test_message: Message,
     ) -> None:
         """Test that output summary correctly reflects findings count."""
@@ -987,8 +979,8 @@ class TestProcessingPurposeAnalyserOutputValidation:
     def test_null_values_omitted_from_json_output_standard_input(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: StandardInputSchema,
-        output_schema: ProcessingPurposeFindingSchema,
+        standard_input_schema: Schema,
+        output_schema: Schema,
         test_message: Message,
     ) -> None:
         """Test that null values are omitted from JSON output for standard input (all three fields null)."""
@@ -1008,11 +1000,11 @@ class TestProcessingPurposeAnalyserOutputValidation:
     def test_null_values_omitted_from_json_output_service_integration(
         self,
         analyser: ProcessingPurposeAnalyser,
-        output_schema: ProcessingPurposeFindingSchema,
+        output_schema: Schema,
     ) -> None:
         """Test that null values are omitted for ServiceIntegrationRule (service_category populated, others null)."""
         # Arrange - create source code with service integration pattern
-        source_code_schema = SourceCodeSchema()
+        source_code_schema = Schema("source_code", "1.0.0")
         file_data = SourceCodeFileDataModel(
             file_path="/src/PaymentService.php",
             language="php",
@@ -1069,11 +1061,11 @@ class TestProcessingPurposeAnalyserOutputValidation:
     def test_null_values_omitted_from_json_output_data_collection(
         self,
         analyser: ProcessingPurposeAnalyser,
-        output_schema: ProcessingPurposeFindingSchema,
+        output_schema: Schema,
     ) -> None:
         """Test that null values are omitted for DataCollectionRule (collection_type and data_source populated, service_category null)."""
         # Arrange - create source code with data collection pattern
-        source_code_schema = SourceCodeSchema()
+        source_code_schema = Schema("source_code", "1.0.0")
         file_data = SourceCodeFileDataModel(
             file_path="/src/FormHandler.php",
             language="php",

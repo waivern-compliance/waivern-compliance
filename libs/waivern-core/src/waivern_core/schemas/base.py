@@ -236,6 +236,38 @@ class SchemaRegistry:
         cls._initialised = False
         cls._loader = None
 
+    @classmethod
+    def snapshot_state(cls) -> dict[str, Any]:
+        """Capture current SchemaRegistry state for later restoration.
+
+        This is primarily used for test isolation - save state before tests,
+        restore after tests to prevent global state pollution.
+
+        Returns:
+            Dictionary containing all mutable state
+
+        """
+        return {
+            "search_paths": cls._search_paths.copy(),
+            "initialised": cls._initialised,
+            # Note: _loader is not captured - it will be recreated as needed
+        }
+
+    @classmethod
+    def restore_state(cls, state: dict[str, Any]) -> None:
+        """Restore SchemaRegistry state from a previously captured snapshot.
+
+        This is primarily used for test isolation - restore state after tests
+        to ensure tests don't pollute global state.
+
+        Args:
+            state: State dictionary from snapshot_state()
+
+        """
+        cls._search_paths = state["search_paths"].copy()
+        cls._initialised = state["initialised"]
+        cls._loader = None  # Force recreation with restored paths
+
 
 class Schema:
     """Generic schema class for all Waivern Compliance Framework schemas.

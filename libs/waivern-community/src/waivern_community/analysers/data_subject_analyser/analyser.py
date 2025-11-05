@@ -12,20 +12,18 @@ from waivern_core.schemas import (
     BaseMetadata,
     Schema,
     StandardInputDataModel,
-    StandardInputSchema,
 )
 from waivern_llm import BaseLLMService
 
 from .pattern_matcher import DataSubjectPatternMatcher
-from .schemas import DataSubjectFindingSchema
 from .schemas.types import DataSubjectFindingModel
 from .types import DataSubjectAnalyserConfig
 
 logger = logging.getLogger(__name__)
 
-_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [StandardInputSchema()]
+_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [Schema("standard_input", "1.0.0")]
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [DataSubjectFindingSchema()]
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [Schema("data_subject_finding", "1.0.0")]
 
 
 class DataSubjectAnalyser(Analyser):
@@ -85,7 +83,7 @@ class DataSubjectAnalyser(Analyser):
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
         # Process standard_input schema data
-        if isinstance(input_schema, StandardInputSchema):
+        if input_schema.name == "standard_input":
             typed_data = StandardInputDataModel[BaseMetadata].model_validate(
                 message.content
             )

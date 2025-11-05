@@ -2,7 +2,7 @@
 
 from waivern_core import Analyser
 from waivern_core.message import Message
-from waivern_core.schemas import AnalysisChainEntry, StandardInputSchema
+from waivern_core.schemas import AnalysisChainEntry, Schema
 
 
 class TestAnalyserChainLogic:
@@ -22,7 +22,7 @@ class TestAnalyserChainLogic:
                 "name": "Test data",
                 "data": [{"content": "test content", "metadata": {"source": "test"}}],
             },
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
         # Act
@@ -77,7 +77,7 @@ class TestAnalyserChainLogic:
                 "summary": {"total_findings": 0},
                 "analysis_metadata": existing_metadata,
             },
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
         # Act
@@ -137,7 +137,7 @@ class TestAnalyserChainLogic:
                 "summary": {"total_findings": 0},
                 "analysis_metadata": existing_metadata,
             },
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
         # Act
@@ -165,7 +165,7 @@ class TestAnalyserChainLogic:
                 "some_field": "some_value",
                 "data": {"content": "test content"},
             },
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
         # Act
@@ -206,7 +206,7 @@ class TestAnalyserChainLogic:
                 "findings": [],
                 "analysis_metadata": existing_metadata,
             },
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
         # Act

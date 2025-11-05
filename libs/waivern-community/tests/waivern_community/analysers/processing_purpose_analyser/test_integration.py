@@ -10,18 +10,15 @@ import pytest
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseMetadata,
+    Schema,
     StandardInputDataItemModel,
     StandardInputDataModel,
-    StandardInputSchema,
 )
 from waivern_llm import AnthropicLLMService
 
 from waivern_community.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
     ProcessingPurposeAnalyserConfig,
-)
-from waivern_community.analysers.processing_purpose_analyser.schemas import (
-    ProcessingPurposeFindingSchema,
 )
 
 
@@ -80,12 +77,14 @@ class TestProcessingPurposeAnalyserRealLLMIntegration:
         message = Message(
             id="integration_test",
             content=test_data.model_dump(exclude_none=True),
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
         # Run analysis with real LLM
         result = analyser.process(
-            StandardInputSchema(), ProcessingPurposeFindingSchema(), message
+            Schema("standard_input", "1.0.0"),
+            Schema("processing_purpose_finding", "1.0.0"),
+            message,
         )
 
         # Verify response structure
@@ -145,12 +144,14 @@ class TestProcessingPurposeAnalyserRealLLMIntegration:
         message = Message(
             id="integration_test_no_llm",
             content=test_data.model_dump(exclude_none=True),
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
         # Run analysis without LLM
         result = analyser.process(
-            StandardInputSchema(), ProcessingPurposeFindingSchema(), message
+            Schema("standard_input", "1.0.0"),
+            Schema("processing_purpose_finding", "1.0.0"),
+            message,
         )
 
         # Verify response structure

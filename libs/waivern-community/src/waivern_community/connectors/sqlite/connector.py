@@ -15,7 +15,6 @@ from waivern_core.message import Message
 from waivern_core.schemas import (
     RelationalDatabaseMetadata,
     Schema,
-    StandardInputSchema,
 )
 
 from waivern_community.connectors.sqlite.config import SQLiteConnectorConfig
@@ -23,7 +22,7 @@ from waivern_community.connectors.sqlite.config import SQLiteConnectorConfig
 logger = logging.getLogger(__name__)
 
 # Constants
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [StandardInputSchema()]
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [Schema("standard_input", "1.0.0")]
 
 
 class SQLiteConnector(DatabaseConnector):

@@ -1,7 +1,5 @@
 """Tests for StandardInputSchema."""
 
-import dataclasses
-
 import pytest
 from pydantic import ValidationError
 from waivern_core.schemas import (
@@ -73,9 +71,6 @@ class TestStandardInputSchema:
         version1 = schema.version
         version2 = schema.version
         assert version1 == version2 == EXPECTED_VERSION
-
-        # Verify it's a dataclass (public API)
-        assert dataclasses.is_dataclass(schema)
 
 
 class TestGenericStandardInputModel:

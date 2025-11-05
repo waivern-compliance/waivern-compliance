@@ -11,19 +11,16 @@ from waivern_core.schemas import (
     BaseMetadata,
     Schema,
     StandardInputDataModel,
-    StandardInputSchema,
     parse_data_model,
 )
 from waivern_llm import BaseLLMService
 
 from waivern_community.connectors.source_code.schemas import (
     SourceCodeDataModel,
-    SourceCodeSchema,
 )
 
 from .llm_validation_strategy import processing_purpose_validation_strategy
 from .pattern_matcher import ProcessingPurposePatternMatcher
-from .schemas import ProcessingPurposeFindingSchema
 from .schemas.types import ProcessingPurposeFindingModel
 from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
 from .types import ProcessingPurposeAnalyserConfig
@@ -31,11 +28,13 @@ from .types import ProcessingPurposeAnalyserConfig
 logger = logging.getLogger(__name__)
 
 _SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
-    StandardInputSchema(),
-    SourceCodeSchema(),
+    Schema("standard_input", "1.0.0"),
+    Schema("source_code", "1.0.0"),
 ]
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [ProcessingPurposeFindingSchema()]
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
+    Schema("processing_purpose_finding", "1.0.0")
+]
 
 
 class ProcessingPurposeAnalyser(Analyser):
@@ -99,12 +98,12 @@ class ProcessingPurposeAnalyser(Analyser):
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
         # Validate and parse data based on schema type
-        if isinstance(input_schema, StandardInputSchema):
+        if input_schema.name == "standard_input":
             typed_data = StandardInputDataModel[BaseMetadata].model_validate(
                 message.content
             )
             findings = self._process_standard_input_data(typed_data)
-        elif isinstance(input_schema, SourceCodeSchema):
+        elif input_schema.name == "source_code":
             typed_data = parse_data_model(message.content, SourceCodeDataModel)
             findings = self._process_source_code_data(typed_data)
         else:
