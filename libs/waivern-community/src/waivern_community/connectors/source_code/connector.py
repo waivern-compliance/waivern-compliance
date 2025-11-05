@@ -24,13 +24,12 @@ from waivern_community.connectors.source_code.extractors import (
     FunctionExtractor,
 )
 from waivern_community.connectors.source_code.parser import SourceCodeParser
-from waivern_community.connectors.source_code.schemas import SourceCodeSchema
 
 logger = logging.getLogger(__name__)
 
 # Constants
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [SourceCodeSchema()]
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [Schema("source_code", "1.0.0")]
 
 
 class SourceCodeConnector(Connector):

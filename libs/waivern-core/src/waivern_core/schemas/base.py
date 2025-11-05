@@ -6,10 +6,8 @@ This module provides the foundation for strongly typed schemas with unified inte
 from __future__ import annotations
 
 import json
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol, override, runtime_checkable
+from typing import Any, ClassVar, Protocol, override, runtime_checkable
 
 
 @runtime_checkable
@@ -56,7 +54,7 @@ class JsonSchemaLoader:
                          If None, uses package-relative path (json_schemas/ alongside this file).
 
         """
-        self._cache: dict[str, dict[str, Any]] = {}
+        self._cache: dict[tuple[str, str], dict[str, Any]] = {}
         self._custom_search_paths = search_paths
 
     def _generate_schema_paths(self, schema_name: str, version: str) -> list[Path]:
@@ -106,8 +104,8 @@ class JsonSchemaLoader:
             SchemaLoadError: If schema file cannot be parsed
 
         """
-        # Create cache key with version
-        cache_key = f"{schema_name}:{version}"
+        # Create cache key using tuple for type safety
+        cache_key = (schema_name, version)
 
         # Return cached version if available
         if cache_key in self._cache:
@@ -128,7 +126,7 @@ class JsonSchemaLoader:
                             f"Schema version mismatch: expected '{version}', found '{schema_data['version']}' in '{schema_path}'"
                         )
 
-                    # Cache the loaded schema with versioned key
+                    # Cache the loaded schema using tuple key
                     self._cache[cache_key] = schema_data
                     return schema_data
                 except json.JSONDecodeError as e:
@@ -151,80 +149,203 @@ class SchemaLoadError(Exception):
     pass
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class Schema(ABC):
-    """Base class for all Waivern Compliance Framework schemas.
+class SchemaRegistry:
+    """Registry for managing schema infrastructure.
 
-    Each concrete schema represents a strongly typed data structure
-    and provides its own name, version, and schema definition.
+    Provides centralised management of schema search paths and loader instances.
+    This enables packages to contribute their own schemas without modifying
+    waivern-core code (Open/Closed Principle).
 
-    Schema comparison is now type-based rather than name/version based
-    for better type safety and performance.
+    The registry maintains default search paths, allows additional paths to be
+    registered at runtime, and provides a shared singleton loader for efficiency.
     """
 
+    # Class-level storage for search paths (shared across all instances)
+    _search_paths: ClassVar[list[Path]] = []
+    _initialised: ClassVar[bool] = False
+
+    # Shared singleton loader for caching across all Schema instances
+    _loader: ClassVar[JsonSchemaLoader | None] = None
+
+    @classmethod
+    def _ensure_initialised(cls) -> None:
+        """Ensure default search paths are registered (called once)."""
+        if not cls._initialised:
+            # Register default waivern-core schema location
+            default_path = Path(__file__).parent / "json_schemas"
+            cls._search_paths.append(default_path)
+            cls._initialised = True
+
+    @classmethod
+    def register_search_path(cls, path: Path) -> None:
+        """Register an additional search path for schemas.
+
+        Args:
+            path: Base directory containing schema files
+                 (expects subdirectories: {schema_name}/{version}/)
+
+        Example:
+            >>> from pathlib import Path
+            >>> SchemaRegistry.register_search_path(
+            ...     Path(__file__).parent / "my_schemas"
+            ... )
+
+        Note:
+            Invalidates the singleton loader cache, forcing recreation with new paths.
+
+        """
+        cls._ensure_initialised()
+        if path not in cls._search_paths:
+            cls._search_paths.append(path)
+            # Invalidate loader cache when paths change
+            cls._loader = None
+
+    @classmethod
+    def get_search_paths(cls) -> list[Path]:
+        """Get all registered search paths.
+
+        Returns:
+            List of search paths in registration order
+
+        """
+        cls._ensure_initialised()
+        return cls._search_paths.copy()
+
+    @classmethod
+    def get_loader(cls) -> JsonSchemaLoader:
+        """Get or create the shared singleton loader.
+
+        Returns:
+            Shared JsonSchemaLoader instance configured with registered paths
+
+        """
+        if cls._loader is None:
+            search_paths = cls.get_search_paths()
+            cls._loader = JsonSchemaLoader(search_paths=search_paths)
+        return cls._loader
+
+    @classmethod
+    def clear_search_paths(cls) -> None:
+        """Clear all registered search paths (primarily for testing).
+
+        Note:
+            Also clears the singleton loader cache.
+
+        """
+        cls._search_paths.clear()
+        cls._initialised = False
+        cls._loader = None
+
+    @classmethod
+    def snapshot_state(cls) -> dict[str, Any]:
+        """Capture current SchemaRegistry state for later restoration.
+
+        This is primarily used for test isolation - save state before tests,
+        restore after tests to prevent global state pollution.
+
+        Returns:
+            Dictionary containing all mutable state
+
+        """
+        return {
+            "search_paths": cls._search_paths.copy(),
+            "initialised": cls._initialised,
+            # Note: _loader is not captured - it will be recreated as needed
+        }
+
+    @classmethod
+    def restore_state(cls, state: dict[str, Any]) -> None:
+        """Restore SchemaRegistry state from a previously captured snapshot.
+
+        This is primarily used for test isolation - restore state after tests
+        to ensure tests don't pollute global state.
+
+        Args:
+            state: State dictionary from snapshot_state()
+
+        """
+        cls._search_paths = state["search_paths"].copy()
+        cls._initialised = state["initialised"]
+        cls._loader = None  # Force recreation with restored paths
+
+
+class Schema:
+    """Generic schema class for all Waivern Compliance Framework schemas.
+
+    Schema objects are lightweight descriptors instantiated with name and version.
+    JSON schema files are loaded lazily only when actually needed.
+
+    Schema loading uses the shared loader from SchemaRegistry. Custom loaders can
+    be injected for testing or alternative schema sources (dependency injection).
+    """
+
+    def __init__(
+        self, name: str, version: str, loader: JsonSchemaLoader | None = None
+    ) -> None:
+        """Initialise schema descriptor (does not load JSON file).
+
+        Args:
+            name: Schema name (e.g., "standard_input")
+            version: Schema version (e.g., "1.0.0")
+            loader: Optional custom loader. If None, uses shared singleton loader
+                   from SchemaRegistry (dependency injection)
+
+        """
+        self._name = name
+        self._version = version
+        self._loader = loader  # Instance-specific loader (or None for shared)
+        self._schema_def: dict[str, Any] | None = None  # Lazy - loaded on demand
+
     @property
-    @abstractmethod
     def name(self) -> str:
         """Return the unique identifier for this schema."""
+        return self._name
 
     @property
-    @abstractmethod
     def version(self) -> str:
         """Return the version for this schema."""
+        return self._version
 
     @property
-    @abstractmethod
     def schema(self) -> dict[str, Any]:
-        """Return the JSON schema definition for validation.
+        """Get JSON schema definition, loading from file if needed.
 
-        Design decision: Returns dict[str, Any] to maintain compatibility
-        with the jsonschema library and existing validation patterns.
-        Future enhancement could introduce strongly typed JSON Schema
-        representations if needed.
+        Returns:
+            The JSON schema definition as a dictionary
+
+        Raises:
+            SchemaLoadError: If schema file cannot be loaded or validation fails
+            FileNotFoundError: If schema JSON file doesn't exist
+
         """
+        if self._schema_def is None:
+            # Use instance-specific loader if provided, otherwise shared registry loader
+            # Loader validates version correctness, so no additional validation needed
+            loader = (
+                self._loader
+                if self._loader is not None
+                else SchemaRegistry.get_loader()
+            )
+            self._schema_def = loader.load(self._name, self._version)
+
+        return self._schema_def
 
     @override
     def __eq__(self, other: object) -> bool:
-        """Compare schemas based on their concrete type.
+        """Compare schemas based on (name, version) tuple.
 
-        This enables type-based schema comparison instead of name/version
-        comparison for better type safety and performance.
+        This enables version-aware schema comparison for multi-version support.
         """
-        return type(other) is type(self)
+        if not isinstance(other, Schema):
+            return False
+        return self.name == other.name and self.version == other.version
 
     @override
     def __hash__(self) -> int:
-        """Hash based on schema type for use in sets and dictionaries."""
-        return hash(type(self))
+        """Hash based on (name, version) tuple for use in sets and dictionaries."""
+        return hash((self.name, self.version))
 
-
-@dataclass(frozen=True, slots=True, eq=False)
-class BaseFindingSchema(Schema, ABC):
-    """Base schema for analyser finding result types.
-
-    This abstract schema provides the common structure that analyser
-    finding outputs share: findings array, summary object, and analysis metadata.
-
-    "Finding" represents discovered compliance issues or data items during analysis.
-    This is used by analysers to structure their output in a consistent format.
-    """
-
-    _loader: SchemaLoader = field(default_factory=JsonSchemaLoader, init=False)
-
-    @property
-    @abstractmethod
     @override
-    def name(self) -> str:
-        """Return the unique identifier for this schema."""
-
-    @property
-    @abstractmethod
-    @override
-    def version(self) -> str:
-        """Return the version for this schema."""
-
-    @property
-    @override
-    def schema(self) -> dict[str, Any]:
-        """Return the JSON schema definition for validation."""
-        return self._loader.load(self.name, self.version)
+    def __repr__(self) -> str:
+        """Return string representation of schema."""
+        return f"Schema(name='{self.name}', version='{self.version}')"

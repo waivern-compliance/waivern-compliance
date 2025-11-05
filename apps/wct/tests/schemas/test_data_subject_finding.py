@@ -1,8 +1,6 @@
 """Tests for DataSubjectFindingSchema."""
 
-from waivern_community.analysers.data_subject_analyser.schemas import (
-    DataSubjectFindingSchema,
-)
+from waivern_core.schemas import Schema
 
 # Version constant for easy maintenance
 EXPECTED_VERSION = "1.0.0"
@@ -13,7 +11,7 @@ class TestDataSubjectFindingSchema:
 
     def test_init_creates_working_schema(self) -> None:
         """Test initialization creates a working schema instance."""
-        schema = DataSubjectFindingSchema()
+        schema = Schema("data_subject_finding", "1.0.0")
         # Test that the schema instance has the expected public interface
         assert hasattr(schema, "name")
         assert hasattr(schema, "version")
@@ -24,13 +22,13 @@ class TestDataSubjectFindingSchema:
 
     def test_name_and_version_properties(self) -> None:
         """Test name and version properties return correct values."""
-        schema = DataSubjectFindingSchema()
+        schema = Schema("data_subject_finding", "1.0.0")
         assert schema.name == "data_subject_finding"
         assert schema.version == EXPECTED_VERSION
 
     def test_schema_loading_integration(self) -> None:
         """Test schema loading integration with real files."""
-        schema = DataSubjectFindingSchema()
+        schema = Schema("data_subject_finding", "1.0.0")
 
         result = schema.schema
         # Verify it's a valid schema structure

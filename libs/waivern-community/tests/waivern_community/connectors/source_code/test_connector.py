@@ -6,11 +6,10 @@ from pathlib import Path
 import pytest
 from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 from waivern_core.message import Message
-from waivern_core.schemas import StandardInputSchema
+from waivern_core.schemas import Schema
 
 from waivern_community.connectors.source_code.config import SourceCodeConnectorConfig
 from waivern_community.connectors.source_code.connector import SourceCodeConnector
-from waivern_community.connectors.source_code.schemas import SourceCodeSchema
 
 
 class TestSourceCodeConnectorInitialisation:
@@ -257,7 +256,7 @@ class UserManager {
             try:
                 config = SourceCodeConnectorConfig.from_properties({"path": f.name})
                 connector = SourceCodeConnector(config)
-                explicit_schema = SourceCodeSchema()
+                explicit_schema = Schema("source_code", "1.0.0")
 
                 message = connector.extract(output_schema=explicit_schema)
 
@@ -597,7 +596,7 @@ class TestSourceCodeConnectorEdgeCases:
             try:
                 config = SourceCodeConnectorConfig.from_properties({"path": f.name})
                 connector = SourceCodeConnector(config)
-                unsupported_schema = StandardInputSchema()
+                unsupported_schema = Schema("standard_input", "1.0.0")
 
                 with pytest.raises(
                     ConnectorExtractionError, match="Unsupported output schema"

@@ -11,7 +11,7 @@ from waivern_core.errors import (
     ConnectorExtractionError,
 )
 from waivern_core.message import Message
-from waivern_core.schemas import FilesystemMetadata, Schema, StandardInputSchema
+from waivern_core.schemas import FilesystemMetadata, Schema
 
 from waivern_community.connectors.filesystem.config import FilesystemConnectorConfig
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Constants
 _CONNECTOR_NAME = "filesystem_connector"
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [StandardInputSchema()]
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [Schema("standard_input", "1.0.0")]
 
 
 class FilesystemConnector(Connector):
@@ -173,7 +173,7 @@ class FilesystemConnector(Connector):
             Schema-compliant transformed content
 
         """
-        if isinstance(schema, StandardInputSchema):
+        if schema.name == "standard_input":
             return self._transform_for_standard_input_schema(schema, all_file_data)
 
         raise ConnectorConfigError(f"Unsupported schema transformation: {schema.name}")

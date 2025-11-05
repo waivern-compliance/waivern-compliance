@@ -3,7 +3,6 @@
 from typing import override
 
 from waivern_core import ComponentConfig, ComponentFactory, Schema
-from waivern_core.schemas import StandardInputSchema
 
 from .config import SQLiteConnectorConfig
 from .connector import SQLiteConnector
@@ -68,7 +67,7 @@ class SQLiteConnectorFactory(ComponentFactory[SQLiteConnector]):
     @override
     def get_output_schemas(self) -> list[Schema]:
         """Get the output schemas this connector produces."""
-        return [StandardInputSchema()]
+        return [Schema("standard_input", "1.0.0")]
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:

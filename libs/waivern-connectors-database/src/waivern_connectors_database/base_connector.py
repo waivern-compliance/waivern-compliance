@@ -4,7 +4,6 @@ import abc
 from typing import override
 
 from waivern_core.base_connector import Connector
-from waivern_core.schemas import StandardInputSchema
 from waivern_core.schemas.base import Schema
 
 
@@ -26,4 +25,4 @@ class DatabaseConnector(Connector, abc.ABC):
         Default implementation returns standard_input schema.
         Subclasses can override to support additional schemas.
         """
-        return [StandardInputSchema()]
+        return [Schema("standard_input", "1.0.0")]

@@ -618,7 +618,7 @@ pip install my-wcf-components --extra-index-url https://pypi.yourcompany.com
 - [Extending WCF](extending-wcf.md) - Extension mechanisms overview
 - [Remote Analyser Protocol](../architecture/remote-analyser-protocol.md) - HTTP API spec
 - [WCF Core Components](../core-concepts/wcf-core-components.md) - Framework architecture
-- [Component Extraction Template](component-extraction-template.md) - Internal extraction guide
+- [Component Extraction Template](guides/component-extraction-template.md) - Internal extraction guide
 
 ## Next Steps
 

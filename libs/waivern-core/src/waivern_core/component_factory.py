@@ -71,10 +71,10 @@ class ComponentFactory[T](ABC):
         ...         return "personal_data_analyser"
         ...
         ...     def get_input_schemas(self) -> list[Schema]:
-        ...         return [StandardInputSchema()]
+        ...         return [Schema("standard_input", "1.0.0")]
         ...
         ...     def get_output_schemas(self) -> list[Schema]:
-        ...         return [PersonalDataFindingSchema()]
+        ...         return [Schema("personal_data_finding", "1.0.0")]
         ...
         ...     def can_create(self, config: ComponentConfig) -> bool:
         ...         # Validate config and check service availability
@@ -148,7 +148,7 @@ class ComponentFactory[T](ABC):
 
         Example:
             >>> factory.get_input_schemas()
-            [StandardInputSchema(), SourceCodeSchema()]
+            [Schema("standard_input", "1.0.0"), Schema("source_code", "1.0.0")]
 
         """
         ...

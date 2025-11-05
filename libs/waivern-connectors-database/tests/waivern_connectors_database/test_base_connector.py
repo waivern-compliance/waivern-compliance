@@ -3,7 +3,6 @@
 from typing import override
 
 import pytest
-from waivern_community.connectors.source_code.schemas import SourceCodeSchema
 from waivern_core.base_connector import Connector
 from waivern_core.message import Message
 from waivern_core.schemas.base import Schema
@@ -43,7 +42,9 @@ class TestBaseDatabaseConnector:
             @classmethod
             @override
             def get_supported_output_schemas(cls) -> list[Schema]:
-                return [SourceCodeSchema()]  # Override to support different schema
+                return [
+                    Schema("source_code", "1.0.0")
+                ]  # Override to support different schema
 
             @override
             def extract(self, output_schema: Schema) -> Message:

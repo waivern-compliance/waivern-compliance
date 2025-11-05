@@ -1,10 +1,7 @@
 """Tests for database schema utility functions following TDD/BDD methodology."""
 
-from typing import override
-
 import pytest
 from waivern_core.errors import ConnectorConfigError
-from waivern_core.schemas import StandardInputSchema
 from waivern_core.schemas.base import Schema
 
 from waivern_connectors_database import DatabaseSchemaUtils
@@ -21,8 +18,8 @@ class TestDatabaseSchemaUtils:
         THEN it should return the schema unchanged.
         """
         # Arrange - Use different instances to test type-based matching
-        schema = StandardInputSchema()
-        different_instance = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
+        different_instance = Schema("standard_input", "1.0.0")
         supported_schemas: list[Schema] = [different_instance]
 
         # Act
@@ -42,27 +39,10 @@ class TestDatabaseSchemaUtils:
         WHEN validating the schema
         THEN it should raise ConnectorConfigError with descriptive message.
         """
-
         # Arrange
         # Create a proper unsupported schema for testing
-        class UnsupportedTestSchema(Schema):
-            @property
-            @override
-            def name(self) -> str:
-                return "unsupported_schema"
-
-            @property
-            @override
-            def version(self) -> str:
-                return "1.0.0"
-
-            @property
-            @override
-            def schema(self) -> dict[str, str]:
-                return {"type": "object"}
-
-        unsupported_schema = UnsupportedTestSchema()
-        supported_schemas: list[Schema] = [StandardInputSchema()]
+        unsupported_schema = Schema("unsupported_schema", "1.0.0")
+        supported_schemas: list[Schema] = [Schema("standard_input", "1.0.0")]
 
         # Act & Assert
         with pytest.raises(
@@ -81,7 +61,7 @@ class TestDatabaseSchemaUtils:
         """
         # Arrange
         schema = None
-        first_schema = StandardInputSchema()
+        first_schema = Schema("standard_input", "1.0.0")
         supported_schemas: list[Schema] = [first_schema]
 
         # Act
@@ -100,8 +80,8 @@ class TestDatabaseSchemaUtils:
         THEN it should automatically deduplicate and work correctly.
         """
         # Arrange
-        schema = StandardInputSchema()
-        duplicate_schema = StandardInputSchema()
+        schema = Schema("standard_input", "1.0.0")
+        duplicate_schema = Schema("standard_input", "1.0.0")
         supported_schemas: list[Schema] = [
             schema,
             duplicate_schema,

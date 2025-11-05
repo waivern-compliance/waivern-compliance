@@ -21,7 +21,7 @@ from waivern_core.message import Message
 from waivern_core.services.container import ServiceContainer
 
 from wct.executor import Executor, ExecutorError
-from wct.schemas import PersonalDataFindingSchema, Schema, StandardInputSchema
+from wct.schemas import Schema
 
 
 class MockConnector(Connector):
@@ -40,7 +40,7 @@ class MockConnector(Connector):
     @classmethod
     @override
     def get_supported_output_schemas(cls) -> list[Schema]:
-        return [StandardInputSchema()]
+        return [Schema("standard_input", "1.0.0")]
 
     @override
     def extract(self, output_schema: Schema):
@@ -71,12 +71,12 @@ class MockAnalyser(Analyser):
     @classmethod
     @override
     def get_supported_input_schemas(cls) -> list[Schema]:
-        return [StandardInputSchema()]
+        return [Schema("standard_input", "1.0.0")]
 
     @classmethod
     @override
     def get_supported_output_schemas(cls) -> list[Schema]:
-        return [PersonalDataFindingSchema()]
+        return [Schema("personal_data_finding", "1.0.0")]
 
     @override
     def process(self, input_schema: Schema, output_schema: Schema, message: Any):
@@ -111,7 +111,7 @@ class MockConnectorFactory(ComponentFactory[MockConnector]):
 
     @override
     def get_output_schemas(self) -> list[Schema]:
-        return [StandardInputSchema()]
+        return [Schema("standard_input", "1.0.0")]
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:
@@ -135,11 +135,11 @@ class MockAnalyserFactory(ComponentFactory[MockAnalyser]):
 
     @override
     def get_input_schemas(self) -> list[Schema]:
-        return [StandardInputSchema()]
+        return [Schema("standard_input", "1.0.0")]
 
     @override
     def get_output_schemas(self) -> list[Schema]:
-        return [PersonalDataFindingSchema()]
+        return [Schema("personal_data_finding", "1.0.0")]
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:
@@ -422,7 +422,7 @@ execution:
                 "can_create": lambda self, config: True,
                 "get_component_name": lambda self: "failing_connector",
                 "get_input_schemas": lambda self: [],
-                "get_output_schemas": lambda self: [StandardInputSchema()],
+                "get_output_schemas": lambda self: [Schema("standard_input", "1.0.0")],
                 "get_service_dependencies": lambda self: {},
             },
         )()
@@ -490,8 +490,10 @@ execution:
                 "create": lambda self, config: failing_analyser(),
                 "can_create": lambda self, config: True,
                 "get_component_name": lambda self: "failing_analyser",
-                "get_input_schemas": lambda self: [StandardInputSchema()],
-                "get_output_schemas": lambda self: [PersonalDataFindingSchema()],
+                "get_input_schemas": lambda self: [Schema("standard_input", "1.0.0")],
+                "get_output_schemas": lambda self: [
+                    Schema("personal_data_finding", "1.0.0")
+                ],
                 "get_service_dependencies": lambda self: {},
             },
         )()
@@ -652,8 +654,10 @@ execution:
                 "create": lambda self, config: failing_analyser(),
                 "can_create": lambda self, config: True,
                 "get_component_name": lambda self: "failing_analyser",
-                "get_input_schemas": lambda self: [StandardInputSchema()],
-                "get_output_schemas": lambda self: [PersonalDataFindingSchema()],
+                "get_input_schemas": lambda self: [Schema("standard_input", "1.0.0")],
+                "get_output_schemas": lambda self: [
+                    Schema("personal_data_finding", "1.0.0")
+                ],
                 "get_service_dependencies": lambda self: {},
             },
         )()
@@ -765,7 +769,7 @@ execution: []
 
             @override
             def get_output_schemas(self) -> list[Schema]:
-                return [StandardInputSchema()]
+                return [Schema("standard_input", "1.0.0")]
 
             @override
             def get_service_dependencies(self) -> dict[str, type]:

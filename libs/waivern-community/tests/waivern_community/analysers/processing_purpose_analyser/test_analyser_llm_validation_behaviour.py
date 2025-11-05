@@ -11,17 +11,14 @@ import pytest
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseMetadata,
+    Schema,
     StandardInputDataItemModel,
     StandardInputDataModel,
-    StandardInputSchema,
 )
 from waivern_llm import BaseLLMService
 
 from waivern_community.analysers.processing_purpose_analyser.analyser import (
     ProcessingPurposeAnalyser,
-)
-from waivern_community.analysers.processing_purpose_analyser.schemas import (
-    ProcessingPurposeFindingSchema,
 )
 from waivern_community.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeAnalyserConfig,
@@ -66,7 +63,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         return Message(
             id="test",
             content=test_data.model_dump(exclude_none=True),
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
     def test_llm_validation_enabled_calls_llm_service_when_findings_exist(
@@ -103,8 +100,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         analyser.process(
-            StandardInputSchema(),
-            ProcessingPurposeFindingSchema(),
+            Schema("standard_input", "1.0.0"),
+            Schema("processing_purpose_finding", "1.0.0"),
             test_message_with_patterns,
         )
 
@@ -150,8 +147,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         result = analyser.process(
-            StandardInputSchema(),
-            ProcessingPurposeFindingSchema(),
+            Schema("standard_input", "1.0.0"),
+            Schema("processing_purpose_finding", "1.0.0"),
             test_message_with_patterns,
         )
 
@@ -209,8 +206,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         result = analyser.process(
-            StandardInputSchema(),
-            ProcessingPurposeFindingSchema(),
+            Schema("standard_input", "1.0.0"),
+            Schema("processing_purpose_finding", "1.0.0"),
             test_message_with_patterns,
         )
 
@@ -234,8 +231,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         result = analyser.process(
-            StandardInputSchema(),
-            ProcessingPurposeFindingSchema(),
+            Schema("standard_input", "1.0.0"),
+            Schema("processing_purpose_finding", "1.0.0"),
             test_message_with_patterns,
         )
 
@@ -263,8 +260,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         result = analyser.process(
-            StandardInputSchema(),
-            ProcessingPurposeFindingSchema(),
+            Schema("standard_input", "1.0.0"),
+            Schema("processing_purpose_finding", "1.0.0"),
             test_message_with_patterns,
         )
 
@@ -299,7 +296,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         test_message = Message(
             id="test_no_patterns",
             content=test_data.model_dump(exclude_none=True),
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
         config = ProcessingPurposeAnalyserConfig.from_properties(properties)
@@ -307,8 +304,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         result = analyser.process(
-            StandardInputSchema(),
-            ProcessingPurposeFindingSchema(),
+            Schema("standard_input", "1.0.0"),
+            Schema("processing_purpose_finding", "1.0.0"),
             test_message,
         )
 
