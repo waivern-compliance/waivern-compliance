@@ -6,8 +6,6 @@ This module provides the foundation for strongly typed schemas with unified inte
 from __future__ import annotations
 
 import json
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol, override, runtime_checkable
 
@@ -151,80 +149,96 @@ class SchemaLoadError(Exception):
     pass
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class Schema(ABC):
-    """Base class for all Waivern Compliance Framework schemas.
+class Schema:
+    """Generic schema class for all Waivern Compliance Framework schemas.
 
-    Each concrete schema represents a strongly typed data structure
-    and provides its own name, version, and schema definition.
+    Schema objects are lightweight descriptors instantiated with name and version.
+    JSON schema files are loaded lazily only when actually needed.
 
-    Schema comparison is now type-based rather than name/version based
-    for better type safety and performance.
+    Schema loading uses fixed conventional search paths. All schemas must be
+    placed in one of these conventional locations.
     """
 
+    # Fixed conventional search paths - schemas must be in one of these locations
+    _SEARCH_PATHS: list[Path] = [
+        Path(__file__).parent / "json_schemas",  # waivern-core/schemas/json_schemas/
+        # Additional conventional paths can be added here as framework grows
+    ]
+
+    # Shared singleton loader for caching across all Schema instances
+    _loader: JsonSchemaLoader | None = None
+
+    @classmethod
+    def _get_loader(cls) -> JsonSchemaLoader:
+        """Get or create the shared singleton loader."""
+        if cls._loader is None:
+            cls._loader = JsonSchemaLoader(search_paths=cls._SEARCH_PATHS)
+        return cls._loader
+
+    def __init__(self, name: str, version: str) -> None:
+        """Initialise schema descriptor (does not load JSON file).
+
+        Args:
+            name: Schema name (e.g., "standard_input")
+            version: Schema version (e.g., "1.0.0")
+
+        """
+        self._name = name
+        self._version = version
+        self._schema_def: dict[str, Any] | None = None  # Lazy - loaded on demand
+
     @property
-    @abstractmethod
     def name(self) -> str:
         """Return the unique identifier for this schema."""
+        return self._name
 
     @property
-    @abstractmethod
     def version(self) -> str:
         """Return the version for this schema."""
+        return self._version
 
     @property
-    @abstractmethod
     def schema(self) -> dict[str, Any]:
-        """Return the JSON schema definition for validation.
+        """Get JSON schema definition, loading from file if needed.
 
-        Design decision: Returns dict[str, Any] to maintain compatibility
-        with the jsonschema library and existing validation patterns.
-        Future enhancement could introduce strongly typed JSON Schema
-        representations if needed.
+        Returns:
+            The JSON schema definition as a dictionary
+
+        Raises:
+            SchemaLoadError: If schema file cannot be loaded or validation fails
+            FileNotFoundError: If schema JSON file doesn't exist
+
         """
+        if self._schema_def is None:
+            # Lazy load using shared singleton loader (for cache efficiency)
+            loader = self._get_loader()
+            self._schema_def = loader.load(self._name, self._version)
+
+            # Validate JSON version matches parameter (name is implied by directory)
+            if self._schema_def.get("version") != self._version:
+                raise SchemaLoadError(
+                    f"Schema version mismatch: expected '{self._version}', "
+                    f"found '{self._schema_def.get('version')}'"
+                )
+
+        return self._schema_def
 
     @override
     def __eq__(self, other: object) -> bool:
-        """Compare schemas based on their concrete type.
+        """Compare schemas based on (name, version) tuple.
 
-        This enables type-based schema comparison instead of name/version
-        comparison for better type safety and performance.
+        This enables version-aware schema comparison for multi-version support.
         """
-        return type(other) is type(self)
+        if not isinstance(other, Schema):
+            return False
+        return self.name == other.name and self.version == other.version
 
     @override
     def __hash__(self) -> int:
-        """Hash based on schema type for use in sets and dictionaries."""
-        return hash(type(self))
+        """Hash based on (name, version) tuple for use in sets and dictionaries."""
+        return hash((self.name, self.version))
 
-
-@dataclass(frozen=True, slots=True, eq=False)
-class BaseFindingSchema(Schema, ABC):
-    """Base schema for analyser finding result types.
-
-    This abstract schema provides the common structure that analyser
-    finding outputs share: findings array, summary object, and analysis metadata.
-
-    "Finding" represents discovered compliance issues or data items during analysis.
-    This is used by analysers to structure their output in a consistent format.
-    """
-
-    _loader: SchemaLoader = field(default_factory=JsonSchemaLoader, init=False)
-
-    @property
-    @abstractmethod
     @override
-    def name(self) -> str:
-        """Return the unique identifier for this schema."""
-
-    @property
-    @abstractmethod
-    @override
-    def version(self) -> str:
-        """Return the version for this schema."""
-
-    @property
-    @override
-    def schema(self) -> dict[str, Any]:
-        """Return the JSON schema definition for validation."""
-        return self._loader.load(self.name, self.version)
+    def __repr__(self) -> str:
+        """Return string representation of schema."""
+        return f"Schema(name='{self.name}', version='{self.version}')"

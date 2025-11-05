@@ -1,17 +1,17 @@
 """Standard input schema for WCT.
 
-This module defines the StandardInputSchema class that represents
-the standard input format used by most WCT connectors.
+This module defines Pydantic models for the standard_input schema,
+which represents the common input format used by most WCT connectors.
+
+To use the schema, instantiate it with:
+    schema = Schema("standard_input", "1.0.0")
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, override
+from typing import Any
 
 from pydantic import BaseModel, Field
-
-from waivern_core.schemas.base import JsonSchemaLoader, Schema, SchemaLoader
 
 
 class BaseMetadata(BaseModel):
@@ -73,34 +73,3 @@ class StandardInputDataModel[MetadataT: BaseMetadata](BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
-
-
-@dataclass(frozen=True, slots=True, eq=False)
-class StandardInputSchema(Schema):
-    """Schema for standard input data format.
-
-    This schema represents the common input format used by filesystem
-    connectors and other basic data sources.
-    """
-
-    _VERSION = "1.0.0"
-
-    _loader: SchemaLoader = field(default_factory=JsonSchemaLoader, init=False)
-
-    @property
-    @override
-    def name(self) -> str:
-        """Return the schema name."""
-        return "standard_input"
-
-    @property
-    @override
-    def version(self) -> str:
-        """Return the schema version."""
-        return self._VERSION
-
-    @property
-    @override
-    def schema(self) -> dict[str, Any]:
-        """Return the JSON schema definition for validation."""
-        return self._loader.load(self.name, self.version)
