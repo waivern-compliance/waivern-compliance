@@ -105,7 +105,7 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
         """Get input schemas accepted by created analysers.
 
         Returns:
-            List containing StandardInputSchema
+            List containing Schema("standard_input", "1.0.0")
 
         """
         return PersonalDataAnalyser.get_supported_input_schemas()
@@ -115,7 +115,7 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
         """Get output schemas produced by created analysers.
 
         Returns:
-            List containing PersonalDataFindingSchema
+            List containing Schema("personal_data_finding", "1.0.0")
 
         """
         return PersonalDataAnalyser.get_supported_output_schemas()

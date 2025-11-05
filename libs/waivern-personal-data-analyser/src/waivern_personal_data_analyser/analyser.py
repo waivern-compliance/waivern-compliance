@@ -12,22 +12,20 @@ from waivern_core.schemas import (
     BaseMetadata,
     Schema,
     StandardInputDataModel,
-    StandardInputSchema,
 )
 from waivern_llm import BaseLLMService
 
 from .llm_validation_strategy import personal_data_validation_strategy
 from .pattern_matcher import PersonalDataPatternMatcher
-from .schemas import PersonalDataFindingSchema
 from .schemas.types import PersonalDataFindingModel
 from .types import PersonalDataAnalyserConfig
 
 logger = logging.getLogger(__name__)
 
 # Schema constants
-_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [StandardInputSchema()]
+_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [Schema("standard_input", "1.0.0")]
 
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [PersonalDataFindingSchema()]
+_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [Schema("personal_data_finding", "1.0.0")]
 
 
 class PersonalDataAnalyser(Analyser):

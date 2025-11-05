@@ -12,14 +12,13 @@ from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )
-from waivern_community.connectors.source_code.schemas import SourceCodeSchema
 from waivern_core import Analyser, RuleComplianceData
 from waivern_core.errors import MessageValidationError
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseFindingCompliance,
     BaseFindingEvidence,
-    StandardInputSchema,
+    Schema,
 )
 from waivern_core.schemas.base import SchemaLoadError
 from waivern_llm import BaseLLMService
@@ -30,9 +29,6 @@ from waivern_personal_data_analyser.analyser import (
 )
 from waivern_personal_data_analyser.pattern_matcher import (
     PersonalDataPatternMatcher,
-)
-from waivern_personal_data_analyser.schemas import (
-    PersonalDataFindingSchema,
 )
 from waivern_personal_data_analyser.schemas.types import (
     PersonalDataFindingMetadata,
@@ -105,7 +101,7 @@ class TestPersonalDataAnalyser:
         return Message(
             id="test_input",
             content=sample_input_data,
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
     @pytest.fixture
@@ -209,8 +205,8 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
-            input_schema = StandardInputSchema()
-            output_schema = PersonalDataFindingSchema()
+            input_schema = Schema("standard_input", "1.0.0")
+            output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
             result_message = analyser.process(
@@ -253,8 +249,8 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
-            input_schema = StandardInputSchema()
-            output_schema = PersonalDataFindingSchema()
+            input_schema = Schema("standard_input", "1.0.0")
+            output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
             result_message = analyser.process(
@@ -300,8 +296,8 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
-            input_schema = StandardInputSchema()
-            output_schema = PersonalDataFindingSchema()
+            input_schema = Schema("standard_input", "1.0.0")
+            output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
             result_message = analyser.process(
@@ -351,8 +347,8 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(filtered_findings, True),
         ):
-            input_schema = StandardInputSchema()
-            output_schema = PersonalDataFindingSchema()
+            input_schema = Schema("standard_input", "1.0.0")
+            output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
             result_message = analyser.process(
@@ -402,8 +398,8 @@ class TestPersonalDataAnalyser:
             llm_service=None,
         )
 
-        input_schema = StandardInputSchema()
-        output_schema = PersonalDataFindingSchema()
+        input_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("personal_data_finding", "1.0.0")
 
         # Act
         result_message = analyser.process(
@@ -446,11 +442,11 @@ class TestPersonalDataAnalyser:
                     }
                 ],
             },
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
-        input_schema = StandardInputSchema()
-        output_schema = PersonalDataFindingSchema()
+        input_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("personal_data_finding", "1.0.0")
 
         # Act
         result_message = analyser.process(input_schema, output_schema, empty_message)
@@ -480,11 +476,11 @@ class TestPersonalDataAnalyser:
         empty_message = Message(
             id="empty_test",
             content=empty_input_data,
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
 
-        input_schema = StandardInputSchema()
-        output_schema = PersonalDataFindingSchema()
+        input_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("personal_data_finding", "1.0.0")
 
         # Act
         result_message = analyser.process(input_schema, output_schema, empty_message)
@@ -513,11 +509,13 @@ class TestPersonalDataAnalyser:
         wrong_message = Message(
             id="test_wrong_schema",
             content={"some": "data"},
-            schema=SourceCodeSchema(),  # Wrong schema - expected StandardInputSchema
+            schema=Schema(
+                "source_code", "1.0.0"
+            ),  # Wrong schema - expected standard_input
         )
 
-        input_schema = StandardInputSchema()
-        output_schema = PersonalDataFindingSchema()
+        input_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("personal_data_finding", "1.0.0")
 
         # Act & Assert
         with pytest.raises(
@@ -532,9 +530,9 @@ class TestPersonalDataAnalyser:
         message = Message(
             id="test_message",
             content={"schemaVersion": "1.0.0", "name": "test", "data": []},
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
-        expected_schema = StandardInputSchema()
+        expected_schema = Schema("standard_input", "1.0.0")
 
         # Act & Assert - should not raise any exception
         Analyser.validate_input_message(message, expected_schema)
@@ -549,7 +547,7 @@ class TestPersonalDataAnalyser:
             content={"schemaVersion": "1.0.0", "name": "test", "data": []},
             schema=None,  # No schema attached
         )
-        expected_schema = StandardInputSchema()
+        expected_schema = Schema("standard_input", "1.0.0")
 
         # Act & Assert - should raise MessageValidationError
         with pytest.raises(
@@ -585,9 +583,9 @@ class TestPersonalDataAnalyser:
         message = Message(
             id="test_message",
             content=valid_content,
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
-        expected_schema = StandardInputSchema()
+        expected_schema = Schema("standard_input", "1.0.0")
 
         # Act & Assert - should not raise any exception
         Analyser.validate_input_message(message, expected_schema)
@@ -605,9 +603,9 @@ class TestPersonalDataAnalyser:
         message = Message(
             id="test_message",
             content=invalid_content,
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
-        expected_schema = StandardInputSchema()
+        expected_schema = Schema("standard_input", "1.0.0")
 
         # Act & Assert - should raise MessageValidationError due to schema validation failure
         with pytest.raises(MessageValidationError, match="Schema validation failed"):
@@ -625,9 +623,9 @@ class TestPersonalDataAnalyser:
         message = Message(
             id="test_message",
             content=malformed_content,
-            schema=StandardInputSchema(),
+            schema=Schema("standard_input", "1.0.0"),
         )
-        expected_schema = StandardInputSchema()
+        expected_schema = Schema("standard_input", "1.0.0")
 
         # Act & Assert - should raise MessageValidationError
         with pytest.raises(MessageValidationError, match="Schema validation failed"):
@@ -681,11 +679,13 @@ class TestPersonalDataAnalyser:
                 ],
             }
             test_message = Message(
-                id="test_data_type", content=input_content, schema=StandardInputSchema()
+                id="test_data_type",
+                content=input_content,
+                schema=Schema("standard_input", "1.0.0"),
             )
 
-            input_schema = StandardInputSchema()
-            output_schema = PersonalDataFindingSchema()
+            input_schema = Schema("standard_input", "1.0.0")
+            output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
             result_message = analyser.process(input_schema, output_schema, test_message)
@@ -719,8 +719,8 @@ class TestPersonalDataAnalyser:
 
         # Act
         result = analyser.process(
-            StandardInputSchema(),
-            PersonalDataFindingSchema(),
+            Schema("standard_input", "1.0.0"),
+            Schema("personal_data_finding", "1.0.0"),
             sample_input_message,
         )
 
