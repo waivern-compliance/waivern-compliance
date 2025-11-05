@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Protocol, override, runtime_checkable
+from typing import Any, ClassVar, Protocol, override, runtime_checkable
 
 
 @runtime_checkable
@@ -54,7 +54,7 @@ class JsonSchemaLoader:
                          If None, uses package-relative path (json_schemas/ alongside this file).
 
         """
-        self._cache: dict[str, dict[str, Any]] = {}
+        self._cache: dict[tuple[str, str], dict[str, Any]] = {}
         self._custom_search_paths = search_paths
 
     def _generate_schema_paths(self, schema_name: str, version: str) -> list[Path]:
@@ -104,8 +104,8 @@ class JsonSchemaLoader:
             SchemaLoadError: If schema file cannot be parsed
 
         """
-        # Create cache key with version
-        cache_key = f"{schema_name}:{version}"
+        # Create cache key using tuple for type safety
+        cache_key = (schema_name, version)
 
         # Return cached version if available
         if cache_key in self._cache:
@@ -126,7 +126,7 @@ class JsonSchemaLoader:
                             f"Schema version mismatch: expected '{version}', found '{schema_data['version']}' in '{schema_path}'"
                         )
 
-                    # Cache the loaded schema with versioned key
+                    # Cache the loaded schema using tuple key
                     self._cache[cache_key] = schema_data
                     return schema_data
                 except json.JSONDecodeError as e:
@@ -149,42 +149,119 @@ class SchemaLoadError(Exception):
     pass
 
 
+class SchemaRegistry:
+    """Registry for managing schema infrastructure.
+
+    Provides centralised management of schema search paths and loader instances.
+    This enables packages to contribute their own schemas without modifying
+    waivern-core code (Open/Closed Principle).
+
+    The registry maintains default search paths, allows additional paths to be
+    registered at runtime, and provides a shared singleton loader for efficiency.
+    """
+
+    # Class-level storage for search paths (shared across all instances)
+    _search_paths: ClassVar[list[Path]] = []
+    _initialised: ClassVar[bool] = False
+
+    # Shared singleton loader for caching across all Schema instances
+    _loader: ClassVar[JsonSchemaLoader | None] = None
+
+    @classmethod
+    def _ensure_initialised(cls) -> None:
+        """Ensure default search paths are registered (called once)."""
+        if not cls._initialised:
+            # Register default waivern-core schema location
+            default_path = Path(__file__).parent / "json_schemas"
+            cls._search_paths.append(default_path)
+            cls._initialised = True
+
+    @classmethod
+    def register_search_path(cls, path: Path) -> None:
+        """Register an additional search path for schemas.
+
+        Args:
+            path: Base directory containing schema files
+                 (expects subdirectories: {schema_name}/{version}/)
+
+        Example:
+            >>> from pathlib import Path
+            >>> SchemaRegistry.register_search_path(
+            ...     Path(__file__).parent / "my_schemas"
+            ... )
+
+        Note:
+            Invalidates the singleton loader cache, forcing recreation with new paths.
+
+        """
+        cls._ensure_initialised()
+        if path not in cls._search_paths:
+            cls._search_paths.append(path)
+            # Invalidate loader cache when paths change
+            cls._loader = None
+
+    @classmethod
+    def get_search_paths(cls) -> list[Path]:
+        """Get all registered search paths.
+
+        Returns:
+            List of search paths in registration order
+
+        """
+        cls._ensure_initialised()
+        return cls._search_paths.copy()
+
+    @classmethod
+    def get_loader(cls) -> JsonSchemaLoader:
+        """Get or create the shared singleton loader.
+
+        Returns:
+            Shared JsonSchemaLoader instance configured with registered paths
+
+        """
+        if cls._loader is None:
+            search_paths = cls.get_search_paths()
+            cls._loader = JsonSchemaLoader(search_paths=search_paths)
+        return cls._loader
+
+    @classmethod
+    def clear_search_paths(cls) -> None:
+        """Clear all registered search paths (primarily for testing).
+
+        Note:
+            Also clears the singleton loader cache.
+
+        """
+        cls._search_paths.clear()
+        cls._initialised = False
+        cls._loader = None
+
+
 class Schema:
     """Generic schema class for all Waivern Compliance Framework schemas.
 
     Schema objects are lightweight descriptors instantiated with name and version.
     JSON schema files are loaded lazily only when actually needed.
 
-    Schema loading uses fixed conventional search paths. All schemas must be
-    placed in one of these conventional locations.
+    Schema loading uses the shared loader from SchemaRegistry. Custom loaders can
+    be injected for testing or alternative schema sources (dependency injection).
     """
 
-    # Fixed conventional search paths - schemas must be in one of these locations
-    _SEARCH_PATHS: list[Path] = [
-        Path(__file__).parent / "json_schemas",  # waivern-core/schemas/json_schemas/
-        # Additional conventional paths can be added here as framework grows
-    ]
-
-    # Shared singleton loader for caching across all Schema instances
-    _loader: JsonSchemaLoader | None = None
-
-    @classmethod
-    def _get_loader(cls) -> JsonSchemaLoader:
-        """Get or create the shared singleton loader."""
-        if cls._loader is None:
-            cls._loader = JsonSchemaLoader(search_paths=cls._SEARCH_PATHS)
-        return cls._loader
-
-    def __init__(self, name: str, version: str) -> None:
+    def __init__(
+        self, name: str, version: str, loader: JsonSchemaLoader | None = None
+    ) -> None:
         """Initialise schema descriptor (does not load JSON file).
 
         Args:
             name: Schema name (e.g., "standard_input")
             version: Schema version (e.g., "1.0.0")
+            loader: Optional custom loader. If None, uses shared singleton loader
+                   from SchemaRegistry (dependency injection)
 
         """
         self._name = name
         self._version = version
+        self._loader = loader  # Instance-specific loader (or None for shared)
         self._schema_def: dict[str, Any] | None = None  # Lazy - loaded on demand
 
     @property
@@ -210,16 +287,14 @@ class Schema:
 
         """
         if self._schema_def is None:
-            # Lazy load using shared singleton loader (for cache efficiency)
-            loader = self._get_loader()
+            # Use instance-specific loader if provided, otherwise shared registry loader
+            # Loader validates version correctness, so no additional validation needed
+            loader = (
+                self._loader
+                if self._loader is not None
+                else SchemaRegistry.get_loader()
+            )
             self._schema_def = loader.load(self._name, self._version)
-
-            # Validate JSON version matches parameter (name is implied by directory)
-            if self._schema_def.get("version") != self._version:
-                raise SchemaLoadError(
-                    f"Schema version mismatch: expected '{self._version}', "
-                    f"found '{self._schema_def.get('version')}'"
-                )
 
         return self._schema_def
 

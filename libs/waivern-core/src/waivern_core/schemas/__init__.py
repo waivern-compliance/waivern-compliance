@@ -14,6 +14,7 @@ from waivern_core.schemas.base import (
     Schema,
     SchemaLoader,
     SchemaLoadError,
+    SchemaRegistry,
 )
 from waivern_core.schemas.standard_input import (
     BaseMetadata,
@@ -38,6 +39,7 @@ __all__ = [
     "Schema",
     "SchemaLoadError",
     "SchemaLoader",
+    "SchemaRegistry",
     # Shared input schema models (used by multiple connectors)
     "StandardInputDataModel",
     "StandardInputDataItemModel",

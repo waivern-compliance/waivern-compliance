@@ -9,6 +9,7 @@ from waivern_core.schemas.base import (
     Schema,
     SchemaLoader,
     SchemaLoadError,
+    SchemaRegistry,
 )
 
 
@@ -263,3 +264,139 @@ class TestSchemaLoader:
         # Test method signature
         assert hasattr(loader, "load")
         assert callable(loader.load)
+
+
+class TestSchemaDependencyInjection:
+    """Tests for Schema loader behaviour (singleton vs injected)."""
+
+    def test_default_schemas_share_singleton_loader_cache(self) -> None:
+        """Multiple Schema instances without custom loader share singleton loader.
+
+        This verifies that the singleton pattern still works for the default case,
+        ensuring efficient cache sharing across all Schema instances.
+        """
+        # Create two different Schema instances (different schemas)
+        schema1 = Schema("standard_input", "1.0.0")
+        schema2 = Schema("standard_input", "1.0.0")
+
+        # Access schema definitions to trigger loading
+        json_schema1 = schema1.schema
+        json_schema2 = schema2.schema
+
+        # Should be same cached object from singleton loader's cache
+        assert json_schema1 is json_schema2
+
+        # Verify they both loaded successfully
+        assert json_schema1["version"] == "1.0.0"
+        assert json_schema2["version"] == "1.0.0"
+
+    def test_schema_with_custom_loader_uses_injected_loader(self) -> None:
+        """Schema with injected loader uses it instead of singleton.
+
+        This verifies dependency injection works - useful for testing or
+        alternative schema sources.
+        """
+        # Create custom loader pointing to test fixtures
+        fixtures_path = Path(__file__).parent / "fixtures"
+        custom_loader = JsonSchemaLoader(search_paths=[fixtures_path])
+
+        # Inject custom loader
+        schema = Schema("test_schema", "1.0.0", loader=custom_loader)
+
+        # Should use the injected loader (which finds version mismatch in fixture)
+        with pytest.raises(SchemaLoadError) as exc_info:
+            _ = schema.schema
+
+        assert "version mismatch" in str(exc_info.value).lower()
+        assert "1.0.0" in str(exc_info.value)
+        assert "2.0.0" in str(exc_info.value)
+
+    def test_custom_loader_does_not_affect_singleton(self) -> None:
+        """Injecting loader into one instance doesn't affect others.
+
+        This verifies isolation between injected and default behaviours.
+        """
+        # Create schema with custom loader (non-existent path)
+        custom_loader = JsonSchemaLoader(search_paths=[Path("/nonexistent/path")])
+        schema_with_custom = Schema("standard_input", "1.0.0", loader=custom_loader)
+
+        # Create schema without custom loader (uses singleton)
+        schema_default = Schema("standard_input", "1.0.0")
+
+        # Custom loader should fail to find schema
+        with pytest.raises(FileNotFoundError):
+            _ = schema_with_custom.schema
+
+        # Default schema should succeed (uses singleton with registry paths)
+        json_schema = schema_default.schema
+        assert isinstance(json_schema, dict)
+        assert json_schema["version"] == "1.0.0"
+
+
+class TestSchemaRegistry:
+    """Tests for SchemaRegistry."""
+
+    def teardown_method(self) -> None:
+        """Restore default state after each test."""
+        SchemaRegistry.clear_search_paths()
+
+    def test_default_search_paths_include_waivern_core(self) -> None:
+        """Registry includes default waivern-core schema directory."""
+        paths = SchemaRegistry.get_search_paths()
+
+        assert len(paths) == 1
+        assert paths[0].name == "json_schemas"
+        assert "waivern_core" in str(paths[0])
+
+    def test_register_additional_search_path(self) -> None:
+        """Users can register additional schema directories."""
+        custom_path = Path("/custom/schemas")
+
+        SchemaRegistry.register_search_path(custom_path)
+        paths = SchemaRegistry.get_search_paths()
+
+        assert len(paths) == 2
+        assert paths[1] == custom_path
+
+    def test_register_duplicate_path_ignored(self) -> None:
+        """Registering the same path twice doesn't create duplicates."""
+        custom_path = Path("/custom/schemas")
+
+        SchemaRegistry.register_search_path(custom_path)
+        SchemaRegistry.register_search_path(custom_path)
+        paths = SchemaRegistry.get_search_paths()
+
+        assert len(paths) == 2  # Default + custom (no duplicate)
+        assert paths.count(custom_path) == 1
+
+    def test_get_search_paths_returns_copy(self) -> None:
+        """get_search_paths returns a copy to prevent external modification."""
+        paths1 = SchemaRegistry.get_search_paths()
+        paths2 = SchemaRegistry.get_search_paths()
+
+        # Modifying returned list shouldn't affect registry
+        paths1.append(Path("/external/modification"))
+
+        assert paths1 != paths2
+        assert len(paths2) == 1  # Only default path
+
+    def test_clear_search_paths_removes_all(self) -> None:
+        """clear_search_paths removes all paths including defaults."""
+        SchemaRegistry.register_search_path(Path("/custom1"))
+        SchemaRegistry.register_search_path(Path("/custom2"))
+
+        SchemaRegistry.clear_search_paths()
+        # After clear, get_search_paths should reinitialise with defaults
+        paths = SchemaRegistry.get_search_paths()
+
+        assert len(paths) == 1  # Only default after reinitialisation
+
+    def test_schema_uses_registry_paths(self) -> None:
+        """Schema class queries registry for search paths."""
+        # Create schema (should use registry paths)
+        schema = Schema("standard_input", "1.0.0")
+
+        # Should successfully load from default registry path
+        json_schema = schema.schema
+        assert isinstance(json_schema, dict)
+        assert json_schema["version"] == "1.0.0"
