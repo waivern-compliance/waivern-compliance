@@ -358,7 +358,10 @@ execution:
         result = results[0]
         assert result.success is False
         assert result.error_message is not None
-        assert "Input schema 'unsupported_schema' not found" in result.error_message
+        assert (
+            "Producer does not support schema 'unsupported_schema'"
+            in result.error_message
+        )
         assert result.analysis_name == "Test execution with unsupported input schema"
 
     def test_execute_runbook_unsupported_output_schema(self) -> None:
@@ -393,7 +396,7 @@ execution:
         assert result.success is False
         assert result.error_message is not None
         assert (
-            "Output schema 'unsupported_output_schema' not found"
+            "Producer does not support schema 'unsupported_output_schema'"
             in result.error_message
         )
         assert result.analysis_name == "Test execution with unsupported output schema"

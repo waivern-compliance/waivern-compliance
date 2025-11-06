@@ -94,6 +94,14 @@ class ExecutionStep(BaseModel):
     output_schema: str = Field(
         min_length=1, description="Schema name for analyser output validation"
     )
+    input_schema_version: str | None = Field(
+        default=None,
+        description="Optional specific version for input schema (auto-select latest if not specified)",
+    )
+    output_schema_version: str | None = Field(
+        default=None,
+        description="Optional specific version for output schema (auto-select latest if not specified)",
+    )
     context: dict[str, Any] = Field(
         default_factory=dict,
         description="Optional execution metadata and runtime configuration",
