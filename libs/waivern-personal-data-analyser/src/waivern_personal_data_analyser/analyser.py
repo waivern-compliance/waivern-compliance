@@ -1,7 +1,9 @@
 """Personal data analysis analyser."""
 
+import importlib
 import logging
 from pprint import pformat
+from types import ModuleType
 from typing import Any, override
 
 from waivern_core import Analyser
@@ -9,9 +11,7 @@ from waivern_core.message import Message
 from waivern_core.schemas import (
     AnalysisChainEntry,
     BaseAnalysisOutputMetadata,
-    BaseMetadata,
     Schema,
-    StandardInputDataModel,
 )
 from waivern_llm import BaseLLMService
 
@@ -21,11 +21,6 @@ from .schemas.types import PersonalDataFindingModel
 from .types import PersonalDataAnalyserConfig
 
 logger = logging.getLogger(__name__)
-
-# Schema constants
-_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [Schema("standard_input", "1.0.0")]
-
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [Schema("personal_data_finding", "1.0.0")]
 
 
 class PersonalDataAnalyser(Analyser):
@@ -58,17 +53,47 @@ class PersonalDataAnalyser(Analyser):
         """Return the name of the analyser."""
         return "personal_data_analyser"
 
-    @classmethod
-    @override
-    def get_supported_input_schemas(cls) -> list[Schema]:
-        """Return the input schemas supported by this analyser."""
-        return _SUPPORTED_INPUT_SCHEMAS
+    def _load_reader(self, schema: Schema) -> ModuleType:
+        """Dynamically import reader module.
 
-    @classmethod
-    @override
-    def get_supported_output_schemas(cls) -> list[Schema]:
-        """Return the output schemas supported by this analyser."""
-        return _SUPPORTED_OUTPUT_SCHEMAS
+        Python's import system automatically caches modules in sys.modules,
+        so repeated imports are fast and don't require manual caching.
+
+        Args:
+            schema: Input schema to load reader for
+
+        Returns:
+            Reader module with read() function
+
+        Raises:
+            ModuleNotFoundError: If reader module doesn't exist for this version
+
+        """
+        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
+        return importlib.import_module(
+            f"waivern_personal_data_analyser.schema_readers.{module_name}"
+        )
+
+    def _load_producer(self, schema: Schema) -> ModuleType:
+        """Dynamically import producer module.
+
+        Python's import system automatically caches modules in sys.modules,
+        so repeated imports are fast and don't require manual caching.
+
+        Args:
+            schema: Output schema to load producer for
+
+        Returns:
+            Producer module with produce() function
+
+        Raises:
+            ModuleNotFoundError: If producer module doesn't exist for this version
+
+        """
+        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
+        return importlib.import_module(
+            f"waivern_personal_data_analyser.schema_producers.{module_name}"
+        )
 
     @override
     def process(
@@ -77,13 +102,12 @@ class PersonalDataAnalyser(Analyser):
         output_schema: Schema,
         message: Message,
     ) -> Message:
-        """Process data to find personal data patterns using runners."""
+        """Process data to find personal data patterns using dynamic reader/producer."""
         Analyser.validate_input_message(message, input_schema)
 
-        # Extract and validate data using Pydantic.model_validate
-        typed_data = StandardInputDataModel[BaseMetadata].model_validate(
-            message.content
-        )
+        # Load reader and transform to canonical Pydantic model
+        reader = self._load_reader(input_schema)
+        typed_data = reader.read(message.content)
 
         # Process each data item using the pattern matcher
         findings: list[PersonalDataFindingModel] = []
@@ -116,7 +140,7 @@ class PersonalDataAnalyser(Analyser):
         output_schema: Schema,
         analyses_chain: list[AnalysisChainEntry],
     ) -> Message:
-        """Create and validate output message.
+        """Create and validate output message using producer.
 
         Args:
             original_findings: Original findings before LLM validation
@@ -128,34 +152,34 @@ class PersonalDataAnalyser(Analyser):
             Validated output message
 
         """
-        # Convert models to dicts for final output
-        validated_findings_dicts = [
-            finding.model_dump(mode="json", exclude_none=True)
-            for finding in validated_findings
-        ]
+        # Build summary
+        summary = self._build_findings_summary(validated_findings)
 
-        result_data: dict[str, Any] = {
-            "findings": validated_findings_dicts,
-            "summary": self._build_findings_summary(validated_findings),
-        }
-
+        # Build validation summary if applicable
+        validation_summary = None
         if (
             self._config.llm_validation.enable_llm_validation
             and len(original_findings) > 0
         ):
-            result_data["validation_summary"] = self._build_validation_summary(
+            validation_summary = self._build_validation_summary(
                 original_findings, validated_findings
             )
 
-        # Add analysis metadata for chaining support
+        # Build analysis metadata for chaining support
         analysis_metadata = BaseAnalysisOutputMetadata(
             ruleset_used=self._config.pattern_matching.ruleset,
             llm_validation_enabled=self._config.llm_validation.enable_llm_validation,
             evidence_context_size=self._config.pattern_matching.evidence_context_size,
             analyses_chain=analyses_chain,
         )
-        result_data["analysis_metadata"] = analysis_metadata.model_dump(
-            mode="json", exclude_none=True
+
+        # Load producer and transform to wire format
+        producer = self._load_producer(output_schema)
+        result_data = producer.produce(
+            findings=validated_findings,
+            summary=summary,
+            analysis_metadata=analysis_metadata,
+            validation_summary=validation_summary,
         )
 
         output_message = Message(
