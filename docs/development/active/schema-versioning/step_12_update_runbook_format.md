@@ -1,5 +1,6 @@
 # Step 12: Update Runbook Format and Validation
 
+**Status:** ✅ COMPLETED
 **Phase:** 5 - Runbook Format Updates
 **Dependencies:** Step 11 complete (Phase 4 done)
 **Estimated Scope:** Runbook schema and documentation updates
@@ -240,41 +241,28 @@ Runbook validation failed:
 
 ### Unit Tests for Version Format Validation
 
-Create `apps/wct/tests/test_runbook_version_validation.py`:
+Created `apps/wct/tests/test_runbook_version_validation.py` with 10 comprehensive tests:
 
-**Test 1: Valid semantic versions**
-```python
-def test_valid_version_formats():
-    """Test that valid semantic versions pass validation."""
-    # Test with valid versions: "1.0.0", "2.10.5", "0.0.1"
-    # Load runbook via RunbookLoader.load()
-    # Assert no validation errors raised
-```
+**Valid Format Tests:**
+1. `test_valid_input_schema_version` - Accepts "1.0.0" for input_schema_version
+2. `test_valid_output_schema_version` - Accepts "2.10.5" for output_schema_version
+3. `test_valid_both_schema_versions` - Accepts both version fields together
 
-**Test 2: Invalid version formats**
-```python
-def test_invalid_version_formats():
-    """Test that invalid version formats raise ValidationError."""
-    # Test with invalid: "1.0", "v1.0.0", "1.0.0-beta", "invalid"
-    # Attempt to load runbook
-    # Assert RunbookValidationError raised with helpful message
-```
+**Invalid Format Tests:**
+4. `test_invalid_input_version_two_parts` - Rejects "1.0" (missing patch)
+5. `test_invalid_input_version_with_prefix` - Rejects "v1.0.0" (no prefixes)
+6. `test_invalid_input_version_with_prerelease` - Rejects "1.0.0-beta" (no suffixes)
+7. `test_invalid_input_version_non_numeric` - Rejects "latest" (non-numeric)
+8. `test_invalid_output_version_format` - Validates output_schema_version too
 
-**Test 3: Backward compatibility**
-```python
-def test_missing_versions_still_valid():
-    """Test that runbooks without version fields are still valid."""
-    # Load runbook without input_schema_version/output_schema_version
-    # Assert loads successfully (fields are optional)
-```
+**Backward Compatibility Tests:**
+9. `test_missing_versions_backward_compatibility` - Optional fields (omitted = None)
+10. `test_error_message_clarity` - Error messages include field name, format, example, actual value
 
-**Test 4: None values accepted**
-```python
-def test_explicit_null_versions():
-    """Test that explicit null/None values are valid."""
-    # YAML with `input_schema_version: null`
-    # Assert loads successfully
-```
+**Test Infrastructure:**
+- `_create_test_runbook_yaml()` helper method reduces duplication
+- `runbook_file` pytest fixture handles temp file lifecycle
+- All tests use public API (RunbookLoader.load()) not internal methods
 
 ### Integration Tests (Already exist)
 
