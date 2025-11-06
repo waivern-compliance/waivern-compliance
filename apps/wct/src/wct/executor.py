@@ -194,7 +194,9 @@ class Executor:
             analyser, connector = self._instantiate_components(
                 analyser_type, connector_type, analyser_config, connector_config
             )
-            input_schema, output_schema = self._resolve_step_schemas(step, analyser)
+            input_schema, output_schema = self._resolve_step_schemas(
+                step, connector, analyser
+            )
 
             # Execute the analysis
             return self._run_step_analysis(
@@ -300,34 +302,240 @@ class Executor:
         return analyser, connector
 
     def _resolve_step_schemas(
-        self, step: ExecutionStep, analyser: Analyser
+        self, step: ExecutionStep, connector: Connector, analyser: Analyser
     ) -> tuple[Schema, Schema]:
-        """Resolve input and output schemas for the step.
+        """Resolve input and output schemas with version matching.
 
-        Schema validation is handled during runbook loading and analyser
-        initialization, so we just need to find the matching schemas.
+        Args:
+            step: Execution step with schema requirements
+            connector: Connector instance
+            analyser: Analyser instance
+
+        Returns:
+            Tuple of (input_schema, output_schema) to use
+
+        Raises:
+            SchemaNotFoundError: If schema not supported
+            VersionMismatchError: If no compatible versions found
+            VersionNotSupportedError: If requested version not compatible
+
         """
-        # Find input schema by name (validated during runbook loading)
-        supported_input_schemas = analyser.get_supported_input_schemas()
-        input_schema = next(
-            (s for s in supported_input_schemas if s.name == step.input_schema),
-            None,
+        connector_outputs = connector.get_supported_output_schemas()
+        analyser_inputs = analyser.get_supported_input_schemas()
+        analyser_outputs = analyser.get_supported_output_schemas()
+
+        # Resolve input schema (connector output → analyser input)
+        input_schema = self._find_compatible_schema(
+            schema_name=step.input_schema,
+            requested_version=step.input_schema_version,
+            producer_schemas=connector_outputs,
+            consumer_schemas=analyser_inputs,
         )
 
-        # Find output schema by name (validated during runbook loading)
-        supported_output_schemas = analyser.get_supported_output_schemas()
-        output_schema = next(
-            (s for s in supported_output_schemas if s.name == step.output_schema),
-            None,
+        # Resolve output schema (analyser output)
+        output_schema = self._find_compatible_schema(
+            schema_name=step.output_schema,
+            requested_version=step.output_schema_version,
+            producer_schemas=analyser_outputs,
+            consumer_schemas=[],  # No consumer for final output
         )
-
-        # These should never be None due to earlier validation, but check for safety
-        if input_schema is None:
-            raise ExecutorError(f"Input schema '{step.input_schema}' not found")
-        if output_schema is None:
-            raise ExecutorError(f"Output schema '{step.output_schema}' not found")
 
         return input_schema, output_schema
+
+    def _filter_schemas_by_name(
+        self, schemas: list[Schema], schema_name: str
+    ) -> list[Schema]:
+        """Filter schemas by name.
+
+        Args:
+            schemas: List of schemas to filter
+            schema_name: Name to filter by
+
+        Returns:
+            List of schemas matching the name
+
+        """
+        return [s for s in schemas if s.name == schema_name]
+
+    def _validate_schema_existence(
+        self,
+        filtered_schemas: list[Schema],
+        schema_name: str,
+        component_type: str,
+        all_schemas: list[Schema],
+    ) -> None:
+        """Validate that schema is supported by component.
+
+        Args:
+            filtered_schemas: Schemas filtered by name
+            schema_name: Name of schema being validated
+            component_type: Type of component (Producer/Consumer) for error message
+            all_schemas: All schemas supported by component (for error message)
+
+        Raises:
+            SchemaNotFoundError: If schema not supported
+
+        """
+        if not filtered_schemas:
+            available_names = [s.name for s in all_schemas]
+            raise SchemaNotFoundError(
+                f"{component_type} does not support schema '{schema_name}'. "
+                f"Available: {available_names}"
+            )
+
+    def _find_compatible_versions(
+        self,
+        producer_by_name: list[Schema],
+        consumer_by_name: list[Schema],
+        schema_name: str,
+        has_consumer: bool,
+    ) -> tuple[dict[str, Schema], set[str]]:
+        """Find compatible versions between producer and consumer.
+
+        Args:
+            producer_by_name: Producer schemas filtered by name
+            consumer_by_name: Consumer schemas filtered by name
+            schema_name: Schema name for error messages
+            has_consumer: Whether there is a consumer component
+
+        Returns:
+            Tuple of (producer_versions_dict, compatible_versions_set)
+
+        Raises:
+            VersionMismatchError: If no compatible versions found
+
+        """
+        producer_versions = {s.version: s for s in producer_by_name}
+        consumer_versions: set[str] = set()
+
+        if has_consumer:
+            consumer_versions = {s.version for s in consumer_by_name}
+            compatible_versions = set(producer_versions.keys()) & consumer_versions
+        else:
+            # No consumer - all producer versions are compatible
+            compatible_versions = set(producer_versions.keys())
+
+        if not compatible_versions:
+            raise VersionMismatchError(
+                f"No compatible versions for schema '{schema_name}'. "
+                f"Producer supports: {sorted(producer_versions.keys())}. "
+                f"Consumer supports: {sorted(consumer_versions) if has_consumer else 'N/A'}"
+            )
+
+        return producer_versions, compatible_versions
+
+    def _select_version(
+        self,
+        requested_version: str | None,
+        compatible_versions: set[str],
+        producer_versions: dict[str, Schema],
+        schema_name: str,
+    ) -> Schema:
+        """Select specific version from compatible versions.
+
+        Args:
+            requested_version: Explicitly requested version (if any)
+            compatible_versions: Set of compatible version strings
+            producer_versions: Dict mapping versions to Schema objects
+            schema_name: Schema name for error messages
+
+        Returns:
+            Selected Schema object
+
+        Raises:
+            VersionNotSupportedError: If requested version not in compatible set
+
+        """
+        if requested_version:
+            # Explicit version requested
+            if requested_version not in compatible_versions:
+                raise VersionNotSupportedError(
+                    f"Requested version '{requested_version}' for schema '{schema_name}' "
+                    f"not compatible. Compatible versions: {sorted(compatible_versions)}"
+                )
+            return producer_versions[requested_version]
+        else:
+            # Auto-select latest compatible version
+            latest_version = max(compatible_versions, key=self._version_sort_key)
+            return producer_versions[latest_version]
+
+    def _find_compatible_schema(
+        self,
+        schema_name: str,
+        requested_version: str | None,
+        producer_schemas: list[Schema],
+        consumer_schemas: list[Schema],
+    ) -> Schema:
+        """Find compatible schema version between producer and consumer.
+
+        Strategy:
+        - If version explicitly requested: validate and use it
+        - Otherwise: select latest version both support
+
+        Args:
+            schema_name: Name of schema to find
+            requested_version: Optional specific version requested
+            producer_schemas: Schemas the producer can output
+            consumer_schemas: Schemas the consumer can accept (empty if no consumer)
+
+        Returns:
+            Compatible Schema object
+
+        Raises:
+            SchemaNotFoundError: If schema not supported by producer/consumer
+            VersionMismatchError: If no compatible versions found
+            VersionNotSupportedError: If requested version not compatible
+
+        """
+        # Filter by name
+        producer_by_name = self._filter_schemas_by_name(producer_schemas, schema_name)
+        consumer_by_name = self._filter_schemas_by_name(consumer_schemas, schema_name)
+
+        # Validate schema is supported
+        self._validate_schema_existence(
+            producer_by_name, schema_name, "Producer", producer_schemas
+        )
+        if consumer_schemas:
+            self._validate_schema_existence(
+                consumer_by_name, schema_name, "Consumer", consumer_schemas
+            )
+
+        # Find compatible versions
+        producer_versions, compatible_versions = self._find_compatible_versions(
+            producer_by_name, consumer_by_name, schema_name, bool(consumer_schemas)
+        )
+
+        # Select version (explicit or auto-select latest)
+        return self._select_version(
+            requested_version, compatible_versions, producer_versions, schema_name
+        )
+
+    def _version_sort_key(self, version: str) -> tuple[int, int, int]:
+        """Convert version string to sortable tuple.
+
+        Args:
+            version: Version string like "1.2.3"
+
+        Returns:
+            Tuple of (major, minor, patch) for sorting
+
+        Raises:
+            ExecutorError: If version format is invalid
+
+        """
+        try:
+            parts = version.split(".")
+            expected_parts = 3
+            if len(parts) != expected_parts:
+                raise ValueError(
+                    "Version must have exactly 3 parts (major.minor.patch)"
+                )
+            return (int(parts[0]), int(parts[1]), int(parts[2]))
+        except (ValueError, IndexError) as e:
+            logger.error(f"Invalid semantic version format: '{version}' - {e}")
+            raise ExecutorError(
+                f"Invalid semantic version '{version}': must be in format 'major.minor.patch' (e.g., '1.2.3')"
+            ) from e
 
     def _run_step_analysis(
         self,
@@ -409,3 +617,15 @@ class Executor:
 
 class ExecutorError(WaivernError):
     """Base exception for executor errors."""
+
+
+class SchemaNotFoundError(ExecutorError):
+    """Raised when required schema is not supported by component."""
+
+
+class VersionMismatchError(ExecutorError):
+    """Raised when no compatible schema versions found."""
+
+
+class VersionNotSupportedError(ExecutorError):
+    """Raised when explicitly requested version is not compatible."""

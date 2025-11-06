@@ -12,6 +12,7 @@ All configuration uses Pydantic models for validation and runtime representation
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -94,10 +95,44 @@ class ExecutionStep(BaseModel):
     output_schema: str = Field(
         min_length=1, description="Schema name for analyser output validation"
     )
+    input_schema_version: str | None = Field(
+        default=None,
+        description="Optional specific version for input schema (auto-select latest if not specified)",
+    )
+    output_schema_version: str | None = Field(
+        default=None,
+        description="Optional specific version for output schema (auto-select latest if not specified)",
+    )
     context: dict[str, Any] = Field(
         default_factory=dict,
         description="Optional execution metadata and runtime configuration",
     )
+
+    @field_validator("input_schema_version", "output_schema_version")
+    @classmethod
+    def validate_version_format(cls, v: str | None) -> str | None:
+        """Validate semantic version format for schema versions.
+
+        Args:
+            v: Version string to validate
+
+        Returns:
+            Validated version string
+
+        Raises:
+            ValueError: If version format is invalid
+
+        """
+        if v is None:
+            return v
+
+        # Semantic version pattern: major.minor.patch (e.g., "1.0.0")
+        pattern = r"^\d+\.\d+\.\d+$"
+        if not re.match(pattern, v):
+            raise ValueError(
+                f"Version must be in format 'major.minor.patch' (e.g., '1.0.0'), got: {v}"
+            )
+        return v
 
 
 class Runbook(BaseModel):

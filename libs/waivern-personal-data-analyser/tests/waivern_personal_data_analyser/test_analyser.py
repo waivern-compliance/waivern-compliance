@@ -105,6 +105,46 @@ class TestPersonalDataAnalyser:
         )
 
     @pytest.fixture
+    def mock_schema_modules(self) -> tuple[Mock, Mock]:
+        """Create mock reader and producer modules for testing dynamic loading.
+
+        Returns:
+            Tuple of (mock_reader_module, mock_producer_module) configured
+            with appropriate return values for process() testing.
+
+        """
+        # Setup mock reader module
+        mock_reader = Mock()
+        mock_reader.read.return_value = Mock(
+            data=[],
+            schemaVersion="1.0.0",
+            name="test",
+            description=None,
+            contentEncoding=None,
+            source=None,
+            metadata={},
+        )
+
+        # Setup mock producer module
+        mock_producer = Mock()
+        mock_producer.produce.return_value = {
+            "findings": [],
+            "summary": {
+                "total_findings": 0,
+                "high_risk_count": 0,
+                "special_category_count": 0,
+            },
+            "analysis_metadata": {
+                "ruleset_used": "personal_data",
+                "llm_validation_enabled": True,
+                "evidence_context_size": "medium",
+                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
+            },
+        }
+
+        return mock_reader, mock_producer
+
+    @pytest.fixture
     def sample_findings(self) -> list[PersonalDataFindingModel]:
         """Create sample personal data findings for testing."""
         return [
@@ -738,3 +778,73 @@ class TestPersonalDataAnalyser:
         assert "execution_timestamp" in chain_entry, (
             "Should include execution timestamp"
         )
+
+    def test_reader_module_is_loaded_dynamically(
+        self,
+        valid_config: PersonalDataAnalyserConfig,
+        mock_llm_service: Mock,
+        sample_input_message: Message,
+        mock_schema_modules: tuple[Mock, Mock],
+    ) -> None:
+        """Test that reader module is dynamically loaded for input schema."""
+        # Arrange
+        analyser = PersonalDataAnalyser(valid_config, mock_llm_service)
+        mock_reader, mock_producer = mock_schema_modules
+
+        # Mock importlib.import_module to track dynamic loading
+        with patch("importlib.import_module") as mock_import:
+            # Return different mocks based on module name
+            def import_side_effect(module_name: str) -> Mock:
+                if "schema_readers" in module_name:
+                    return mock_reader
+                elif "schema_producers" in module_name:
+                    return mock_producer
+                return Mock()
+
+            mock_import.side_effect = import_side_effect
+
+            input_schema = Schema("standard_input", "1.0.0")
+            output_schema = Schema("personal_data_finding", "1.0.0")
+
+            # Act
+            analyser.process(input_schema, output_schema, sample_input_message)
+
+            # Assert - Verify reader module was dynamically imported
+            mock_import.assert_any_call(
+                "waivern_personal_data_analyser.schema_readers.standard_input_1_0_0"
+            )
+
+    def test_producer_module_is_loaded_dynamically(
+        self,
+        valid_config: PersonalDataAnalyserConfig,
+        mock_llm_service: Mock,
+        sample_input_message: Message,
+        mock_schema_modules: tuple[Mock, Mock],
+    ) -> None:
+        """Test that producer module is dynamically loaded for output schema."""
+        # Arrange
+        analyser = PersonalDataAnalyser(valid_config, mock_llm_service)
+        mock_reader, mock_producer = mock_schema_modules
+
+        # Mock importlib.import_module to track dynamic loading
+        with patch("importlib.import_module") as mock_import:
+            # Return different mocks based on module name
+            def import_side_effect(module_name: str) -> Mock:
+                if "schema_readers" in module_name:
+                    return mock_reader
+                elif "schema_producers" in module_name:
+                    return mock_producer
+                return Mock()
+
+            mock_import.side_effect = import_side_effect
+
+            input_schema = Schema("standard_input", "1.0.0")
+            output_schema = Schema("personal_data_finding", "1.0.0")
+
+            # Act
+            analyser.process(input_schema, output_schema, sample_input_message)
+
+            # Assert - Verify producer module was dynamically imported
+            mock_import.assert_any_call(
+                "waivern_personal_data_analyser.schema_producers.personal_data_finding_1_0_0"
+            )
