@@ -3,10 +3,24 @@
 **Phase:** 6 - Component Rollout
 **Dependencies:** Step 12 complete (Phase 5 done)
 **Estimated Scope:** Multiple component migrations
+**Status:** 🔄 IN PROGRESS (1/7 complete)
 
 ## Purpose
 
 Migrate all remaining connectors and analysers to use the reader/producer pattern with auto-discovery. Follow the pattern established with PersonalDataAnalyser.
+
+## Migration Status
+
+### Analysers (0/2 complete)
+1. **ProcessingPurposeAnalyser** - in waivern-community ⏳ PENDING
+2. **DataSubjectAnalyser** - in waivern-community ⏳ PENDING
+
+### Connectors (1/5 complete)
+3. **FilesystemConnector** - in waivern-community ✅ COMPLETE
+4. **SQLiteConnector** - in waivern-community ⏳ PENDING
+5. **MySQLConnector** - in waivern-mysql (standalone) ⏳ PENDING
+6. **SourceCodeConnector** - in waivern-community ⏳ PENDING
+7. **DatabaseConnector** (base class) - in waivern-community ⏳ PENDING
 
 ## Components to Migrate
 
@@ -15,7 +29,7 @@ Migrate all remaining connectors and analysers to use the reader/producer patter
 2. **DataSubjectAnalyser** - in waivern-community
 
 ### Connectors (5 total)
-3. **FilesystemConnector** - in waivern-community
+3. ~~**FilesystemConnector** - in waivern-community~~ ✅ COMPLETE
 4. **SQLiteConnector** - in waivern-community
 5. **MySQLConnector** - in waivern-mysql (standalone)
 6. **SourceCodeConnector** - in waivern-community

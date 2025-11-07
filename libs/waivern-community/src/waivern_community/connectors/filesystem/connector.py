@@ -1,8 +1,10 @@
 """Filesystem connector for WCT - handles files and directories."""
 
 import fnmatch
+import importlib
 import logging
 from pathlib import Path
+from types import ModuleType
 from typing import Any, override
 
 from waivern_core.base_connector import Connector
@@ -11,7 +13,7 @@ from waivern_core.errors import (
     ConnectorExtractionError,
 )
 from waivern_core.message import Message
-from waivern_core.schemas import FilesystemMetadata, Schema
+from waivern_core.schemas import Schema
 
 from waivern_community.connectors.filesystem.config import FilesystemConnectorConfig
 
@@ -19,8 +21,6 @@ logger = logging.getLogger(__name__)
 
 # Constants
 _CONNECTOR_NAME = "filesystem_connector"
-
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [Schema("standard_input", "1.0.0")]
 
 
 class FilesystemConnector(Connector):
@@ -49,11 +49,23 @@ class FilesystemConnector(Connector):
         """Return the name of the connector."""
         return _CONNECTOR_NAME
 
-    @classmethod
-    @override
-    def get_supported_output_schemas(cls) -> list[Schema]:
-        """Return the output schemas supported by this connector."""
-        return _SUPPORTED_OUTPUT_SCHEMAS
+    def _load_producer(self, schema: Schema) -> ModuleType:
+        """Dynamically import producer module.
+
+        Python's import system automatically caches modules in sys.modules,
+        so repeated imports are fast and don't require manual caching.
+
+        Args:
+            schema: The schema to load producer for
+
+        Returns:
+            Producer module with produce() function
+
+        """
+        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
+        return importlib.import_module(
+            f"waivern_community.connectors.filesystem.schema_producers.{module_name}"
+        )
 
     @override
     def extract(
@@ -122,11 +134,13 @@ class FilesystemConnector(Connector):
             ConnectorConfigError: If schema is invalid or unsupported
 
         """
+        supported_schemas = self.get_supported_output_schemas()
+
         if not output_schema:
             logger.warning("No schema provided, using default schema")
-            output_schema = _SUPPORTED_OUTPUT_SCHEMAS[0]
+            output_schema = supported_schemas[0]
 
-        supported_schema_names = [schema.name for schema in _SUPPORTED_OUTPUT_SCHEMAS]
+        supported_schema_names = [schema.name for schema in supported_schemas]
         if output_schema.name not in supported_schema_names:
             raise ConnectorConfigError(
                 f"Unsupported output schema: {output_schema.name}. Supported schemas: {supported_schema_names}"
@@ -181,19 +195,7 @@ class FilesystemConnector(Connector):
     def _transform_for_standard_input_schema(
         self, schema: Schema, all_file_data: list[dict[str, Any]]
     ) -> dict[str, Any]:
-        """Transform file content(s) for the 'standard_input' schema.
-
-        The standard_input schema supports multiple content pieces, making it perfect for
-        aggregating multiple files from a directory into a single schema.
-
-        Schema Structure:
-        - schemaVersion: Version identifier for schema compatibility
-        - name: Human-readable identifier for this content source
-        - description: Brief description of the content
-        - contentEncoding: Text encoding used (e.g., utf-8)
-        - source: Original path for traceability
-        - metadata: Overall metadata (file count, total size, etc.)
-        - data: Array of content pieces, one per file
+        """Transform file content(s) for the 'standard_input' schema using producer module.
 
         Args:
             schema: The standard_input schema to transform content for
@@ -203,54 +205,23 @@ class FilesystemConnector(Connector):
             Dictionary conforming to the standard_input schema structure
 
         """
-        # Calculate aggregate metadata
-        total_size = sum(file_data["stat"].st_size for file_data in all_file_data)
-        file_count = len(all_file_data)
+        # Load the appropriate producer for this schema version
+        producer = self._load_producer(schema)
 
-        # Build data array with one entry per file
-        data_entries: list[dict[str, Any]] = []
-        for file_data in all_file_data:
-            file_path = file_data["path"]
-            content = file_data["content"]
-
-            # Create FilesystemMetadata instance
-            metadata = FilesystemMetadata(
-                source=str(file_path),
-                connector_type=_CONNECTOR_NAME,
-                file_path=str(file_path),
-            )
-
-            data_entries.append(
-                {
-                    "content": content,
-                    "metadata": metadata.model_dump(),
-                }
-            )
-
-        # Determine source description
-        if self._config.path.is_file():
-            source_desc = f"Content from file {self._config.path.name}"
-            name_suffix = self._config.path.name
-        else:
-            source_desc = (
-                f"Content from directory {self._config.path.name} ({file_count} files)"
-            )
-            name_suffix = f"{self._config.path.name}_directory"
-
-        return {
-            "schemaVersion": schema.version,
-            "name": f"standard_input_from_{name_suffix}",
-            "description": source_desc,
-            "contentEncoding": self._config.encoding,
-            "source": str(self._config.path),
-            "metadata": {
-                "file_count": file_count,
-                "total_size_bytes": total_size,
-                "exclude_patterns": self._config.exclude_patterns,
-                "source_type": "file" if self._config.path.is_file() else "directory",
-            },
-            "data": data_entries,
+        # Prepare config data for producer
+        config_data = {
+            "path": self._config.path,
+            "encoding": self._config.encoding,
+            "exclude_patterns": self._config.exclude_patterns,
+            "is_file": self._config.path.is_file(),
         }
+
+        # Delegate transformation to producer
+        return producer.produce(
+            schema_version=schema.version,
+            all_file_data=all_file_data,
+            config_data=config_data,
+        )
 
     def collect_files(self) -> list[Path]:
         """Collect all files to process, handling both single files and directories.
