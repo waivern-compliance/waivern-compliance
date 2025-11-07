@@ -20,7 +20,6 @@ from waivern_community.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyserFactory,
 )
 from waivern_community.connectors import (
-    FilesystemConnectorFactory,
     SourceCodeConnectorFactory,
     SQLiteConnectorFactory,
 )
@@ -29,6 +28,7 @@ from waivern_core.component_factory import ComponentFactory
 from waivern_core.errors import WaivernError
 from waivern_core.schemas import Schema
 from waivern_core.services.container import ServiceContainer
+from waivern_filesystem import FilesystemConnectorFactory
 from waivern_llm import BaseLLMService
 from waivern_llm.di.factory import LLMServiceFactory
 from waivern_mysql import MySQLConnectorFactory

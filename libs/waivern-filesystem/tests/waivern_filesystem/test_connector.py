@@ -14,8 +14,8 @@ from waivern_core.schemas import (
     StandardInputDataModel,
 )
 
-from waivern_community.connectors.filesystem.config import FilesystemConnectorConfig
-from waivern_community.connectors.filesystem.connector import FilesystemConnector
+from waivern_filesystem.config import FilesystemConnectorConfig
+from waivern_filesystem.connector import FilesystemConnector
 
 # Test constants - expected behaviour from public interface
 EXPECTED_CONNECTOR_NAME = "filesystem_connector"

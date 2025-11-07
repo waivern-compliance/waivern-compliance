@@ -14,6 +14,7 @@ members = [
     "waivern-compliance-tool",
     "waivern-connectors-database",
     "waivern-core",
+    "waivern-filesystem",
     "waivern-llm",
     "waivern-mysql",
     "waivern-personal-data-analyser",
@@ -1538,6 +1539,7 @@ dependencies = [
     { name = "waivern-analysers-shared" },
     { name = "waivern-connectors-database" },
     { name = "waivern-core" },
+    { name = "waivern-filesystem" },
     { name = "waivern-llm" },
     { name = "waivern-mysql" },
     { name = "waivern-personal-data-analyser" },
@@ -1571,6 +1573,7 @@ requires-dist = [
     { name = "waivern-community", extras = ["source-code"], marker = "extra == 'all'", editable = "libs/waivern-community" },
     { name = "waivern-connectors-database", editable = "libs/waivern-connectors-database" },
     { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-filesystem", editable = "libs/waivern-filesystem" },
     { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-mysql", editable = "libs/waivern-mysql" },
     { name = "waivern-personal-data-analyser", editable = "libs/waivern-personal-data-analyser" },
@@ -1671,6 +1674,33 @@ requires-dist = [
     { name = "annotated-types", specifier = ">=0.7.0" },
     { name = "jsonschema", specifier = ">=4.25.0" },
     { name = "typing-extensions", specifier = ">=4.14.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
+[[package]]
+name = "waivern-filesystem"
+version = "0.1.0"
+source = { editable = "libs/waivern-filesystem" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "waivern-core" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "waivern-core", editable = "libs/waivern-core" },
 ]
 
 [package.metadata.requires-dev]

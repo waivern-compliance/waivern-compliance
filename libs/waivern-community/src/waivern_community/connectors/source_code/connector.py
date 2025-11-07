@@ -17,9 +17,8 @@ from waivern_core.message import Message
 
 # Import the actual schema instances
 from waivern_core.schemas.base import Schema
+from waivern_filesystem import FilesystemConnector, FilesystemConnectorConfig
 
-from waivern_community.connectors.filesystem import FilesystemConnector
-from waivern_community.connectors.filesystem.config import FilesystemConnectorConfig
 from waivern_community.connectors.source_code.config import SourceCodeConnectorConfig
 from waivern_community.connectors.source_code.extractors import (
     ClassExtractor,

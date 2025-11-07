@@ -16,7 +16,7 @@ class TestStandardInputProducer:
 
     def test_produce_transforms_single_file_data_to_schema(self) -> None:
         """Test producer transforms single file data with all required fields."""
-        from waivern_community.connectors.filesystem.schema_producers import (
+        from waivern_filesystem.schema_producers import (
             standard_input_1_0_0,
         )
 
@@ -66,7 +66,7 @@ class TestStandardInputProducer:
 
     def test_produce_transforms_multiple_files_to_schema(self) -> None:
         """Test producer transforms directory/multi-file data correctly."""
-        from waivern_community.connectors.filesystem.schema_producers import (
+        from waivern_filesystem.schema_producers import (
             standard_input_1_0_0,
         )
 

@@ -15,7 +15,7 @@ from waivern_core.errors import (
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
-from waivern_community.connectors.filesystem.config import FilesystemConnectorConfig
+from waivern_filesystem.config import FilesystemConnectorConfig
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class FilesystemConnector(Connector):
         """
         module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
         return importlib.import_module(
-            f"waivern_community.connectors.filesystem.schema_producers.{module_name}"
+            f"waivern_filesystem.schema_producers.{module_name}"
         )
 
     @override

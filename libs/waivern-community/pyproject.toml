@@ -9,6 +9,7 @@ dependencies = [
     "waivern-llm",
     "waivern-connectors-database",
     "waivern-mysql",
+    "waivern-filesystem",
     "waivern-rulesets",
     "waivern-analysers-shared",
     "waivern-personal-data-analyser",

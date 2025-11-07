@@ -34,6 +34,7 @@ SchemaRegistry.register_search_path(_DATA_SUBJECT_SCHEMA_DIR)
 SchemaRegistry.register_search_path(_SOURCE_CODE_SCHEMA_DIR)
 
 # Connectors
+from waivern_filesystem import FilesystemConnector, FilesystemConnectorFactory
 from waivern_mysql import MySQLConnector, MySQLConnectorFactory
 
 # Analysers - re-export from standalone packages and waivern_community
@@ -48,10 +49,6 @@ from waivern_rulesets import (
 
 from waivern_community.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
-)
-from waivern_community.connectors.filesystem import (
-    FilesystemConnector,
-    FilesystemConnectorFactory,
 )
 from waivern_community.connectors.source_code import SourceCodeConnector
 from waivern_community.connectors.sqlite import SQLiteConnector

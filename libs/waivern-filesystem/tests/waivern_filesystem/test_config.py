@@ -3,7 +3,7 @@
 import pytest
 from waivern_core.errors import ConnectorConfigError
 
-from waivern_community.connectors.filesystem.config import FilesystemConnectorConfig
+from waivern_filesystem.config import FilesystemConnectorConfig
 
 
 class TestFilesystemConnectorConfig:

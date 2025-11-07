@@ -4,7 +4,7 @@ import pytest
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.testing import ComponentFactoryContractTests
 
-from waivern_community.connectors.filesystem import (
+from waivern_filesystem import (
     FilesystemConnector,
     FilesystemConnectorFactory,
 )
