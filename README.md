@@ -123,15 +123,16 @@ execution:
 
 ```
 waivern-compliance/
-├── libs/                           # Framework libraries
-│   ├── waivern-core/              # Core abstractions (Connector, Analyser, Schema, Message)
-│   ├── waivern-llm/               # Multi-provider LLM (Anthropic, OpenAI, Google)
-│   └── waivern-community/         # Built-in connectors, analysers, rulesets
+├── libs/                           # Framework libraries (13 standalone packages)
+│   ├── waivern-core/              # Core abstractions
+│   ├── waivern-llm/               # Multi-provider LLM support
+│   ├── waivern-connectors-*/      # Connectors (mysql, sqlite, filesystem, source-code)
+│   ├── waivern-analysers-*/       # Analysers (personal-data, data-subject, processing-purpose)
+│   └── waivern-*-shared/          # Shared utilities (rulesets, analyser utils, database utils)
 └── apps/
-    └── wct/                        # CLI application
-        ├── runbooks/               # Runbook configurations
-        ├── src/wct/                # Application code
-        └── tests/                  # Application tests
+    └── wct/                        # CLI application (plugin host)
+        ├── runbooks/               # YAML runbook configurations
+        └── src/wct/                # Component discovery via entry points
 ```
 
 **Framework Independence:**

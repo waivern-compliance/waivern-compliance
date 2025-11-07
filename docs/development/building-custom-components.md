@@ -594,17 +594,21 @@ Users install with:
 pip install my-wcf-components --extra-index-url https://pypi.yourcompany.com
 ```
 
-## Examples from the Community
+## Examples from the Framework
 
 **Reference implementations:**
-- `waivern-community` - Community connectors and analysers
-- `waivern-mysql` - MySQL connector
-- `waivern-personal-data-analyser` - Personal data analyser
+- **Simple connector:** `waivern-filesystem` - Minimal connector example
+- **Database connector:** `waivern-mysql` - SQL connector with shared utilities
+- **Complex connector:** `waivern-source-code` - Custom schema, tree-sitter integration
+- **Simple analyser:** `waivern-personal-data-analyser` - Ruleset-based analysis
+- **Complex analyser:** `waivern-processing-purpose-analyser` - Multi-schema support, LLM validation
 
 **Study these for patterns:**
-- Configuration design
+- Entry point registration
+- Configuration design with Pydantic
 - Error handling
 - Testing approaches
+- Schema co-location
 - Documentation style
 
 ## Getting Help
