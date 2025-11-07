@@ -8,7 +8,7 @@ class TestStandardInputReader:
 
     def test_read_validates_and_returns_typed_model(self) -> None:
         """Test reader validates input and returns StandardInputDataModel."""
-        from waivern_community.analysers.data_subject_analyser.schema_readers import (
+        from waivern_data_subject_analyser.schema_readers import (
             standard_input_1_0_0,
         )
 

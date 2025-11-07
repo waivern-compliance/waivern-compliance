@@ -12,8 +12,8 @@ from waivern_core.services.container import ServiceContainer
 from waivern_core.services.protocols import ServiceFactory
 from waivern_llm import BaseLLMService
 
-from waivern_community.analysers.data_subject_analyser import DataSubjectAnalyser
-from waivern_community.analysers.data_subject_analyser.factory import (
+from waivern_data_subject_analyser import DataSubjectAnalyser
+from waivern_data_subject_analyser.factory import (
     DataSubjectAnalyserFactory,
 )
 

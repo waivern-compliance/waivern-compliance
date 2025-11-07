@@ -185,9 +185,6 @@ connector = FilesystemConnector(config)
 messages = connector.extract()
 \```
 
-## Development
-
-See [CLAUDE.md](../../CLAUDE.md) for development guidelines.
 ```
 
 ### 5. Copy Component Code

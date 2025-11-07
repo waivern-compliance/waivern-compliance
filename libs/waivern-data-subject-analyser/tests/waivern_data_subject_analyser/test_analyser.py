@@ -15,10 +15,10 @@ from waivern_core.schemas import (
     StandardInputDataModel,
 )
 
-from waivern_community.analysers.data_subject_analyser.analyser import (
+from waivern_data_subject_analyser.analyser import (
     DataSubjectAnalyser,
 )
-from waivern_community.analysers.data_subject_analyser.types import (
+from waivern_data_subject_analyser.types import (
     DataSubjectAnalyserConfig,
 )
 

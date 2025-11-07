@@ -14,16 +14,16 @@ from waivern_core import (
 )
 
 # Import from standalone packages
+from waivern_data_subject_analyser import (
+    DataSubjectAnalyser,
+    DataSubjectFindingModel,
+)
 from waivern_personal_data_analyser import (
     PersonalDataAnalyser,
     PersonalDataFindingModel,
 )
 
 # Import from waivern_community
-from waivern_community.analysers.data_subject_analyser import (
-    DataSubjectAnalyser,
-    DataSubjectFindingModel,
-)
 from waivern_community.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
     ProcessingPurposeFindingModel,

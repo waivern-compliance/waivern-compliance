@@ -6,7 +6,7 @@ for data subject classification.
 
 from waivern_rulesets.data_subjects import DataSubjectRule
 
-from waivern_community.analysers.data_subject_analyser.confidence_scorer import (
+from waivern_data_subject_analyser.confidence_scorer import (
     DataSubjectConfidenceScorer,
 )
 

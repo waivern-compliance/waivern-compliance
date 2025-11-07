@@ -5,7 +5,7 @@ from typing import Any
 
 from waivern_core.schemas import BaseAnalysisOutputMetadata
 
-from waivern_community.analysers.data_subject_analyser.schemas.types import (
+from waivern_data_subject_analyser.schemas.types import (
     DataSubjectFindingModel,
 )
 

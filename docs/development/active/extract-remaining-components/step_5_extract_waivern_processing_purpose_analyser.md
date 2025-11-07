@@ -211,9 +211,6 @@ messages = analyser.process_data(input_message)
 source_code_messages = analyser.process_data(source_code_message)
 \```
 
-## Development
-
-See [CLAUDE.md](../../CLAUDE.md) for development guidelines.
 ```
 
 ### 5. Copy Component Code

@@ -2,7 +2,7 @@
 
 from waivern_core.schemas import AnalysisChainEntry, BaseAnalysisOutputMetadata
 
-from waivern_community.analysers.data_subject_analyser.schemas.types import (
+from waivern_data_subject_analyser.schemas.types import (
     DataSubjectFindingModel,
 )
 
@@ -14,10 +14,10 @@ class TestDataSubjectFindingProducer:
         """Test producer formats findings list correctly for schema."""
         from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
 
-        from waivern_community.analysers.data_subject_analyser.schema_producers import (
+        from waivern_data_subject_analyser.schema_producers import (
             data_subject_finding_1_0_0,
         )
-        from waivern_community.analysers.data_subject_analyser.schemas.types import (
+        from waivern_data_subject_analyser.schemas.types import (
             DataSubjectFindingMetadata,
         )
 
@@ -76,7 +76,7 @@ class TestDataSubjectFindingProducer:
         """Test producer formats summary with required fields."""
         from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
 
-        from waivern_community.analysers.data_subject_analyser.schema_producers import (
+        from waivern_data_subject_analyser.schema_producers import (
             data_subject_finding_1_0_0,
         )
 

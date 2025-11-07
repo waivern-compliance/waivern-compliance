@@ -7,7 +7,7 @@ for data subject classification.
 from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_core.schemas import BaseMetadata
 
-from waivern_community.analysers.data_subject_analyser.pattern_matcher import (
+from waivern_data_subject_analyser.pattern_matcher import (
     DataSubjectPatternMatcher,
 )
 

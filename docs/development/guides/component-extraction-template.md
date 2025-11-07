@@ -276,9 +276,6 @@ from {PACKAGE_MODULE} import {COMPONENT_NAME}
 {example_code}
 ```
 
-## Development
-
-See [CLAUDE.md](../../CLAUDE.md) for development guidelines.
 ```
 
 **Reference examples:**
@@ -677,9 +674,6 @@ from {PACKAGE_MODULE} import {COMPONENT_NAME}
 # Usage example
 ```
 
-## Development
-
-See [CLAUDE.md](../../CLAUDE.md) for development guidelines.
 ```
 
 ---

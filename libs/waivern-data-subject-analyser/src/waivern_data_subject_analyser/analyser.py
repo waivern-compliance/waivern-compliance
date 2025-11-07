@@ -73,7 +73,7 @@ class DataSubjectAnalyser(Analyser):
         """
         module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
         return importlib.import_module(
-            f"waivern_community.analysers.data_subject_analyser.schema_readers.{module_name}"
+            f"waivern_data_subject_analyser.schema_readers.{module_name}"
         )
 
     def _load_producer(self, schema: Schema) -> ModuleType:
@@ -94,7 +94,7 @@ class DataSubjectAnalyser(Analyser):
         """
         module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
         return importlib.import_module(
-            f"waivern_community.analysers.data_subject_analyser.schema_producers.{module_name}"
+            f"waivern_data_subject_analyser.schema_producers.{module_name}"
         )
 
     @classmethod

@@ -8,14 +8,12 @@ This directory contains atomic work units for extracting all remaining component
 
 **Goal:** Extract remaining analysers from waivern-community as standalone packages, then remove waivern-community completely.
 
-**Current State:** 10 packages (core + 9 extracted components)
+**Current State:** 11 packages (core + 10 extracted components)
 **Target State:** 12 standalone packages (no waivern-community)
 
 **Components remaining in waivern-community:**
-- DataSubjectAnalyser (743 LOC + 716 test LOC)
 - ProcessingPurposeAnalyser (1,231 LOC + 3,081 test LOC)
 - Processing Purpose Prompts (196 LOC, used by ProcessingPurposeAnalyser)
-- Database connector utilities (124 LOC - duplicates of waivern-connectors-database, to be removed)
 - TCF vendor database reference data (decision needed)
 
 **Note:** waivern-mysql and waivern-personal-data-analyser were extracted in separate efforts prior to this plan.
@@ -37,11 +35,11 @@ This directory contains atomic work units for extracting all remaining component
 |------|-----------|------------|--------------|--------|
 | [Step 3](./step_3_extract_waivern_source_code.md) | waivern-source-code | 🟡 Medium | Step 1 (filesystem) | ✅ Complete |
 
-### Phase 3: Independent Analyser ⏳ IN PROGRESS
+### Phase 3: Independent Analyser ✅ COMPLETE
 
 | Step | Component | Complexity | Dependencies | Status |
 |------|-----------|------------|--------------|--------|
-| [Step 4](./step_4_extract_waivern_data_subject_analyser.md) | waivern-data-subject-analyser | 🟡 Medium | Shared packages only | ❌ Pending |
+| [Step 4](./step_4_extract_waivern_data_subject_analyser.md) | waivern-data-subject-analyser | 🟡 Medium | Shared packages only | ✅ Complete |
 
 ### Phase 4: Processing Purpose Analyser
 
@@ -85,11 +83,11 @@ This directory contains atomic work units for extracting all remaining component
 - **Blocking:** Step 5 (processing-purpose needs this)
 - **Special:** Has custom schema, optional tree-sitter dependencies
 
-### [Step 4: Extract waivern-data-subject-analyser](./step_4_extract_waivern_data_subject_analyser.md)
+### [Step 4: Extract waivern-data-subject-analyser](./step_4_extract_waivern_data_subject_analyser.md) ✅
 - **Phase:** 3 - Independent Analyser
-- **Status:** ❌ Pending
+- **Status:** ✅ Complete
 - **Complexity:** 🟡 Medium
-- **Size:** 743 LOC source + 716 LOC tests (6 test files)
+- **Size:** 743 LOC source + 716 LOC tests (24 test files)
 - **Dependencies:** Shared packages only
 - **Blocking:** None
 - **Special:** Has custom schema, uses data_subjects ruleset

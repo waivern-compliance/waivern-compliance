@@ -10,6 +10,7 @@ members = [
 waivern-core = { workspace = true }
 waivern-llm = { workspace = true }
 waivern-connectors-database = { workspace = true }
+waivern-data-subject-analyser = { workspace = true }
 waivern-mysql = { workspace = true }
 waivern-filesystem = { workspace = true }
 waivern-sqlite = { workspace = true }
