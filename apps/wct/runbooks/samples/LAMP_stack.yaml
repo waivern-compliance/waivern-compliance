@@ -8,7 +8,7 @@ connectors:
   - name: "php_source_code"
     type: "source_code_connector"
     properties:
-      path: "./libs/waivern-community/tests/waivern_community/analysers/processing_purpose_analyser/source_code_mock_php"
+      path: "./libs/waivern-processing-purpose-analyser/tests/waivern_processing_purpose_analyser/source_code_mock_php"
       language: "php"
       file_patterns: ["**/*.php"]
       max_file_size: 10485760  # 10MB
@@ -17,7 +17,7 @@ connectors:
   - name: "log_files"
     type: "filesystem_connector"
     properties:
-      path: "./libs/waivern-community/tests/waivern_community/connectors/filesystem/filesystem_mock/logs"
+      path: "./libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock/logs"
       exclude_patterns: []
       max_files: 100
       encoding: "utf-8"

@@ -11,8 +11,9 @@ from typing import Any, override
 from unittest.mock import MagicMock
 
 import pytest
-from waivern_community.analysers import Analyser, AnalyserError
-from waivern_community.connectors import (
+from waivern_core import (
+    Analyser,
+    AnalyserError,
     Connector,
     ConnectorError,
 )

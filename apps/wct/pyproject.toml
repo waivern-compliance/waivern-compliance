@@ -4,14 +4,30 @@ version = "0.1.0"
 description = "Waivern Compliance Tool - a wrapper application that executes runbooks"
 requires-python = ">=3.12"
 dependencies = [
+    # Core framework
     "waivern-core",
-    "waivern-llm",
-    "waivern-connectors-database",
-    "waivern-mysql",
-    "waivern-community[all]",
+    "waivern-llm",  # For LLM service container
+    # Application dependencies
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
     "typer>=0.16.0",
+]
+
+[project.optional-dependencies]
+# Components for running sample runbooks and integration tests
+# Users install only the components they need for their use cases
+samples = [
+    # Connectors used in sample runbooks
+    "waivern-mysql",
+    "waivern-filesystem",
+    "waivern-sqlite",
+    "waivern-source-code[tree-sitter]",
+    # Analysers used in sample runbooks
+    "waivern-rulesets",
+    "waivern-analysers-shared",
+    "waivern-personal-data-analyser",
+    "waivern-data-subject-analyser",
+    "waivern-processing-purpose-analyser",
 ]
 
 [project.scripts]
@@ -31,6 +47,17 @@ packages = ["src/wct"]
 dev = [
     "basedpyright>=1.29.2",
     "ruff>=0.11.12",
+    # Install sample components for integration tests
+    "waivern-connectors-database",  # Shared database connector base
+    "waivern-mysql",
+    "waivern-filesystem",
+    "waivern-sqlite",
+    "waivern-source-code[tree-sitter]",
+    "waivern-rulesets",
+    "waivern-analysers-shared",
+    "waivern-personal-data-analyser",
+    "waivern-data-subject-analyser",
+    "waivern-processing-purpose-analyser",
 ]
 
 [tool.ruff]

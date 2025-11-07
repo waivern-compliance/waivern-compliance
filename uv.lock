@@ -1604,17 +1604,37 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "rich" },
     { name = "typer" },
-    { name = "waivern-community", extra = ["all"] },
-    { name = "waivern-connectors-database" },
     { name = "waivern-core" },
     { name = "waivern-llm" },
+]
+
+[package.optional-dependencies]
+samples = [
+    { name = "waivern-analysers-shared" },
+    { name = "waivern-data-subject-analyser" },
+    { name = "waivern-filesystem" },
     { name = "waivern-mysql" },
+    { name = "waivern-personal-data-analyser" },
+    { name = "waivern-processing-purpose-analyser" },
+    { name = "waivern-rulesets" },
+    { name = "waivern-source-code", extra = ["tree-sitter"] },
+    { name = "waivern-sqlite" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "basedpyright" },
     { name = "ruff" },
+    { name = "waivern-analysers-shared" },
+    { name = "waivern-connectors-database" },
+    { name = "waivern-data-subject-analyser" },
+    { name = "waivern-filesystem" },
+    { name = "waivern-mysql" },
+    { name = "waivern-personal-data-analyser" },
+    { name = "waivern-processing-purpose-analyser" },
+    { name = "waivern-rulesets" },
+    { name = "waivern-source-code", extra = ["tree-sitter"] },
+    { name = "waivern-sqlite" },
 ]
 
 [package.metadata]
@@ -1622,17 +1642,34 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "typer", specifier = ">=0.16.0" },
-    { name = "waivern-community", extras = ["all"], editable = "libs/waivern-community" },
-    { name = "waivern-connectors-database", editable = "libs/waivern-connectors-database" },
+    { name = "waivern-analysers-shared", marker = "extra == 'samples'", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-data-subject-analyser", marker = "extra == 'samples'", editable = "libs/waivern-data-subject-analyser" },
+    { name = "waivern-filesystem", marker = "extra == 'samples'", editable = "libs/waivern-filesystem" },
     { name = "waivern-llm", editable = "libs/waivern-llm" },
-    { name = "waivern-mysql", editable = "libs/waivern-mysql" },
+    { name = "waivern-mysql", marker = "extra == 'samples'", editable = "libs/waivern-mysql" },
+    { name = "waivern-personal-data-analyser", marker = "extra == 'samples'", editable = "libs/waivern-personal-data-analyser" },
+    { name = "waivern-processing-purpose-analyser", marker = "extra == 'samples'", editable = "libs/waivern-processing-purpose-analyser" },
+    { name = "waivern-rulesets", marker = "extra == 'samples'", editable = "libs/waivern-rulesets" },
+    { name = "waivern-source-code", extras = ["tree-sitter"], marker = "extra == 'samples'", editable = "libs/waivern-source-code" },
+    { name = "waivern-sqlite", marker = "extra == 'samples'", editable = "libs/waivern-sqlite" },
 ]
+provides-extras = ["samples"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "basedpyright", specifier = ">=1.29.2" },
     { name = "ruff", specifier = ">=0.11.12" },
+    { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
+    { name = "waivern-connectors-database", editable = "libs/waivern-connectors-database" },
+    { name = "waivern-data-subject-analyser", editable = "libs/waivern-data-subject-analyser" },
+    { name = "waivern-filesystem", editable = "libs/waivern-filesystem" },
+    { name = "waivern-mysql", editable = "libs/waivern-mysql" },
+    { name = "waivern-personal-data-analyser", editable = "libs/waivern-personal-data-analyser" },
+    { name = "waivern-processing-purpose-analyser", editable = "libs/waivern-processing-purpose-analyser" },
+    { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
+    { name = "waivern-source-code", extras = ["tree-sitter"], editable = "libs/waivern-source-code" },
+    { name = "waivern-sqlite", editable = "libs/waivern-sqlite" },
 ]
 
 [[package]]
