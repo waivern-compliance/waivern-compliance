@@ -20,6 +20,14 @@ dependencies = [
     "typing-extensions>=4.14.0",
 ]
 
+[project.entry-points."waivern.analysers"]
+processing_purpose = "waivern_community.analysers.processing_purpose_analyser:ProcessingPurposeAnalyserFactory"
+data_subject = "waivern_community.analysers.data_subject_analyser:DataSubjectAnalyserFactory"
+
+[project.entry-points."waivern.schemas"]
+processing_purpose = "waivern_community.analysers.processing_purpose_analyser:register_schemas"
+data_subject = "waivern_community.analysers.data_subject_analyser:register_schemas"
+
 [project.optional-dependencies]
 source-code = ["waivern-source-code[tree-sitter]"]
 all = ["waivern-community[source-code]"]
