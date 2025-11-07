@@ -7,9 +7,11 @@ This module provides:
 - Connection management with proper error handling and logging
 """
 
+import importlib
 import logging
 from collections.abc import Generator
 from contextlib import contextmanager
+from types import ModuleType
 from typing import Any, override
 
 import pymysql
@@ -75,6 +77,25 @@ class MySQLConnector(Connector):
     def get_name(cls) -> str:
         """Return the name of the connector."""
         return _CONNECTOR_NAME
+
+    def _load_producer(self, schema: Schema) -> ModuleType:
+        """Dynamically import producer module.
+
+        Python's import system automatically caches modules in sys.modules,
+        so repeated imports are fast and don't require manual caching.
+
+        Args:
+            schema: The schema to load producer for
+
+        Returns:
+            Producer module with produce() function
+
+        Raises:
+            ModuleNotFoundError: If producer module doesn't exist for this version
+
+        """
+        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
+        return importlib.import_module(f"waivern_mysql.schema_producers.{module_name}")
 
     @classmethod
     @override
@@ -293,7 +314,7 @@ class MySQLConnector(Connector):
     def _transform_for_standard_input_schema(
         self, schema: Schema, metadata: dict[str, Any]
     ) -> dict[str, Any]:
-        """Transform MySQL data for the 'standard_input' schema.
+        """Transform MySQL data for the 'standard_input' schema using producer module.
 
         This method extracts database content into granular text data items for compliance analysis:
         1. Each cell content as a separate data item
@@ -315,40 +336,31 @@ class MySQLConnector(Connector):
 
         """
         data_items: list[dict[str, Any]] = []
-        database_source = (
-            f"{self._config.host}:{self._config.port}/{self._config.database}"
-        )
 
         # Extract actual cell data from each table
         for table_info in metadata.get("tables", []):
             table_data_items = self._extract_table_cell_data(table_info)
             data_items.extend(table_data_items)
 
-        return {
-            "schemaVersion": schema.version,
-            "name": f"mysql_text_from_{self._config.database}",
-            "description": f"Text content extracted from MySQL database: {self._config.database}",
-            "contentEncoding": "utf-8",
-            "source": database_source,
-            # Top-level metadata includes complete database schema for reference
-            "metadata": {
-                "connector_type": "mysql",  # Standard connector type field
-                "connection_info": {
-                    "host": self._config.host,
-                    "port": self._config.port,
-                    "database": self._config.database,
-                    "user": self._config.user,
-                },
-                "database_schema": metadata,  # Complete database schema for traceability
-                "total_data_items": len(data_items),
-                "extraction_summary": {
-                    "tables_processed": len(metadata.get("tables", [])),
-                    "cell_values_extracted": len(data_items),
-                    "max_rows_per_table": self._config.max_rows_per_table,
-                },
-            },
-            "data": data_items,
+        # Load the appropriate producer for this schema version
+        producer = self._load_producer(schema)
+
+        # Prepare config data for producer
+        config_data = {
+            "host": self._config.host,
+            "port": self._config.port,
+            "database": self._config.database,
+            "user": self._config.user,
+            "max_rows_per_table": self._config.max_rows_per_table,
         }
+
+        # Delegate transformation to producer
+        return producer.produce(
+            schema_version=schema.version,
+            metadata=metadata,
+            data_items=data_items,
+            config_data=config_data,
+        )
 
     def _extract_table_cell_data(
         self, table_info: dict[str, Any]
