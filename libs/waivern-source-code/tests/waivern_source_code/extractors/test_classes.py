@@ -4,8 +4,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
-from waivern_community.connectors.source_code.extractors.classes import ClassExtractor
-from waivern_community.connectors.source_code.parser import SourceCodeParser
+from waivern_source_code.extractors.classes import ClassExtractor
+from waivern_source_code.parser import SourceCodeParser
 
 # Test constants - expected behaviour from public interface
 EXPECTED_SUPPORTED_LANGUAGES = [

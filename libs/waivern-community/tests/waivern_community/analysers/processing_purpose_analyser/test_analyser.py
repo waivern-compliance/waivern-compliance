@@ -19,6 +19,12 @@ from waivern_core.schemas import (
     StandardInputDataModel,
 )
 from waivern_llm import BaseLLMService
+from waivern_source_code.schemas import (
+    SourceCodeAnalysisMetadataModel,
+    SourceCodeDataModel,
+    SourceCodeFileDataModel,
+    SourceCodeFileMetadataModel,
+)
 
 from waivern_community.analysers.processing_purpose_analyser.analyser import (
     ProcessingPurposeAnalyser,
@@ -28,12 +34,6 @@ from waivern_community.analysers.processing_purpose_analyser.pattern_matcher imp
 )
 from waivern_community.analysers.processing_purpose_analyser.types import (
     ProcessingPurposeAnalyserConfig,
-)
-from waivern_community.connectors.source_code.schemas import (
-    SourceCodeAnalysisMetadataModel,
-    SourceCodeDataModel,
-    SourceCodeFileDataModel,
-    SourceCodeFileMetadataModel,
 )
 
 

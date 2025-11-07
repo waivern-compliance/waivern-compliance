@@ -3,7 +3,7 @@
 import pytest
 from waivern_core.errors import ConnectorConfigError
 
-from waivern_community.connectors.source_code.config import SourceCodeConnectorConfig
+from waivern_source_code.config import SourceCodeConnectorConfig
 
 
 class TestSourceCodeConnectorConfig:

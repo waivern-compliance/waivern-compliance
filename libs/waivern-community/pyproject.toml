@@ -11,6 +11,7 @@ dependencies = [
     "waivern-mysql",
     "waivern-filesystem",
     "waivern-sqlite",
+    "waivern-source-code",
     "waivern-rulesets",
     "waivern-analysers-shared",
     "waivern-personal-data-analyser",
@@ -20,7 +21,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-source-code = ["tree-sitter>=0.21.0", "tree-sitter-php>=0.22.0"]
+source-code = ["waivern-source-code[tree-sitter]"]
 all = ["waivern-community[source-code]"]
 
 [dependency-groups]

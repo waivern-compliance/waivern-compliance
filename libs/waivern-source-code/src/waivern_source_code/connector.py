@@ -19,12 +19,12 @@ from waivern_core.message import Message
 from waivern_core.schemas.base import Schema
 from waivern_filesystem import FilesystemConnector, FilesystemConnectorConfig
 
-from waivern_community.connectors.source_code.config import SourceCodeConnectorConfig
-from waivern_community.connectors.source_code.extractors import (
+from waivern_source_code.config import SourceCodeConnectorConfig
+from waivern_source_code.extractors import (
     ClassExtractor,
     FunctionExtractor,
 )
-from waivern_community.connectors.source_code.parser import SourceCodeParser
+from waivern_source_code.parser import SourceCodeParser
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class SourceCodeConnector(Connector):
         """
         module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
         return importlib.import_module(
-            f"waivern_community.connectors.source_code.schema_producers.{module_name}"
+            f"waivern_source_code.schema_producers.{module_name}"
         )
 
     @classmethod

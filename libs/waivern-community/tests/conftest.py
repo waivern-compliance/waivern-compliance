@@ -4,12 +4,32 @@ This module provides fixtures and configuration for the waivern-community test s
 """
 
 from collections.abc import Iterator
+from importlib.metadata import entry_points
 from typing import Any
 
 import pytest
 from waivern_core import BaseRule
 from waivern_rulesets import RulesetRegistry
 from waivern_rulesets.base import AbstractRuleset
+
+
+@pytest.fixture(autouse=True)
+def _register_all_schemas():  # pyright: ignore[reportUnusedFunction]
+    """Automatically register all schemas for waivern-community tests.
+
+    Discovers and registers schemas from all installed packages via entry points.
+    This ensures that schemas from standalone packages (like waivern-source-code)
+    are available to tests.
+    """
+    schema_eps = entry_points(group="waivern.schemas")
+
+    for ep in schema_eps:
+        try:
+            register_func = ep.load()
+            register_func()
+        except Exception:  # noqa: S110
+            # Ignore failures - some schemas might not be available
+            pass
 
 
 @pytest.fixture

@@ -3,8 +3,7 @@
 from typing import Any
 
 from waivern_core.schemas import parse_data_model
-
-from waivern_community.connectors.source_code.schemas import SourceCodeDataModel
+from waivern_source_code.schemas import SourceCodeDataModel
 
 
 def read(content: dict[str, Any]) -> SourceCodeDataModel:

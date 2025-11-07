@@ -6,7 +6,7 @@ class TestSourceCodeProducer:
 
     def test_produce_formats_output_correctly(self) -> None:
         """Test producer formats source_code output with correct structure."""
-        from waivern_community.connectors.source_code.schema_producers import (
+        from waivern_source_code.schema_producers import (
             source_code_1_0_0,
         )
 

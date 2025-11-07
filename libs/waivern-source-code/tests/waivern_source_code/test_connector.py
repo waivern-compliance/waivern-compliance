@@ -8,8 +8,8 @@ from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
-from waivern_community.connectors.source_code.config import SourceCodeConnectorConfig
-from waivern_community.connectors.source_code.connector import SourceCodeConnector
+from waivern_source_code.config import SourceCodeConnectorConfig
+from waivern_source_code.connector import SourceCodeConnector
 
 
 class TestSourceCodeConnectorInitialisation:

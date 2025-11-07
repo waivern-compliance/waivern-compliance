@@ -1,6 +1,6 @@
 """Schema for source code connector output."""
 
-from waivern_community.connectors.source_code.schemas.source_code import (
+from waivern_source_code.schemas.source_code import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeClassModel,
     SourceCodeClassPropertyModel,

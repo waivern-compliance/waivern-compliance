@@ -11,17 +11,6 @@ Note: This is a compatibility layer. New code should import directly from:
 
 # Core schemas and base types (from waivern-core)
 # Type models from standalone packages and waivern-community
-from waivern_community.connectors.source_code.schemas import (
-    SourceCodeAnalysisMetadataModel,
-    SourceCodeClassModel,
-    SourceCodeClassPropertyModel,
-    SourceCodeDataModel,
-    SourceCodeFileDataModel,
-    SourceCodeFileMetadataModel,
-    SourceCodeFunctionModel,
-    SourceCodeFunctionParameterModel,
-    SourceCodeImportModel,
-)
 from waivern_core.schemas import (
     BaseFindingModel,
     BaseMetadata,
@@ -35,6 +24,17 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
     parse_data_model,
+)
+from waivern_source_code.schemas import (
+    SourceCodeAnalysisMetadataModel,
+    SourceCodeClassModel,
+    SourceCodeClassPropertyModel,
+    SourceCodeDataModel,
+    SourceCodeFileDataModel,
+    SourceCodeFileMetadataModel,
+    SourceCodeFunctionModel,
+    SourceCodeFunctionParameterModel,
+    SourceCodeImportModel,
 )
 
 __all__ = [

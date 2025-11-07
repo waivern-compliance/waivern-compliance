@@ -15,8 +15,7 @@ from waivern_core.schemas import (
     StandardInputDataModel,
 )
 from waivern_llm import BaseLLMService
-
-from waivern_community.connectors.source_code.schemas import (
+from waivern_source_code.schemas import (
     SourceCodeDataModel,
 )
 

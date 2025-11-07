@@ -26,12 +26,8 @@ _DATA_SUBJECT_SCHEMA_DIR = (
     / "schemas"
     / "json_schemas"
 )
-_SOURCE_CODE_SCHEMA_DIR = (
-    Path(__file__).parent / "connectors" / "source_code" / "schemas" / "json_schemas"
-)
 SchemaRegistry.register_search_path(_PROCESSING_PURPOSE_SCHEMA_DIR)
 SchemaRegistry.register_search_path(_DATA_SUBJECT_SCHEMA_DIR)
-SchemaRegistry.register_search_path(_SOURCE_CODE_SCHEMA_DIR)
 
 # Connectors
 from waivern_filesystem import FilesystemConnector, FilesystemConnectorFactory
@@ -46,12 +42,12 @@ from waivern_rulesets import (
     ProcessingPurposesRuleset,
     RulesetLoader,
 )
+from waivern_source_code import SourceCodeConnector, SourceCodeConnectorFactory
 from waivern_sqlite import SQLiteConnector, SQLiteConnectorFactory
 
 from waivern_community.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
 )
-from waivern_community.connectors.source_code import SourceCodeConnector
 
 __all__ = [
     "__version__",
@@ -61,6 +57,7 @@ __all__ = [
     "MySQLConnector",
     "MySQLConnectorFactory",
     "SourceCodeConnector",
+    "SourceCodeConnectorFactory",
     "SQLiteConnector",
     "SQLiteConnectorFactory",
     # Analysers
