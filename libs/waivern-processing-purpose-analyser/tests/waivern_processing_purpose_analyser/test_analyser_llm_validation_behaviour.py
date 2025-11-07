@@ -17,10 +17,10 @@ from waivern_core.schemas import (
 )
 from waivern_llm import BaseLLMService
 
-from waivern_community.analysers.processing_purpose_analyser.analyser import (
+from waivern_processing_purpose_analyser.analyser import (
     ProcessingPurposeAnalyser,
 )
-from waivern_community.analysers.processing_purpose_analyser.types import (
+from waivern_processing_purpose_analyser.types import (
     ProcessingPurposeAnalyserConfig,
 )
 

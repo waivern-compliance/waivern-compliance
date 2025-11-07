@@ -26,13 +26,13 @@ from waivern_source_code.schemas import (
     SourceCodeFileMetadataModel,
 )
 
-from waivern_community.analysers.processing_purpose_analyser.analyser import (
+from waivern_processing_purpose_analyser.analyser import (
     ProcessingPurposeAnalyser,
 )
-from waivern_community.analysers.processing_purpose_analyser.pattern_matcher import (
+from waivern_processing_purpose_analyser.pattern_matcher import (
     ProcessingPurposePatternMatcher,
 )
-from waivern_community.analysers.processing_purpose_analyser.types import (
+from waivern_processing_purpose_analyser.types import (
     ProcessingPurposeAnalyserConfig,
 )
 

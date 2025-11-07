@@ -10,10 +10,10 @@ class TestProcessingPurposeFindingProducer:
         """Test producer formats findings list correctly for schema."""
         from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
 
-        from waivern_community.analysers.processing_purpose_analyser.schema_producers import (
+        from waivern_processing_purpose_analyser.schema_producers import (
             processing_purpose_finding_1_0_0,
         )
-        from waivern_community.analysers.processing_purpose_analyser.schemas.types import (
+        from waivern_processing_purpose_analyser.schemas.types import (
             ProcessingPurposeFindingModel,
         )
 

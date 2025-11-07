@@ -9,7 +9,7 @@ from waivern_analysers_shared.llm_validation import (
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_llm import BaseLLMService
 
-from waivern_community.prompts.processing_purpose_validation import (
+from waivern_processing_purpose_analyser.prompts.processing_purpose_validation import (
     get_processing_purpose_validation_prompt,
 )
 

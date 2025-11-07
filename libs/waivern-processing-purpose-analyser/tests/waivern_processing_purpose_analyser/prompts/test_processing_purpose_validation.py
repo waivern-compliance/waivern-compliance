@@ -3,12 +3,12 @@
 import pytest
 from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
 
-from waivern_community.analysers.processing_purpose_analyser.schemas.types import (
+from waivern_processing_purpose_analyser.prompts.processing_purpose_validation import (
+    get_processing_purpose_validation_prompt,
+)
+from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeFindingMetadata,
     ProcessingPurposeFindingModel,
-)
-from waivern_community.prompts.processing_purpose_validation import (
-    get_processing_purpose_validation_prompt,
 )
 
 

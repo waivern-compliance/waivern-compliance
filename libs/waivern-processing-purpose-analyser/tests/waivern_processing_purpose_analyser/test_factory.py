@@ -29,10 +29,10 @@ from waivern_core.services.container import ServiceContainer
 from waivern_core.services.protocols import ServiceFactory
 from waivern_llm import BaseLLMService
 
-from waivern_community.analysers.processing_purpose_analyser import (
+from waivern_processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
 )
-from waivern_community.analysers.processing_purpose_analyser.factory import (
+from waivern_processing_purpose_analyser.factory import (
     ProcessingPurposeAnalyserFactory,
 )
 

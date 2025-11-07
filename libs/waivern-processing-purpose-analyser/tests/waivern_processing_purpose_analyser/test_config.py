@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from waivern_community.analysers.processing_purpose_analyser.types import (
+from waivern_processing_purpose_analyser.types import (
     ProcessingPurposeAnalyserConfig,
 )
 

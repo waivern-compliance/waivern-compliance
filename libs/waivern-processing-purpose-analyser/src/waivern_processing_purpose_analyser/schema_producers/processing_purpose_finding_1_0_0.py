@@ -4,7 +4,7 @@ from typing import Any
 
 from waivern_core.schemas import BaseAnalysisOutputMetadata
 
-from waivern_community.analysers.processing_purpose_analyser.schemas.types import (
+from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeFindingModel,
 )
 

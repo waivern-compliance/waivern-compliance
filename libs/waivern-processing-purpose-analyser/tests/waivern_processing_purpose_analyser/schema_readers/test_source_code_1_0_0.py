@@ -8,7 +8,7 @@ class TestSourceCodeReader:
 
     def test_read_validates_and_returns_typed_model(self) -> None:
         """Test reader validates input and returns SourceCodeDataModel."""
-        from waivern_community.analysers.processing_purpose_analyser.schema_readers import (
+        from waivern_processing_purpose_analyser.schema_readers import (
             source_code_1_0_0,
         )
 

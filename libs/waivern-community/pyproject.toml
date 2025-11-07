@@ -16,16 +16,11 @@ dependencies = [
     "waivern-analysers-shared",
     "waivern-personal-data-analyser",
     "waivern-data-subject-analyser",
+    "waivern-processing-purpose-analyser",
     "pyyaml>=6.0.2",
     "pydantic>=2.11.5",
     "typing-extensions>=4.14.0",
 ]
-
-[project.entry-points."waivern.analysers"]
-processing_purpose = "waivern_community.analysers.processing_purpose_analyser:ProcessingPurposeAnalyserFactory"
-
-[project.entry-points."waivern.schemas"]
-processing_purpose = "waivern_community.analysers.processing_purpose_analyser:register_schemas"
 
 [project.optional-dependencies]
 source-code = ["waivern-source-code[tree-sitter]"]

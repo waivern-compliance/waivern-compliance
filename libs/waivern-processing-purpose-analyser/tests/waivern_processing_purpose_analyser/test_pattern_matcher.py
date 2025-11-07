@@ -8,10 +8,10 @@ import pytest
 from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_core.schemas import BaseMetadata
 
-from waivern_community.analysers.processing_purpose_analyser.pattern_matcher import (
+from waivern_processing_purpose_analyser.pattern_matcher import (
     ProcessingPurposePatternMatcher,
 )
-from waivern_community.analysers.processing_purpose_analyser.schemas.types import (
+from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeFindingMetadata,
     ProcessingPurposeFindingModel,
 )

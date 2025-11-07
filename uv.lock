@@ -19,6 +19,7 @@ members = [
     "waivern-llm",
     "waivern-mysql",
     "waivern-personal-data-analyser",
+    "waivern-processing-purpose-analyser",
     "waivern-rulesets",
     "waivern-source-code",
     "waivern-sqlite",
@@ -1547,6 +1548,7 @@ dependencies = [
     { name = "waivern-llm" },
     { name = "waivern-mysql" },
     { name = "waivern-personal-data-analyser" },
+    { name = "waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets" },
     { name = "waivern-source-code" },
     { name = "waivern-sqlite" },
@@ -1580,6 +1582,7 @@ requires-dist = [
     { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-mysql", editable = "libs/waivern-mysql" },
     { name = "waivern-personal-data-analyser", editable = "libs/waivern-personal-data-analyser" },
+    { name = "waivern-processing-purpose-analyser", editable = "libs/waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
     { name = "waivern-source-code", editable = "libs/waivern-source-code" },
     { name = "waivern-source-code", extras = ["tree-sitter"], marker = "extra == 'source-code'", editable = "libs/waivern-source-code" },
@@ -1849,6 +1852,41 @@ requires-dist = [
     { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
+[[package]]
+name = "waivern-processing-purpose-analyser"
+version = "0.1.0"
+source = { editable = "libs/waivern-processing-purpose-analyser" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "waivern-analysers-shared" },
+    { name = "waivern-core" },
+    { name = "waivern-llm" },
+    { name = "waivern-rulesets" },
+    { name = "waivern-source-code" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
+    { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-llm", editable = "libs/waivern-llm" },
+    { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
+    { name = "waivern-source-code", editable = "libs/waivern-source-code" },
 ]
 
 [package.metadata.requires-dev]

@@ -22,9 +22,7 @@ from waivern_personal_data_analyser import (
     PersonalDataAnalyser,
     PersonalDataFindingModel,
 )
-
-# Import from waivern_community
-from waivern_community.analysers.processing_purpose_analyser import (
+from waivern_processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
     ProcessingPurposeFindingModel,
 )

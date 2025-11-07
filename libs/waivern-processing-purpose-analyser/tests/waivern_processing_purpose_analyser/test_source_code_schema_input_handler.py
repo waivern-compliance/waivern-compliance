@@ -18,10 +18,10 @@ from waivern_source_code.schemas import (
     SourceCodeImportModel,
 )
 
-from waivern_community.analysers.processing_purpose_analyser.schemas.types import (
+from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeFindingModel,
 )
-from waivern_community.analysers.processing_purpose_analyser.source_code_schema_input_handler import (
+from waivern_processing_purpose_analyser.source_code_schema_input_handler import (
     SourceCodeSchemaInputHandler,
 )
 

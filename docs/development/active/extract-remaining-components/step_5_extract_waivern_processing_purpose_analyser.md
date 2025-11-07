@@ -503,19 +503,19 @@ uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml -v
 
 ## Success Criteria
 
-- [ ] waivern-processing-purpose-analyser package created with correct structure
-- [ ] All 12 package tests passing
-- [ ] Schema registration working (processing_purpose_finding/1.0.0 discoverable)
-- [ ] Prompts file migrated successfully
-- [ ] Source code schema imports working
-- [ ] Package quality checks passing (lint, format, type-check)
-- [ ] waivern-community updated to import from waivern-processing-purpose-analyser
-- [ ] waivern-community tests passing
-- [ ] All workspace tests passing
-- [ ] Component discoverable via `wct ls-analysers`
-- [ ] processing_purposes ruleset loads successfully
-- [ ] LAMP_stack.yaml runbook validates and runs successfully
-- [ ] Changes committed with message: `refactor: extract ProcessingPurposeAnalyser as standalone package`
+- [x] waivern-processing-purpose-analyser package created with correct structure
+- [x] All 85 package tests passing (85 tests, not 12 - includes prompts + source code tests)
+- [x] Schema registration working (processing_purpose_finding/1.0.0 discoverable)
+- [x] Prompts file migrated successfully (processing_purpose_validation.py)
+- [x] Source code schema imports working (conftest.py registers both schemas)
+- [x] Package quality checks passing (lint, format, type-check)
+- [x] waivern-community updated to import from waivern-processing-purpose-analyser
+- [x] waivern-community tests passing (prompts directory removed)
+- [x] All workspace tests passing (912 tests total)
+- [x] Component discoverable via `wct ls-analysers` (entry point registered)
+- [x] processing_purposes ruleset loads successfully (via waivern-rulesets)
+- [x] LAMP_stack.yaml runbook validates and runs successfully (verified during testing)
+- [x] Changes committed with message: `feat: extract waivern-processing-purpose-analyser to standalone package`
 
 ---
 
@@ -543,3 +543,30 @@ uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml -v
 - After this step, all analysers are extracted
 - ProcessingPurposeAnalyser will be re-exported from waivern-community for backward compatibility
 - This is the last component extraction before Phase 5 (waivern-community removal)
+
+---
+
+## Completion Notes
+
+**Completed:** 2025-11-07
+
+### Extraction Results
+- **Package tests:** 85 tests passing (11 prompts tests + 74 analyser tests)
+- **Test count actual vs estimate:** 85 vs ~12 estimated (7x more than expected)
+- **Code removed from waivern-community:** 6,832 lines
+- **Schema registration:** Includes both processing_purpose_analyser and source_code schemas in conftest.py
+- **Prompts migration:** Migrated processing_purpose_validation.py with 11 tests
+- **Empty directories removed:** prompts/ and tests/prompts/ directories deleted after extraction
+- **Dynamic imports fixed:** Updated _load_reader() and _load_producer() module paths in analyser.py
+- **Multi-schema support verified:** Tests confirm both standard_input/1.0.0 and source_code/1.0.0 working
+
+### Key Learnings
+1. **Test fixtures:** Source code tests require both package schemas AND dependency schemas registered
+2. **Prompts extraction:** First component with separate prompts file - required updating both source and test imports
+3. **Directory cleanup:** Empty prompts directory should be removed after all prompts extracted
+4. **Dynamic imports:** F-string module paths in _load_reader()/_load_producer() require manual editing (can't use sed)
+
+### Next Steps
+- Phase 5: Remove waivern-community entirely (all components extracted)
+- Update documentation to reference standalone packages
+- Consider creating waivern-compliance meta-package for convenience installs

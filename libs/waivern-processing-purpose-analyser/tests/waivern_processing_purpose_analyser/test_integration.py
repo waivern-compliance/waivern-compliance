@@ -16,7 +16,7 @@ from waivern_core.schemas import (
 )
 from waivern_llm import AnthropicLLMService
 
-from waivern_community.analysers.processing_purpose_analyser import (
+from waivern_processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
     ProcessingPurposeAnalyserConfig,
 )

@@ -3,11 +3,12 @@
 __version__ = "0.1.0"
 
 # Connectors
+# Analysers - re-export from standalone packages
+from waivern_data_subject_analyser import DataSubjectAnalyser
 from waivern_filesystem import FilesystemConnector, FilesystemConnectorFactory
 from waivern_mysql import MySQLConnector, MySQLConnectorFactory
-
-# Analysers - re-export from standalone packages and waivern_community
 from waivern_personal_data_analyser import PersonalDataAnalyser
+from waivern_processing_purpose_analyser import ProcessingPurposeAnalyser
 
 # Rulesets - re-export from waivern-rulesets for convenience
 from waivern_rulesets import (
@@ -17,10 +18,6 @@ from waivern_rulesets import (
 )
 from waivern_source_code import SourceCodeConnector, SourceCodeConnectorFactory
 from waivern_sqlite import SQLiteConnector, SQLiteConnectorFactory
-
-from waivern_community.analysers.processing_purpose_analyser import (
-    ProcessingPurposeAnalyser,
-)
 
 __all__ = [
     "__version__",
@@ -34,6 +31,7 @@ __all__ = [
     "SQLiteConnector",
     "SQLiteConnectorFactory",
     # Analysers
+    "DataSubjectAnalyser",
     "PersonalDataAnalyser",
     "ProcessingPurposeAnalyser",
     # Rulesets
