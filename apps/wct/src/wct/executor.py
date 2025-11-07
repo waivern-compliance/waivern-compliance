@@ -21,7 +21,6 @@ from waivern_community.analysers.processing_purpose_analyser import (
 )
 from waivern_community.connectors import (
     SourceCodeConnectorFactory,
-    SQLiteConnectorFactory,
 )
 from waivern_core import Analyser, AnalyserError, Connector, ConnectorError
 from waivern_core.component_factory import ComponentFactory
@@ -33,6 +32,7 @@ from waivern_llm import BaseLLMService
 from waivern_llm.di.factory import LLMServiceFactory
 from waivern_mysql import MySQLConnectorFactory
 from waivern_personal_data_analyser import PersonalDataAnalyserFactory
+from waivern_sqlite import SQLiteConnectorFactory
 
 from wct.analysis import AnalysisResult
 from wct.runbook import (

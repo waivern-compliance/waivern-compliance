@@ -13,8 +13,8 @@ from waivern_core.schemas import (
     StandardInputDataModel,
 )
 
-from waivern_community.connectors.sqlite.config import SQLiteConnectorConfig
-from waivern_community.connectors.sqlite.connector import SQLiteConnector
+from waivern_sqlite.config import SQLiteConnectorConfig
+from waivern_sqlite.connector import SQLiteConnector
 
 
 class TestSQLiteConnector:

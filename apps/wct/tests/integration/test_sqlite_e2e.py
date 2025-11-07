@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from waivern_community.connectors.sqlite import SQLiteConnectorFactory
+from waivern_sqlite import SQLiteConnectorFactory
 
 from wct.executor import Executor
 from wct.schemas import Schema

@@ -19,7 +19,7 @@ from waivern_core.schemas import (
     Schema,
 )
 
-from waivern_community.connectors.sqlite.config import SQLiteConnectorConfig
+from waivern_sqlite.config import SQLiteConnectorConfig
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +67,7 @@ class SQLiteConnector(DatabaseConnector):
 
         """
         module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
-        return importlib.import_module(
-            f"waivern_community.connectors.sqlite.schema_producers.{module_name}"
-        )
+        return importlib.import_module(f"waivern_sqlite.schema_producers.{module_name}")
 
     @classmethod
     @override

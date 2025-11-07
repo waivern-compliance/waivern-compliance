@@ -12,6 +12,7 @@ waivern-llm = { workspace = true }
 waivern-connectors-database = { workspace = true }
 waivern-mysql = { workspace = true }
 waivern-filesystem = { workspace = true }
+waivern-sqlite = { workspace = true }
 waivern-rulesets = { workspace = true }
 waivern-analysers-shared = { workspace = true }
 waivern-personal-data-analyser = { workspace = true }

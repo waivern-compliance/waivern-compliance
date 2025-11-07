@@ -46,12 +46,12 @@ from waivern_rulesets import (
     ProcessingPurposesRuleset,
     RulesetLoader,
 )
+from waivern_sqlite import SQLiteConnector, SQLiteConnectorFactory
 
 from waivern_community.analysers.processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
 )
 from waivern_community.connectors.source_code import SourceCodeConnector
-from waivern_community.connectors.sqlite import SQLiteConnector
 
 __all__ = [
     "__version__",
@@ -62,6 +62,7 @@ __all__ = [
     "MySQLConnectorFactory",
     "SourceCodeConnector",
     "SQLiteConnector",
+    "SQLiteConnectorFactory",
     # Analysers
     "PersonalDataAnalyser",
     "ProcessingPurposeAnalyser",

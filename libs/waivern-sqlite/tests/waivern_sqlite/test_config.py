@@ -5,7 +5,7 @@ import os
 import pytest
 from waivern_core.errors import ConnectorConfigError
 
-from waivern_community.connectors.sqlite.config import SQLiteConnectorConfig
+from waivern_sqlite.config import SQLiteConnectorConfig
 
 
 class TestSQLiteConfig:

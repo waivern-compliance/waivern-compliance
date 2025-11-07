@@ -4,7 +4,7 @@ import pytest
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.testing import ComponentFactoryContractTests
 
-from waivern_community.connectors.sqlite import (
+from waivern_sqlite import (
     SQLiteConnector,
     SQLiteConnectorFactory,
 )

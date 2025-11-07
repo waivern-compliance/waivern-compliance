@@ -12,14 +12,11 @@ from waivern_core.errors import (
 )
 from waivern_filesystem import FilesystemConnector, FilesystemConnectorFactory
 from waivern_mysql import MySQLConnector
+from waivern_sqlite import SQLiteConnector, SQLiteConnectorFactory
 
 from waivern_community.connectors.source_code import (
     SourceCodeConnector,
     SourceCodeConnectorFactory,
-)
-from waivern_community.connectors.sqlite import (
-    SQLiteConnector,
-    SQLiteConnectorFactory,
 )
 
 __all__ = (

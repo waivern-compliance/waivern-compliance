@@ -8,7 +8,7 @@ class TestStandardInputProducer:
 
     def test_produce_formats_output_correctly(self) -> None:
         """Test producer formats standard_input output with correct structure."""
-        from waivern_community.connectors.sqlite.schema_producers import (
+        from waivern_sqlite.schema_producers import (
             standard_input_1_0_0,
         )
 
