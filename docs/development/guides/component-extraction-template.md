@@ -165,13 +165,15 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include py.typed marker
-# If component has schemas, include them too
+# IMPORTANT: Only include non-.py files (Hatchling includes .py files by default)
+# Omit this entire section if your package only contains .py files (e.g., waivern-mysql)
+# Include this section ONLY if your package has non-.py files to distribute:
 include = [
-    "src/{PACKAGE_MODULE}/**/*.py",
     "src/{PACKAGE_MODULE}/py.typed",
-    # If schemas exist:
+    # Add ONLY if your component has schemas:
     # "src/{PACKAGE_MODULE}/**/schemas/json_schemas/**/*.json",
+    # Add ONLY if your component has YAML rulesets:
+    # "src/{PACKAGE_MODULE}/**/rulesets/**/*.yaml",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -180,6 +182,18 @@ packages = ["src/{PACKAGE_MODULE}"]
 [tool.basedpyright]
 typeCheckingMode = "strict"
 reportImplicitOverride = "error"
+
+# Optional: Relax type checking for test files (recommended for packages with complex test fixtures)
+# Used by: waivern-core, waivern-llm, waivern-analysers-shared, waivern-connectors-database
+# Omit this section if you prefer strict type checking everywhere
+[[tool.basedpyright.executionEnvironments]]
+root = "tests"
+reportUnknownVariableType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownParameterType = "none"
+reportUnknownMemberType = "none"
+reportMissingParameterType = "none"
+reportUnknownLambdaType = "none"
 
 [tool.ruff]
 target-version = "py312"
@@ -207,12 +221,26 @@ ignore-decorators = ["typing.overload"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
-    "S101",    # assert-used - assert statements are standard in pytest
-    "PLR2004", # magic-value-comparison - magic values are acceptable in tests
+    "ANN",     # Type annotations - not required in tests
+    "B",       # flake8-bugbear - less strict in tests
+    "D",       # Documentation - docstrings not required in tests
+    "S101",    # Use of assert detected - assert statements are standard in pytest
+    "PLC0415", # Import outside top-level - acceptable for checking optional dependencies
+    "PLR2004", # Magic value comparison - magic values are acceptable in tests
 ]
 ```
 
 #### 1.4 Create README.md
+
+**Structure guidance:**
+- **Title**: Package name
+- **Brief description**: One-line description (same as pyproject.toml)
+- **Overview**: 2-4 paragraphs explaining purpose, capabilities, and design
+- **Installation**: Standard pip install command
+- **Usage**: Concrete code example showing typical usage
+- **Development**: Link to CLAUDE.md
+
+**Example structure:**
 
 ```markdown
 # {PACKAGE_NAME}
@@ -221,7 +249,17 @@ ignore-decorators = ["typing.overload"]
 
 ## Overview
 
-[Describe what the component does]
+[Paragraph 1: What problem does this component solve?]
+This component provides {functionality} for {use case}. It is designed to {key design principle}.
+
+[Paragraph 2: Key capabilities]
+Key features include:
+- {Feature 1}
+- {Feature 2}
+- {Feature 3}
+
+[Paragraph 3: Integration context (optional)]
+This package integrates with the Waivern Compliance Framework and can be used {standalone/with other packages}.
 
 ## Installation
 
@@ -234,13 +272,18 @@ pip install {PACKAGE_NAME}
 ```python
 from {PACKAGE_MODULE} import {COMPONENT_NAME}
 
-# Usage example
+# Concrete example showing typical usage
+{example_code}
 ```
 
 ## Development
 
 See [CLAUDE.md](../../CLAUDE.md) for development guidelines.
 ```
+
+**Reference examples:**
+- See `libs/waivern-mysql/README.md` for connector example
+- See `libs/waivern-personal-data-analyser/README.md` for analyser example
 
 #### 1.5 Copy Component Code
 
@@ -272,19 +315,48 @@ from {PACKAGE_MODULE}.module import Something
 #### 1.7 Package Exports
 
 `src/{PACKAGE_MODULE}/__init__.py`:
+
+**CRITICAL: If your component has schemas, register the schema directory FIRST (before imports):**
+
+```python
+"""{DESCRIPTION}."""
+
+from pathlib import Path
+from waivern_core.schemas import SchemaRegistry
+
+# IMPORTANT: Register schema directory BEFORE importing component classes
+# This ensures schemas are discoverable when component classes are instantiated
+_SCHEMA_DIR = Path(__file__).parent / "schemas" / "json_schemas"
+SchemaRegistry.register_search_path(_SCHEMA_DIR)
+
+from .{component} import {COMPONENT_NAME}
+from .config import {CONFIG_NAME}
+from .schemas import {SCHEMA_NAME}Model  # If you have schema models
+
+__all__ = [
+    "{COMPONENT_NAME}",
+    "{CONFIG_NAME}",
+    "{SCHEMA_NAME}Model",
+]
+```
+
+**If your component does NOT have schemas:**
+
 ```python
 """{DESCRIPTION}."""
 
 from .{component} import {COMPONENT_NAME}
-# Add other exports as needed
-# from .config import {CONFIG_NAME}
-# from .schemas import {SCHEMA_NAME}
+from .config import {CONFIG_NAME}
 
 __all__ = [
     "{COMPONENT_NAME}",
-    # Add other exports
+    "{CONFIG_NAME}",
 ]
 ```
+
+**Reference examples:**
+- With schemas: `libs/waivern-personal-data-analyser/src/waivern_personal_data_analyser/__init__.py`
+- Without schemas: `libs/waivern-mysql/src/waivern_mysql/__init__.py`
 
 #### 1.8 Move Tests
 
@@ -309,17 +381,32 @@ Update root `pyproject.toml`:
 ```toml
 [tool.uv.workspace]
 members = [
-    # ... existing packages
-    # If using shared package, add after it:
-    # "libs/{SHARED_PACKAGE}",
-    "libs/{PACKAGE_NAME}",  # ADD THIS
-    "libs/waivern-community",
-    # ...
+    "libs/*",    # ✅ AUTO-DISCOVERS all packages - no action needed!
+    "apps/*",    # ✅ Your new package will be automatically discovered
 ]
 
 [tool.uv.sources]
-# ... existing sources
-{PACKAGE_NAME} = { workspace = true }  # ADD THIS
+# ❌ NOT AUTO-DISCOVERED - you MUST manually add this line:
+{PACKAGE_NAME} = { workspace = true }  # ADD THIS - REQUIRED!
+```
+
+**CRITICAL DISTINCTION:**
+
+| Configuration | Auto-Discovery | Action Required |
+|--------------|----------------|-----------------|
+| `[tool.uv.workspace]` members | ✅ Yes (via `libs/*` glob) | ❌ No update needed |
+| `[tool.uv.sources]` | ❌ No (mapping structure) | ✅ **MUST manually add entry** |
+
+**Why manual update is required:**
+- Workspace members use glob patterns (`libs/*`) for auto-discovery
+- Workspace sources use a mapping structure that cannot use globs
+- If you forget this step, other packages won't be able to import your package
+- This is only required if your package will be used as a dependency by other packages
+
+**After adding the source entry, verify it appears in workspace sources:**
+```bash
+uv sync
+# Your package should now be available to other workspace members
 ```
 
 #### 1.10 Initial Package Installation
@@ -643,6 +730,152 @@ Test results:
 - Linting: all checks passed
 [If applicable:]
 - {runbook}.yaml validates successfully
+```
+
+---
+
+## Troubleshooting
+
+Common issues and solutions during component extraction:
+
+### Issue 1: Package Not Found / Import Errors
+
+**Symptoms:**
+```
+ModuleNotFoundError: No module named '{PACKAGE_MODULE}'
+```
+
+**Cause:** Forgot to add package to `[tool.uv.sources]` in root `pyproject.toml`
+
+**Solution:**
+1. Add entry to root `pyproject.toml`:
+   ```toml
+   [tool.uv.sources]
+   {PACKAGE_NAME} = { workspace = true }
+   ```
+2. Run `uv sync` to register the package
+3. Verify with: `uv run python -c "import {PACKAGE_MODULE}; print('✓ Package installed')"`
+
+### Issue 2: Schemas Not Found
+
+**Symptoms:**
+```
+SchemaNotFoundError: Schema '{schema_name}' version '{version}' not found
+```
+
+**Cause:** Schema directory not registered in package `__init__.py`
+
+**Solution:**
+1. Add schema registration to `src/{PACKAGE_MODULE}/__init__.py` (BEFORE imports):
+   ```python
+   from pathlib import Path
+   from waivern_core.schemas import SchemaRegistry
+
+   _SCHEMA_DIR = Path(__file__).parent / "schemas" / "json_schemas"
+   SchemaRegistry.register_search_path(_SCHEMA_DIR)
+   ```
+2. Verify schemas are included in build (check `pyproject.toml` include directive)
+3. Run tests to verify: `cd libs/{PACKAGE_NAME} && uv run pytest tests/ -v`
+
+### Issue 3: Type Checking Errors in Tests
+
+**Symptoms:**
+```
+error: Argument type is partially unknown [reportUnknownArgumentType]
+```
+
+**Cause:** Strict type checking applied to test files
+
+**Solution:**
+Add test environment relaxation to `pyproject.toml`:
+```toml
+[[tool.basedpyright.executionEnvironments]]
+root = "tests"
+reportUnknownVariableType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownParameterType = "none"
+reportUnknownMemberType = "none"
+reportMissingParameterType = "none"
+reportUnknownLambdaType = "none"
+```
+
+### Issue 4: Workspace Scripts Don't Find Package
+
+**Symptoms:**
+- Running `./scripts/lint.sh` doesn't check your new package
+
+**Cause:** Package missing required scripts or `pyproject.toml`
+
+**Solution:**
+1. Verify package has all required scripts:
+   ```bash
+   ls libs/{PACKAGE_NAME}/scripts/
+   # Should show: format.sh, lint.sh, type-check.sh
+   ```
+2. Ensure scripts are executable:
+   ```bash
+   chmod +x libs/{PACKAGE_NAME}/scripts/*.sh
+   ```
+3. Verify `pyproject.toml` exists in package root
+
+### Issue 5: waivern-community Tests Fail After Extraction
+
+**Symptoms:**
+- Tests in waivern-community fail with import errors or missing components
+
+**Cause:** Forgot to update imports in waivern-community `__init__.py` or missing dependency
+
+**Solution:**
+1. Update `libs/waivern-community/pyproject.toml` dependencies:
+   ```toml
+   dependencies = [
+       "{PACKAGE_NAME}",
+       # ... other deps
+   ]
+   ```
+2. Update `libs/waivern-community/src/waivern_community/{COMPONENT_TYPE}s/__init__.py`:
+   ```python
+   from {PACKAGE_MODULE} import {COMPONENT_NAME}
+
+   __all__ = (
+       "{COMPONENT_NAME}",
+       # ... other exports
+   )
+   ```
+3. Run: `uv sync && ./scripts/dev-checks.sh`
+
+### Issue 6: WCT Can't Find Component
+
+**Symptoms:**
+- `uv run wct ls-{COMPONENT_TYPE}s` doesn't show your component
+
+**Cause:** Component not registered or WCT dependencies not updated
+
+**Solution:**
+1. Verify component is exported from waivern-community (see Issue 5)
+2. Update WCT dependencies if needed (usually inherited from waivern-community)
+3. Rebuild: `uv sync`
+4. Verify: `uv run wct ls-{COMPONENT_TYPE}s | grep {component}`
+
+### Verification Steps
+
+Run these commands to verify extraction is complete:
+
+```bash
+# 1. Verify package installation
+uv run python -c "import {PACKAGE_MODULE}; print('✓ Package installed')"
+
+# 2. Run package tests
+cd libs/{PACKAGE_NAME} && uv run pytest tests/ -v
+
+# 3. Run full workspace checks
+./scripts/dev-checks.sh
+
+# 4. Verify component registration
+uv run wct ls-{COMPONENT_TYPE}s | grep {component}
+
+# 5. Validate related runbook (if applicable)
+uv run wct validate-runbook apps/wct/runbooks/samples/{runbook}.yaml
 ```
 
 ---
