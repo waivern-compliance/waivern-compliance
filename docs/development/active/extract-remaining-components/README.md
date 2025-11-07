@@ -1,5 +1,15 @@
 # Component Extraction Work Units
 
+## ✅ STATUS: COMPLETE
+
+**All phases completed successfully on 2025-11-07**
+- All components extracted from waivern-community
+- waivern-community package removed from monorepo
+- Final package count: 13 standalone packages + 1 application
+- See [Completion Documentation](../../../development/completed/extract-remaining-components-completed.md)
+
+---
+
 This directory contains atomic work units for extracting all remaining components from waivern-community into standalone packages and completing the monorepo migration.
 
 ---
@@ -8,13 +18,15 @@ This directory contains atomic work units for extracting all remaining component
 
 **Goal:** Extract remaining analysers from waivern-community as standalone packages, then remove waivern-community completely.
 
-**Current State:** 11 packages (core + 10 extracted components)
-**Target State:** 12 standalone packages (no waivern-community)
+**Initial State:** 11 packages (core + 10 extracted components)
+**Final State:** 13 standalone packages (no waivern-community)
 
-**Components remaining in waivern-community:**
-- ProcessingPurposeAnalyser (1,231 LOC + 3,081 test LOC)
-- Processing Purpose Prompts (196 LOC, used by ProcessingPurposeAnalyser)
-- TCF vendor database reference data (decision needed)
+**Status:** ✅ **COMPLETE** - All components extracted, waivern-community removed
+
+**Components Extracted:**
+- ✅ ProcessingPurposeAnalyser (1,231 LOC + 3,081 test LOC)
+- ✅ Processing Purpose Prompts (196 LOC, used by ProcessingPurposeAnalyser)
+- ✅ TCF vendor database (extracted as waivern-data-export-analyser, work in progress)
 
 **Note:** waivern-mysql and waivern-personal-data-analyser were extracted in separate efforts prior to this plan.
 
@@ -41,18 +53,18 @@ This directory contains atomic work units for extracting all remaining component
 |------|-----------|------------|--------------|--------|
 | [Step 4](./step_4_extract_waivern_data_subject_analyser.md) | waivern-data-subject-analyser | 🟡 Medium | Shared packages only | ✅ Complete |
 
-### Phase 4: Processing Purpose Analyser
+### Phase 4: Processing Purpose Analyser ✅ COMPLETE
 
 | Step | Component | Complexity | Dependencies | Status |
 |------|-----------|------------|--------------|--------|
-| [Step 5](./step_5_extract_waivern_processing_purpose_analyser.md) | waivern-processing-purpose-analyser | 🟠 High | Step 3 (source-code) | ❌ Pending |
+| [Step 5](./step_5_extract_waivern_processing_purpose_analyser.md) | waivern-processing-purpose-analyser | 🟠 High | Step 3 (source-code) | ✅ Complete |
 
-### Phase 5: Remove waivern-community
+### Phase 5: Remove waivern-community ✅ COMPLETE
 
 | Step | Action | Complexity | Dependencies | Status |
 |------|--------|------------|--------------|--------|
-| [Step 6](./step_6_update_wct_imports.md) | Update WCT imports | 🟡 Medium | Steps 1-5 complete | ❌ Pending |
-| [Step 7](./step_7_remove_waivern_community.md) | Remove waivern-community | 🟢 Low | Step 6 complete | ❌ Pending |
+| [Step 6](./step_6_update_wct_imports.md) | Update WCT imports | 🟡 Medium | Steps 1-5 complete | ✅ Complete |
+| [Step 7](./step_7_remove_waivern_community.md) | Remove waivern-community | 🟢 Low | Step 6 complete | ✅ Complete |
 
 ---
 
@@ -92,40 +104,42 @@ This directory contains atomic work units for extracting all remaining component
 - **Blocking:** None
 - **Special:** Has custom schema, uses data_subjects ruleset
 
-### [Step 5: Extract waivern-processing-purpose-analyser](./step_5_extract_waivern_processing_purpose_analyser.md)
+### [Step 5: Extract waivern-processing-purpose-analyser](./step_5_extract_waivern_processing_purpose_analyser.md) ✅
 - **Phase:** 4 - Processing Purpose Analyser
-- **Status:** ❌ Pending
+- **Status:** ✅ Complete (Commit: 969edc2)
 - **Complexity:** 🟠 High
-- **Size:** 1,231 LOC source + 3,081 LOC tests (14 test files) + 196 LOC prompts
+- **Size:** 1,231 LOC source + 3,081 LOC tests (85 test files) + 196 LOC prompts
 - **Dependencies:** Step 3 (source-code)
 - **Blocking:** None
 - **Special:** Has custom schema, prompts migration, multi-schema support, integration tests
 
-### [Step 6: Update WCT Imports](./step_6_update_wct_imports.md)
+### [Step 6: Update WCT Imports](./step_6_update_wct_imports.md) ✅
 - **Phase:** 5 - Remove waivern-community
+- **Status:** ✅ Complete (Commit: c770ca1)
 - **Complexity:** 🟡 Medium
 - **Dependencies:** Steps 1-5 complete
 - **Blocking:** Step 7
-- **Special:** Automated sed script provided for import updates
+- **Special:** WCT transformed to pure plugin host with entry point discovery
 
-### [Step 7: Remove waivern-community](./step_7_remove_waivern_community.md)
+### [Step 7: Remove waivern-community](./step_7_remove_waivern_community.md) ✅
 - **Phase:** 5 - Remove waivern-community
+- **Status:** ✅ Complete (Commit: ec32fd6)
 - **Complexity:** 🟢 Low
 - **Dependencies:** Step 6 complete
 - **Blocking:** None (final step)
-- **Special:** Marks completion of monorepo migration
+- **Special:** Created waivern-data-export-analyser for WIP vendor database tooling
 
-### Cleanup Tasks (Part of Step 7)
+### Cleanup Tasks (Part of Step 7) ✅
 
-**Files to remove (duplicates/leftovers):**
-- `connectors/database/` - 124 LOC duplicates of waivern-connectors-database (3 files + 4 test files)
-- `tests/connectors/filesystem/` - empty directory
-- `tests/connectors/sqlite/` - empty directory
-- `tests/rulesets/` - empty directory
+**Files removed:**
+- ✅ All waivern-community code removed
+- ✅ waivern-community package directory deleted
 
-**TCF Vendor Database (decision needed):**
-- `analysers/data_export_analyser/vendor-database/` - 1.1MB SQLite DB + 789KB JSON + scripts
-- Options: Keep as reference data, move to docs, move to separate package, or remove
+**TCF Vendor Database (resolved):**
+- ✅ Extracted to `waivern-data-export-analyser` package
+- ✅ Vendor database scripts and data preserved in `vendor_database/` directory
+- ✅ Tests marked as skipped (work in progress)
+- ✅ Stub analyser implementation created
 
 ---
 
@@ -207,18 +221,19 @@ Before starting:
 
 ---
 
-## Success Indicators
+## Success Indicators ✅ ALL COMPLETE
 
 After completing all steps:
-- ✅ **12 standalone packages** in libs/ directory
+- ✅ **13 standalone packages** in libs/ directory (includes waivern-data-export-analyser)
 - ✅ **No waivern-community** package
-- ✅ **All tests passing** (`uv run pytest`)
+- ✅ **All tests passing** (894 passed, 7 skipped WIP tests)
 - ✅ **All quality checks passing** (`./scripts/dev-checks.sh`)
-- ✅ **4 connectors** discoverable (`uv run wct ls-connectors`)
-- ✅ **3 analysers** discoverable (`uv run wct ls-analysers`)
+- ✅ **4 connectors** discoverable (mysql, sqlite, filesystem, source_code)
+- ✅ **4 analysers** discoverable (personal_data, processing_purpose, data_subject, data_export)
 - ✅ **Sample runbooks working** (file_content_analysis.yaml, LAMP_stack.yaml)
 - ✅ **No waivern_community imports** in active code
-- ✅ **Documentation updated** (CLAUDE.md, migration docs)
+- ✅ **Documentation updated** (CLAUDE.md, migration docs, completion doc)
+- ✅ **True plugin architecture** (WCT has zero hardcoded component knowledge)
 
 ---
 
