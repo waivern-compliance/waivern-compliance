@@ -9,6 +9,9 @@ dependencies = [
     "waivern-connectors-database",
 ]
 
+[project.entry-points."waivern.connectors"]
+sqlite = "waivern_sqlite:SQLiteConnectorFactory"
+
 [dependency-groups]
 dev = [
     "basedpyright>=1.29.2",

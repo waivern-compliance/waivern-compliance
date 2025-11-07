@@ -9,6 +9,9 @@ dependencies = [
     "pydantic>=2.11.5",
 ]
 
+[project.entry-points."waivern.connectors"]
+filesystem = "waivern_filesystem:FilesystemConnectorFactory"
+
 [dependency-groups]
 dev = [
     "basedpyright>=1.29.2",

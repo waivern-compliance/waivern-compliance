@@ -12,6 +12,9 @@ dependencies = [
     "pydantic>=2.11.5",
 ]
 
+[project.entry-points."waivern.connectors"]
+mysql = "waivern_mysql:MySQLConnectorFactory"
+
 [dependency-groups]
 dev = [
     "basedpyright>=1.29.2",
