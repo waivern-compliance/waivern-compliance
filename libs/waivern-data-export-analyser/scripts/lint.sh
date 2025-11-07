@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Run code linting checks for waivern-community package
+# Run code linting checks for waivern-core package
 # Usage: bash scripts/lint.sh [--fix]
 # Checks code for style and quality issues using Ruff
 

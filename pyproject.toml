@@ -10,6 +10,7 @@ members = [
 waivern-core = { workspace = true }
 waivern-llm = { workspace = true }
 waivern-connectors-database = { workspace = true }
+waivern-data-export-analyser = { workspace = true }
 waivern-data-subject-analyser = { workspace = true }
 waivern-mysql = { workspace = true }
 waivern-filesystem = { workspace = true }
@@ -19,7 +20,6 @@ waivern-source-code = { workspace = true }
 waivern-rulesets = { workspace = true }
 waivern-analysers-shared = { workspace = true }
 waivern-personal-data-analyser = { workspace = true }
-waivern-community = { workspace = true }
 waivern-compliance-tool = { workspace = true }
 
 [project]
