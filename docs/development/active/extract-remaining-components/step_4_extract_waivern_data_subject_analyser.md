@@ -19,8 +19,8 @@ Extract the DataSubjectAnalyser from waivern-community into a standalone `waiver
 The DataSubjectAnalyser depends only on already-extracted shared packages (waivern-llm, waivern-analysers-shared, waivern-rulesets). It has no dependencies on other waivern-community components, making it suitable for extraction in Phase 3.
 
 **Current location:** `libs/waivern-community/src/waivern_community/analysers/data_subject_analyser/`
-**Size:** ~715 LOC across 12 files
-**Tests:** 6 test files
+**Size:** 743 LOC source + 716 LOC tests
+**Test files:** 6 test files
 **Schemas:** ✅ Yes - `data_subject_finding/1.0.0` custom schema
 
 ---
@@ -102,6 +102,13 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/waivern_data_subject_analyser"]
+
+# Component discovery via entry points
+[project.entry-points."waivern.analysers"]
+data_subject = "waivern_data_subject_analyser:DataSubjectAnalyserFactory"
+
+[project.entry-points."waivern.schemas"]
+data_subject = "waivern_data_subject_analyser:register_schemas"
 
 [tool.basedpyright]
 typeCheckingMode = "strict"
@@ -224,31 +231,47 @@ No waivern-community internal imports to update (component is self-contained).
 
 ### 7. Package Exports with Schema Registration
 
-**CRITICAL:** Create `src/waivern_data_subject_analyser/__init__.py` with schema registration:
+**CRITICAL:** Create `src/waivern_data_subject_analyser/__init__.py` with explicit schema registration:
 
 ```python
 """Data subject analyser for WCF."""
 
+from importlib.resources import files
 from pathlib import Path
 
 from waivern_core.schemas import SchemaRegistry
 
-# IMPORTANT: Register schema directory BEFORE importing component classes
-_SCHEMA_DIR = Path(__file__).parent / "schemas" / "json_schemas"
-SchemaRegistry.register_search_path(_SCHEMA_DIR)
-
 from .analyser import DataSubjectAnalyser
-from .config import DataSubjectAnalyserConfig
 from .factory import DataSubjectAnalyserFactory
 from .schemas import DataSubjectFindingModel
+from .types import DataSubjectAnalyserConfig
+
+
+def register_schemas() -> None:
+    """Register schemas with SchemaRegistry.
+
+    Called explicitly by WCF framework during initialisation via entry point.
+    This function is referenced in pyproject.toml [project.entry-points."waivern.schemas"].
+
+    NO import-time side effects - registration is explicit and controlled.
+    """
+    schema_dir = files(__name__) / "schemas" / "json_schemas"
+    SchemaRegistry.register_search_path(Path(str(schema_dir)))
+
 
 __all__ = [
     "DataSubjectAnalyser",
     "DataSubjectAnalyserConfig",
     "DataSubjectAnalyserFactory",
     "DataSubjectFindingModel",
+    "register_schemas",
 ]
 ```
+
+**Key Points:**
+- `register_schemas()` is called by WCT Executor via entry point, NOT at import time
+- Uses `importlib.resources.files()` for proper resource location in installed packages
+- Entry point system allows WCT to discover and register all schemas before loading components
 
 ### 8. Move Tests
 
@@ -286,8 +309,12 @@ uv sync --package waivern-data-subject-analyser
 # Verify installation
 uv run python -c "import waivern_data_subject_analyser; print('✓ Package installed')"
 
-# Verify schema registration
-uv run python -c "from waivern_core.schemas import SchemaRegistry; s = SchemaRegistry.get_schema('data_subject_finding', '1.0.0'); print('✓ Schema registered')"
+# Verify entry point registration
+uv run python -c "from importlib.metadata import entry_points; eps = entry_points(group='waivern.analysers'); assert any(ep.name == 'data_subject' for ep in eps); print('✓ Analyser entry point registered')"
+uv run python -c "from importlib.metadata import entry_points; eps = entry_points(group='waivern.schemas'); assert any(ep.name == 'data_subject' for ep in eps); print('✓ Schema entry point registered')"
+
+# Verify schema registration via entry point
+uv run python -c "from waivern_data_subject_analyser import register_schemas; from waivern_core.schemas import SchemaRegistry; register_schemas(); s = SchemaRegistry.get_schema('data_subject_finding', '1.0.0'); print('✓ Schema registration works')"
 
 # Run package tests
 cd libs/waivern-data-subject-analyser
@@ -307,6 +334,18 @@ cd libs/waivern-data-subject-analyser
 ### 12. Update waivern-community
 
 **Update `libs/waivern-community/pyproject.toml`:**
+
+Remove entry points (component is now standalone):
+```toml
+# REMOVE these entry points:
+[project.entry-points."waivern.analysers"]
+# data_subject = "waivern_community.analysers.data_subject_analyser:DataSubjectAnalyserFactory"  # REMOVE
+
+[project.entry-points."waivern.schemas"]
+# data_subject = "waivern_community.analysers.data_subject_analyser:register_schemas"  # REMOVE
+```
+
+Add dependency:
 ```toml
 dependencies = [
     "waivern-core",

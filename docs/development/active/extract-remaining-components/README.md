@@ -6,67 +6,79 @@ This directory contains atomic work units for extracting all remaining component
 
 ## Overview
 
-**Goal:** Extract 5 remaining components from waivern-community as standalone packages, then remove waivern-community completely.
+**Goal:** Extract remaining analysers from waivern-community as standalone packages, then remove waivern-community completely.
 
-**Current State:** 7 packages (core + 2 extracted components)
+**Current State:** 10 packages (core + 9 extracted components)
 **Target State:** 12 standalone packages (no waivern-community)
+
+**Components remaining in waivern-community:**
+- DataSubjectAnalyser (743 LOC + 716 test LOC)
+- ProcessingPurposeAnalyser (1,231 LOC + 3,081 test LOC)
+- Processing Purpose Prompts (196 LOC, used by ProcessingPurposeAnalyser)
+- Database connector utilities (124 LOC - duplicates of waivern-connectors-database, to be removed)
+- TCF vendor database reference data (decision needed)
+
+**Note:** waivern-mysql and waivern-personal-data-analyser were extracted in separate efforts prior to this plan.
 
 ---
 
 ## Execution Order
 
-### Phase 1: Independent Connectors
+### Phase 1: Independent Connectors ✅ COMPLETE
 
-| Step | Component | Complexity | Dependencies | Can Run in Parallel |
-|------|-----------|------------|--------------|---------------------|
-| [Step 1](./step_1_extract_waivern_filesystem.md) | waivern-filesystem | 🟢 Low | None | ✅ Yes (with Step 2) |
-| [Step 2](./step_2_extract_waivern_sqlite.md) | waivern-sqlite | 🟢 Low | waivern-connectors-database | ✅ Yes (with Step 1) |
+| Step | Component | Complexity | Dependencies | Status |
+|------|-----------|------------|--------------|--------|
+| [Step 1](./step_1_extract_waivern_filesystem.md) | waivern-filesystem | 🟢 Low | None | ✅ Complete |
+| [Step 2](./step_2_extract_waivern_sqlite.md) | waivern-sqlite | 🟢 Low | waivern-connectors-database | ✅ Complete |
 
-### Phase 2: Source Code Connector
+### Phase 2: Source Code Connector ✅ COMPLETE
 
-| Step | Component | Complexity | Dependencies | Can Run in Parallel |
-|------|-----------|------------|--------------|---------------------|
-| [Step 3](./step_3_extract_waivern_source_code.md) | waivern-source-code | 🟡 Medium | Step 1 (filesystem) | ❌ No - Must wait for Step 1 |
+| Step | Component | Complexity | Dependencies | Status |
+|------|-----------|------------|--------------|--------|
+| [Step 3](./step_3_extract_waivern_source_code.md) | waivern-source-code | 🟡 Medium | Step 1 (filesystem) | ✅ Complete |
 
-### Phase 3: Independent Analyser
+### Phase 3: Independent Analyser ⏳ IN PROGRESS
 
-| Step | Component | Complexity | Dependencies | Can Run in Parallel |
-|------|-----------|------------|--------------|---------------------|
-| [Step 4](./step_4_extract_waivern_data_subject_analyser.md) | waivern-data-subject-analyser | 🟡 Medium | Shared packages only | ✅ Yes (with Steps 1-3) |
+| Step | Component | Complexity | Dependencies | Status |
+|------|-----------|------------|--------------|--------|
+| [Step 4](./step_4_extract_waivern_data_subject_analyser.md) | waivern-data-subject-analyser | 🟡 Medium | Shared packages only | ❌ Pending |
 
 ### Phase 4: Processing Purpose Analyser
 
-| Step | Component | Complexity | Dependencies | Can Run in Parallel |
-|------|-----------|------------|--------------|---------------------|
-| [Step 5](./step_5_extract_waivern_processing_purpose_analyser.md) | waivern-processing-purpose-analyser | 🟠 High | Step 3 (source-code) | ❌ No - Must wait for Step 3 |
+| Step | Component | Complexity | Dependencies | Status |
+|------|-----------|------------|--------------|--------|
+| [Step 5](./step_5_extract_waivern_processing_purpose_analyser.md) | waivern-processing-purpose-analyser | 🟠 High | Step 3 (source-code) | ❌ Pending |
 
 ### Phase 5: Remove waivern-community
 
-| Step | Action | Complexity | Dependencies | Can Run in Parallel |
-|------|--------|------------|--------------|---------------------|
-| [Step 6](./step_6_update_wct_imports.md) | Update WCT imports | 🟡 Medium | Steps 1-5 complete | ❌ No - Must wait for all |
-| [Step 7](./step_7_remove_waivern_community.md) | Remove waivern-community | 🟢 Low | Step 6 complete | ❌ No - Final step |
+| Step | Action | Complexity | Dependencies | Status |
+|------|--------|------------|--------------|--------|
+| [Step 6](./step_6_update_wct_imports.md) | Update WCT imports | 🟡 Medium | Steps 1-5 complete | ❌ Pending |
+| [Step 7](./step_7_remove_waivern_community.md) | Remove waivern-community | 🟢 Low | Step 6 complete | ❌ Pending |
 
 ---
 
 ## Work Units
 
-### [Step 1: Extract waivern-filesystem](./step_1_extract_waivern_filesystem.md)
+### [Step 1: Extract waivern-filesystem](./step_1_extract_waivern_filesystem.md) ✅
 - **Phase:** 1 - Independent Connectors
+- **Status:** ✅ Complete (Commit: 7eab880)
 - **Complexity:** 🟢 Low
 - **Size:** ~604 LOC, 6 tests
 - **Dependencies:** waivern-core only
 - **Blocking:** Step 3 (source-code needs this)
 
-### [Step 2: Extract waivern-sqlite](./step_2_extract_waivern_sqlite.md)
+### [Step 2: Extract waivern-sqlite](./step_2_extract_waivern_sqlite.md) ✅
 - **Phase:** 1 - Independent Connectors
+- **Status:** ✅ Complete (Commit documented in step file)
 - **Complexity:** 🟢 Low
 - **Size:** ~560 LOC, 6 tests
 - **Dependencies:** waivern-core, waivern-connectors-database
 - **Blocking:** None
 
-### [Step 3: Extract waivern-source-code](./step_3_extract_waivern_source_code.md)
+### [Step 3: Extract waivern-source-code](./step_3_extract_waivern_source_code.md) ✅
 - **Phase:** 2 - Source Code Connector
+- **Status:** ✅ Complete (Commit: df14915)
 - **Complexity:** 🟡 Medium
 - **Size:** ~1,658 LOC, 7 tests
 - **Dependencies:** Step 1 (filesystem)
@@ -75,19 +87,21 @@ This directory contains atomic work units for extracting all remaining component
 
 ### [Step 4: Extract waivern-data-subject-analyser](./step_4_extract_waivern_data_subject_analyser.md)
 - **Phase:** 3 - Independent Analyser
+- **Status:** ❌ Pending
 - **Complexity:** 🟡 Medium
-- **Size:** ~715 LOC, 6 tests
+- **Size:** 743 LOC source + 716 LOC tests (6 test files)
 - **Dependencies:** Shared packages only
 - **Blocking:** None
 - **Special:** Has custom schema, uses data_subjects ruleset
 
 ### [Step 5: Extract waivern-processing-purpose-analyser](./step_5_extract_waivern_processing_purpose_analyser.md)
 - **Phase:** 4 - Processing Purpose Analyser
+- **Status:** ❌ Pending
 - **Complexity:** 🟠 High
-- **Size:** ~1,212 LOC, 12 tests
+- **Size:** 1,231 LOC source + 3,081 LOC tests (14 test files) + 196 LOC prompts
 - **Dependencies:** Step 3 (source-code)
 - **Blocking:** None
-- **Special:** Has custom schema, prompts migration, multi-schema support
+- **Special:** Has custom schema, prompts migration, multi-schema support, integration tests
 
 ### [Step 6: Update WCT Imports](./step_6_update_wct_imports.md)
 - **Phase:** 5 - Remove waivern-community
@@ -102,6 +116,18 @@ This directory contains atomic work units for extracting all remaining component
 - **Dependencies:** Step 6 complete
 - **Blocking:** None (final step)
 - **Special:** Marks completion of monorepo migration
+
+### Cleanup Tasks (Part of Step 7)
+
+**Files to remove (duplicates/leftovers):**
+- `connectors/database/` - 124 LOC duplicates of waivern-connectors-database (3 files + 4 test files)
+- `tests/connectors/filesystem/` - empty directory
+- `tests/connectors/sqlite/` - empty directory
+- `tests/rulesets/` - empty directory
+
+**TCF Vendor Database (decision needed):**
+- `analysers/data_export_analyser/vendor-database/` - 1.1MB SQLite DB + 789KB JSON + scripts
+- Options: Keep as reference data, move to docs, move to separate package, or remove
 
 ---
 
@@ -166,16 +192,20 @@ Execute steps 1-7 in strict order. Recommended for first-time execution.
 ## Prerequisites
 
 Before starting:
-- [ ] All shared packages already extracted:
-  - waivern-core
-  - waivern-llm
-  - waivern-connectors-database
-  - waivern-rulesets
-  - waivern-analysers-shared
-  - waivern-mysql
-  - waivern-personal-data-analyser
-- [ ] Familiar with [Component Extraction Template](../../guides/component-extraction-template.md)
-- [ ] Feature branch created (e.g., `feature/extract-all-components`)
+- [x] All shared packages already extracted:
+  - ✅ waivern-core
+  - ✅ waivern-llm
+  - ✅ waivern-connectors-database
+  - ✅ waivern-rulesets
+  - ✅ waivern-analysers-shared
+  - ✅ waivern-mysql
+  - ✅ waivern-personal-data-analyser
+- [x] Connectors extracted (Steps 1-3):
+  - ✅ waivern-filesystem (Step 1)
+  - ✅ waivern-sqlite (Step 2)
+  - ✅ waivern-source-code (Step 3)
+- [x] Familiar with [Component Extraction Template](../../guides/component-extraction-template.md)
+- [x] Feature branch created (e.g., `feature/extract-all-components`)
 
 ---
 

@@ -23,9 +23,9 @@ The ProcessingPurposeAnalyser depends on waivern-source-code (Step 3) for source
 - Uses both pattern matching and LLM validation
 
 **Current location:** `libs/waivern-community/src/waivern_community/analysers/processing_purpose_analyser/`
-**Prompts location:** `libs/waivern-community/src/waivern_community/prompts/processing_purpose_validation.py`
-**Size:** ~1,212 LOC across 14 files
-**Tests:** 12 test files
+**Prompts location:** `libs/waivern-community/src/waivern_community/prompts/processing_purpose_validation.py` (196 LOC + 1 test file)
+**Size:** 1,231 LOC source + 3,081 LOC tests
+**Test files:** 14 test files (includes integration tests and source code mocks)
 **Schemas:** ✅ Yes - `processing_purpose_finding/1.0.0` custom schema
 
 ---
@@ -109,6 +109,13 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/waivern_processing_purpose_analyser"]
+
+# Component discovery via entry points
+[project.entry-points."waivern.analysers"]
+processing_purpose = "waivern_processing_purpose_analyser:ProcessingPurposeAnalyserFactory"
+
+[project.entry-points."waivern.schemas"]
+processing_purpose = "waivern_processing_purpose_analyser:register_schemas"
 
 [tool.basedpyright]
 typeCheckingMode = "strict"
@@ -258,31 +265,47 @@ from waivern_processing_purpose_analyser.prompts.processing_purpose_validation i
 
 ### 7. Package Exports with Schema Registration
 
-**CRITICAL:** Create `src/waivern_processing_purpose_analyser/__init__.py` with schema registration:
+**CRITICAL:** Create `src/waivern_processing_purpose_analyser/__init__.py` with explicit schema registration:
 
 ```python
 """Processing purpose analyser for WCF."""
 
+from importlib.resources import files
 from pathlib import Path
 
 from waivern_core.schemas import SchemaRegistry
 
-# IMPORTANT: Register schema directory BEFORE importing component classes
-_SCHEMA_DIR = Path(__file__).parent / "schemas" / "json_schemas"
-SchemaRegistry.register_search_path(_SCHEMA_DIR)
-
 from .analyser import ProcessingPurposeAnalyser
-from .config import ProcessingPurposeAnalyserConfig
 from .factory import ProcessingPurposeAnalyserFactory
 from .schemas import ProcessingPurposeFindingModel
+from .types import ProcessingPurposeAnalyserConfig
+
+
+def register_schemas() -> None:
+    """Register schemas with SchemaRegistry.
+
+    Called explicitly by WCF framework during initialisation via entry point.
+    This function is referenced in pyproject.toml [project.entry-points."waivern.schemas"].
+
+    NO import-time side effects - registration is explicit and controlled.
+    """
+    schema_dir = files(__name__) / "schemas" / "json_schemas"
+    SchemaRegistry.register_search_path(Path(str(schema_dir)))
+
 
 __all__ = [
     "ProcessingPurposeAnalyser",
     "ProcessingPurposeAnalyserConfig",
     "ProcessingPurposeAnalyserFactory",
     "ProcessingPurposeFindingModel",
+    "register_schemas",
 ]
 ```
+
+**Key Points:**
+- `register_schemas()` is called by WCT Executor via entry point, NOT at import time
+- Uses `importlib.resources.files()` for proper resource location in installed packages
+- Entry point system allows WCT to discover and register all schemas before loading components
 
 ### 8. Move Tests
 
@@ -322,8 +345,12 @@ uv sync --package waivern-processing-purpose-analyser
 # Verify installation
 uv run python -c "import waivern_processing_purpose_analyser; print('✓ Package installed')"
 
-# Verify schema registration
-uv run python -c "from waivern_core.schemas import SchemaRegistry; s = SchemaRegistry.get_schema('processing_purpose_finding', '1.0.0'); print('✓ Schema registered')"
+# Verify entry point registration
+uv run python -c "from importlib.metadata import entry_points; eps = entry_points(group='waivern.analysers'); assert any(ep.name == 'processing_purpose' for ep in eps); print('✓ Analyser entry point registered')"
+uv run python -c "from importlib.metadata import entry_points; eps = entry_points(group='waivern.schemas'); assert any(ep.name == 'processing_purpose' for ep in eps); print('✓ Schema entry point registered')"
+
+# Verify schema registration via entry point
+uv run python -c "from waivern_processing_purpose_analyser import register_schemas; from waivern_core.schemas import SchemaRegistry; register_schemas(); s = SchemaRegistry.get_schema('processing_purpose_finding', '1.0.0'); print('✓ Schema registration works')"
 
 # Verify source code schema imports
 uv run python -c "from waivern_processing_purpose_analyser.source_code_schema_input_handler import SourceCodeSchemaInputHandler; print('✓ Source code imports working')"
@@ -331,7 +358,7 @@ uv run python -c "from waivern_processing_purpose_analyser.source_code_schema_in
 # Run package tests
 cd libs/waivern-processing-purpose-analyser
 uv run pytest tests/ -v
-# Expected: ~12 tests passing
+# Expected: ~14 tests passing
 ```
 
 ### 11. Run Package Quality Checks
@@ -346,6 +373,18 @@ cd libs/waivern-processing-purpose-analyser
 ### 12. Update waivern-community
 
 **Update `libs/waivern-community/pyproject.toml`:**
+
+Remove entry points (component is now standalone):
+```toml
+# REMOVE these entry points:
+[project.entry-points."waivern.analysers"]
+# processing_purpose = "waivern_community.analysers.processing_purpose_analyser:ProcessingPurposeAnalyserFactory"  # REMOVE
+
+[project.entry-points."waivern.schemas"]
+# processing_purpose = "waivern_community.analysers.processing_purpose_analyser:register_schemas"  # REMOVE
+```
+
+Add dependency:
 ```toml
 dependencies = [
     "waivern-core",
