@@ -1,6 +1,8 @@
 """Processing purpose analysis analyser for GDPR compliance."""
 
+import importlib
 import logging
+from types import ModuleType
 from typing import Any, override
 
 from waivern_core import Analyser
@@ -11,7 +13,6 @@ from waivern_core.schemas import (
     BaseMetadata,
     Schema,
     StandardInputDataModel,
-    parse_data_model,
 )
 from waivern_llm import BaseLLMService
 
@@ -70,6 +71,48 @@ class ProcessingPurposeAnalyser(Analyser):
         """Return the name of the analyser."""
         return "processing_purpose_analyser"
 
+    def _load_reader(self, schema: Schema) -> ModuleType:
+        """Dynamically import reader module.
+
+        Python's import system automatically caches modules in sys.modules,
+        so repeated imports are fast and don't require manual caching.
+
+        Args:
+            schema: Input schema to load reader for
+
+        Returns:
+            Reader module with read() function
+
+        Raises:
+            ModuleNotFoundError: If reader module doesn't exist for this version
+
+        """
+        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
+        return importlib.import_module(
+            f"waivern_community.analysers.processing_purpose_analyser.schema_readers.{module_name}"
+        )
+
+    def _load_producer(self, schema: Schema) -> ModuleType:
+        """Dynamically import producer module.
+
+        Python's import system automatically caches modules in sys.modules,
+        so repeated imports are fast and don't require manual caching.
+
+        Args:
+            schema: Output schema to load producer for
+
+        Returns:
+            Producer module with produce() function
+
+        Raises:
+            ModuleNotFoundError: If producer module doesn't exist for this version
+
+        """
+        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
+        return importlib.import_module(
+            f"waivern_community.analysers.processing_purpose_analyser.schema_producers.{module_name}"
+        )
+
     @classmethod
     @override
     def get_supported_input_schemas(cls) -> list[Schema]:
@@ -89,7 +132,7 @@ class ProcessingPurposeAnalyser(Analyser):
         output_schema: Schema,
         message: Message,
     ) -> Message:
-        """Process data to identify processing purposes using runners."""
+        """Process data to identify processing purposes using dynamic reader/producer."""
         logger.info("Starting processing purpose analysis")
 
         # Validate input message
@@ -97,14 +140,17 @@ class ProcessingPurposeAnalyser(Analyser):
 
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
-        # Validate and parse data based on schema type
+        # Load reader and transform to canonical Pydantic model
+        try:
+            reader = self._load_reader(input_schema)
+            typed_data = reader.read(message.content)
+        except (ModuleNotFoundError, AttributeError) as e:
+            raise ValueError(f"Unsupported input schema: {input_schema.name}") from e
+
+        # Process based on schema type
         if input_schema.name == "standard_input":
-            typed_data = StandardInputDataModel[BaseMetadata].model_validate(
-                message.content
-            )
             findings = self._process_standard_input_data(typed_data)
         elif input_schema.name == "source_code":
-            typed_data = parse_data_model(message.content, SourceCodeDataModel)
             findings = self._process_source_code_data(typed_data)
         else:
             raise ValueError(f"Unsupported input schema: {input_schema.name}")
@@ -215,7 +261,7 @@ class ProcessingPurposeAnalyser(Analyser):
         output_schema: Schema,
         analyses_chain: list[AnalysisChainEntry],
     ) -> Message:
-        """Create and validate output message.
+        """Create and validate output message using producer.
 
         Args:
             original_findings: Original findings before LLM validation
@@ -228,21 +274,13 @@ class ProcessingPurposeAnalyser(Analyser):
             Validated output message
 
         """
-        # Convert validated models to dicts for JSON output
-        findings_dicts = [
-            finding.model_dump(mode="json", exclude_none=True)
-            for finding in validated_findings
-        ]
+        # Build summary statistics
+        summary = self._build_findings_summary(validated_findings)
 
-        # Create result data with validated findings
-        result_data: dict[str, Any] = {
-            "findings": findings_dicts,
-            "summary": self._build_findings_summary(validated_findings),
-        }
-
-        # Add validation summary if LLM validation was actually applied
+        # Build validation summary separately if LLM validation was actually applied
+        validation_summary = None
         if validation_applied and len(original_findings) > 0:
-            result_data["validation_summary"] = self._build_validation_summary(
+            validation_summary = self._build_validation_summary(
                 original_findings, validated_findings
             )
 
@@ -265,8 +303,14 @@ class ProcessingPurposeAnalyser(Analyser):
             analyses_chain=analyses_chain,
             **extra_fields,
         )
-        result_data["analysis_metadata"] = analysis_metadata.model_dump(
-            mode="json", exclude_none=True
+
+        # Load producer and transform to wire format
+        producer = self._load_producer(output_schema)
+        result_data = producer.produce(
+            findings=validated_findings,
+            summary=summary,
+            analysis_metadata=analysis_metadata,
+            validation_summary=validation_summary,
         )
 
         output_message = Message(

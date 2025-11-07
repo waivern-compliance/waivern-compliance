@@ -1,9 +1,11 @@
 """Source code connector for WCT."""
 
+import importlib
 import logging
 from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
+from types import ModuleType
 from typing import Any, override
 
 from waivern_core.base_connector import Connector
@@ -76,6 +78,27 @@ class SourceCodeConnector(Connector):
     def get_name(cls) -> str:
         """Return the name of the connector."""
         return "source_code_connector"
+
+    def _load_producer(self, schema: Schema) -> ModuleType:
+        """Dynamically import producer module.
+
+        Python's import system automatically caches modules in sys.modules,
+        so repeated imports are fast and don't require manual caching.
+
+        Args:
+            schema: The schema to load producer for
+
+        Returns:
+            Producer module with produce() function
+
+        Raises:
+            ModuleNotFoundError: If producer module doesn't exist for this version
+
+        """
+        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
+        return importlib.import_module(
+            f"waivern_community.connectors.source_code.schema_producers.{module_name}"
+        )
 
     @classmethod
     @override
@@ -164,19 +187,21 @@ class SourceCodeConnector(Connector):
                 self._config.path
             )
 
-        return {
-            "schemaVersion": schema.version,
-            "name": f"source_code_analysis_{self._config.path.name}",
-            "description": f"Source code analysis of {self._config.path}",
-            "language": self._config.language or "auto-detected",
-            "source": str(self._config.path),
-            "metadata": {
+        # Load producer and transform to wire format
+        producer = self._load_producer(schema)
+        return producer.produce(
+            schema_version=schema.version,
+            source_config={
+                "path_name": self._config.path.name,
+                "path_str": str(self._config.path),
+                "language": self._config.language or "auto-detected",
+            },
+            analysis_summary={
                 "total_files": total_files,
                 "total_lines": total_lines,
-                "analysis_timestamp": datetime.now().isoformat(),
             },
-            "data": files_data,
-        }
+            files_data=files_data,
+        )
 
     def _analyse_single_file(
         self, file_path: Path
