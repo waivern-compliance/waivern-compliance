@@ -1,7 +1,9 @@
 """Data subject analysis analyser for GDPR Article 30(1)(c) compliance."""
 
+import importlib
 import logging
 from datetime import UTC, datetime
+from types import ModuleType
 from typing import override
 
 from waivern_core import Analyser
@@ -9,9 +11,7 @@ from waivern_core.message import Message
 from waivern_core.schemas import (
     AnalysisChainEntry,
     BaseAnalysisOutputMetadata,
-    BaseMetadata,
     Schema,
-    StandardInputDataModel,
 )
 from waivern_llm import BaseLLMService
 
@@ -55,6 +55,48 @@ class DataSubjectAnalyser(Analyser):
         """Get the name of the analyser."""
         return "data_subject_analyser"
 
+    def _load_reader(self, schema: Schema) -> ModuleType:
+        """Dynamically import reader module.
+
+        Python's import system automatically caches modules in sys.modules,
+        so repeated imports are fast and don't require manual caching.
+
+        Args:
+            schema: Input schema to load reader for
+
+        Returns:
+            Reader module with read() function
+
+        Raises:
+            ModuleNotFoundError: If reader module doesn't exist for this version
+
+        """
+        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
+        return importlib.import_module(
+            f"waivern_community.analysers.data_subject_analyser.schema_readers.{module_name}"
+        )
+
+    def _load_producer(self, schema: Schema) -> ModuleType:
+        """Dynamically import producer module.
+
+        Python's import system automatically caches modules in sys.modules,
+        so repeated imports are fast and don't require manual caching.
+
+        Args:
+            schema: Output schema to load producer for
+
+        Returns:
+            Producer module with produce() function
+
+        Raises:
+            ModuleNotFoundError: If producer module doesn't exist for this version
+
+        """
+        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
+        return importlib.import_module(
+            f"waivern_community.analysers.data_subject_analyser.schema_producers.{module_name}"
+        )
+
     @classmethod
     @override
     def get_supported_input_schemas(cls) -> list[Schema]:
@@ -74,7 +116,7 @@ class DataSubjectAnalyser(Analyser):
         output_schema: Schema,
         message: Message,
     ) -> Message:
-        """Process data to identify data subjects."""
+        """Process data to identify data subjects using dynamic reader/producer."""
         logger.info("Starting data subject analysis")
 
         # Validate input message
@@ -82,14 +124,19 @@ class DataSubjectAnalyser(Analyser):
 
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
-        # Process standard_input schema data
-        if input_schema.name == "standard_input":
-            typed_data = StandardInputDataModel[BaseMetadata].model_validate(
-                message.content
-            )
-            findings = self._process_standard_input_data(typed_data)
-        else:
-            raise ValueError(f"Unsupported input schema: {input_schema.name}")
+        # Load reader and transform to canonical Pydantic model
+        reader = self._load_reader(input_schema)
+        typed_data = reader.read(message.content)
+
+        # Process each data item using the pattern matcher
+        findings: list[DataSubjectFindingModel] = []
+        for data_item in typed_data.data:
+            content = data_item.content
+            metadata = data_item.metadata
+
+            # Find patterns using pattern matcher
+            item_findings = self._pattern_matcher.find_patterns(content, metadata)
+            findings.extend(item_findings)
 
         # Update analysis chain with this analyser
         updated_chain_dicts = self.update_analyses_chain(
@@ -99,46 +146,18 @@ class DataSubjectAnalyser(Analyser):
         updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
 
         # Create and validate output message
-        return self._create_output_message(
-            findings, input_schema, output_schema, updated_chain
-        )
-
-    def _process_standard_input_data(
-        self, typed_data: StandardInputDataModel[BaseMetadata]
-    ) -> list[DataSubjectFindingModel]:
-        """Process standard_input schema data.
-
-        Args:
-            typed_data: Validated standard input data
-
-        Returns:
-            List of data subject findings
-
-        """
-        findings: list[DataSubjectFindingModel] = []
-
-        for data_item in typed_data.data:
-            content = data_item.content
-            metadata = data_item.metadata
-
-            # Find patterns using pattern matcher
-            item_findings = self._pattern_matcher.find_patterns(content, metadata)
-            findings.extend(item_findings)
-
-        return findings
+        return self._create_output_message(findings, output_schema, updated_chain)
 
     def _create_output_message(
         self,
         findings: list[DataSubjectFindingModel],
-        input_schema: Schema,
         output_schema: Schema,
         analyses_chain: list[AnalysisChainEntry],
     ) -> Message:
-        """Create output message with data subject findings.
+        """Create output message with data subject findings using producer.
 
         Args:
             findings: List of data subject findings
-            input_schema: Input schema used for processing
             output_schema: Output schema for validation
             analyses_chain: Updated analysis chain with proper ordering
 
@@ -150,6 +169,11 @@ class DataSubjectAnalyser(Analyser):
         total_classifications = len(findings)
         categories_identified = list(set(f.primary_category for f in findings))
 
+        summary = {
+            "total_classifications": total_classifications,
+            "categories_identified": categories_identified,
+        }
+
         # Create analysis metadata for chaining support
         analysis_metadata = BaseAnalysisOutputMetadata(
             ruleset_used=self._config.pattern_matching.ruleset,
@@ -158,23 +182,25 @@ class DataSubjectAnalyser(Analyser):
             analyses_chain=analyses_chain,
         )
 
-        # Build complete output structure
-        output_content = {
-            "findings": [
-                finding.model_dump(mode="json", exclude_none=True)
-                for finding in findings
-            ],
-            "summary": {
-                "total_classifications": total_classifications,
-                "categories_identified": categories_identified,
-            },
-            "analysis_metadata": analysis_metadata.model_dump(
-                mode="json", exclude_none=True
-            ),
-        }
+        # Load producer and transform to wire format
+        producer = self._load_producer(output_schema)
+        result_data = producer.produce(
+            findings=findings,
+            summary=summary,
+            analysis_metadata=analysis_metadata,
+        )
 
-        return Message(
+        output_message = Message(
             id=f"data_subject_analysis_{datetime.now(UTC).isoformat()}",
-            content=output_content,
+            content=result_data,
             schema=output_schema,
         )
+
+        # Validate the output message against the output schema
+        output_message.validate()
+
+        logger.info(
+            f"DataSubjectAnalyser processed with {len(result_data['findings'])} findings"
+        )
+
+        return output_message
