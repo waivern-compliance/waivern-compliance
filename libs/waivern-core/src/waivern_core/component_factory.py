@@ -6,19 +6,18 @@ factories must implement. ComponentFactory bridges the gap between:
 - Component instances (transient, created per execution)
 
 ComponentFactory instances are singleton services that create transient
-component instances (analysers/connectors) with injected dependencies.
+component instances (analysers/connectors) by resolving dependencies from
+the ServiceContainer.
 
 Example:
-    >>> # Infrastructure service (singleton)
-    >>> llm_service = container.get_service(BaseLLMService)
-    >>>
-    >>> # Component factory (singleton) with injected dependencies
-    >>> factory = PersonalDataAnalyserFactory(llm_service=llm_service)
+    >>> # Component factory (singleton) receives container
+    >>> factory = PersonalDataAnalyserFactory(container)
     >>>
     >>> # Component configuration dict (from runbook properties)
     >>> config = {"pattern_matching": {"ruleset": "personal_data"}}
     >>>
     >>> # Component instance (transient) created by factory
+    >>> # Factory resolves dependencies from container internally
     >>> analyser = factory.create(config)
 
 """
@@ -60,12 +59,17 @@ class ComponentFactory[T](ABC):
 
     Example:
         >>> class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
-        ...     def __init__(self, llm_service: BaseLLMService | None = None):
-        ...         self._llm_service = llm_service
+        ...     def __init__(self, container: ServiceContainer):
+        ...         self._container = container
         ...
         ...     def create(self, config: ComponentConfig) -> PersonalDataAnalyser:
         ...         analyser_config = PersonalDataAnalyserConfig.from_properties(config)
-        ...         return PersonalDataAnalyser(analyser_config, self._llm_service)
+        ...         # Resolve dependencies from container
+        ...         try:
+        ...             llm_service = self._container.get_service(BaseLLMService)
+        ...         except ValueError:
+        ...             llm_service = None
+        ...         return PersonalDataAnalyser(analyser_config, llm_service)
         ...
         ...     def get_component_name(self) -> str:
         ...         return "personal_data_analyser"
@@ -81,7 +85,12 @@ class ComponentFactory[T](ABC):
         ...         try:
         ...             analyser_config = PersonalDataAnalyserConfig.from_properties(config)
         ...             if analyser_config.llm_validation.enable_llm_validation:
-        ...                 return self._llm_service is not None
+        ...                 # Check if service is available in container
+        ...                 try:
+        ...                     self._container.get_service(BaseLLMService)
+        ...                     return True
+        ...                 except ValueError:
+        ...                     return False
         ...             return True
         ...         except Exception:
         ...             return False
@@ -108,7 +117,7 @@ class ComponentFactory[T](ABC):
             RuntimeError: If component creation fails (e.g., service unavailable)
 
         Example:
-            >>> factory = PersonalDataAnalyserFactory(llm_service)
+            >>> factory = PersonalDataAnalyserFactory(container)
             >>> config = {
             ...     "pattern_matching": {"ruleset": "personal_data"},
             ...     "llm_validation": {"enable_llm_validation": True}

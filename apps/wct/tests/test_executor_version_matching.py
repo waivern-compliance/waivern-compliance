@@ -12,8 +12,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Protocol, override
 
-from waivern_community.analysers import Analyser
-from waivern_community.connectors import Connector
+from waivern_core import Analyser, Connector
 from waivern_core.component_factory import ComponentConfig, ComponentFactory
 from waivern_core.message import Message
 from waivern_core.schemas import Schema

@@ -11,8 +11,9 @@ from typing import Any, override
 from unittest.mock import MagicMock
 
 import pytest
-from waivern_community.analysers import Analyser, AnalyserError
-from waivern_community.connectors import (
+from waivern_core import (
+    Analyser,
+    AnalyserError,
     Connector,
     ConnectorError,
 )
@@ -938,16 +939,24 @@ class TestExecutorCreateWithBuiltIns:
         # Verify all built-in analyser factories are registered
         registered_analysers = executor.list_available_analysers()
 
-        # Check that all expected analyser factories are present
-        expected_analysers = {
+        # Check that expected core analyser factories are present
+        # Note: This checks for a subset, not exact match, since additional
+        # analysers may be discovered via entry points in the workspace
+        expected_core_analysers = {
             "personal_data_analyser",
             "processing_purpose_analyser",
             "data_subject_analyser",
         }
         registered_names = set(registered_analysers.keys())
 
-        assert expected_analysers == registered_names
-        assert len(registered_analysers) == 3
+        assert expected_core_analysers.issubset(registered_names), (
+            f"Missing expected analysers. "
+            f"Expected at least: {expected_core_analysers}, "
+            f"Found: {registered_names}"
+        )
+        assert len(registered_analysers) >= 3, (
+            f"Expected at least 3 analysers, found {len(registered_analysers)}"
+        )
 
     def test_creates_independent_executor_instances(self) -> None:
         """Test that multiple calls create independent executor instances."""

@@ -1,27 +1,18 @@
-"""WCT Schemas - Re-exports for backwards compatibility.
+"""WCT Schemas - Re-exports core schemas from waivern-core.
 
-This module re-exports schemas from their new locations in waivern-core
-and waivern-community packages.
+This module re-exports only core schemas that WCT needs. Component-specific schemas
+(from connectors and analysers) are NOT re-exported here to maintain the plugin
+architecture where WCT has no hardcoded knowledge of specific components.
 
-Note: This is a compatibility layer. New code should import directly from:
-- waivern_core.schemas for core schemas (StandardInputSchema, base types)
-- waivern_community.connectors.*.schemas for connector schemas
-- waivern_community.analysers.*.schemas for analyser output schemas
+Components register their schemas dynamically via entry points, and the SchemaRegistry
+discovers them at runtime. WCT only needs to know about core base types.
+
+Note: If you need component-specific schemas (e.g., SourceCodeDataModel,
+PersonalDataFindingModel), import them directly from the component package
+(e.g., from waivern_source_code.schemas import SourceCodeDataModel).
 """
 
-# Core schemas and base types (from waivern-core)
-# Type models from standalone packages and waivern-community
-from waivern_community.connectors.source_code.schemas import (
-    SourceCodeAnalysisMetadataModel,
-    SourceCodeClassModel,
-    SourceCodeClassPropertyModel,
-    SourceCodeDataModel,
-    SourceCodeFileDataModel,
-    SourceCodeFileMetadataModel,
-    SourceCodeFunctionModel,
-    SourceCodeFunctionParameterModel,
-    SourceCodeImportModel,
-)
+# Core schemas and base types (from waivern-core only)
 from waivern_core.schemas import (
     BaseFindingModel,
     BaseMetadata,
@@ -53,14 +44,4 @@ __all__ = [
     "BaseMetadata",
     "RelationalDatabaseMetadata",
     "FilesystemMetadata",
-    # Source code schema types (from waivern-community)
-    "SourceCodeDataModel",
-    "SourceCodeFileDataModel",
-    "SourceCodeAnalysisMetadataModel",
-    "SourceCodeFileMetadataModel",
-    "SourceCodeFunctionModel",
-    "SourceCodeFunctionParameterModel",
-    "SourceCodeClassModel",
-    "SourceCodeClassPropertyModel",
-    "SourceCodeImportModel",
 ]

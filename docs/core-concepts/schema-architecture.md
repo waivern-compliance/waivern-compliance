@@ -17,10 +17,10 @@ Schemas used by multiple components across the framework:
 
 ### 2. Component-Specific Schemas → Component Package
 Schemas that define a single component's output:
-- Source code connector → `libs/waivern-community/connectors/source_code/schemas/json_schemas/source_code/`
-- Personal data analyser → `libs/waivern-community/analysers/personal_data_analyser/schemas/json_schemas/personal_data_finding/`
-- Data subject analyser → `libs/waivern-community/analysers/data_subject_analyser/schemas/json_schemas/data_subject_finding/`
-- Processing purpose analyser → `libs/waivern-community/analysers/processing_purpose_analyser/schemas/json_schemas/processing_purpose_finding/`
+- Source code connector → `libs/waivern-source-code/src/waivern_source_code/schemas/json_schemas/source_code/`
+- Personal data analyser → `libs/waivern-personal-data-analyser/src/waivern_personal_data_analyser/schemas/json_schemas/personal_data_finding/`
+- Data subject analyser → `libs/waivern-data-subject-analyser/src/waivern_data_subject_analyser/schemas/json_schemas/data_subject_finding/`
+- Processing purpose analyser → `libs/waivern-processing-purpose-analyser/src/waivern_processing_purpose_analyser/schemas/json_schemas/processing_purpose_finding/`
 
 ### 3. Domain-Shared Schemas → Domain Package
 When multiple components in the same domain share a schema:
@@ -213,13 +213,13 @@ class StandardInputSchema(Schema):
 
 ### Example Search Paths
 
-For `SourceCodeSchema` in `libs/waivern-community/connectors/source_code/schemas/source_code.py`:
+For `SourceCodeSchema` in `libs/waivern-source-code/src/waivern_source_code/schemas/source_code.py`:
 
 ```python
 search_paths=[Path(__file__).parent / "json_schemas"]
 ```
 
-Resolves to: `libs/waivern-community/connectors/source_code/schemas/json_schemas/`
+Resolves to: `libs/waivern-source-code/src/waivern_source_code/schemas/json_schemas/`
 
 Loader will search: `json_schemas/source_code/1.0.0/source_code.json`
 

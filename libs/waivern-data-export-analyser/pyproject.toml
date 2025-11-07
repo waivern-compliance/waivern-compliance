@@ -1,0 +1,89 @@
+[project]
+name = "waivern-data-export-analyser"
+version = "0.1.0"
+description = "Data export analyser for Waivern Compliance Framework (work in progress)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "waivern-core",
+    "pydantic>=2.11.5",
+]
+
+[project.entry-points."waivern.analysers"]
+data_export = "waivern_data_export_analyser:DataExportAnalyserFactory"
+
+[project.entry-points."waivern.schemas"]
+data_export = "waivern_data_export_analyser:register_schemas"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.29.2",
+    "ruff>=0.11.12",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+dev-mode-dirs = ["src"]
+
+# Include JSON schemas, vendor database files, and py.typed marker
+include = [
+    "src/waivern_data_export_analyser/**/*.py",
+    "src/waivern_data_export_analyser/**/schemas/json_schemas/**/*.json",
+    "src/waivern_data_export_analyser/**/vendor_database/**/*.json",
+    "src/waivern_data_export_analyser/**/vendor_database/**/*.sql",
+    "src/waivern_data_export_analyser/**/vendor_database/**/*.db",
+    "src/waivern_data_export_analyser/**/vendor_database/**/*.md",
+    "src/waivern_data_export_analyser/py.typed",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/waivern_data_export_analyser"]
+
+[tool.basedpyright]
+typeCheckingMode = "strict"
+reportImplicitOverride = "error"
+exclude = [
+    "tests/waivern_data_export_analyser/test_vendor_database_protection.py"
+]
+
+[tool.ruff]
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "ANN",    # flake8-annotations - enforce type annotations
+    "B",      # flake8-bugbear - find likely bugs and design problems
+    "D",      # pydocstyle - docstring style checking
+    "F",      # pyflakes - detect various errors
+    "I",      # isort - import sorting
+    "PL",     # pylint - comprehensive code analysis
+    "RUF100", # ruff-specific - detect unused noqa directives
+    "S",      # flake8-bandit - security issue detection
+    "UP",     # pyupgrade - upgrade syntax for newer Python versions
+]
+ignore = [
+    "D203",    # one-blank-line-before-class - conflicts with D211 (no-blank-line-before-class)
+    "D213",    # multi-line-summary-second-line - conflicts with D212 (multi-line-summary-first-line)
+]
+
+[tool.ruff.lint.pydocstyle]
+ignore-decorators = ["typing.overload"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # assert-used - assert statements are standard in pytest
+    "PLR2004", # magic-value-comparison - magic values are acceptable in tests
+    "PLR0915", # too-many-statements - vendor database tests are comprehensive
+    "ANN",     # flake8-annotations - test fixtures don't need type annotations
+    "D",       # pydocstyle - vendor database tests are work in progress
+    "F821",    # undefined-name - vendor database tests are work in progress
+    "F841",    # unused-variable - vendor database tests are work in progress
+]
+"src/waivern_data_export_analyser/vendor_database/**/*.py" = [
+    "D",       # pydocstyle - vendor database scripts are standalone utilities
+    "ANN",     # flake8-annotations - vendor database scripts are standalone utilities
+]

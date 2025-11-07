@@ -11,19 +11,9 @@ between connectors and analysers based on runbook configurations.
 from __future__ import annotations
 
 import logging
+from importlib.metadata import entry_points
 from pathlib import Path
 
-from waivern_community.analysers.data_subject_analyser import (
-    DataSubjectAnalyserFactory,
-)
-from waivern_community.analysers.processing_purpose_analyser import (
-    ProcessingPurposeAnalyserFactory,
-)
-from waivern_community.connectors import (
-    FilesystemConnectorFactory,
-    SourceCodeConnectorFactory,
-    SQLiteConnectorFactory,
-)
 from waivern_core import Analyser, AnalyserError, Connector, ConnectorError
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.errors import WaivernError
@@ -31,8 +21,6 @@ from waivern_core.schemas import Schema
 from waivern_core.services.container import ServiceContainer
 from waivern_llm import BaseLLMService
 from waivern_llm.di.factory import LLMServiceFactory
-from waivern_mysql import MySQLConnectorFactory
-from waivern_personal_data_analyser import PersonalDataAnalyserFactory
 
 from wct.analysis import AnalysisResult
 from wct.runbook import (
@@ -67,17 +55,77 @@ class Executor:
         self.connector_factories: dict[str, ComponentFactory[Connector]] = {}
         self.analyser_factories: dict[str, ComponentFactory[Analyser]] = {}
 
+    def _discover_and_register_schemas(self) -> None:
+        """Discover and register schemas from entry points.
+
+        This must be called BEFORE discovering components, as components
+        may reference schemas during initialisation.
+        """
+        schema_eps = entry_points(group="waivern.schemas")
+
+        logger.debug("Discovering schemas from %d entry points", len(list(schema_eps)))
+
+        for ep in entry_points(group="waivern.schemas"):  # Re-query to avoid consuming
+            try:
+                register_func = ep.load()
+                register_func()
+                logger.debug("✓ Registered schemas from: %s", ep.name)
+            except Exception as e:
+                logger.warning("Failed to register schemas from %s: %s", ep.name, e)
+
+    def _discover_connectors(self) -> None:
+        """Discover connector factories from entry points."""
+        connector_eps = entry_points(group="waivern.connectors")
+
+        logger.debug(
+            "Discovering connectors from %d entry points", len(list(connector_eps))
+        )
+
+        for ep in entry_points(
+            group="waivern.connectors"
+        ):  # Re-query to avoid consuming
+            try:
+                factory_class = ep.load()
+                # Instantiate factory with ServiceContainer for DI
+                factory = factory_class(self._container)
+                self.register_connector_factory(factory)
+                logger.debug("✓ Registered connector: %s", ep.name)
+            except Exception as e:
+                logger.warning("Failed to load connector %s: %s", ep.name, e)
+
+    def _discover_analysers(self) -> None:
+        """Discover analyser factories from entry points.
+
+        Factories receive the ServiceContainer and resolve their own dependencies.
+        """
+        analyser_eps = entry_points(group="waivern.analysers")
+
+        logger.debug(
+            "Discovering analysers from %d entry points", len(list(analyser_eps))
+        )
+
+        for ep in entry_points(
+            group="waivern.analysers"
+        ):  # Re-query to avoid consuming
+            try:
+                factory_class = ep.load()
+                # Instantiate factory with ServiceContainer for DI
+                factory = factory_class(self._container)
+                self.register_analyser_factory(factory)
+                logger.debug("✓ Registered analyser: %s", ep.name)
+            except Exception as e:
+                logger.warning("Failed to load analyser %s: %s", ep.name, e)
+
     @classmethod
     def create_with_built_ins(cls) -> Executor:
-        """Create an executor pre-configured with all built-in connectors and analysers.
+        """Create an executor with components discovered via entry points.
 
-        This method:
-        1. Creates and configures the DI container with infrastructure services
-        2. Instantiates all component factories with injected dependencies
-        3. Registers factories with the executor
+        Components are discovered via entry points - no import-time side effects.
+        This enables a true plugin architecture where any installed package can
+        provide connectors, analysers, or rulesets.
 
         Returns:
-            Configured executor with all built-in component factories registered
+            Configured executor with all discovered component factories registered
 
         """
         # Create and configure DI container
@@ -88,28 +136,12 @@ class Executor:
         # Create executor with container
         executor = cls(container)
 
-        # Get infrastructure services from container (may be None if unavailable)
-        try:
-            llm_service = container.get_service(BaseLLMService)
-            logger.debug("Retrieved LLM service from container")
-        except ValueError:
-            llm_service = None
-            logger.warning(
-                "LLM service unavailable - analysers will run without LLM validation"
-            )
+        # CRITICAL: Register schemas FIRST, before loading components
+        executor._discover_and_register_schemas()
 
-        # Register analyser factories with LLM service dependency
-        executor.register_analyser_factory(PersonalDataAnalyserFactory(llm_service))
-        executor.register_analyser_factory(
-            ProcessingPurposeAnalyserFactory(llm_service)
-        )
-        executor.register_analyser_factory(DataSubjectAnalyserFactory(llm_service))
-
-        # Register connector factories (no service dependencies)
-        executor.register_connector_factory(FilesystemConnectorFactory())
-        executor.register_connector_factory(SourceCodeConnectorFactory())
-        executor.register_connector_factory(SQLiteConnectorFactory())
-        executor.register_connector_factory(MySQLConnectorFactory())
+        # Discover and register components (factories resolve dependencies from container)
+        executor._discover_connectors()
+        executor._discover_analysers()
 
         logger.info(
             "Executor initialised with %d connector factories and %d analyser factories",

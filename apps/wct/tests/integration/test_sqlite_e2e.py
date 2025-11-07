@@ -4,7 +4,8 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from waivern_community.connectors.sqlite import SQLiteConnectorFactory
+from waivern_core.services.container import ServiceContainer
+from waivern_sqlite import SQLiteConnectorFactory
 
 from wct.executor import Executor
 from wct.schemas import Schema
@@ -53,7 +54,8 @@ class TestSQLiteE2EIntegration:
             "database_path": compliance_database_path,
             "max_rows_per_table": 20,
         }
-        factory = SQLiteConnectorFactory()
+        container = ServiceContainer()
+        factory = SQLiteConnectorFactory(container)
         connector = factory.create(properties)
         schema = Schema("standard_input", "1.0.0")
 
@@ -147,7 +149,8 @@ class TestSQLiteE2EIntegration:
             "database_path": compliance_database_path,
             "max_rows_per_table": row_limit,
         }
-        factory = SQLiteConnectorFactory()
+        container = ServiceContainer()
+        factory = SQLiteConnectorFactory(container)
         connector = factory.create(properties)
         schema = Schema("standard_input", "1.0.0")
 

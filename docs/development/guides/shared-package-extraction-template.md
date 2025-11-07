@@ -217,9 +217,6 @@ pip install {SHARED_PACKAGE}
 - **[UtilityClass]**: [Description]
 - **[AnotherClass]**: [Description]
 
-## Development
-
-See [CLAUDE.md](../../CLAUDE.md) for development guidelines.
 ```
 
 #### 1.5 Copy Shared Code

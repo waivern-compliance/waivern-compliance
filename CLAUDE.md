@@ -17,10 +17,15 @@ waivern-compliance/
 │   ├── waivern-llm/               # Multi-provider LLM abstraction (Anthropic, OpenAI, Google)
 │   ├── waivern-connectors-database/  # Shared SQL connector utilities
 │   ├── waivern-mysql/             # MySQL connector (standalone)
+│   ├── waivern-sqlite/            # SQLite connector (standalone)
+│   ├── waivern-filesystem/        # Filesystem connector (standalone)
+│   ├── waivern-source-code/       # Source code connector (standalone)
 │   ├── waivern-rulesets/          # Shared rulesets (standalone)
 │   ├── waivern-analysers-shared/  # Shared analyser utilities (standalone)
 │   ├── waivern-personal-data-analyser/  # Personal data analyser (standalone)
-│   └── waivern-community/         # SQLite + other connectors, analysers, prompts
+│   ├── waivern-data-subject-analyser/  # Data subject analyser (standalone)
+│   ├── waivern-processing-purpose-analyser/  # Processing purpose analyser (standalone)
+│   └── waivern-data-export-analyser/  # Data export analyser (work in progress)
 └── apps/                           # Applications
     └── wct/                        # Waivern Compliance Tool (CLI application)
         ├── .env                    # App-specific configuration
@@ -38,10 +43,15 @@ waivern-compliance/
 - **waivern-llm**: Multi-provider LLM service with lazy loading for optional providers (zero WCT dependencies)
 - **waivern-connectors-database**: Shared SQL connector utilities (DatabaseConnector, DatabaseExtractionUtils, DatabaseSchemaUtils)
 - **waivern-mysql**: MySQL connector (standalone package for minimal dependencies)
+- **waivern-sqlite**: SQLite connector (standalone package)
+- **waivern-filesystem**: Filesystem connector for reading files and directories (standalone package)
+- **waivern-source-code**: Source code connector for PHP analysis (standalone package)
 - **waivern-rulesets**: Shared rulesets for pattern-based analysis (PersonalDataRuleset, ProcessingPurposesRuleset, etc.)
 - **waivern-analysers-shared**: Shared utilities for analysers (LLMServiceManager, RulesetManager, EvidenceExtractor, etc.)
 - **waivern-personal-data-analyser**: Personal data analyser (standalone package for minimal dependencies)
-- **waivern-community**: Built-in connectors (SQLite, Filesystem, SourceCode), analysers (ProcessingPurpose, DataSubject), and prompts (re-exports standalone packages for convenience)
+- **waivern-data-subject-analyser**: Data subject analyser (standalone package)
+- **waivern-processing-purpose-analyser**: Processing purpose analyser (standalone package, supports both standard input and source code analysis)
+- **waivern-data-export-analyser**: Data export analyser with TCF vendor database (work in progress, not yet functional)
 
 **Applications:**
 - **wct**: CLI tool that orchestrates compliance analysis by executing YAML runbooks using framework components
@@ -80,13 +90,13 @@ The framework is **schema-driven**:
 
 **Schema Ownership:**
 - **Shared schemas** (StandardInputSchema, BaseFindingSchema) → waivern-core
-- **Component-specific schemas** → co-located with components (standalone packages or waivern-community)
+- **Component-specific schemas** → co-located with components (standalone packages)
 - **Application schemas** (runbook config, analysis output) → wct
 
 **Examples:**
 - PersonalDataFindingSchema → waivern-personal-data-analyser (standalone)
-- ProcessingPurposeFindingSchema → waivern-community
-- DataSubjectFindingSchema → waivern-community
+- ProcessingPurposeFindingSchema → waivern-processing-purpose-analyser (standalone)
+- DataSubjectFindingSchema → waivern-data-subject-analyser (standalone)
 
 ## Development Commands
 
@@ -123,7 +133,7 @@ Each package can be checked independently:
 # Check individual packages
 cd libs/waivern-core && ./scripts/lint.sh
 cd libs/waivern-llm && ./scripts/type-check.sh
-cd libs/waivern-community && ./scripts/format.sh
+cd libs/waivern-personal-data-analyser && ./scripts/format.sh
 cd apps/wct && ./scripts/dev-checks.sh
 ```
 
@@ -271,13 +281,14 @@ execution:
 The framework libraries are independent:
 - **waivern-core** - No dependencies on WCT or other packages
 - **waivern-llm** - Depends only on waivern-core, no WCT dependencies
-- **waivern-community** - Depends on waivern-core and waivern-llm, no WCT dependencies
-- **wct** - Application that uses all framework libraries
+- **Component packages** - Each standalone package depends only on waivern-core and necessary shared utilities
+- **wct** - Application that discovers and uses framework components via entry points
 
 This enables:
 - Independent versioning and releases
 - Other applications can use the framework
 - Clear separation of concerns
+- True plugin architecture with zero hardcoded dependencies
 
 ### Package-Centric Quality Checks
 
@@ -308,6 +319,38 @@ All data flow uses Message objects:
 - Executor discovers component factories by type name
 - Tests use `isolated_registry` fixture for proper isolation
 
+### Shared Utilities vs Services
+
+**Architecture Decision:** Database utilities (waivern-connectors-database) remain a **shared library**, not a service.
+
+**When to use Services (via ServiceContainer):**
+- Stateful components requiring lifecycle management
+- Multiple implementations of same interface
+- Runtime configuration needed
+- External system connections (API clients, database pools)
+- Examples: LLM services (API clients, retry logic, rate limiting)
+
+**When to use Shared Libraries (direct imports):**
+- Stateless pure functions with no side effects
+- Single implementation, no polymorphism needed
+- No runtime configuration required
+- No lifecycle management needed
+- Examples: Database extraction utilities, schema utilities, evidence extractors
+
+**Database utilities characteristics:**
+- Pure functions: `extract_data(conn, query) → dict`
+- No state, no configuration, no lifecycle
+- Single implementation (no need for polymorphism)
+- Used in hot path (performance-sensitive)
+
+**Why not convert to service:**
+- Would add ~110 LOC infrastructure for 134 LOC utilities
+- Violates YAGNI principle (no current need for DI features)
+- Performance overhead (DI resolution) unjustified
+- Industry patterns (Django utils, Spring utils, Apache Commons) support shared library approach
+
+**Result:** Stateless pure functions belong in shared libraries. Services are for stateful infrastructure requiring lifecycle management.
+
 ## Core Concepts Documentation
 
 **See:** [docs/core-concepts/wcf-core-components.md](docs/core-concepts/wcf-core-components.md) for detailed framework concepts.
@@ -334,7 +377,6 @@ All data flow uses Message objects:
    - Rulesets → `libs/waivern-rulesets/`
    - Shared analyser utilities → `libs/waivern-analysers-shared/`
    - Standalone components → `libs/waivern-{component-name}/`
-   - Community components → `libs/waivern-community/`
    - Application logic → `apps/wct/`
 
 3. **Run quality checks:**

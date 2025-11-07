@@ -101,14 +101,16 @@ Applications are responsible for loading configuration. WCT loads `.env` from it
 - Development database credentials
 - Local development settings
 
-### Libraries (waivern-core, waivern-llm, waivern-community)
+### Framework Libraries (waivern-core, waivern-llm, component packages)
 
 **Configuration location:** None (libraries have no `.env` files)
 
-Libraries read configuration from the environment using `os.getenv()`. This allows:
+Framework libraries read configuration from the environment using `os.getenv()`. This allows:
 - Multiple applications to use the same library differently
 - Flexible deployment patterns
 - Clear separation of concerns
+
+**Component packages** (connectors, analysers) are discovered via entry points and configured through runbooks. Each package documents required environment variables in its README.
 
 **Libraries document required environment variables in their READMEs.**
 
@@ -282,20 +284,25 @@ analysers:
 
 No configuration required (base abstractions only).
 
-### waivern-community
+### Component Packages (Connectors and Analysers)
 
-Documentation coming in Phase 3 (after migration).
+All components are now standalone packages discovered via Python entry points:
+- **Connectors:** mysql, sqlite, filesystem, source-code
+- **Analysers:** personal-data, data-subject, processing-purpose, data-export
+
+Each component package:
+- Registers via `pyproject.toml` entry points
+- Documents configuration in its README
+- Configurable through runbook properties
+
+See individual package READMEs in `libs/waivern-*/` for component-specific configuration.
 
 ## Migration Notes
 
-**Changed in Phase 2 (waivern-llm extraction):**
-- `.env` moved from workspace root to `apps/wct/.env`
-- This supports app-specific configuration for monorepo
-- Old location (root `.env`) is deprecated
-
-**Coming in Phase 3 (waivern-community):**
-- Connector/analyser configuration will move to waivern-community package
-- Environment variable support remains unchanged
+**Completed Migrations:**
+- **Phase 2:** `.env` moved from workspace root to `apps/wct/.env` for app-specific configuration
+- **Phase 3:** All components extracted to standalone packages with entry point discovery
+- **Phase 4-5:** waivern-community removed, true plugin architecture established
 
 ## Additional Resources
 
