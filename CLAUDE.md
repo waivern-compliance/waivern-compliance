@@ -308,6 +308,38 @@ All data flow uses Message objects:
 - Executor discovers component factories by type name
 - Tests use `isolated_registry` fixture for proper isolation
 
+### Shared Utilities vs Services
+
+**Architecture Decision:** Database utilities (waivern-connectors-database) remain a **shared library**, not a service.
+
+**When to use Services (via ServiceContainer):**
+- Stateful components requiring lifecycle management
+- Multiple implementations of same interface
+- Runtime configuration needed
+- External system connections (API clients, database pools)
+- Examples: LLM services (API clients, retry logic, rate limiting)
+
+**When to use Shared Libraries (direct imports):**
+- Stateless pure functions with no side effects
+- Single implementation, no polymorphism needed
+- No runtime configuration required
+- No lifecycle management needed
+- Examples: Database extraction utilities, schema utilities, evidence extractors
+
+**Database utilities characteristics:**
+- Pure functions: `extract_data(conn, query) → dict`
+- No state, no configuration, no lifecycle
+- Single implementation (no need for polymorphism)
+- Used in hot path (performance-sensitive)
+
+**Why not convert to service:**
+- Would add ~110 LOC infrastructure for 134 LOC utilities
+- Violates YAGNI principle (no current need for DI features)
+- Performance overhead (DI resolution) unjustified
+- Industry patterns (Django utils, Spring utils, Apache Commons) support shared library approach
+
+**Result:** Stateless pure functions belong in shared libraries. Services are for stateful infrastructure requiring lifecycle management.
+
 ## Core Concepts Documentation
 
 **See:** [docs/core-concepts/wcf-core-components.md](docs/core-concepts/wcf-core-components.md) for detailed framework concepts.
