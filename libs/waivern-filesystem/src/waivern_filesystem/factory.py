@@ -3,6 +3,7 @@
 from typing import override
 
 from waivern_core import ComponentConfig, ComponentFactory, Schema
+from waivern_core.services.container import ServiceContainer
 
 from .config import FilesystemConnectorConfig
 from .connector import FilesystemConnector
@@ -14,6 +15,15 @@ class FilesystemConnectorFactory(ComponentFactory[FilesystemConnector]):
     This factory has no service dependencies because filesystem operations
     require no infrastructure services.
     """
+
+    def __init__(self, container: ServiceContainer) -> None:
+        """Initialise factory with dependency injection container.
+
+        Args:
+            container: Service container for resolving dependencies (unused for this factory)
+
+        """
+        self._container = container
 
     @override
     def create(self, config: ComponentConfig) -> FilesystemConnector:

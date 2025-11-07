@@ -25,6 +25,8 @@ from waivern_core import (
     ComponentFactory,
     ComponentFactoryContractTests,
 )
+from waivern_core.services.container import ServiceContainer
+from waivern_core.services.protocols import ServiceFactory
 from waivern_llm import BaseLLMService
 
 from waivern_personal_data_analyser import PersonalDataAnalyser
@@ -48,8 +50,12 @@ class TestPersonalDataAnalyserFactory(
 
         This fixture is required by ComponentFactoryContractTests.
         """
+        container = ServiceContainer()
         llm_service = Mock(spec=BaseLLMService)
-        return PersonalDataAnalyserFactory(llm_service=llm_service)
+        llm_service_factory = Mock(spec=ServiceFactory)
+        llm_service_factory.create.return_value = llm_service
+        container.register(BaseLLMService, llm_service_factory)
+        return PersonalDataAnalyserFactory(container)
 
     @pytest.fixture
     def valid_config(self) -> ComponentConfig:
@@ -75,7 +81,8 @@ class TestPersonalDataAnalyserFactory(
 
     def test_can_create_returns_false_when_llm_required_but_unavailable(self) -> None:
         """Test graceful degradation when LLM validation enabled but service unavailable."""
-        factory = PersonalDataAnalyserFactory(llm_service=None)
+        container = ServiceContainer()  # No LLM service registered
+        factory = PersonalDataAnalyserFactory(container)
 
         config_requiring_llm = {
             "pattern_matching": {"ruleset": "personal_data"},
@@ -88,7 +95,8 @@ class TestPersonalDataAnalyserFactory(
 
     def test_get_service_dependencies_declares_llm_service(self) -> None:
         """Test that factory declares BaseLLMService dependency."""
-        factory = PersonalDataAnalyserFactory()
+        container = ServiceContainer()
+        factory = PersonalDataAnalyserFactory(container)
 
         deps = factory.get_service_dependencies()
 

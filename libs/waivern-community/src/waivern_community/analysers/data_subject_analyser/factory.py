@@ -3,6 +3,7 @@
 from typing import override
 
 from waivern_core import ComponentConfig, ComponentFactory, Schema
+from waivern_core.services.container import ServiceContainer
 from waivern_llm import BaseLLMService
 
 from .analyser import DataSubjectAnalyser
@@ -12,9 +13,14 @@ from .types import DataSubjectAnalyserConfig
 class DataSubjectAnalyserFactory(ComponentFactory[DataSubjectAnalyser]):
     """Factory for creating DataSubjectAnalyser instances with dependency injection."""
 
-    def __init__(self, llm_service: BaseLLMService | None = None) -> None:
-        """Initialise factory with optional LLM service."""
-        self._llm_service = llm_service
+    def __init__(self, container: ServiceContainer) -> None:
+        """Initialise factory with dependency injection container.
+
+        Args:
+            container: Service container for resolving dependencies
+
+        """
+        self._container = container
 
     @override
     def create(self, config: ComponentConfig) -> DataSubjectAnalyser:
@@ -33,18 +39,21 @@ class DataSubjectAnalyserFactory(ComponentFactory[DataSubjectAnalyser]):
         # Parse and validate configuration
         analyser_config = DataSubjectAnalyserConfig.from_properties(config)
 
+        # Resolve LLM service from container
+        try:
+            llm_service = self._container.get_service(BaseLLMService)
+        except (ValueError, KeyError):
+            llm_service = None
+
         # Validate that LLM validation requirements can be met
-        if (
-            analyser_config.llm_validation.enable_llm_validation
-            and self._llm_service is None
-        ):
+        if analyser_config.llm_validation.enable_llm_validation and llm_service is None:
             msg = "LLM validation enabled but no LLM service available"
             raise ValueError(msg)
 
-        # Create analyser with injected LLM service
+        # Create analyser with resolved LLM service
         return DataSubjectAnalyser(
             config=analyser_config,
-            llm_service=self._llm_service,
+            llm_service=llm_service,
         )
 
     @override
@@ -65,12 +74,12 @@ class DataSubjectAnalyserFactory(ComponentFactory[DataSubjectAnalyser]):
             # Config validation failed
             return False
 
-        # If LLM validation enabled, must have LLM service
-        if (
-            analyser_config.llm_validation.enable_llm_validation
-            and self._llm_service is None
-        ):
-            return False
+        # If LLM validation enabled, must have LLM service available in container
+        if analyser_config.llm_validation.enable_llm_validation:
+            try:
+                self._container.get_service(BaseLLMService)
+            except (ValueError, KeyError):
+                return False
 
         return True
 

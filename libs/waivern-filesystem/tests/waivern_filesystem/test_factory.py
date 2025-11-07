@@ -2,6 +2,7 @@
 
 import pytest
 from waivern_core import ComponentConfig, ComponentFactory
+from waivern_core.services.container import ServiceContainer
 from waivern_core.testing import ComponentFactoryContractTests
 
 from waivern_filesystem import (
@@ -27,7 +28,8 @@ class TestFilesystemConnectorFactory(
     @pytest.fixture
     def factory(self) -> ComponentFactory[FilesystemConnector]:
         """Provide factory instance for contract tests."""
-        return FilesystemConnectorFactory()
+        container = ServiceContainer()
+        return FilesystemConnectorFactory(container)
 
     @pytest.fixture
     def valid_config(self, tmp_path) -> ComponentConfig:

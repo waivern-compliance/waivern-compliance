@@ -25,6 +25,8 @@ from waivern_core import (
     ComponentFactory,
     ComponentFactoryContractTests,
 )
+from waivern_core.services.container import ServiceContainer
+from waivern_core.services.protocols import ServiceFactory
 from waivern_llm import BaseLLMService
 
 from waivern_community.analysers.processing_purpose_analyser import (
@@ -52,8 +54,12 @@ class TestProcessingPurposeAnalyserFactory(
 
         This fixture is required by ComponentFactoryContractTests.
         """
+        container = ServiceContainer()
         llm_service = Mock(spec=BaseLLMService)
-        return ProcessingPurposeAnalyserFactory(llm_service=llm_service)
+        llm_service_factory = Mock(spec=ServiceFactory)
+        llm_service_factory.create.return_value = llm_service
+        container.register(BaseLLMService, llm_service_factory)
+        return ProcessingPurposeAnalyserFactory(container)
 
     @pytest.fixture
     def valid_config(self) -> ComponentConfig:
@@ -79,7 +85,8 @@ class TestProcessingPurposeAnalyserFactory(
 
     def test_can_create_returns_false_when_llm_required_but_unavailable(self) -> None:
         """Test graceful degradation when LLM validation enabled but service unavailable."""
-        factory = ProcessingPurposeAnalyserFactory(llm_service=None)
+        container = ServiceContainer()  # No LLM service registered
+        factory = ProcessingPurposeAnalyserFactory(container)
 
         config_requiring_llm = {
             "pattern_matching": {"ruleset": "processing_purposes"},
@@ -92,7 +99,8 @@ class TestProcessingPurposeAnalyserFactory(
 
     def test_get_service_dependencies_declares_llm_service(self) -> None:
         """Test that factory declares BaseLLMService dependency."""
-        factory = ProcessingPurposeAnalyserFactory()
+        container = ServiceContainer()
+        factory = ProcessingPurposeAnalyserFactory(container)
 
         deps = factory.get_service_dependencies()
 

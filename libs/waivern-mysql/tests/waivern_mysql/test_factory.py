@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 import pytest
 from waivern_core import ComponentConfig, ComponentFactory
+from waivern_core.services.container import ServiceContainer
 from waivern_core.testing import ComponentFactoryContractTests
 
 from waivern_mysql import MySQLConnector, MySQLConnectorFactory
@@ -40,7 +41,8 @@ class TestMySQLConnectorFactory(ComponentFactoryContractTests[MySQLConnector]):
     @pytest.fixture
     def factory(self) -> ComponentFactory[MySQLConnector]:
         """Provide factory instance for contract tests."""
-        return MySQLConnectorFactory()
+        container = ServiceContainer()
+        return MySQLConnectorFactory(container)
 
     @pytest.fixture
     def valid_config(self) -> ComponentConfig:

@@ -2,6 +2,7 @@
 
 import pytest
 from waivern_core import ComponentConfig, ComponentFactory
+from waivern_core.services.container import ServiceContainer
 from waivern_core.testing import ComponentFactoryContractTests
 
 from waivern_sqlite import (
@@ -19,7 +20,8 @@ class TestSQLiteConnectorFactory(ComponentFactoryContractTests[SQLiteConnector])
     @pytest.fixture
     def factory(self) -> ComponentFactory[SQLiteConnector]:
         """Provide factory instance for contract tests."""
-        return SQLiteConnectorFactory()
+        container = ServiceContainer()
+        return SQLiteConnectorFactory(container)
 
     @pytest.fixture
     def valid_config(self, tmp_path) -> ComponentConfig:

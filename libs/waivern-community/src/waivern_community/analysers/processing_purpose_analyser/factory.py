@@ -3,6 +3,7 @@
 from typing import override
 
 from waivern_core import ComponentConfig, ComponentFactory, Schema
+from waivern_core.services.container import ServiceContainer
 from waivern_llm import BaseLLMService
 
 from .analyser import ProcessingPurposeAnalyser
@@ -12,25 +13,24 @@ from .types import ProcessingPurposeAnalyserConfig
 class ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyser]):
     """Factory for creating ProcessingPurposeAnalyser instances with dependency injection.
 
-    This factory follows the three-tier DI architecture:
-    - Tier 1: Infrastructure services (BaseLLMService) injected into factory
-    - Tier 2: Factory (this class) holds service references
-    - Tier 3: Component instances created with injected services
+    This factory follows proper DI principles:
+    - Receives ServiceContainer on construction
+    - Resolves dependencies from container when creating components
+    - Validates service availability in can_create()
 
-    The factory validates configuration and creates analysers with:
-    - LLM service for validation (optional, injected)
+    The factory creates analysers with:
+    - LLM service for validation (optional, resolved from container)
     - Pattern matcher instantiated from config (not a service)
     """
 
-    def __init__(self, llm_service: BaseLLMService | None = None) -> None:
-        """Initialise factory with optional LLM service.
+    def __init__(self, container: ServiceContainer) -> None:
+        """Initialise factory with dependency injection container.
 
         Args:
-            llm_service: Optional LLM service for validation. If None, LLM validation
-                will be disabled for created analysers.
+            container: Service container for resolving dependencies
 
         """
-        self._llm_service = llm_service
+        self._container = container
 
     @override
     def create(self, config: ComponentConfig) -> ProcessingPurposeAnalyser:
@@ -49,18 +49,21 @@ class ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyse
         # Parse and validate configuration
         analyser_config = ProcessingPurposeAnalyserConfig.from_properties(config)
 
+        # Resolve LLM service from container
+        try:
+            llm_service = self._container.get_service(BaseLLMService)
+        except (ValueError, KeyError):
+            llm_service = None
+
         # Validate that LLM validation requirements can be met
-        if (
-            analyser_config.llm_validation.enable_llm_validation
-            and self._llm_service is None
-        ):
+        if analyser_config.llm_validation.enable_llm_validation and llm_service is None:
             msg = "LLM validation enabled but no LLM service available"
             raise ValueError(msg)
 
-        # Create analyser with injected LLM service
+        # Create analyser with resolved LLM service
         return ProcessingPurposeAnalyser(
             config=analyser_config,
-            llm_service=self._llm_service,
+            llm_service=llm_service,
         )
 
     @override
@@ -81,12 +84,12 @@ class ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyse
             # Config validation failed
             return False
 
-        # If LLM validation enabled, must have LLM service
-        if (
-            analyser_config.llm_validation.enable_llm_validation
-            and self._llm_service is None
-        ):
-            return False
+        # If LLM validation enabled, must have LLM service available in container
+        if analyser_config.llm_validation.enable_llm_validation:
+            try:
+                self._container.get_service(BaseLLMService)
+            except (ValueError, KeyError):
+                return False
 
         return True
 

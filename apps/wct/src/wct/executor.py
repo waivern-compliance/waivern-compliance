@@ -86,19 +86,17 @@ class Executor:
         ):  # Re-query to avoid consuming
             try:
                 factory_class = ep.load()
-                # Instantiate factory (factories should not require constructor args)
-                factory = factory_class()
+                # Instantiate factory with ServiceContainer for DI
+                factory = factory_class(self._container)
                 self.register_connector_factory(factory)
                 logger.debug("✓ Registered connector: %s", ep.name)
             except Exception as e:
                 logger.warning("Failed to load connector %s: %s", ep.name, e)
 
-    def _discover_analysers(self, llm_service: BaseLLMService | None) -> None:
+    def _discover_analysers(self) -> None:
         """Discover analyser factories from entry points.
 
-        Args:
-            llm_service: Optional LLM service to inject into analyser factories
-
+        Factories receive the ServiceContainer and resolve their own dependencies.
         """
         analyser_eps = entry_points(group="waivern.analysers")
 
@@ -111,8 +109,8 @@ class Executor:
         ):  # Re-query to avoid consuming
             try:
                 factory_class = ep.load()
-                # Instantiate factory with LLM service dependency
-                factory = factory_class(llm_service)
+                # Instantiate factory with ServiceContainer for DI
+                factory = factory_class(self._container)
                 self.register_analyser_factory(factory)
                 logger.debug("✓ Registered analyser: %s", ep.name)
             except Exception as e:
@@ -141,19 +139,9 @@ class Executor:
         # CRITICAL: Register schemas FIRST, before loading components
         executor._discover_and_register_schemas()
 
-        # Get infrastructure services from container (may be None if unavailable)
-        try:
-            llm_service = container.get_service(BaseLLMService)
-            logger.debug("Retrieved LLM service from container")
-        except ValueError:
-            llm_service = None
-            logger.warning(
-                "LLM service unavailable - analysers will run without LLM validation"
-            )
-
-        # Now discover and register components
+        # Discover and register components (factories resolve dependencies from container)
         executor._discover_connectors()
-        executor._discover_analysers(llm_service)
+        executor._discover_analysers()
 
         logger.info(
             "Executor initialised with %d connector factories and %d analyser factories",
