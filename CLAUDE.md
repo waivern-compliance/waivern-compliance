@@ -47,7 +47,7 @@ waivern-compliance/
 - **waivern-filesystem**: Filesystem connector for reading files and directories (standalone package)
 - **waivern-source-code**: Source code connector for PHP analysis (standalone package)
 - **waivern-rulesets**: Shared rulesets for pattern-based analysis (PersonalDataRuleset, ProcessingPurposesRuleset, etc.)
-- **waivern-analysers-shared**: Shared utilities for analysers (LLMServiceManager, RulesetManager, EvidenceExtractor, etc.)
+- **waivern-analysers-shared**: Shared utilities for analysers (RulesetManager, EvidenceExtractor, LLM validation strategies, etc.)
 - **waivern-personal-data-analyser**: Personal data analyser (standalone package for minimal dependencies)
 - **waivern-data-subject-analyser**: Data subject analyser (standalone package)
 - **waivern-processing-purpose-analyser**: Processing purpose analyser (standalone package, supports both standard input and source code analysis)
