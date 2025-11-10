@@ -13,6 +13,7 @@ connectors:
       # or specified directly in the runbook
       database_path: "./apps/wct/tests/integration/test_data/sqlite_compliance_test.db"
       max_rows_per_table: 10
+
   - name: "filesystem_mock_lite"
     type: "filesystem_connector"
     properties:
@@ -36,6 +37,7 @@ analysers:
         enable_llm_validation: false
         llm_batch_size: 80
         llm_validation_mode: "conservative"
+
   - name: "data_subject_analyser_for_sqlite"
     type: "data_subject_analyser"
     properties:
@@ -50,6 +52,7 @@ analysers:
         enable_llm_validation: false
         llm_batch_size: 50
         llm_validation_mode: "conservative"
+
   - name: "personal_data_analyser_for_filesystem"
     type: "personal_data_analyser"
     properties:
@@ -66,6 +69,7 @@ analysers:
         llm_validation_mode: "conservative"
     metadata:
       description: "Analyse filesystem mock for personally identifiable information"
+
   - name: "processing_purpose_analyser_for_sqlite"
     type: "processing_purpose_analyser"
     properties:
@@ -83,6 +87,7 @@ analysers:
         confidence_threshold: 0.5
     metadata:
       description: "Identify data processing purposes from SQLite database content"
+
   - name: "processing_purpose_analyser_for_filesystem"
     type: "processing_purpose_analyser"
     properties:
@@ -111,6 +116,7 @@ execution:
     input_schema_version: "1.0.0"
     output_schema: "personal_data_finding"
     output_schema_version: "1.0.0"
+
   - name: "Data Subject Classification in SQLite Database"
     description: "Identify data subject categories from database content for GDPR Article 30(1)(c) compliance"
     contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
@@ -120,6 +126,7 @@ execution:
     input_schema_version: "1.0.0"
     output_schema: "data_subject_finding"
     output_schema_version: "1.0.0"
+
   - name: "Personal Data Detection in Filesystem"
     description: "Scan filesystem mock for personally identifiable information in files"
     contact: "Michael Brown (DevOps) <michael.brown@company.co.uk>"
@@ -129,6 +136,7 @@ execution:
     input_schema_version: "1.0.0"
     output_schema: "personal_data_finding"
     output_schema_version: "1.0.0"
+
   - name: "Processing Purpose Analysis of Database Content"
     description: "Identify GDPR and CCPA compliance processing purposes from database content"
     connector: "compliance_sqlite_db"
@@ -137,6 +145,7 @@ execution:
     input_schema_version: "1.0.0"
     output_schema: "processing_purpose_finding"
     output_schema_version: "1.0.0"
+
   - name: "Processing Purpose Analysis of Filesystem Content"
     description: "Identify data processing purposes and compliance frameworks from filesystem content"
     connector: "filesystem_mock_lite"
