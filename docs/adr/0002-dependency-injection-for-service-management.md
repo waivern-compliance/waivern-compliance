@@ -2,85 +2,25 @@
 
 ## Status
 
-Proposed
+Implemented (2025-11)
 
 ## Context
 
 ### Current State
 
-The Waivern Compliance Framework currently uses `LLMServiceManager` in `waivern-analysers-shared/utilities/` to manage LLM service lifecycle. This utility class provides lazy initialisation and basic caching for LLM services used across all analysers.
+The Waivern Compliance Framework uses a dependency injection container pattern for service management. This provides unified service lifecycle management across all framework components (connectors, analysers, and tools).
 
-**Note:** While currently in `waivern-analysers-shared`, service management is core infrastructure that should be available to all components (connectors, analysers, etc.), not just analysers.
+**Current architecture:**
+- **ServiceContainer** (`waivern-core/services/container.py`) - Generic DI container with singleton/transient lifetimes
+- **ServiceFactory Protocol** (`waivern-core/services/protocols.py`) - Factory abstraction for service creation
+- **ComponentFactory** (`waivern-core/component_factory.py`) - Base factory for analysers and connectors
+- **LLM DI Integration** (`waivern-llm/di/`) - LLM service factories and providers
 
-**Current implementation:**
-```python
-class LLMServiceManager:
-    """Utility for managing LLM service lifecycle and configuration."""
+All analysers and connectors receive `ServiceContainer` at factory construction and resolve dependencies (like LLM services) from the container when creating component instances.
 
-    def __init__(self, enable_llm_validation: bool = True):
-        self._enable_llm_validation = enable_llm_validation
-        self._llm_service: BaseLLMService | None = None
+### Design Requirements
 
-    @property
-    def llm_service(self) -> BaseLLMService | None:
-        if self._llm_service is None and self._enable_llm_validation:
-            try:
-                self._llm_service = LLMServiceFactory.create_service()
-                logger.info("LLM service initialised")
-            except LLMServiceError as e:
-                logger.warning(f"Failed to initialise: {e}")
-                self._enable_llm_validation = False  # Side effect!
-        return self._llm_service
-```
-
-### Problems with Current Approach
-
-1. **Limited Scope**: Only manages LLM services
-   - Cannot be used for databases, caches, HTTP clients, or other services
-   - Each new service type would need its own manager class
-   - No standardised pattern across the framework
-
-2. **Hidden Complexity**: Service creation buried in property getter
-   - Property access has side effects (mutates `_enable_llm_validation`)
-   - Violates Command-Query Separation principle
-   - Makes debugging harder
-
-3. **Hard to Test**: Difficult to inject mock services
-   - Cannot easily substitute test implementations
-   - Mocking requires patching `LLMServiceFactory.create_service()`
-   - No explicit dependency declaration
-
-4. **No Extensibility**: Pattern doesn't scale
-   - No support for different service lifetimes (singleton vs transient)
-   - Adding retry logic would make property getter even more complex
-
-5. **Implicit Dependencies**: Analysers don't declare requirements
-   - Looking at analyser constructor doesn't show it needs LLM service
-   - Dependencies discovered at runtime through property access
-   - Unclear service lifecycle
-
-### Framework Growth Requirements
-
-As the framework matures, we need to manage more services:
-
-- **LLM Services**: Already in use (Anthropic, OpenAI, Google)
-- **Database Services**: Connection pools for MySQL, PostgreSQL, SQLite
-- **Cache Services**: Redis, Memcached for performance optimisation
-- **HTTP Clients**: For API integrations and vendor services
-- **Metrics/Telemetry**: Prometheus, DataDog for observability
-- **Message Queues**: For asynchronous processing
-
-Each service needs:
-- ✅ Lazy initialisation (don't create until needed)
-- ✅ Singleton caching (reuse expensive instances)
-- ✅ Graceful degradation (continue without service if unavailable)
-- ✅ Health checking (detect failures, enable recovery)
-- ✅ Testability (easy mocking for unit tests)
-- ✅ Type safety (full type checker support)
-
-### Requirements
-
-A proper service management solution must:
+The DI system was designed to meet the following requirements:
 
 - ✅ Support multiple service types with a unified pattern
 - ✅ Enable easy testing through dependency injection
@@ -90,6 +30,10 @@ A proper service management solution must:
 - ✅ Maintain separation of concerns (waivern-llm stays clean)
 - ✅ Enable future retry logic and advanced lifecycle features
 - ✅ Scale to dozens of service types without code duplication
+- ✅ Lazy initialisation (don't create until needed)
+- ✅ Singleton caching (reuse expensive instances)
+- ✅ Health checking (detect failures, enable recovery)
+- ✅ Type safety (full type checker support)
 
 ---
 
@@ -605,35 +549,20 @@ executor.register_analyser_factory(factory)
 
 ---
 
-### Negative ⚠️
+### Trade-offs ⚠️
 
-**Additional Complexity:**
-- New abstractions (Factory, Container, Provider, ComponentFactory)
+**Increased Complexity:**
+- Additional abstractions (Factory, Container, Provider, ComponentFactory)
 - Contributors must understand DI pattern
-- More code to maintain (~800 lines vs ~40 for old manager)
+- More infrastructure code (~800 lines for DI system)
 - Learning curve for Python developers unfamiliar with DI
 - Two-level abstraction (factories + instances)
 
-**Implementation Effort:**
-- Update all 3 analysers + all connectors (7 components total)
-- Create factory for each component
-- Update executor integration
-- Update test files (60+ new tests)
-- Write comprehensive tests for DI system
-- Documentation updates across multiple files
-
-**Breaking Changes (Pre-1.0):**
-- Remove `Analyser.from_properties()` classmethod
-- Remove `Connector.from_properties()` classmethod
-- Remove `BUILTIN_ANALYSERS` and `BUILTIN_CONNECTORS` lists
-- Replace with `BUILTIN_ANALYSER_FACTORIES` and `BUILTIN_CONNECTOR_FACTORIES`
-- Executor initialization pattern changes
-- Component constructors require explicit service injection
-
-**Potential Misuse:**
-- Developers might over-engineer simple scenarios
-- Risk of creating "God Container" with too many services
-- Need guidelines on when to use DI vs simple instantiation
+**Considerations:**
+- Developers should avoid over-engineering simple scenarios
+- Follow guidelines on when to use DI services vs shared utilities (see architectural analysis)
+- Services are for stateful components with lifecycle management
+- Utilities are for stateless pure functions
 
 ---
 
@@ -697,32 +626,8 @@ container.register(
 
 ---
 
-## Success Metrics
-
-**Before Implementation:**
-- 1 service type managed (LLM)
-- 1 manager class (~40 lines)
-- Testing requires mocking factory methods
-- No standardised pattern
-
-**After Implementation:**
-- ∞ service types supported (generic pattern)
-- 1 container + N lightweight providers
-- Testing via dependency injection (clean)
-- Standardised DI pattern framework-wide
-
-**Verification:**
-- All existing tests pass
-- New DI tests comprehensive
-- Sample runbooks work
-- Type checking passes (strict mode)
-- Documentation complete
-
----
-
 ## Related Documents
 
-- **Implementation Plan:** [dependency-injection-implementation-plan.md](../architecture/dependency-injection-implementation-plan.md)
 - **ADR-0001:** [Explicit Schema Loading](0001-explicit-schema-loading-over-autodiscovery.md) - Similar principle of explicit over implicit
 
 ---

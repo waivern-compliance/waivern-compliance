@@ -1,78 +1,156 @@
 # Dependency Injection in WCF
 
-The Waivern Compliance Framework uses dependency injection to manage component lifecycles and service dependencies.
-
-## ComponentFactory Pattern
-
-Each connector and analyser has a corresponding factory responsible for component instantiation.
-
-**Structure:**
-- Factories implement the `ComponentFactory[T]` interface
-- Factories receive configuration dictionaries from runbooks
-- Factories convert configuration to typed Pydantic models
-- Factories instantiate components with validated configuration
-
-**Example:**
-```python
-class MySQLConnectorFactory(ComponentFactory[MySQLConnector]):
-    def create(self, properties: dict) -> MySQLConnector:
-        config = MySQLConnectorConfig.from_properties(properties)
-        return MySQLConnector(config)
-```
+The Waivern Compliance Framework uses dependency injection to manage service lifecycles and inject dependencies into components.
 
 ## ServiceContainer
 
-The `ServiceContainer` manages singleton services like LLM providers.
+The `ServiceContainer` manages singleton services like LLM providers that are shared across multiple components.
 
-**Lifecycle:**
-- Services registered once at application startup
-- Shared across all components requiring them
-- Factories retrieve services from the container when creating components
+**Key concepts:**
+- Services are registered once at application startup
+- Service factories handle lazy creation (only created when first requested)
+- Services are cached as singletons (reused across all components)
+- Components receive services through their factories
 
-**Example:**
+**Example - Registering a service:**
 ```python
+from waivern_core.services.container import ServiceContainer
+from waivern_llm.di import LLMServiceFactory
+from waivern_llm import BaseLLMService
+
+# Create container
 container = ServiceContainer()
-llm_service = LLMServiceFactory().create(llm_config)
-container.register_service(BaseLLMService, llm_service)
+
+# Register LLM service with factory
+llm_factory = LLMServiceFactory()
+container.register(BaseLLMService, llm_factory, lifetime="singleton")
 ```
 
-## Configuration Flow
+## ComponentFactory Pattern
 
-1. User writes runbook with component properties (YAML dictionaries)
-2. Executor reads runbook configuration
-3. Executor converts properties to `BaseComponentConfiguration` objects
-4. Executor calls factory with configuration
-5. Factory validates configuration via Pydantic models
-6. Factory instantiates component with dependencies
+Each connector and analyser has a corresponding factory that creates component instances with their required dependencies.
 
-## Component Instantiation
+**How it works:**
+1. Factories receive the `ServiceContainer` when constructed
+2. Factories resolve services from the container when creating components
+3. Factories validate configuration from runbooks
+4. Factories instantiate components with configuration and services
 
-**Old approach (removed):**
+**Example - Factory with dependency injection:**
 ```python
-connector = MySQLConnector.from_properties(properties)
+class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
+    def __init__(self, container: ServiceContainer):
+        """Factory receives container to resolve services."""
+        self._container = container
+
+    def create(self, config: ComponentConfig) -> PersonalDataAnalyser:
+        """Create analyser with injected LLM service."""
+        # Parse configuration
+        analyser_config = PersonalDataAnalyserConfig.from_properties(config)
+
+        # Resolve LLM service from container
+        llm_service = self._container.get_service(BaseLLMService)
+
+        # Create component with dependencies
+        return PersonalDataAnalyser(
+            config=analyser_config,
+            llm_service=llm_service
+        )
 ```
 
-**Current approach:**
+## Complete Flow: From Runbook to Component
+
+Here's how dependency injection works end-to-end in WCF:
+
+**1. Application Startup (WCT)**
 ```python
-factory = MySQLConnectorFactory()
-connector = factory.create(properties)
+# Create service container
+container = ServiceContainer()
+
+# Register services
+llm_factory = LLMServiceFactory()
+container.register(BaseLLMService, llm_factory, lifetime="singleton")
+
+# Create factories with container
+personal_data_factory = PersonalDataAnalyserFactory(container)
+mysql_factory = MySQLConnectorFactory(container)
 ```
 
-Analysers requiring LLM services receive them via constructor injection:
+**2. User writes runbook (YAML)**
+```yaml
+analysers:
+  - name: "personal_data_detector"
+    type: "personal_data_analyser"
+    properties:
+      pattern_matching:
+        ruleset: "personal_data"
+      llm_validation:
+        enable_llm_validation: true
+```
 
+**3. Executor creates component**
+```python
+# Executor gets factory by type
+factory = executor.get_analyser_factory("personal_data_analyser")
+
+# Factory creates component with runbook config
+analyser = factory.create(runbook_properties)
+
+# Component now has config + LLM service injected!
+```
+
+**4. Component receives dependencies**
 ```python
 class PersonalDataAnalyser:
-    def __init__(self, config: PersonalDataAnalyserConfig, llm_service: BaseLLMService):
-        self.config = config
-        self.llm_service = llm_service
+    def __init__(
+        self,
+        config: PersonalDataAnalyserConfig,
+        llm_service: BaseLLMService | None = None
+    ):
+        """Component receives validated config + services."""
+        self._config = config
+        self._llm_service = llm_service  # Injected by factory!
 ```
 
-## Architecture Layers
+## Architecture Diagram
 
 ```
-Runbook (YAML) → Executor → Factory → Component
-                      ↓
-                ServiceContainer
+┌─────────────────────────────────────────────────┐
+│ Application Startup                             │
+│  - ServiceContainer created                     │
+│  - Services registered (LLM, etc.)              │
+│  - Factories created with container             │
+└─────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│ Runbook Execution                               │
+│  - User writes YAML config                      │
+│  - Executor reads runbook                       │
+│  - Factory creates component                    │
+│  - Factory injects services from container      │
+└─────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│ Component Instance                              │
+│  - Has validated configuration                  │
+│  - Has injected services (LLM, etc.)           │
+│  - Ready to process data                        │
+└─────────────────────────────────────────────────┘
 ```
 
-The executor holds factories, not component classes. When execution begins, the executor uses factories to create component instances with their required dependencies.
+## Key Principles
+
+**Services vs Components:**
+- **Services** (LLM, database pools) - Long-lived, shared, managed by ServiceContainer
+- **Components** (analysers, connectors) - Short-lived, created per execution, receive services
+
+**Why factories?**
+- Factories separate component creation from usage
+- Factories handle dependency resolution (get services from container)
+- Components stay focused on their business logic
+- Easy to test (inject mock services through factory)
+
+**Configuration validation:**
+- Runbook properties (dict) → Pydantic model → Validated config
+- Factories perform validation before creating components
+- Type-safe configuration throughout the framework
