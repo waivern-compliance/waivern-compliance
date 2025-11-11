@@ -67,7 +67,21 @@ class AnalyserConfig(BaseModel):
 
 
 class ExecutionStep(BaseModel):
-    """Pydantic model for execution step configuration."""
+    """Pipeline execution step with explicit data flow.
+
+    Each step is either:
+    - Connector-based: Reads from external source (connector + optional analyser)
+    - Input-based: Transforms previous step output (input_from + analyser)
+
+    Steps are mutually exclusive: connector XOR input_from.
+    """
+
+    # Step identification (REQUIRED)
+    id: str = Field(
+        min_length=1,
+        pattern=r"^[a-zA-Z0-9._-]+$",
+        description="Unique identifier for this step (required for pipeline chaining)",
+    )
 
     name: str = Field(
         min_length=1,
@@ -79,18 +93,32 @@ class ExecutionStep(BaseModel):
     contact: str | None = Field(
         default=None, description="Optional contact information for this execution step"
     )
-    connector: str = Field(
+
+    # Data source (connector OR input_from, mutually exclusive)
+    connector: str | None = Field(
+        default=None,
         min_length=1,
         pattern=r"^[a-zA-Z0-9._-]+$",
-        description="Name of connector instance to use",
+        description="Name of connector instance (for connector-based steps)",
     )
-    analyser: str = Field(
+    input_from: str | None = Field(
+        default=None,
+        pattern=r"^[a-zA-Z0-9._-]+$",
+        description="Step ID to read input from (for input-based steps)",
+    )
+
+    # Processing (analyser optional for connector-only steps)
+    analyser: str | None = Field(
+        default=None,
         min_length=1,
         pattern=r"^[a-zA-Z0-9._-]+$",
-        description="Name of analyser instance to use",
+        description="Name of analyser instance to use (optional for connector-only steps)",
     )
+
+    # Schema definitions
     input_schema: str = Field(
-        min_length=1, description="Schema name for connector output validation"
+        min_length=1,
+        description="Schema name for connector output or previous step output validation",
     )
     output_schema: str = Field(
         min_length=1, description="Schema name for analyser output validation"
@@ -103,6 +131,13 @@ class ExecutionStep(BaseModel):
         default=None,
         description="Optional specific version for output schema (auto-select latest if not specified)",
     )
+
+    # Pipeline control
+    save_output: bool = Field(
+        default=False,
+        description="Whether to save output for use by subsequent steps",
+    )
+
     context: dict[str, Any] = Field(
         default_factory=dict,
         description="Optional execution metadata and runtime configuration",
@@ -133,6 +168,19 @@ class ExecutionStep(BaseModel):
                 f"Version must be in format 'major.minor.patch' (e.g., '1.0.0'), got: {v}"
             )
         return v
+
+    @model_validator(mode="after")
+    def validate_connector_xor_input_from(self) -> ExecutionStep:
+        """Validate that connector and input_from are mutually exclusive."""
+        if self.connector is not None and self.input_from is not None:
+            msg = "Step cannot have both 'connector' and 'input_from' - choose one data source"
+            raise ValueError(msg)
+
+        if self.connector is None and self.input_from is None:
+            msg = "Step must have either 'connector' or 'input_from' as data source"
+            raise ValueError(msg)
+
+        return self
 
 
 class Runbook(BaseModel):
@@ -181,21 +229,37 @@ class Runbook(BaseModel):
 
     @model_validator(mode="after")
     def validate_cross_references(self) -> Runbook:
-        """Validate cross-references between execution steps and components."""
+        """Validate cross-references between execution steps and components.
+
+        Validates:
+        - Connector references point to defined connectors
+        - Analyser references point to defined analysers
+        - Pipeline step references (input_from) point to valid step IDs
+        """
         connector_names = {conn.name for conn in self.connectors}
         analyser_names = {analyser.name for analyser in self.analysers}
+        step_ids = {step.id for step in self.execution}
 
         for i, step in enumerate(self.execution):
-            if step.connector not in connector_names:
+            # Validate connector reference (if present)
+            if step.connector is not None and step.connector not in connector_names:
                 raise ValueError(
                     f"Execution step {i + 1} references unknown connector '{step.connector}'. "
                     f"Available connectors: {sorted(connector_names)}"
                 )
 
-            if step.analyser not in analyser_names:
+            # Validate analyser reference (if present)
+            if step.analyser is not None and step.analyser not in analyser_names:
                 raise ValueError(
                     f"Execution step {i + 1} references unknown analyser '{step.analyser}'. "
                     f"Available analysers: {sorted(analyser_names)}"
+                )
+
+            # Validate pipeline reference (input_from)
+            if step.input_from is not None and step.input_from not in step_ids:
+                raise ValueError(
+                    f"Step '{step.name}' references unknown step ID '{step.input_from}'. "
+                    f"Available step IDs: {sorted(step_ids)}"
                 )
 
         return self

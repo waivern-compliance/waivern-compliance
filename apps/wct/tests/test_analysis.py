@@ -361,7 +361,8 @@ analysers:
     type: personal_data_analyser
     properties: {}
 execution:
-  - name: Test Step
+  - id: "test_step"
+    name: Test Step
     description: Test step
     connector: test_connector
     analyser: test_analyser

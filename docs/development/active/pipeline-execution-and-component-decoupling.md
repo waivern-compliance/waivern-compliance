@@ -1,8 +1,9 @@
 # Task: Pipeline Execution Model and Component Decoupling
 
-**Status:** Planned
+**Status:** Phase 1 Complete (Steps 1-2), Phase 2 In Progress
 **Priority:** High
 **Created:** 2025-11-10
+**Last Updated:** 2025-11-11
 
 ## Executive Summary
 
@@ -79,97 +80,168 @@ execution:
 ✅ **Enables reusability** - SourceCodeAnalyser can accept input from any connector
 ✅ **Future-proof** - Foundation for parallel execution and complex DAGs
 ✅ **Schema-driven** - Executor validates compatibility automatically
-✅ **Backward compatible** - Old single-step format continues to work
+✅ **Clean architecture** - Breaking change accepted for better long-term design (WCF is pre-1.0)
 
 ## Implementation Plan
 
-### Phase 1: Extend Runbook Format (Backward Compatible)
+### Phase 1: Extend Runbook Format (Pipeline-Only Design) ✅ COMPLETED
+
+**Status:** ✅ Completed 2025-11-11
+**Decision:** Breaking change - dropped backward compatibility for cleaner design (WCF is pre-1.0)
 
 **File:** `apps/wct/src/wct/runbook.py`
 
 #### Changes to `ExecutionStep` Model
 
-Add new optional fields while maintaining backward compatibility:
+Implemented pipeline-only model with required fields:
 
 ```python
 class ExecutionStep(BaseModel):
-    """Execution step supporting both single-step and pipeline modes."""
+    """Pipeline execution step with explicit data flow.
 
-    # Existing fields (required for single-step mode)
-    name: str
-    description: str
-    contact: str | None
-    connector: str | None  # Make optional (None for pipeline steps)
-    analyser: str
-    input_schema: str
-    output_schema: str
-    input_schema_version: str | None
-    output_schema_version: str | None
-    context: dict[str, Any]
+    Each step is either:
+    - Connector-based: Reads from external source (connector + optional analyser)
+    - Input-based: Transforms previous step output (input_from + analyser)
 
-    # NEW: Pipeline execution fields
-    id: str | None = Field(
+    Steps are mutually exclusive: connector XOR input_from.
+    """
+
+    # Step identification (REQUIRED)
+    id: str = Field(
+        min_length=1,
+        pattern=r"^[a-zA-Z0-9._-]+$",
+        description="Unique identifier for this step (required for pipeline chaining)",
+    )
+
+    name: str = Field(min_length=1, description="Human-readable name for this execution step")
+    description: str = Field(description="Description of what this execution step does")
+    contact: str | None = Field(default=None, description="Optional contact information")
+
+    # Data source (connector OR input_from, mutually exclusive)
+    connector: str | None = Field(
         default=None,
-        description="Unique identifier for this step (required for pipeline mode)"
+        min_length=1,
+        pattern=r"^[a-zA-Z0-9._-]+$",
+        description="Name of connector instance (for connector-based steps)",
     )
     input_from: str | None = Field(
         default=None,
-        description="Step ID to read input from (for analyser-only steps)"
+        pattern=r"^[a-zA-Z0-9._-]+$",
+        description="Step ID to read input from (for input-based steps)",
     )
+
+    # Processing (analyser optional for connector-only steps)
+    analyser: str | None = Field(
+        default=None,
+        min_length=1,
+        pattern=r"^[a-zA-Z0-9._-]+$",
+        description="Name of analyser instance to use (optional for connector-only steps)",
+    )
+
+    # Schema definitions
+    input_schema: str = Field(
+        min_length=1,
+        description="Schema name for connector output or previous step output validation"
+    )
+    output_schema: str = Field(
+        min_length=1, description="Schema name for analyser output validation"
+    )
+    input_schema_version: str | None = Field(
+        default=None,
+        description="Optional specific version for input schema",
+    )
+    output_schema_version: str | None = Field(
+        default=None,
+        description="Optional specific version for output schema",
+    )
+
+    # Pipeline control
     save_output: bool = Field(
         default=False,
-        description="Whether to save output for use by subsequent steps"
+        description="Whether to save output for use by subsequent steps",
+    )
+
+    context: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional execution metadata and runtime configuration",
     )
 
     @model_validator(mode="after")
-    def validate_execution_mode(self) -> ExecutionStep:
-        """Validate step configuration based on execution mode."""
-        # Single-step mode: must have connector
+    def validate_connector_xor_input_from(self) -> "ExecutionStep":
+        """Validate that connector and input_from are mutually exclusive."""
         if self.connector is not None and self.input_from is not None:
-            raise ValueError(
-                "Cannot specify both 'connector' and 'input_from'. "
-                "Use 'connector' for extraction or 'input_from' for pipeline chaining."
-            )
+            msg = "Step cannot have both 'connector' and 'input_from' - choose one data source"
+            raise ValueError(msg)
 
         if self.connector is None and self.input_from is None:
-            raise ValueError(
-                "Must specify either 'connector' (extraction) or 'input_from' (pipeline)"
-            )
-
-        # Pipeline mode: must have id for referencing
-        if self.save_output and not self.id:
-            raise ValueError(
-                "Step must have 'id' field when 'save_output' is true"
-            )
+            msg = "Step must have either 'connector' or 'input_from' as data source"
+            raise ValueError(msg)
 
         return self
 ```
 
-#### Validation Updates
+**Breaking Changes:**
+- Required `id` field for all execution steps
+- Connector and input_from are mutually exclusive (XOR validation)
+- Analyser field is now optional (connector-only steps supported)
+- All sample runbooks updated with step IDs
 
-Add cross-reference validation for pipeline dependencies:
+#### Validation Updates ✅ COMPLETED
+
+**Status:** ✅ Completed 2025-11-11 (Step 2)
+
+Implemented cross-reference validation integrated into existing `validate_cross_references`:
 
 ```python
 class Runbook(BaseModel):
     # ... existing fields ...
 
     @model_validator(mode="after")
-    def validate_pipeline_references(self) -> Runbook:
-        """Validate pipeline step dependencies."""
-        step_ids = {step.id for step in self.execution if step.id}
+    def validate_cross_references(self) -> Runbook:
+        """Validate cross-references between execution steps and components.
 
-        for step in self.execution:
-            if step.input_from:
-                if step.input_from not in step_ids:
-                    raise ValueError(
-                        f"Step '{step.name}' references unknown step ID '{step.input_from}'. "
-                        f"Available: {sorted(step_ids)}"
-                    )
+        Validates:
+        - Connector references point to defined connectors (if present)
+        - Analyser references point to defined analysers (if present)
+        - Pipeline step references (input_from) point to valid step IDs
+        """
+        connector_names = {conn.name for conn in self.connectors}
+        analyser_names = {analyser.name for analyser in self.analysers}
+        step_ids = {step.id for step in self.execution}
+
+        for i, step in enumerate(self.execution):
+            # Validate connector reference (if present)
+            if step.connector is not None and step.connector not in connector_names:
+                raise ValueError(
+                    f"Execution step {i + 1} references unknown connector '{step.connector}'. "
+                    f"Available connectors: {sorted(connector_names)}"
+                )
+
+            # Validate analyser reference (if present)
+            if step.analyser is not None and step.analyser not in analyser_names:
+                raise ValueError(
+                    f"Execution step {i + 1} references unknown analyser '{step.analyser}'. "
+                    f"Available analysers: {sorted(analyser_names)}"
+                )
+
+            # Validate pipeline reference (input_from)
+            if step.input_from is not None and step.input_from not in step_ids:
+                raise ValueError(
+                    f"Step '{step.name}' references unknown step ID '{step.input_from}'. "
+                    f"Available step IDs: {sorted(step_ids)}"
+                )
 
         return self
 ```
 
-**Files Modified:** 1 (`apps/wct/src/wct/runbook.py`)
+**Files Modified:**
+- `apps/wct/src/wct/runbook.py` (ExecutionStep model + Runbook validation)
+- `apps/wct/tests/test_runbook.py` (9 new pipeline validation tests)
+- `apps/wct/runbooks/samples/*.yaml` (3 sample runbooks updated with step IDs)
+- `apps/wct/tests/*.py` (29 test execution steps updated with IDs)
+- Documentation (Steps 1-2 marked complete)
+
+**Tests:** 890 passed, 7 skipped, 14 deselected
 
 ---
 
@@ -680,9 +752,7 @@ class SourceCodeAnalyserFactory(ComponentFactory[SourceCodeAnalyser]):
 [project.entry-points."waivern.analysers"]
 source_code_analyser = "waivern_source_code.analyser_factory:SourceCodeAnalyserFactory"
 
-# Keep connector entry point for backward compatibility (deprecated)
-[project.entry-points."waivern.connectors"]
-source_code_connector = "waivern_source_code.factory:SourceCodeConnectorFactory"
+# NOTE: Old source_code_connector removed - breaking change accepted for Phase 3
 ```
 
 #### Step 3.5: Remove FilesystemConnector Dependency
@@ -810,11 +880,11 @@ dependencies = [
 
 #### Test Categories
 
-1. **Runbook validation tests** - Test new pipeline format validation
-2. **Executor tests** - Test artifact passing and schema resolution
-3. **SourceCodeAnalyser tests** - Test transformation from standard_input
-4. **Integration tests** - Test full pipeline execution
-5. **Backward compatibility tests** - Ensure old runbooks still work
+1. **Runbook validation tests** - Test new pipeline format validation (✅ Phase 1 complete - 9 tests added)
+2. **Executor tests** - Test artifact passing and schema resolution (Phase 2 pending)
+3. **SourceCodeAnalyser tests** - Test transformation from standard_input (Phase 3 pending)
+4. **Integration tests** - Test full pipeline execution (Phase 2+ pending)
+5. **Migration validation tests** - Ensure updated runbooks work with new format (✅ Phase 1 complete)
 
 #### Key Test Files
 
@@ -1154,22 +1224,47 @@ execution:
     output_schema: "processing_purpose_finding"
 ```
 
-## Backward Compatibility
+## Breaking Changes (Phase 1 Complete)
 
-Old single-step runbooks continue to work. The `source_code_connector` entry point
-remains registered (deprecated) for backward compatibility.
+**Decision (2025-11-11):** Breaking change accepted for cleaner architecture (WCF is pre-1.0)
 
-## When to Use Pipelines
+**What Changed:**
+- All execution steps now require `id` field
+- Old runbooks without `id` will fail validation
+- Migration required: add `id` to all execution steps
 
-Use pipeline execution when:
+**Migration Example:**
+```yaml
+# Old (no longer valid):
+execution:
+  - name: "Analyse data"
+    connector: "filesystem"
+    ...
+
+# New (required):
+execution:
+  - id: "analyse_data"
+    name: "Analyse data"
+    connector: "filesystem"
+    ...
+```
+
+**Affected:**
+- All existing runbooks (updated in Phase 1)
+- Sample runbooks (3 files updated)
+- Test runbooks (29 execution steps updated)
+
+## Pipeline Execution Use Cases
+
+**When to use pipeline mode:**
 - Chaining multiple analysers
-- Transforming data between schemas
+- Transforming data between schemas (e.g., standard_input → source_code → findings)
 - Reusing intermediate results
 - Building complex analysis workflows
 
-Use single-step execution when:
-- Simple connector → analyser pattern
-- No intermediate transformations needed
+**Single-step mode still works:**
+- All current runbooks use single-step pattern (one connector → one analyser)
+- Each step is independent (no `input_from` references)
 ```
 
 **Files Created:** 3 documentation files, 2 example runbooks
@@ -1181,59 +1276,68 @@ Use single-step execution when:
 
 #### Final Checklist
 
-- [ ] All tests pass (`uv run pytest`)
-- [ ] Type checking passes (`./scripts/type-check.sh`)
-- [ ] Linting passes (`./scripts/lint.sh`)
-- [ ] Formatting correct (`./scripts/format.sh`)
-- [ ] Dev checks pass (`./scripts/dev-checks.sh`)
+**Phase 1 Complete (2025-11-11):**
+- [x] All tests pass - 890 passed, 7 skipped
+- [x] Type checking passes (strict mode)
+- [x] Linting passes
+- [x] Formatting correct
+- [x] Dev checks pass
+- [x] All runbooks updated with required `id` field
+- [x] Documentation updated (Steps 1-2 marked complete)
+
+**Pending (Phases 2-7):**
 - [ ] Integration tests pass (require API keys)
-- [ ] Documentation builds correctly
-- [ ] Example runbooks execute successfully
-- [ ] Backward compatibility verified (old runbooks work)
+- [ ] Pipeline execution implemented (artifact storage, schema resolution)
+- [ ] SourceCode refactoring complete (analyser instead of connector)
+- [ ] ProcessingPurpose dependency removed
+- [ ] Example pipeline runbooks created
 - [ ] No hardcoded dependencies remain
 
 ---
 
 ## Success Criteria
 
-### Functional Requirements
+### Functional Requirements (Phase 1 Status)
 
-✅ Pipeline execution supports multi-step analyser chaining
-✅ Schema-based routing validates compatibility automatically
-✅ Artifact passing works between steps
-✅ SourceCodeAnalyser accepts `standard_input` schema
-✅ ProcessingPurposeAnalyser has no hardcoded imports
-✅ Backward compatibility maintained for existing runbooks
+- ✅ **Runbook format extended** - ExecutionStep model supports pipeline fields
+- ✅ **Validation implemented** - XOR and cross-reference validation working
+- ⏳ Pipeline execution supports multi-step analyser chaining (Phase 2 pending)
+- ⏳ Schema-based routing validates compatibility automatically (Phase 2 pending)
+- ⏳ Artifact passing works between steps (Phase 2 pending)
+- ⏳ SourceCodeAnalyser accepts `standard_input` schema (Phase 3 pending)
+- ⏳ ProcessingPurposeAnalyser has no hardcoded imports (Phase 4 pending)
+- ✅ **Breaking changes accepted** - Clean architecture over backward compatibility
 
-### Non-Functional Requirements
+### Non-Functional Requirements (Phase 1 Status)
 
-✅ All components are independently installable
-✅ No hardcoded cross-component dependencies
-✅ Components depend only on waivern-core and shared utilities
-✅ True plugin architecture achieved
-✅ Code quality standards maintained (type checking, linting)
+- ✅ All components are independently installable
+- ✅ Code quality standards maintained (type checking, linting, 890 tests passing)
+- ⏳ No hardcoded cross-component dependencies (Phase 3-4 pending)
+- ⏳ Components depend only on waivern-core and shared utilities (Phase 3-4 pending)
+- ⏳ True plugin architecture achieved (Phase 3-4 pending)
 
-### Architecture Validation
+### Architecture Validation (Future)
 
-✅ FilesystemConnector is standalone (no dependencies)
-✅ SourceCodeAnalyser depends only on waivern-core
-✅ ProcessingPurposeAnalyser depends only on waivern-core + shared utilities
-✅ No circular dependencies
-✅ Dependency graph is clean
+- ⏳ FilesystemConnector is standalone (already achieved, no changes needed)
+- ⏳ SourceCodeAnalyser depends only on waivern-core (Phase 3 pending)
+- ⏳ ProcessingPurposeAnalyser depends only on waivern-core + shared utilities (Phase 4 pending)
+- ✅ No circular dependencies (maintained)
+- ⏳ Dependency graph is clean (Phase 3-4 will complete this)
 
 ---
 
 ## Risks and Mitigation
 
-### Risk 1: Breaking Changes to Existing Users
+### Risk 1: Breaking Changes to Existing Users ✅ RESOLVED
 
+**Decision:** Breaking change accepted (2025-11-11) - WCF is pre-1.0
 **Impact:** Medium
-**Likelihood:** Low
-**Mitigation:**
-- Maintain `source_code_connector` entry point (deprecated)
-- Provide clear migration guide
-- Support both old and new formats during transition
-- Version bump indicates breaking change (if needed)
+**Status:** ✅ Completed in Phase 1
+**Resolution:**
+- All existing runbooks updated with required `id` field (3 samples, 29 test steps)
+- Migration is straightforward (add `id` to each execution step)
+- Clear migration guide provided in documentation
+- Pre-1.0 status makes breaking changes acceptable
 
 ### Risk 2: Increased Complexity for Simple Use Cases
 
@@ -1295,7 +1399,7 @@ These can be implemented incrementally without changing the core architecture.
 
 - **Unit tests first** - Test each component in isolation
 - **Integration tests** - Test full pipeline execution
-- **Backward compatibility** - Verify old runbooks work
+- **Migration validation** - Verify updated runbooks work
 - **Manual testing** - Run example runbooks
 - **Performance testing** - Benchmark artifact passing overhead
 
@@ -1304,7 +1408,7 @@ These can be implemented incrementally without changing the core architecture.
 - Schema validation logic correctness
 - Artifact lifecycle management
 - Error handling in pipeline execution
-- Backward compatibility handling
+- Breaking change migration completeness
 - Documentation completeness
 
 ---
@@ -1319,15 +1423,5 @@ These can be implemented incrementally without changing the core architecture.
 
 ---
 
-## Approval and Sign-off
-
-**Reviewed By:** [Pending]
-**Approved By:** [Pending]
-**Start Date:** [TBD]
-**Target Completion:** [TBD]
-
----
-
-**Document Version:** 1.0
-**Last Updated:** 2025-11-10
-**Author:** Claude (Anthropic)
+**Document Version:** 2.0 (Phase 1 Complete)
+**Last Updated:** 2025-11-11

@@ -16,6 +16,7 @@ import pytest
 from pydantic import ValidationError
 
 from wct.runbook import (
+    ExecutionStep,
     Runbook,
     RunbookLoader,
     RunbookLoadError,
@@ -80,7 +81,8 @@ analysers:
       pattern_matching:
         ruleset: personal_data
 execution:
-  - name: "Valid runbook test execution"
+  - id: "step1"
+    name: "Valid runbook test execution"
     description: "Testing valid runbook loading and parsing"
     connector: test_connector
     analyser: test_analyser
@@ -117,7 +119,8 @@ analysers:
     type: personal_data_analyser
     properties: {}
 execution:
-  - name: "Duplicate names test execution"
+  - id: "step1"
+    name: "Duplicate names test execution"
     description: "Testing validation of duplicate connector names"
     connector: duplicate_name
     analyser: test_analyser
@@ -152,7 +155,8 @@ analysers:
     type: personal_data_analyser
     properties: {}
 execution:
-  - name: "Contact test execution"
+  - id: "step1"
+    name: "Contact test execution"
     description: "Testing runbook contact loading"
     connector: test_connector
     analyser: test_analyser
@@ -184,7 +188,8 @@ analysers:
     type: personal_data_analyser
     properties: {}
 execution:
-  - name: "No contact test execution"
+  - id: "step1"
+    name: "No contact test execution"
     description: "Testing runbook without contact"
     connector: test_connector
     analyser: test_analyser
@@ -226,6 +231,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "description": "Test execution step without name",
                     "connector": "test_connector",
                     "analyser": "test_analyser",
@@ -265,6 +271,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Test execution step without description",
                     "connector": "test_connector",
                     "analyser": "test_analyser",
@@ -305,6 +312,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "",
                     "description": "Test execution step with empty name",
                     "connector": "test_connector",
@@ -346,6 +354,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Test execution step with empty description",
                     "description": "",
                     "connector": "test_connector",
@@ -382,6 +391,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Personal Data Analysis",
                     "description": "Analyse filesystem for personal data using pattern matching",
                     "connector": "test_connector",
@@ -422,6 +432,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Duplicate connector validation test",
                     "description": "Testing duplicate connector name validation logic",
                     "connector": "duplicate_name",
@@ -464,6 +475,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Duplicate analyser validation test",
                     "description": "Testing duplicate analyser name validation logic",
                     "connector": "test_connector",
@@ -501,6 +513,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Invalid connector reference test",
                     "description": "Testing validation of nonexistent connector references",
                     "connector": "nonexistent_connector",
@@ -538,6 +551,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Invalid analyser reference test",
                     "description": "Testing validation of nonexistent analyser references",
                     "connector": "test_connector",
@@ -575,6 +589,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Step with contact",
                     "description": "Testing execution step with contact",
                     "contact": "Jane Austin <jane.austin@company.com>",
@@ -611,6 +626,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Step without contact",
                     "description": "Testing execution step without contact",
                     "connector": "test_connector",
@@ -646,6 +662,7 @@ class TestRunbookValidation:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Step with contact",
                     "description": "Step that has contact information",
                     "contact": "Alice Smith <alice@company.com>",
@@ -655,6 +672,7 @@ class TestRunbookValidation:
                     "output_schema": "personal_data_finding",
                 },
                 {
+                    "id": "step2",
                     "name": "Step without contact",
                     "description": "Step that has no contact information",
                     "connector": "test_connector",
@@ -695,6 +713,7 @@ class TestRunbookSummary:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "First summary test execution",
                     "description": "First step in runbook summary test",
                     "connector": "conn1",
@@ -703,6 +722,7 @@ class TestRunbookSummary:
                     "output_schema": "output1",
                 },
                 {
+                    "id": "step2",
                     "name": "Second summary test execution",
                     "description": "Second step in runbook summary test",
                     "connector": "conn2",
@@ -791,6 +811,7 @@ class TestRunbookIntegration:
             ],
             "execution": [
                 {
+                    "id": "step1",
                     "name": "Filesystem personal data analysis",
                     "description": "Comprehensive analysis of filesystem for personal data patterns",
                     "contact": "Data Analysis Team <data-analysis@company.com>",
@@ -800,6 +821,7 @@ class TestRunbookIntegration:
                     "output_schema": "personal_data_finding",
                 },
                 {
+                    "id": "step2",
                     "name": "Database processing purpose analysis",
                     "description": "Identification of data processing purposes in database",
                     "connector": "database_connector",
@@ -836,3 +858,199 @@ class TestRunbookIntegration:
             personal_data_analyser.properties["pattern_matching"]["ruleset"]
             == "personal_data"
         )
+
+
+class TestPipelineExecutionStep:
+    """Tests for pipeline-only ExecutionStep model."""
+
+    def test_connector_based_step_with_analyser(self) -> None:
+        """Test connector-based step with analyser."""
+        step = ExecutionStep(
+            id="read_and_analyse",
+            name="Read and analyse files",
+            description="Read files and analyse for personal data",
+            connector="filesystem",
+            analyser="personal_data",
+            input_schema="standard_input",
+            output_schema="personal_data_finding",
+            save_output=True,
+        )
+
+        assert step.id == "read_and_analyse"
+        assert step.connector == "filesystem"
+        assert step.analyser == "personal_data"
+        assert step.input_from is None
+        assert step.save_output is True
+
+    def test_connector_based_step_without_analyser(self) -> None:
+        """Test connector-only step (no analyser)."""
+        step = ExecutionStep(
+            id="read_files",
+            name="Read source files",
+            description="Read files from filesystem",
+            connector="filesystem",
+            input_schema="standard_input",
+            output_schema="standard_input",
+            save_output=True,
+        )
+
+        assert step.connector == "filesystem"
+        assert step.analyser is None
+        assert step.input_from is None
+
+    def test_input_based_step_with_analyser(self) -> None:
+        """Test input-based transformer step."""
+        step = ExecutionStep(
+            id="parse_code",
+            name="Parse source code",
+            description="Transform files to code structure",
+            input_from="read_files",
+            analyser="source_code_parser",
+            input_schema="standard_input",
+            output_schema="source_code",
+            save_output=True,
+        )
+
+        assert step.id == "parse_code"
+        assert step.input_from == "read_files"
+        assert step.analyser == "source_code_parser"
+        assert step.connector is None
+        assert step.save_output is True
+
+    def test_id_field_required(self) -> None:
+        """Test that id field is required."""
+        with pytest.raises(ValidationError, match="id"):
+            ExecutionStep(  # type: ignore[call-arg]  # Intentionally missing id
+                name="No ID step",
+                description="Missing ID",
+                connector="filesystem",
+                input_schema="standard_input",
+                output_schema="standard_input",
+            )
+
+    def test_connector_xor_input_from_both_fails(self) -> None:
+        """Test that having both connector and input_from fails validation."""
+        with pytest.raises(ValidationError, match="cannot have both"):
+            ExecutionStep(
+                id="invalid",
+                name="Invalid step",
+                description="Has both connector and input_from",
+                connector="filesystem",
+                input_from="previous_step",
+                analyser="analyser",
+                input_schema="standard_input",
+                output_schema="output",
+            )
+
+    def test_connector_xor_input_from_neither_fails(self) -> None:
+        """Test that having neither connector nor input_from fails validation."""
+        with pytest.raises(ValidationError, match="must have either"):
+            ExecutionStep(
+                id="invalid",
+                name="Invalid step",
+                description="Has neither connector nor input_from",
+                analyser="analyser",
+                input_schema="standard_input",
+                output_schema="output",
+            )
+
+    def test_save_output_defaults_false(self) -> None:
+        """Test that save_output defaults to False."""
+        step = ExecutionStep(
+            id="step1",
+            name="Test step",
+            description="Test",
+            connector="conn",
+            input_schema="input",
+            output_schema="output",
+        )
+
+        assert step.save_output is False
+
+
+class TestPipelineCrossReferenceValidation:
+    """Tests for pipeline cross-reference validation (Step 2)."""
+
+    def test_runbook_validates_input_from_references_valid_step_id(self) -> None:
+        """Test that input_from must reference a valid step ID."""
+        runbook_data = {
+            "name": "Test Pipeline",
+            "description": "Test cross-reference validation",
+            "connectors": [
+                {"name": "reader", "type": "filesystem_connector", "properties": {}}
+            ],
+            "analysers": [
+                {"name": "analyser", "type": "personal_data_analyser", "properties": {}}
+            ],
+            "execution": [
+                {
+                    "id": "step1",
+                    "name": "Read files",
+                    "description": "Read from filesystem",
+                    "connector": "reader",
+                    "analyser": "analyser",
+                    "input_schema": "standard_input",
+                    "output_schema": "personal_data_finding",
+                    "save_output": True,
+                },
+                {
+                    "id": "step2",
+                    "name": "Process output",
+                    "description": "Process previous step output",
+                    "input_from": "non_existent_step",  # Invalid reference!
+                    "analyser": "analyser",
+                    "input_schema": "personal_data_finding",
+                    "output_schema": "personal_data_finding",
+                },
+            ],
+        }
+
+        with pytest.raises(ValidationError, match="references unknown step ID"):
+            Runbook.model_validate(runbook_data)
+
+    def test_runbook_accepts_valid_pipeline_with_chained_steps(self) -> None:
+        """Test that valid pipeline with proper references is accepted."""
+        runbook_data = {
+            "name": "Valid Pipeline",
+            "description": "Test valid pipeline",
+            "connectors": [
+                {"name": "reader", "type": "filesystem_connector", "properties": {}}
+            ],
+            "analysers": [
+                {"name": "parser", "type": "source_code_analyser", "properties": {}},
+                {
+                    "name": "analyser",
+                    "type": "personal_data_analyser",
+                    "properties": {},
+                },
+            ],
+            "execution": [
+                {
+                    "id": "read",
+                    "name": "Read files",
+                    "description": "Read source files",
+                    "connector": "reader",
+                    "analyser": "parser",
+                    "input_schema": "standard_input",
+                    "output_schema": "source_code",
+                    "save_output": True,
+                },
+                {
+                    "id": "analyse",
+                    "name": "Analyse code",
+                    "description": "Analyse parsed code",
+                    "input_from": "read",  # Valid reference
+                    "analyser": "analyser",
+                    "input_schema": "source_code",
+                    "output_schema": "personal_data_finding",
+                },
+            ],
+        }
+
+        runbook = Runbook.model_validate(runbook_data)
+
+        assert len(runbook.execution) == 2
+        assert runbook.execution[0].id == "read"
+        assert runbook.execution[0].connector == "reader"
+        assert runbook.execution[1].id == "analyse"
+        assert runbook.execution[1].input_from == "read"

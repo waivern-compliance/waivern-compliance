@@ -13,7 +13,7 @@ Modify the `_execute_step` method to support both single-step mode (connector â†
 1. **Conditional input source** - Check `step.connector` vs `step.input_from` to determine mode
 2. **Artifact retrieval** - Get input Message from artifacts dict using `input_from` ID
 3. **Different schema resolution** - Use existing method for single-step, new method for pipeline
-4. **Maintain backward compatibility** - Existing single-step logic unchanged
+4. **Single-step support** - Existing single-step logic (connector XOR input_from) works as-is
 
 ## Implementation
 

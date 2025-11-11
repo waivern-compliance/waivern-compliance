@@ -107,7 +107,8 @@ analysers:
       description: "Identify data processing purposes and compliance frameworks from filesystem content"
 
 execution:
-  - name: "Personal Data Detection in SQLite Database"
+  - id: "sqlite_personal_data"
+    name: "Personal Data Detection in SQLite Database"
     description: "Scan SQLite database tables and columns for personally identifiable information"
     contact: "Emily Chen (Database Administrator) <emily.chen@company.co.uk>"
     connector: "compliance_sqlite_db"
@@ -117,7 +118,8 @@ execution:
     output_schema: "personal_data_finding"
     output_schema_version: "1.0.0"
 
-  - name: "Data Subject Classification in SQLite Database"
+  - id: "sqlite_data_subject"
+    name: "Data Subject Classification in SQLite Database"
     description: "Identify data subject categories from database content for GDPR Article 30(1)(c) compliance"
     contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
     connector: "compliance_sqlite_db"
@@ -127,7 +129,8 @@ execution:
     output_schema: "data_subject_finding"
     output_schema_version: "1.0.0"
 
-  - name: "Personal Data Detection in Filesystem"
+  - id: "filesystem_personal_data"
+    name: "Personal Data Detection in Filesystem"
     description: "Scan filesystem mock for personally identifiable information in files"
     contact: "Michael Brown (DevOps) <michael.brown@company.co.uk>"
     connector: "filesystem_mock_lite"
@@ -137,7 +140,8 @@ execution:
     output_schema: "personal_data_finding"
     output_schema_version: "1.0.0"
 
-  - name: "Processing Purpose Analysis of Database Content"
+  - id: "sqlite_processing_purpose"
+    name: "Processing Purpose Analysis of Database Content"
     description: "Identify GDPR and CCPA compliance processing purposes from database content"
     connector: "compliance_sqlite_db"
     analyser: "processing_purpose_analyser_for_sqlite"
@@ -146,7 +150,8 @@ execution:
     output_schema: "processing_purpose_finding"
     output_schema_version: "1.0.0"
 
-  - name: "Processing Purpose Analysis of Filesystem Content"
+  - id: "filesystem_processing_purpose"
+    name: "Processing Purpose Analysis of Filesystem Content"
     description: "Identify data processing purposes and compliance frameworks from filesystem content"
     connector: "filesystem_mock_lite"
     analyser: "processing_purpose_analyser_for_filesystem"

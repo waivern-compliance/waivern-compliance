@@ -74,7 +74,8 @@ analysers:
         - "phone"
 
 execution:
-  - name: "File system analysis for personal data"
+  - id: "analyse_files"
+    name: "File system analysis for personal data"
     description: "Test execution for filesystem connector with personal data analyser"
     connector: "test_filesystem"
     analyser: "test_personal_data"
@@ -165,7 +166,8 @@ analysers:
         - "email"
 
 execution:
-  - name: "File system analysis with output directory creation"
+  - id: "analyse_with_dir_creation"
+    name: "File system analysis with output directory creation"
     description: "Test execution that creates output directory if not exists"
     connector: "test_filesystem"
     analyser: "test_personal_data"
@@ -214,7 +216,8 @@ analysers:
         - "email"
 
 execution:
-  - name: "File system analysis with absolute output path"
+  - id: "analyse_with_absolute_path"
+    name: "File system analysis with absolute output path"
     description: "Test execution that handles absolute output paths correctly"
     connector: "test_filesystem"
     analyser: "test_personal_data"
@@ -261,7 +264,8 @@ analysers:
         - "email"
 
 execution:
-  - name: "File system analysis with verbose mode"
+  - id: "analyse_verbose"
+    name: "File system analysis with verbose mode"
     description: "Test execution that demonstrates verbose logging mode changes"
     connector: "test_filesystem"
     analyser: "test_personal_data"
@@ -360,7 +364,8 @@ analysers:
         - "phone"
 
 execution:
-  - name: "File system analysis for validation test"
+  - id: "validate_runbook"
+    name: "File system analysis for validation test"
     description: "Test execution for runbook validation functionality"
     connector: "test_filesystem"
     analyser: "test_personal_data"
@@ -414,7 +419,8 @@ analysers:
       patterns: ["email"]
 
 execution:
-  - name: "File system analysis for log level test"
+  - id: "test_log_level"
+    name: "File system analysis for log level test"
     description: "Test execution for verifying log level parameter handling"
     connector: "test_filesystem"
     analyser: "test_personal_data"
