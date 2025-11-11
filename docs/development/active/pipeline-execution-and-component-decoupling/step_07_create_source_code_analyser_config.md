@@ -3,6 +3,7 @@
 - **Phase:** 3 - Refactor SourceCodeConnector → SourceCodeAnalyser
 - **Status:** TODO
 - **Prerequisites:** Phase 2 complete (pipeline execution working)
+- **GitHub Issue:** #212
 
 ## Context
 

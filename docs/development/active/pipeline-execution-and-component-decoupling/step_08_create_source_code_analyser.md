@@ -3,6 +3,7 @@
 - **Phase:** 3 - Refactor SourceCodeConnector → SourceCodeAnalyser
 - **Status:** TODO
 - **Prerequisites:** Step 7 (SourceCodeAnalyserConfig created)
+- **GitHub Issue:** #213
 
 ## Context
 

@@ -3,6 +3,7 @@
 - **Phase:** 3 - Refactor SourceCodeConnector → SourceCodeAnalyser
 - **Status:** TODO
 - **Prerequisites:** Step 9 (SourceCodeAnalyserFactory created)
+- **GitHub Issue:** #215
 
 ## Context
 

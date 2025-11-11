@@ -3,6 +3,7 @@
 - **Phase:** 3 - Refactor SourceCodeConnector → SourceCodeAnalyser
 - **Status:** TODO
 - **Prerequisites:** Step 11 (pipeline integration tests passing)
+- **GitHub Issue:** #217
 
 ## Context
 

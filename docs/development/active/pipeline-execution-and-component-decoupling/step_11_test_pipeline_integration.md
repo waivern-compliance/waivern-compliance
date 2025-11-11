@@ -3,6 +3,7 @@
 - **Phase:** 3 - Refactor SourceCodeConnector → SourceCodeAnalyser
 - **Status:** TODO
 - **Prerequisites:** Step 10 (entry points and exports updated)
+- **GitHub Issue:** #216
 
 ## Context
 

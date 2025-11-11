@@ -3,6 +3,7 @@
 - **Phase:** 3 - Refactor SourceCodeConnector → SourceCodeAnalyser
 - **Status:** TODO
 - **Prerequisites:** Step 8 (SourceCodeAnalyser created)
+- **GitHub Issue:** #214
 
 ## Context
 
