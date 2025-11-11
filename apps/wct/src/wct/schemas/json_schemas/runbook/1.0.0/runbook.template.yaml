@@ -61,7 +61,8 @@ analysers:
 # Execution pipeline - defines the analysis workflow
 execution:
   # Analyse filesystem for personal data
-  - name: "Filesystem Personal Data Analysis"
+  - id: "filesystem_personal_data"
+    name: "Filesystem Personal Data Analysis"
     description: "Scan files for personal data patterns using LLM validation"
     connector: "sample_filesystem"
     analyser: "personal_data_detector"
@@ -69,7 +70,8 @@ execution:
     output_schema: "personal_data_finding"
 
   # Analyse database for personal data
-  - name: "Database Personal Data Analysis"
+  - id: "database_personal_data"
+    name: "Database Personal Data Analysis"
     description: "Examine database tables for personal information and PII patterns"
     connector: "sample_database"
     analyser: "personal_data_detector"
@@ -77,7 +79,8 @@ execution:
     output_schema: "personal_data_finding"
 
   # Analyse database for processing purposes
-  - name: "Database Processing Purpose Analysis"
+  - id: "database_processing_purpose"
+    name: "Database Processing Purpose Analysis"
     description: "Identify data processing purposes for GDPR compliance assessment"
     connector: "sample_database"
     analyser: "processing_purpose_detector"

@@ -277,7 +277,8 @@ analysers:
     type: analyser_in_v1_0_1_1_out_v1_0
     properties: {}
 execution:
-  - name: "Test auto version selection"
+  - id: "auto_version_selection"
+    name: "Test auto version selection"
     description: "Should select latest compatible version"
     connector: test_connector
     analyser: test_analyser
@@ -313,7 +314,8 @@ analysers:
     type: analyser_in_v1_0_1_1_out_v1_0_1_1
     properties: {}
 execution:
-  - name: "Test explicit version"
+  - id: "explicit_version"
+    name: "Test explicit version"
     description: "Should use explicitly requested version"
     connector: test_connector
     analyser: test_analyser
@@ -352,7 +354,8 @@ analysers:
     type: analyser_in_v1_0_1_1_out_v1_0
     properties: {}
 execution:
-  - name: "Test partial compatibility"
+  - id: "partial_compatibility"
+    name: "Test partial compatibility"
     description: "Should select v1.1.0 (latest compatible), not v2.0.0"
     connector: test_connector
     analyser: test_analyser
@@ -388,7 +391,8 @@ analysers:
     type: analyser_in_v1_0_out_v1_0
     properties: {}
 execution:
-  - name: "Test version mismatch"
+  - id: "version_mismatch"
+    name: "Test version mismatch"
     description: "Should fail with version mismatch error"
     connector: test_connector
     analyser: test_analyser
@@ -427,7 +431,8 @@ analysers:
     type: analyser_in_v1_0_1_1_out_v1_0
     properties: {}
 execution:
-  - name: "Test explicit version not available"
+  - id: "explicit_version_unavailable"
+    name: "Test explicit version not available"
     description: "Should fail when requesting unavailable version"
     connector: test_connector
     analyser: test_analyser
