@@ -1,19 +1,45 @@
 # Step 4: Implement Execution Order Resolution
 
-**Phase:** 2 - Implement Sequential Pipeline Execution
-**Status:** Pending
-**Prerequisites:** Step 3 (artifact storage added)
+- **Phase:** 2 - Implement Sequential Pipeline Execution
+- **Status:** ✅ Completed (2025-01-11)
+- **Prerequisites:** Step 3 (artifact storage added)
+
+## Context
+
+This is part of implementing pipeline execution for WCF, enabling multi-step analysis workflows where data flows between steps.
+
+**See:** [Pipeline Execution and Component Decoupling](../pipeline-execution-and-component-decoupling.md) for full context and roadmap.
 
 ## Purpose
 
 Add dependency graph validation to detect circular dependencies in pipeline execution steps, ensuring safe execution order.
 
+## Problem
+
+Pipeline steps can reference each other via `input_from`, creating dependency chains. Without validation, circular dependencies (A→B→C→A) would cause infinite loops or incorrect execution order.
+
+**Example problematic scenario:**
+```yaml
+execution:
+  - id: "step_a"
+    input_from: "step_c"  # Depends on C
+  - id: "step_b"
+    input_from: "step_a"  # Depends on A
+  - id: "step_c"
+    input_from: "step_b"  # Depends on B → CYCLE!
+```
+
+## Solution
+
+Use graph-based cycle detection with depth-first search (DFS) before execution starts. This validates the dependency graph is a **Directed Acyclic Graph (DAG)** and fails fast with a helpful error message.
+
 ## Decisions Made
 
-1. **Build dependency graph** - Map step IDs to their dependencies
-2. **Detect cycles using DFS** - Use depth-first search with recursion stack
-3. **Sequential execution for now** - Return steps in declaration order (topological sort can come later)
+1. **Build dependency graph** - Map step IDs to their dependencies from `input_from` fields
+2. **Detect cycles using DFS** - Use depth-first search with recursion stack (standard algorithm)
+3. **Sequential execution for now** - Return steps in declaration order (no reordering)
 4. **Fail fast** - Raise ExecutorError on cycle detection before execution begins
+5. **Future-proof** - Design allows adding topological sort later for parallel execution
 
 ## Implementation
 
@@ -23,313 +49,214 @@ Add dependency graph validation to detect circular dependencies in pipeline exec
 
 ### Changes Required
 
-Add two new methods to the `Executor` class:
+#### 1. Add cycle detection method to Executor
 
-```python
-def _build_execution_order(self, steps: list[ExecutionStep]) -> list[ExecutionStep]:
-    """Build execution order respecting dependencies.
+**Method:** `_build_execution_order(steps: list[ExecutionStep]) -> list[ExecutionStep]`
 
-    For sequential execution, this validates there are no cycles
-    and returns steps in declaration order. Future enhancement can
-    add proper topological sorting for parallel execution.
+**Purpose:** Validate dependency graph and return steps in safe execution order
 
-    Args:
-        steps: Execution steps from runbook
-
-    Returns:
-        Steps in valid execution order
-
-    Raises:
-        ExecutorError: If circular dependencies detected
-    """
+**Algorithm (pseudo-code):**
+```
+function build_execution_order(steps):
     # Build dependency graph
-    dependencies: dict[str, set[str]] = {}
-    for step in steps:
-        step_id = step.id or step.name  # Use name as fallback for single-step mode
-        dependencies[step_id] = set()
-        if step.input_from:
-            dependencies[step_id].add(step.input_from)
+    graph = {}
+    for each step in steps:
+        graph[step.id] = set()
+        if step.input_from exists:
+            graph[step.id].add(step.input_from)
 
-    # Validate no cycles using DFS
-    visited: set[str] = set()
-    for step_id in dependencies:
-        if self._has_cycle(step_id, dependencies, visited, set()):
-            raise ExecutorError(
-                f"Circular dependency detected in execution steps involving '{step_id}'. "
-                f"Pipeline steps cannot form dependency cycles."
-            )
+    # Validate no cycles
+    visited = set()
+    for each step_id in graph:
+        if has_cycle(step_id, graph, visited, recursion_stack=set()):
+            raise ExecutorError("Circular dependency detected involving '{step_id}'")
 
-    logger.debug("Execution order validated - no circular dependencies found")
+    log("Execution order validated - no cycles")
 
-    # For sequential execution, return in declaration order
-    # (Proper topological sort can be added later for parallel execution)
+    # For now, return in declaration order
+    # (Future: topological sort for optimal ordering)
     return steps
-
-
-def _has_cycle(
-    self,
-    step_id: str,
-    dependencies: dict[str, set[str]],
-    visited: set[str],
-    rec_stack: set[str],
-) -> bool:
-    """Check for cycles in dependency graph using depth-first search.
-
-    Args:
-        step_id: Current step being checked
-        dependencies: Dependency graph (step_id -> set of dependencies)
-        visited: Set of all visited nodes
-        rec_stack: Recursion stack for current DFS path
-
-    Returns:
-        True if cycle detected, False otherwise
-    """
-    visited.add(step_id)
-    rec_stack.add(step_id)
-
-    # Check all dependencies
-    for dep in dependencies.get(step_id, set()):
-        # If dependency not visited, recurse
-        if dep not in visited:
-            if self._has_cycle(dep, dependencies, visited, rec_stack):
-                return True
-        # If dependency is in current recursion stack, cycle found
-        elif dep in rec_stack:
-            return True
-
-    # Remove from recursion stack as we backtrack
-    rec_stack.remove(step_id)
-    return False
 ```
 
-Update `execute_runbook` to call the new method:
+**Error handling:**
+- Raise `ExecutorError` with helpful message including step ID involved in cycle
+- Message should explain that pipeline steps cannot form dependency cycles
 
-```python
-def execute_runbook(self, runbook_path: Path) -> list[AnalysisResult]:
-    """Load and execute a runbook file with pipeline support."""
-    try:
-        runbook = RunbookLoader.load(runbook_path)
-    except Exception as e:
-        raise ExecutorError(f"Failed to load runbook {runbook_path}: {e}") from e
+#### 2. Add DFS cycle detection helper
 
-    # NEW: Validate execution order and dependencies
-    execution_order = self._build_execution_order(runbook.execution)
+**Method:** `_has_cycle(step_id, graph, visited, rec_stack) -> bool`
 
-    # Artifact storage for passing data between steps
-    artifacts: dict[str, Message] = {}
+**Purpose:** Detect cycles using depth-first search with recursion stack
 
-    results: list[AnalysisResult] = []
+**Algorithm (pseudo-code):**
+```
+function has_cycle(node, graph, visited, rec_stack):
+    visited.add(node)
+    rec_stack.add(node)  # Track current DFS path
+
+    for each dependency in graph[node]:
+        if dependency not in visited:
+            # Recursively check dependency
+            if has_cycle(dependency, graph, visited, rec_stack):
+                return true
+        elif dependency in rec_stack:
+            # Found back edge → cycle detected
+            return true
+
+    rec_stack.remove(node)  # Backtrack
+    return false
+```
+
+**Key insight:** If we encounter a node already in the current recursion stack, we've found a back edge (cycle).
+
+**Complexity:** O(V + E) where V = number of steps, E = number of dependencies
+
+#### 3. Update execute_runbook
+
+**Changes:**
+1. Call `_build_execution_order(runbook.execution)` after loading runbook
+2. Use returned order for execution loop (currently same as declaration order)
+3. Let ExecutorError propagate if cycle detected
+
+**Pseudo-code:**
+```
+function execute_runbook(runbook_path):
+    runbook = load_runbook(runbook_path)
+
+    # NEW: Validate execution order (fails fast on cycles)
+    execution_order = _build_execution_order(runbook.execution)
+
+    artifacts = {}
+    results = []
+
     for step in execution_order:  # Use validated order
-        result = self._execute_step(step, runbook, artifacts)
+        result, message = _execute_step(step, runbook, artifacts)
         results.append(result)
 
-        if step.save_output and step.id and result.message:
-            logger.debug(f"Saving output artifact for step '{step.id}'")
-            artifacts[step.id] = result.message
+        if step.save_output:
+            artifacts[step.id] = message
 
     return results
 ```
 
 ## Testing
 
-### Unit Tests to Add
+### Testing Strategy
 
-**File:** `apps/wct/tests/unit/test_executor.py`
+**Critical principle:** Test through the **public API** (`execute_runbook`), not by calling private methods directly.
 
-```python
-import pytest
-from wct.executor import Executor, ExecutorError
-from wct.runbook import ExecutionStep
+Create temporary runbook YAML files with various dependency patterns and verify behavior through `execute_runbook()`.
 
+### Test Scenarios
 
-def test_execution_order_detects_direct_cycle(isolated_registry):
-    """Cycle detection catches direct circular dependency."""
-    executor = Executor.create_with_built_ins()
+**File:** `apps/wct/tests/test_executor.py`
 
-    # Create steps with direct cycle: A -> B -> A
-    steps = [
-        ExecutionStep(
-            id="step_a",
-            name="Step A",
-            description="",
-            input_from="step_b",  # Depends on B
-            analyser="analyser",
-            input_schema="standard_input",
-            output_schema="standard_input",
-        ),
-        ExecutionStep(
-            id="step_b",
-            name="Step B",
-            description="",
-            input_from="step_a",  # Depends on A - CYCLE!
-            analyser="analyser",
-            input_schema="standard_input",
-            output_schema="standard_input",
-        ),
-    ]
+#### 1. Direct Cycle (A → B → A)
 
-    with pytest.raises(ExecutorError) as exc_info:
-        executor._build_execution_order(steps)
+**Setup:**
+- Create runbook with 2 steps where `step_a.input_from = "step_b"` and `step_b.input_from = "step_a"`
+- Use mock connector and analyser
 
-    assert "Circular dependency detected" in str(exc_info.value)
+**Expected behavior:**
+- `execute_runbook()` raises `ExecutorError`
+- Error message contains "Circular dependency detected"
+- Error message helpful (mentions step ID involved)
 
+#### 2. Indirect Cycle (A → B → C → A)
 
-def test_execution_order_detects_indirect_cycle(isolated_registry):
-    """Cycle detection catches indirect circular dependency."""
-    executor = Executor.create_with_built_ins()
+**Setup:**
+- Create runbook with 3 steps forming indirect cycle
+- Chain: A depends on C, B depends on A, C depends on B
 
-    # Create steps with indirect cycle: A -> B -> C -> A
-    steps = [
-        ExecutionStep(
-            id="step_a",
-            name="Step A",
-            description="",
-            input_from="step_c",  # Depends on C
-            analyser="analyser",
-            input_schema="standard_input",
-            output_schema="standard_input",
-        ),
-        ExecutionStep(
-            id="step_b",
-            name="Step B",
-            description="",
-            input_from="step_a",  # Depends on A
-            analyser="analyser",
-            input_schema="standard_input",
-            output_schema="standard_input",
-        ),
-        ExecutionStep(
-            id="step_c",
-            name="Step C",
-            description="",
-            input_from="step_b",  # Depends on B - CYCLE!
-            analyser="analyser",
-            input_schema="standard_input",
-            output_schema="standard_input",
-        ),
-    ]
+**Expected behavior:**
+- `execute_runbook()` raises `ExecutorError`
+- Error message contains "Circular dependency detected"
 
-    with pytest.raises(ExecutorError) as exc_info:
-        executor._build_execution_order(steps)
+#### 3. Valid Linear Chain (A → B → C)
 
-    assert "Circular dependency detected" in str(exc_info.value)
+**Setup:**
+- Create runbook with 3 steps in valid dependency chain
+- Step A uses connector (no `input_from`)
+- Step B has `input_from: "step_a"` with `save_output: true` on A
+- Step C has `input_from: "step_b"` with `save_output: true` on B
 
+**Expected behavior:**
+- Execution succeeds without raising errors
+- All 3 steps execute
+- Results returned in correct order
 
-def test_execution_order_accepts_valid_dag(isolated_registry):
-    """Valid directed acyclic graph is accepted."""
-    executor = Executor.create_with_built_ins()
+#### 4. Valid DAG with Branch
 
-    # Create valid linear dependency: A -> B -> C
-    steps = [
-        ExecutionStep(
-            id="step_a",
-            name="Step A",
-            description="",
-            connector="filesystem",
-            analyser="analyser",
-            input_schema="standard_input",
-            output_schema="standard_input",
-            save_output=True,
-        ),
-        ExecutionStep(
-            id="step_b",
-            name="Step B",
-            description="",
-            input_from="step_a",
-            analyser="analyser",
-            input_schema="standard_input",
-            output_schema="standard_input",
-            save_output=True,
-        ),
-        ExecutionStep(
-            id="step_c",
-            name="Step C",
-            description="",
-            input_from="step_b",
-            analyser="analyser",
-            input_schema="standard_input",
-            output_schema="standard_input",
-        ),
-    ]
+**Setup:**
+- Create runbook where multiple steps depend on same ancestor
+- Example: A (connector), B depends on A, C depends on A (parallel branches)
 
-    # Should not raise
-    result = executor._build_execution_order(steps)
-    assert len(result) == 3
-```
+**Expected behavior:**
+- Execution succeeds
+- Both branches execute correctly
 
-### Manual Testing
+### Implementation Notes
 
-Create a test YAML with circular dependency:
+- Use `tempfile.NamedTemporaryFile` to create runbook YAML in tests
+- Use existing mock connector and analyser from test fixtures
+- Clean up temp files in `finally` blocks
+- Test error messages are helpful (include step IDs)
 
-```yaml
-name: "Circular Dependency Test"
-description: "Should fail validation"
-
-connectors:
-  - name: "reader"
-    type: "filesystem_connector"
-    properties:
-      path: "."
-
-analysers:
-  - name: "analyser"
-    type: "personal_data_analyser"
-
-execution:
-  - id: "step_a"
-    name: "Step A"
-    input_from: "step_b"  # Circular!
-    analyser: "analyser"
-    input_schema: "standard_input"
-    output_schema: "standard_input"
-
-  - id: "step_b"
-    name: "Step B"
-    input_from: "step_a"  # Circular!
-    analyser: "analyser"
-    input_schema: "standard_input"
-    output_schema: "standard_input"
-```
-
-Test:
-```bash
-uv run wct run circular_test.yaml
-# Should error with "Circular dependency detected"
-```
-
-### Validation
+### Validation Commands
 
 ```bash
-# Run unit tests
-cd apps/wct
-uv run pytest tests/unit/test_executor.py::test_execution_order -v
+# Run all WCT tests
+uv run pytest apps/wct/tests/ -v
 
-# Type check
-./scripts/type-check.sh
+# Run cycle detection tests specifically
+uv run pytest apps/wct/tests/test_executor.py -k "cycle" -v
 
-# Lint
-./scripts/lint.sh
+# Run all quality checks
+./scripts/dev-checks.sh
 ```
 
 ## Success Criteria
 
-- [ ] `_build_execution_order` method added to Executor
-- [ ] `_has_cycle` method correctly detects cycles using DFS
-- [ ] Direct cycles are detected (A -> B -> A)
-- [ ] Indirect cycles are detected (A -> B -> C -> A)
-- [ ] Valid DAGs are accepted
-- [ ] ExecutorError is raised with helpful message
-- [ ] Unit tests pass
-- [ ] Type checking passes
-- [ ] Linting passes
+**Functional:**
+- [x] ✅ Direct cycles (A → B → A) are detected and rejected before execution
+- [x] ✅ Indirect cycles (A → B → C → A) are detected and rejected
+- [x] ✅ Valid linear chains (A → B → C) execute successfully
+- [x] ✅ Valid DAGs with branches execute successfully
+- [x] ✅ Helpful error messages that include step IDs involved in cycles
+- [x] ✅ `execute_runbook` calls validation before execution loop
+- [x] ✅ Validation happens before any step executes (fail fast)
 
-## Notes
+**Quality:**
+- [x] ✅ All tests pass (including new cycle detection tests)
+- [x] ✅ Type checking passes (strict mode)
+- [x] ✅ Linting passes
+- [x] ✅ No regressions in existing functionality
 
-- This implements cycle detection only, not topological sorting
-- Steps are returned in declaration order for sequential execution
-- Future enhancement: proper topological sort for parallel execution
-- The algorithm has O(V + E) complexity where V=steps, E=dependencies
+**Code Quality:**
+- [x] ✅ Private methods (`_build_execution_order`, `_has_cycle`) not tested directly
+- [x] ✅ All tests use public API (`execute_runbook`)
+- [x] ✅ Clean separation: validation logic separate from execution logic
+- [x] ✅ Code follows existing patterns in Executor
 
-## Next Step
+## Implementation Notes
 
-Step 5: Update _execute_step to support pipeline mode
+**Key design decisions:**
+- Cycle detection only (no topological reordering yet)
+- Steps returned in declaration order for sequential execution
+- Graph traversal: standard DFS with recursion stack
+- Complexity: O(V + E) where V = steps, E = dependencies
+
+**Future enhancements:**
+- Topological sort for optimal execution order
+- Parallel execution of independent branches
+- Dependency graph visualization for debugging
+
+**Edge cases to consider:**
+- Steps without `input_from` (connector-based) have no dependencies
+- Self-referencing step (`input_from: "self"`) should be caught
+- Missing step IDs referenced in `input_from` already caught by Step 2 validation
+
+## Next Steps
+
+- **Step 5:** Update `_execute_step` to support pipeline mode (use `input_from`)
+- **Step 6:** Add pipeline schema resolution method

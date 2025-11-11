@@ -203,10 +203,13 @@ class Executor:
         except Exception as e:
             raise ExecutorError(f"Failed to load runbook {runbook_path}: {e}") from e
 
+        # Validate execution order (detect cycles)
+        execution_order = self._build_execution_order(runbook.execution)
+
         results: list[AnalysisResult] = []
         artifacts: dict[str, Message] = {}
 
-        for step in runbook.execution:
+        for step in execution_order:
             analysis_result, message = self._execute_step(step, runbook, artifacts)
             results.append(analysis_result)
 
@@ -216,6 +219,80 @@ class Executor:
                 logger.debug(f"Saved artifact from step '{step.id}' for pipeline use")
 
         return results
+
+    def _build_execution_order(self, steps: list[ExecutionStep]) -> list[ExecutionStep]:
+        """Build execution order and validate no circular dependencies.
+
+        For sequential execution, this validates there are no cycles and returns
+        steps in declaration order. Future enhancement can add topological sorting
+        for parallel execution.
+
+        Args:
+            steps: Execution steps from runbook
+
+        Returns:
+            Steps in valid execution order (currently declaration order)
+
+        Raises:
+            ExecutorError: If circular dependencies detected
+
+        """
+        # Build dependency graph
+        dependencies: dict[str, set[str]] = {}
+        for step in steps:
+            dependencies[step.id] = set()
+            if step.input_from:
+                dependencies[step.id].add(step.input_from)
+
+        # Validate no cycles using DFS
+        visited: set[str] = set()
+        for step_id in dependencies:
+            if self._has_cycle(step_id, dependencies, visited, set()):
+                raise ExecutorError(
+                    f"Circular dependency detected in execution steps involving '{step_id}'. "
+                    f"Pipeline steps cannot form dependency cycles."
+                )
+
+        logger.debug("Execution order validated - no circular dependencies found")
+
+        # For sequential execution, return in declaration order
+        return steps
+
+    def _has_cycle(
+        self,
+        step_id: str,
+        dependencies: dict[str, set[str]],
+        visited: set[str],
+        rec_stack: set[str],
+    ) -> bool:
+        """Check for cycles in dependency graph using depth-first search.
+
+        Args:
+            step_id: Current step being checked
+            dependencies: Dependency graph (step_id -> set of dependencies)
+            visited: Set of all visited nodes
+            rec_stack: Recursion stack for current DFS path
+
+        Returns:
+            True if cycle detected, False otherwise
+
+        """
+        visited.add(step_id)
+        rec_stack.add(step_id)
+
+        # Check all dependencies
+        for dep in dependencies.get(step_id, set()):
+            # If dependency not visited, recurse
+            if dep not in visited:
+                if self._has_cycle(dep, dependencies, visited, rec_stack):
+                    return True
+            # If dependency is in current recursion stack, cycle found
+            elif dep in rec_stack:
+                return True
+
+        # Remove from recursion stack as we backtrack
+        rec_stack.remove(step_id)
+        return False
 
     def _execute_step(
         self,
