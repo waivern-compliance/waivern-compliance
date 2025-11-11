@@ -1198,6 +1198,103 @@ execution:
         # Verify runbook was processed (cycle detection passed)
         assert len(results) == 3
 
+    def test_execute_runbook_pipeline_mode_reads_from_artifact(self) -> None:
+        """Test that pipeline step reads artifact from previous step and processes it."""
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook with 2 steps: connector-based → pipeline-based
+        runbook_content = """
+name: Pipeline Execution Test
+description: Test pipeline mode artifact consumption
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+execution:
+  - id: "extract_data"
+    name: "Extract Data"
+    description: "Extract data from connector"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+    save_output: true
+  - id: "process_data"
+    name: "Process Data"
+    description: "Process data from previous step"
+    input_from: "extract_data"
+    analyser: test_analyser
+    input_schema: personal_data_finding
+    output_schema: personal_data_finding
+"""
+
+        # Both steps should execute successfully
+        results = self._execute_runbook_yaml(executor, runbook_content)
+
+        # Verify both steps executed
+        assert len(results) == 2
+
+        # Verify first step (connector-based)
+        assert results[0].success is True
+        assert results[0].analysis_name == "Extract Data"
+        assert results[0].input_schema == "standard_input"
+
+        # Verify second step (pipeline-based) executed successfully
+        assert results[1].success is True
+        assert results[1].analysis_name == "Process Data"
+        assert results[1].input_schema == "personal_data_finding"
+
+    def test_execute_runbook_pipeline_mode_errors_on_missing_artifact(self) -> None:
+        """Test that pipeline step errors when artifact not saved by previous step."""
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook with step 1 NOT saving output (save_output: false)
+        runbook_content = """
+name: Pipeline Error Test
+description: Test error when artifact not saved
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+execution:
+  - id: "extract_data"
+    name: "Extract Data"
+    description: "Extract data from connector"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+    save_output: false
+  - id: "process_data"
+    name: "Process Data"
+    description: "Process data from previous step"
+    input_from: "extract_data"
+    analyser: test_analyser
+    input_schema: personal_data_finding
+    output_schema: personal_data_finding
+"""
+
+        # Execute runbook and expect error
+        results = self._execute_runbook_yaml(executor, runbook_content)
+
+        # First step should succeed
+        assert len(results) == 2
+        assert results[0].success is True
+        assert results[0].analysis_name == "Extract Data"
+
+        # Second step should fail with helpful error message
+        assert results[1].success is False
+        assert "artifact not found" in results[1].error_message.lower()
+        assert "save_output: true" in results[1].error_message
+
 
 class TestExecutorCreateWithBuiltIns:
     """Tests for Executor.create_with_built_ins() class method ✔️."""

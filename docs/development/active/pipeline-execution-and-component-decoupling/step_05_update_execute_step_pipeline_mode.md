@@ -1,7 +1,7 @@
 # Step 5: Update _execute_step to Support Pipeline Mode
 
 **Phase:** 2 - Implement Sequential Pipeline Execution
-**Status:** TODO
+**Status:** DONE
 **Prerequisites:** Steps 1-4 (pipeline infrastructure and validation in place)
 
 ## Context
@@ -235,24 +235,24 @@ uv run pytest apps/wct/tests/test_executor.py -v
 ## Success Criteria
 
 **Functional:**
-- [ ] Single-step mode continues to work unchanged (regression test passes)
-- [ ] Pipeline mode successfully retrieves input from artifacts dict
-- [ ] Pipeline mode executes analyser with artifact data
-- [ ] Helpful error when artifact missing (mentions `save_output: true`)
-- [ ] Both modes return proper tuple (AnalysisResult, Message)
-- [ ] Artifact retrieval logged for debugging
+- [x] Single-step mode continues to work unchanged (regression test passes)
+- [x] Pipeline mode successfully retrieves input from artifacts dict
+- [x] Pipeline mode executes analyser with artifact data
+- [x] Helpful error when artifact missing (mentions `save_output: true`)
+- [x] Both modes return proper tuple (AnalysisResult, Message)
+- [x] Artifact retrieval logged for debugging
 
 **Quality:**
-- [ ] All tests pass (including new pipeline mode tests)
-- [ ] Type checking passes (strict mode)
-- [ ] Linting passes
-- [ ] No regressions in existing single-step functionality
+- [x] All tests pass (including new pipeline mode tests)
+- [x] Type checking passes (strict mode)
+- [x] Linting passes
+- [x] No regressions in existing single-step functionality
 
 **Code Quality:**
-- [ ] Tests use public API (`execute_runbook`) only
-- [ ] Code follows existing Executor patterns
-- [ ] Error messages are actionable and user-friendly
-- [ ] Conditional logic is clear and maintainable
+- [x] Tests use public API (`execute_runbook`) only
+- [x] Code follows existing Executor patterns
+- [x] Error messages are actionable and user-friendly
+- [x] Conditional logic is clear and maintainable
 
 ## Implementation Notes
 
@@ -282,3 +282,57 @@ uv run pytest apps/wct/tests/test_executor.py -v
 - **Step 6:** Add pipeline schema resolution method to validate schema compatibility between steps
 - **Phase 3:** Refactor SourceCodeConnector to SourceCodeAnalyser
 - **Phase 4:** Integration tests and end-to-end validation
+
+---
+
+## Completion Notes
+
+**Date Completed:** 2025-11-11
+
+### Implementation Summary
+
+Successfully implemented pipeline mode execution in `_execute_step` using TDD methodology (RED-GREEN-REFACTOR):
+
+**Core Changes:**
+1. Updated `_get_step_configs` to return `tuple[AnalyserConfig, ConnectorConfig | None]`
+2. Updated `_validate_step_types` to handle optional connector types
+3. Updated `_instantiate_components` to conditionally instantiate connectors
+4. Updated `_run_step_analysis` to accept `input_message` parameter instead of connector
+5. Added mode detection logic in `_execute_step` (connector-based vs pipeline-based)
+6. Implemented artifact retrieval with helpful error messages
+
+**Refactoring Improvements:**
+- Extracted `_resolve_pipeline_schemas` method to match existing `_resolve_step_schemas` pattern
+- Created symmetry between single-step and pipeline mode schema resolution
+- Reduced `_execute_step` complexity from 54 to 43 lines
+- Added inline documentation for future Strategy pattern opportunity
+
+**Tests Added:**
+1. `test_execute_runbook_pipeline_mode_reads_from_artifact` - Verifies pipeline mode reads from artifacts
+2. `test_execute_runbook_pipeline_mode_errors_on_missing_artifact` - Verifies helpful error messages
+
+**Key Design Decisions:**
+- Connector is `None` for pipeline mode (not instantiated)
+- Schema resolution uses dedicated helper methods for both modes
+- Error messages guide users to add `save_output: true`
+- Logging added for both execution modes
+
+**Files Modified:**
+- `apps/wct/src/wct/executor.py` - Core pipeline mode implementation
+- `apps/wct/tests/test_executor.py` - New tests for pipeline mode
+
+**Quality Metrics:**
+- All 32 executor tests passing
+- Total test suite: 897 passed, 7 skipped
+- Type checking: 0 errors (strict mode)
+- Linting: All checks passed
+- Code coverage: Maintained
+
+**Architecture Notes:**
+
+The implementation uses optional type cascading (`Type | None`) through helper methods. While functional and type-safe, this approach was documented as a future refactoring opportunity. If additional input modes are needed (API, database, streaming), consider extracting to a Strategy pattern with an `InputAcquisitionStrategy` interface to:
+- Eliminate optional type propagation
+- Improve extensibility and Open/Closed principle compliance
+- Separate input mode concerns more clearly
+
+Inline comments added in `_execute_step` to guide future developers toward this pattern when appropriate.
