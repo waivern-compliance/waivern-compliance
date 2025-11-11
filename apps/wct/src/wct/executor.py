@@ -17,6 +17,7 @@ from pathlib import Path
 from waivern_core import Analyser, AnalyserError, Connector, ConnectorError
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.errors import WaivernError
+from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_core.services.container import ServiceContainer
 from waivern_llm import BaseLLMService
@@ -203,14 +204,36 @@ class Executor:
             raise ExecutorError(f"Failed to load runbook {runbook_path}: {e}") from e
 
         results: list[AnalysisResult] = []
+        artifacts: dict[str, Message] = {}
+
         for step in runbook.execution:
-            result = self._execute_step(step, runbook)
-            results.append(result)
+            analysis_result, message = self._execute_step(step, runbook, artifacts)
+            results.append(analysis_result)
+
+            # Store message in artifacts if step has save_output enabled
+            if step.save_output:
+                artifacts[step.id] = message
+                logger.debug(f"Saved artifact from step '{step.id}' for pipeline use")
 
         return results
 
-    def _execute_step(self, step: ExecutionStep, runbook: Runbook) -> AnalysisResult:
-        """Execute a single step in the runbook."""
+    def _execute_step(
+        self,
+        step: ExecutionStep,
+        runbook: Runbook,
+        artifacts: dict[str, Message],
+    ) -> tuple[AnalysisResult, Message]:
+        """Execute a single step in the runbook.
+
+        Args:
+            step: Execution step to run
+            runbook: Full runbook configuration
+            artifacts: Dictionary of saved Message artifacts from previous steps
+
+        Returns:
+            Tuple of (AnalysisResult for user output, Message for pipeline artifacts)
+
+        """
         logger.info("Executing analysis: %s", step.name)
         if step.description:
             logger.info("Analysis description: %s", step.description)
@@ -577,8 +600,13 @@ class Executor:
         input_schema: Schema,
         output_schema: Schema,
         analyser_config: AnalyserConfig,
-    ) -> AnalysisResult:
-        """Execute the actual analysis step."""
+    ) -> tuple[AnalysisResult, Message]:
+        """Execute the actual analysis step.
+
+        Returns:
+            Tuple of (AnalysisResult for user output, Message for pipeline artifacts)
+
+        """
         # Extract data from connector
         connector_message = connector.extract(input_schema)
 
@@ -587,7 +615,7 @@ class Executor:
             input_schema, output_schema, connector_message
         )
 
-        return AnalysisResult(
+        analysis_result = AnalysisResult(
             analysis_name=step.name,
             analysis_description=step.description,
             input_schema=input_schema.name,
@@ -598,12 +626,19 @@ class Executor:
             success=True,
         )
 
+        return analysis_result, result_message
+
     def _handle_step_error(
         self, step: ExecutionStep, error: Exception
-    ) -> AnalysisResult:
-        """Handle execution errors and return appropriate error result."""
+    ) -> tuple[AnalysisResult, Message]:
+        """Handle execution errors and return appropriate error result.
+
+        Returns:
+            Tuple of (error AnalysisResult, error Message with empty content)
+
+        """
         logger.error(f"Step execution failed for {step.name}: {error}")
-        return self._create_error_result(
+        error_result = self._create_error_result(
             step.name,
             step.description,
             error_message=str(error),
@@ -611,6 +646,15 @@ class Executor:
             output_schema=step.output_schema,
             contact=step.contact,
         )
+
+        # Create error Message with empty content
+        error_message = Message(
+            id=step.id,
+            content={},
+            schema=None,
+        )
+
+        return error_result, error_message
 
     def _create_error_result(
         self,

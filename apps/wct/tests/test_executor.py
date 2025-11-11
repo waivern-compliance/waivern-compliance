@@ -871,6 +871,119 @@ execution:
         assert result.metadata.compliance_standard == "GDPR"
         # Analyser metadata is included in AnalysisResult
 
+    def test_execute_runbook_stores_message_artifacts(self) -> None:
+        """Test that execute_runbook stores Message artifacts for steps with save_output."""
+        from unittest.mock import patch
+
+        from waivern_core.message import Message
+        from waivern_core.schemas.base import Schema
+
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook with two steps - first has save_output=true
+        runbook_content = """
+name: Pipeline Test
+description: Test artifact storage
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+execution:
+  - id: "step1"
+    name: "First step"
+    description: "Step with save_output"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+    save_output: true
+  - id: "step2"
+    name: "Second step"
+    description: "Step without save_output"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(runbook_content)
+            runbook_path = Path(f.name)
+
+        try:
+            # Create mock return values for _execute_step
+            from wct.analysis import AnalysisResult
+
+            result1 = AnalysisResult(
+                analysis_name="step1",
+                analysis_description="First step",
+                input_schema="standard_input",
+                output_schema="personal_data_finding",
+                data={"result": "data1"},
+                success=True,
+            )
+            message1 = Message(
+                id="step1",
+                content={"result": "data1"},
+                schema=Schema("personal_data_finding", "1.0.0"),
+            )
+
+            result2 = AnalysisResult(
+                analysis_name="step2",
+                analysis_description="Second step",
+                input_schema="standard_input",
+                output_schema="personal_data_finding",
+                data={"result": "data2"},
+                success=True,
+            )
+            message2 = Message(
+                id="step2",
+                content={"result": "data2"},
+                schema=Schema("personal_data_finding", "1.0.0"),
+            )
+
+            # Capture artifacts state at time of each call
+            captured_artifacts = []
+
+            def capture_and_return(*args, **kwargs):
+                """Capture artifacts dict state and return mock result."""
+                artifacts = args[2]  # Third positional arg
+                # Make a copy of the dict to preserve state
+                captured_artifacts.append(dict(artifacts))
+                # Return different results based on call count
+                if len(captured_artifacts) == 1:
+                    return (result1, message1)
+                else:
+                    return (result2, message2)
+
+            # Mock _execute_step to capture artifacts dict state
+            with patch.object(
+                executor, "_execute_step", side_effect=capture_and_return
+            ) as mock_execute:
+                results = executor.execute_runbook(runbook_path)
+
+                # Verify results
+                assert len(results) == 2
+                assert results[0].analysis_name == "step1"
+                assert results[1].analysis_name == "step2"
+
+                # Verify _execute_step was called twice
+                assert mock_execute.call_count == 2
+
+                # First call should have empty artifacts dict
+                assert captured_artifacts[0] == {}
+
+                # Second call should have step1's message in artifacts (from save_output)
+                assert "step1" in captured_artifacts[1]
+                assert captured_artifacts[1]["step1"] == message1
+
+        finally:
+            runbook_path.unlink()
+
     def test_register_duplicate_connector_overrides(self) -> None:
         """Test that registering a factory with the same name overrides the previous one."""
         container = ServiceContainer()
