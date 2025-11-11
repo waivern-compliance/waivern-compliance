@@ -536,6 +536,7 @@ class Executor:
 
         In pipeline mode, the input schema comes from the artifact's message,
         and the output schema is resolved from the analyser's supported schemas.
+        Validates that the analyser can process the input schema from the previous step.
 
         Args:
             step: Execution step with schema requirements
@@ -546,7 +547,7 @@ class Executor:
             Tuple of (input_schema, output_schema) to use
 
         Raises:
-            ExecutorError: If input message has no schema information
+            ExecutorError: If input message has no schema information or analyser doesn't support input schema
 
         """
         # Validate input message has schema
@@ -556,6 +557,28 @@ class Executor:
                 f"Artifact from '{step.input_from}' has no schema information"
             )
 
+        logger.debug(
+            f"Pipeline step '{step.name}' receiving input schema: {input_schema.name} v{input_schema.version}"
+        )
+
+        # Validate analyser supports this input schema
+        analyser_inputs = analyser.get_supported_input_schemas()
+
+        # Check if input schema is supported (exact name and version match)
+        schema_supported = any(
+            s.name == input_schema.name and s.version == input_schema.version
+            for s in analyser_inputs
+        )
+
+        if not schema_supported:
+            supported_schemas = [f"{s.name} v{s.version}" for s in analyser_inputs]
+            raise ExecutorError(
+                f"Schema mismatch in pipeline step '{step.name}': "
+                f"Analyser '{step.analyser}' does not support input schema "
+                f"'{input_schema.name} v{input_schema.version}'. "
+                f"Supported input schemas: {supported_schemas}"
+            )
+
         # Resolve output schema from analyser
         analyser_outputs = analyser.get_supported_output_schemas()
         output_schema = self._find_compatible_schema(
@@ -563,6 +586,10 @@ class Executor:
             requested_version=step.output_schema_version,
             producer_schemas=analyser_outputs,
             consumer_schemas=[],
+        )
+
+        logger.debug(
+            f"Pipeline step '{step.name}' output schema resolved: {output_schema.name} v{output_schema.version}"
         )
 
         return input_schema, output_schema

@@ -119,6 +119,71 @@ class MockConnectorFactory(ComponentFactory[MockConnector]):
         return {}
 
 
+class MockAnalyser2(Analyser):
+    """Mock analyser that accepts personal_data_finding or data_subject_finding as input."""
+
+    def __init__(self, process_result: Any = None, should_fail: bool = False) -> None:
+        super().__init__()
+        self.process_result = process_result
+        self.should_fail = should_fail
+
+    @classmethod
+    @override
+    def get_name(cls) -> str:
+        return "mock_analyser_2"
+
+    @classmethod
+    @override
+    def get_supported_input_schemas(cls) -> list[Schema]:
+        return [
+            Schema("personal_data_finding", "1.0.0"),
+            Schema("data_subject_finding", "1.0.0"),
+        ]
+
+    @classmethod
+    @override
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        return [Schema("data_subject_finding", "1.0.0")]
+
+    @override
+    def process(self, input_schema: Schema, output_schema: Schema, message: Any):
+        if self.should_fail:
+            raise AnalyserError("Mock analyser 2 failure")
+
+        return Message(
+            id="mock_analyser_2_result",
+            content=self.process_result or {"findings": []},
+            schema=output_schema,
+        )
+
+
+class MockAnalyserIncompatible(Analyser):
+    """Mock analyser that only accepts source_code schema (incompatible with personal_data_finding)."""
+
+    @classmethod
+    @override
+    def get_name(cls) -> str:
+        return "mock_analyser_incompatible"
+
+    @classmethod
+    @override
+    def get_supported_input_schemas(cls) -> list[Schema]:
+        return [Schema("source_code", "1.0.0")]
+
+    @classmethod
+    @override
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        return [Schema("processing_purpose_finding", "1.0.0")]
+
+    @override
+    def process(self, input_schema: Schema, output_schema: Schema, message: Any):
+        return Message(
+            id="mock_analyser_incompatible_result",
+            content={"findings": []},
+            schema=output_schema,
+        )
+
+
 class MockAnalyserFactory(ComponentFactory[MockAnalyser]):
     """Factory for creating MockAnalyser instances."""
 
@@ -147,6 +212,65 @@ class MockAnalyserFactory(ComponentFactory[MockAnalyser]):
         return {}
 
 
+class MockAnalyser2Factory(ComponentFactory[MockAnalyser2]):
+    """Factory for creating MockAnalyser2 instances."""
+
+    @override
+    def create(self, config: ComponentConfig) -> MockAnalyser2:
+        return MockAnalyser2()
+
+    @override
+    def can_create(self, config: ComponentConfig) -> bool:
+        return True
+
+    @override
+    def get_component_name(self) -> str:
+        return "mock_analyser_2"
+
+    @override
+    def get_input_schemas(self) -> list[Schema]:
+        return [
+            Schema("personal_data_finding", "1.0.0"),
+            Schema("data_subject_finding", "1.0.0"),
+        ]
+
+    @override
+    def get_output_schemas(self) -> list[Schema]:
+        return [Schema("data_subject_finding", "1.0.0")]
+
+    @override
+    def get_service_dependencies(self) -> dict[str, type]:
+        return {}
+
+
+class MockAnalyserIncompatibleFactory(ComponentFactory[MockAnalyserIncompatible]):
+    """Factory for creating MockAnalyserIncompatible instances."""
+
+    @override
+    def create(self, config: ComponentConfig) -> MockAnalyserIncompatible:
+        return MockAnalyserIncompatible()
+
+    @override
+    def can_create(self, config: ComponentConfig) -> bool:
+        return True
+
+    @override
+    def get_component_name(self) -> str:
+        return "mock_analyser_incompatible"
+
+    @override
+    def get_input_schemas(self) -> list[Schema]:
+        return [Schema("source_code", "1.0.0")]
+
+    @override
+    def get_output_schemas(self) -> list[Schema]:
+        return [Schema("processing_purpose_finding", "1.0.0")]
+
+    @override
+    def get_service_dependencies(self) -> dict[str, type]:
+        return {}
+
+
 class TestExecutor:
     """Tests for Executor class."""
 
@@ -159,6 +283,8 @@ class TestExecutor:
         # Register mock factories
         executor.register_connector_factory(MockConnectorFactory())
         executor.register_analyser_factory(MockAnalyserFactory())
+        executor.register_analyser_factory(MockAnalyser2Factory())
+        executor.register_analyser_factory(MockAnalyserIncompatibleFactory())
 
         return executor
 
@@ -1214,6 +1340,9 @@ analysers:
   - name: test_analyser
     type: mock_analyser
     properties: {}
+  - name: test_analyser_2
+    type: mock_analyser_2
+    properties: {}
 execution:
   - id: "extract_data"
     name: "Extract Data"
@@ -1227,9 +1356,9 @@ execution:
     name: "Process Data"
     description: "Process data from previous step"
     input_from: "extract_data"
-    analyser: test_analyser
+    analyser: test_analyser_2
     input_schema: personal_data_finding
-    output_schema: personal_data_finding
+    output_schema: data_subject_finding
 """
 
         # Both steps should execute successfully
@@ -1247,6 +1376,7 @@ execution:
         assert results[1].success is True
         assert results[1].analysis_name == "Process Data"
         assert results[1].input_schema == "personal_data_finding"
+        assert results[1].output_schema == "data_subject_finding"
 
     def test_execute_runbook_pipeline_mode_errors_on_missing_artifact(self) -> None:
         """Test that pipeline step errors when artifact not saved by previous step."""
@@ -1294,6 +1424,226 @@ execution:
         assert results[1].success is False
         assert "artifact not found" in results[1].error_message.lower()
         assert "save_output: true" in results[1].error_message
+
+    def test_execute_runbook_pipeline_compatible_schema_chain_succeeds(self) -> None:
+        """Test that compatible schema chains execute successfully across multiple steps."""
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook with 2-step pipeline: standard_input → personal_data_finding → data_subject_finding
+        runbook_content = """
+name: Compatible Schema Chain Test
+description: Test compatible schema pipeline
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+  - name: test_analyser_2
+    type: mock_analyser_2
+    properties: {}
+execution:
+  - id: "step1"
+    name: "Extract and Analyse"
+    description: "Extract data and analyse for personal data"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+    save_output: true
+  - id: "step2"
+    name: "Analyse Data Subjects"
+    description: "Analyse personal data for data subjects"
+    input_from: "step1"
+    analyser: test_analyser_2
+    input_schema: personal_data_finding
+    output_schema: data_subject_finding
+"""
+
+        # Both steps should execute successfully
+        results = self._execute_runbook_yaml(executor, runbook_content)
+
+        # Verify both steps executed successfully
+        assert len(results) == 2
+        assert results[0].success is True
+        assert results[0].analysis_name == "Extract and Analyse"
+        assert results[0].output_schema == "personal_data_finding"
+
+        assert results[1].success is True
+        assert results[1].analysis_name == "Analyse Data Subjects"
+        assert results[1].input_schema == "personal_data_finding"
+        assert results[1].output_schema == "data_subject_finding"
+
+    def test_execute_runbook_pipeline_incompatible_input_schema_fails(self) -> None:
+        """Test that incompatible input schemas are rejected with helpful error messages."""
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook where step 1 outputs personal_data_finding but step 2 only accepts source_code
+        runbook_content = """
+name: Incompatible Schema Test
+description: Test incompatible schema rejection
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+  - name: incompatible_analyser
+    type: mock_analyser_incompatible
+    properties: {}
+execution:
+  - id: "step1"
+    name: "Extract and Analyse"
+    description: "Extract data and analyse for personal data"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+    save_output: true
+  - id: "step2"
+    name: "Incompatible Step"
+    description: "Try to process with incompatible analyser"
+    input_from: "step1"
+    analyser: incompatible_analyser
+    input_schema: personal_data_finding
+    output_schema: processing_purpose_finding
+"""
+
+        # Execute runbook and expect error
+        results = self._execute_runbook_yaml(executor, runbook_content)
+
+        # First step should succeed
+        assert len(results) == 2
+        assert results[0].success is True
+        assert results[0].analysis_name == "Extract and Analyse"
+
+        # Second step should fail with schema mismatch error
+        assert results[1].success is False
+        assert (
+            "schema mismatch" in results[1].error_message.lower()
+            or "does not support" in results[1].error_message.lower()
+        )
+        # Error should mention the step name
+        assert (
+            "step2" in results[1].error_message.lower()
+            or "incompatible" in results[1].error_message.lower()
+        )
+
+    def test_execute_runbook_pipeline_invalid_output_schema_fails(self) -> None:
+        """Test that invalid output schemas are detected and rejected."""
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook with pipeline step requesting non-existent output schema
+        runbook_content = """
+name: Invalid Output Schema Test
+description: Test invalid output schema rejection
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+  - name: test_analyser_2
+    type: mock_analyser_2
+    properties: {}
+execution:
+  - id: "step1"
+    name: "Extract and Analyse"
+    description: "Extract data"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+    save_output: true
+  - id: "step2"
+    name: "Invalid Output"
+    description: "Request non-existent output schema"
+    input_from: "step1"
+    analyser: test_analyser_2
+    input_schema: personal_data_finding
+    output_schema: nonexistent_schema
+"""
+
+        # Execute runbook and expect error
+        results = self._execute_runbook_yaml(executor, runbook_content)
+
+        # First step should succeed
+        assert len(results) == 2
+        assert results[0].success is True
+
+        # Second step should fail with output schema error
+        assert results[1].success is False
+        assert "schema" in results[1].error_message.lower()
+
+    def test_execute_runbook_pipeline_multi_step_schema_transformations(self) -> None:
+        """Test 3-step pipeline with schema transformations at each boundary."""
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook with 3-step chain: standard_input → personal_data_finding → data_subject_finding → data_subject_finding
+        runbook_content = """
+name: Multi-Step Pipeline Test
+description: Test multi-step schema transformations
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+  - name: test_analyser_2
+    type: mock_analyser_2
+    properties: {}
+  - name: test_analyser_3
+    type: mock_analyser_2
+    properties: {}
+execution:
+  - id: "step1"
+    name: "Extract Data"
+    description: "Extract from connector"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+    save_output: true
+  - id: "step2"
+    name: "Transform to Data Subjects"
+    description: "Transform personal data to data subjects"
+    input_from: "step1"
+    analyser: test_analyser_2
+    input_schema: personal_data_finding
+    output_schema: data_subject_finding
+    save_output: true
+  - id: "step3"
+    name: "Further Processing"
+    description: "Continue processing data subjects"
+    input_from: "step2"
+    analyser: test_analyser_2
+    input_schema: data_subject_finding
+    output_schema: data_subject_finding
+"""
+
+        # All steps should execute successfully
+        results = self._execute_runbook_yaml(executor, runbook_content)
+
+        # Verify all 3 steps executed successfully
+        assert len(results) == 3
+        assert results[0].success is True, f"Step 1 failed: {results[0].error_message}"
+        assert results[1].success is True, f"Step 2 failed: {results[1].error_message}"
+        assert results[2].success is True, f"Step 3 failed: {results[2].error_message}"
+
+        # Verify schema flow
+        assert results[0].output_schema == "personal_data_finding"
+        assert results[1].input_schema == "personal_data_finding"
+        assert results[1].output_schema == "data_subject_finding"
+        assert results[2].input_schema == "data_subject_finding"
+        assert results[2].output_schema == "data_subject_finding"
 
 
 class TestExecutorCreateWithBuiltIns:
