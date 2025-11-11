@@ -1020,6 +1020,184 @@ execution:
         assert executor.analyser_factories["mock_analyser"] == alternate_factory
         assert executor.analyser_factories["mock_analyser"] != initial_factory
 
+    def test_execute_runbook_detects_direct_cycle(self) -> None:
+        """Test that execute_runbook detects direct 2-step circular dependency."""
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook with direct cycle: step_a → step_b → step_a
+        runbook_content = """
+name: Circular Dependency Test
+description: Test direct cycle detection
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+execution:
+  - id: "step_a"
+    name: "Step A"
+    description: "Depends on step_b"
+    input_from: "step_b"
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+  - id: "step_b"
+    name: "Step B"
+    description: "Depends on step_a"
+    input_from: "step_a"
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+"""
+
+        # Should raise ExecutorError with circular dependency message
+        with pytest.raises(ExecutorError, match="Circular dependency detected"):
+            self._execute_runbook_yaml(executor, runbook_content)
+
+    def test_execute_runbook_detects_indirect_cycle(self) -> None:
+        """Test that execute_runbook detects indirect 3-step circular dependency."""
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook with indirect cycle: step_a → step_c → step_b → step_a
+        runbook_content = """
+name: Indirect Circular Dependency Test
+description: Test indirect cycle detection
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+execution:
+  - id: "step_a"
+    name: "Step A"
+    description: "Depends on step_c"
+    input_from: "step_c"
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+  - id: "step_b"
+    name: "Step B"
+    description: "Depends on step_a"
+    input_from: "step_a"
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+  - id: "step_c"
+    name: "Step C"
+    description: "Depends on step_b"
+    input_from: "step_b"
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+"""
+
+        # Should raise ExecutorError with circular dependency message
+        with pytest.raises(ExecutorError, match="Circular dependency detected"):
+            self._execute_runbook_yaml(executor, runbook_content)
+
+    def test_execute_runbook_accepts_valid_linear_chain(self) -> None:
+        """Test that execute_runbook accepts valid linear dependency chain."""
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook with valid linear chain: step_a → step_b → step_c
+        runbook_content = """
+name: Valid Linear Chain Test
+description: Test valid dependency chain
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+execution:
+  - id: "step_a"
+    name: "Step A"
+    description: "Uses connector"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+    save_output: true
+  - id: "step_b"
+    name: "Step B"
+    description: "Depends on step_a"
+    input_from: "step_a"
+    analyser: test_analyser
+    input_schema: personal_data_finding
+    output_schema: personal_data_finding
+    save_output: true
+  - id: "step_c"
+    name: "Step C"
+    description: "Depends on step_b"
+    input_from: "step_b"
+    analyser: test_analyser
+    input_schema: personal_data_finding
+    output_schema: personal_data_finding
+"""
+
+        # Should not raise ExecutorError for cycle detection
+        # (Pipeline execution itself may fail until Step 5 is implemented)
+        results = self._execute_runbook_yaml(executor, runbook_content)
+
+        # Verify runbook was processed (cycle detection passed)
+        assert len(results) == 3
+
+    def test_execute_runbook_accepts_valid_dag_with_branches(self) -> None:
+        """Test that execute_runbook accepts valid DAG with parallel branches."""
+        executor = self._create_executor_with_mocks()
+
+        # Create runbook with valid DAG: step_a → step_b, step_a → step_c
+        runbook_content = """
+name: Valid DAG with Branches Test
+description: Test valid DAG with parallel branches
+connectors:
+  - name: test_connector
+    type: mock_connector
+    properties: {}
+analysers:
+  - name: test_analyser
+    type: mock_analyser
+    properties: {}
+execution:
+  - id: "step_a"
+    name: "Step A"
+    description: "Uses connector"
+    connector: test_connector
+    analyser: test_analyser
+    input_schema: standard_input
+    output_schema: personal_data_finding
+    save_output: true
+  - id: "step_b"
+    name: "Step B"
+    description: "Branch 1 - Depends on step_a"
+    input_from: "step_a"
+    analyser: test_analyser
+    input_schema: personal_data_finding
+    output_schema: personal_data_finding
+  - id: "step_c"
+    name: "Step C"
+    description: "Branch 2 - Depends on step_a"
+    input_from: "step_a"
+    analyser: test_analyser
+    input_schema: personal_data_finding
+    output_schema: personal_data_finding
+"""
+
+        # Should not raise ExecutorError for cycle detection
+        # (Pipeline execution itself may fail until Step 5 is implemented)
+        results = self._execute_runbook_yaml(executor, runbook_content)
+
+        # Verify runbook was processed (cycle detection passed)
+        assert len(results) == 3
+
 
 class TestExecutorCreateWithBuiltIns:
     """Tests for Executor.create_with_built_ins() class method ✔️."""

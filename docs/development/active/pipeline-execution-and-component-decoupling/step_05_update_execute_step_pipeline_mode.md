@@ -1,19 +1,57 @@
 # Step 5: Update _execute_step to Support Pipeline Mode
 
 **Phase:** 2 - Implement Sequential Pipeline Execution
-**Status:** Pending
-**Prerequisites:** Steps 1-4 (pipeline infrastructure in place)
+**Status:** TODO
+**Prerequisites:** Steps 1-4 (pipeline infrastructure and validation in place)
+
+## Context
+
+This is part of implementing pipeline execution for WCF, enabling multi-step analysis workflows where data flows between steps.
+
+**Previous steps built:** Pipeline fields, validation, artifact storage, and cycle detection.
+
+**This step adds:** Support for two execution modes - connector-based (existing) and artifact-based (new pipeline mode).
+
+**See:** [Pipeline Execution and Component Decoupling](../pipeline-execution-and-component-decoupling.md) for full context and roadmap.
 
 ## Purpose
 
-Modify the `_execute_step` method to support both single-step mode (connector → analyser) and pipeline mode (previous step → analyser), retrieving input from artifacts when `input_from` is specified.
+Modify `_execute_step` to support both single-step mode (extract from connector) and pipeline mode (read from previous step's artifact), enabling data to flow through multi-step analysis workflows.
+
+## Problem
+
+Currently, `_execute_step` only supports single-step mode where a connector extracts data and an analyser processes it. Pipeline execution requires a second mode where steps read input from previous steps' saved artifacts instead of extracting from connectors.
+
+**Current limitation:**
+```yaml
+execution:
+  # This works (single-step mode)
+  - id: "step1"
+    connector: mysql_connector
+    analyser: personal_data_analyser
+
+  # This doesn't work yet (pipeline mode)
+  - id: "step2"
+    input_from: "step1"  # Need to read from step1's artifact
+    analyser: data_subject_analyser
+```
+
+**Why both modes are needed:**
+- **Single-step mode:** Extract data from external sources (databases, files, APIs)
+- **Pipeline mode:** Transform/enrich data from previous steps without re-extraction
+
+## Solution
+
+Add conditional logic to `_execute_step` to detect execution mode based on `step.connector` vs `step.input_from`, retrieve input accordingly, then process with analyser. Both modes share the same analyser execution path and return the same tuple structure.
 
 ## Decisions Made
 
-1. **Conditional input source** - Check `step.connector` vs `step.input_from` to determine mode
-2. **Artifact retrieval** - Get input Message from artifacts dict using `input_from` ID
-3. **Different schema resolution** - Use existing method for single-step, new method for pipeline
-4. **Single-step support** - Existing single-step logic (connector XOR input_from) works as-is
+1. **Mode detection:** Check `step.connector is not None` vs `step.input_from is not None` (already mutually exclusive from Step 2)
+2. **Artifact retrieval:** Use `artifacts[step.input_from]` to get previous step's Message
+3. **Error handling:** Provide helpful error if artifact missing (user forgot `save_output: true`)
+4. **Connector optional:** Make connector instantiation conditional (only for single-step mode)
+5. **Shared execution:** Both modes use same analyser processing and return pattern
+6. **Schema resolution:** Use existing method for now (Step 6 will add pipeline-specific resolution)
 
 ## Implementation
 
@@ -23,273 +61,224 @@ Modify the `_execute_step` method to support both single-step mode (connector �
 
 ### Changes Required
 
-Modify the `_execute_step` method:
+#### 1. Update `_execute_step` to support two modes
 
-```python
-def _execute_step(
-    self,
-    step: ExecutionStep,
-    runbook: Runbook,
-    artifacts: dict[str, Message],
-) -> AnalysisResult:
-    """Execute a single step in either single-step or pipeline mode.
-
-    Single-step mode: connector extracts data, analyser processes
-    Pipeline mode: read from previous step's artifact, analyser processes
-
-    Args:
-        step: Execution step configuration
-        runbook: Full runbook configuration
-        artifacts: Dictionary of saved step outputs
-
-    Returns:
-        AnalysisResult with execution results
-
-    Raises:
-        ExecutorError: If step execution fails
-    """
-    logger.info("Executing step: %s", step.name)
-    if step.description:
-        logger.info("Step description: %s", step.description)
-
-    try:
-        # Get configurations
-        analyser_config = self._get_analyser_config(step, runbook)
-        analyser_type = self._validate_analyser_type(step, analyser_config)
-
-        # Instantiate analyser (always needed)
-        analyser = self._instantiate_analyser(analyser_type, analyser_config)
-
-        # Determine execution mode and get input
-        if step.connector:
-            # SINGLE-STEP MODE: Extract from connector
-            logger.debug("Single-step mode: extracting from connector '%s'", step.connector)
-
-            connector_config = self._get_connector_config(step, runbook)
-            connector_type = self._validate_connector_type(step, connector_config)
-            connector = self._instantiate_connector(connector_type, connector_config)
-
-            # Resolve schemas (connector → analyser)
-            input_schema, output_schema = self._resolve_step_schemas(
-                step, connector, analyser
-            )
-
-            # Extract data
-            input_message = connector.extract(input_schema)
-
-        else:
-            # PIPELINE MODE: Read from previous step
-            logger.debug("Pipeline mode: reading from step '%s'", step.input_from)
-
-            # Retrieve artifact from previous step
-            if step.input_from not in artifacts:
-                raise ExecutorError(
-                    f"Step '{step.name}' depends on step '{step.input_from}' "
-                    f"but no saved artifact found. Ensure the previous step has 'save_output: true'."
-                )
-
-            input_message = artifacts[step.input_from]
-            logger.debug(
-                f"Retrieved artifact from '{step.input_from}': "
-                f"schema={input_message.schema.name} v{input_message.schema.version}"
-            )
-
-            # Resolve schemas (previous step → analyser)
-            input_schema, output_schema = self._resolve_pipeline_schemas(
-                step, input_message, analyser
-            )
-
-        # Execute analyser (same for both modes)
-        result_message = analyser.process(input_schema, output_schema, input_message)
-
-        return AnalysisResult(
-            analysis_name=step.name,
-            analysis_description=step.description,
-            input_schema=input_schema.name,
-            output_schema=output_schema.name,
-            data=result_message.content,
-            metadata=analyser_config.metadata,
-            contact=step.contact,
-            success=True,
-            message=result_message,  # Store for artifacts
-        )
-
-    except (ConnectorError, AnalyserError, ExecutorError, Exception) as e:
-        return self._handle_step_error(step, e)
+**Current structure:**
+```
+function _execute_step(step, runbook, artifacts) -> (AnalysisResult, Message):
+    get analyser config
+    get connector config  # ALWAYS required currently
+    instantiate both
+    resolve schemas
+    extract from connector
+    process with analyser
+    return tuple
 ```
 
-Add helper methods for getting configs:
-
-```python
-def _get_analyser_config(self, step: ExecutionStep, runbook: Runbook) -> AnalyserConfig:
-    """Get analyser configuration for the step."""
-    try:
-        return next(p for p in runbook.analysers if p.name == step.analyser)
-    except StopIteration:
-        raise ExecutorError(
-            f"Analyser '{step.analyser}' referenced in step '{step.name}' not found in runbook"
-        )
-
-
-def _get_connector_config(self, step: ExecutionStep, runbook: Runbook) -> ConnectorConfig:
-    """Get connector configuration for the step."""
-    if not step.connector:
-        raise ExecutorError(f"Step '{step.name}' has no connector specified")
-
-    try:
-        return next(c for c in runbook.connectors if c.name == step.connector)
-    except StopIteration:
-        raise ExecutorError(
-            f"Connector '{step.connector}' referenced in step '{step.name}' not found in runbook"
-        )
+**New structure (pseudo-code):**
 ```
+function _execute_step(step, runbook, artifacts) -> (AnalysisResult, Message):
+    # Always need analyser
+    analyser_config = get_analyser_config(step, runbook)
+    analyser = instantiate_analyser(analyser_config)
 
-Update `_get_step_configs` to use new helpers:
+    # Mode detection and input acquisition
+    if step.connector is not None:
+        # SINGLE-STEP MODE (existing)
+        connector_config = get_connector_config(step, runbook)
+        connector = instantiate_connector(connector_config)
+        schemas = resolve_step_schemas(step, connector, analyser)
+        input_message = connector.extract(schemas.input)
 
-```python
-def _get_step_configs(
-    self, step: ExecutionStep, runbook: Runbook
-) -> tuple[AnalyserConfig, ConnectorConfig | None]:
-    """Get analyser and connector configurations for the step.
+    else:
+        # PIPELINE MODE (new)
+        if step.input_from not in artifacts:
+            raise ExecutorError(
+                "Step '{step.name}' depends on '{step.input_from}' but artifact not found. "
+                "Ensure previous step has 'save_output: true'."
+            )
 
-    Returns:
-        Tuple of (analyser_config, connector_config or None)
-    """
-    analyser_config = self._get_analyser_config(step, runbook)
-    connector_config = (
-        self._get_connector_config(step, runbook) if step.connector else None
+        input_message = artifacts[step.input_from]
+        log("Pipeline mode: using artifact from '{step.input_from}'")
+
+        # Schema resolution for pipeline mode
+        # For now, use input_message.schema as-is
+        # Step 6 will add proper pipeline schema resolution
+        schemas = resolve_schemas_for_pipeline(step, input_message, analyser)
+
+    # Common execution path (both modes)
+    result_message = analyser.process(schemas.input, schemas.output, input_message)
+
+    analysis_result = create_analysis_result(
+        step=step,
+        schemas=schemas,
+        result_data=result_message.content,
+        analyser_config=analyser_config
     )
-    return analyser_config, connector_config
+
+    return (analysis_result, result_message)
 ```
+
+**Key changes:**
+- Make connector instantiation conditional (only for single-step mode)
+- Add artifact retrieval logic for pipeline mode
+- Validate artifact exists with helpful error message
+- Use input_message.schema for pipeline mode (temporary - Step 6 improves this)
+- Maintain tuple return pattern from Step 3
+
+#### 2. Update helper methods
+
+**Make `_get_step_configs` handle optional connector:**
+
+Currently requires both analyser and connector. Need to support pipeline mode where connector is None.
+
+**Option:** Split into separate methods or make connector_config optional in return type.
+
+**Pseudo-code:**
+```
+function get_step_configs(step, runbook) -> (analyser_config, connector_config | None):
+    analyser_config = find analyser in runbook.analysers
+
+    if step.connector exists:
+        connector_config = find connector in runbook.connectors
+    else:
+        connector_config = None
+
+    return (analyser_config, connector_config)
+```
+
+#### 3. Update component instantiation
+
+**Make `_instantiate_components` handle optional connector:**
+
+Currently expects both. Need to handle case where connector_config is None.
+
+**Consideration:** May need to refactor to separate methods or handle None gracefully.
 
 ## Testing
 
-### Unit Tests to Add
+### Testing Strategy
 
-**File:** `apps/wct/tests/unit/test_executor.py`
+**Critical principle:** Test through the **public API** (`execute_runbook`), not by calling private methods directly.
 
-```python
-def test_execute_step_single_mode_uses_connector(isolated_registry):
-    """Single-step mode extracts from connector."""
-    # This will be an integration test - create minimal runbook and verify
-    # connector is called for extraction
-    pass  # Implementation depends on test fixtures
+Create temporary runbook YAML files that exercise both execution modes and verify behavior through `execute_runbook()`.
 
+### Test Scenarios
 
-def test_execute_step_pipeline_mode_uses_artifact(isolated_registry):
-    """Pipeline mode reads from artifacts dict."""
-    from wct.executor import Executor, ExecutorError
-    from wct.runbook import ExecutionStep, Runbook
-    from waivern_core.message import Message
-    from waivern_core.schemas.base import Schema
+**File:** `apps/wct/tests/test_executor.py`
 
-    executor = Executor.create_with_built_ins()
+#### 1. Single-Step Mode Still Works (Regression Test)
 
-    # Create a step that expects artifact
-    step = ExecutionStep(
-        name="Pipeline step",
-        description="",
-        input_from="previous_step",
-        analyser="personal_data_analyser",
-        input_schema="standard_input",
-        output_schema="personal_data_finding",
-    )
+**Setup:**
+- Create runbook with single step using connector
+- Step has connector + analyser, no `input_from`
 
-    # Empty artifacts - should error
-    with pytest.raises(ExecutorError) as exc_info:
-        # This will error because artifact is missing
-        # (Full integration test needs complete runbook)
-        pass
+**Expected behavior:**
+- Execution succeeds
+- Step extracts from connector as before
+- Returns AnalysisResult with correct data
 
-    # Proper testing requires integration test with full runbook
-    # See step_17 for integration tests
+#### 2. Pipeline Mode Reads from Artifact
 
+**Setup:**
+- Create runbook with 2 steps:
+  - Step 1: connector-based with `save_output: true`
+  - Step 2: `input_from: "step1"` with different analyser
 
-def test_execute_step_errors_on_missing_artifact(isolated_registry):
-    """Pipeline mode errors if artifact not found."""
-    # Verify ExecutorError is raised with helpful message
-    # when input_from references non-existent artifact
-    pass  # Integration test needed
-```
+**Expected behavior:**
+- Both steps execute successfully
+- Step 2 reads from step 1's artifact (not from connector)
+- Results contain data from both steps
 
-### Integration Testing
+#### 3. Pipeline Mode Errors on Missing Artifact
 
-Will be fully tested in Step 17 (integration tests).
+**Setup:**
+- Create runbook with 2 steps:
+  - Step 1: connector-based with `save_output: false` (or omitted)
+  - Step 2: `input_from: "step1"`
 
-For now, manual test with a simple pipeline runbook:
+**Expected behavior:**
+- `execute_runbook()` raises `ExecutorError`
+- Error message mentions "artifact not found"
+- Error message suggests adding `save_output: true`
+- Step 1 completes, Step 2 fails (fail at execution, not validation)
 
-```yaml
-name: "Pipeline Test"
-description: "Test pipeline execution"
+#### 4. Pipeline Mode Errors on Non-existent Step Reference
 
-connectors:
-  - name: "reader"
-    type: "filesystem_connector"
-    properties:
-      path: "./test_data"
-      max_files: 5
+**Setup:**
+- Create runbook with step that has `input_from: "nonexistent_step"`
 
-analysers:
-  - name: "analyser"
-    type: "personal_data_analyser"
-    properties:
-      pattern_matching:
-        ruleset: "personal_data"
+**Expected behavior:**
+- This should already be caught by Step 2 validation (cross-reference)
+- Verify validation prevents this from reaching execution
 
-execution:
-  - id: "step1"
-    name: "Read files"
-    connector: "reader"
-    analyser: "analyser"
-    input_schema: "standard_input"
-    output_schema: "personal_data_finding"
-    save_output: true
+### Implementation Notes
 
-  - id: "step2"
-    name: "Process from previous"
-    input_from: "step1"
-    analyser: "analyser"
-    input_schema: "personal_data_finding"
-    output_schema: "personal_data_finding"
-```
+- Use `tempfile.NamedTemporaryFile` to create runbook YAML
+- Use existing mock connector and analyser from test fixtures
+- Test error messages are helpful and actionable
+- Clean up temp files in `finally` blocks
 
-Test (when all steps complete):
-```bash
-uv run wct run pipeline_test.yaml -v
-```
-
-### Validation
+### Validation Commands
 
 ```bash
-# Run unit tests
-cd apps/wct
-uv run pytest tests/unit/test_executor.py -v
+# Run all WCT tests
+uv run pytest apps/wct/tests/ -v
 
-# Type check
-./scripts/type-check.sh
+# Run specific executor tests
+uv run pytest apps/wct/tests/test_executor.py -v
 
-# Lint
-./scripts/lint.sh
+# Run dev checks
+./scripts/dev-checks.sh
 ```
 
 ## Success Criteria
 
-- [ ] `_execute_step` detects single-step vs pipeline mode
-- [ ] Single-step mode uses connector for extraction (unchanged)
-- [ ] Pipeline mode retrieves input from artifacts dict
-- [ ] Pipeline mode validates artifact exists
-- [ ] ExecutorError raised with helpful message if artifact missing
-- [ ] Helper methods `_get_analyser_config` and `_get_connector_config` added
-- [ ] Unit tests pass
-- [ ] Type checking passes
+**Functional:**
+- [ ] Single-step mode continues to work unchanged (regression test passes)
+- [ ] Pipeline mode successfully retrieves input from artifacts dict
+- [ ] Pipeline mode executes analyser with artifact data
+- [ ] Helpful error when artifact missing (mentions `save_output: true`)
+- [ ] Both modes return proper tuple (AnalysisResult, Message)
+- [ ] Artifact retrieval logged for debugging
+
+**Quality:**
+- [ ] All tests pass (including new pipeline mode tests)
+- [ ] Type checking passes (strict mode)
 - [ ] Linting passes
+- [ ] No regressions in existing single-step functionality
 
-## Notes
+**Code Quality:**
+- [ ] Tests use public API (`execute_runbook`) only
+- [ ] Code follows existing Executor patterns
+- [ ] Error messages are actionable and user-friendly
+- [ ] Conditional logic is clear and maintainable
 
-- This step connects the pipeline infrastructure together
-- Full end-to-end testing requires Step 6 (pipeline schema resolution)
-- Error messages should guide users to add `save_output: true`
+## Implementation Notes
 
-## Next Step
+**Current architecture (Step 3):**
+- `_execute_step` returns `tuple[AnalysisResult, Message]`
+- `execute_runbook` maintains `artifacts: dict[str, Message]`
+- AnalysisResult has NO message field (clean separation)
 
-Step 6: Add pipeline schema resolution method
+**Design decisions:**
+- Connector is None for pipeline mode (not instantiated)
+- Schema resolution simplified for now (use input_message.schema as-is)
+- Step 6 will add proper pipeline schema resolution method
+- Error at execution time (not validation) because artifact missing is runtime condition
+
+**Edge cases to consider:**
+- Step references itself (`input_from: "self"`) - caught by Step 4 cycle detection
+- Step references non-existent ID - caught by Step 2 cross-reference validation
+- Artifact exists but has wrong schema - Step 6 will handle schema validation
+
+**Future enhancements (not in this step):**
+- Pipeline-specific schema resolution (Step 6)
+- Schema compatibility validation between steps
+- Better error messages showing schema mismatches
+
+## Next Steps
+
+- **Step 6:** Add pipeline schema resolution method to validate schema compatibility between steps
+- **Phase 3:** Refactor SourceCodeConnector to SourceCodeAnalyser
+- **Phase 4:** Integration tests and end-to-end validation
