@@ -322,17 +322,52 @@ class Executor:
                 step, analyser_config, connector_config
             )
 
-            # Set up components and schemas
+            # Instantiate components
             analyser, connector = self._instantiate_components(
                 analyser_type, connector_type, analyser_config, connector_config
             )
-            input_schema, output_schema = self._resolve_step_schemas(
-                step, connector, analyser
-            )
 
-            # Execute the analysis
+            # Mode detection: connector-based vs pipeline-based
+            # NOTE: This branching logic handles two different input acquisition strategies.
+            # Future refactoring opportunity: If additional input modes are needed (e.g., API,
+            # database, streaming), consider extracting to a Strategy pattern with
+            # InputAcquisitionStrategy interface to eliminate optional type cascading through
+            # helper methods and improve extensibility. See refactoring analysis in Step 5
+            # completion notes for detailed design recommendations.
+            if connector is not None:
+                # SINGLE-STEP MODE: Extract from connector
+                input_schema, output_schema = self._resolve_step_schemas(
+                    step, connector, analyser
+                )
+                input_message = connector.extract(input_schema)
+                logger.debug("Single-step mode: extracted data from connector")
+
+            else:
+                # PIPELINE MODE: Retrieve from artifacts
+                if step.input_from not in artifacts:
+                    raise ExecutorError(
+                        f"Step '{step.name}' depends on '{step.input_from}' but artifact not found. "
+                        f"Ensure previous step has 'save_output: true'."
+                    )
+
+                input_message = artifacts[step.input_from]
+                logger.debug(
+                    f"Pipeline mode: using artifact from step '{step.input_from}'"
+                )
+
+                # Resolve schemas for pipeline mode
+                input_schema, output_schema = self._resolve_pipeline_schemas(
+                    step, input_message, analyser
+                )
+
+            # Execute the analysis (common path for both modes)
             return self._run_step_analysis(
-                step, analyser, connector, input_schema, output_schema, analyser_config
+                step,
+                analyser,
+                input_message,
+                input_schema,
+                output_schema,
+                analyser_config,
             )
 
         except (ConnectorError, AnalyserError, ExecutorError, Exception) as e:
@@ -340,12 +375,18 @@ class Executor:
 
     def _get_step_configs(
         self, step: ExecutionStep, runbook: Runbook
-    ) -> tuple[AnalyserConfig, ConnectorConfig]:
+    ) -> tuple[AnalyserConfig, ConnectorConfig | None]:
         """Get analyser and connector configurations for the step.
 
         Configurations are guaranteed to exist by Pydantic model validation.
+        For pipeline steps (input_from), connector_config is None.
         """
         analyser_config = next(p for p in runbook.analysers if p.name == step.analyser)
+
+        # Pipeline steps don't have connectors
+        if step.connector is None:
+            return analyser_config, None
+
         connector_config = next(
             c for c in runbook.connectors if c.name == step.connector
         )
@@ -355,12 +396,12 @@ class Executor:
         self,
         step: ExecutionStep,
         analyser_config: AnalyserConfig,
-        connector_config: ConnectorConfig,
-    ) -> tuple[str, str]:
+        connector_config: ConnectorConfig | None,
+    ) -> tuple[str, str | None]:
         """Validate that analyser and connector types are registered with executor.
 
         Returns:
-            Tuple of (analyser_type_name, connector_type_name)
+            Tuple of (analyser_type_name, connector_type_name or None)
 
         Raises:
             ExecutorError: If analyser or connector type not registered
@@ -368,6 +409,10 @@ class Executor:
         """
         if analyser_config.type not in self.analyser_factories:
             raise ExecutorError(f"Unknown analyser type: {analyser_config.type}")
+
+        # Pipeline steps don't have connectors
+        if connector_config is None:
+            return analyser_config.type, None
 
         if connector_config.type not in self.connector_factories:
             raise ExecutorError(f"Unknown connector type: {connector_config.type}")
@@ -377,37 +422,32 @@ class Executor:
     def _instantiate_components(
         self,
         analyser_type: str,
-        connector_type: str,
+        connector_type: str | None,
         analyser_config: AnalyserConfig,
-        connector_config: ConnectorConfig,
-    ) -> tuple[Analyser, Connector]:
+        connector_config: ConnectorConfig | None,
+    ) -> tuple[Analyser, Connector | None]:
         """Instantiate analyser and connector from their configurations using factories.
 
         Args:
             analyser_type: Analyser type name (registered factory key)
-            connector_type: Connector type name (registered factory key)
+            connector_type: Connector type name (registered factory key) or None for pipeline mode
             analyser_config: Analyser configuration from runbook
-            connector_config: Connector configuration from runbook
+            connector_config: Connector configuration from runbook or None for pipeline mode
 
         Returns:
-            Tuple of (analyser_instance, connector_instance)
+            Tuple of (analyser_instance, connector_instance or None)
 
         Raises:
             ExecutorError: If factory not found or component cannot be created
 
         """
-        # Get factories from registries
+        # Get analyser factory from registry
         analyser_factory = self.analyser_factories.get(analyser_type)
         if not analyser_factory:
             raise ExecutorError(f"Unknown analyser type: {analyser_type}")
 
-        connector_factory = self.connector_factories.get(connector_type)
-        if not connector_factory:
-            raise ExecutorError(f"Unknown connector type: {connector_type}")
-
-        # Pass raw properties dict to factories - they convert to their specific config types
+        # Pass raw properties dict to factory - it converts to its specific config type
         analyser_properties = analyser_config.properties or {}
-        connector_properties = connector_config.properties
 
         # Check availability before creation
         if not analyser_factory.can_create(analyser_properties):
@@ -419,14 +459,26 @@ class Executor:
                 error_msg += "LLM service may be unavailable (required when LLM validation is enabled)."
             raise ExecutorError(error_msg)
 
+        # Create analyser instance (transient lifecycle)
+        logger.debug("Creating analyser instance: %s", analyser_type)
+        analyser = analyser_factory.create(analyser_properties)
+
+        # Pipeline steps don't have connectors
+        if connector_type is None or connector_config is None:
+            logger.debug("Pipeline mode: no connector to instantiate")
+            return analyser, None
+
+        # Single-step mode: instantiate connector
+        connector_factory = self.connector_factories.get(connector_type)
+        if not connector_factory:
+            raise ExecutorError(f"Unknown connector type: {connector_type}")
+
+        connector_properties = connector_config.properties
+
         if not connector_factory.can_create(connector_properties):
             raise ExecutorError(
                 f"Connector '{connector_type}' cannot be created with given configuration"
             )
-
-        # Create component instances (transient lifecycle)
-        logger.debug("Creating analyser instance: %s", analyser_type)
-        analyser = analyser_factory.create(analyser_properties)
 
         logger.debug("Creating connector instance: %s", connector_type)
         connector = connector_factory.create(connector_properties)
@@ -470,6 +522,74 @@ class Executor:
             requested_version=step.output_schema_version,
             producer_schemas=analyser_outputs,
             consumer_schemas=[],  # No consumer for final output
+        )
+
+        return input_schema, output_schema
+
+    def _resolve_pipeline_schemas(
+        self,
+        step: ExecutionStep,
+        input_message: Message,
+        analyser: Analyser,
+    ) -> tuple[Schema, Schema]:
+        """Resolve schemas for pipeline mode execution.
+
+        In pipeline mode, the input schema comes from the artifact's message,
+        and the output schema is resolved from the analyser's supported schemas.
+        Validates that the analyser can process the input schema from the previous step.
+
+        Args:
+            step: Execution step with schema requirements
+            input_message: Input message from previous step's artifact
+            analyser: Analyser instance
+
+        Returns:
+            Tuple of (input_schema, output_schema) to use
+
+        Raises:
+            ExecutorError: If input message has no schema information or analyser doesn't support input schema
+
+        """
+        # Validate input message has schema
+        input_schema = input_message.schema
+        if input_schema is None:
+            raise ExecutorError(
+                f"Artifact from '{step.input_from}' has no schema information"
+            )
+
+        logger.debug(
+            f"Pipeline step '{step.name}' receiving input schema: {input_schema.name} v{input_schema.version}"
+        )
+
+        # Validate analyser supports this input schema
+        analyser_inputs = analyser.get_supported_input_schemas()
+
+        # Check if input schema is supported (exact name and version match)
+        schema_supported = any(
+            s.name == input_schema.name and s.version == input_schema.version
+            for s in analyser_inputs
+        )
+
+        if not schema_supported:
+            supported_schemas = [f"{s.name} v{s.version}" for s in analyser_inputs]
+            raise ExecutorError(
+                f"Schema mismatch in pipeline step '{step.name}': "
+                f"Analyser '{step.analyser}' does not support input schema "
+                f"'{input_schema.name} v{input_schema.version}'. "
+                f"Supported input schemas: {supported_schemas}"
+            )
+
+        # Resolve output schema from analyser
+        analyser_outputs = analyser.get_supported_output_schemas()
+        output_schema = self._find_compatible_schema(
+            schema_name=step.output_schema,
+            requested_version=step.output_schema_version,
+            producer_schemas=analyser_outputs,
+            consumer_schemas=[],
+        )
+
+        logger.debug(
+            f"Pipeline step '{step.name}' output schema resolved: {output_schema.name} v{output_schema.version}"
         )
 
         return input_schema, output_schema
@@ -673,24 +793,27 @@ class Executor:
         self,
         step: ExecutionStep,
         analyser: Analyser,
-        connector: Connector,
+        input_message: Message,
         input_schema: Schema,
         output_schema: Schema,
         analyser_config: AnalyserConfig,
     ) -> tuple[AnalysisResult, Message]:
         """Execute the actual analysis step.
 
+        Args:
+            step: Execution step configuration
+            analyser: Analyser instance to process the data
+            input_message: Input message (from connector or artifact)
+            input_schema: Input schema for validation
+            output_schema: Expected output schema
+            analyser_config: Analyser configuration from runbook
+
         Returns:
             Tuple of (AnalysisResult for user output, Message for pipeline artifacts)
 
         """
-        # Extract data from connector
-        connector_message = connector.extract(input_schema)
-
-        # Run the analyser with the extracted data
-        result_message = analyser.process(
-            input_schema, output_schema, connector_message
-        )
+        # Run the analyser with the input data
+        result_message = analyser.process(input_schema, output_schema, input_message)
 
         analysis_result = AnalysisResult(
             analysis_name=step.name,
