@@ -3,7 +3,7 @@
 This module provides:
 - WaivernError: Base exception class for all framework errors
 - ConnectorError, ConnectorConfigError, ConnectorExtractionError: Connector exceptions
-- AnalyserError, AnalyserInputError, AnalyserProcessingError: Analyser exceptions
+- AnalyserError, AnalyserConfigError, AnalyserInputError, AnalyserProcessingError: Analyser exceptions
 - MessageValidationError: Message validation exception
 """
 
@@ -34,6 +34,12 @@ class ConnectorExtractionError(ConnectorError):
 
 class AnalyserError(WaivernError):
     """Base exception for analyser-related errors."""
+
+    pass
+
+
+class AnalyserConfigError(AnalyserError):
+    """Raised when analyser configuration is invalid."""
 
     pass
 

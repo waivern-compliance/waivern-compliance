@@ -12,6 +12,8 @@ from pydantic import (
 from waivern_core import BaseComponentConfiguration
 from waivern_core.errors import ConnectorConfigError
 
+from waivern_source_code.validators import validate_and_normalise_language
+
 # Common file patterns to exclude from source code analysis
 _DEFAULT_EXCLUDE_PATTERNS = [
     "*.pyc",
@@ -91,13 +93,7 @@ class SourceCodeConnectorConfig(BaseComponentConfiguration):
     @classmethod
     def validate_language_if_provided(cls, v: str | None) -> str | None:
         """Validate language if provided (optional validation for supported languages)."""
-        if v is not None:
-            # Optionally validate against supported languages if we have a list
-            # For now, just ensure it's not empty if provided
-            if not v.strip():
-                raise ValueError("Language must be a non-empty string if provided")
-            return v.strip().lower()
-        return v
+        return validate_and_normalise_language(v)
 
     @field_validator("file_patterns")
     @classmethod

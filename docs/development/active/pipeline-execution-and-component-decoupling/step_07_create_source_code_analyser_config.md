@@ -1,9 +1,10 @@
 # Task: Create SourceCodeAnalyserConfig
 
 - **Phase:** 3 - Refactor SourceCodeConnector → SourceCodeAnalyser
-- **Status:** TODO
+- **Status:** DONE
 - **Prerequisites:** Phase 2 complete (pipeline execution working)
 - **GitHub Issue:** #212
+- **Completed:** 2025-11-12
 
 ## Context
 
@@ -142,23 +143,23 @@ Test through analyser's public API once analyser is created. For now, validate c
 ## Success Criteria
 
 **Functional:**
-- [ ] SourceCodeAnalyserConfig created with language and max_file_size fields only
-- [ ] Validation works for language (non-empty, lowercase)
-- [ ] Validation works for max_file_size (positive integer)
-- [ ] from_properties() creates config from dict
-- [ ] from_properties() raises ConnectorConfigError on invalid input
+- [x] SourceCodeAnalyserConfig created with language and max_file_size fields only
+- [x] Validation works for language (non-empty, lowercase)
+- [x] Validation works for max_file_size (positive integer)
+- [x] from_properties() creates config from dict
+- [x] from_properties() raises AnalyserConfigError on invalid input
 
 **Quality:**
-- [ ] All tests pass
-- [ ] Type checking passes (strict mode)
-- [ ] Linting passes
-- [ ] Docstrings follow project standards
+- [x] All tests pass (9 tests created, 910 total tests passing)
+- [x] Type checking passes (strict mode)
+- [x] Linting passes
+- [x] Docstrings follow project standards
 
 **Code Quality:**
-- [ ] Tests use from_properties() (public API)
-- [ ] Config follows existing patterns (PersonalDataAnalyserConfig, etc.)
-- [ ] No hardcoded values in validation logic
-- [ ] Clear error messages for validation failures
+- [x] Tests use from_properties() (public API)
+- [x] Config follows existing patterns (PersonalDataAnalyserConfig, etc.)
+- [x] No hardcoded values in validation logic
+- [x] Clear error messages for validation failures
 
 ## Implementation Notes
 
@@ -172,3 +173,111 @@ Test through analyser's public API once analyser is created. For now, validate c
 - Could add parsing options (e.g., depth limits)
 - Could add language-specific parsing flags
 - Could add performance tuning options
+
+## Completion Notes
+
+### What Was Implemented
+
+**Core Implementation:**
+- Created `SourceCodeAnalyserConfig` in `libs/waivern-source-code/src/waivern_source_code/analyser_config.py`
+- Two fields only: `language` (optional) and `max_file_size` (default 10MB)
+- Follows Pydantic validation pattern with Field descriptions
+- Uses `from_properties()` classmethod for runbook property loading
+
+**Test Coverage:**
+- Created `libs/waivern-source-code/tests/test_analyser_config.py` with 9 comprehensive tests
+- All tests passing (100% coverage of config behaviour)
+- Tests cover valid configs, defaults, validation errors, and edge cases
+
+### Framework Enhancement
+
+**Added AnalyserConfigError Exception:**
+- Added `AnalyserConfigError` to `libs/waivern-core/src/waivern_core/errors.py`
+- Exported in `waivern_core.__init__.py`
+- Creates symmetry with `ConnectorConfigError` in exception hierarchy
+- Proper separation: config errors vs. input/processing errors
+
+**Exception Hierarchy:**
+```
+WaivernError
+├── AnalyserError
+│   ├── AnalyserConfigError    ← NEW (configuration validation)
+│   ├── AnalyserInputError      (invalid input data)
+│   └── AnalyserProcessingError (processing failures)
+└── ConnectorError
+    ├── ConnectorConfigError    (configuration validation)
+    └── ConnectorExtractionError (extraction failures)
+```
+
+### Refactoring Applied
+
+**Extracted Shared Validation Utility:**
+- Created `libs/waivern-source-code/src/waivern_source_code/validators.py`
+- Moved language validation logic to `validate_and_normalise_language()` function
+- Updated both `analyser_config.py` and `config.py` to use shared validator
+- Eliminated code duplication (DRY principle)
+- Consistent validation across connector and analyser configs
+
+### Test Results
+
+**Package Tests:**
+- 9 new tests in `test_analyser_config.py` - all passing
+- Existing source code package tests - all passing
+
+**Full Test Suite:**
+- Total: 910 tests passed
+- Skipped: 7 tests (expected - require external dependencies)
+- Deselected: 14 tests (expected - integration tests)
+- Duration: 7.67s
+
+**Quality Checks:**
+- ✓ Formatting passed (ruff format)
+- ✓ Linting passed (ruff check)
+- ✓ Type checking passed (basedpyright strict mode, 0 errors, 0 warnings)
+
+### Technical Debt Created
+
+**Framework Enhancement Opportunity:**
+- Created `docs/technical-debt/standardise-config-error-handling.md`
+- Documents template method pattern for eliminating boilerplate error handling
+- Currently, every config class duplicates error handling in `from_properties()`
+- Proposed solution: Add `_get_config_error_class()` abstract method to `BaseComponentConfiguration`
+- Priority: LOW (nice to have, not blocking)
+- Impact: Reduces ~10 lines to ~2 lines per config class
+
+### Files Modified
+
+**New Files:**
+1. `libs/waivern-source-code/src/waivern_source_code/analyser_config.py` - Config class
+2. `libs/waivern-source-code/src/waivern_source_code/validators.py` - Shared validation
+3. `libs/waivern-source-code/tests/test_analyser_config.py` - Test suite
+4. `docs/technical-debt/standardise-config-error-handling.md` - Tech debt document
+
+**Modified Files:**
+1. `libs/waivern-core/src/waivern_core/errors.py` - Added AnalyserConfigError
+2. `libs/waivern-core/src/waivern_core/__init__.py` - Exported new exception
+3. `libs/waivern-source-code/src/waivern_source_code/config.py` - Use shared validator
+
+### Methodology Followed
+
+**TDD (RED-GREEN-REFACTOR):**
+1. Created 9 empty test stubs (all with `pass`)
+2. Implemented tests one at a time
+3. Each test passed immediately (GREEN state)
+4. Ran refactor skill after all tests passed
+5. Applied refactoring fixes identified
+
+**SOLID Principles:**
+- Liskov Substitution: Fixed by using correct error type (AnalyserConfigError)
+- DRY Principle: Eliminated duplication through shared validator
+- Single Responsibility: Config class focused solely on configuration
+
+### Next Steps
+
+This task is complete. The next step in Phase 3 is:
+
+**Step 8:** Create SourceCodeAnalyser class
+- Implement analyser accepting `standard_input` schema
+- Transform to `source_code` schema output
+- Use new `SourceCodeAnalyserConfig`
+- Maintain existing parsing logic from connector
