@@ -1,9 +1,9 @@
 # Task: Pipeline Execution Model and Component Decoupling
 
-**Status:** Phase 2 Complete ✅ (Steps 1-6), Phase 3+ Pending
+**Status:** Phase 3 Complete ✅ (Steps 1-12), Phase 4+ Pending
 **Priority:** High
 **Created:** 2025-11-10
-**Last Updated:** 2025-11-11
+**Last Updated:** 2025-11-12
 
 ## Executive Summary
 
@@ -176,34 +176,49 @@ execution:
 
 ---
 
-### Phase 3: Refactor SourceCodeConnector → SourceCodeAnalyser
+### Phase 3: Refactor SourceCodeConnector → SourceCodeAnalyser ✅ COMPLETED
 
-**Status:** 📋 Planned
-**Location:** `libs/waivern-source-code/`
+**Status:** ✅ Complete (2025-11-12)
+**Location:** `libs/waivern-source-code-analyser/`
+**PR:** #217
+**Issue:** #217
 
-**Objectives:**
-- Convert SourceCodeConnector to SourceCodeAnalyser
-- Accept `standard_input` schema (file content)
-- Output `source_code` schema (parsed code structure)
-- Remove FilesystemConnector dependency
+**What was implemented:**
 
-**Key changes needed:**
-1. Create SourceCodeAnalyser class implementing Analyser interface
-2. Update configuration to remove path-related fields (handled by FilesystemConnector)
-3. Create SourceCodeAnalyserFactory
-4. Update entry points from connector to analyser
-5. Remove waivern-filesystem dependency
+#### Steps 7-12: Complete refactoring from connector to pure analyser
+- **Step 7**: Renamed SourceCodeConnector → SourceCodeAnalyser
+- **Step 8**: Updated configuration for schema-based input
+- **Step 9**: Created SourceCodeAnalyserFactory with analyser entry point
+- **Step 10**: Updated ProcessingPurposeAnalyser to use new package
+- **Step 11**: Added end-to-end pipeline integration tests
+- **Step 12**: Renamed package to `waivern-source-code-analyser` and removed all connector code
 
-**Testing strategy:**
-- Verify analyser accepts standard_input schema
-- Verify output matches source_code schema
-- Test with FilesystemConnector → SourceCodeAnalyser pipeline
-- Ensure ProcessingPurposeAnalyser can consume output
+**Key changes implemented:**
+1. ✅ Created SourceCodeAnalyser class implementing Analyser interface
+2. ✅ Updated configuration to remove path-related fields (handled by FilesystemConnector)
+3. ✅ Created SourceCodeAnalyserFactory with analyser entry point
+4. ✅ Renamed package to `waivern-source-code-analyser` (matches naming convention)
+5. ✅ Removed waivern-filesystem dependency (analyser doesn't perform file I/O)
+6. ✅ Deleted all connector source files (connector.py, config.py, factory.py - 532 lines)
+7. ✅ Deleted all connector test files (1,247 lines)
+8. ✅ Removed connector entry point entirely
+9. ✅ Updated all imports throughout codebase
+10. ✅ Rewrote README for analyser-only package
+
+**Testing results:**
+- 882 tests passing (41 tests removed with connector deletion)
+- Integration tests verify FilesystemConnector → SourceCodeAnalyser → ProcessingPurposeAnalyser pipeline
+- Unit test coverage for `last_modified` field population
+- Type checking passes (strict mode)
+- Linting passes
 
 **Migration impact:**
 - Breaking change: `source_code_connector` entry point removed
+- Package renamed: `waivern-source-code` → `waivern-source-code-analyser`
 - Users must update runbooks to use pipeline format
-- Example migration included in documentation
+- Migration guide in README
+
+**Implementation details:** See `docs/development/active/pipeline-execution-and-component-decoupling/step_07_*.md` through `step_12_*.md`
 
 ---
 
@@ -303,26 +318,26 @@ uv run pytest -m integration
 - ✅ Pipeline execution supports multi-step analyser chaining
 - ✅ Schema-based routing validates compatibility automatically
 - ✅ Artifact passing works between steps
-- 📋 SourceCodeAnalyser accepts `standard_input` schema (Phase 3)
+- ✅ SourceCodeAnalyser accepts `standard_input` schema (Phase 3 complete)
 - 📋 ProcessingPurposeAnalyser has no hardcoded imports (Phase 4)
 - ✅ Breaking changes accepted for cleaner architecture
 
 ### Non-Functional Requirements
 
 - ✅ All components independently installable
-- ✅ Code quality standards maintained (901 tests passing, 0 type errors)
-- 📋 No hardcoded cross-component dependencies (Phase 3-4)
-- 📋 Components depend only on waivern-core and shared utilities (Phase 3-4)
-- 📋 True plugin architecture achieved (Phase 3-4)
+- ✅ Code quality standards maintained (882 tests passing, 0 type errors)
+- 🔄 No hardcoded cross-component dependencies (SourceCode complete, ProcessingPurpose pending Phase 4)
+- 🔄 Components depend only on waivern-core and shared utilities (SourceCode complete, ProcessingPurpose pending Phase 4)
+- 🔄 True plugin architecture achieved (SourceCode complete, ProcessingPurpose pending Phase 4)
 
 ### Architecture Validation
 
 - ✅ FilesystemConnector is standalone (no changes needed)
-- 📋 SourceCodeAnalyser depends only on waivern-core (Phase 3)
+- ✅ SourceCodeAnalyser depends only on waivern-core (Phase 3 complete)
 - 📋 ProcessingPurposeAnalyser depends only on waivern-core + shared utilities (Phase 4)
 - ✅ No circular dependencies
 - ✅ Sequential pipeline execution working
-- 📋 Dependency graph is clean (Phase 3-4 will complete)
+- 🔄 Dependency graph is clean (SourceCode complete, ProcessingPurpose pending Phase 4)
 
 ---
 
@@ -394,13 +409,13 @@ These can be implemented incrementally without changing core architecture.
 |-------|--------|----|----|-------|
 | 1. Extend Runbook Format | ✅ Complete | #208 | 890 passing | Breaking change accepted |
 | 2. Pipeline Execution | ✅ Complete | #211 | 901 passing | 6 steps implemented via TDD |
-| 3. SourceCode Refactor | 📋 Planned | - | - | Pending Phase 2 completion |
+| 3. SourceCode Refactor | ✅ Complete | #217 | 882 passing | 6 steps (7-12) implemented via TDD |
 | 4. ProcessingPurpose Fix | 📋 Planned | - | - | Depends on Phase 3 |
-| 5. Update Tests | 🔄 Partial | - | - | Phase 1-2 tests complete |
+| 5. Update Tests | 🔄 Partial | - | - | Phase 1-3 tests complete |
 | 6. Documentation | 📋 Planned | - | - | Pending Phases 3-4 |
 | 7. Validation | 📋 Planned | - | - | Final quality checks |
 
-**Overall Progress:** 2/7 phases complete (29%)
+**Overall Progress:** 3/7 phases complete (43%)
 
 ---
 
@@ -416,8 +431,9 @@ These can be implemented incrementally without changing core architecture.
 5. Use `git-commit` skill with conventional commits
 6. Create PR when phase complete
 
-**Phase 2 demonstrated this workflow successfully:**
-- 6 atomic steps with individual step documents
+**Phases 2 and 3 demonstrated this workflow successfully:**
+- Phase 2: 6 atomic steps with individual step documents
+- Phase 3: 6 atomic steps (steps 7-12) with individual step documents
 - TDD methodology throughout
 - All quality checks passing
 - Clear git history with conventional commits
@@ -427,13 +443,15 @@ These can be implemented incrementally without changing core architecture.
 ## References
 
 - **WCF Core Concepts:** `docs/core-concepts/wcf-core-components.md`
-- **Phase 2 Step Documents:** `docs/development/completed/pipeline-execution-and-component-decoupling/step_01-06_*.md`
+- **Phase 1-2 Step Documents:** `docs/development/completed/pipeline-execution-and-component-decoupling/step_01-06_*.md`
+- **Phase 3 Step Documents:** `docs/development/active/pipeline-execution-and-component-decoupling/step_07-12_*.md`
 - **Current Executor:** `apps/wct/src/wct/executor.py`
 - **Runbook Format:** `apps/wct/src/wct/runbook.py`
 - **Issue #189:** DAG-based Execution Engine (parent epic)
 - **Issue #210:** Phase 2 Implementation (closed by PR #211)
+- **Issue #217:** Phase 3 Implementation (SourceCode refactor)
 
 ---
 
-**Document Version:** 3.0 (Phase 2 Complete)
-**Last Updated:** 2025-11-11
+**Document Version:** 4.0 (Phase 3 Complete)
+**Last Updated:** 2025-11-12
