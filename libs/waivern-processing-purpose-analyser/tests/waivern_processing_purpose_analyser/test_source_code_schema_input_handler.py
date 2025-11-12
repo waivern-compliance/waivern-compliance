@@ -8,20 +8,15 @@ from datetime import UTC, datetime
 
 import pytest
 from waivern_core.schemas import BaseFindingEvidence
-from waivern_source_code_analyser.schemas import (
-    SourceCodeAnalysisMetadataModel,
-    SourceCodeClassModel,
-    SourceCodeDataModel,
-    SourceCodeFileDataModel,
-    SourceCodeFileMetadataModel,
-    SourceCodeFunctionModel,
-    SourceCodeImportModel,
-)
 
 from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeFindingModel,
 )
 from waivern_processing_purpose_analyser.source_code_schema_input_handler import (
+    SourceCodeAnalysisMetadataDict,
+    SourceCodeFileDict,
+    SourceCodeFileMetadataDict,
+    SourceCodeSchemaDict,
     SourceCodeSchemaInputHandler,
 )
 
@@ -47,47 +42,47 @@ class TestSourceCodeSchemaInputHandler:
         return SourceCodeSchemaInputHandler()
 
     @pytest.fixture
-    def sample_file_metadata(self) -> SourceCodeFileMetadataModel:
+    def sample_file_metadata(self) -> SourceCodeFileMetadataDict:
         """Create sample file metadata for testing."""
-        return SourceCodeFileMetadataModel(
-            file_size=1024,
-            line_count=50,
-            last_modified="2024-01-01T00:00:00Z",
-        )
+        return {
+            "file_size": 1024,
+            "line_count": 50,
+            "last_modified": "2024-01-01T00:00:00Z",
+        }
 
     @pytest.fixture
-    def sample_analysis_metadata(self) -> SourceCodeAnalysisMetadataModel:
+    def sample_analysis_metadata(self) -> SourceCodeAnalysisMetadataDict:
         """Create sample analysis metadata for testing."""
-        return SourceCodeAnalysisMetadataModel(
-            total_files=1,
-            total_lines=50,
-            analysis_timestamp="2024-01-01T00:00:00Z",
-        )
+        return {
+            "total_files": 1,
+            "total_lines": 50,
+            "analysis_timestamp": "2024-01-01T00:00:00Z",
+        }
 
     @pytest.fixture
     def empty_source_code_data(
-        self, sample_analysis_metadata: SourceCodeAnalysisMetadataModel
-    ) -> SourceCodeDataModel:
+        self, sample_analysis_metadata: SourceCodeAnalysisMetadataDict
+    ) -> SourceCodeSchemaDict:
         """Create empty source code data for testing."""
-        return SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Empty analysis",
-            description="Empty source code analysis",
-            language="php",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[],
-        )
+        return {
+            "schemaVersion": "1.0.0",
+            "name": "Empty analysis",
+            "description": "Empty source code analysis",
+            "language": "php",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [],
+        }
 
     @pytest.fixture
     def simple_php_file_data(
-        self, sample_file_metadata: SourceCodeFileMetadataModel
-    ) -> SourceCodeFileDataModel:
+        self, sample_file_metadata: SourceCodeFileMetadataDict
+    ) -> SourceCodeFileDict:
         """Create simple PHP file data with processing purpose patterns."""
-        return SourceCodeFileDataModel(
-            file_path="/src/CustomerService.php",
-            language="php",
-            raw_content="""<?php
+        return {
+            "file_path": "/src/CustomerService.php",
+            "language": "php",
+            "raw_content": """<?php
 class CustomerService {
     public function processPayment($amount) {
         // Process customer payment
@@ -100,42 +95,38 @@ class CustomerService {
     }
 }
 """,
-            metadata=sample_file_metadata,
-            functions=[
-                SourceCodeFunctionModel(
-                    name="processPayment",
-                    line_start=3,
-                    line_end=6,
-                    parameters=[],
-                    visibility="public",
-                ),
-                SourceCodeFunctionModel(
-                    name="sendSupportEmail",
-                    line_start=8,
-                    line_end=11,
-                    parameters=[],
-                    visibility="public",
-                ),
+            "metadata": sample_file_metadata,
+            "functions": [
+                {
+                    "name": "processPayment",
+                    "line_start": 3,
+                    "line_end": 6,
+                },
+                {
+                    "name": "sendSupportEmail",
+                    "line_start": 8,
+                    "line_end": 11,
+                },
             ],
-            classes=[
-                SourceCodeClassModel(
-                    name="CustomerService",
-                    line_start=2,
-                    line_end=12,
-                ),
+            "classes": [
+                {
+                    "name": "CustomerService",
+                    "line_start": 2,
+                    "line_end": 12,
+                },
             ],
-            imports=[],
-        )
+            "imports": [],
+        }
 
     @pytest.fixture
     def service_integration_file_data(
-        self, sample_file_metadata: SourceCodeFileMetadataModel
-    ) -> SourceCodeFileDataModel:
+        self, sample_file_metadata: SourceCodeFileMetadataDict
+    ) -> SourceCodeFileDict:
         """Create file data with actual service integration patterns from ruleset."""
-        return SourceCodeFileDataModel(
-            file_path="/src/CloudStorageService.php",
-            language="php",
-            raw_content="""<?php
+        return {
+            "file_path": "/src/CloudStorageService.php",
+            "language": "php",
+            "raw_content": """<?php
 require_once 'vendor/aws/aws-sdk-php/src/functions.php';
 
 class CloudStorageService {
@@ -151,48 +142,44 @@ class CloudStorageService {
     }
 }
 """,
-            metadata=sample_file_metadata,
-            functions=[
-                SourceCodeFunctionModel(
-                    name="uploadToAWS",
-                    line_start=5,
-                    line_end=9,
-                    parameters=[],
-                    visibility="public",
-                ),
-                SourceCodeFunctionModel(
-                    name="uploadToDropbox",
-                    line_start=11,
-                    line_end=14,
-                    parameters=[],
-                    visibility="public",
-                ),
+            "metadata": sample_file_metadata,
+            "functions": [
+                {
+                    "name": "uploadToAWS",
+                    "line_start": 5,
+                    "line_end": 9,
+                },
+                {
+                    "name": "uploadToDropbox",
+                    "line_start": 11,
+                    "line_end": 14,
+                },
             ],
-            classes=[
-                SourceCodeClassModel(
-                    name="CloudStorageService",
-                    line_start=4,
-                    line_end=15,
-                ),
+            "classes": [
+                {
+                    "name": "CloudStorageService",
+                    "line_start": 4,
+                    "line_end": 15,
+                },
             ],
-            imports=[
-                SourceCodeImportModel(
-                    module="vendor/aws/aws-sdk-php/src/functions.php",
-                    line=2,
-                    type="require_once",
-                ),
+            "imports": [
+                {
+                    "module": "vendor/aws/aws-sdk-php/src/functions.php",
+                    "line": 2,
+                    "type": "require_once",
+                },
             ],
-        )
+        }
 
     @pytest.fixture
     def data_collection_file_data(
-        self, sample_file_metadata: SourceCodeFileMetadataModel
-    ) -> SourceCodeFileDataModel:
+        self, sample_file_metadata: SourceCodeFileMetadataDict
+    ) -> SourceCodeFileDict:
         """Create file data with actual data collection patterns from ruleset."""
-        return SourceCodeFileDataModel(
-            file_path="/src/UserFormHandler.php",
-            language="php",
-            raw_content="""<?php
+        return {
+            "file_path": "/src/UserFormHandler.php",
+            "language": "php",
+            "raw_content": """<?php
 class UserFormHandler {
     public function processForm() {
         // Collect form data via POST
@@ -207,25 +194,23 @@ class UserFormHandler {
     }
 }
 """,
-            metadata=sample_file_metadata,
-            functions=[
-                SourceCodeFunctionModel(
-                    name="processForm",
-                    line_start=3,
-                    line_end=12,
-                    parameters=[],
-                    visibility="public",
-                ),
+            "metadata": sample_file_metadata,
+            "functions": [
+                {
+                    "name": "processForm",
+                    "line_start": 3,
+                    "line_end": 12,
+                },
             ],
-            classes=[
-                SourceCodeClassModel(
-                    name="UserFormHandler",
-                    line_start=2,
-                    line_end=13,
-                ),
+            "classes": [
+                {
+                    "name": "UserFormHandler",
+                    "line_start": 2,
+                    "line_end": 13,
+                },
             ],
-            imports=[],
-        )
+            "imports": [],
+        }
 
     def test_init_creates_handler_successfully(self) -> None:
         """Test that __init__ creates a handler successfully."""
@@ -240,7 +225,7 @@ class UserFormHandler {
     def test_analyse_source_code_data_returns_empty_list_for_empty_data(
         self,
         handler: SourceCodeSchemaInputHandler,
-        empty_source_code_data: SourceCodeDataModel,
+        empty_source_code_data: SourceCodeSchemaDict,
     ) -> None:
         """Test that analyse_source_code_data returns empty list for empty data."""
         # Act
@@ -253,20 +238,20 @@ class UserFormHandler {
     def test_analyse_source_code_data_returns_findings_for_simple_patterns(
         self,
         handler: SourceCodeSchemaInputHandler,
-        simple_php_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+        simple_php_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
     ) -> None:
         """Test that analyse_source_code_data returns findings for simple processing purpose patterns."""
         # Arrange
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Simple PHP analysis",
-            description="Analysis of simple PHP file",
-            language="php",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[simple_php_file_data],
-        )
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Simple PHP analysis",
+            "description": "Analysis of simple PHP file",
+            "language": "php",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [simple_php_file_data],
+        }
 
         # Act
         findings = handler.analyse_source_code_data(source_data)
@@ -288,20 +273,20 @@ class UserFormHandler {
     def test_analyse_source_code_data_detects_payment_patterns(
         self,
         handler: SourceCodeSchemaInputHandler,
-        simple_php_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+        simple_php_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
     ) -> None:
         """Test that analyse_source_code_data detects payment-related patterns."""
         # Arrange
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Payment analysis",
-            description="Analysis for payment patterns",
-            language="php",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[simple_php_file_data],
-        )
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Payment analysis",
+            "description": "Analysis for payment patterns",
+            "language": "php",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [simple_php_file_data],
+        }
 
         # Act
         findings = handler.analyse_source_code_data(source_data)
@@ -329,21 +314,21 @@ class UserFormHandler {
     def test_analyse_source_code_data_handles_multiple_files(
         self,
         handler: SourceCodeSchemaInputHandler,
-        simple_php_file_data: SourceCodeFileDataModel,
-        service_integration_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+        simple_php_file_data: SourceCodeFileDict,
+        service_integration_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
     ) -> None:
         """Test that analyse_source_code_data handles multiple files correctly."""
         # Arrange
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Multi-file analysis",
-            description="Analysis of multiple files",
-            language="php",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[simple_php_file_data, service_integration_file_data],
-        )
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Multi-file analysis",
+            "description": "Analysis of multiple files",
+            "language": "php",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [simple_php_file_data, service_integration_file_data],
+        }
 
         # Act
         findings = handler.analyse_source_code_data(source_data)
@@ -366,20 +351,20 @@ class UserFormHandler {
     def test_analyse_source_code_data_creates_proper_metadata(
         self,
         handler: SourceCodeSchemaInputHandler,
-        simple_php_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+        simple_php_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
     ) -> None:
         """Test that analyse_source_code_data creates proper metadata for findings."""
         # Arrange
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Metadata test",
-            description="Test metadata creation",
-            language="php",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[simple_php_file_data],
-        )
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Metadata test",
+            "description": "Test metadata creation",
+            "language": "php",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [simple_php_file_data],
+        }
 
         # Act
         findings = handler.analyse_source_code_data(source_data)
@@ -416,15 +401,15 @@ class UserFormHandler {
     def test_analyse_source_code_data_handles_file_with_no_patterns(
         self,
         handler: SourceCodeSchemaInputHandler,
-        sample_file_metadata: SourceCodeFileMetadataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+        sample_file_metadata: SourceCodeFileMetadataDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
     ) -> None:
         """Test that analyse_source_code_data handles files with no matching patterns gracefully."""
         # Arrange
-        empty_file_data = SourceCodeFileDataModel(
-            file_path="/src/EmptyClass.php",
-            language="php",
-            raw_content="""<?php
+        empty_file_data: SourceCodeFileDict = {
+            "file_path": "/src/EmptyClass.php",
+            "language": "php",
+            "raw_content": """<?php
 class EmptyClass {
     // This class has no processing purpose patterns
     public function doNothing() {
@@ -432,35 +417,33 @@ class EmptyClass {
     }
 }
 """,
-            metadata=sample_file_metadata,
-            functions=[
-                SourceCodeFunctionModel(
-                    name="doNothing",
-                    line_start=4,
-                    line_end=6,
-                    parameters=[],
-                    visibility="public",
-                ),
+            "metadata": sample_file_metadata,
+            "functions": [
+                {
+                    "name": "doNothing",
+                    "line_start": 4,
+                    "line_end": 6,
+                },
             ],
-            classes=[
-                SourceCodeClassModel(
-                    name="EmptyClass",
-                    line_start=2,
-                    line_end=7,
-                ),
+            "classes": [
+                {
+                    "name": "EmptyClass",
+                    "line_start": 2,
+                    "line_end": 7,
+                },
             ],
-            imports=[],
-        )
+            "imports": [],
+        }
 
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Empty pattern test",
-            description="Test file with no patterns",
-            language="php",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[empty_file_data],
-        )
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Empty pattern test",
+            "description": "Test file with no patterns",
+            "language": "php",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [empty_file_data],
+        }
 
         # Act
         findings = handler.analyse_source_code_data(source_data)
@@ -472,20 +455,20 @@ class EmptyClass {
     def test_analyse_source_code_data_returns_valid_finding_types(
         self,
         handler: SourceCodeSchemaInputHandler,
-        simple_php_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+        simple_php_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
     ) -> None:
         """Test that analyse_source_code_data returns valid finding types."""
         # Arrange
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Type validation test",
-            description="Test finding type validation",
-            language="php",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[simple_php_file_data],
-        )
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Type validation test",
+            "description": "Test finding type validation",
+            "language": "php",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [simple_php_file_data],
+        }
 
         # Act
         findings = handler.analyse_source_code_data(source_data)
@@ -520,8 +503,8 @@ class EmptyClass {
     def test_service_integration_findings_include_service_category(
         self,
         handler: SourceCodeSchemaInputHandler,
-        service_integration_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+        service_integration_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
     ) -> None:
         """Test that findings from ServiceIntegrationRule include service_category field.
 
@@ -530,15 +513,15 @@ class EmptyClass {
         includes the service_category from the rule.
         """
         # Arrange
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Service integration test",
-            description="Test service integration categorical data",
-            language="php",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[service_integration_file_data],
-        )
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Service integration test",
+            "description": "Test service integration categorical data",
+            "language": "php",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [service_integration_file_data],
+        }
 
         # Act
         findings = handler.analyse_source_code_data(source_data)
@@ -573,8 +556,8 @@ class EmptyClass {
     def test_data_collection_findings_include_collection_type_and_data_source(
         self,
         handler: SourceCodeSchemaInputHandler,
-        data_collection_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+        data_collection_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
     ) -> None:
         """Test that findings from DataCollectionRule include collection_type and data_source fields.
 
@@ -583,15 +566,15 @@ class EmptyClass {
         includes both collection_type and data_source from the rule.
         """
         # Arrange
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Data collection test",
-            description="Test data collection categorical data",
-            language="php",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[data_collection_file_data],
-        )
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Data collection test",
+            "description": "Test data collection categorical data",
+            "language": "php",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [data_collection_file_data],
+        }
 
         # Act
         findings = handler.analyse_source_code_data(source_data)

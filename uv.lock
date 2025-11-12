@@ -1870,7 +1870,6 @@ dependencies = [
     { name = "waivern-core" },
     { name = "waivern-llm" },
     { name = "waivern-rulesets" },
-    { name = "waivern-source-code-analyser" },
 ]
 
 [package.dev-dependencies]
@@ -1886,7 +1885,6 @@ requires-dist = [
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
-    { name = "waivern-source-code-analyser", editable = "libs/waivern-source-code-analyser" },
 ]
 
 [package.metadata.requires-dev]
