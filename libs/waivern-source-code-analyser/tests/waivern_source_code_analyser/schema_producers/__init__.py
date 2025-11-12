@@ -1,1 +1,1 @@
-"""Tests for SourceCodeConnector schema producers."""
+"""Tests for SourceCodeAnalyser schema producers."""

@@ -15,14 +15,14 @@ from waivern_core.schemas import (
     StandardInputDataModel,
 )
 from waivern_llm import BaseLLMService
-from waivern_source_code_analyser.schemas import (
-    SourceCodeDataModel,
-)
 
 from .llm_validation_strategy import processing_purpose_validation_strategy
 from .pattern_matcher import ProcessingPurposePatternMatcher
 from .schemas.types import ProcessingPurposeFindingModel
-from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
+from .source_code_schema_input_handler import (
+    SourceCodeSchemaDict,
+    SourceCodeSchemaInputHandler,
+)
 from .types import ProcessingPurposeAnalyserConfig
 
 logger = logging.getLogger(__name__)
@@ -202,20 +202,18 @@ class ProcessingPurposeAnalyser(Analyser):
         return findings
 
     def _process_source_code_data(
-        self, typed_data: SourceCodeDataModel
+        self, typed_data: SourceCodeSchemaDict
     ) -> list[ProcessingPurposeFindingModel]:
-        """Process source_code schema data using the source code handler.
+        """Process source_code schema data.
 
         Args:
-            typed_data: Validated source code data
+            typed_data: TypedDict dict (validated by Message against source_code schema)
 
         Returns:
-            List of processing purpose findings from source code analysis
+            Processing purpose findings
 
         """
-        # Use source code handler for analysis - returns strongly typed models
         findings = self._source_code_handler.analyse_source_code_data(typed_data)
-
         return findings
 
     def _validate_findings_with_llm(

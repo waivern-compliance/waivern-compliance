@@ -1,13 +1,11 @@
 """Tests for source_code v1.0.0 reader."""
 
-from waivern_source_code_analyser.schemas import SourceCodeDataModel
-
 
 class TestSourceCodeReader:
     """Tests for source_code schema v1.0.0 reader module."""
 
-    def test_read_validates_and_returns_typed_model(self) -> None:
-        """Test reader validates input and returns SourceCodeDataModel."""
+    def test_read_returns_typed_dict(self) -> None:
+        """Test reader returns TypedDict with validated schema data."""
         from waivern_processing_purpose_analyser.schema_readers import (
             source_code_1_0_0,
         )
@@ -44,10 +42,13 @@ class TestSourceCodeReader:
         # Act
         result = source_code_1_0_0.read(input_data)
 
-        # Assert
-        assert isinstance(result, SourceCodeDataModel)
-        assert result.schemaVersion == "1.0.0"
-        assert result.name == "Test source code"
-        assert result.language == "python"
-        assert len(result.data) == 1
-        assert result.data[0].file_path == "test.py"
+        # Assert - Runtime: it's a dict
+        assert isinstance(result, dict)
+        # Type checker knows: result is SourceCodeSchemaDict
+        assert result["schemaVersion"] == "1.0.0"
+        assert result["name"] == "Test source code"
+        assert result["language"] == "python"
+        assert len(result["data"]) == 1
+        assert result["data"][0]["file_path"] == "test.py"
+        # Verify dict structure is preserved
+        assert result is input_data  # Same object reference

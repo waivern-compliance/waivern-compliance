@@ -1,25 +1,23 @@
 """Reader for source_code schema version 1.0.0."""
 
-from typing import Any
+from typing import Any, cast
 
-from waivern_core.schemas import parse_data_model
-from waivern_source_code_analyser.schemas import SourceCodeDataModel
+from waivern_processing_purpose_analyser.source_code_schema_input_handler import (
+    SourceCodeSchemaDict,
+)
 
 
-def read(content: dict[str, Any]) -> SourceCodeDataModel:
-    """Transform source_code v1.0.0 to canonical format.
+def read(content: dict[str, Any]) -> SourceCodeSchemaDict:
+    """Transform source_code v1.0.0 to TypedDict.
 
-    Uses parse_data_model for generic Pydantic model validation
-    with support for generic types.
+    Message has already validated content against JSON schema.
+    Returns dict with TypedDict type hint for compile-time safety.
 
     Args:
-        content: Data conforming to source_code v1.0.0 schema
+        content: Validated source_code v1.0.0 data
 
     Returns:
-        Validated SourceCodeDataModel instance
-
-    Raises:
-        ValidationError: If content doesn't match schema structure
+        TypedDict-annotated dict
 
     """
-    return parse_data_model(content, SourceCodeDataModel)
+    return cast(SourceCodeSchemaDict, content)

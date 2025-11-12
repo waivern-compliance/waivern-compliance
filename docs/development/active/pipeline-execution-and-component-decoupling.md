@@ -1,6 +1,6 @@
 # Task: Pipeline Execution Model and Component Decoupling
 
-**Status:** Phase 3 Complete ✅ (Steps 1-12), Phase 4+ Pending
+**Status:** Phase 4 Complete ✅ (All steps 1-17)
 **Priority:** High
 **Created:** 2025-11-10
 **Last Updated:** 2025-11-12
@@ -224,28 +224,21 @@ execution:
 
 ### Phase 4: Fix ProcessingPurposeAnalyser Schema Coupling
 
-**Status:** 📋 Planned
+**Status:** ✅ Complete
 **Location:** `libs/waivern-processing-purpose-analyser/`
+**Completed:** 2025-11-12
 
-**Objectives:**
-- Remove direct imports of SourceCodeConnector schema models
-- Use dictionary-based schema handling (already validated by Message)
-- Eliminate hardcoded dependency chain
+**What was done:**
+- Removed waivern-source-code-analyser dependency
+- Handler uses dict-based schema handling with TypedDict
+- Reader returns TypedDict with cast()
+- Deleted 5 redundant integration tests
+- 877 tests pass, all quality checks pass
 
-**Key changes needed:**
-1. Update `source_code_schema_input_handler.py` to use dict instead of typed models
-2. Remove waivern-source-code from dependencies
-3. Rely on schema validation provided by Message object
+**Result:**
+ProcessingPurposeAnalyser now truly independent - no package coupling, schema-driven via Message validation.
 
-**Why this works:**
-- Message object validates data against source_code schema
-- Analyser can trust the data structure is correct
-- No need for typed models when schema already enforces structure
-
-**Testing strategy:**
-- Verify analyser processes source_code schema data correctly
-- Test with SourceCodeAnalyser → ProcessingPurposeAnalyser pipeline
-- Ensure no functionality lost from removing typed models
+**Details:** `docs/development/completed/phase_04_processing_purpose_schema_decoupling.md`
 
 ---
 
@@ -319,25 +312,25 @@ uv run pytest -m integration
 - ✅ Schema-based routing validates compatibility automatically
 - ✅ Artifact passing works between steps
 - ✅ SourceCodeAnalyser accepts `standard_input` schema (Phase 3 complete)
-- 📋 ProcessingPurposeAnalyser has no hardcoded imports (Phase 4)
+- ✅ ProcessingPurposeAnalyser has no hardcoded imports (Phase 4)
 - ✅ Breaking changes accepted for cleaner architecture
 
 ### Non-Functional Requirements
 
 - ✅ All components independently installable
-- ✅ Code quality standards maintained (882 tests passing, 0 type errors)
-- 🔄 No hardcoded cross-component dependencies (SourceCode complete, ProcessingPurpose pending Phase 4)
-- 🔄 Components depend only on waivern-core and shared utilities (SourceCode complete, ProcessingPurpose pending Phase 4)
-- 🔄 True plugin architecture achieved (SourceCode complete, ProcessingPurpose pending Phase 4)
+- ✅ Code quality standards maintained (877 tests passing, 0 type errors)
+- ✅ No hardcoded cross-component dependencies
+- ✅ Components depend only on waivern-core and shared utilities
+- ✅ True plugin architecture achieved
 
 ### Architecture Validation
 
 - ✅ FilesystemConnector is standalone (no changes needed)
 - ✅ SourceCodeAnalyser depends only on waivern-core (Phase 3 complete)
-- 📋 ProcessingPurposeAnalyser depends only on waivern-core + shared utilities (Phase 4)
+- ✅ ProcessingPurposeAnalyser depends only on waivern-core + shared utilities (Phase 4 complete)
 - ✅ No circular dependencies
 - ✅ Sequential pipeline execution working
-- 🔄 Dependency graph is clean (SourceCode complete, ProcessingPurpose pending Phase 4)
+- ✅ Dependency graph is clean
 
 ---
 
