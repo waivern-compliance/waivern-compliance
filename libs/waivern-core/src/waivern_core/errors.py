@@ -4,6 +4,7 @@ This module provides:
 - WaivernError: Base exception class for all framework errors
 - ConnectorError, ConnectorConfigError, ConnectorExtractionError: Connector exceptions
 - AnalyserError, AnalyserConfigError, AnalyserInputError, AnalyserProcessingError: Analyser exceptions
+- ParserError: Parser-related exception
 - MessageValidationError: Message validation exception
 """
 
@@ -58,5 +59,11 @@ class AnalyserProcessingError(AnalyserError):
 
 class MessageValidationError(WaivernError):
     """Raised when message validation fails."""
+
+    pass
+
+
+class ParserError(WaivernError):
+    """Base exception for parser-related errors."""
 
     pass

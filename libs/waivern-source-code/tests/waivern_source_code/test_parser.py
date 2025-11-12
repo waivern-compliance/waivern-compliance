@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from waivern_core.errors import ConnectorConfigError
+from waivern_core.errors import ParserError
 
 from waivern_source_code.parser import SourceCodeParser
 
@@ -29,7 +29,7 @@ class TestSourceCodeParserInitialisation:
         unsupported_languages = ["javascript", "python", "java", "unsupported_language"]
 
         for language in unsupported_languages:
-            with pytest.raises(ConnectorConfigError, match="Unsupported language"):
+            with pytest.raises(ParserError, match="Unsupported language"):
                 SourceCodeParser(language)
 
     def test_initialisation_language_case_sensitivity(self):
@@ -37,7 +37,7 @@ class TestSourceCodeParserInitialisation:
         case_variations = ["PHP", "Php", "pHP"]
 
         for variation in case_variations:
-            with pytest.raises(ConnectorConfigError, match="Unsupported language"):
+            with pytest.raises(ParserError, match="Unsupported language"):
                 SourceCodeParser(variation)
 
 
@@ -101,9 +101,7 @@ class TestLanguageDetection:
             try:
                 parser = SourceCodeParser()
 
-                with pytest.raises(
-                    ConnectorConfigError, match="Cannot detect language"
-                ):
+                with pytest.raises(ParserError, match="Cannot detect language"):
                     parser.detect_language_from_file(Path(f.name))
 
             finally:
@@ -118,9 +116,7 @@ class TestLanguageDetection:
             try:
                 parser = SourceCodeParser()
 
-                with pytest.raises(
-                    ConnectorConfigError, match="Cannot detect language"
-                ):
+                with pytest.raises(ParserError, match="Cannot detect language"):
                     parser.detect_language_from_file(Path(f.name))
 
             finally:
@@ -201,7 +197,8 @@ class TestClass {
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 # Verify return types
                 assert root_node is not None
@@ -226,7 +223,8 @@ class TestClass {
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 assert root_node is not None
                 assert source_code == php_content
@@ -246,7 +244,8 @@ class TestClass {
             try:
                 parser = SourceCodeParser("php")
                 # Should not raise exception - tree-sitter handles invalid syntax gracefully
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 assert root_node is not None
                 assert source_code == invalid_php
@@ -256,29 +255,8 @@ class TestClass {
             finally:
                 Path(f.name).unlink()
 
-    def test_parse_nonexistent_file(self):
-        """Test error handling for nonexistent files."""
-        parser = SourceCodeParser("php")
-        nonexistent_path = Path("/nonexistent/file.php")
-
-        with pytest.raises(ConnectorConfigError, match="Cannot parse file"):
-            parser.parse_file(nonexistent_path)
-
-    def test_parse_binary_file(self):
-        """Test error handling for binary files that cannot be decoded."""
-        with tempfile.NamedTemporaryFile(suffix=".php", delete=False) as f:
-            # Write binary data that cannot be decoded as UTF-8
-            f.write(b"\x80\x81\x82\x83")
-            f.flush()
-
-            try:
-                parser = SourceCodeParser("php")
-
-                with pytest.raises(ConnectorConfigError, match="Cannot parse file"):
-                    parser.parse_file(Path(f.name))
-
-            finally:
-                Path(f.name).unlink()
+    # Note: File I/O error tests removed - parser no longer handles file I/O
+    # File operations are now the responsibility of connectors/analysers
 
     def test_parse_large_php_file(self):
         """Test parsing of large PHP file."""
@@ -298,7 +276,8 @@ function func{i}($param) {{
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 assert root_node is not None
                 assert source_code == large_php_content
@@ -347,7 +326,8 @@ class UserManager {
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 assert root_node is not None
                 assert source_code == mixed_content
@@ -395,7 +375,8 @@ class UserController {
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 assert root_node is not None
                 assert source_code == namespace_php
@@ -426,7 +407,8 @@ class UserController {
 
             # Parse all files with same parser instance
             for i, file_path in enumerate(temp_files):
-                root_node, source_code = parser.parse_file(Path(file_path))
+                source_code = Path(file_path).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 assert root_node is not None
                 assert source_code == files_content[i]
@@ -437,49 +419,8 @@ class UserController {
                 Path(file_path).unlink()
 
 
-class TestParserErrorHandling:
-    """Test parser error handling and edge cases."""
-
-    def test_parse_file_with_permission_error(self):
-        """Test handling of files that cannot be read due to permissions."""
-        # This test may not work on all systems, but we can test the error path
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".php", delete=False) as f:
-            f.write("<?php echo 'test'; ?>")
-            f.flush()
-
-            try:
-                # Change permissions to make file unreadable (if possible)
-                file_path = Path(f.name)
-                try:
-                    file_path.chmod(0o000)  # Remove all permissions
-
-                    parser = SourceCodeParser("php")
-
-                    with pytest.raises(ConnectorConfigError, match="Cannot parse file"):
-                        parser.parse_file(file_path)
-
-                except (OSError, PermissionError):
-                    # If we can't change permissions, skip this specific test
-                    # but verify the parser works normally
-                    file_path.chmod(0o644)  # Restore permissions
-                    parser = SourceCodeParser("php")
-                    root_node, _ = parser.parse_file(file_path)
-                    assert root_node is not None
-
-            finally:
-                try:
-                    Path(f.name).chmod(0o644)  # Restore permissions before cleanup
-                    Path(f.name).unlink()
-                except (OSError, PermissionError):
-                    pass  # Ignore cleanup errors
-
-    def test_parse_directory_instead_of_file(self):
-        """Test error handling when trying to parse a directory."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            parser = SourceCodeParser("php")
-
-            with pytest.raises(ConnectorConfigError, match="Cannot parse file"):
-                parser.parse_file(Path(temp_dir))
+class TestParserEdgeCases:
+    """Test parser edge cases and language detection."""
 
     def test_language_detection_with_symbolic_links(self):
         """Test language detection with symbolic links to PHP files."""

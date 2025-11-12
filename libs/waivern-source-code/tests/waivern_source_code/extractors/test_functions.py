@@ -120,7 +120,8 @@ class TestFunctionExtractionBasicCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 functions = extractor.extract(root_node, source_code)
@@ -153,7 +154,8 @@ class TestFunctionExtractionBasicCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 functions = extractor.extract(root_node, source_code)
@@ -181,7 +183,8 @@ class TestFunctionExtractionBasicCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 functions = extractor.extract(root_node, source_code)
@@ -217,7 +220,8 @@ class TestFunctionExtractionBasicCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 functions = extractor.extract(root_node, source_code)
@@ -254,7 +258,8 @@ class TestFunctionExtractionEdgeCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 functions = extractor.extract(root_node, source_code)
@@ -272,7 +277,8 @@ class TestFunctionExtractionEdgeCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 # Should not raise exception, may return empty list or partial results
@@ -339,7 +345,8 @@ class TestFunctionExtractionComplexScenarios:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 functions = extractor.extract(root_node, source_code)
@@ -381,7 +388,8 @@ function complexFunction($simple, array $arrayParam, ?string $optional, $default
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 functions = extractor.extract(root_node, source_code)
@@ -409,7 +417,8 @@ class TestFunctionExtractionDataStructure:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 functions = extractor.extract(root_node, source_code)
@@ -453,7 +462,8 @@ class TestFunctionExtractionDataStructure:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 functions = extractor.extract(root_node, source_code)
@@ -487,7 +497,8 @@ class TestFunctionExtractionDataStructure:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = FunctionExtractor("php")
                 functions = extractor.extract(root_node, source_code)

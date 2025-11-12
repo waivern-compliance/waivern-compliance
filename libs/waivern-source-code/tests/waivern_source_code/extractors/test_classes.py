@@ -176,7 +176,8 @@ class TestClassExtractionBasicCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -205,7 +206,8 @@ class TestClassExtractionBasicCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -231,7 +233,8 @@ class TestClassExtractionBasicCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -273,7 +276,10 @@ class TestClassExtractionBasicCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+
+                source_code = Path(f.name).read_text(encoding="utf-8")
+
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -320,7 +326,10 @@ class TestClassExtractionEdgeCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+
+                source_code = Path(f.name).read_text(encoding="utf-8")
+
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -338,7 +347,10 @@ class TestClassExtractionEdgeCases:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+
+                source_code = Path(f.name).read_text(encoding="utf-8")
+
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 # Should not raise exception, may return empty list or partial results
@@ -405,7 +417,10 @@ class TestClassExtractionComplexScenarios:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+
+                source_code = Path(f.name).read_text(encoding="utf-8")
+
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -463,7 +478,10 @@ class AdminUser extends BaseUser {
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+
+                source_code = Path(f.name).read_text(encoding="utf-8")
+
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -494,7 +512,10 @@ class TestClassExtractionDataStructure:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+
+                source_code = Path(f.name).read_text(encoding="utf-8")
+
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -538,7 +559,10 @@ class TestClassExtractionDataStructure:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+
+                source_code = Path(f.name).read_text(encoding="utf-8")
+
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -581,7 +605,10 @@ class TestClassExtractionDataStructure:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+
+                source_code = Path(f.name).read_text(encoding="utf-8")
+
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -608,7 +635,10 @@ class TestClassExtractionDataStructure:
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+
+                source_code = Path(f.name).read_text(encoding="utf-8")
+
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)
@@ -668,7 +698,10 @@ class LargeClass {
 
             try:
                 parser = SourceCodeParser("php")
-                root_node, source_code = parser.parse_file(Path(f.name))
+
+                source_code = Path(f.name).read_text(encoding="utf-8")
+
+                root_node = parser.parse(source_code)
 
                 extractor = ClassExtractor("php")
                 classes = extractor.extract(root_node, source_code)

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import tree_sitter_php
 from tree_sitter import Language, Node, Parser
-from waivern_core.errors import ConnectorConfigError
+from waivern_core.errors import ParserError
 
 # Language registry for individual language packages
 _LANGUAGE_REGISTRY: dict[str, Language] = {}
@@ -21,12 +21,12 @@ def get_tree_sitter_language(name: str) -> Language:
         Tree-sitter Language object for the specified language
 
     Raises:
-        ConnectorConfigError: If the language is not supported
+        ParserError: If the language is not supported
 
     """
     if name not in _LANGUAGE_REGISTRY:
         supported_languages: list[str] = list(_LANGUAGE_REGISTRY.keys())
-        raise ConnectorConfigError(
+        raise ParserError(
             f"Language '{name}' not supported. Available: {supported_languages}"
         )
     return _LANGUAGE_REGISTRY[name]
@@ -42,7 +42,7 @@ def get_parser(name: str) -> Parser:
         Tree-sitter Parser object configured for the specified language
 
     Raises:
-        ConnectorConfigError: If the language is not supported
+        ParserError: If the language is not supported
 
     """
     parser = Parser()
@@ -80,7 +80,7 @@ class SourceCodeParser:
             language: Programming language to parse (default: php)
 
         Raises:
-            ConnectorConfigError: If language is not supported or tree-sitter unavailable
+            ParserError: If language is not supported or tree-sitter unavailable
 
         """
         self._validate_language_support(language)
@@ -89,7 +89,8 @@ class SourceCodeParser:
         self.parser = get_parser(language)
         self.tree_sitter_language = get_tree_sitter_language(language)
 
-    def detect_language_from_file(self, file_path: Path) -> str:
+    @staticmethod
+    def detect_language_from_file(file_path: Path) -> str:
         """Detect programming language from file extension.
 
         Args:
@@ -99,39 +100,18 @@ class SourceCodeParser:
             Detected language name
 
         Raises:
-            ConnectorConfigError: If language cannot be detected
+            ParserError: If language cannot be detected
 
         """
         extension = file_path.suffix.lower()
 
-        for language, extensions in self._SUPPORTED_LANGUAGES.items():
+        for language, extensions in SourceCodeParser._SUPPORTED_LANGUAGES.items():
             if extension in extensions:
                 return language
 
-        raise ConnectorConfigError(
-            f"Cannot detect language for file extension: {extension}"
-        )
+        raise ParserError(f"Cannot detect language for file extension: {extension}")
 
-    def parse_file(self, file_path: Path) -> tuple[Node, str]:
-        """Parse a source code file.
-
-        Args:
-            file_path: Path to the source file
-
-        Returns:
-            Tuple of (AST root node, source code content)
-
-        Raises:
-            ConnectorConfigError: If file cannot be parsed
-
-        """
-        try:
-            source_code = self._read_file_content(file_path)
-            return self._parse_code(source_code), source_code
-        except Exception as e:
-            raise ConnectorConfigError(f"Cannot parse file {file_path}: {e}") from e
-
-    def _parse_code(self, source_code: str) -> Node:
+    def parse(self, source_code: str) -> Node:
         """Parse source code string.
 
         Args:
@@ -144,7 +124,8 @@ class SourceCodeParser:
         tree = self.parser.parse(bytes(source_code, _DEFAULT_ENCODING))
         return tree.root_node
 
-    def is_supported_file(self, file_path: Path) -> bool:
+    @staticmethod
+    def is_supported_file(file_path: Path) -> bool:
         """Check if file is supported for parsing.
 
         Args:
@@ -156,7 +137,8 @@ class SourceCodeParser:
         """
         extension = file_path.suffix.lower()
         return any(
-            extension in extensions for extensions in self._SUPPORTED_LANGUAGES.values()
+            extension in extensions
+            for extensions in SourceCodeParser._SUPPORTED_LANGUAGES.values()
         )
 
     def _validate_language_support(self, language: str) -> None:
@@ -166,31 +148,11 @@ class SourceCodeParser:
             language: Programming language to validate
 
         Raises:
-            ConnectorConfigError: If language is not supported
+            ParserError: If language is not supported
 
         """
         if language not in self._SUPPORTED_LANGUAGES:
-            raise ConnectorConfigError(
+            raise ParserError(
                 f"Unsupported language: {language}. "
                 f"Supported languages: {list(self._SUPPORTED_LANGUAGES.keys())}"
             )
-
-    def _read_file_content(self, file_path: Path) -> str:
-        """Read and decode file content.
-
-        Args:
-            file_path: Path to the source file
-
-        Returns:
-            Decoded file content
-
-        Raises:
-            ConnectorConfigError: If file cannot be read or decoded
-
-        """
-        try:
-            return file_path.read_text(encoding=_DEFAULT_ENCODING)
-        except UnicodeDecodeError as e:
-            raise ConnectorConfigError(f"Cannot decode file {file_path}: {e}") from e
-        except Exception as e:
-            raise ConnectorConfigError(f"Cannot read file {file_path}: {e}") from e

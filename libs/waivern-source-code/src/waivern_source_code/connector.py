@@ -65,7 +65,7 @@ class SourceCodeConnector(Connector):
         if self._config.path.is_file():
             detected_language = (
                 config.language
-                or SourceCodeParser().detect_language_from_file(self._config.path)
+                or SourceCodeParser.detect_language_from_file(self._config.path)
             )
             self.parser = SourceCodeParser(detected_language)
         else:
@@ -222,11 +222,12 @@ class SourceCodeConnector(Connector):
 
             # Detect language if needed
             if not self.parser:
-                language = SourceCodeParser().detect_language_from_file(file_path)
+                language = SourceCodeParser.detect_language_from_file(file_path)
                 self.parser = SourceCodeParser(language)
 
-            # Parse file
-            root_node, source_code = self.parser.parse_file(file_path)
+            # Read and parse file
+            source_code = file_path.read_text(encoding="utf-8")
+            root_node = self.parser.parse(source_code)
             line_count = source_code.count("\n") + 1
 
             # Extract information
@@ -277,25 +278,23 @@ class SourceCodeConnector(Connector):
         """
         # Use filesystem connector to collect files
         files_to_process = self.file_collector.collect_files()
-        parser = SourceCodeParser()
 
         for file_path in files_to_process:
-            if self._should_process_file(file_path, parser):
+            if self._should_process_file(file_path):
                 yield file_path
 
-    def _should_process_file(self, file_path: Path, parser: SourceCodeParser) -> bool:
+    def _should_process_file(self, file_path: Path) -> bool:
         """Determine if a file should be processed based on language support and patterns.
 
         Args:
             file_path: Path to the file to check
-            parser: Parser instance to check file support
 
         Returns:
             True if file should be processed, False otherwise
 
         """
         # Check if file is supported by parser
-        if not parser.is_supported_file(file_path):
+        if not SourceCodeParser.is_supported_file(file_path):
             return False
 
         # Apply file pattern matching if specified (inclusion patterns)
@@ -344,7 +343,7 @@ class SourceCodeConnector(Connector):
         language = (
             self.parser.language
             if self.parser
-            else SourceCodeParser().detect_language_from_file(file_path)
+            else SourceCodeParser.detect_language_from_file(file_path)
         )
 
         # Initialise extractors
