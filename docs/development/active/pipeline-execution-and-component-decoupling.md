@@ -108,7 +108,6 @@ execution:
 - 9 new validation tests
 - All sample and test runbooks updated (3 samples, 29 test steps)
 
-**Implementation details:** See `docs/development/completed/pipeline-execution-and-component-decoupling/step_01_*.md` and `step_02_*.md`
 
 ---
 
@@ -166,8 +165,6 @@ execution:
     analyser: data_subject_analyser
 ```
 
-**Implementation details:** See `docs/development/completed/pipeline-execution-and-component-decoupling/step_03_*.md` through `step_06_*.md`
-
 **Key design decisions:**
 - Sequential execution only (parallel deferred to future)
 - In-memory artifact storage (no persistence)
@@ -218,8 +215,6 @@ execution:
 - Users must update runbooks to use pipeline format
 - Migration guide in README
 
-**Implementation details:** See `docs/development/completed/pipeline-execution-and-component-decoupling/step_07_*.md` through `step_12_*.md`
-
 ---
 
 ### Phase 4: Fix ProcessingPurposeAnalyser Schema Coupling
@@ -237,8 +232,6 @@ execution:
 
 **Result:**
 ProcessingPurposeAnalyser now truly independent - no package coupling, schema-driven via Message validation.
-
-**Details:** `docs/development/completed/phase_04_processing_purpose_schema_decoupling.md`
 
 ---
 
@@ -403,12 +396,12 @@ These can be implemented incrementally without changing core architecture.
 | 1. Extend Runbook Format | ✅ Complete | #208 | 890 passing | Breaking change accepted |
 | 2. Pipeline Execution | ✅ Complete | #211 | 901 passing | 6 steps implemented via TDD |
 | 3. SourceCode Refactor | ✅ Complete | #217 | 882 passing | 6 steps (7-12) implemented via TDD |
-| 4. ProcessingPurpose Fix | 📋 Planned | - | - | Depends on Phase 3 |
-| 5. Update Tests | 🔄 Partial | - | - | Phase 1-3 tests complete |
-| 6. Documentation | 📋 Planned | - | - | Pending Phases 3-4 |
+| 4. ProcessingPurpose Fix | ✅ Complete | #218 | 877 passing | Steps 13-17 implemented via TDD |
+| 5. Update Tests | 🔄 Partial | - | - | Phase 1-4 tests complete |
+| 6. Documentation | 📋 Planned | - | - | Pending Phase 5 |
 | 7. Validation | 📋 Planned | - | - | Final quality checks |
 
-**Overall Progress:** 3/7 phases complete (43%)
+**Overall Progress:** 4/7 phases complete (57%)
 
 ---
 
@@ -424,9 +417,10 @@ These can be implemented incrementally without changing core architecture.
 5. Use `git-commit` skill with conventional commits
 6. Create PR when phase complete
 
-**Phases 2 and 3 demonstrated this workflow successfully:**
+**Phases 2, 3, and 4 demonstrated this workflow successfully:**
 - Phase 2: 6 atomic steps with individual step documents
 - Phase 3: 6 atomic steps (steps 7-12) with individual step documents
+- Phase 4: 5 atomic steps (steps 13-17) with individual step documents
 - TDD methodology throughout
 - All quality checks passing
 - Clear git history with conventional commits
@@ -436,7 +430,6 @@ These can be implemented incrementally without changing core architecture.
 ## References
 
 - **WCF Core Concepts:** `docs/core-concepts/wcf-core-components.md`
-- **Phase 1-3 Step Documents:** `docs/development/completed/pipeline-execution-and-component-decoupling/step_01-12_*.md`
 - **Current Executor:** `apps/wct/src/wct/executor.py`
 - **Runbook Format:** `apps/wct/src/wct/runbook.py`
 - **Issue #189:** DAG-based Execution Engine (parent epic)
@@ -445,5 +438,5 @@ These can be implemented incrementally without changing core architecture.
 
 ---
 
-**Document Version:** 4.0 (Phase 3 Complete)
+**Document Version:** 5.0 (Phase 4 Complete)
 **Last Updated:** 2025-11-12
