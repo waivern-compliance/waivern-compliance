@@ -3,7 +3,7 @@
 import pytest
 from waivern_core.errors import AnalyserConfigError
 
-from waivern_source_code.analyser_config import SourceCodeAnalyserConfig
+from waivern_source_code_analyser.analyser_config import SourceCodeAnalyserConfig
 
 
 class TestSourceCodeAnalyserConfig:

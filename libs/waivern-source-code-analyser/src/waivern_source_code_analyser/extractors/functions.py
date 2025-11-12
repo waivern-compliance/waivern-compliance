@@ -4,7 +4,7 @@ from typing import Any, override
 
 from tree_sitter import Node
 
-from waivern_source_code.extractors.base import BaseExtractor
+from waivern_source_code_analyser.extractors.base import BaseExtractor
 
 # Constants
 _ANONYMOUS_FUNCTION_NAME = "<anonymous>"

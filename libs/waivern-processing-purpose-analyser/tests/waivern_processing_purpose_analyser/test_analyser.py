@@ -19,7 +19,7 @@ from waivern_core.schemas import (
     StandardInputDataModel,
 )
 from waivern_llm import BaseLLMService
-from waivern_source_code.schemas import (
+from waivern_source_code_analyser.schemas import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeDataModel,
     SourceCodeFileDataModel,

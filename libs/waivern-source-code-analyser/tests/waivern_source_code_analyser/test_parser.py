@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from waivern_core.errors import ParserError
 
-from waivern_source_code.parser import SourceCodeParser
+from waivern_source_code_analyser.parser import SourceCodeParser
 
 
 class TestSourceCodeParserInitialisation:

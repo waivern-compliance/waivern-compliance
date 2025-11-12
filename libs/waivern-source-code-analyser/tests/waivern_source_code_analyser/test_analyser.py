@@ -11,8 +11,8 @@ from waivern_core.schemas import (
     StandardInputDataModel,
 )
 
-from waivern_source_code.analyser import SourceCodeAnalyser
-from waivern_source_code.analyser_config import SourceCodeAnalyserConfig
+from waivern_source_code_analyser.analyser import SourceCodeAnalyser
+from waivern_source_code_analyser.analyser_config import SourceCodeAnalyserConfig
 
 
 class TestSourceCodeAnalyserInitialisation:

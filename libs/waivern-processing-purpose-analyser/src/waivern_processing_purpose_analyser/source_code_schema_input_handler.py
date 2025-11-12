@@ -6,7 +6,7 @@ from waivern_rulesets import RulesetLoader
 from waivern_rulesets.data_collection import DataCollectionRule
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 from waivern_rulesets.service_integrations import ServiceIntegrationRule
-from waivern_source_code.schemas import (
+from waivern_source_code_analyser.schemas import (
     SourceCodeDataModel,
     SourceCodeFileDataModel,
 )

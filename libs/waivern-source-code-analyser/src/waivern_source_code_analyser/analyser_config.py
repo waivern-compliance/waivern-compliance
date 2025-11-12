@@ -6,7 +6,7 @@ from pydantic import Field, ValidationError, field_validator
 from waivern_core import BaseComponentConfiguration
 from waivern_core.errors import AnalyserConfigError
 
-from waivern_source_code.validators import validate_and_normalise_language
+from waivern_source_code_analyser.validators import validate_and_normalise_language
 
 
 class SourceCodeAnalyserConfig(BaseComponentConfiguration):

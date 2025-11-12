@@ -1,12 +1,11 @@
 [project]
-name = "waivern-source-code"
+name = "waivern-source-code-analyser"
 version = "0.1.0"
-description = "Source code connector for WCF"
+description = "Source code analyser for WCF"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
-    "waivern-filesystem",
     "pydantic>=2.11.5",
 ]
 
@@ -15,16 +14,13 @@ tree-sitter = [
     "tree-sitter>=0.21.0",
     "tree-sitter-php>=0.22.0",
 ]
-all = ["waivern-source-code[tree-sitter]"]
-
-[project.entry-points."waivern.connectors"]
-source_code = "waivern_source_code:SourceCodeConnectorFactory"
+all = ["waivern-source-code-analyser[tree-sitter]"]
 
 [project.entry-points."waivern.analysers"]
-source_code = "waivern_source_code:SourceCodeAnalyserFactory"
+source_code_analyser = "waivern_source_code_analyser.analyser_factory:SourceCodeAnalyserFactory"
 
 [project.entry-points."waivern.schemas"]
-source_code = "waivern_source_code:register_schemas"
+source_code = "waivern_source_code_analyser:register_schemas"
 
 [dependency-groups]
 dev = [
@@ -41,12 +37,12 @@ dev-mode-dirs = ["src"]
 
 # Include JSON schemas and py.typed
 include = [
-    "src/waivern_source_code/py.typed",
-    "src/waivern_source_code/**/schemas/json_schemas/**/*.json",
+    "src/waivern_source_code_analyser/py.typed",
+    "src/waivern_source_code_analyser/**/schemas/json_schemas/**/*.json",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/waivern_source_code"]
+packages = ["src/waivern_source_code_analyser"]
 
 [tool.basedpyright]
 typeCheckingMode = "strict"

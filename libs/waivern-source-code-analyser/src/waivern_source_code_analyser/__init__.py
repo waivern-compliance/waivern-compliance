@@ -14,9 +14,6 @@ from waivern_core.schemas import SchemaRegistry
 from .analyser import SourceCodeAnalyser
 from .analyser_config import SourceCodeAnalyserConfig
 from .analyser_factory import SourceCodeAnalyserFactory
-from .config import SourceCodeConnectorConfig
-from .connector import SourceCodeConnector
-from .factory import SourceCodeConnectorFactory
 from .schemas import (
     SourceCodeClassModel,
     SourceCodeDataModel,
@@ -40,9 +37,6 @@ __all__ = [
     "SourceCodeAnalyser",
     "SourceCodeAnalyserConfig",
     "SourceCodeAnalyserFactory",
-    "SourceCodeConnector",
-    "SourceCodeConnectorConfig",
-    "SourceCodeConnectorFactory",
     "SourceCodeDataModel",
     "SourceCodeFunctionModel",
     "SourceCodeClassModel",

@@ -4,10 +4,10 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
-from waivern_source_code.extractors.functions import (
+from waivern_source_code_analyser.extractors.functions import (
     FunctionExtractor,
 )
-from waivern_source_code.parser import SourceCodeParser
+from waivern_source_code_analyser.parser import SourceCodeParser
 
 # Test constants - expected behaviour from public interface
 EXPECTED_SUPPORTED_LANGUAGES = [

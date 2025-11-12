@@ -21,8 +21,8 @@ from waivern_core import (
 )
 from waivern_core.services.container import ServiceContainer
 
-from waivern_source_code.analyser import SourceCodeAnalyser
-from waivern_source_code.analyser_factory import SourceCodeAnalyserFactory
+from waivern_source_code_analyser.analyser import SourceCodeAnalyser
+from waivern_source_code_analyser.analyser_factory import SourceCodeAnalyserFactory
 
 
 class TestSourceCodeAnalyserFactory(ComponentFactoryContractTests[SourceCodeAnalyser]):

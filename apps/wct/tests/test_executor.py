@@ -1674,14 +1674,13 @@ class TestExecutorCreateWithBuiltIns:
         # Check that all expected connector factories are present
         expected_connectors = {
             "filesystem_connector",
-            "source_code_connector",
             "sqlite_connector",
             "mysql_connector",
         }
         registered_names = set(registered_connectors.keys())
 
         assert expected_connectors == registered_names
-        assert len(registered_connectors) == 4
+        assert len(registered_connectors) == 3
 
     def test_creates_executor_with_all_built_in_analysers(self) -> None:
         """Test that create_with_built_ins registers all built-in analysers."""

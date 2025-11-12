@@ -10,6 +10,6 @@ def _register_schemas():  # pyright: ignore[reportUnusedFunction]
     Since we no longer have import-time registration, tests need
     schemas to be explicitly registered.
     """
-    from waivern_source_code import register_schemas
+    from waivern_source_code_analyser import register_schemas
 
     register_schemas()

@@ -12,9 +12,9 @@ from waivern_core.errors import AnalyserProcessingError
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
-from waivern_source_code.analyser_config import SourceCodeAnalyserConfig
-from waivern_source_code.extractors import ClassExtractor, FunctionExtractor
-from waivern_source_code.parser import SourceCodeParser
+from waivern_source_code_analyser.analyser_config import SourceCodeAnalyserConfig
+from waivern_source_code_analyser.extractors import ClassExtractor, FunctionExtractor
+from waivern_source_code_analyser.parser import SourceCodeParser
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class SourceCodeAnalyser(Analyser):
         """
         module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
         return importlib.import_module(
-            f"waivern_source_code.schema_producers.{module_name}"
+            f"waivern_source_code_analyser.schema_producers.{module_name}"
         )
 
     @override

@@ -21,7 +21,7 @@ samples = [
     "waivern-mysql",
     "waivern-filesystem",
     "waivern-sqlite",
-    "waivern-source-code[tree-sitter]",
+    "waivern-source-code-analyser[tree-sitter]",
     # Analysers used in sample runbooks
     "waivern-rulesets",
     "waivern-analysers-shared",
@@ -52,7 +52,7 @@ dev = [
     "waivern-mysql",
     "waivern-filesystem",
     "waivern-sqlite",
-    "waivern-source-code[tree-sitter]",
+    "waivern-source-code-analyser[tree-sitter]",
     "waivern-rulesets",
     "waivern-analysers-shared",
     "waivern-personal-data-analyser",
