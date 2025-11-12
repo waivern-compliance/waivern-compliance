@@ -1,4 +1,10 @@
-"""Source code connector for WCF."""
+"""Source code analyser for WCF.
+
+This package provides SourceCodeAnalyser, which transforms file content
+from standard_input schema to source_code schema with parsed code structure.
+
+Use in pipeline: FilesystemConnector → SourceCodeAnalyser → ProcessingPurposeAnalyser
+"""
 
 from importlib.resources import files
 from pathlib import Path
