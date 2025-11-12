@@ -9,7 +9,7 @@ discovers them at runtime. WCT only needs to know about core base types.
 
 Note: If you need component-specific schemas (e.g., SourceCodeDataModel,
 PersonalDataFindingModel), import them directly from the component package
-(e.g., from waivern_source_code.schemas import SourceCodeDataModel).
+(e.g., from waivern_source_code_analyser.schemas import SourceCodeDataModel).
 """
 
 # Core schemas and base types (from waivern-core only)

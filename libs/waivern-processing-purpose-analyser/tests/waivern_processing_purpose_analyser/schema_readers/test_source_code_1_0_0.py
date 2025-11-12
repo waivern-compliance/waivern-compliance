@@ -1,6 +1,6 @@
 """Tests for source_code v1.0.0 reader."""
 
-from waivern_source_code.schemas import SourceCodeDataModel
+from waivern_source_code_analyser.schemas import SourceCodeDataModel
 
 
 class TestSourceCodeReader:

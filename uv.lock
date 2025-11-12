@@ -21,7 +21,7 @@ members = [
     "waivern-personal-data-analyser",
     "waivern-processing-purpose-analyser",
     "waivern-rulesets",
-    "waivern-source-code",
+    "waivern-source-code-analyser",
     "waivern-sqlite",
     "waivern-workspace",
 ]
@@ -1553,7 +1553,7 @@ samples = [
     { name = "waivern-personal-data-analyser" },
     { name = "waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets" },
-    { name = "waivern-source-code", extra = ["tree-sitter"] },
+    { name = "waivern-source-code-analyser", extra = ["tree-sitter"] },
     { name = "waivern-sqlite" },
 ]
 
@@ -1569,7 +1569,7 @@ dev = [
     { name = "waivern-personal-data-analyser" },
     { name = "waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets" },
-    { name = "waivern-source-code", extra = ["tree-sitter"] },
+    { name = "waivern-source-code-analyser", extra = ["tree-sitter"] },
     { name = "waivern-sqlite" },
 ]
 
@@ -1587,7 +1587,7 @@ requires-dist = [
     { name = "waivern-personal-data-analyser", marker = "extra == 'samples'", editable = "libs/waivern-personal-data-analyser" },
     { name = "waivern-processing-purpose-analyser", marker = "extra == 'samples'", editable = "libs/waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets", marker = "extra == 'samples'", editable = "libs/waivern-rulesets" },
-    { name = "waivern-source-code", extras = ["tree-sitter"], marker = "extra == 'samples'", editable = "libs/waivern-source-code" },
+    { name = "waivern-source-code-analyser", extras = ["tree-sitter"], marker = "extra == 'samples'", editable = "libs/waivern-source-code-analyser" },
     { name = "waivern-sqlite", marker = "extra == 'samples'", editable = "libs/waivern-sqlite" },
 ]
 provides-extras = ["samples"]
@@ -1604,7 +1604,7 @@ dev = [
     { name = "waivern-personal-data-analyser", editable = "libs/waivern-personal-data-analyser" },
     { name = "waivern-processing-purpose-analyser", editable = "libs/waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
-    { name = "waivern-source-code", extras = ["tree-sitter"], editable = "libs/waivern-source-code" },
+    { name = "waivern-source-code-analyser", extras = ["tree-sitter"], editable = "libs/waivern-source-code-analyser" },
     { name = "waivern-sqlite", editable = "libs/waivern-sqlite" },
 ]
 
@@ -1870,7 +1870,7 @@ dependencies = [
     { name = "waivern-core" },
     { name = "waivern-llm" },
     { name = "waivern-rulesets" },
-    { name = "waivern-source-code" },
+    { name = "waivern-source-code-analyser" },
 ]
 
 [package.dev-dependencies]
@@ -1886,7 +1886,7 @@ requires-dist = [
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
-    { name = "waivern-source-code", editable = "libs/waivern-source-code" },
+    { name = "waivern-source-code-analyser", editable = "libs/waivern-source-code-analyser" },
 ]
 
 [package.metadata.requires-dev]
@@ -1925,13 +1925,12 @@ dev = [
 ]
 
 [[package]]
-name = "waivern-source-code"
+name = "waivern-source-code-analyser"
 version = "0.1.0"
-source = { editable = "libs/waivern-source-code" }
+source = { editable = "libs/waivern-source-code-analyser" }
 dependencies = [
     { name = "pydantic" },
     { name = "waivern-core" },
-    { name = "waivern-filesystem" },
 ]
 
 [package.optional-dependencies]
@@ -1956,8 +1955,7 @@ requires-dist = [
     { name = "tree-sitter", marker = "extra == 'tree-sitter'", specifier = ">=0.21.0" },
     { name = "tree-sitter-php", marker = "extra == 'tree-sitter'", specifier = ">=0.22.0" },
     { name = "waivern-core", editable = "libs/waivern-core" },
-    { name = "waivern-filesystem", editable = "libs/waivern-filesystem" },
-    { name = "waivern-source-code", extras = ["tree-sitter"], marker = "extra == 'all'", editable = "libs/waivern-source-code" },
+    { name = "waivern-source-code-analyser", extras = ["tree-sitter"], marker = "extra == 'all'", editable = "libs/waivern-source-code-analyser" },
 ]
 provides-extras = ["tree-sitter", "all"]
 

@@ -1,17 +1,26 @@
 [project]
-name = "waivern-processing-purpose-analyser"
+name = "waivern-source-code-analyser"
 version = "0.1.0"
-description = "Processing purpose analyser for WCF"
+description = "Source code analyser for WCF"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
-    "waivern-llm",
-    "waivern-analysers-shared",
-    "waivern-rulesets",
-    "waivern-source-code-analyser",
     "pydantic>=2.11.5",
 ]
+
+[project.optional-dependencies]
+tree-sitter = [
+    "tree-sitter>=0.21.0",
+    "tree-sitter-php>=0.22.0",
+]
+all = ["waivern-source-code-analyser[tree-sitter]"]
+
+[project.entry-points."waivern.analysers"]
+source_code_analyser = "waivern_source_code_analyser.analyser_factory:SourceCodeAnalyserFactory"
+
+[project.entry-points."waivern.schemas"]
+source_code = "waivern_source_code_analyser:register_schemas"
 
 [dependency-groups]
 dev = [
@@ -28,19 +37,12 @@ dev-mode-dirs = ["src"]
 
 # Include JSON schemas and py.typed
 include = [
-    "src/waivern_processing_purpose_analyser/py.typed",
-    "src/waivern_processing_purpose_analyser/**/schemas/json_schemas/**/*.json",
+    "src/waivern_source_code_analyser/py.typed",
+    "src/waivern_source_code_analyser/**/schemas/json_schemas/**/*.json",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/waivern_processing_purpose_analyser"]
-
-# Component discovery via entry points
-[project.entry-points."waivern.analysers"]
-processing_purpose = "waivern_processing_purpose_analyser:ProcessingPurposeAnalyserFactory"
-
-[project.entry-points."waivern.schemas"]
-processing_purpose = "waivern_processing_purpose_analyser:register_schemas"
+packages = ["src/waivern_source_code_analyser"]
 
 [tool.basedpyright]
 typeCheckingMode = "strict"

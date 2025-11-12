@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 import pytest
 from waivern_core.schemas import BaseFindingEvidence
-from waivern_source_code.schemas import (
+from waivern_source_code_analyser.schemas import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeClassModel,
     SourceCodeDataModel,
