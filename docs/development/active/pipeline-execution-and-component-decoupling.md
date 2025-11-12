@@ -218,7 +218,7 @@ execution:
 - Users must update runbooks to use pipeline format
 - Migration guide in README
 
-**Implementation details:** See `docs/development/active/pipeline-execution-and-component-decoupling/step_07_*.md` through `step_12_*.md`
+**Implementation details:** See `docs/development/completed/pipeline-execution-and-component-decoupling/step_07_*.md` through `step_12_*.md`
 
 ---
 
@@ -443,13 +443,12 @@ These can be implemented incrementally without changing core architecture.
 ## References
 
 - **WCF Core Concepts:** `docs/core-concepts/wcf-core-components.md`
-- **Phase 1-2 Step Documents:** `docs/development/completed/pipeline-execution-and-component-decoupling/step_01-06_*.md`
-- **Phase 3 Step Documents:** `docs/development/active/pipeline-execution-and-component-decoupling/step_07-12_*.md`
+- **Phase 1-3 Step Documents:** `docs/development/completed/pipeline-execution-and-component-decoupling/step_01-12_*.md`
 - **Current Executor:** `apps/wct/src/wct/executor.py`
 - **Runbook Format:** `apps/wct/src/wct/runbook.py`
 - **Issue #189:** DAG-based Execution Engine (parent epic)
 - **Issue #210:** Phase 2 Implementation (closed by PR #211)
-- **Issue #217:** Phase 3 Implementation (SourceCode refactor)
+- **Issue #217:** Phase 3 Implementation (closed by PR #218)
 
 ---
 
