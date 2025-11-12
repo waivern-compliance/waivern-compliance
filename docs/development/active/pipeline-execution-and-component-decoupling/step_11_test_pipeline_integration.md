@@ -1,7 +1,7 @@
 # Task: Test Pipeline Integration End-to-End
 
 - **Phase:** 3 - Refactor SourceCodeConnector → SourceCodeAnalyser
-- **Status:** TODO
+- **Status:** DONE
 - **Prerequisites:** Step 10 (entry points and exports updated)
 - **GitHub Issue:** #216
 
@@ -163,24 +163,24 @@ uv run pytest libs/waivern-source-code/tests/ -v
 ## Success Criteria
 
 **Functional:**
-- [ ] FilesystemConnector → SourceCodeAnalyser pipeline works
-- [ ] 3-step pipeline (Filesystem → SourceCode → ProcessingPurpose) works
-- [ ] Schema validation catches incompatible chains
-- [ ] Missing save_output flag detected
-- [ ] Single file and empty directory cases handled
-- [ ] No hardcoded dependencies between components
+- [x] FilesystemConnector → SourceCodeAnalyser pipeline works
+- [x] 3-step pipeline (Filesystem → SourceCode → ProcessingPurpose) works
+- [x] Schema validation catches incompatible chains
+- [x] Missing save_output flag detected
+- [x] Single file and empty directory cases handled (covered by component tests)
+- [x] No hardcoded dependencies between components
 
 **Quality:**
-- [ ] All integration tests pass
-- [ ] Tests use public API only (execute_runbook)
-- [ ] Tests clean up temp files properly
-- [ ] Clear test names describe scenarios
+- [x] All integration tests pass
+- [x] Tests use public API only (execute_runbook)
+- [x] Tests clean up temp files properly
+- [x] Clear test names describe scenarios
 
 **Code Quality:**
-- [ ] Tests are independent (no shared state)
-- [ ] Fixtures used for common setup
-- [ ] Assertions verify outcomes, not implementation
-- [ ] Error cases tested (negative tests)
+- [x] Tests are independent (no shared state)
+- [x] Fixtures used for common setup
+- [x] Assertions verify outcomes, not implementation
+- [x] Error cases tested (negative tests)
 
 ## Implementation Notes
 

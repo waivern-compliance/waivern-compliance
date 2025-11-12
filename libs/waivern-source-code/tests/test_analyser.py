@@ -1,5 +1,8 @@
 """Tests for SourceCodeAnalyser."""
 
+import tempfile
+from pathlib import Path
+
 from waivern_core.message import Message
 from waivern_core.schemas import (
     FilesystemMetadata,
@@ -405,3 +408,64 @@ class UserManager {
         assert len(content["data"]) == 0
         assert content["metadata"]["total_files"] == 0
         assert content["metadata"]["total_lines"] == 0
+
+    def test_process_populates_last_modified_for_existing_files(self):
+        """Test that last_modified timestamp is populated for files that exist on disk."""
+        # Arrange - create a real temporary PHP file
+        with tempfile.TemporaryDirectory() as tmpdir:
+            php_file = Path(tmpdir) / "test.php"
+            php_content = "<?php function testFunc() { return true; } ?>"
+            php_file.write_text(php_content)
+
+            # Ensure file exists before processing
+            assert php_file.exists()
+
+            data = StandardInputDataModel(
+                schemaVersion="1.0.0",
+                name="Last modified test",
+                description="Test last_modified field population",
+                source=str(tmpdir),
+                metadata={},
+                data=[
+                    StandardInputDataItemModel(
+                        content=php_content,
+                        metadata=FilesystemMetadata(
+                            source=str(php_file),
+                            connector_type="filesystem_connector",
+                            file_path=str(php_file),
+                        ),
+                    ),
+                ],
+            )
+
+            message = Message(
+                id="test_last_modified",
+                content=data.model_dump(exclude_none=True),
+                schema=Schema("standard_input", "1.0.0"),
+            )
+
+            config = SourceCodeAnalyserConfig.from_properties({})
+            analyser = SourceCodeAnalyser(config)
+
+            # Act
+            result = analyser.process(
+                Schema("standard_input", "1.0.0"),
+                Schema("source_code", "1.0.0"),
+                message,
+            )
+
+            # Assert
+            content = result.content
+            assert len(content["data"]) == 1
+
+            parsed_file = content["data"][0]
+            assert "metadata" in parsed_file
+
+            file_metadata = parsed_file["metadata"]
+            assert "last_modified" in file_metadata
+            assert file_metadata["last_modified"] is not None
+            assert isinstance(file_metadata["last_modified"], str)
+
+            # Should be ISO 8601 format with timezone
+            assert "T" in file_metadata["last_modified"]
+            assert file_metadata["last_modified"].endswith("+00:00")

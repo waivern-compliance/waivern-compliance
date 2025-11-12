@@ -1,4 +1,4 @@
-# Task: Update Package Dependencies
+# Task: Rename Package and Update Dependencies
 
 - **Phase:** 3 - Refactor SourceCodeConnector → SourceCodeAnalyser
 - **Status:** TODO
@@ -7,15 +7,31 @@
 
 ## Context
 
-This is the final step of Phase 3, refactoring SourceCodeConnector into a pure transformer analyser. The analyser no longer needs FilesystemConnector as a dependency.
+This is the final step of Phase 3, refactoring SourceCodeConnector into a pure transformer analyser. The package must be renamed to follow the naming convention of other analyser packages, and dependencies updated to reflect that the analyser no longer needs FilesystemConnector.
 
 **See:** the parent implementation plan for full context.
 
 ## Purpose
 
-Update `pyproject.toml` dependencies to reflect that SourceCodeAnalyser is independent - remove waivern-filesystem from required dependencies since analyser doesn't perform file I/O.
+1. Rename package from `waivern-source-code` to `waivern-source-code-analyser` to match naming convention
+2. Update all imports throughout the codebase
+3. Update `pyproject.toml` dependencies to reflect that SourceCodeAnalyser is independent
+4. Document waivern-filesystem dependency (only needed by deprecated connector)
 
 ## Problem
+
+**Issue 1: Package naming inconsistency**
+
+Current package name: `waivern-source-code`
+
+Other analyser packages follow the pattern:
+- `waivern-personal-data-analyser`
+- `waivern-processing-purpose-analyser`
+- `waivern-data-subject-analyser`
+
+The `waivern-source-code` name doesn't follow this convention and creates inconsistency.
+
+**Issue 2: Dependency structure**
 
 Current dependency structure:
 ```
@@ -49,18 +65,58 @@ Two options considered:
 2. **Phase 4 will remove it** - When connector fully deprecated
 3. **Document the dependency reason** - Add comment in pyproject.toml
 4. **Add deprecation notice** - Update README to guide users toward analyser
+5. **Rename package to `waivern-source-code-analyser`** - Follow naming convention of other analyser packages
 
 **Rationale:** Breaking dependencies immediately would break existing users. Phase 3 focuses on creating the analyser; Phase 4 will handle deprecation and removal.
 
+**Package naming rationale:** Must rename from `waivern-source-code` to `waivern-source-code-analyser` to match the established naming convention:
+- `waivern-personal-data-analyser`
+- `waivern-processing-purpose-analyser`
+- `waivern-data-subject-analyser`
+
+This maintains consistency across all analyser packages in the framework.
+
 ## Implementation
 
-### File to Modify
+### Files to Modify
 
-`libs/waivern-source-code/pyproject.toml`
+#### Package Rename
+1. Rename directory: `libs/waivern-source-code/` → `libs/waivern-source-code-analyser/`
+2. Update `libs/waivern-source-code-analyser/pyproject.toml` - package name
+3. Update root `pyproject.toml` - workspace sources mapping
+4. Update all imports throughout codebase
+5. Update entry points references
+6. Update documentation references
+
+#### Dependency Updates
+`libs/waivern-source-code-analyser/pyproject.toml`
 
 ### Changes Required
 
-#### 1. Add dependency documentation comment
+#### 1. Rename package directory
+
+```bash
+mv libs/waivern-source-code libs/waivern-source-code-analyser
+```
+
+#### 2. Update package name in pyproject.toml
+
+```toml
+[project]
+name = "waivern-source-code-analyser"
+description = "Source code analyser for WCF"
+```
+
+#### 3. Update root pyproject.toml workspace sources
+
+```toml
+[tool.uv.sources]
+waivern-source-code-analyser = { workspace = true }
+```
+
+Remove old `waivern-source-code` entry.
+
+#### 4. Add dependency documentation comment
 
 Add comment explaining waivern-filesystem is only needed by connector (deprecated):
 
@@ -72,15 +128,31 @@ dependencies = [
 ]
 ```
 
-#### 2. Update package description
+#### 5. Update all import statements
 
-Update description to mention both connector and analyser:
+Find and replace all imports:
+- Old: `from waivern_source_code`
+- New: `from waivern_source_code_analyser`
+
+Files to update:
+- All test files in `libs/waivern-source-code-analyser/tests/`
+- Integration test: `libs/waivern-source-code-analyser/tests/test_pipeline_integration.py`
+- WCT application files that import from this package
+- Any other packages that depend on waivern-source-code
+
+#### 6. Update entry points
+
+In `libs/waivern-source-code-analyser/pyproject.toml`:
 
 ```toml
-description = "Source code connector and analyser for WCF"
+[project.entry-points."waivern.analysers"]
+source_code_analyser = "waivern_source_code_analyser.analyser_factory:SourceCodeAnalyserFactory"
+
+[project.entry-points."waivern.connectors"]
+source_code_connector = "waivern_source_code_analyser.factory:SourceCodeConnectorFactory"
 ```
 
-#### 3. Verify other dependencies
+#### 7. Verify other dependencies
 
 Ensure all required dependencies present:
 - waivern-core: Required (base classes)
@@ -144,23 +216,27 @@ Verify package installation and imports work correctly.
 ## Success Criteria
 
 **Functional:**
-- [ ] Package installs successfully
+- [ ] Package renamed to `waivern-source-code-analyser`
+- [ ] Package installs successfully with new name
 - [ ] SourceCodeAnalyser works without filesystem dependency in code
 - [ ] SourceCodeConnector still works (backward compatibility)
 - [ ] Dependencies documented with comments
 - [ ] Package description updated
+- [ ] All imports updated throughout codebase
 
 **Quality:**
-- [ ] All tests pass after dependency changes
+- [ ] All tests pass after rename and dependency changes
 - [ ] Type checking passes
 - [ ] Linting passes
 - [ ] Package builds successfully
+- [ ] No references to old package name remain
 
 **Code Quality:**
 - [ ] Dependencies have clear justifications
 - [ ] Deprecation notices in place
 - [ ] README updated with migration guidance
 - [ ] No unused dependencies
+- [ ] Naming convention matches other analyser packages
 
 ## Implementation Notes
 
@@ -179,17 +255,26 @@ Verify package installation and imports work correctly.
 **Phase 4 changes:**
 When connector deprecated:
 - Remove waivern-filesystem dependency entirely
-- Update description to "Source code analyser"
+- Update description to "Source code analyser for WCF"
 - Remove connector entry point
 - Remove connector classes
+
+**Package rename impact:**
+- Directory rename: `libs/waivern-source-code/` → `libs/waivern-source-code-analyser/`
+- Module imports: `waivern_source_code` → `waivern_source_code_analyser`
+- Package name: `waivern-source-code` → `waivern-source-code-analyser`
+- Follows established naming convention for analyser packages
+- Breaking change but necessary for consistency
 
 **Documentation updates needed:**
 - README: Add "Migration Guide" section
 - README: Show pipeline usage example
 - README: Mark connector as deprecated
 - Docstrings: Add deprecation warnings
+- Update all references to package name
 
-**Future considerations:**
-- Could split into 2 packages: waivern-source-code-connector, waivern-source-code-analyser
-- Current approach simpler for transition
-- Re-evaluate in Phase 4 if split needed
+**Files requiring import updates:**
+- All test files in the package
+- WCT executor and related files
+- Any integration tests
+- Documentation examples

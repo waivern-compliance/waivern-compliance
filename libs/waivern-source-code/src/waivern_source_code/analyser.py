@@ -2,6 +2,7 @@
 
 import importlib
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
 from typing import Any, override
@@ -221,6 +222,12 @@ class SourceCodeAnalyser(Analyser):
         # Calculate line count
         line_count = source_code.count("\n") + 1
 
+        # Get last modified timestamp if file exists on disk
+        last_modified: str | None = None
+        if file_path.exists():
+            mtime = file_path.stat().st_mtime
+            last_modified = datetime.fromtimestamp(mtime, tz=UTC).isoformat()
+
         # Extract pure structural information
         file_data = {
             "file_path": str(file_path),
@@ -232,7 +239,7 @@ class SourceCodeAnalyser(Analyser):
             "metadata": {
                 "file_size": len(source_code.encode("utf-8")),
                 "line_count": line_count,
-                "last_modified": None,  # Not available from standard_input
+                "last_modified": last_modified,
             },
         }
 
