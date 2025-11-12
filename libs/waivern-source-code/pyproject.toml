@@ -20,6 +20,9 @@ all = ["waivern-source-code[tree-sitter]"]
 [project.entry-points."waivern.connectors"]
 source_code = "waivern_source_code:SourceCodeConnectorFactory"
 
+[project.entry-points."waivern.analysers"]
+source_code = "waivern_source_code:SourceCodeAnalyserFactory"
+
 [project.entry-points."waivern.schemas"]
 source_code = "waivern_source_code:register_schemas"
 
