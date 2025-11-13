@@ -8,6 +8,7 @@ from pydantic import (
     Field,
     ValidationError,
     field_validator,
+    model_validator,
 )
 from waivern_core import BaseComponentConfiguration
 from waivern_core.errors import ConnectorConfigError
@@ -60,9 +61,13 @@ class FilesystemConnectorConfig(BaseComponentConfiguration):
         default="strict",
         description="How to handle encoding errors (strict, replace, ignore)",
     )
-    exclude_patterns: list[str] = Field(
-        default_factory=list,
-        description="Glob patterns to exclude from processing",
+    include_patterns: list[str] | None = Field(
+        default=None,
+        description="Glob patterns to include (positive filtering). None = include all, [] = include none. Mutually exclusive with exclude_patterns.",
+    )
+    exclude_patterns: list[str] | None = Field(
+        default=None,
+        description="Glob patterns to exclude (negative filtering). None = exclude none, [] = exclude none. Mutually exclusive with include_patterns.",
     )
     max_files: int = Field(
         default=1000,
@@ -78,6 +83,15 @@ class FilesystemConnectorConfig(BaseComponentConfiguration):
         if v not in allowed:
             raise ValueError(f"errors must be one of {allowed}, got: {v}")
         return v
+
+    @model_validator(mode="after")
+    def validate_patterns_mutual_exclusivity(self) -> Self:
+        """Validate that include_patterns and exclude_patterns are mutually exclusive."""
+        if self.include_patterns and self.exclude_patterns:
+            raise ValueError(
+                "include_patterns and exclude_patterns are mutually exclusive"
+            )
+        return self
 
     @classmethod
     @override

@@ -212,6 +212,139 @@ class TestFilesystemConnector:
         assert "Content of file 1" in file_contents
         assert "Content of file 2" in file_contents
 
+    def test_extract_directory_with_include_patterns(
+        self, sample_directory, standard_input_schema
+    ):
+        """Test extracting directory with include patterns for positive filtering."""
+        # Add files of different types
+        (sample_directory / "script.php").write_text("PHP content")
+        (sample_directory / "app.js").write_text("JS content")
+        (sample_directory / "readme.md").write_text("Markdown content")
+
+        # Pattern "**/*.php" matches all PHP files (gitwildmatch semantics)
+        config = FilesystemConnectorConfig.from_properties(
+            {
+                "path": str(sample_directory),
+                "include_patterns": ["**/*.php", "**/*.js"],
+            }
+        )
+        connector = FilesystemConnector(config)
+
+        result = connector.extract(standard_input_schema)
+
+        # Should include only .php and .js files, not .txt or .md files
+        content = result.content
+        file_contents = [item["content"] for item in content["data"]]
+        file_paths = [item["metadata"]["file_path"] for item in content["data"]]
+
+        # PHP and JS files should be included
+        assert "PHP content" in file_contents
+        assert "JS content" in file_contents
+
+        # TXT and MD files should NOT be included
+        assert "Content of file 1" not in file_contents
+        assert "Content of file 2" not in file_contents
+        assert "Markdown content" not in file_contents
+
+        # Verify only expected file extensions
+        assert all(
+            path.endswith(".php") or path.endswith(".js") for path in file_paths
+        ), f"Unexpected file types in: {file_paths}"
+
+    def test_extract_directory_with_include_patterns_nested_directories(
+        self, sample_directory, standard_input_schema
+    ):
+        """Test that **/*.php matches files at any depth including root (gitwildmatch semantics)."""
+        # Create nested directory structure
+        nested = sample_directory / "src"
+        nested.mkdir()
+        (nested / "app.php").write_text("Nested PHP content")
+        (sample_directory / "config.php").write_text("Root PHP content")
+
+        # Pattern "**/*.php" should match ALL PHP files (gitwildmatch semantics)
+        config = FilesystemConnectorConfig.from_properties(
+            {"path": str(sample_directory), "include_patterns": ["**/*.php"]}
+        )
+        connector = FilesystemConnector(config)
+
+        result = connector.extract(standard_input_schema)
+
+        content = result.content
+        file_contents = [item["content"] for item in content["data"]]
+
+        # Both nested AND root PHP files should be included (gitwildmatch behavior)
+        assert "Nested PHP content" in file_contents
+        assert "Root PHP content" in file_contents
+
+    def test_extract_directory_with_no_patterns_includes_everything(
+        self, sample_directory, standard_input_schema
+    ):
+        """Test that not specifying patterns includes all files."""
+        (sample_directory / "test1.txt").write_text("Content 1")
+        (sample_directory / "test2.php").write_text("Content 2")
+        (sample_directory / "test3.log").write_text("Content 3")
+
+        config = FilesystemConnectorConfig.from_properties(
+            {"path": str(sample_directory)}
+        )
+        connector = FilesystemConnector(config)
+
+        result = connector.extract(standard_input_schema)
+        content = result.content
+        file_contents = [item["content"] for item in content["data"]]
+
+        # All files should be included when no patterns specified
+        assert "Content 1" in file_contents
+        assert "Content 2" in file_contents
+        assert "Content 3" in file_contents
+
+    def test_extract_directory_with_empty_include_patterns_matches_nothing(
+        self, sample_directory, standard_input_schema
+    ):
+        """Test that explicit empty include_patterns list matches no files."""
+        (sample_directory / "test1.txt").write_text("Content 1")
+        (sample_directory / "test2.txt").write_text("Content 2")
+
+        config = FilesystemConnectorConfig.from_properties(
+            {"path": str(sample_directory), "include_patterns": []}
+        )
+        connector = FilesystemConnector(config)
+
+        # Empty include_patterns should match nothing
+        with pytest.raises(
+            ConnectorExtractionError, match="No files found in directory"
+        ):
+            connector.extract(standard_input_schema)
+
+    def test_extract_directory_with_patterns_containing_special_characters(
+        self, sample_directory, standard_input_schema
+    ):
+        """Test patterns with dashes, dots, underscores work correctly."""
+        # Create files with special characters in names
+        (sample_directory / "test-file.php").write_text("Dash content")
+        (sample_directory / "test_file.js").write_text("Underscore content")
+        (sample_directory / ".htaccess").write_text("Dotfile content")
+        (sample_directory / "regular.txt").write_text("Regular content")
+
+        config = FilesystemConnectorConfig.from_properties(
+            {
+                "path": str(sample_directory),
+                "include_patterns": ["*-*.php", "*_*.js", ".*"],
+            }
+        )
+        connector = FilesystemConnector(config)
+
+        result = connector.extract(standard_input_schema)
+        content = result.content
+        file_contents = [item["content"] for item in content["data"]]
+
+        # Files matching special character patterns should be included
+        assert "Dash content" in file_contents
+        assert "Underscore content" in file_contents
+        assert "Dotfile content" in file_contents
+        # File not matching pattern should be excluded
+        assert "Regular content" not in file_contents
+
     def test_extract_directory_with_max_files_limit(
         self, sample_directory, standard_input_schema
     ):

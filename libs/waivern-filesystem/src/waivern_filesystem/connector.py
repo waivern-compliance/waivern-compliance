@@ -1,12 +1,12 @@
 """Filesystem connector for WCT - handles files and directories."""
 
-import fnmatch
 import importlib
 import logging
 from pathlib import Path
 from types import ModuleType
 from typing import Any, override
 
+import pathspec
 from waivern_core.base_connector import Connector
 from waivern_core.errors import (
     ConnectorConfigError,
@@ -223,6 +223,38 @@ class FilesystemConnector(Connector):
             config_data=config_data,
         )
 
+    def _should_include_path(
+        self,
+        path: Path,
+        include_spec: pathspec.PathSpec | None,
+        exclude_spec: pathspec.PathSpec | None,
+    ) -> bool:
+        """Check if a path should be included based on patterns.
+
+        Uses pathspec library for Git-style wildmatch semantics where
+        **/*.php matches both root-level and nested PHP files.
+
+        Args:
+            path: File path to check
+            include_spec: Compiled include pattern spec (or None)
+            exclude_spec: Compiled exclude pattern spec (or None)
+
+        Returns:
+            True if path should be included, False otherwise
+
+        """
+        relative_path = str(path.relative_to(self._config.path))
+
+        # Include patterns (positive filtering) - include only if matching
+        if include_spec is not None:
+            return include_spec.match_file(relative_path)
+
+        # Exclude patterns (negative filtering) - include if NOT matching
+        if exclude_spec is not None:
+            return not exclude_spec.match_file(relative_path)
+
+        return True  # No patterns, include everything
+
     def collect_files(self) -> list[Path]:
         """Collect all files to process, handling both single files and directories.
 
@@ -239,27 +271,26 @@ class FilesystemConnector(Connector):
         # Directory processing with recursive traversal
         files: list[Path] = []
 
-        def should_exclude_path(path: Path) -> bool:
-            """Check if a path should be excluded based on patterns."""
-            path_str = str(path)
-            relative_path = str(path.relative_to(self._config.path))
+        # Create PathSpec once before loop for performance
+        include_spec: pathspec.PathSpec | None = None
+        exclude_spec: pathspec.PathSpec | None = None
 
-            for pattern in self._config.exclude_patterns:
-                if (
-                    fnmatch.fnmatch(path.name, pattern)
-                    or fnmatch.fnmatch(relative_path, pattern)
-                    or fnmatch.fnmatch(path_str, pattern)
-                ):
-                    return True
-            return False
+        if self._config.include_patterns is not None:
+            include_spec = pathspec.PathSpec.from_lines(
+                "gitwildmatch", self._config.include_patterns
+            )
+        elif self._config.exclude_patterns is not None:
+            exclude_spec = pathspec.PathSpec.from_lines(
+                "gitwildmatch", self._config.exclude_patterns
+            )
 
         # Recursively collect files
         for file_path in self._config.path.rglob("*"):
             if not file_path.is_file():
                 continue
 
-            if should_exclude_path(file_path):
-                logger.debug(f"Excluding file: {file_path}")
+            if not self._should_include_path(file_path, include_spec, exclude_spec):
+                logger.debug(f"Filtering file: {file_path}")
                 continue
 
             files.append(file_path)

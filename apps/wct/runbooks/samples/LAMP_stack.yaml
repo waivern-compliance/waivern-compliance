@@ -5,14 +5,13 @@ description: >
 contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
 
 connectors:
-  - name: "php_source_code"
-    type: "source_code_connector"
+  - name: "php_files"
+    type: "filesystem_connector"
     properties:
       path: "./libs/waivern-processing-purpose-analyser/tests/waivern_processing_purpose_analyser/source_code_mock_php"
-      language: "php"
-      file_patterns: ["**/*.php"]
-      max_file_size: 10485760  # 10MB
-      max_files: 100  # Allow up to 100 files
+      include_patterns: ["*.php"]
+      max_files: 100
+      encoding: "utf-8"
 
   - name: "log_files"
     type: "filesystem_connector"
@@ -146,6 +145,14 @@ analysers:
         llm_batch_size: 50
         llm_validation_mode: "conservative"
 
+  - name: "source_code_analyser_for_php"
+    type: "source_code_analyser"
+    properties:
+      language: "php"
+      max_file_size: 10485760  # 10MB
+    metadata:
+      description: "Parse PHP source code and extract functions, classes, and imports"
+
 execution:
   - id: "logs_data_subject"
     name: "Data Subject Classification in Log Files"
@@ -164,11 +171,21 @@ execution:
     input_schema: "standard_input"
     output_schema: "processing_purpose_finding"
 
+  - id: "read_php_files"
+    name: "Read PHP Source Files"
+    description: "Read PHP application files from filesystem and parse source code structure"
+    contact: "James Wilson (Lead Developer) <james.wilson@company.co.uk>"
+    connector: "php_files"
+    analyser: "source_code_analyser_for_php"
+    input_schema: "standard_input"
+    output_schema: "source_code"
+    save_output: true
+
   - id: "php_processing_purpose"
     name: "PHP Source Code Processing Purpose Detection"
     description: "Analyse PHP application code for business logic, service integrations, and data processing activities"
     contact: "James Wilson (Lead Developer) <james.wilson@company.co.uk>"
-    connector: "php_source_code"
+    input_from: "read_php_files"
     analyser: "processing_purpose_analyser_for_source_code"
     input_schema: "source_code"
     output_schema: "processing_purpose_finding"
