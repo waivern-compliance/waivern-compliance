@@ -14,11 +14,11 @@ Connectors are fully open-source. Waivern provides connectors for common softwar
 
 Analysers take input data from connectors in WCF-defined schemas, run it through specific analysis processes, and produce results in the WCF-defined result schema.
 
-Following a middleware and decorator design, analysers can be chained or run in parallel. For example, multiple analyses—such as personal data types, actual data collection, and data processing purposes—can all run against a MySQL database at the same time. In this scenario, the MySQL connector transforms data into the formats required by different analysers (analysis processors).
+Analysers can be chained through **pipeline execution**, where the output of one analyser becomes the input to the next. For example, a source code analyser can parse PHP files into structured data, which is then fed to a processing purpose analyser to identify GDPR compliance requirements. This enables modular, composable workflows where each analyser focuses on a single transformation or analysis step.
 
 As the brains of WCF, analysers execute the actual analyses. They take input data and determine how to conduct the analysis. There are two primary analysis methods: The first runs locally against a static, pre-defined ruleset. The second calls an LLM for more advanced and accurate analysis. These methods can be used separately or together to improve results. For example, static analysis results can be fed to fine-tuned LLMs for further analysis and verification. As more analyses are developed, new methods may be employed as necessary.
 
-There are no strict one-to-one relationships between analysers and input schemas. Some schemas can be used by multiple analysis processes; some analyses require multiple schemas. For example, the commonly supported Text schema can be used by both Personal Data Type analysis and Processing Purpose Analysis.
+There are no strict one-to-one relationships between analysers and input schemas. Some schemas can be used by multiple analysis processes; some analyses require multiple schemas. For example, the commonly supported standard_input schema can be used by both Personal Data Type analysis and Processing Purpose Analysis.
 
 Analysers behave like pure functions. They accept data in pre-defined input schemas and return results in pre-defined result schemas. Analysers don't know where the data originates; they only care whether the data matches the required input schema.
 
@@ -50,4 +50,4 @@ Under the hood, stacks are simply pre-defined runbooks. You can build more compl
 
 ## Executor
 
-Executor reads runbooks, follows the detailed instructions from the runbooks, and executes the plans. It facilitates ruleset management for static analyses and orchestrates API calls to LLMs, including both Waivern fine-tuned and users' own models. If a Waivern API key is provided, the executor can call the Waivern service to get up-to-date rulesets in real time or run complex analyses in the Waivern cloud. It is the gateway to utilise Waivern fine-tuned models and advanced analyses to generate legal documents for highly specific compliance frameworks.
+Executor reads runbooks, follows the detailed instructions from the runbooks, and executes the plans. It orchestrates multi-step pipeline execution by storing intermediate results and routing data between components based on schema compatibility. It facilitates ruleset management for static analyses and orchestrates API calls to LLMs, including both Waivern fine-tuned and users' own models. If a Waivern API key is provided, the executor can call the Waivern service to get up-to-date rulesets in real time or run complex analyses in the Waivern cloud. It is the gateway to utilise Waivern fine-tuned models and advanced analyses to generate legal documents for highly specific compliance frameworks.

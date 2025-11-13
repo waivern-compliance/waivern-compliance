@@ -96,8 +96,15 @@
       "type": "object"
     },
     "ExecutionStep": {
-      "description": "Pydantic model for execution step configuration.",
+      "description": "Pipeline execution step with explicit data flow.\n\nEach step is either:\n- Connector-based: Reads from external source (connector + optional analyser)\n- Input-based: Transforms previous step output (input_from + analyser)\n\nSteps are mutually exclusive: connector XOR input_from.",
       "properties": {
+        "id": {
+          "description": "Unique identifier for this step (required for pipeline chaining)",
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9._-]+$",
+          "title": "Id",
+          "type": "string"
+        },
         "name": {
           "description": "Human-readable name for this execution step",
           "minLength": 1,
@@ -123,21 +130,51 @@
           "title": "Contact"
         },
         "connector": {
-          "description": "Name of connector instance to use",
-          "minLength": 1,
-          "pattern": "^[a-zA-Z0-9._-]+$",
-          "title": "Connector",
-          "type": "string"
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^[a-zA-Z0-9._-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name of connector instance (for connector-based steps)",
+          "title": "Connector"
+        },
+        "input_from": {
+          "anyOf": [
+            {
+              "pattern": "^[a-zA-Z0-9._-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Step ID to read input from (for input-based steps)",
+          "title": "Input From"
         },
         "analyser": {
-          "description": "Name of analyser instance to use",
-          "minLength": 1,
-          "pattern": "^[a-zA-Z0-9._-]+$",
-          "title": "Analyser",
-          "type": "string"
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^[a-zA-Z0-9._-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name of analyser instance to use (optional for connector-only steps)",
+          "title": "Analyser"
         },
         "input_schema": {
-          "description": "Schema name for connector output validation",
+          "description": "Schema name for connector output or previous step output validation",
           "minLength": 1,
           "title": "Input Schema",
           "type": "string"
@@ -174,6 +211,12 @@
           "description": "Optional specific version for output schema (auto-select latest if not specified)",
           "title": "Output Schema Version"
         },
+        "save_output": {
+          "default": false,
+          "description": "Whether to save output for use by subsequent steps",
+          "title": "Save Output",
+          "type": "boolean"
+        },
         "context": {
           "additionalProperties": true,
           "description": "Optional execution metadata and runtime configuration",
@@ -182,10 +225,9 @@
         }
       },
       "required": [
+        "id",
         "name",
         "description",
-        "connector",
-        "analyser",
         "input_schema",
         "output_schema"
       ],
