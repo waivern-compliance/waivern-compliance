@@ -2,6 +2,7 @@ name: "Sample Runbook for GDPR Analysis of a LAMP Stack"
 description: >
   Analyse database and source code for GDPR.
   This runbook runs both personal data analysis and processing purpose analysis on MySQL and PHP source code.
+  Demonstrates pipeline execution: Filesystem → SourceCodeAnalyser → ProcessingPurposeAnalyser.
 contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
 
 connectors:
@@ -171,6 +172,7 @@ execution:
     input_schema: "standard_input"
     output_schema: "processing_purpose_finding"
 
+  # Pipeline example: Filesystem → SourceCode → ProcessingPurpose
   - id: "read_php_files"
     name: "Read PHP Source Files"
     description: "Read PHP application files from filesystem and parse source code structure"

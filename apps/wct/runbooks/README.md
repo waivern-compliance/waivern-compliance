@@ -14,11 +14,11 @@ A simple demonstration runbook showing:
 
 #### `samples/LAMP_stack.yaml`
 A comprehensive example runbook that demonstrates:
-- File content analysis
+- **Pipeline execution** (Filesystem → SourceCode → ProcessingPurpose)
+- Multi-step analyser chaining with `input_from`
 - MySQL database analysis
 - PHP source code analysis
 - Personal data detection across multiple data sources
-- Multi-analyser execution with different configurations
 - Complete LAMP stack compliance analysis
 
 ## Usage
@@ -36,6 +36,82 @@ uv run wct run runbooks/samples/LAMP_stack.yaml
 # Execute with debug logging
 uv run wct run runbooks/samples/file_content_analysis.yaml --log-level DEBUG
 uv run wct run runbooks/samples/LAMP_stack.yaml -v
+```
+
+## Pipeline Execution
+
+Pipeline execution enables multi-step analysis workflows where the output of one step becomes the input to the next. This is WCF's most powerful feature for complex compliance analysis.
+
+### When to Use Pipelines
+
+Use pipeline execution when you need to:
+- Transform data through multiple stages (e.g., parse → analyse → classify)
+- Chain analysers that require different input schemas
+- Reuse intermediate results across multiple downstream steps
+- Build modular, composable analysis workflows
+
+### Pipeline Basics
+
+**Key fields:**
+- `id`: Unique identifier for each step (required)
+- `input_from`: Reference to previous step's ID (pipeline mode)
+- `connector`: Extract from external source (connector mode)
+- `save_output`: Store step output for downstream steps (default: false)
+
+**Execution modes:**
+- **Connector mode:** Step has `connector` field - extracts from external source
+- **Pipeline mode:** Step has `input_from` field - reads from previous step's output
+
+### Example: Source Code Analysis Pipeline
+
+```yaml
+execution:
+  # Step 1: Read PHP files from filesystem
+  - id: "read_files"
+    connector: "filesystem"
+    analyser: "source_code_analyser"
+    input_schema: "standard_input"
+    output_schema: "source_code"
+    save_output: true  # Required for downstream steps
+
+  # Step 2: Analyse parsed code for processing purposes
+  - id: "analyse_purposes"
+    input_from: "read_files"  # Uses output from step 1
+    analyser: "processing_purpose_analyser"
+    input_schema: "source_code"
+    output_schema: "processing_purpose_finding"
+```
+
+**How it works:**
+1. `read_files` extracts files via filesystem connector
+2. `source_code_analyser` transforms standard_input → source_code schema
+3. `save_output: true` stores the Message for downstream use
+4. `analyse_purposes` reads from artifacts (no connector needed)
+5. Executor validates schema compatibility automatically
+
+### Schema Compatibility
+
+The executor validates that:
+- Step's input schema matches previous step's output schema
+- Analyser supports the input schema
+- Schema names and versions are compatible
+
+If schemas don't match, WCT provides clear error messages listing supported schemas.
+
+### Real-World Example
+
+See `samples/LAMP_stack.yaml` lines 174-191 for a complete pipeline:
+```yaml
+- id: "read_php_files"
+  connector: "php_files"
+  analyser: "source_code_analyser_for_php"
+  output_schema: "source_code"
+  save_output: true
+
+- id: "php_processing_purpose"
+  input_from: "read_php_files"
+  analyser: "processing_purpose_analyser_for_source_code"
+  input_schema: "source_code"
 ```
 
 ## Schema Version Specification
