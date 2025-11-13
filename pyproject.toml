@@ -7,6 +7,7 @@ members = [
 [tool.uv.sources]
 # Workspace members must be explicitly declared as sources for dependency resolution
 # These definitions are inherited by all workspace members
+waivern-artifact-store = { workspace = true }
 waivern-core = { workspace = true }
 waivern-llm = { workspace = true }
 waivern-connectors-database = { workspace = true }

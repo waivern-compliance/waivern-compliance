@@ -1,7 +1,7 @@
 # Task: Implement ArtifactStore Core Service
 
 - **Phase:** ArtifactStore Service - Core Implementation
-- **Status:** TODO
+- **Status:** COMPLETED
 - **Prerequisites:** None
 - **Related Issue:** #227
 
@@ -36,8 +36,24 @@ Implement ArtifactStore as a WCF service with abstract interface, concrete in-me
 
 **Service usage:**
 ```python
-# Create store via factory
-store = create_artifact_store(backend="memory")
+from waivern_artifact_store import (
+    ArtifactStoreFactory,
+    ArtifactStoreConfiguration
+)
+
+# Create store via factory (three configuration modes)
+# 1. Explicit configuration
+config = ArtifactStoreConfiguration(backend="memory")
+factory = ArtifactStoreFactory(config)
+store = factory.create()
+
+# 2. Environment variable fallback (ARTIFACT_STORE_BACKEND)
+factory = ArtifactStoreFactory()
+store = factory.create()
+
+# 3. Default configuration
+factory = ArtifactStoreFactory()  # Defaults to "memory"
+store = factory.create()
 
 # Save artifact
 store.save(step_id="extract", message=output_message)
@@ -57,9 +73,21 @@ store.clear()
 
 ### Changes Required
 
+#### 0. Create Package Structure
+
+**Location:** `libs/waivern-artifact-store/`
+
+**Purpose:** Create standalone package following WCF patterns (mirrors waivern-llm structure)
+
+**Package setup:**
+- Create directory structure (see Implementation Notes)
+- Create `pyproject.toml` with dependencies: waivern-core
+- Create standard scripts (lint.sh, format.sh, type-check.sh)
+- Follow standalone package pattern from existing packages
+
 #### 1. Create ArtifactStore Abstract Base
 
-**Location:** `libs/waivern-core/src/waivern_core/services/artifact_store.py`
+**Location:** `libs/waivern-artifact-store/src/waivern_artifact_store/base.py`
 
 **Purpose:** Define service interface for all implementations
 
@@ -85,18 +113,18 @@ class ArtifactStore(ABC):
 
 #### 2. Define Exception Hierarchy
 
-**Location:** Same file as abstract base
+**Location:** `libs/waivern-artifact-store/src/waivern_artifact_store/errors.py`
 
 **Purpose:** Provide clear error messages for storage operations
 
 **Exception design:**
-- `ArtifactStoreError` - Base exception for all storage errors
+- `ArtifactStoreError` - Base exception for all storage errors (inherits from WaivernError)
 - `ArtifactNotFoundError` - Specific exception for missing artifacts
-- Error messages should include step_id for debugging
+- Error messages include step_id for debugging
 
 #### 3. Implement InMemoryArtifactStore
 
-**Location:** `libs/waivern-core/src/waivern_core/services/in_memory_artifact_store.py`
+**Location:** `libs/waivern-artifact-store/src/waivern_artifact_store/in_memory.py`
 
 **Purpose:** Default dict-based implementation with thread safety
 
@@ -123,86 +151,107 @@ class InMemoryArtifactStore(ArtifactStore):
 - Store Message references (no deep copying)
 - Helpful error messages with context
 
-#### 4. Create Factory Function
+#### 4. Create Configuration and Factory
 
-**Location:** `libs/waivern-core/src/waivern_core/services/artifact_store_factory.py`
+**Location:**
+- `libs/waivern-artifact-store/src/waivern_artifact_store/configuration.py`
+- `libs/waivern-artifact-store/src/waivern_artifact_store/factory.py`
 
-**Purpose:** Instantiate appropriate backend based on configuration
+**Purpose:** Configuration class and factory for backend instantiation following LLM Service pattern
 
-**Algorithm (pseudo-code):**
+**Implementation:**
 ```python
-def create_artifact_store(backend: str = "memory") -> ArtifactStore:
-    match backend:
-        case "memory":
+# Configuration class (Pydantic model)
+class ArtifactStoreConfiguration(BaseServiceConfiguration):
+    backend: str = Field(default="memory")
+
+    @classmethod
+    def from_properties(cls, properties: dict) -> Self:
+        # Layered config: explicit > env vars > defaults
+        config_data = properties.copy()
+        if "backend" not in config_data:
+            config_data["backend"] = os.getenv("ARTIFACT_STORE_BACKEND", "memory")
+        return cls.model_validate(config_data)
+
+# Factory class (implements ServiceFactory protocol)
+class ArtifactStoreFactory:
+    def __init__(self, config: ArtifactStoreConfiguration | None = None):
+        self._config = config
+
+    def can_create(self) -> bool:
+        config = self._get_config()
+        return config is not None
+
+    def create(self) -> ArtifactStore | None:
+        config = self._get_config()
+        if config and config.backend == "memory":
             return InMemoryArtifactStore()
-        case _:
-            raise ValueError(f"Unknown backend: {backend}")
+        return None
 ```
 
-**Extensibility:**
-- Future backends: "redis", "s3", "http"
-- Load config from environment variables
-- Validate backend-specific requirements
+**Design pattern:**
+- Configuration class handles env vars via `from_properties()`
+- Factory accepts optional configuration (follows LLM Service pattern)
+- Layered precedence: explicit config > env vars > defaults
+- Implements ServiceFactory protocol for DI integration
 
 ## Testing
 
 ### Testing Strategy
 
-Unit tests for each component focusing on behaviour verification and error handling.
+Comprehensive unit tests for each component following LLM Service test patterns. Total: **21 tests** across 3 test files.
 
-### Test Scenarios
+### Test Coverage
 
-#### 1. InMemoryArtifactStore - CRUD Operations
+#### 1. Configuration Tests (11 tests)
 
-**Setup:**
-- Create store instance
-- Create mock Message objects
+**File:** `test_configuration.py`
 
-**Expected behaviour:**
-- save() stores message successfully
-- get() retrieves exact same reference
-- exists() returns True after save, False before
-- clear() removes all artifacts
+**Coverage:**
+- Basic instantiation with valid backend
+- Default backend when not specified
+- `from_properties()` with explicit properties
+- `from_properties()` environment fallback
+- `from_properties()` with defaults (no env/properties)
+- Explicit properties override environment
+- Validation rejects unsupported backend
+- Validation rejects empty backend
+- Backend is case-insensitive
+- Immutability (frozen behavior)
+- Invalid backend from environment
 
-#### 2. InMemoryArtifactStore - Error Cases
+#### 2. Factory Tests (5 tests)
 
-**Setup:**
-- Create store instance
-- Attempt operations on non-existent artifacts
+**File:** `test_factory.py`
 
-**Expected behaviour:**
-- get() on missing artifact raises ArtifactNotFoundError
-- Error message includes step_id
-- exists() returns False for missing artifacts
+**Coverage:**
+- Factory with explicit configuration
+- Factory with environment variable fallback
+- Factory with default configuration
+- Returns None for unsupported backend
+- Explicit config overrides environment variables
 
-#### 3. InMemoryArtifactStore - Thread Safety
+#### 3. InMemoryArtifactStore Tests (5 tests)
 
-**Setup:**
-- Create store instance
-- Multiple threads performing concurrent saves/gets
+**File:** `test_in_memory.py`
 
-**Expected behaviour:**
-- No race conditions or corruption
-- All messages retrieved match saved messages
-- Lock prevents concurrent modification issues
-
-#### 4. Factory - Backend Selection
-
-**Setup:**
-- Call factory with various backend parameters
-
-**Expected behaviour:**
-- backend="memory" returns InMemoryArtifactStore
-- Invalid backend raises ValueError
-- Error message lists available backends
+**Coverage:**
+- Save and retrieve artifact (same reference)
+- Exists returns correct boolean
+- Get raises ArtifactNotFoundError for missing artifact
+- Clear removes all artifacts
+- Concurrent operations are thread-safe (10 threads × 100 ops)
 
 ### Validation Commands
 
 ```bash
-# Run core library tests
-uv run pytest libs/waivern-core/tests/services/ -v
+# Run artifact store tests
+uv run pytest libs/waivern-artifact-store/tests/ -v
 
-# Run all quality checks
+# Run package quality checks
+cd libs/waivern-artifact-store && ./scripts/dev-checks.sh
+
+# Run all workspace quality checks
 ./scripts/dev-checks.sh
 ```
 
@@ -210,17 +259,67 @@ uv run pytest libs/waivern-core/tests/services/ -v
 
 **Package structure:**
 ```
-libs/waivern-core/
-├── src/waivern_core/services/
-│   ├── artifact_store.py            # ABC + exceptions
-│   ├── in_memory_artifact_store.py  # Default implementation
-│   └── artifact_store_factory.py    # Factory function
-└── tests/services/
-    └── test_artifact_store.py       # Unit tests
+libs/waivern-artifact-store/
+├── README.md                        # Package documentation
+├── pyproject.toml                   # Package configuration
+├── src/waivern_artifact_store/
+│   ├── __init__.py                  # Package exports
+│   ├── base.py                      # ArtifactStore ABC
+│   ├── errors.py                    # Exception hierarchy
+│   ├── configuration.py             # ArtifactStoreConfiguration (Pydantic)
+│   ├── factory.py                   # ArtifactStoreFactory (ServiceFactory)
+│   ├── in_memory.py                 # InMemoryArtifactStore implementation
+│   └── py.typed                     # Type checking marker
+├── tests/
+│   ├── __init__.py
+│   └── waivern_artifact_store/
+│       ├── __init__.py
+│       ├── test_configuration.py    # Configuration tests (11)
+│       ├── test_factory.py          # Factory tests (5)
+│       └── test_in_memory.py        # Implementation tests (5)
+└── scripts/
+    ├── lint.sh                      # Linting
+    ├── format.sh                    # Formatting
+    ├── type-check.sh                # Type checking
+    └── dev-checks.sh                # All quality checks
 ```
 
 **Design principles:**
-- Follow LLMService architectural patterns
-- Thread-safe for future parallel execution
+- Follows LLM Service architectural patterns exactly
+- Configuration class with `from_properties()` for env var handling
+- Factory implements ServiceFactory protocol for DI integration
+- Thread-safe for concurrent access
 - Message immutability assumed (no defensive copying)
-- Clear separation between interface and implementation
+- Clear separation between interface, configuration, and implementation
+- Comprehensive test coverage (21 tests) matching LLM Service patterns
+
+**Test Results:**
+- ✅ 21 tests passing
+- ✅ All quality checks passing (formatting, linting, type checking)
+- ✅ Thread safety verified (10 threads × 100 concurrent operations)
+
+## Completion Summary
+
+**Status:** ✅ COMPLETED
+
+**Implementation completed:**
+1. ✅ Created standalone package `waivern-artifact-store` following LLM Service pattern
+2. ✅ Implemented `ArtifactStore` abstract base class
+3. ✅ Implemented exception hierarchy (`ArtifactStoreError`, `ArtifactNotFoundError`)
+4. ✅ Implemented `ArtifactStoreConfiguration` (Pydantic model with env var support)
+5. ✅ Implemented `ArtifactStoreFactory` (ServiceFactory protocol-compliant)
+6. ✅ Implemented `InMemoryArtifactStore` with thread safety
+7. ✅ Created comprehensive test suite (21 tests across 3 files)
+8. ✅ Added package documentation (README.md)
+9. ✅ All quality checks passing (907 total workspace tests)
+
+**Key achievements:**
+- Configuration pattern matches LLM Service exactly (layered config precedence)
+- Factory implements ServiceFactory protocol for DI integration
+- Test coverage equivalent to LLM Service patterns
+- Thread-safe implementation verified with concurrent operations
+- Clean separation of concerns (interface, configuration, factory, implementation)
+
+**Next steps:**
+- Task 2: ServiceContainer integration
+- Task 3: Executor integration
