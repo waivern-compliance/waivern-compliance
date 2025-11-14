@@ -191,6 +191,26 @@ uv run wct generate-schema
 
 This enables real-time validation and autocomplete in VS Code, PyCharm, and other IDEs. See [IDE Integration Guide](../docs/ide-integration.md) for setup instructions.
 
+### How Schema Generation Works
+
+WCT uses Pydantic models as the single source of truth for runbook validation:
+
+1. **Runtime validation**: Pydantic validates runbooks when `wct run` executes
+2. **IDE support**: JSON Schema is auto-generated from Pydantic via `model_json_schema()`
+3. **Single source**: One definition serves both purposes (no duplication)
+
+When you run `wct generate-schema`, it:
+- Extracts JSON Schema from the Pydantic `Runbook` model
+- Adds WCT-specific metadata (version, title, description)
+- Outputs to file for IDE consumption
+
+This ensures runtime validation and IDE autocomplete are always in sync. Field descriptions, constraints, and validation rules defined in the Pydantic model automatically appear in both runtime errors and IDE tooltips.
+
+**Regenerate schema after WCT updates:**
+```bash
+wct generate-schema --output runbook.schema.json
+```
+
 ## Scenario Ideas
 
 Future runbooks could include:
