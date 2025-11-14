@@ -147,6 +147,38 @@ class RulesetRegistry:
         self._registry.clear()
         self._type_mapping.clear()
 
+    @classmethod
+    def snapshot_state(cls) -> dict[str, Any]:
+        """Capture current RulesetRegistry state for later restoration.
+
+        This is primarily used for test isolation - save state before tests,
+        restore after tests to prevent global state pollution.
+
+        Returns:
+            Dictionary containing all mutable state
+
+        """
+        instance = cls()
+        return {
+            "registry": instance._registry.copy(),
+            "type_mapping": instance._type_mapping.copy(),
+        }
+
+    @classmethod
+    def restore_state(cls, state: dict[str, Any]) -> None:
+        """Restore RulesetRegistry state from a previously captured snapshot.
+
+        This is primarily used for test isolation - restore state after tests
+        to ensure tests don't pollute global state.
+
+        Args:
+            state: State dictionary from snapshot_state()
+
+        """
+        instance = cls()
+        instance._registry = state["registry"].copy()
+        instance._type_mapping = state["type_mapping"].copy()
+
 
 class RulesetLoader:
     """Loads rulesets using singleton registry with explicit registration."""

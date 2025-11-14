@@ -6,6 +6,7 @@ the entire monorepo workspace.
 
 import pytest
 from waivern_core.schemas import SchemaRegistry
+from waivern_rulesets import RulesetRegistry
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -31,3 +32,28 @@ def isolate_schema_registry():
 
     # Restore state after test completes (even if test fails)
     SchemaRegistry.restore_state(saved_state)
+
+
+@pytest.fixture(autouse=True, scope="function")
+def isolate_ruleset_registry():
+    """Automatically preserve and restore RulesetRegistry state for each test.
+
+    This fixture ensures test isolation by:
+    1. Capturing RulesetRegistry state before each test
+    2. Restoring the exact state after each test completes
+    3. Running automatically for ALL tests (autouse=True)
+
+    Why this is needed:
+    - RulesetRegistry is a singleton with mutable global state
+    - Tests that clear/modify the registry would break subsequent tests
+    - Without isolation, test execution order affects test results
+
+    This is the industry standard pattern for testing singletons in Python.
+    """
+    # Capture state before test runs
+    saved_state = RulesetRegistry.snapshot_state()
+
+    yield  # Test runs here
+
+    # Restore state after test completes (even if test fails)
+    RulesetRegistry.restore_state(saved_state)

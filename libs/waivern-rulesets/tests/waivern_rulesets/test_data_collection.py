@@ -158,7 +158,6 @@ class TestDataCollectionIntegration:
         self, isolated_registry: RulesetRegistry
     ) -> None:
         """Test that DataCollectionRuleset works with RulesetLoader."""
-        isolated_registry.clear()
         isolated_registry.register(
             "loader_test", DataCollectionRuleset, DataCollectionRule
         )
