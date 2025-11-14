@@ -51,13 +51,26 @@ Remove conditional branching by ensuring every step has a connector (either exte
 **Simplified execution logic:**
 ```python
 # AFTER refactoring (single path)
-connector, analyser = self._instantiate_components(...)
-input_schema, output_schema = self._resolve_schemas(connector, analyser)
+analyser, connector = self._instantiate_components(...)  # No Optional handling
+input_schema, output_schema = self._resolve_schemas(connector, analyser)  # Single method
 input_message = connector.extract(input_schema)
 result = self._run_step_analysis(...)
 ```
 
 **No more branching between connector/pipeline modes.**
+
+**Runbook format (named connectors):**
+```yaml
+connectors:
+  - name: "artifact_from_extract"
+    type: "artifact"
+    properties:
+      step_id: "extract"
+
+execution:
+  - id: "classify"
+    connector: "artifact_from_extract"  # Now required (not Optional)
+```
 
 ## Implementation
 
@@ -65,11 +78,12 @@ result = self._run_step_analysis(...)
 
 #### 1. Update Runbook Schema Validation
 
-**Location:** `apps/wct/src/wct/models/runbook.py` (or schema validation location)
+**Location:** `apps/wct/src/wct/runbook.py` - ExecutionStep model
 
 **Changes:**
-- Make `connector` field required in ExecutionStep
-- Remove `input_from` field (replaced by ArtifactConnector config)
+- Make `connector` field required in ExecutionStep (change from `str | None` to `str`)
+- Remove `input_from` field (replaced by artifact connector references)
+- Remove XOR validation between connector and input_from
 - Update validation to ensure connector always present
 
 **Schema change (pseudo-code):**
@@ -77,11 +91,15 @@ result = self._run_step_analysis(...)
 class ExecutionStep(BaseModel):
     id: str
     name: str
-    connector: ConnectorConfig  # NOW REQUIRED (was Optional)
+    connector: str  # NOW REQUIRED (was str | None)
     analyser: str
     save_output: bool = False
-    # input_from: removed
+    # input_from: str | None - REMOVED
+
+    # Remove XOR validator between connector and input_from
 ```
+
+**Note:** Connector references remain strings (named connector lookup). Inline configuration is future work.
 
 #### 2. Remove Dual-Mode Branching
 
@@ -176,34 +194,22 @@ def _resolve_schemas(connector: Connector, analyser: Analyser) -> tuple[Schema, 
 
 **Key insight:** ArtifactConnector behaves like any other connector, so no special handling needed.
 
-#### 5. Update ArtifactConnector Instantiation
-
-**Location:** Executor connector factory registration
-
-**Changes:**
-- Register ArtifactConnectorFactory in Executor's component registry
-- Pass ArtifactStore to factory during registration
-- Ensure factory available for "artifact" connector type
-
-**Pseudo-code:**
-```python
-def __init__(...):
-    # Register standard connectors
-    self._register_connectors()
-
-    # Register artifact connector with store injection
-    artifact_factory = ArtifactConnectorFactory(self.artifact_store)
-    self.connector_factories["artifact"] = artifact_factory
-```
-
-#### 6. Remove Old Artifact Handling Code
+#### 5. Remove Old Artifact Handling Code
 
 **Location:** Execute runbook method
 
 **Changes:**
-- Remove artifact dict references (already using ArtifactStore)
-- Remove `input_from` field handling
-- Keep `save_output` handling (still needed)
+- Remove `input_from` field handling in ExecutionStep processing
+- Keep `save_output` handling (still needed for artifact storage)
+- ArtifactConnector discovered automatically via entry points (no manual registration)
+
+**Note:** ArtifactConnector registered via entry points like all other connectors:
+```toml
+[project.entry-points."waivern.connectors"]
+artifact = "waivern_artifact_connector:ArtifactConnectorFactory"
+```
+
+Executor discovers it automatically in `_discover_connectors()` - no special case code needed.
 
 ## Testing
 

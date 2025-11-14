@@ -37,29 +37,33 @@ Update all sample runbooks to use ArtifactConnector for pipeline steps, making c
 
 ## Decisions Made
 
-1. **Scope** - Update 3 sample runbooks in `apps/wct/runbooks/samples/`
-2. **Format** - Use inline connector config (type + properties)
-3. **Documentation** - Update runbook README with new format
+1. **Scope** - Update 2 sample runbooks in `apps/wct/runbooks/samples/`
+2. **Format** - Use named connector references (keep top-level connectors section)
+3. **Documentation** - Update runbook README with artifact connector examples
 4. **Backward compatibility** - No support for old format (breaking change)
 
 ## Expected Outcome & Usage Example
 
 **Updated runbook format:**
 ```yaml
+connectors:
+  - name: "mysql_source"
+    type: "mysql"
+    properties:
+      query: "SELECT * FROM users"
+  - name: "artifact_from_extract"
+    type: "artifact"
+    properties:
+      step_id: "extract"
+
 execution:
   - id: "extract"
-    connector:
-      type: "mysql"
-      properties:
-        query: "SELECT * FROM users"
+    connector: "mysql_source"
     analyser: personal_data_analyser
     save_output: true
 
   - id: "classify"
-    connector:
-      type: "artifact"
-      properties:
-        step_id: "extract"
+    connector: "artifact_from_extract"  # Required field, no more input_from
     analyser: data_subject_analyser
 ```
 
@@ -74,27 +78,25 @@ execution:
 **Current structure:**
 - Single-step runbook (filesystem → analyser)
 - No pipeline steps
+- Already uses named connector format
 
 **Changes needed:**
-- Update connector config to inline format
-- Verify format consistency
+- Make `connector` field explicit (ensure not Optional)
+- Verify `id` field present on all execution steps
+- No artifact connectors needed (single-step runbook)
 
-**Example transformation:**
+**Example (minimal change):**
 ```yaml
-# OLD:
+# Remains mostly unchanged - already has named connector
 connectors:
   - name: "filesystem_reader"
     type: "filesystem"
     properties: {...}
-execution:
-  - connector: "filesystem_reader"
 
-# NEW:
 execution:
-  - id: "analyse_content"
-    connector:
-      type: "filesystem"
-      properties: {...}
+  - id: "analyse_content"  # Ensure id present
+    connector: "filesystem_reader"  # Already required
+    analyser: personal_data_analyser
 ```
 
 #### 2. Update LAMP_stack.yaml
@@ -106,75 +108,64 @@ execution:
 - Pipeline steps using `input_from`
 
 **Changes needed:**
-- Convert all connectors to inline format
-- Replace `input_from` with ArtifactConnector
-- Ensure `save_output` flags correct
+- Add artifact connector declarations to connectors section
+- Replace `input_from` with artifact connector references
+- Ensure `save_output` flags correct on source steps
 
 **Example transformation:**
 ```yaml
 # OLD:
+connectors:
+  - name: "mysql_connector"
+    type: "mysql"
+    properties: {...}
+
 execution:
   - id: "extract_db"
     connector: "mysql_connector"
     save_output: true
 
   - id: "classify"
-    input_from: "extract_db"
+    input_from: "extract_db"  # Uses input_from
+    analyser: data_subject_analyser
 
 # NEW:
+connectors:
+  - name: "mysql_connector"
+    type: "mysql"
+    properties: {...}
+  - name: "artifact_from_extract_db"  # NEW artifact connector
+    type: "artifact"
+    properties:
+      step_id: "extract_db"
+
 execution:
   - id: "extract_db"
-    connector:
-      type: "mysql"
-      properties: {...}
+    connector: "mysql_connector"
     save_output: true
 
   - id: "classify"
-    connector:
-      type: "artifact"
-      properties:
-        step_id: "extract_db"
+    connector: "artifact_from_extract_db"  # Uses artifact connector
+    analyser: data_subject_analyser
 ```
 
-#### 3. Update Third Sample Runbook
-
-**Location:** Third runbook in `apps/wct/runbooks/samples/`
-
-**Changes:**
-- Apply same transformation pattern
-- Inline connector configs
-- Use ArtifactConnector for pipeline steps
-
-#### 4. Remove Old Connector Declarations
-
-**Location:** All updated runbooks
-
-**Changes:**
-- Remove top-level `connectors:` section
-- Move all configs inline to execution steps
-- Ensure no references to named connectors
-
-**Rationale:**
-- Simplifies runbook structure
-- Eliminates indirection (connector name → config lookup)
-- Makes step dependencies explicit
-
-#### 5. Update Runbook Documentation
+#### 3. Update Runbook Documentation
 
 **Location:** `apps/wct/runbooks/README.md`
 
 **Changes:**
-- Document new connector format
-- Add ArtifactConnector examples
+- Document artifact connector type
+- Add examples of artifact connector declarations
 - Update pipeline execution section
 - Remove `input_from` documentation
 - Add migration guide for existing runbooks
 
 **Key documentation points:**
-- Connector field is now required
-- Pipeline steps use `type: "artifact"`
-- Artifact connector requires `step_id` property
-- `save_output` still required for artifact source steps
+- Connector field is now required (no longer Optional)
+- Pipeline steps use artifact connector with `type: "artifact"`
+- Artifact connector requires `step_id` property pointing to previous step
+- `save_output` still required on source steps for artifact storage
+- Connectors section remains (named references preserved)
 
 ## Testing
 
@@ -206,17 +197,7 @@ Run each updated runbook and verify successful execution with expected results.
 - Artifact passing works correctly
 - Multi-step pipeline produces expected results
 
-#### 3. Third Runbook Execution
-
-**Setup:**
-- Configure necessary connections
-- Execute runbook
-
-**Expected behaviour:**
-- Successful execution
-- Results validate correctly
-
-#### 4. Runbook Validation
+#### 3. Runbook Validation
 
 **Setup:**
 - Use `wct validate-runbook` command
@@ -224,10 +205,10 @@ Run each updated runbook and verify successful execution with expected results.
 
 **Expected behaviour:**
 - All runbooks pass validation
-- Schema validation accepts new format
+- Schema validation accepts new format (artifact connector type)
 - Helpful errors if misconfigured
 
-#### 5. Error Cases
+#### 4. Error Cases
 
 **Setup:**
 - Create runbook with invalid artifact connector config
@@ -256,22 +237,24 @@ uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml -v
 ## Implementation Notes
 
 **Migration checklist per runbook:**
-1. ✓ Identify all execution steps
-2. ✓ Convert external connectors to inline format
-3. ✓ Replace `input_from` with ArtifactConnector
-4. ✓ Verify `save_output` flags
-5. ✓ Remove top-level connectors section
+1. ✓ Identify all execution steps with `input_from`
+2. ✓ Add artifact connector declarations to connectors section
+3. ✓ Replace `input_from` references with artifact connector names
+4. ✓ Verify `save_output` flags on source steps
+5. ✓ Ensure all execution steps have required `connector` field
 6. ✓ Test execution
 7. ✓ Validate schema compliance
 
 **Breaking changes documentation:**
-- Document in CHANGELOG
-- Update migration guide
-- Provide examples for common patterns
-- Consider version bump strategy
+- Document in CHANGELOG or migration guide
+- Provide examples for pipeline step migration
+- Show before/after for `input_from` → artifact connector
+- Update runbook schema documentation
 
 **Connector type mapping:**
 - `mysql` → MySQL connector
 - `sqlite` → SQLite connector
 - `filesystem` → Filesystem connector
 - `artifact` → ArtifactConnector (new)
+
+**Note:** Named connector format preserved - inline configuration is future work (DAG orchestration Epic)

@@ -42,21 +42,25 @@ Create ArtifactConnector that implements Connector interface and retrieves Messa
 
 ## Expected Outcome & Usage Example
 
-**Future runbook format (not yet used):**
+**Updated runbook format:**
 ```yaml
+connectors:
+  - name: "mysql_source"
+    type: "mysql"
+    properties: {...}
+  - name: "previous_step"
+    type: "artifact"  # NEW connector type
+    properties:
+      step_id: "extract"
+
 execution:
   - id: "extract"
-    connector:
-      type: "mysql"
-      properties: {...}
+    connector: "mysql_source"
     analyser: personal_data_analyser
     save_output: true
 
   - id: "classify"
-    connector:
-      type: "artifact"  # NEW connector type
-      properties:
-        step_id: "extract"
+    connector: "previous_step"  # Required field, no more input_from
     analyser: data_subject_analyser
 ```
 
@@ -92,26 +96,44 @@ class ArtifactConnector(Connector):
     def __init__(config: ArtifactConnectorConfig, artifact_store: ArtifactStore):
         self.config = config
         self.artifact_store = artifact_store
+        self._cached_message: Message | None = None  # Cache for schema resolution
 
     def get_supported_output_schemas() -> list[Schema]:
-        # Cannot know output schema until extraction
-        # Return empty list or special marker
-        return []
+        # CRITICAL: Executor calls this BEFORE extract() to match schemas
+        # Must peek at artifact to get schema WITHOUT consuming it
+        if self._cached_message is None:
+            try:
+                self._cached_message = self.artifact_store.get(self.config.step_id)
+            except ArtifactNotFoundError as e:
+                # Artifact doesn't exist yet - return empty (will fail schema matching)
+                logger.warning(f"Artifact '{self.config.step_id}' not found during schema resolution")
+                return []
+
+        if self._cached_message.schema is None:
+            return []
+
+        return [self._cached_message.schema]
 
     def extract(output_schema: Schema) -> Message:
-        try:
-            message = self.artifact_store.get(self.config.step_id)
-            # Message already has schema, return as-is
+        # Return cached message if available (from schema resolution)
+        if self._cached_message:
+            message = self._cached_message
+            self._cached_message = None  # Clear cache after consumption
             return message
+
+        # Otherwise fetch fresh (fallback case)
+        try:
+            return self.artifact_store.get(self.config.step_id)
         except ArtifactNotFoundError as e:
             raise ConnectorError(f"Artifact not found: {self.config.step_id}") from e
 ```
 
 **Key design decisions:**
-- `get_supported_output_schemas()` returns empty list (schema determined at runtime)
-- `extract()` retrieves Message from store
+- `get_supported_output_schemas()` peeks at artifact and caches the Message
+- Cached Message reused in `extract()` to avoid double-fetching
 - Error conversion: ArtifactNotFoundError → ConnectorError
 - No schema validation needed (Message already validated)
+- Cache cleared after extraction to prevent stale data
 
 #### 3. Create ComponentFactory for ArtifactConnector
 
@@ -122,16 +144,30 @@ class ArtifactConnector(Connector):
 **Algorithm (pseudo-code):**
 ```python
 class ArtifactConnectorFactory(ComponentFactory[Connector]):
-    def __init__(artifact_store: ArtifactStore):
-        self.artifact_store = artifact_store
+    def __init__(self, container: ServiceContainer):
+        self._container = container
 
-    def create(config: dict) -> Connector:
-        connector_config = ArtifactConnectorConfig(**config)
-        return ArtifactConnector(connector_config, self.artifact_store)
+    def get_component_name(self) -> str:
+        return "artifact"
+
+    def can_create(self, properties: dict) -> bool:
+        # Validate config and check ArtifactStore availability
+        try:
+            ArtifactConnectorConfig.model_validate(properties)
+            artifact_store = self._container.get_service(ArtifactStore)
+            return artifact_store is not None
+        except (ValidationError, Exception):
+            return False
+
+    def create(self, properties: dict) -> Connector:
+        config = ArtifactConnectorConfig.model_validate(properties)
+        artifact_store = self._container.get_service(ArtifactStore)
+        return ArtifactConnector(config, artifact_store)
 ```
 
 **Dependency injection:**
-- Factory receives ArtifactStore from Executor
+- Factory receives ServiceContainer (matches pattern used by MySQL, Filesystem connectors)
+- Resolves ArtifactStore from container using Service Locator pattern
 - Passes store to each ArtifactConnector instance
 
 #### 4. Register as Entry Point
