@@ -239,7 +239,6 @@ class TestProcessingPurposesIntegration:
         self, isolated_registry: RulesetRegistry
     ) -> None:
         """Test that ProcessingPurposesRuleset works with the registry pattern."""
-        isolated_registry.clear()
         isolated_registry.register(
             "test_processing_purposes", ProcessingPurposesRuleset, ProcessingPurposeRule
         )
@@ -258,7 +257,6 @@ class TestProcessingPurposesIntegration:
         self, isolated_registry: RulesetRegistry
     ) -> None:
         """Test that ProcessingPurposesRuleset works with RulesetLoader."""
-        isolated_registry.clear()
         isolated_registry.register(
             "loader_test", ProcessingPurposesRuleset, ProcessingPurposeRule
         )

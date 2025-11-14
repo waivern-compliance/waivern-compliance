@@ -176,7 +176,6 @@ class TestServiceIntegrationsIntegration:
         self, isolated_registry: RulesetRegistry
     ) -> None:
         """Test that the ruleset can be registered and retrieved."""
-        isolated_registry.clear()
         isolated_registry.register(
             "test_service_integrations",
             ServiceIntegrationsRuleset,

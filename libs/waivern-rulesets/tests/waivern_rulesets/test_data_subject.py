@@ -319,7 +319,6 @@ class TestDataSubjectsRulesetIntegration:
         self, isolated_registry: RulesetRegistry
     ) -> None:
         """Test that DataSubjectsRuleset works with the registry pattern."""
-        isolated_registry.clear()
         isolated_registry.register(
             "test_data_subjects", DataSubjectsRuleset, DataSubjectRule
         )
@@ -338,7 +337,6 @@ class TestDataSubjectsRulesetIntegration:
         self, isolated_registry: RulesetRegistry
     ) -> None:
         """Test that DataSubjectsRuleset works with RulesetLoader."""
-        isolated_registry.clear()
         isolated_registry.register("loader_test", DataSubjectsRuleset, DataSubjectRule)
 
         # Load via RulesetLoader

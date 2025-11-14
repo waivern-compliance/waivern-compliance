@@ -186,7 +186,6 @@ class TestPersonalDataIntegration:
         self, isolated_registry: RulesetRegistry
     ) -> None:
         """Test that PersonalDataRuleset works with the registry pattern."""
-        isolated_registry.clear()
         isolated_registry.register(
             "test_personal_data", PersonalDataRuleset, PersonalDataRule
         )
@@ -205,7 +204,6 @@ class TestPersonalDataIntegration:
         self, isolated_registry: RulesetRegistry
     ) -> None:
         """Test that PersonalDataRuleset works with RulesetLoader."""
-        isolated_registry.clear()
         isolated_registry.register("loader_test", PersonalDataRuleset, PersonalDataRule)
 
         # Load via RulesetLoader
