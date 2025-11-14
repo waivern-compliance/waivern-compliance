@@ -245,6 +245,15 @@ class ServiceProvider(Protocol):
     def is_available[T](self, service_type: type[T]) -> bool: ...
 ```
 
+**When to Implement ServiceProvider:**
+
+ServiceProvider is **optional** and should only be implemented for:
+- Standalone packages (waivern-llm, waivern-database-client)
+- Services used by external tools outside WCF
+- Packages that want clean APIs hiding DI complexity
+
+WCF-internal services (ArtifactStore, internal utilities) should **NOT** implement ServiceProvider - components should use ServiceContainer directly.
+
 ### 2. LLM Service Integration (Adapter Pattern)
 
 **LLMServiceFactory (wraps waivern-llm):**

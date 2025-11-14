@@ -89,6 +89,16 @@ class ServiceProvider(Protocol):
     directly (which raises exceptions), providers return None for unavailable
     services, enabling graceful degradation.
 
+    When to implement ServiceProvider:
+        - Standalone packages meant for external/third-party use (e.g., waivern-llm)
+        - Services that may be used outside WCF ecosystem
+        - Packages that want to hide ServiceContainer complexity
+
+    When NOT to implement ServiceProvider:
+        - WCF-internal services (e.g., ArtifactStore used only by Executor)
+        - Services only accessed within WCF components
+        - When ServiceContainer direct access is acceptable
+
     This protocol enables:
         - Exception-free service retrieval (returns None instead of raising)
         - Availability checking without attempting service creation

@@ -323,3 +323,7 @@ libs/waivern-artifact-store/
 **Next steps:**
 - Task 2: ServiceContainer integration
 - Task 3: Executor integration
+
+**Issue tracking:**
+- **Do NOT close** issue #227 - this is part 1 of 3 tasks
+- Issue will be closed after Task 3 (Executor integration) is complete

@@ -221,3 +221,14 @@ uv run pytest apps/wct/tests/ -k "pipeline" -v
 - Test after each change
 - Verify error messages match exactly
 - Ensure cleanup happens in all code paths
+
+## Issue Tracking
+
+**Related Issue:** #227
+
+**Upon completion:**
+- **Close issue #227** - this is the final task (3 of 3)
+- Update this task status to COMPLETED
+- Commit with message: `feat: integrate artifact store with Executor
+
+Closes #227`

@@ -1,164 +1,91 @@
 # Task: Integrate ArtifactStore with ServiceContainer
 
 - **Phase:** ArtifactStore Service - Dependency Injection
-- **Status:** TODO
+- **Status:** COMPLETED
 - **Prerequisites:** Task 1 (Core service implementation)
 - **Related Issue:** #227
 
 ## Context
 
-Integrates the ArtifactStore service into WCF's dependency injection system. This enables components to access artifact storage through the ServiceContainer, following established patterns from LLMService.
+ServiceContainer already supports ArtifactStore via generic `register()` and `get_service()` methods. This task adds workspace configuration and integration tests.
 
 ## Purpose
 
-Make ArtifactStore available to components (Executor, ArtifactConnector) via dependency injection whilst maintaining lazy initialisation and singleton behaviour.
+Enable components to access artifact storage through ServiceContainer using the existing DI infrastructure.
 
-## Problem
+## Current State
 
-Components need access to artifact storage without:
-- Directly instantiating stores (tight coupling)
-- Managing lifecycle manually (resource leaks)
-- Duplicating configuration logic (inconsistency)
-
-## Proposed Solution
-
-Extend ServiceContainer with ArtifactStore support following the existing LLMService pattern: lazy initialisation, singleton per container, configuration-driven backend selection.
-
-## Decisions Made
-
-1. **Integration pattern** - Mirror LLMService implementation (lazy init + singleton)
-2. **Configuration** - Environment variable ARTIFACT_STORE_BACKEND (defaults to "memory")
-3. **Lifecycle** - Singleton per ServiceContainer instance
-4. **Factory usage** - Use artifact_store_factory for instantiation
+- ✅ ServiceContainer uses generic `ServiceFactory[T]` protocol
+- ✅ ArtifactStoreFactory implements `ServiceFactory[ArtifactStore]`
+- ✅ Workspace configuration already includes waivern-artifact-store
+- ❌ Missing integration tests demonstrating DI usage
 
 ## Expected Outcome & Usage Example
 
-**ServiceContainer usage:**
 ```python
-# In Executor
+from waivern_core.services import ServiceContainer
+from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
+
+# Register artifact store
 container = ServiceContainer()
-store = container.get_artifact_store()  # Returns singleton
+container.register(
+    ArtifactStore,
+    ArtifactStoreFactory(),
+    lifetime="singleton"
+)
+
+# Get singleton instance
+store = container.get_service(ArtifactStore)
 
 # Subsequent calls return same instance
-store2 = container.get_artifact_store()  # store2 is store == True
+store2 = container.get_service(ArtifactStore)
+assert store2 is store
 ```
 
 ## Implementation
 
 ### Changes Required
 
-#### 1. Update ServiceContainer Class
+#### Add Integration Tests
 
-**Location:** `libs/waivern-core/src/waivern_core/services/service_container.py`
+**Location:** `libs/waivern-artifact-store/tests/waivern_artifact_store/test_integration.py`
 
-**Changes:**
-- Add `_artifact_store: ArtifactStore | None` attribute
-- Add `get_artifact_store() -> ArtifactStore` method
-- Import factory function and ArtifactStore type
-
-**Algorithm (pseudo-code):**
-```python
-class ServiceContainer:
-    def __init__():
-        self._llm_service = None
-        self._artifact_store = None  # NEW
-
-    def get_artifact_store() -> ArtifactStore:
-        # Lazy initialisation
-        if self._artifact_store is None:
-            backend = os.getenv("ARTIFACT_STORE_BACKEND", "memory")
-            self._artifact_store = create_artifact_store(backend)
-        return self._artifact_store
-```
-
-**Key considerations:**
-- Follow existing LLM service pattern exactly
-- Lazy initialisation (only create when first requested)
-- Singleton behaviour (cache instance in attribute)
-- Configuration via environment variable
-
-#### 2. Update Service Exports
-
-**Location:** `libs/waivern-core/src/waivern_core/services/__init__.py`
-
-**Changes:**
-- Export ArtifactStore abstract class
-- Export concrete implementations
-- Export factory function
-- Export exceptions
-
-**Example:**
-```python
-from .artifact_store import ArtifactStore, ArtifactStoreError, ArtifactNotFoundError
-from .in_memory_artifact_store import InMemoryArtifactStore
-from .artifact_store_factory import create_artifact_store
-```
+**Test coverage:**
+- Register and retrieve singleton
+- Multiple containers have independent instances
+- Factory configuration respected
+- Explicit configuration override
 
 ## Testing
 
-### Testing Strategy
+### Test Coverage
 
-Test ServiceContainer integration focusing on singleton behaviour and configuration.
+**File:** `test_integration.py` (4 tests)
 
-### Test Scenarios
-
-#### 1. Lazy Initialisation
-
-**Setup:**
-- Create ServiceContainer instance
-- Call get_artifact_store()
-
-**Expected behaviour:**
-- Returns ArtifactStore instance
-- Instance created on first call (lazy init)
-
-#### 2. Singleton Behaviour
-
-**Setup:**
-- Create ServiceContainer
-- Call get_artifact_store() multiple times
-
-**Expected behaviour:**
-- Same instance returned each time
-- Singleton per container (not global singleton)
-
-#### 3. Configuration Respect
-
-**Setup:**
-- Set ARTIFACT_STORE_BACKEND environment variable
-- Create ServiceContainer and get store
-
-**Expected behaviour:**
-- Factory called with configured backend
-- Environment variable respected
-
-#### 4. Multiple Containers
-
-**Setup:**
-- Create two ServiceContainer instances
-- Get artifact store from each
-
-**Expected behaviour:**
-- Each container has own store instance
-- Stores are independent (not shared)
+1. **Singleton behavior** - `get_service()` returns same instance
+2. **Multiple containers** - Each container has independent instance
+3. **Configuration** - Environment variable respected
+4. **Explicit config** - Explicit config overrides environment
 
 ### Validation Commands
 
 ```bash
-# Run service container tests
-uv run pytest libs/waivern-core/tests/services/test_service_container.py -v
+# Run integration tests
+uv run pytest libs/waivern-artifact-store/tests/waivern_artifact_store/test_integration.py -v
 
-# Run all core tests
-uv run pytest libs/waivern-core/tests/ -v
+# Run all artifact store tests
+uv run pytest libs/waivern-artifact-store/tests/ -v
 
 # Run quality checks
 ./scripts/dev-checks.sh
 ```
 
-## Implementation Notes
+## Issue Tracking
 
-**Design principles:**
-- Exact pattern match with LLMService integration
-- No special logic or deviation from established patterns
-- Configuration follows WCF conventions
-- Clear separation between container and service lifecycle
+**Related Issue:** #227
+
+**Upon completion:**
+- **Do NOT close** issue #227 - this is part 2 of 3 tasks
+- Issue will be closed after Task 3 (Executor integration) is complete
+- Update this task status to COMPLETED
+- Commit with message: `feat: add artifact store ServiceContainer integration tests`
