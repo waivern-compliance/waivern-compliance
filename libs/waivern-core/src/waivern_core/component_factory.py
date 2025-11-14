@@ -47,6 +47,16 @@ class ComponentFactory[T](ABC):
     - Health checking for remote/SaaS components
     - AI agent discovery and querying
 
+    Service Locator Pattern:
+        ComponentFactory uses Service Locator pattern - factories receive ServiceContainer
+        and call get_service() to resolve dependencies dynamically. This is appropriate for
+        WCF's plugin architecture where:
+        - Factories are discovered at runtime via entry points
+        - Dependencies may be optional (graceful degradation required)
+        - Component creation is configuration-driven from runbook properties
+
+        See: ADR-0002 "Service Locator in Component Factories" for architectural justification.
+
     Note:
         This abstraction is specifically for WCF components (Analysers and Connectors).
         For infrastructure services (LLM, database pools, HTTP clients), use the

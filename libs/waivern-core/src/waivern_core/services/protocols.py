@@ -89,6 +89,13 @@ class ServiceProvider(Protocol):
     directly (which raises exceptions), providers return None for unavailable
     services, enabling graceful degradation.
 
+    Naming Note:
+        WCF's ServiceProvider differs from .NET's IServiceProvider:
+        - .NET IServiceProvider: IS the DI container itself
+        - WCF ServiceProvider: Optional wrapper around ServiceContainer for cleaner APIs
+
+        WCF's ServiceContainer is equivalent to .NET's IServiceProvider.
+
     When to implement ServiceProvider:
         - Standalone packages meant for external/third-party use (e.g., waivern-llm)
         - Services that may be used outside WCF ecosystem
