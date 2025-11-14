@@ -3,6 +3,7 @@
 import os
 from collections.abc import Generator
 from contextlib import contextmanager
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -240,18 +241,178 @@ class TestMySQLConnectorDataExtraction:
 
     def test_extracts_multiple_tables_with_metadata(self) -> None:
         """Test extraction from multiple tables with proper metadata for each."""
-        # TODO: Implement to match SQLite connector test pattern
-        pass
+        with clear_mysql_env_vars():
+            config = MySQLConnectorConfig.from_properties(
+                {
+                    "host": TEST_HOST,
+                    "user": TEST_USER,
+                    "password": TEST_PASSWORD,
+                    "database": TEST_DATABASE,
+                }
+            )
+            connector = MySQLConnector(config)
+
+        metadata: dict[str, Any] = {
+            "database_name": TEST_DATABASE,
+            "tables": [
+                {
+                    "name": "customers",
+                    "columns": [
+                        {"COLUMN_NAME": "id", "DATA_TYPE": "int"},
+                        {"COLUMN_NAME": "email", "DATA_TYPE": "varchar"},
+                        {"COLUMN_NAME": "phone", "DATA_TYPE": "varchar"},
+                    ],
+                },
+                {
+                    "name": "orders",
+                    "columns": [
+                        {"COLUMN_NAME": "order_id", "DATA_TYPE": "int"},
+                        {"COLUMN_NAME": "customer_id", "DATA_TYPE": "int"},
+                        {"COLUMN_NAME": "product", "DATA_TYPE": "varchar"},
+                    ],
+                },
+            ],
+            "server_info": {},
+        }
+        table_rows: dict[str, list[dict[str, object]]] = {
+            "customers": [
+                {"id": 1, "email": "john@test.com", "phone": "+1234567890"},
+            ],
+            "orders": [
+                {"order_id": 100, "customer_id": 1, "product": "Widget A"},
+            ],
+        }
+
+        def _table_data(name: str, limit: int | None = None) -> list[dict[str, object]]:
+            return table_rows.get(name, [])
+
+        with (
+            patch.object(connector, "_get_database_metadata", return_value=metadata),
+            patch.object(connector, "_get_table_data") as mock_get_table_data,
+        ):
+            mock_get_table_data.side_effect = _table_data
+            result_message = connector.extract(Schema("standard_input", "1.0.0"))
+
+        typed_result = StandardInputDataModel[
+            RelationalDatabaseMetadata
+        ].model_validate(result_message.content)
+
+        assert len(typed_result.data) == 6
+
+        customers_items = [
+            item
+            for item in typed_result.data
+            if item.metadata.table_name == "customers"
+        ]
+        orders_items = [
+            item for item in typed_result.data if item.metadata.table_name == "orders"
+        ]
+
+        assert len(customers_items) == 3
+        assert len(orders_items) == 3
+        assert {item.metadata.column_name for item in customers_items} == {
+            "id",
+            "email",
+            "phone",
+        }
+        assert {item.metadata.column_name for item in orders_items} == {
+            "order_id",
+            "customer_id",
+            "product",
+        }
+        for item in typed_result.data:
+            assert item.metadata.connector_type == "mysql_connector"
 
     def test_extracts_empty_database_returns_empty_data(self) -> None:
         """Test extraction from database with no tables returns empty data list."""
-        # TODO: Implement to match SQLite connector test pattern
-        pass
+        with clear_mysql_env_vars():
+            config = MySQLConnectorConfig.from_properties(
+                {
+                    "host": TEST_HOST,
+                    "user": TEST_USER,
+                    "password": TEST_PASSWORD,
+                    "database": TEST_DATABASE,
+                }
+            )
+            connector = MySQLConnector(config)
+
+        metadata: dict[str, Any] = {
+            "database_name": TEST_DATABASE,
+            "tables": [],
+            "server_info": {},
+        }
+
+        with (
+            patch.object(connector, "_get_database_metadata", return_value=metadata),
+            patch.object(connector, "_get_table_data") as mock_get_table_data,
+        ):
+            result_message = connector.extract(Schema("standard_input", "1.0.0"))
+
+        typed_result = StandardInputDataModel[
+            RelationalDatabaseMetadata
+        ].model_validate(result_message.content)
+        assert len(typed_result.data) == 0
+        mock_get_table_data.assert_not_called()
 
     def test_extracts_tables_with_special_characters_in_names(self) -> None:
         """Test extraction handles table names with underscores and hyphens."""
-        # TODO: Implement to match SQLite connector test pattern
-        pass
+        with clear_mysql_env_vars():
+            config = MySQLConnectorConfig.from_properties(
+                {
+                    "host": TEST_HOST,
+                    "user": TEST_USER,
+                    "password": TEST_PASSWORD,
+                    "database": TEST_DATABASE,
+                }
+            )
+            connector = MySQLConnector(config)
+
+        metadata: dict[str, Any] = {
+            "database_name": TEST_DATABASE,
+            "tables": [
+                {
+                    "name": "user_profile",
+                    "columns": [
+                        {"COLUMN_NAME": "id", "DATA_TYPE": "int"},
+                        {"COLUMN_NAME": "name", "DATA_TYPE": "varchar"},
+                    ],
+                },
+                {
+                    "name": "order-items",
+                    "columns": [
+                        {"COLUMN_NAME": "id", "DATA_TYPE": "int"},
+                        {"COLUMN_NAME": "item", "DATA_TYPE": "varchar"},
+                    ],
+                },
+            ],
+            "server_info": {},
+        }
+        table_rows: dict[str, list[dict[str, object]]] = {
+            "user_profile": [{"id": 1, "name": "John"}],
+            "order-items": [{"id": 1, "item": "Widget"}],
+        }
+
+        def _table_data(name: str, limit: int | None = None) -> list[dict[str, object]]:
+            return table_rows.get(name, [])
+
+        with (
+            patch.object(connector, "_get_database_metadata", return_value=metadata),
+            patch.object(connector, "_get_table_data") as mock_get_table_data,
+        ):
+            mock_get_table_data.side_effect = _table_data
+            result_message = connector.extract(Schema("standard_input", "1.0.0"))
+
+        typed_result = StandardInputDataModel[
+            RelationalDatabaseMetadata
+        ].model_validate(result_message.content)
+
+        assert len(typed_result.data) == 4
+        assert {item.metadata.table_name for item in typed_result.data} == {
+            "user_profile",
+            "order-items",
+        }
+        for item in typed_result.data:
+            assert item.metadata.connector_type == "mysql_connector"
 
 
 class TestMySQLConnectorEdgeCases:
