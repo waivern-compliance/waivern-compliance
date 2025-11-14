@@ -1072,21 +1072,32 @@ execution:
                 schema=Schema("personal_data_finding", "1.0.0"),
             )
 
-            # Capture artifacts state at time of each call
-            captured_artifacts = []
+            # Capture artifact store state at time of each call
+            captured_store_states = []
 
             def capture_and_return(*args, **kwargs):
-                """Capture artifacts dict state and return mock result."""
-                artifacts = args[2]  # Third positional arg
-                # Make a copy of the dict to preserve state
-                captured_artifacts.append(dict(artifacts))
+                """Capture artifact store state and return mock result."""
+                # Capture artifact IDs currently in store
+                # Try to get 'step1' - if it exists, store has artifacts
+                from waivern_artifact_store import ArtifactNotFoundError
+
+                store_state = {}
+                try:
+                    stored_message = executor.artifact_store.get("step1")
+                    store_state["step1"] = stored_message
+                except ArtifactNotFoundError:
+                    # Not found - store is empty or doesn't have step1 yet
+                    pass  # Expected when store is empty
+
+                captured_store_states.append(store_state)
+
                 # Return different results based on call count
-                if len(captured_artifacts) == 1:
+                if len(captured_store_states) == 1:
                     return (result1, message1)
                 else:
                     return (result2, message2)
 
-            # Mock _execute_step to capture artifacts dict state
+            # Mock _execute_step to capture artifact store state
             with patch.object(
                 executor, "_execute_step", side_effect=capture_and_return
             ) as mock_execute:
@@ -1100,12 +1111,12 @@ execution:
                 # Verify _execute_step was called twice
                 assert mock_execute.call_count == 2
 
-                # First call should have empty artifacts dict
-                assert captured_artifacts[0] == {}
+                # First call should have empty artifact store
+                assert captured_store_states[0] == {}
 
-                # Second call should have step1's message in artifacts (from save_output)
-                assert "step1" in captured_artifacts[1]
-                assert captured_artifacts[1]["step1"] == message1
+                # Second call should have step1's message in artifact store (from save_output)
+                assert "step1" in captured_store_states[1]
+                assert captured_store_states[1]["step1"] == message1
 
         finally:
             runbook_path.unlink()

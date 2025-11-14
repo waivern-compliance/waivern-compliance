@@ -51,20 +51,26 @@ class ComponentFactory[T](ABC):
 - Schema declarations for component discovery
 - Component name maps to runbook `type:` field
 - Transient component instances
+- Uses Service Locator pattern (receives ServiceContainer)
 
 **Example:**
 ```python
 class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
-    def __init__(self, llm_service: BaseLLMService | None = None):
-        self._llm_service = llm_service
+    def __init__(self, container: ServiceContainer) -> None:
+        self._container = container
 
     def create(self, config: dict) -> PersonalDataAnalyser:
         config_obj = PersonalDataAnalyserConfig.from_properties(config)
-        return PersonalDataAnalyser(config_obj, self._llm_service)
+        # Resolve dependencies from container (Service Locator)
+        llm_service = self._container.get_service(BaseLLMService)
+        return PersonalDataAnalyser(config_obj, llm_service)
 
     def get_component_name(self) -> str:
         return "personal_data"
 ```
+
+**Service Locator Pattern:**
+ComponentFactory uses Service Locator pattern - factories receive ServiceContainer and resolve dependencies dynamically. This is appropriate for WCF's plugin architecture where factories are discovered at runtime and dependencies may be optional. See ADR-0002 "Service Locator in Component Factories" for justification.
 
 ## Why Two Patterns?
 
@@ -118,11 +124,10 @@ class Executor:
         container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
 
         executor = cls(container)
-        llm_service = container.get_service(BaseLLMService)
 
-        # Register component factories with dependencies
+        # Register component factories - each receives container
         for factory_class in BUILTIN_ANALYSER_FACTORIES:
-            factory = factory_class(llm_service=llm_service)
+            factory = factory_class(container)  # Service Locator pattern
             executor.register_analyser_factory(factory)
 
         return executor

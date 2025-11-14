@@ -10,6 +10,7 @@ resolution-markers = [
 [manifest]
 members = [
     "waivern-analysers-shared",
+    "waivern-artifact-store",
     "waivern-compliance-tool",
     "waivern-connectors-database",
     "waivern-core",
@@ -1534,6 +1535,29 @@ requires-dist = [
     { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
 ]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
+[[package]]
+name = "waivern-artifact-store"
+version = "0.1.0"
+source = { editable = "libs/waivern-artifact-store" }
+dependencies = [
+    { name = "waivern-core" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "waivern-core", editable = "libs/waivern-core" }]
 
 [package.metadata.requires-dev]
 dev = [

@@ -245,6 +245,15 @@ class ServiceProvider(Protocol):
     def is_available[T](self, service_type: type[T]) -> bool: ...
 ```
 
+**When to Implement ServiceProvider:**
+
+ServiceProvider is **optional** and should only be implemented for:
+- Standalone packages (waivern-llm, waivern-database-client)
+- Services used by external tools outside WCF
+- Packages that want clean APIs hiding DI complexity
+
+WCF-internal services (ArtifactStore, internal utilities) should **NOT** implement ServiceProvider - components should use ServiceContainer directly.
+
 ### 2. LLM Service Integration (Adapter Pattern)
 
 **LLMServiceFactory (wraps waivern-llm):**
@@ -473,6 +482,52 @@ llm_service = container.get_service(BaseLLMService)
 factory = ThirdPartyAnalyserFactory(llm_service=llm_service)
 executor.register_analyser_factory(factory)
 ```
+
+---
+
+## Service Locator in Component Factories
+
+### Pattern Usage
+
+WCF component factories use the Service Locator pattern: they receive `ServiceContainer` and call `get_service()` to resolve dependencies dynamically:
+
+```python
+class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
+    def __init__(self, container: ServiceContainer) -> None:
+        self._container = container
+
+    def create(self, config: ComponentConfig) -> PersonalDataAnalyser:
+        llm_service = self._container.get_service(BaseLLMService)  # Service Locator
+        return PersonalDataAnalyser(config=config, llm_service=llm_service)
+```
+
+### Architectural Justification
+
+This pattern is appropriate for WCF because:
+
+1. **Plugin Architecture**: Factories are discovered at runtime via entry points; dependencies cannot be statically resolved
+2. **Optional Dependencies**: LLM services may be unconfigured; factories must gracefully degrade
+3. **Configuration-Driven Instantiation**: Component creation depends on runbook properties loaded at runtime
+4. **Industry Precedent**: Spring `ServiceLocatorFactoryBean`, ASP.NET `IServiceProvider` in factory patterns
+
+### Pure DI Alternative Rejected
+
+Pure constructor injection would require:
+- Factories receive all possible services as constructor parameters (10+ parameters)
+- Executor statically wires all factories at startup
+- No support for optional dependencies or graceful degradation
+- Incompatible with dynamic plugin discovery
+
+### Trade-offs Accepted
+
+**Accepted:**
+- Hidden dependencies (container access in factories)
+- Runtime dependency resolution
+
+**Mitigated by:**
+- `get_service_dependencies()` method declares factory requirements
+- `can_create()` validates service availability before instantiation
+- Limited scope (only in factories, not in components themselves)
 
 ---
 

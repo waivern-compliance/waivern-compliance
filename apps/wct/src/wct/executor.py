@@ -14,6 +14,11 @@ import logging
 from importlib.metadata import entry_points
 from pathlib import Path
 
+from waivern_artifact_store import (
+    ArtifactNotFoundError,
+    ArtifactStore,
+    ArtifactStoreFactory,
+)
 from waivern_core import Analyser, AnalyserError, Connector, ConnectorError
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.errors import WaivernError
@@ -53,6 +58,17 @@ class Executor:
 
         """
         self._container = container
+
+        # Register artifact store factory
+        self._container.register(
+            ArtifactStore,
+            ArtifactStoreFactory(),
+            lifetime="singleton",
+        )
+
+        # Get artifact store instance
+        self.artifact_store = self._container.get_service(ArtifactStore)
+
         self.connector_factories: dict[str, ComponentFactory[Connector]] = {}
         self.analyser_factories: dict[str, ComponentFactory[Analyser]] = {}
 
@@ -207,15 +223,15 @@ class Executor:
         execution_order = self._build_execution_order(runbook.execution)
 
         results: list[AnalysisResult] = []
-        artifacts: dict[str, Message] = {}
+        self.artifact_store.clear()  # Start fresh for this runbook execution
 
         for step in execution_order:
-            analysis_result, message = self._execute_step(step, runbook, artifacts)
+            analysis_result, message = self._execute_step(step, runbook)
             results.append(analysis_result)
 
             # Store message in artifacts if step has save_output enabled
             if step.save_output:
-                artifacts[step.id] = message
+                self.artifact_store.save(step.id, message)
                 logger.debug(f"Saved artifact from step '{step.id}' for pipeline use")
 
         return results
@@ -298,14 +314,12 @@ class Executor:
         self,
         step: ExecutionStep,
         runbook: Runbook,
-        artifacts: dict[str, Message],
     ) -> tuple[AnalysisResult, Message]:
         """Execute a single step in the runbook.
 
         Args:
             step: Execution step to run
             runbook: Full runbook configuration
-            artifacts: Dictionary of saved Message artifacts from previous steps
 
         Returns:
             Tuple of (AnalysisResult for user output, Message for pipeline artifacts)
@@ -344,13 +358,20 @@ class Executor:
 
             else:
                 # PIPELINE MODE: Retrieve from artifacts
-                if step.input_from not in artifacts:
+                # In pipeline mode, input_from is guaranteed to be set (validated by Pydantic)
+                if step.input_from is None:
+                    raise ExecutorError(
+                        f"Step '{step.name}' is in pipeline mode but has no input_from reference"
+                    )
+
+                try:
+                    input_message = self.artifact_store.get(step.input_from)
+                except ArtifactNotFoundError as e:
                     raise ExecutorError(
                         f"Step '{step.name}' depends on '{step.input_from}' but artifact not found. "
                         f"Ensure previous step has 'save_output: true'."
-                    )
+                    ) from e
 
-                input_message = artifacts[step.input_from]
                 logger.debug(
                     f"Pipeline mode: using artifact from step '{step.input_from}'"
                 )

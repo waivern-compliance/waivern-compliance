@@ -8,26 +8,26 @@ This directory contains detailed task plans for implementing features and refact
 
 Foundation for unified connector architecture - implements service-based artifact management.
 
-1. **[Core Service Implementation](artifact-store-task-1-core-service.md)**
+1. **[Core Service Implementation](../../completed/artifect-store/artifact-store-task-1-core-service.md)** ✅
    - Abstract ArtifactStore interface
    - InMemoryArtifactStore implementation
    - Exception hierarchy and factory pattern
    - **Prerequisites:** None
-   - **Status:** TODO
+   - **Status:** COMPLETED
 
-2. **[ServiceContainer Integration](artifact-store-task-2-service-container.md)**
+2. **[ServiceContainer Integration](../../completed/artifect-store/artifact-store-task-2-service-container.md)** ✅
    - Integrate ArtifactStore with dependency injection system
    - Lazy initialisation and singleton behaviour
    - Configuration via environment variables
    - **Prerequisites:** Task 1
-   - **Status:** TODO
+   - **Status:** COMPLETED
 
-3. **[Executor Integration](artifact-store-task-3-executor-integration.md)**
+3. **[Executor Integration](../../completed/artifect-store/artifact-store-task-3-executor-integration.md)** ✅
    - Replace dict-based artifact storage with service
    - Maintain backward compatibility
    - Lifecycle management and cleanup
    - **Prerequisites:** Tasks 1-2
-   - **Status:** TODO
+   - **Status:** COMPLETED
 
 ### Unified Connector Architecture (#226)
 
