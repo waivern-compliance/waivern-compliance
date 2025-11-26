@@ -2,6 +2,7 @@
 
 - **Phase:** 1 - Foundation
 - **Status:** DONE
+- **GitHub Issue:** #242 (close via PR)
 - **Prerequisites:** None
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)
 
