@@ -1,8 +1,9 @@
 # Remote Analyser Protocol Specification
 
-**Version:** 1.0.0 (Draft)
-**Last Updated:** 2025-11-03
-**Status:** Specification Draft
+- **Version:** 1.0.0 (Draft)
+- **Last Updated:** 2025-11-26
+- **Status:** Specification Draft
+- **Related:** [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md)
 
 ## Overview
 
@@ -39,13 +40,6 @@ The protocol uses a **hybrid envelope pattern** that separates transport concern
   }
 }
 ```
-
-**Benefits:**
-- **Clean separation** - Transport vs. domain concerns
-- **WCF alignment** - Message structure matches internal `Message` class
-- **Protocol independence** - Same Message can be used over HTTP, gRPC, WebSocket, etc.
-- **Minimal translation** - WCT easily converts between HTTP and internal Message
-- **Industry standard** - Follows patterns from GitHub, AWS, Stripe APIs
 
 ## Base URL Structure
 
@@ -926,286 +920,26 @@ Services SHOULD:
 - Document deprecation timelines (minimum 6 months notice)
 - Provide migration guides for breaking changes
 
-## Implementation Examples
-
-### Python (FastAPI) - Streaming Mode
-
-```python
-from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-import asyncio
-import json
-
-app = FastAPI()
-
-class Message(BaseModel):
-    id: str
-    content: dict
-    schema: dict
-    context: dict | None = None
-
-class ExecuteRequest(BaseModel):
-    request_id: str | None = None
-    message: Message
-
-@app.get("/v1/analysers")
-async def list_analysers():
-    return {
-        "api_version": "1.0.0",
-        "analysers": [{
-            "name": "gdpr_legal_basis_analyser",
-            "type": "gdpr_legal_basis_analyser",
-            "capabilities": {
-                "streaming": True,
-                "batch_processing": True,
-                "polling": True
-            }
-        }]
-    }
-
-@app.post("/v1/analysers/{analyser_type}/execute")
-async def execute_analyser(
-    analyser_type: str,
-    request: ExecuteRequest,
-    req: Request
-):
-    # Check if client accepts SSE
-    if req.headers.get("accept") == "text/event-stream":
-        return StreamingResponse(
-            stream_analysis(request),
-            media_type="text/event-stream"
-        )
-
-    # Polling mode - return 202 with status URL
-    task_id = start_async_analysis(request)
-    return {
-        "request_id": request.request_id,
-        "status": "processing",
-        "status_url": f"/v1/analysers/status/{task_id}",
-        "poll_interval_seconds": 30
-    }
-
-async def stream_analysis(request: ExecuteRequest):
-    """Stream analysis progress via SSE"""
-    # Send started event
-    yield f"event: started\n"
-    yield f"data: {json.dumps({'request_id': request.request_id, 'status': 'processing'})}\n\n"
-
-    # Simulate analysis progress
-    for progress in [25, 50, 75]:
-        await asyncio.sleep(1)
-        yield f"event: progress\n"
-        yield f"data: {json.dumps({'request_id': request.request_id, 'progress': progress})}\n\n"
-
-    # Execute actual analysis
-    result = await run_analysis(request.message)
-
-    # Store result for later retrieval
-    await store_result(request.request_id, result)
-
-    # Send completed event with result URL
-    yield f"event: completed\n"
-    yield f"data: {json.dumps({'request_id': request.request_id, 'status': 'completed', 'result_url': f'/v1/analysers/results/{request.request_id}', 'result_size_bytes': len(json.dumps(result))})}\n\n"
-
-async def run_analysis(message: Message) -> dict:
-    """Execute the actual analysis"""
-    # Validate input schema
-    # Run analysis logic
-    # Return WCF Message object
-    return {
-        "id": message.id,
-        "content": {"findings": [...]},
-        "schema": {"name": "output_schema", "version": "1.0.0"},
-        "context": None
-    }
-
-@app.get("/v1/analysers/results/{request_id}")
-async def get_result(request_id: str):
-    """Fetch analysis result"""
-    result = await fetch_result(request_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Result not found or expired")
-
-    return {
-        "request_id": request_id,
-        "message": result["message"],
-        "execution_metadata": result["execution_metadata"]
-    }
-```
-
-### Node.js (Express) - Streaming Mode
-
-```javascript
-const express = require('express');
-const app = express();
-
-app.get('/v1/analysers', (req, res) => {
-  res.json({
-    api_version: '1.0.0',
-    analysers: [{
-      name: 'gdpr_legal_basis_analyser',
-      type: 'gdpr_legal_basis_analyser',
-      capabilities: {
-        streaming: true,
-        batch_processing: true,
-        polling: true
-      }
-    }]
-  });
-});
-
-app.post('/v1/analysers/:type/execute', async (req, res) => {
-  const { request_id, message } = req.body;
-
-  // Check if client accepts SSE
-  if (req.headers.accept === 'text/event-stream') {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    // Send started event
-    res.write(`event: started\ndata: ${JSON.stringify({
-      request_id, status: 'processing'
-    })}\n\n`);
-
-    // Simulate progress
-    const progress = [25, 50, 75];
-    for (const p of progress) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      res.write(`event: progress\ndata: ${JSON.stringify({
-        request_id, progress: p
-      })}\n\n`);
-    }
-
-    // Execute analysis
-    const result = await runAnalysis(message);
-
-    // Store result
-    await storeResult(request_id, result);
-
-    // Send completed event with result URL
-    res.write(`event: completed\ndata: ${JSON.stringify({
-      request_id,
-      status: 'completed',
-      result_url: `/v1/analysers/results/${request_id}`,
-      result_size_bytes: JSON.stringify(result).length
-    })}\n\n`);
-
-    res.end();
-  } else {
-    // Polling mode
-    const taskId = await startAsyncAnalysis(req.body);
-    res.status(202).json({
-      request_id,
-      status: 'processing',
-      status_url: `/v1/analysers/status/${taskId}`,
-      poll_interval_seconds: 30
-    });
-  }
-});
-
-app.get('/v1/analysers/results/:request_id', async (req, res) => {
-  const result = await fetchResult(req.params.request_id);
-
-  if (!result) {
-    return res.status(404).json({
-      error: {
-        code: 'NOT_FOUND',
-        message: 'Result not found or expired'
-      }
-    });
-  }
-
-  res.json({
-    request_id: req.params.request_id,
-    message: result.message,
-    execution_metadata: result.execution_metadata
-  });
-});
-
-async function runAnalysis(message) {
-  // Validate and execute analysis
-  return {
-    id: message.id,
-    content: { findings: [...] },
-    schema: { name: 'output_schema', version: '1.0.0' },
-    context: null
-  };
-}
-```
-
 ## Testing
 
-### Health Check
-
 ```bash
+# Health check
 curl https://api.example.com/v1/health
-```
 
-### Discovery
+# Discovery
+curl -H "Authorization: Bearer API_KEY" https://api.example.com/v1/analysers
 
-```bash
-curl -H "Authorization: Bearer API_KEY" \
-  https://api.example.com/v1/analysers
-```
-
-### Execute (Streaming Mode)
-
-```bash
-curl -X POST \
-  -H "Authorization: Bearer API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -d '{
-    "request_id": "test-123",
-    "message": {
-      "id": "msg-123",
-      "content": {...},
-      "schema": {"name": "standard_input", "version": "1.0.0"}
-    }
-  }' \
-  https://api.example.com/v1/analysers/my_analyser/execute
-```
-
-### Execute (Polling Mode)
-
-```bash
-# Start analysis
-curl -X POST \
-  -H "Authorization: Bearer API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "request_id": "test-123",
-    "message": {...}
-  }' \
+# Execute (streaming)
+curl -X POST -H "Authorization: Bearer API_KEY" \
+  -H "Content-Type: application/json" -H "Accept: text/event-stream" \
+  -d '{"message": {"id": "msg-123", "content": {...}, "schema": {...}}}' \
   https://api.example.com/v1/analysers/my_analyser/execute
 
-# Poll for status
-curl -H "Authorization: Bearer API_KEY" \
-  https://api.example.com/v1/analysers/status/test-123
-
-# Fetch results when completed
-curl -H "Authorization: Bearer API_KEY" \
-  https://api.example.com/v1/analysers/results/test-123
-```
-
-### Batch Execute
-
-```bash
-curl -X POST \
-  -H "Authorization: Bearer API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -d '{
-    "request_id": "batch-123",
-    "messages": [
-      {"id": "msg-001", "content": {...}, "schema": {...}},
-      {"id": "msg-002", "content": {...}, "schema": {...}}
-    ]
-  }' \
-  https://api.example.com/v1/analysers/my_analyser/batch
+# Execute (polling) - returns status_url, poll until completed, fetch from result_url
+curl -X POST -H "Authorization: Bearer API_KEY" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{"message": {...}}' \
+  https://api.example.com/v1/analysers/my_analyser/execute
 ```
 
 ## WCT Integration
@@ -1269,10 +1003,9 @@ deployment:
       half_open_max_requests: 1
 ```
 
-## Related Documentation
+## Related Documents
 
-- [Extending WCF](../development/extending-wcf.md) - Overview of extension mechanisms
-- [Building Custom Components](../development/building-custom-components.md) - Component development guide
+- [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md) - Internal `HttpService` pattern for remote calls
 - [WCF Core Components](../core-concepts/wcf-core-components.md) - Framework architecture
 
 ## Future Enhancements

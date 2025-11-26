@@ -115,11 +115,11 @@ uv run pytest libs/waivern-rulesets/tests/ -v
 
 ## Success Criteria
 
-✅ RulesetRegistry has snapshot_state() and restore_state() methods
-✅ Test fixture uses public API (no private attribute access)
-✅ All package tests pass with new implementation
-✅ Consistent pattern with SchemaRegistry
-✅ Less test boilerplate (fewer/no clear() calls)
+- ✅ RulesetRegistry has snapshot_state() and restore_state() methods
+- ✅ Test fixture uses public API (no private attribute access)
+- ✅ All package tests pass with new implementation
+- ✅ Consistent pattern with SchemaRegistry
+- ✅ Less test boilerplate (fewer/no clear() calls)
 
 ---
 
