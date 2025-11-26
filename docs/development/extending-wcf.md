@@ -1,7 +1,9 @@
 # Extending the Waivern Compliance Framework
 
-**Last Updated:** 2025-11-03
-**Related:** [Building Custom Components](building-custom-components.md), [Remote Analyser Protocol](../architecture/remote-analyser-protocol.md)
+**Last Updated:** 2025-11-26
+**Related:** [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md)
+
+> **Note:** This document uses the legacy runbook format with `execution:` steps. It will be updated after the artifact-centric runbook design is implemented. See [Artifact-Centric Runbook](../future-plans/artifact-centric-runbook.md) for the upcoming format.
 
 ## Overview
 
@@ -19,8 +21,7 @@ Before extending WCF, you should be familiar with:
 **Recommended reading order:**
 1. [WCF Core Components](../core-concepts/wcf-core-components.md) - Start here
 2. This document - Understand extension mechanisms
-3. [Building Custom Components](building-custom-components.md) - Detailed implementation guide
-4. [Remote Analyser Protocol](../architecture/remote-analyser-protocol.md) - For remote execution
+3. [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md) - For remote execution
 
 ## WCF Extensibility Model
 
@@ -65,7 +66,7 @@ patterns:
     regex: '\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b'
 ```
 
-**See:** [Building Custom Components](building-custom-components.md) for detailed implementation guide.
+**See:** Framework packages in `libs/` for reference implementations.
 
 ## Entry Points System
 
@@ -201,7 +202,7 @@ GET /v1/analysers/results/uuid-1234-5678
 }
 ```
 
-**See:** [Remote Analyser Protocol](../architecture/remote-analyser-protocol.md) for complete API specification.
+**See:** [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md) for complete API specification.
 
 ### Discovery Endpoint
 
@@ -567,12 +568,12 @@ Consider open-sourcing your components:
 3. Share in GitHub Discussions
 4. Tag with `waivern-component`
 
-## Related Documentation
+## Related Documents
 
-- [Building Custom Components](building-custom-components.md) - Detailed implementation guide
-- [Remote Analyser Protocol](../architecture/remote-analyser-protocol.md) - HTTP API specification
+- [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md) - HTTP API specification
 - [WCF Core Components](../core-concepts/wcf-core-components.md) - Framework architecture
-- [Entry Points Epic (#188)](https://github.com/waivern-compliance/waivern-compliance/issues/188) - Discovery mechanism
+- [Artifact-Centric Runbook](../future-plans/artifact-centric-runbook.md) - Upcoming runbook format
+- [DAG Orchestration Layer](../future-plans/dag-orchestration-layer.md) - Execution engine design
 
 ## Enterprise Extensions
 
