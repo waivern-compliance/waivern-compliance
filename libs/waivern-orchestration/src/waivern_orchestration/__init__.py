@@ -1,5 +1,6 @@
 """Waivern Orchestration - Orchestration layer for Waivern Compliance Framework."""
 
+from waivern_orchestration.dag import ExecutionDAG
 from waivern_orchestration.errors import (
     ComponentNotFoundError,
     CycleDetectedError,
@@ -18,6 +19,7 @@ from waivern_orchestration.models import (
     SourceConfig,
     TransformConfig,
 )
+from waivern_orchestration.parser import parse_runbook, parse_runbook_from_dict
 
 __all__ = [
     # Models
@@ -29,6 +31,11 @@ __all__ = [
     "RunbookConfig",
     "SourceConfig",
     "TransformConfig",
+    # DAG
+    "ExecutionDAG",
+    # Parser
+    "parse_runbook",
+    "parse_runbook_from_dict",
     # Errors
     "ComponentNotFoundError",
     "CycleDetectedError",

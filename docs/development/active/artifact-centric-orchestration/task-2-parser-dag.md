@@ -1,7 +1,8 @@
 # Task 2: Implement Parser and ExecutionDAG
 
 - **Phase:** 1 - Foundation
-- **Status:** TODO
+- **Status:** DONE
+- **GitHub Issue:** #243 (close via PR)
 - **Prerequisites:** Task 1 (models and errors)
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)
 
