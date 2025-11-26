@@ -15,7 +15,7 @@ Implement the YAML parser for artifact-centric runbooks and the ExecutionDAG cla
 
 ## Problem
 
-Runbook files need to be parsed into the Runbook model, with environment variable substitution. The artifact dependencies (via `from` field) form a directed graph that must be validated for cycles and used to determine execution order.
+Runbook files need to be parsed into the Runbook model, with environment variable substitution. The artifact dependencies (via `inputs` field) form a directed graph that must be validated for cycles and used to determine execution order.
 
 ## Decisions Made
 
@@ -108,17 +108,17 @@ ExecutionDAG
 function build_graph(artifacts):
     graph = {}
     for artifact_id, definition in artifacts:
-        deps = extract_dependencies(definition.from_artifacts)
+        deps = extract_dependencies(definition.inputs)
         graph[artifact_id] = deps
     return graph
 
-function extract_dependencies(from_field):
-    if from_field is None:
+function extract_dependencies(inputs_field):
+    if inputs_field is None:
         return empty set  # Source artifact
-    if from_field is string:
-        return {from_field}
-    if from_field is list:
-        return set(from_field)  # Fan-in
+    if inputs_field is string:
+        return {inputs_field}
+    if inputs_field is list:
+        return set(inputs_field)  # Fan-in
 ```
 
 **Cycle detection:**
@@ -179,7 +179,7 @@ from .dag import ExecutionDAG
 - Verify all returned together from get_ready()
 
 #### 3. Fan-in (A, B → C)
-- Create C with `from: [A, B]`
+- Create C with `inputs: [A, B]`
 - Verify C has both A and B as dependencies
 - Verify C only ready after both complete
 
@@ -197,7 +197,7 @@ from .dag import ExecutionDAG
 - Verify detected by validate()
 
 #### 7. Self-reference
-- Create artifact with `from: self_id`
+- Create artifact with `inputs: self_id`
 - Verify CycleDetectedError raised
 
 ### Validation Commands

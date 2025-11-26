@@ -54,7 +54,7 @@ description: "Analyse MySQL database for personal data"
 artifacts:
   <artifact_id>:
     source: {...}      # OR
-    from: <artifact_id(s)>
+    inputs: <artifact_id(s)>
     transform: {...}
 ```
 
@@ -73,7 +73,7 @@ db_schema:
 **Derived Artifact** - Produced by transforming other artifacts:
 ```yaml
 personal_data_findings:
-  from: db_schema
+  inputs: db_schema
   transform:
     type: personal_data_analyser
     properties:
@@ -83,7 +83,7 @@ personal_data_findings:
 **Fan-in Artifact** - Multiple inputs merged:
 ```yaml
 combined_findings:
-  from:
+  inputs:
     - mysql_findings
     - file_findings
   merge: concatenate
@@ -94,7 +94,7 @@ combined_findings:
 **Output Artifact** - Designated for export (file output, API response):
 ```yaml
 final_report:
-  from: combined_findings
+  inputs: combined_findings
   transform:
     type: report_generator
   output: true  # Explicit: export this artifact
@@ -128,14 +128,14 @@ artifacts:
 
   # Parallel analysis (independent, run concurrently)
   db_findings:
-    from: db_schema
+    inputs: db_schema
     transform:
       type: personal_data_analyser
       properties:
         llm_validation: true
 
   log_findings:
-    from: log_content
+    inputs: log_content
     transform:
       type: personal_data_analyser
       properties:
@@ -143,7 +143,7 @@ artifacts:
 
   # Fan-in (waits for both inputs)
   combined_findings:
-    from:
+    inputs:
       - db_findings
       - log_findings
     merge: concatenate
@@ -152,7 +152,7 @@ artifacts:
 
   # Chained analysis (terminal artifact)
   nis2_assessment:
-    from: combined_findings
+    inputs: combined_findings
     transform:
       type: nis2_policy_analyser
       properties:
@@ -162,7 +162,7 @@ artifacts:
 
 ## DAG Execution Model
 
-The DAG is implicit in the `from` relationships:
+The DAG is implicit in the `inputs` relationships:
 
 ```
      db_schema          log_content
@@ -181,14 +181,14 @@ The DAG is implicit in the `from` relationships:
 
 **Execution:**
 
-1. `TopologicalSorter` builds graph from `from` fields
+1. `TopologicalSorter` builds graph from `inputs` fields
 2. Independent artifacts execute in parallel
 3. Dependent artifacts wait for inputs
 4. Each artifact saved to ArtifactStore upon completion
 
 ```python
 async def execute(artifacts: dict[str, ArtifactDef]):
-    dag = build_dag(artifacts)  # from → dependencies
+    dag = build_dag(artifacts)  # inputs → dependencies
     sorter = dag.get_sorter()
 
     while sorter.is_active():
@@ -203,8 +203,8 @@ async def produce(artifact_id: str):
     if defn.source:
         message = connector.extract()
     else:
-        inputs = [store.get(fid) for fid in defn.from]
-        message = analyser.process(merge(inputs))
+        input_messages = [store.get(fid) for fid in defn.inputs]
+        message = analyser.process(merge(input_messages))
 
     store.save(artifact_id, message)
 ```
@@ -213,10 +213,10 @@ async def produce(artifact_id: str):
 
 | Property | How It's Achieved |
 |----------|-------------------|
-| **Implicit DAG** | Derived from `from` relationships |
+| **Implicit DAG** | Derived from `inputs` relationships |
 | **Parallel execution** | Independent artifacts run concurrently |
 | **Reuse** | Same artifact ID can be referenced by multiple downstream artifacts |
-| **Fan-in** | `from` accepts list of artifact IDs |
+| **Fan-in** | `inputs` accepts list of artifact IDs |
 | **Fan-out** | Multiple artifacts can reference same source |
 | **Extensibility** | New source/transform types added without schema changes |
 
@@ -226,7 +226,7 @@ Per-artifact configuration:
 
 ```yaml
 llm_enriched:
-  from: findings
+  inputs: findings
   transform:
     type: llm_enricher
   optional: true  # Skip dependents on failure, continue pipeline
@@ -237,7 +237,7 @@ llm_enriched:
 **HTTP-backed analyser:**
 ```yaml
 legal_review:
-  from: findings
+  inputs: findings
   transform:
     type: legal_review_analyser
     properties:
@@ -247,7 +247,7 @@ legal_review:
 **Human approval (future):**
 ```yaml
 approved_findings:
-  from: legal_review
+  inputs: legal_review
   transform:
     type: human_approval
     properties:
@@ -257,7 +257,7 @@ approved_findings:
 **Conditional output (future):**
 ```yaml
 high_risk_only:
-  from: findings
+  inputs: findings
   filter:
     field: "risk_level"
     equals: "high"
@@ -273,14 +273,14 @@ A runbook can produce another runbook as output, enabling AI agents to dynamical
 artifacts:
   # AI agent analyses policy and generates a runbook
   generated_runbook:
-    from: policy_document
+    inputs: policy_document
     transform:
       type: policy_to_runbook_agent
     schema: runbook_definition  # Output is a runbook
 
   # Execute the generated runbook as a child
   compliance_results:
-    from: generated_runbook
+    inputs: generated_runbook
     execute: child  # Directive: execute input as child runbook
 ```
 
@@ -288,7 +288,7 @@ artifacts:
 
 ```yaml
 compliance_results:
-  from: generated_runbook
+  inputs: generated_runbook
   execute:
     mode: child
     max_depth: 3      # Prevent infinite recursion

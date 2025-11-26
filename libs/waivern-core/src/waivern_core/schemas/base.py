@@ -349,3 +349,59 @@ class Schema:
     def __repr__(self) -> str:
         """Return string representation of schema."""
         return f"Schema(name='{self.name}', version='{self.version}')"
+
+    @override
+    def __getstate__(self) -> dict[str, str]:
+        """Return serialisable state (name and version only).
+
+        The loader and cached schema definition are runtime infrastructure
+        and do not need to be persisted.
+        """
+        return {"name": self._name, "version": self._version}
+
+    def __setstate__(self, state: dict[str, str]) -> None:
+        """Restore from serialised state."""
+        self._name = state["name"]
+        self._version = state["version"]
+        self._loader = None
+        self._schema_def = None
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        source_type: Any,  # noqa: ANN401
+        handler: Any,  # noqa: ANN401
+    ) -> Any:  # noqa: ANN401
+        """Enable Pydantic serialisation using Python native __getstate__/__setstate__.
+
+        NOTE: Lint ignores are intentional:
+        - ANN401 (Any types): Pydantic is an optional dependency, so we cannot import
+          the specific types (GetCoreSchemaHandler, CoreSchema) at module level.
+        - PLC0415 (import not at top-level): pydantic_core import is inside the method
+          to avoid making Pydantic a required dependency of waivern-core.
+        """
+        from pydantic_core import core_schema  # noqa: PLC0415
+
+        def validate_schema(value: Any) -> Schema:  # noqa: ANN401
+            if isinstance(value, Schema):
+                return value
+            if isinstance(value, dict):
+                instance = object.__new__(Schema)
+                state: dict[str, str] = {
+                    "name": value["name"],
+                    "version": value["version"],
+                }
+                instance.__setstate__(state)
+                return instance
+            raise ValueError(f"Cannot convert {type(value)} to Schema")
+
+        def serialize_schema(value: Schema) -> dict[str, str]:
+            return value.__getstate__()
+
+        return core_schema.no_info_plain_validator_function(
+            validate_schema,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                serialize_schema,
+                info_arg=False,
+            ),
+        )

@@ -1,7 +1,7 @@
 # Task 1: Create waivern-orchestration Package with Models and Errors
 
 - **Phase:** 1 - Foundation
-- **Status:** TODO
+- **Status:** DONE
 - **Prerequisites:** None
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)
 
@@ -21,9 +21,10 @@ The current runbook format separates concerns across three sections with cross-r
 
 1. **New package in libs/** - `waivern-orchestration` is a library package, not part of WCT
 2. **Pydantic for models** - Consistent with existing codebase patterns
-3. **Field alias for `from`** - Use `from_artifacts` with `alias="from"` since `from` is a Python keyword
+3. **Use `inputs` instead of `from`** - Originally planned to use `from_artifacts` with `alias="from"`, but this caused type checking issues with basedpyright. Renamed to `inputs` which is clearer and avoids Python reserved keyword complexity.
 4. **Phase 2 models included** - `ExecuteConfig` and `execute` field added now to avoid schema changes later
-5. **Mutual exclusivity validation** - `source` XOR `from` enforced at model level
+5. **Mutual exclusivity validation** - `source` XOR `inputs` enforced at model level
+6. **Schema serialisation** - Added `__getstate__`/`__setstate__` and `__get_pydantic_core_schema__` to waivern-core's Schema class to enable Message (which contains Schema) to be used in Pydantic models like ArtifactResult
 
 ## Implementation
 
@@ -90,12 +91,12 @@ ExecuteConfig (Phase 2 model, included now)
 ```
 ArtifactDefinition
   - Metadata: name, description, contact (all optional)
-  - Source: source (SourceConfig) OR from_artifacts (str | list[str])
+  - Source: source (SourceConfig) OR inputs (str | list[str])
   - Transform: transform (TransformConfig), merge strategy
   - Schema override: input_schema, output_schema (optional)
   - Behaviour: output (bool), optional (bool)
   - Phase 2: execute (ExecuteConfig)
-  - Validator: source XOR from (mutually exclusive)
+  - Validator: source XOR inputs (mutually exclusive)
 
 Runbook
   - name: str
@@ -121,7 +122,7 @@ ExecutionResult
 ```
 
 **Validation logic:**
-- `validate_source_xor_from`: Ensure exactly one of `source` or `from_artifacts` is set
+- `validate_source_xor_inputs`: Ensure exactly one of `source` or `inputs` is set
 - Handle edge case: source artifact with inline transform is valid
 
 #### 4. Implement errors.py
@@ -139,7 +140,7 @@ CycleDetectedError(OrchestrationError)
   - Include cycle path for debugging
 
 MissingArtifactError(OrchestrationError)
-  - Reference to non-existent artifact in `from`
+  - Reference to non-existent artifact in `inputs`
   - Include artifact ID and referencing artifact
 
 SchemaCompatibilityError(OrchestrationError)
@@ -191,24 +192,24 @@ from .errors import (
 #### 1. Valid source artifact
 - Create ArtifactDefinition with only `source` field
 - Verify validation passes
-- Verify `from_artifacts` is None
+- Verify `inputs` is None
 
 #### 2. Valid derived artifact
-- Create ArtifactDefinition with `from` and `transform`
+- Create ArtifactDefinition with `inputs` and `transform`
 - Verify validation passes
 - Verify `source` is None
 
 #### 3. Valid fan-in artifact
-- Create ArtifactDefinition with `from` as list of IDs
+- Create ArtifactDefinition with `inputs` as list of IDs
 - Verify list is preserved
 - Verify merge strategy defaults to "concatenate"
 
-#### 4. Invalid: both source and from
+#### 4. Invalid: both source and inputs
 - Attempt to create with both fields set
 - Verify ValidationError raised
 - Verify error message is helpful
 
-#### 5. Invalid: neither source nor from
+#### 5. Invalid: neither source nor inputs
 - Attempt to create with neither field
 - Verify ValidationError raised
 
@@ -251,6 +252,6 @@ cd libs/waivern-orchestration && ./scripts/type-check.sh
 ## Implementation Notes
 
 - Follow existing package patterns from waivern-core
-- Use `Field(alias="from")` for the `from_artifacts` field
+- Use `inputs` field name (not `from` - avoids Python reserved keyword issues)
 - Use `model_validator` decorator for cross-field validation
 - Ensure py.typed marker is present for type checking support

@@ -188,7 +188,7 @@ artifacts:
       properties: {...}
 
   findings:
-    from: data_source
+    inputs: data_source
     transform:
       type: analyser_type
       properties: {...}

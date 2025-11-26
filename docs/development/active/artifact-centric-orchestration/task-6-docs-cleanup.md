@@ -58,13 +58,13 @@ artifacts:
     description: str
     contact: str
 
-    # Source (mutually exclusive with 'from')
+    # Source (mutually exclusive with 'inputs')
     source:
       type: str           # Connector type
       properties: {}      # Connector config
 
     # Derived (mutually exclusive with 'source')
-    from: str | list[str] # Upstream artifact(s)
+    inputs: str | list[str] # Upstream artifact(s)
     transform:
       type: str           # Analyser type
       properties: {}      # Analyser config

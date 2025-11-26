@@ -322,7 +322,7 @@ artifacts:
     source:
       type: "y"
   findings:
-    from: data
+    inputs: data
     transform:
       type: "b"
     output: true

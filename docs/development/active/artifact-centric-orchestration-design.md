@@ -38,8 +38,8 @@ Replace the current step-based runbook format and sequential executor with an ar
 │  Runbook (1 section)      Planner           Executor         │
 │  └── artifacts:           ├── parse         ├── parallel     │
 │        a: source(...)     ├── build DAG     ├── async        │
-│        b: from a          ├── validate      └── fan-in       │
-│        c: from [a,b]      └── ExecutionPlan                  │
+│        b: inputs: a       ├── validate      └── fan-in       │
+│        c: inputs: [a,b]   └── ExecutionPlan                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -100,7 +100,7 @@ class ArtifactDefinition(BaseModel):
 
     # Data source (mutually exclusive)
     source: SourceConfig | None = None
-    from_artifacts: str | list[str] | None = Field(None, alias="from")
+    inputs: str | list[str] | None = None
 
     # Transformation
     transform: TransformConfig | None = None
@@ -118,8 +118,8 @@ class ArtifactDefinition(BaseModel):
     execute: ExecuteConfig | None = None  # Execute input artifact as child runbook
 
     @model_validator
-    def validate_source_xor_from(self) -> Self:
-        # source XOR from (not both, not neither)
+    def validate_source_xor_inputs(self) -> Self:
+        # source XOR inputs (not both, not neither)
         ...
 ```
 
@@ -162,7 +162,7 @@ class ExecutionDAG:
 
     def _build(self, artifacts: dict[str, ArtifactDefinition]) -> None:
         for aid, defn in artifacts.items():
-            deps = self._extract_deps(defn.from_artifacts)
+            deps = self._extract_deps(defn.inputs)
             self._graph[aid] = deps
 
     def validate(self) -> None:
@@ -209,7 +209,7 @@ class Planner:
         return ExecutionPlan(runbook=runbook, dag=dag, artifact_schemas=schemas)
 
     def _validate_refs(self, runbook: Runbook) -> None:
-        """Validate all `from` references point to existing artifacts."""
+        """Validate all `inputs` references point to existing artifacts."""
         ...
 
     def _resolve_schemas(self, runbook: Runbook) -> dict[str, tuple[Schema, Schema]]:
@@ -268,8 +268,8 @@ class DAGExecutor:
                 # Phase 2: Recursive execution
                 message = await self._run_child_runbook(defn, store)
             else:
-                inputs = self._gather_inputs(defn.from_artifacts, store)
-                merged = self._merge(inputs, defn.merge)
+                input_messages = self._gather_inputs(defn.inputs, store)
+                merged = self._merge(input_messages, defn.merge)
                 message = await self._run_analyser(defn.transform, merged)
 
             store.save(artifact_id, message)
@@ -399,7 +399,7 @@ Per-artifact `optional` flag:
 ```yaml
 artifacts:
   llm_enriched:
-    from: findings
+    inputs: findings
     transform:
       type: llm_enricher
     optional: true  # Skip dependents on failure
@@ -475,7 +475,7 @@ artifacts:
     name: "Personal Data Findings"
     description: "Personal data detected in log files"
     contact: "DPO <dpo@company.com>"
-    from: log_content
+    inputs: log_content
     transform:
       type: personal_data_analyser
       properties:
