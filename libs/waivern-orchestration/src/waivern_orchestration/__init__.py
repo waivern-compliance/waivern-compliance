@@ -20,6 +20,7 @@ from waivern_orchestration.models import (
     TransformConfig,
 )
 from waivern_orchestration.parser import parse_runbook, parse_runbook_from_dict
+from waivern_orchestration.planner import ExecutionPlan, Planner
 
 __all__ = [
     # Models
@@ -36,6 +37,9 @@ __all__ = [
     # Parser
     "parse_runbook",
     "parse_runbook_from_dict",
+    # Planner
+    "ExecutionPlan",
+    "Planner",
     # Errors
     "ComponentNotFoundError",
     "CycleDetectedError",

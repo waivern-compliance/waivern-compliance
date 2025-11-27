@@ -54,13 +54,14 @@ libs/
         ├── parser.py               # YAML → models
         ├── dag.py                  # ExecutionDAG (graphlib wrapper)
         ├── planner.py              # Planner class
+        ├── executor.py             # DAGExecutor class
         └── errors.py
 
 apps/wct/
 └── src/wct/
-    ├── executor.py                 # REPLACE: DAGExecutor
-    ├── runbook.py                  # REPLACE: import from waivern-orchestration
-    └── ...
+    ├── executor.py                 # REMOVE: replaced by waivern_orchestration.executor
+    ├── runbook.py                  # REMOVE: import from waivern-orchestration
+    └── cli.py                      # UPDATE: use Planner + DAGExecutor
 ```
 
 ## Data Models
@@ -104,7 +105,7 @@ class ArtifactDefinition(BaseModel):
 
     # Transformation
     transform: TransformConfig | None = None
-    merge: Literal["concatenate", "first"] = "concatenate"
+    merge: Literal["concatenate"] = "concatenate"  # See ADR-0003
 
     # Schema override (optional - inferred from components if not specified)
     input_schema: str | None = None
@@ -265,11 +266,11 @@ class DAGExecutor:
             if defn.source:
                 message = await self._run_connector(defn.source)
             elif defn.execute:
-                # Phase 2: Recursive execution
+                # Phase 3: Recursive execution
                 message = await self._run_child_runbook(defn, store)
             else:
                 input_messages = self._gather_inputs(defn.inputs, store)
-                merged = self._merge(input_messages, defn.merge)
+                merged = self._merge(input_messages)  # Always concatenate (ADR-0003)
                 message = await self._run_analyser(defn.transform, merged)
 
             store.save(artifact_id, message)
@@ -280,7 +281,7 @@ class DAGExecutor:
         defn: ArtifactDefinition,
         store: ArtifactStore,
     ) -> Message:
-        """Execute input artifact as child runbook. (Phase 2)"""
+        """Execute input artifact as child runbook. (Phase 3)"""
         raise NotImplementedError("Recursive runbook execution not yet implemented")
 
     async def _run_connector(self, source: SourceConfig) -> Message:
@@ -351,7 +352,7 @@ class ArtifactStore(ABC):
     def list_artifacts(self) -> list[str]: ...  # NEW
 ```
 
-### ScopedArtifactStore (Phase 2)
+### ScopedArtifactStore (Phase 3)
 
 For recursive runbook execution, child runbooks use a scoped store that can read parent artifacts but writes to its own namespace:
 
@@ -486,24 +487,36 @@ artifacts:
 
 ## Phased Implementation
 
-### Phase 1 (This Design)
+### Phase 1 - Foundation (This Design)
 
 Core artifact-centric orchestration:
-- `waivern-orchestration` package with models, parser, DAG, planner
+- `waivern-orchestration` package with models, parser, DAG, planner, executor
 - `DAGExecutor` with parallel execution via asyncio + ThreadPoolExecutor
 - Entry point discovery for components
 - Schema validation at plan time
-- Fan-in support with merge strategies
+- Fan-in support with concatenate merge (same-schema only, see [ADR-0003](../../adr/0003-fan-in-handling-and-transformer-pattern.md))
 - `RunbookConfig` enforcement (timeout, cost_limit, max_concurrency)
 - `list_artifacts()` for observability
 
-### Phase 2 (Deferred)
+### Phase 2 - Transformers (Deferred)
+
+Multi-schema fan-in via Transformer components:
+- New component type: Transformer (multiple schemas in, single schema out)
+- New entry point group: `waivern.transformers`
+- Planner validates transformer input schemas match upstream outputs
+- Enables combining different data types (e.g., database schema + source code findings)
+
+See [ADR-0003](../../adr/0003-fan-in-handling-and-transformer-pattern.md) and [Phase 2 Design](artifact-centric-orchestration/phase-2-transformers-design.md) for details.
+
+### Phase 3 - Child Runbooks (Deferred)
 
 Recursive/composable runbook execution:
 - `_run_child_runbook()` implementation in DAGExecutor
 - `ScopedArtifactStore` implementation
 - Child depth tracking and `max_child_depth` enforcement
 - Runbook-as-schema registration
+
+See [Phase 3 Design](artifact-centric-orchestration/phase-3-child-runbooks-design.md) for details.
 
 **Models included now** (`RunbookConfig`, `ExecuteConfig`, `execute` field) to avoid schema changes later.
 
@@ -514,3 +527,7 @@ Recursive/composable runbook execution:
 2. **Schema Handling** - Schemas are inferred from component declarations by default, with optional explicit `input_schema`/`output_schema` overrides for future extensibility.
 
 3. **Artifact Metadata** - Per-artifact metadata (`name`, `description`, `contact`) is preserved as these are business requirements rather than functional requirements.
+
+4. **Fan-In Handling** - All fan-in inputs must have the same schema (name AND version). Different-schema fan-in requires explicit Transformer components (Phase 2). Only "concatenate" merge strategy is supported. See [ADR-0003](../../adr/0003-fan-in-handling-and-transformer-pattern.md).
+
+5. **Executor Location** - DAGExecutor lives in `waivern-orchestration` alongside Planner, keeping all orchestration logic in one package. WCT imports and wires these components together.

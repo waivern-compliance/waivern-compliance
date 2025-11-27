@@ -68,7 +68,7 @@ artifacts:
     transform:
       type: str           # Analyser type
       properties: {}      # Analyser config
-    merge: str            # "concatenate" | "first" (for fan-in)
+    merge: "concatenate"  # Merge strategy for fan-in (only concatenate supported)
 
     # Behaviour
     output: bool          # Export this artifact (default: false)
@@ -102,9 +102,9 @@ artifacts:
 
 ```
 executor.py
-  - Remove old Executor class
-  - Keep only DAGExecutor (or rename to Executor)
-  - Update imports throughout codebase
+  - Remove old Executor class entirely
+  - DAGExecutor lives in waivern_orchestration (not here)
+  - Update CLI to import from waivern_orchestration
 
 runbook.py
   - Remove old runbook models (Connector, Analyser, ExecutionStep)
@@ -115,6 +115,7 @@ runbook.py
 **Update imports:**
 - Search for imports of old models
 - Update to new waivern_orchestration imports
+- Import Planner, DAGExecutor, ExecutionPlan from waivern_orchestration
 
 #### 5. Move design docs to completed
 
@@ -191,3 +192,4 @@ uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml
 - Update any integration tests that use old format
 - Consider adding migration guide if external users exist
 - Ensure git history preserves old code for reference if needed
+- Reference ADR-0003 when documenting fan-in behaviour (only "concatenate" merge supported in Phase 1)

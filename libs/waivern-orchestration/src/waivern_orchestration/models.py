@@ -49,7 +49,7 @@ class ArtifactDefinition(BaseModel):
     source: SourceConfig | None = None
     inputs: str | list[str] | None = None
     transform: TransformConfig | None = None
-    merge: str = "concatenate"
+    merge: Literal["concatenate"] = "concatenate"
 
     # Schema override (optional)
     input_schema: str | None = None

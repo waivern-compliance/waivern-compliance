@@ -3,6 +3,7 @@
 - **Phase:** 2 - Execution
 - **Status:** TODO
 - **Prerequisites:** Task 3 (planner)
+- **GitHub Issue:** #245 (close via PR)
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)
 
 ## Context
@@ -33,8 +34,8 @@ The current executor is sequential, processing steps one at a time. The DAGExecu
 libs/waivern-artifact-store/src/waivern_artifact_store/
 └── base.py                    # MODIFY: add list_artifacts()
 
-apps/wct/src/wct/
-└── dag_executor.py            # NEW: DAGExecutor class
+libs/waivern-orchestration/src/waivern_orchestration/
+└── executor.py                # NEW: DAGExecutor class
 ```
 
 ### Changes Required
@@ -94,10 +95,9 @@ DAGExecutor
     - Retrieve input messages from store
     - Handle single or list of artifact IDs
 
-  _merge(inputs, strategy) -> Message
-    - Merge multiple inputs based on strategy
-    - "concatenate": combine content lists
-    - "first": take first input only
+  _merge(inputs) -> Message
+    - Merge multiple inputs using concatenate strategy
+    - Combine content lists from all inputs
 
   _skip_dependents(artifact_id, dag, skipped) -> None
     - Mark all downstream artifacts as skipped
@@ -207,9 +207,9 @@ Recommend Option A for simplicity - entry point loading is fast.
 - Verify C only starts after both A and B complete
 - Verify C receives merged input
 
-#### 4. Merge strategies
-- Test "concatenate": verify content combined
-- Test "first": verify only first input used
+#### 4. Merge strategy (concatenate)
+- Test fan-in with multiple inputs
+- Verify content from all inputs is combined
 
 #### 5. Error propagation and dependent skipping
 - Create A → B → C
@@ -242,11 +242,11 @@ Recommend Option A for simplicity - entry point loading is fast.
 ### Validation Commands
 
 ```bash
-# Run WCT tests
-uv run pytest apps/wct/tests/ -v
+# Run orchestration tests (includes DAGExecutor)
+uv run pytest libs/waivern-orchestration/tests/ -v
 
 # Run DAG executor tests specifically
-uv run pytest apps/wct/tests/test_dag_executor.py -v
+uv run pytest libs/waivern-orchestration/tests/waivern_orchestration/test_executor.py -v
 
 # Run ArtifactStore tests
 uv run pytest libs/waivern-artifact-store/tests/ -v
@@ -257,8 +257,10 @@ uv run pytest libs/waivern-artifact-store/tests/ -v
 
 ## Implementation Notes
 
+- DAGExecutor lives in `waivern-orchestration` alongside Planner, ExecutionPlan, and ExecutionDAG
+- Update `waivern_orchestration/__init__.py` to export `DAGExecutor`
 - Use `asyncio.get_running_loop()` instead of deprecated `get_event_loop()`
 - ThreadPoolExecutor context manager ensures cleanup
 - Consider using `asyncio.TaskGroup` (Python 3.11+) for cleaner task management
 - Semaphore must be created inside async context, not in `__init__`
-- For merge, handle schema compatibility (already validated by planner)
+- Merge uses concatenate strategy only (per ADR-0003); schema compatibility already validated by planner

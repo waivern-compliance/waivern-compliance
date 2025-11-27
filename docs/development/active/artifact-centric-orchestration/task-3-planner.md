@@ -1,8 +1,9 @@
 # Task 3: Implement Planner
 
 - **Phase:** 1 - Foundation
-- **Status:** TODO
+- **Status:** COMPLETED
 - **Prerequisites:** Task 2 (parser and DAG)
+- **GitHub Issue:** #244 (close via PR)
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)
 
 ## Context
@@ -17,7 +18,7 @@ Implement the Planner class that produces an immutable, validated ExecutionPlan.
 
 Schema validation currently happens at runtime in the executor, leading to late failures. The Planner moves all validation upfront:
 - Component existence (connector/analyser types registered)
-- Reference validity (all `from` references exist)
+- Reference validity (all `inputs` references exist)
 - Schema compatibility (output schemas match input schemas)
 
 ## Decisions Made
@@ -26,6 +27,9 @@ Schema validation currently happens at runtime in the executor, leading to late 
 2. **Upfront schema validation** - All schema compatibility checked at plan time
 3. **Immutable ExecutionPlan** - Plan is frozen dataclass, cannot be modified after creation
 4. **Optional schema overrides** - Explicit `input_schema`/`output_schema` can override inferred schemas
+5. **Fan-in schema compatibility** - All inputs to a fan-in must have the same schema (name AND version). See [ADR-0003](../../../adr/0003-fan-in-handling-and-transformer-pattern.md)
+6. **Transformer pattern for multi-schema** - Different schemas require explicit transformer component; analysers remain pure (single schema in, single schema out)
+7. **Merge simplification** - Removed `"first"` option from merge field; only `"concatenate"` is supported
 
 ## Implementation
 
@@ -64,7 +68,7 @@ plan(runbook_path: Path) -> ExecutionPlan
   1. Parse runbook using parse_runbook()
   2. Build DAG using ExecutionDAG(runbook.artifacts)
   3. Validate DAG (cycles)
-  4. Validate references (all `from` targets exist)
+  4. Validate references (all `inputs` targets exist)
   5. Resolve and validate schemas
   6. Return frozen ExecutionPlan
 ```
@@ -80,7 +84,7 @@ plan_from_dict(data: dict) -> ExecutionPlan
 
 ```
 _validate_refs(runbook: Runbook) -> None
-  - For each artifact with `from` field
+  - For each artifact with `inputs` field
   - Verify all referenced artifact IDs exist in runbook.artifacts
   - Raise MissingArtifactError if not found
 ```
@@ -191,7 +195,7 @@ from .models import ExecutionPlan  # If not already exported
 - Verify ComponentNotFoundError raised
 
 #### 4. Missing artifact reference
-- Create runbook where artifact references non-existent `from`
+- Create runbook where artifact references non-existent `inputs`
 - Verify MissingArtifactError raised
 - Verify error includes both artifact IDs
 
