@@ -1,7 +1,7 @@
 # Task 4: Update ArtifactStore and Implement DAGExecutor
 
 - **Phase:** 2 - Execution
-- **Status:** TODO
+- **Status:** COMPLETE
 - **Prerequisites:** Task 3 (planner)
 - **GitHub Issue:** #245 (close via PR)
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)
