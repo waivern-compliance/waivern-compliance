@@ -283,10 +283,14 @@ execution:
 [WARN] Skipping artifact: combined_findings (dependency failed)
 ```
 
+### Requires Artifact Persistence
+
+See [Execution Persistence](./execution-persistence.md) for full design.
+
 **Artifact inspection:**
-- `wct inspect <runbook> <artifact_id>` - View artifact contents after execution
-- Artifacts stored with metadata (schema, timing, status)
-- Failed artifacts include error context
+- `wct inspect <run_id> <artifact_id>` - View artifact contents after execution
+- Requires persistent `ExecutionStore` and `ArtifactStore`
+- Run ID correlates execution metadata with artifacts
 
 ### Nice to Have (Future)
 

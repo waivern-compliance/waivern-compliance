@@ -13,8 +13,9 @@ Tasks 1-4 built the complete orchestration infrastructure. This task integrates 
 ## Purpose
 
 1. Update `wct run` to use Planner + DAGExecutor
-2. Add `wct inspect` command for artifact observability
-3. Migrate all sample runbooks to the new format
+2. Update `wct validate-runbook` to use Planner
+3. Update `wct ls-connectors` and `wct ls-analysers` to use ComponentRegistry
+4. Migrate all sample runbooks to the new format
 
 ## Problem
 
@@ -23,9 +24,91 @@ The CLI currently uses the old sequential executor and three-section runbook for
 ## Decisions Made
 
 1. **Replace, don't deprecate** - Old format no longer supported (per user guidance)
-2. **wct inspect** - New command for viewing artifact contents post-execution
-3. **Async CLI entry point** - Use `asyncio.run()` to bridge CLI to async executor
-4. **ComponentRegistry** - Both Planner and DAGExecutor require ComponentRegistry (from Task 4)
+2. **Async executor** - DAGExecutor is async; CLI calls it via `asyncio.run()`
+3. **ComponentRegistry** - Both Planner and DAGExecutor require ComponentRegistry (from Task 4)
+4. **Defer `wct inspect`** - Requires artifact persistence; deferred to future work (see [execution-persistence.md](../../future-plans/execution-persistence.md))
+
+## Output Format Design
+
+### Core Export Format
+
+Universal format for all exporters. Regulation-specific exporters (GDPR, CCPA) add their own context.
+
+```json
+{
+  "format_version": "2.0.0",
+
+  "run": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "timestamp": "2025-12-01T14:30:00Z",
+    "duration_seconds": 12.34,
+    "status": "completed"
+  },
+
+  "runbook": {
+    "path": "runbooks/gdpr_analysis.yaml",
+    "name": "GDPR Compliance Analysis",
+    "description": "Analyse database for personal data",
+    "contact": "John Smith <john@example.com>"
+  },
+
+  "summary": {
+    "total": 5,
+    "succeeded": 3,
+    "failed": 1,
+    "skipped": 1
+  },
+
+  "outputs": [
+    {
+      "artifact_id": "personal_data_findings",
+      "name": "Personal Data Detection",
+      "description": "PII detection in customer database",
+      "contact": "analyst@company.com",
+      "schema": {
+        "name": "personal_data_finding",
+        "version": "1.0.0"
+      },
+      "duration_seconds": 2.1,
+      "content": { ... }
+    }
+  ],
+
+  "errors": [
+    {
+      "artifact_id": "external_api_check",
+      "error": "Connection refused"
+    }
+  ],
+
+  "skipped": ["dependent_report"]
+}
+```
+
+### Design Decisions
+
+1. **Runbook metadata carried in ExecutionResult** - name, description, contact, path only. Full artifact definitions not stored (may contain resolved secrets).
+
+2. **Regulation-specific info is exporter responsibility** - Core format has no `organisation` field. `GdprExporter` reads `organisation.yaml` and adds Article 30(1)(a) compliance info at export time.
+
+3. **Replay uses source files** - To replay, re-execute from runbook file (optionally at specific git commit). Stored execution is for inspection/audit, not replay.
+
+4. **`outputs` is array** - Ordered, natural for iteration. Only includes artifacts with `output: true`.
+
+5. **`status` values** - `completed` (all succeeded), `failed` (any failed), `partial` (some skipped, none failed).
+
+### Exporter Architecture
+
+```
+ExecutionResult (core data)
+        │
+        ├── JsonExporter        → core format
+        ├── GdprExporter        → core + organisation (Article 30(1)(a))
+        ├── CcpaExporter        → core + CCPA-specific fields
+        └── ReportExporter      → formatted PDF/HTML
+```
+
+Each exporter reads from ExecutionResult (or ExecutionStore in future) and adds regulation-specific context as needed.
 
 ## Implementation
 
@@ -33,7 +116,7 @@ The CLI currently uses the old sequential executor and three-section runbook for
 
 ```
 apps/wct/src/wct/
-├── cli.py             # MODIFY: update run, validate, ls-* commands, add inspect
+├── cli.py             # MODIFY: update run, validate, ls-* commands
 ├── executor.py        # DELETE: replaced by DAGExecutor
 ├── runbook.py         # DELETE: replaced by waivern_orchestration models
 └── analysis.py        # DELETE: AnalysisResult replaced by ExecutionResult
@@ -83,70 +166,13 @@ function run_command(runbook_path, options):
 - Show parallel execution info (which artifacts ran together)
 - Show timing per artifact
 - Show skipped artifacts with reason
-- Maintain existing JSON output format for findings
 
 **Logging updates:**
 - Log artifact start/complete with timing
 - Log parallel batch info
 - Log skip reasons
 
-#### 2. Implement `wct inspect` command
-
-**Usage:**
-```bash
-wct inspect <runbook.yaml> <artifact_id>
-```
-
-**Behaviour:**
-1. Run the runbook (if not already executed)
-2. Retrieve specified artifact from store
-3. Display artifact content (JSON formatted)
-
-**Implementation approach:**
-
-Option A: Execute on-demand
-- Run full execution, then retrieve artifact
-- Simple but slow for repeated inspections
-
-Option B: Persist artifacts
-- Save artifacts to disk after execution
-- Inspect reads from disk
-- Faster for repeated access
-
-Recommend Option A for simplicity. Option B can be added later if needed.
-
-**Command implementation (pseudo-code):**
-```
-function inspect_command(runbook_path, artifact_id):
-    # Build registry
-    container = build_service_container()
-    registry = ComponentRegistry(container)
-
-    # Plan and execute
-    planner = Planner(registry)
-    plan = planner.plan(runbook_path)
-
-    # Verify artifact exists in plan
-    if artifact_id not in plan.runbook.artifacts:
-        raise error("Artifact not found in runbook")
-
-    executor = DAGExecutor(registry)
-    result = asyncio.run(executor.execute(plan))
-
-    # Get artifact from store
-    store = registry.container.get_service(ArtifactStore)
-    if not store.exists(artifact_id):
-        if artifact_id in result.skipped:
-            print("Artifact was skipped: " + skip_reason)
-        else:
-            print("Artifact failed: " + result.artifacts[artifact_id].error)
-        return
-
-    message = store.get(artifact_id)
-    print(json.dumps(message.content, indent=2))
-```
-
-#### 3. Update `wct validate-runbook`
+#### 2. Update `wct validate-runbook`
 
 Update to use new Planner for validation:
 ```
@@ -166,7 +192,7 @@ function validate_runbook_command(runbook_path):
         exit(1)
 ```
 
-#### 4. Update `wct ls-connectors` and `wct ls-analysers`
+#### 3. Update `wct ls-connectors` and `wct ls-analysers`
 
 Use ComponentRegistry directly instead of Executor:
 ```
@@ -185,7 +211,7 @@ function list_analysers_command():
         print(name, factory)
 ```
 
-#### 5. Migrate sample runbooks
+#### 4. Migrate sample runbooks
 
 **Files to migrate:**
 - `apps/wct/runbooks/samples/file_content_analysis.yaml`
@@ -256,20 +282,7 @@ artifacts:
 - Verify helpful error message
 - Verify non-zero exit code
 
-#### 3. wct inspect valid artifact
-- Run runbook, then inspect artifact
-- Verify JSON content displayed
-
-#### 4. wct inspect missing artifact
-- Inspect non-existent artifact ID
-- Verify helpful error message
-
-#### 5. wct inspect skipped artifact
-- Create runbook where artifact is skipped
-- Inspect that artifact
-- Verify skip reason displayed
-
-#### 6. wct validate-runbook
+#### 3. wct validate-runbook
 - Validate valid runbook
 - Validate invalid runbook (cycle, missing ref)
 - Verify error messages helpful
@@ -296,18 +309,13 @@ uv run pytest apps/wct/tests/test_cli.py -v
 uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml
 uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml -v
 
-# Test inspect command
-uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml
-uv run wct inspect apps/wct/runbooks/samples/file_content_analysis.yaml findings
-
 # Run full dev-checks
 ./scripts/dev-checks.sh
 ```
 
 ## Implementation Notes
 
-- Use `asyncio.run()` for async→sync bridge in CLI
+- Use `asyncio.run()` to call DAGExecutor from CLI
 - ComponentRegistry must be created once and shared between Planner and DAGExecutor
 - ArtifactStore must have transient lifetime in ServiceContainer (fresh store per execution)
 - Consider adding `--dry-run` flag that just validates without executing
-- Consider adding `--format` flag to inspect (json, yaml, pretty)
