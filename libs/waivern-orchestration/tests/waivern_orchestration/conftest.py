@@ -9,7 +9,7 @@ from waivern_artifact_store.factory import ArtifactStoreFactory
 from waivern_core import Message
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.schemas import Schema
-from waivern_core.services import ComponentRegistry, ServiceContainer
+from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 
 from waivern_orchestration.dag import ExecutionDAG
 from waivern_orchestration.models import ArtifactDefinition, Runbook
@@ -80,7 +80,7 @@ def create_container_with_store() -> ServiceContainer:
     factory = ArtifactStoreFactory(config)
 
     container = ServiceContainer()
-    container.register(ArtifactStore, factory, lifetime="transient")
+    container.register(ServiceDescriptor(ArtifactStore, factory, "transient"))
 
     return container
 

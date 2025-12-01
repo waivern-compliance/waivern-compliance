@@ -1,6 +1,6 @@
 """Tests for service protocols - integration with ServiceContainer."""
 
-from waivern_core.services import ServiceContainer, ServiceFactory
+from waivern_core.services import ServiceContainer, ServiceDescriptor, ServiceFactory
 
 
 class TestServiceFactoryIntegration:
@@ -24,7 +24,7 @@ class TestServiceFactoryIntegration:
         factory: ServiceFactory[TestService] = CompliantFactory()
 
         # Act
-        container.register(TestService, factory)
+        container.register(ServiceDescriptor(TestService, factory))
         service = container.get_service(TestService)
 
         # Assert
@@ -57,7 +57,7 @@ class TestServiceFactoryIntegration:
         )
 
         # Act
-        container_available.register(TestService, available_factory)
+        container_available.register(ServiceDescriptor(TestService, available_factory))
         service = container_available.get_service(TestService)
 
         # Assert - should succeed
@@ -71,7 +71,9 @@ class TestServiceFactoryIntegration:
         )
 
         # Act
-        container_unavailable.register(TestService, unavailable_factory)
+        container_unavailable.register(
+            ServiceDescriptor(TestService, unavailable_factory)
+        )
 
         # Assert - should raise ValueError when factory returns None
         try:
@@ -99,7 +101,7 @@ class TestServiceFactoryIntegration:
         factory: ServiceFactory[TestService] = UnavailableFactory()
 
         # Act
-        container.register(TestService, factory)
+        container.register(ServiceDescriptor(TestService, factory))
 
         # Assert - container should raise ValueError when trying to get unavailable service
         try:

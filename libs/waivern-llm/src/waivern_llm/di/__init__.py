@@ -15,16 +15,14 @@ Components:
 
 Example usage:
     ```python
-    from waivern_core.services import ServiceContainer
+    from waivern_core.services import ServiceContainer, ServiceDescriptor
     from waivern_llm.di import LLMServiceFactory, LLMServiceProvider
     from waivern_llm.base import BaseLLMService
 
     # Create container and register LLM service
     container = ServiceContainer()
     container.register(
-        BaseLLMService,
-        LLMServiceFactory(),
-        lifetime="singleton"
+        ServiceDescriptor(BaseLLMService, LLMServiceFactory(), "singleton")
     )
 
     # Use provider for convenient access

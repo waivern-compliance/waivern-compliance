@@ -8,7 +8,7 @@ from waivern_core import (
     ComponentFactory,
     ComponentFactoryContractTests,
 )
-from waivern_core.services.container import ServiceContainer
+from waivern_core.services import ServiceContainer, ServiceDescriptor
 from waivern_core.services.protocols import ServiceFactory
 from waivern_llm import BaseLLMService
 
@@ -31,7 +31,7 @@ class TestDataSubjectAnalyserFactory(
         llm_service = Mock(spec=BaseLLMService)
         llm_service_factory = Mock(spec=ServiceFactory)
         llm_service_factory.create.return_value = llm_service
-        container.register(BaseLLMService, llm_service_factory)
+        container.register(ServiceDescriptor(BaseLLMService, llm_service_factory))
         return DataSubjectAnalyserFactory(container)
 
     @pytest.fixture

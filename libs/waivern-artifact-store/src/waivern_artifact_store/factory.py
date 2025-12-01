@@ -28,7 +28,7 @@ class ArtifactStoreFactory:
 
     Example:
         ```python
-        from waivern_core.services import ServiceContainer
+        from waivern_core.services import ServiceContainer, ServiceDescriptor
         from waivern_artifact_store import (
             ArtifactStore,
             ArtifactStoreFactory,
@@ -38,17 +38,13 @@ class ArtifactStoreFactory:
         # Zero-config (reads from environment)
         container = ServiceContainer()
         container.register(
-            ArtifactStore,
-            ArtifactStoreFactory(),
-            lifetime="singleton"
+            ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(), "singleton")
         )
 
         # Explicit configuration
         config = ArtifactStoreConfiguration(backend="memory")
         container.register(
-            ArtifactStore,
-            ArtifactStoreFactory(config),
-            lifetime="singleton"
+            ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(config), "singleton")
         )
 
         # Get singleton instance

@@ -9,7 +9,7 @@ from waivern_artifact_store.in_memory import InMemoryArtifactStore
 from waivern_core import Message
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.schemas import Schema
-from waivern_core.services import ComponentRegistry, ServiceContainer
+from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 
 from waivern_orchestration.executor import DAGExecutor
 from waivern_orchestration.models import (
@@ -528,7 +528,7 @@ class TestDAGExecutorObservability:
         # Create a factory that returns our pre-created instance
         store_factory = MagicMock()
         store_factory.create.return_value = store
-        container.register(ArtifactStore, store_factory, lifetime="singleton")
+        container.register(ServiceDescriptor(ArtifactStore, store_factory, "singleton"))
 
         output_schema = Schema("standard_input", "1.0.0")
         message = create_test_message({"files": []})

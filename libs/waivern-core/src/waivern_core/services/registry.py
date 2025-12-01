@@ -27,7 +27,7 @@ class ComponentRegistry:
 
     Example:
         >>> container = ServiceContainer()
-        >>> container.register(ArtifactStore, store_factory, lifetime="transient")
+        >>> container.register(ServiceDescriptor(ArtifactStore, store_factory, "transient"))
         >>>
         >>> registry = ComponentRegistry(container)
         >>>

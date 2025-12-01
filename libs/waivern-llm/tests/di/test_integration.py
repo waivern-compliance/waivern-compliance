@@ -10,7 +10,7 @@ import os
 from unittest.mock import patch
 
 import pytest
-from waivern_core.services import ServiceContainer
+from waivern_core.services import ServiceContainer, ServiceDescriptor
 
 from waivern_llm.base import BaseLLMService
 from waivern_llm.di import (
@@ -29,7 +29,7 @@ class TestLLMDIIntegration:
     ) -> ServiceContainer:
         """Helper to create container and register LLM factory as singleton."""
         container = ServiceContainer()
-        container.register(BaseLLMService, factory, lifetime="singleton")
+        container.register(ServiceDescriptor(BaseLLMService, factory, "singleton"))
         return container
 
     def test_full_di_flow_with_explicit_configuration(self) -> None:

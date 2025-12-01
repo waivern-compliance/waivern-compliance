@@ -24,7 +24,7 @@ from waivern_core.component_factory import ComponentFactory
 from waivern_core.errors import WaivernError
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_core.services.container import ServiceContainer
+from waivern_core.services import ServiceContainer, ServiceDescriptor
 from waivern_llm import BaseLLMService
 from waivern_llm.di.factory import LLMServiceFactory
 
@@ -61,9 +61,7 @@ class Executor:
 
         # Register artifact store factory
         self._container.register(
-            ArtifactStore,
-            ArtifactStoreFactory(),
-            lifetime="singleton",
+            ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(), "singleton")
         )
 
         # Get artifact store instance
@@ -147,7 +145,9 @@ class Executor:
         """
         # Create and configure DI container
         container = ServiceContainer()
-        container.register(BaseLLMService, LLMServiceFactory(), lifetime="singleton")
+        container.register(
+            ServiceDescriptor(BaseLLMService, LLMServiceFactory(), "singleton")
+        )
         logger.debug("ServiceContainer configured with infrastructure services")
 
         # Create executor with container
