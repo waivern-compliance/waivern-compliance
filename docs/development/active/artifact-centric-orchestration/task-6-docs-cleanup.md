@@ -2,6 +2,7 @@
 
 - **Phase:** 4 - Finalisation
 - **Status:** TODO
+- **GitHub Issue:** #247 (close via PR)
 - **Prerequisites:** Task 5 (CLI and runbook migration)
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)
 
@@ -75,13 +76,7 @@ artifacts:
     optional: bool        # Continue on failure (default: false)
 ```
 
-#### 2. Update docs/development/extending-wcf.md
-
-- Remove legacy format deprecation note (already present)
-- Update examples to use artifact-centric format
-- Verify all runbook examples are updated
-
-#### 3. Update CLAUDE.md
+#### 2. Update CLAUDE.md
 
 **Sections to update:**
 
@@ -96,28 +91,7 @@ artifacts:
 3. **Sample Runbooks section:**
    - Update paths and descriptions
 
-#### 4. Remove old code
-
-**Files to modify/remove in apps/wct/src/wct/:**
-
-```
-executor.py
-  - Remove old Executor class entirely
-  - DAGExecutor lives in waivern_orchestration (not here)
-  - Update CLI to import from waivern_orchestration
-
-runbook.py
-  - Remove old runbook models (Connector, Analyser, ExecutionStep)
-  - Import new models from waivern_orchestration
-  - Or remove file entirely if no longer needed
-```
-
-**Update imports:**
-- Search for imports of old models
-- Update to new waivern_orchestration imports
-- Import Planner, DAGExecutor, ExecutionPlan from waivern_orchestration
-
-#### 5. Move design docs to completed
+#### 3. Move design docs to completed
 
 ```
 docs/development/active/artifact-centric-orchestration-design.md
@@ -135,7 +109,7 @@ Update status in design doc:
 - **Status:** Completed
 ```
 
-#### 6. Update future-plans docs
+#### 4. Update future-plans docs
 
 Update status in related docs:
 - `docs/future-plans/artifact-centric-runbook.md` - Mark Phase 1 complete
@@ -190,6 +164,4 @@ uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml
 - Search codebase thoroughly for old format references
 - Check test fixtures for old format runbooks
 - Update any integration tests that use old format
-- Consider adding migration guide if external users exist
-- Ensure git history preserves old code for reference if needed
 - Reference ADR-0003 when documenting fan-in behaviour (only "concatenate" merge supported in Phase 1)

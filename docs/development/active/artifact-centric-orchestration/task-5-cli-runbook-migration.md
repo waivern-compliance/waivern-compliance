@@ -2,6 +2,7 @@
 
 - **Phase:** 3 - Integration
 - **Status:** TODO
+- **GitHub Issue:** #246 (close via PR)
 - **Prerequisites:** Task 4 (DAGExecutor)
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)
 
@@ -24,16 +25,23 @@ The CLI currently uses the old sequential executor and three-section runbook for
 1. **Replace, don't deprecate** - Old format no longer supported (per user guidance)
 2. **wct inspect** - New command for viewing artifact contents post-execution
 3. **Async CLI entry point** - Use `asyncio.run()` to bridge CLI to async executor
+4. **ComponentRegistry** - Both Planner and DAGExecutor require ComponentRegistry (from Task 4)
 
 ## Implementation
 
-### Files to Modify/Create
+### Files to Modify/Create/Delete
 
 ```
 apps/wct/src/wct/
-├── cli.py             # MODIFY: update run, add inspect
-└── commands/
-    └── inspect.py     # NEW: inspect command implementation
+├── cli.py             # MODIFY: update run, validate, ls-* commands, add inspect
+├── executor.py        # DELETE: replaced by DAGExecutor
+├── runbook.py         # DELETE: replaced by waivern_orchestration models
+└── analysis.py        # DELETE: AnalysisResult replaced by ExecutionResult
+
+apps/wct/tests/
+├── test_executor.py   # DELETE
+├── test_runbook.py    # DELETE
+└── test_cli.py        # UPDATE
 ```
 
 ### Changes Required
@@ -47,19 +55,22 @@ run command → load runbook → Executor.execute_runbook()
 
 **New flow:**
 ```
-run command → Planner.plan() → asyncio.run(DAGExecutor.execute())
+run command → ComponentRegistry → Planner.plan() → asyncio.run(DAGExecutor.execute())
 ```
 
 **Changes to run command:**
 ```
 function run_command(runbook_path, options):
+    # Build registry with container and component factories
+    container = build_service_container()
+    registry = ComponentRegistry(container)
+
     # Create planner and plan
-    planner = Planner()
+    planner = Planner(registry)
     plan = planner.plan(runbook_path)
 
-    # Create executor with container
-    container = build_service_container()
-    executor = DAGExecutor(container)
+    # Create executor with same registry
+    executor = DAGExecutor(registry)
 
     # Execute (async → sync bridge)
     result = asyncio.run(executor.execute(plan))
@@ -107,19 +118,23 @@ Recommend Option A for simplicity. Option B can be added later if needed.
 **Command implementation (pseudo-code):**
 ```
 function inspect_command(runbook_path, artifact_id):
+    # Build registry
+    container = build_service_container()
+    registry = ComponentRegistry(container)
+
     # Plan and execute
-    planner = Planner()
+    planner = Planner(registry)
     plan = planner.plan(runbook_path)
 
     # Verify artifact exists in plan
     if artifact_id not in plan.runbook.artifacts:
         raise error("Artifact not found in runbook")
 
-    executor = DAGExecutor(container)
+    executor = DAGExecutor(registry)
     result = asyncio.run(executor.execute(plan))
 
     # Get artifact from store
-    store = container.get_service(ArtifactStore)
+    store = registry.container.get_service(ArtifactStore)
     if not store.exists(artifact_id):
         if artifact_id in result.skipped:
             print("Artifact was skipped: " + skip_reason)
@@ -136,7 +151,11 @@ function inspect_command(runbook_path, artifact_id):
 Update to use new Planner for validation:
 ```
 function validate_runbook_command(runbook_path):
-    planner = Planner()
+    # Build registry (no container services needed for validation)
+    container = build_service_container()
+    registry = ComponentRegistry(container)
+
+    planner = Planner(registry)
     try:
         plan = planner.plan(runbook_path)
         print("Runbook valid")
@@ -147,7 +166,26 @@ function validate_runbook_command(runbook_path):
         exit(1)
 ```
 
-#### 4. Migrate sample runbooks
+#### 4. Update `wct ls-connectors` and `wct ls-analysers`
+
+Use ComponentRegistry directly instead of Executor:
+```
+function list_connectors_command():
+    container = build_service_container()
+    registry = ComponentRegistry(container)
+
+    for name, factory in registry.connector_factories.items():
+        print(name, factory)
+
+function list_analysers_command():
+    container = build_service_container()
+    registry = ComponentRegistry(container)
+
+    for name, factory in registry.analyser_factories.items():
+        print(name, factory)
+```
+
+#### 5. Migrate sample runbooks
 
 **Files to migrate:**
 - `apps/wct/runbooks/samples/file_content_analysis.yaml`
@@ -269,7 +307,7 @@ uv run wct inspect apps/wct/runbooks/samples/file_content_analysis.yaml findings
 ## Implementation Notes
 
 - Use `asyncio.run()` for async→sync bridge in CLI
+- ComponentRegistry must be created once and shared between Planner and DAGExecutor
+- ArtifactStore must have transient lifetime in ServiceContainer (fresh store per execution)
 - Consider adding `--dry-run` flag that just validates without executing
-- Preserve backward compatibility for output JSON format (findings structure)
-- Update any CI/CD scripts that reference old runbook format
 - Consider adding `--format` flag to inspect (json, yaml, pretty)

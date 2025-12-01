@@ -62,3 +62,13 @@ class ArtifactStore(ABC):
         This is called at the end of pipeline execution to clean up resources.
         """
         pass
+
+    @abstractmethod
+    def list_artifacts(self) -> list[str]:
+        """Return list of all stored artifact IDs.
+
+        Returns:
+            List of artifact IDs currently in storage.
+
+        """
+        pass

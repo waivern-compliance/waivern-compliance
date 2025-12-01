@@ -25,17 +25,28 @@ The current executor is sequential, processing steps one at a time. The DAGExecu
 2. **Semaphore-based concurrency** - Limit parallel artifacts via `max_concurrency` from RunbookConfig
 3. **Skip dependents on failure** - When artifact fails, skip all downstream artifacts
 4. **Timeout enforcement** - Use `asyncio.timeout()` for RunbookConfig.timeout
+5. **ComponentRegistry** - Centralised component discovery in waivern-core, shared between Planner and Executor (implemented in this task)
 
 ## Implementation
 
-### Files to Modify/Create
+### Files Modified/Created
 
 ```
 libs/waivern-artifact-store/src/waivern_artifact_store/
-└── base.py                    # MODIFY: add list_artifacts()
+├── base.py                    # MODIFIED: added list_artifacts() abstract method
+└── in_memory.py               # MODIFIED: implemented list_artifacts()
+
+libs/waivern-core/src/waivern_core/services/
+└── registry.py                # NEW: ComponentRegistry for centralised discovery
 
 libs/waivern-orchestration/src/waivern_orchestration/
-└── executor.py                # NEW: DAGExecutor class
+├── __init__.py                # MODIFIED: export DAGExecutor
+├── executor.py                # NEW: DAGExecutor class
+└── planner.py                 # MODIFIED: use ComponentRegistry
+
+libs/waivern-orchestration/tests/waivern_orchestration/
+├── conftest.py                # NEW: shared test helpers
+└── test_executor.py           # NEW: DAGExecutor tests
 ```
 
 ### Changes Required
@@ -60,14 +71,13 @@ def list_artifacts(self) -> list[str]:
 
 #### 2. Implement DAGExecutor
 
-**File:** `apps/wct/src/wct/dag_executor.py`
+**File:** `libs/waivern-orchestration/src/waivern_orchestration/executor.py`
 
 **Class structure:**
 ```
 DAGExecutor
-  __init__(container: ServiceContainer)
-    - Store container for service access
-    - Get connector/analyser factories from container or entry points
+  __init__(registry: ComponentRegistry)
+    - Store registry for component factory access
 
   async execute(plan: ExecutionPlan) -> ExecutionResult
     - Main entry point
@@ -158,17 +168,31 @@ async function run_connector(source, thread_pool):
 
 #### 3. Component instantiation
 
-The executor needs to instantiate connectors and analysers from the plan. Two approaches:
+The executor needs to instantiate connectors and analysers from the plan.
 
-**Option A: Re-discover entry points**
-- Load entry points in executor (duplicates planner work)
-- Simpler, self-contained
+**Chosen approach: ComponentRegistry**
 
-**Option B: Pass factories from planner**
-- Planner passes discovered factories to executor
-- More efficient, no duplicate discovery
+Created `ComponentRegistry` in waivern-core that centralises component discovery:
+- Single source of truth for connector/analyser factories
+- Lazy discovery from entry points on first access
+- Shared between Planner and Executor (no duplicate discovery)
+- Lives in `libs/waivern-core/src/waivern_core/services/registry.py`
 
-Recommend Option A for simplicity - entry point loading is fast.
+```python
+class ComponentRegistry:
+    def __init__(self, container: ServiceContainer) -> None
+
+    @property
+    def container(self) -> ServiceContainer
+
+    @property
+    def connector_factories(self) -> Mapping[str, ComponentFactory[Connector]]
+
+    @property
+    def analyser_factories(self) -> Mapping[str, ComponentFactory[Analyser]]
+```
+
+Both Planner and DAGExecutor accept `ComponentRegistry` in their constructors.
 
 #### 4. Error handling
 
@@ -191,53 +215,80 @@ Recommend Option A for simplicity - entry point loading is fast.
 
 ### Test Scenarios
 
-#### 1. Parallel execution verification
+#### 1. Parallel execution verification ✅
 - Create runbook with 2 independent source artifacts
 - Mock connectors with sleep to simulate work
 - Execute and verify total time < sum of individual times
 - Verifies parallelism is working
+- **Test:** `test_execute_parallel_independent_artifacts`
 
-#### 2. Sequential dependencies
+#### 2. Sequential dependencies ✅
 - Create A → B → C chain
 - Verify execution order: A completes before B starts, B before C
 - Use timing or order tracking
+- **Test:** `test_execute_chain_respects_dependency_order`
 
-#### 3. Fan-in execution
+#### 3. Fan-in execution ⚠️ (partial)
 - Create A, B → C (C depends on both)
 - Verify C only starts after both A and B complete
 - Verify C receives merged input
+- **Test:** `test_execute_fan_in_sources_succeed_merge_not_implemented` (documents that merge raises NotImplementedError)
 
-#### 4. Merge strategy (concatenate)
+#### 4. Merge strategy (concatenate) ⏭️
 - Test fan-in with multiple inputs
 - Verify content from all inputs is combined
+- **Deferred to Phase 2**
 
-#### 5. Error propagation and dependent skipping
+#### 5. Error propagation and dependent skipping ✅
 - Create A → B → C
 - Make A fail
 - Verify B and C are skipped
 - Verify error message in result
+- **Test:** `test_failed_artifact_skips_dependents`
 
-#### 6. Optional artifact
+#### 6. Optional artifact ✅
 - Create A (optional) → B
 - Make A fail
 - Verify B is skipped but no error raised
 - Verify warning logged
+- **Test:** `test_optional_artifact_failure_logs_warning`
 
-#### 7. Timeout enforcement
-- Set short timeout (e.g., 1 second)
-- Create slow artifacts
+#### 7. Timeout enforcement ✅
+- Set short timeout (1 second)
+- Create slow artifacts (2 second connectors)
 - Verify TimeoutError handled gracefully
 - Verify partial results returned
+- **Test:** `test_timeout_marks_remaining_as_skipped`
 
-#### 8. Concurrency limit
+#### 8. Concurrency limit ✅
 - Set max_concurrency = 2
 - Create 5 parallel artifacts
 - Verify at most 2 run simultaneously
+- **Test:** `test_concurrency_limit_respected`
 
-#### 9. list_artifacts observability
+#### 9. list_artifacts observability ✅
 - Execute runbook
 - Call store.list_artifacts()
 - Verify all produced artifacts listed
+- **Test:** `test_list_artifacts_after_execution`
+
+#### 10. Transform/analyser execution ✅
+- Create source → analyser chain
+- Verify analyser receives input message and schemas
+- Verify analyser output stored correctly
+- **Test:** `test_execute_derived_with_transform`
+
+#### 11. Analyser not found error ✅
+- Reference non-existent analyser type
+- Verify clear error message returned
+- **Test:** `test_analyser_not_found_returns_error`
+
+### Additional Tests Implemented
+
+- `test_execute_single_source_artifact` - Happy path for single source artifact
+- `test_connector_not_found_returns_error` - Error handling for missing connector
+- `test_execution_result_contains_duration` - Total duration tracking
+- `test_artifact_result_contains_duration` - Per-artifact duration tracking
 
 ### Validation Commands
 
@@ -264,3 +315,20 @@ uv run pytest libs/waivern-artifact-store/tests/ -v
 - Consider using `asyncio.TaskGroup` (Python 3.11+) for cleaner task management
 - Semaphore must be created inside async context, not in `__init__`
 - Merge uses concatenate strategy only (per ADR-0003); schema compatibility already validated by planner
+
+## Completion Status
+
+### Implemented
+
+1. **ArtifactStore `list_artifacts()`** - Added to base class and InMemoryArtifactStore
+2. **ComponentRegistry** - Centralised component discovery in waivern-core
+3. **DAGExecutor core** - Parallel execution with TopologicalSorter
+4. **Concurrency control** - Semaphore-based limiting via `max_concurrency`
+5. **Error handling** - Dependent skipping, optional artifact support
+6. **Timeout enforcement** - `asyncio.timeout()` with remaining artifacts marked as skipped
+7. **Transform/analyser execution** - `_run_analyser()` method with sync→async bridge
+
+### Deferred
+
+- **Fan-in merge** - Deferred to [Phase 2](phase-2-transformers-design.md)
+- **Child runbook execution** - Deferred to [Phase 3](phase-3-child-runbooks-design.md)

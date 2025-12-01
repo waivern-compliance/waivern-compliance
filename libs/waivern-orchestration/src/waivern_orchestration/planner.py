@@ -1,20 +1,18 @@
 """Planner for artifact-centric runbook orchestration.
 
 The Planner is responsible for:
-1. Discovering components via entry points
-2. Parsing runbooks and building the execution DAG
-3. Validating references and schema compatibility
-4. Producing an immutable ExecutionPlan
+1. Parsing runbooks and building the execution DAG
+2. Validating references and schema compatibility
+3. Producing an immutable ExecutionPlan
 """
 
 from dataclasses import dataclass
-from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
-from waivern_core import Analyser, Connector
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.schemas import Schema
+from waivern_core.services import ComponentRegistry
 
 from waivern_orchestration.dag import ExecutionDAG
 from waivern_orchestration.errors import (
@@ -44,25 +42,14 @@ class ExecutionPlan:
 class Planner:
     """Plans runbook execution by validating and resolving all dependencies upfront."""
 
-    def __init__(self) -> None:
-        """Initialise Planner by discovering components via entry points."""
-        self._connector_factories: dict[str, ComponentFactory[Connector]] = {}
-        self._analyser_factories: dict[str, ComponentFactory[Analyser]] = {}
-        self._discover_components()
+    def __init__(self, registry: ComponentRegistry) -> None:
+        """Initialise Planner with component registry.
 
-    def _discover_components(self) -> None:
-        """Discover connector and analyser factories from entry points."""
-        # Discover connectors
-        for ep in entry_points(group="waivern.connectors"):
-            factory_class = ep.load()
-            factory = factory_class()
-            self._connector_factories[ep.name] = factory
+        Args:
+            registry: ComponentRegistry for accessing component factories.
 
-        # Discover analysers
-        for ep in entry_points(group="waivern.analysers"):
-            factory_class = ep.load()
-            factory = factory_class()
-            self._analyser_factories[ep.name] = factory
+        """
+        self._registry = registry
 
     def plan(self, runbook_path: Path) -> ExecutionPlan:
         """Plan execution from a runbook file.
@@ -208,14 +195,14 @@ class Planner:
 
         """
         connector_type = definition.source.type  # type: ignore[union-attr]
-        if connector_type not in self._connector_factories:
+        if connector_type not in self._registry.connector_factories:
             raise ComponentNotFoundError(f"Connector type '{connector_type}' not found")
 
         # Use explicit override if specified, otherwise infer from connector
         if definition.output_schema is not None:
             output_schema = self._parse_schema_string(definition.output_schema)
         else:
-            factory = self._connector_factories[connector_type]
+            factory = self._registry.connector_factories[connector_type]
             output_schema = self._get_first_output_schema(
                 factory, f"Connector '{connector_type}'"
             )
@@ -333,10 +320,10 @@ class Planner:
             ComponentNotFoundError: If analyser type not found or has no output schemas.
 
         """
-        if analyser_type not in self._analyser_factories:
+        if analyser_type not in self._registry.analyser_factories:
             raise ComponentNotFoundError(f"Analyser type '{analyser_type}' not found")
 
-        factory = self._analyser_factories[analyser_type]
+        factory = self._registry.analyser_factories[analyser_type]
         return self._get_first_output_schema(factory, f"Analyser '{analyser_type}'")
 
     def _get_first_output_schema(

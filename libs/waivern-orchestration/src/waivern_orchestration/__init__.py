@@ -9,6 +9,7 @@ from waivern_orchestration.errors import (
     RunbookParseError,
     SchemaCompatibilityError,
 )
+from waivern_orchestration.executor import DAGExecutor
 from waivern_orchestration.models import (
     ArtifactDefinition,
     ArtifactResult,
@@ -40,6 +41,8 @@ __all__ = [
     # Planner
     "ExecutionPlan",
     "Planner",
+    # Executor
+    "DAGExecutor",
     # Errors
     "ComponentNotFoundError",
     "CycleDetectedError",
