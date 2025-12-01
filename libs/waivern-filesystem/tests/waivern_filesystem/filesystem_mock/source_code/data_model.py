@@ -16,6 +16,7 @@ Contains personal data fields:
 # pyright: reportMissingImports=false, reportDeprecated=false
 # pyright: reportGeneralTypeIssues=false, reportArgumentType=false
 # pyright: reportAttributeAccessIssue=false, reportCallIssue=false
+# pyright: reportUntypedBaseClass=false
 # Test mock file - SQLAlchemy Column types have known type stub issues:
 # - Column.__bool__() returns Never (can't use in conditionals)
 # - Column types can't be passed to functions expecting Python types

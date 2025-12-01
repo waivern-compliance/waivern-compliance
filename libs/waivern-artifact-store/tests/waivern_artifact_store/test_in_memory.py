@@ -76,6 +76,27 @@ class TestInMemoryArtifactStoreCRUD:
         assert not store.exists("step2")
         assert not store.exists("step3")
 
+    def test_list_artifacts_returns_all_stored_ids(self) -> None:
+        """Test list_artifacts() returns all stored artifact IDs."""
+        store = InMemoryArtifactStore()
+
+        # Empty store returns empty list
+        assert store.list_artifacts() == []
+
+        # Save artifacts
+        store.save("artifact_a", Mock())
+        store.save("artifact_b", Mock())
+        store.save("artifact_c", Mock())
+
+        # List should contain all IDs
+        artifact_ids = store.list_artifacts()
+        assert len(artifact_ids) == 3
+        assert set(artifact_ids) == {"artifact_a", "artifact_b", "artifact_c"}
+
+        # After clear, list should be empty again
+        store.clear()
+        assert store.list_artifacts() == []
+
 
 class TestInMemoryArtifactStoreThreadSafety:
     """Test InMemoryArtifactStore thread safety."""

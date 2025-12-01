@@ -11,6 +11,8 @@ Contains personal data fields:
 - Addresses and location data
 - Date of birth and age calculation
 """
+# pyright: reportMissingImports=false, reportUntypedBaseClass=false
+# Test fixture file - SQLAlchemy is not an actual dependency
 
 from datetime import datetime
 from enum import Enum

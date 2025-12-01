@@ -14,6 +14,7 @@ waivern-connectors-database = { workspace = true }
 waivern-data-export-analyser = { workspace = true }
 waivern-data-subject-analyser = { workspace = true }
 waivern-mysql = { workspace = true }
+waivern-orchestration = { workspace = true }
 waivern-filesystem = { workspace = true }
 waivern-processing-purpose-analyser = { workspace = true }
 waivern-sqlite = { workspace = true }

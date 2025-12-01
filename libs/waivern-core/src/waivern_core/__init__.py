@@ -32,6 +32,7 @@ from waivern_core.schemas import (
 from waivern_core.services import (
     BaseComponentConfiguration,
     BaseServiceConfiguration,
+    ComponentRegistry,
     ServiceContainer,
     ServiceDescriptor,
     ServiceFactory,
@@ -61,6 +62,7 @@ __all__ = [
     "ComponentConfig",
     "ComponentFactory",
     "ComponentFactoryContractTests",
+    "ComponentRegistry",
     "ServiceContainer",
     "ServiceDescriptor",
     "ServiceFactory",

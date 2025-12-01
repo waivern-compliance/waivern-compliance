@@ -84,3 +84,14 @@ class InMemoryArtifactStore(ArtifactStore):
         """
         with self._lock:
             self._storage.clear()
+
+    @override
+    def list_artifacts(self) -> list[str]:
+        """Return list of all stored artifact IDs.
+
+        Returns:
+            List of artifact IDs currently in storage.
+
+        """
+        with self._lock:
+            return list(self._storage.keys())
