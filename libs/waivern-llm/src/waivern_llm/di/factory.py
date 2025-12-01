@@ -32,16 +32,14 @@ class LLMServiceFactory:
 
     Example:
         ```python
-        from waivern_core.services import ServiceContainer
+        from waivern_core.services import ServiceContainer, ServiceDescriptor
         from waivern_llm.di import LLMServiceFactory, LLMServiceConfiguration
         from waivern_llm.base import BaseLLMService
 
         # Zero-config (reads from environment)
         container = ServiceContainer()
         container.register(
-            BaseLLMService,
-            LLMServiceFactory(),
-            lifetime="singleton"
+            ServiceDescriptor(BaseLLMService, LLMServiceFactory(), "singleton")
         )
 
         # Explicit configuration
@@ -50,9 +48,7 @@ class LLMServiceFactory:
             api_key="sk-..."
         )
         container.register(
-            BaseLLMService,
-            LLMServiceFactory(config),
-            lifetime="singleton"
+            ServiceDescriptor(BaseLLMService, LLMServiceFactory(config), "singleton")
         )
 
         llm_service = container.get_service(BaseLLMService)

@@ -9,7 +9,7 @@ These tests verify the service container's ability to:
 - Support type safety
 """
 
-from waivern_core.services import ServiceContainer
+from waivern_core.services import ServiceContainer, ServiceDescriptor
 
 
 # Test service for use in tests
@@ -42,7 +42,7 @@ class TestServiceContainer:
         factory = TestServiceFactory()
 
         # Act
-        container.register(TestService, factory, lifetime="singleton")
+        container.register(ServiceDescriptor(TestService, factory, "singleton"))
         service1 = container.get_service(TestService)
         service2 = container.get_service(TestService)
 
@@ -56,7 +56,7 @@ class TestServiceContainer:
         factory = TestServiceFactory()
 
         # Act
-        container.register(TestService, factory, lifetime="transient")
+        container.register(ServiceDescriptor(TestService, factory, "transient"))
         service1 = container.get_service(TestService)
         service2 = container.get_service(TestService)
 
@@ -98,7 +98,7 @@ class TestServiceContainer:
         factory = LazyTestFactory()
 
         # Act - register service
-        container.register(TestService, factory, lifetime="singleton")
+        container.register(ServiceDescriptor(TestService, factory, "singleton"))
 
         # Assert - create() should NOT have been called yet
         assert not create_called, (
@@ -133,7 +133,7 @@ class TestServiceContainer:
         factory = SingletonTestFactory()
 
         # Act
-        container.register(TestService, factory, lifetime="singleton")
+        container.register(ServiceDescriptor(TestService, factory, "singleton"))
         container.get_service(TestService)
         container.get_service(TestService)
         container.get_service(TestService)
@@ -163,7 +163,7 @@ class TestServiceContainer:
         factory = TransientTestFactory()
 
         # Act
-        container.register(TestService, factory, lifetime="transient")
+        container.register(ServiceDescriptor(TestService, factory, "transient"))
         container.get_service(TestService)
         container.get_service(TestService)
         container.get_service(TestService)
@@ -193,8 +193,10 @@ class TestServiceContainer:
         another_factory = AnotherServiceFactory()
 
         # Act
-        container.register(TestService, test_factory, lifetime="singleton")
-        container.register(AnotherService, another_factory, lifetime="transient")
+        container.register(ServiceDescriptor(TestService, test_factory, "singleton"))
+        container.register(
+            ServiceDescriptor(AnotherService, another_factory, "transient")
+        )
 
         service1 = container.get_service(TestService)
         service2 = container.get_service(AnotherService)
@@ -218,7 +220,7 @@ class TestServiceContainer:
         factory = TestServiceFactory()
 
         # Act
-        container.register(TestService, factory)
+        container.register(ServiceDescriptor(TestService, factory))
         service = container.get_service(TestService)
 
         # Assert
@@ -242,7 +244,7 @@ class TestServiceContainer:
         factory = NoneReturningFactory()
 
         # Act
-        container.register(TestService, factory)
+        container.register(ServiceDescriptor(TestService, factory))
 
         # Assert - should raise clear error when service creation returns None
         try:
@@ -271,7 +273,7 @@ class TestServiceContainer:
         factory = FailingFactory()
 
         # Act
-        container.register(TestService, factory)
+        container.register(ServiceDescriptor(TestService, factory))
 
         # Assert - exception should bubble up from factory.create()
         try:

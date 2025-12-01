@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from unittest.mock import patch
 
-from waivern_core.services import ServiceContainer
+from waivern_core.services import ServiceContainer, ServiceDescriptor
 
 from waivern_llm.base import BaseLLMService
 from waivern_llm.di.factory import LLMServiceFactory
@@ -34,9 +34,7 @@ class TestLLMServiceProvider:
         ):
             container = ServiceContainer()
             container.register(
-                BaseLLMService,
-                LLMServiceFactory(),
-                lifetime="singleton",
+                ServiceDescriptor(BaseLLMService, LLMServiceFactory(), "singleton")
             )
 
             provider = LLMServiceProvider(container)
@@ -57,9 +55,7 @@ class TestLLMServiceProvider:
         ):
             container = ServiceContainer()
             container.register(
-                BaseLLMService,
-                LLMServiceFactory(),
-                lifetime="singleton",
+                ServiceDescriptor(BaseLLMService, LLMServiceFactory(), "singleton")
             )
 
             provider = LLMServiceProvider(container)
@@ -91,9 +87,7 @@ class TestLLMServiceProvider:
         ):
             container = ServiceContainer()
             container.register(
-                BaseLLMService,
-                LLMServiceFactory(),
-                lifetime="singleton",
+                ServiceDescriptor(BaseLLMService, LLMServiceFactory(), "singleton")
             )
 
             provider = LLMServiceProvider(container)
@@ -113,9 +107,7 @@ class TestLLMServiceProvider:
         ):
             container = ServiceContainer()
             container.register(
-                BaseLLMService,
-                LLMServiceFactory(),
-                lifetime="singleton",
+                ServiceDescriptor(BaseLLMService, LLMServiceFactory(), "singleton")
             )
 
             provider = LLMServiceProvider(container)

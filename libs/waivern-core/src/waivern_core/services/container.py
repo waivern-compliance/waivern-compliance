@@ -3,7 +3,7 @@
 import logging
 from typing import Any
 
-from waivern_core.services.protocols import ServiceFactory
+from waivern_core.services.lifecycle import ServiceDescriptor
 
 logger = logging.getLogger(__name__)
 
@@ -13,33 +13,24 @@ class ServiceContainer:
 
     def __init__(self) -> None:
         """Initialise the service container."""
-        # Internal storage uses Any for heterogeneous type storage
+        # Store descriptors directly - type uses Any for heterogeneous storage
         # Type safety is enforced at the public API level through generics
-        self._factories: dict[type, Any] = {}
-        self._lifetimes: dict[type, str] = {}
+        self._descriptors: dict[type, ServiceDescriptor[Any]] = {}
         self._singletons: dict[type, Any] = {}
         logger.debug("ServiceContainer initialized")
 
-    def register[T](
-        self,
-        service_type: type[T],
-        factory: ServiceFactory[T],
-        lifetime: str = "singleton",
-    ) -> None:
-        """Register a service factory with the container.
+    def register[T](self, descriptor: ServiceDescriptor[T]) -> None:
+        """Register a service with the container.
 
         Args:
-            service_type: The type of service being registered
-            factory: Factory that creates service instances
-            lifetime: Service lifetime ("singleton" or "transient")
+            descriptor: Service descriptor containing type, factory, and lifetime
 
         """
-        self._factories[service_type] = factory
-        self._lifetimes[service_type] = lifetime
+        self._descriptors[descriptor.service_type] = descriptor
         logger.debug(
             "Registered service: %s with lifetime: %s",
-            service_type.__name__,
-            lifetime,
+            descriptor.service_type.__name__,
+            descriptor.lifetime,
         )
 
     def get_service[T](self, service_type: type[T]) -> T:
@@ -55,15 +46,14 @@ class ServiceContainer:
             ValueError: If factory returns None (service unavailable)
 
         """
-        factory = self._factories[service_type]
-        lifetime = self._lifetimes[service_type]
+        descriptor = self._descriptors[service_type]
 
-        if lifetime == "singleton":
+        if descriptor.lifetime == "singleton":
             # Check if singleton already created
             if service_type not in self._singletons:
                 # Create and cache singleton
                 logger.debug("Creating singleton service: %s", service_type.__name__)
-                instance = factory.create()
+                instance = descriptor.factory.create()
                 if instance is None:
                     logger.error(
                         "Factory for %s returned None - service unavailable",
@@ -83,7 +73,7 @@ class ServiceContainer:
         else:
             # Transient - create new instance
             logger.debug("Creating transient service: %s", service_type.__name__)
-            instance = factory.create()
+            instance = descriptor.factory.create()
             if instance is None:
                 logger.error(
                     "Factory for %s returned None - service unavailable",

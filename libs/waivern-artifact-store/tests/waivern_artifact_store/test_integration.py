@@ -6,7 +6,7 @@ ArtifactStoreConfiguration working together.
 
 from __future__ import annotations
 
-from waivern_core.services import ServiceContainer
+from waivern_core.services import ServiceContainer, ServiceDescriptor
 
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
@@ -23,7 +23,7 @@ class TestArtifactStoreServiceContainerIntegration:
         factory = ArtifactStoreFactory(config)
 
         container = ServiceContainer()
-        container.register(ArtifactStore, factory, lifetime="singleton")
+        container.register(ServiceDescriptor(ArtifactStore, factory, "singleton"))
 
         # Get service twice
         store_first = container.get_service(ArtifactStore)
@@ -45,10 +45,14 @@ class TestArtifactStoreServiceContainerIntegration:
 
         # Create two separate containers
         container1 = ServiceContainer()
-        container1.register(ArtifactStore, ArtifactStoreFactory(config))
+        container1.register(
+            ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(config))
+        )
 
         container2 = ServiceContainer()
-        container2.register(ArtifactStore, ArtifactStoreFactory(config))
+        container2.register(
+            ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(config))
+        )
 
         # Get stores from each container
         store1 = container1.get_service(ArtifactStore)
@@ -71,7 +75,7 @@ class TestArtifactStoreServiceContainerIntegration:
         factory = ArtifactStoreFactory()
 
         container = ServiceContainer()
-        container.register(ArtifactStore, factory, lifetime="singleton")
+        container.register(ServiceDescriptor(ArtifactStore, factory, "singleton"))
 
         store = container.get_service(ArtifactStore)
 
@@ -88,7 +92,7 @@ class TestArtifactStoreServiceContainerIntegration:
         factory = ArtifactStoreFactory(config)
 
         container = ServiceContainer()
-        container.register(ArtifactStore, factory, lifetime="singleton")
+        container.register(ServiceDescriptor(ArtifactStore, factory, "singleton"))
 
         store = container.get_service(ArtifactStore)
 
