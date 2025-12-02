@@ -1,8 +1,10 @@
 # Artifact-Centric Runbook Design
 
-- **Status:** Design Proposal
-- **Last Updated:** 2025-11-26
+- **Status:** Phase 1 Implemented
+- **Last Updated:** 2025-12-02
 - **Related:** [DAG Orchestration Layer](./dag-orchestration-layer.md), [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md)
+
+> **Implementation:** Phase 1 (core artifact model, DAG execution, fan-in) is complete. See [completed design](../development/completed/artifact-centric-orchestration-design.md) for implementation details.
 
 ## Problem
 

@@ -1,7 +1,7 @@
 # Task 6: Update Documentation and Clean Up Old Code
 
 - **Phase:** 4 - Finalisation
-- **Status:** TODO
+- **Status:** DONE
 - **GitHub Issue:** #247 (close via PR)
 - **Prerequisites:** Task 5 (CLI and runbook migration)
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)

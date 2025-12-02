@@ -1,8 +1,8 @@
 # Design: Artifact-Centric Orchestration
 
 - **Epics:** #189, #190
-- **Status:** Ready for Review
-- **Last Updated:** 2025-11-26
+- **Status:** Completed
+- **Last Updated:** 2025-12-02
 
 ## Overview
 
