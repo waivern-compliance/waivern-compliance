@@ -24,7 +24,7 @@ class TestLLMDIIntegration:
     """Integration tests for the complete LLM DI system."""
 
     @staticmethod
-    def _create_container_with_factory(
+    def create_container_with_factory(
         factory: LLMServiceFactory,
     ) -> ServiceContainer:
         """Helper to create container and register LLM factory as singleton."""
@@ -45,7 +45,7 @@ class TestLLMDIIntegration:
                 model="claude-3-opus",
             )
             factory = LLMServiceFactory(config)
-            container = self._create_container_with_factory(factory)
+            container = self.create_container_with_factory(factory)
 
             service = container.get_service(BaseLLMService)
 
@@ -62,7 +62,7 @@ class TestLLMDIIntegration:
             clear=True,
         ):
             factory = LLMServiceFactory()
-            container = self._create_container_with_factory(factory)
+            container = self.create_container_with_factory(factory)
             provider = LLMServiceProvider(container)
 
             service = provider.get_service(BaseLLMService)
@@ -82,7 +82,7 @@ class TestLLMDIIntegration:
             clear=True,
         ):
             factory = LLMServiceFactory()  # Zero-config
-            container = self._create_container_with_factory(factory)
+            container = self.create_container_with_factory(factory)
 
             service = container.get_service(BaseLLMService)
 
@@ -99,7 +99,7 @@ class TestLLMDIIntegration:
             clear=True,
         ):
             factory = LLMServiceFactory()
-            container = self._create_container_with_factory(factory)
+            container = self.create_container_with_factory(factory)
 
             service_first = container.get_service(BaseLLMService)
             service_second = container.get_service(BaseLLMService)
@@ -144,7 +144,7 @@ class TestLLMDIIntegration:
         """Test is_available() pattern for checking optional dependencies before use."""
         with patch.dict(os.environ, env_vars, clear=True):
             factory = LLMServiceFactory()
-            container = self._create_container_with_factory(factory)
+            container = self.create_container_with_factory(factory)
             provider = LLMServiceProvider(container)
 
             assert provider.is_available(BaseLLMService) == expected_available

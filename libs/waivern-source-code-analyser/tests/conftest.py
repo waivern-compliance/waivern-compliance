@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def _register_schemas():  # pyright: ignore[reportUnusedFunction]
+def register_test_schemas() -> None:
     """Automatically register schemas for all tests.
 
     Since we no longer have import-time registration, tests need

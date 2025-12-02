@@ -11,7 +11,7 @@ from waivern_orchestration import (
 )
 from waivern_orchestration.planner import ExecutionPlan, Planner
 
-from .conftest import (
+from .test_helpers import (
     create_mock_analyser_factory,
     create_mock_connector_factory,
     create_mock_registry,

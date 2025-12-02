@@ -1,8 +1,10 @@
 # Lightweight DAG Orchestration Layer for WCT
 
-- **Status:** Design Proposal
-- **Last Updated:** 2025-11-26
+- **Status:** Phase 1 Implemented
+- **Last Updated:** 2025-12-02
 - **Related:** [Artifact-Centric Runbook](./artifact-centric-runbook.md), [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md)
+
+> **Implementation:** Phase 1 (Planner, DAGExecutor, ArtifactStore) is complete. See [completed design](../development/completed/artifact-centric-orchestration-design.md) for implementation details.
 
 ## Overview
 
@@ -160,7 +162,7 @@ class ExecutionDAG:
         ts = TopologicalSorter(graph)
         ts.prepare()  # Raises CycleError if cycles
 
-    def get_sorter(self) -> TopologicalSorter[str]:
+    def create_sorter(self) -> TopologicalSorter[str]:
         graph = {n.step_id: n.dependencies for n in self._nodes.values()}
         ts = TopologicalSorter(graph)
         ts.prepare()
@@ -178,7 +180,7 @@ class DAGExecutor:
 
     async def execute(self, context: ExecutionContext, step_fn) -> list[StepResult]:
         results: list[StepResult] = []
-        sorter = self._dag.get_sorter()
+        sorter = self._dag.create_sorter()
 
         while sorter.is_active():
             ready_ids = sorter.get_ready()

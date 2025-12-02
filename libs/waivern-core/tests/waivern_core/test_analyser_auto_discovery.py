@@ -9,7 +9,7 @@ from waivern_core.schemas.base import Schema
 class TestAnalyserAutoDiscovery:
     """Tests for auto-discovery of supported input/output schemas."""
 
-    def _create_test_analyser_with_schemas(
+    def create_test_analyser_with_schemas(
         self,
         input_schema_files: dict[str, str] | None = None,
         output_schema_files: dict[str, str] | None = None,
@@ -77,7 +77,7 @@ class TestAnalyserAutoDiscovery:
 
     def test_input_schema_auto_discovery_finds_single_schema(self) -> None:
         """Test input schema discovery from schema_readers/ directory."""
-        input_schemas, output_schemas = self._create_test_analyser_with_schemas(
+        input_schemas, output_schemas = self.create_test_analyser_with_schemas(
             input_schema_files={"standard_input_1_0_0.py": "# Input schema"}
         )
 
@@ -88,7 +88,7 @@ class TestAnalyserAutoDiscovery:
 
     def test_output_schema_auto_discovery_finds_single_schema(self) -> None:
         """Test output schema discovery from schema_producers/ directory."""
-        input_schemas, output_schemas = self._create_test_analyser_with_schemas(
+        input_schemas, output_schemas = self.create_test_analyser_with_schemas(
             output_schema_files={"personal_data_finding_1_0_0.py": "# Output schema"}
         )
 
@@ -99,7 +99,7 @@ class TestAnalyserAutoDiscovery:
 
     def test_both_directories_work_independently(self) -> None:
         """Test both directories can exist and work together."""
-        input_schemas, output_schemas = self._create_test_analyser_with_schemas(
+        input_schemas, output_schemas = self.create_test_analyser_with_schemas(
             input_schema_files={"standard_input_1_0_0.py": "# Input schema"},
             output_schema_files={"personal_data_finding_1_0_0.py": "# Output schema"},
         )
@@ -111,7 +111,7 @@ class TestAnalyserAutoDiscovery:
 
     def test_input_discovery_finds_multiple_versions(self) -> None:
         """Test multiple input schema versions discovered."""
-        input_schemas, _ = self._create_test_analyser_with_schemas(
+        input_schemas, _ = self.create_test_analyser_with_schemas(
             input_schema_files={
                 "standard_input_1_0_0.py": "# v1.0.0",
                 "standard_input_1_1_0.py": "# v1.1.0",
@@ -125,7 +125,7 @@ class TestAnalyserAutoDiscovery:
 
     def test_output_discovery_finds_multiple_versions(self) -> None:
         """Test multiple output schema versions discovered."""
-        _, output_schemas = self._create_test_analyser_with_schemas(
+        _, output_schemas = self.create_test_analyser_with_schemas(
             output_schema_files={
                 "finding_1_0_0.py": "# v1.0.0",
                 "finding_2_0_0.py": "# v2.0.0",
@@ -139,14 +139,14 @@ class TestAnalyserAutoDiscovery:
 
     def test_returns_empty_lists_when_directories_missing(self) -> None:
         """Test graceful handling when directories don't exist."""
-        input_schemas, output_schemas = self._create_test_analyser_with_schemas()
+        input_schemas, output_schemas = self.create_test_analyser_with_schemas()
 
         assert input_schemas == []
         assert output_schemas == []
 
     def test_input_discovery_skips_private_files(self) -> None:
         """Test __init__.py and _*.py ignored in schema_readers/."""
-        input_schemas, _ = self._create_test_analyser_with_schemas(
+        input_schemas, _ = self.create_test_analyser_with_schemas(
             input_schema_files={
                 "__init__.py": "# Init file",
                 "_helper.py": "# Helper",
@@ -160,7 +160,7 @@ class TestAnalyserAutoDiscovery:
 
     def test_output_discovery_skips_private_files(self) -> None:
         """Test __init__.py and _*.py ignored in schema_producers/."""
-        _, output_schemas = self._create_test_analyser_with_schemas(
+        _, output_schemas = self.create_test_analyser_with_schemas(
             output_schema_files={
                 "__init__.py": "# Init file",
                 "_helper.py": "# Helper",
@@ -174,7 +174,7 @@ class TestAnalyserAutoDiscovery:
 
     def test_input_discovery_parses_multi_word_schema_names(self) -> None:
         """Test correct parsing of names like processing_purpose_finding."""
-        input_schemas, _ = self._create_test_analyser_with_schemas(
+        input_schemas, _ = self.create_test_analyser_with_schemas(
             input_schema_files={"processing_purpose_finding_1_0_0.py": "# Schema"}
         )
 
@@ -184,7 +184,7 @@ class TestAnalyserAutoDiscovery:
 
     def test_output_discovery_parses_multi_word_schema_names(self) -> None:
         """Test multi-word names work in schema_producers/."""
-        _, output_schemas = self._create_test_analyser_with_schemas(
+        _, output_schemas = self.create_test_analyser_with_schemas(
             output_schema_files={"personal_data_finding_1_0_0.py": "# Schema"}
         )
 
@@ -246,7 +246,7 @@ class TestAnalyserAutoDiscovery:
 
     def test_input_discovery_skips_invalid_filename_formats(self) -> None:
         """Test files without proper version format ignored in schema_readers/."""
-        input_schemas, _ = self._create_test_analyser_with_schemas(
+        input_schemas, _ = self.create_test_analyser_with_schemas(
             input_schema_files={
                 "invalid.py": "# No version",
                 "schema_1_0.py": "# Only two version parts",
@@ -261,7 +261,7 @@ class TestAnalyserAutoDiscovery:
 
     def test_output_discovery_skips_invalid_filename_formats(self) -> None:
         """Test invalid formats ignored in schema_producers/."""
-        _, output_schemas = self._create_test_analyser_with_schemas(
+        _, output_schemas = self.create_test_analyser_with_schemas(
             output_schema_files={
                 "invalid.py": "# No version",
                 "schema_1_0.py": "# Only two version parts",

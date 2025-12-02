@@ -15,7 +15,7 @@ if env_file.exists():
 
 
 @pytest.fixture(autouse=True)
-def _register_all_schemas():  # pyright: ignore[reportUnusedFunction]
+def register_all_schemas() -> None:
     """Automatically register all schemas for WCT tests.
 
     Discovers and registers schemas from all installed packages via entry points.

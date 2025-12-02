@@ -7,6 +7,7 @@ lazy-loaded access to connector and analyser factories.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from importlib.metadata import entry_points
 
@@ -14,6 +15,8 @@ from waivern_core.base_analyser import Analyser
 from waivern_core.base_connector import Connector
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.services.container import ServiceContainer
+
+logger = logging.getLogger(__name__)
 
 
 class ComponentRegistry:
@@ -67,7 +70,15 @@ class ComponentRegistry:
         return self._analyser_factories  # type: ignore[return-value]
 
     def _discover_components(self) -> None:
-        """Discover connector and analyser factories from entry points."""
+        """Discover connector and analyser factories from entry points.
+
+        Also registers schemas from packages via waivern.schemas entry points.
+        Schema registration must happen before components are used to ensure
+        schema files can be found.
+        """
+        # Register schemas first (before component factories need them)
+        self._register_schemas()
+
         self._connector_factories = {}
         self._analyser_factories = {}
 
@@ -82,3 +93,13 @@ class ComponentRegistry:
             factory_class = ep.load()
             factory = factory_class(self._container)
             self._analyser_factories[ep.name] = factory
+
+    def _register_schemas(self) -> None:
+        """Register schemas from all packages via entry points."""
+        for ep in entry_points(group="waivern.schemas"):
+            try:
+                register_func = ep.load()
+                register_func()
+                logger.debug("Registered schemas from '%s'", ep.name)
+            except Exception as e:
+                logger.warning("Failed to register schemas from '%s': %s", ep.name, e)

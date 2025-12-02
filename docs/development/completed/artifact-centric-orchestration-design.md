@@ -1,8 +1,8 @@
 # Design: Artifact-Centric Orchestration
 
 - **Epics:** #189, #190
-- **Status:** Ready for Review
-- **Last Updated:** 2025-11-26
+- **Status:** Completed
+- **Last Updated:** 2025-12-02
 
 ## Overview
 
@@ -170,7 +170,7 @@ class ExecutionDAG:
         """Raises CycleError if cycles detected."""
         TopologicalSorter(self._graph).prepare()
 
-    def get_sorter(self) -> TopologicalSorter[str]:
+    def create_sorter(self) -> TopologicalSorter[str]:
         ts = TopologicalSorter(self._graph)
         ts.prepare()
         return ts
@@ -236,7 +236,7 @@ class DAGExecutor:
         store = self._container.get_service(ArtifactStore)
         store.clear()
 
-        sorter = plan.dag.get_sorter()
+        sorter = plan.dag.create_sorter()
         results: dict[str, ArtifactResult] = {}
         skipped: set[str] = set()
 

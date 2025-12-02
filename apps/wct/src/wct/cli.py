@@ -2,25 +2,40 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import override
+from typing import Any, override
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
+from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
 from waivern_core.component_factory import ComponentFactory
+from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
+from waivern_llm import BaseLLMService
+from waivern_llm.di import LLMServiceFactory
+from waivern_orchestration import (
+    DAGExecutor,
+    ExecutionPlan,
+    ExecutionResult,
+    OrchestrationError,
+    Planner,
+    RunbookSchemaGenerator,
+)
 
-from wct.analysis import AnalysisResult, AnalysisResultsExporter
-from wct.executor import Executor
 from wct.logging import setup_logging
-from wct.runbook import Runbook, RunbookLoader
-from wct.schemas.runbook import RunbookSchemaGenerator
 
 logger = logging.getLogger(__name__)
 console = Console()
+
+# Export format version
+FORMAT_VERSION = "2.0.0"
 
 
 class CLIError(Exception):
@@ -57,93 +72,131 @@ class CLIError(Exception):
         return base_message
 
 
-class OutputFormatter:
+def _build_service_container() -> ServiceContainer:
+    """Build a ServiceContainer with required services.
+
+    Creates and configures a ServiceContainer with:
+    - LLMService (singleton) - for LLM-based analysis
+    - ArtifactStore (transient) - fresh store per execution
+
+    Returns:
+        Configured ServiceContainer.
+
+    """
+    container = ServiceContainer()
+
+    # Register LLM service as singleton (shared across components)
+    container.register(
+        ServiceDescriptor(BaseLLMService, LLMServiceFactory(), "singleton")
+    )
+
+    # Register ArtifactStore as transient (fresh store per execution)
+    container.register(
+        ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(), "transient")
+    )
+
+    logger.debug("ServiceContainer configured with LLM and ArtifactStore services")
+    return container
+
+
+class _OutputFormatter:
     """Handles formatting CLI output for different commands."""
 
-    def format_analysis_results(
-        self, results: list[AnalysisResult], verbose: bool = False
+    def format_execution_result(
+        self,
+        result: ExecutionResult,
+        plan: ExecutionPlan,
+        verbose: bool = False,
     ) -> None:
-        """Format and print analysis results.
+        """Format and print execution results.
 
         Args:
-            results: List of analysis results to format
-            verbose: Show detailed information
+            result: ExecutionResult from DAGExecutor.
+            plan: ExecutionPlan with artifact definitions.
+            verbose: Show detailed information.
 
         """
         # Create summary table
         table = Table(
-            title="📊 Analysis Results Summary",
+            title="📊 Execution Results Summary",
             show_header=True,
             header_style="bold magenta",
         )
-        table.add_column("Analysis", style="cyan", no_wrap=True)
-        table.add_column("Description", style="white", max_width=40)
+        table.add_column("Artifact", style="cyan", no_wrap=True)
         table.add_column("Status", style="green")
-        table.add_column("Input Schema", style="blue")
-        table.add_column("Output Schema", style="blue")
-
+        table.add_column("Duration", style="blue")
         if verbose:
-            table.add_column("Metadata", style="yellow")
+            table.add_column("Schema", style="yellow")
 
-        for result in results:
-            status_icon = "✅" if result.success else "❌"
-            status_text = f"{status_icon} {'Success' if result.success else 'Failed'}"
+        for artifact_id, artifact_result in result.artifacts.items():
+            status_icon = "✅" if artifact_result.success else "❌"
+            status_text = (
+                f"{status_icon} {'Success' if artifact_result.success else 'Failed'}"
+            )
+            duration_text = f"{artifact_result.duration_seconds:.2f}s"
 
-            row = [
-                result.analysis_name,
-                result.analysis_description,
-                status_text,
-                result.input_schema,
-                result.output_schema,
-            ]
+            row = [artifact_id, status_text, duration_text]
 
             if verbose:
-                metadata_str = str(result.metadata) if result.metadata else "None"
-                row.append(metadata_str)
+                # Get schema from plan
+                _, output_schema = plan.artifact_schemas.get(artifact_id, (None, None))
+                schema_text = (
+                    f"{output_schema.name}/{output_schema.version}"
+                    if output_schema
+                    else "N/A"
+                )
+                row.append(schema_text)
 
+            table.add_row(*row)
+
+        # Show skipped artifacts
+        for artifact_id in result.skipped:
+            row = [artifact_id, "⏭️ Skipped", "-"]
+            if verbose:
+                row.append("-")
             table.add_row(*row)
 
         console.print(table)
 
         # Show detailed error information for failed results
-        failed_results = [r for r in results if not r.success]
+        failed_results = [
+            (aid, ar) for aid, ar in result.artifacts.items() if not ar.success
+        ]
         if failed_results:
-            console.print("\n[bold red]❌ Failed Analysis Details:[/bold red]")
-            for result in failed_results:
+            console.print("\n[bold red]❌ Failed Artifact Details:[/bold red]")
+            for artifact_id, artifact_result in failed_results:
                 error_panel = Panel(
-                    f"[red]{result.error_message}[/red]",
-                    title=f"Error in {result.analysis_name}",
+                    f"[red]{artifact_result.error}[/red]",
+                    title=f"Error in {artifact_id}",
                     border_style="red",
                 )
                 console.print(error_panel)
                 logger.error(
-                    "Analysis %s failed: %s", result.analysis_name, result.error_message
+                    "Artifact %s failed: %s", artifact_id, artifact_result.error
                 )
 
         # Show successful results in verbose mode
         if verbose:
-            successful_results = [r for r in results if r.success]
+            successful_results = [
+                (aid, ar) for aid, ar in result.artifacts.items() if ar.success
+            ]
             if successful_results:
                 console.print(
-                    "\n[bold green]✅ Successful Analysis Details:[/bold green]"
+                    "\n[bold green]✅ Successful Artifact Details:[/bold green]"
                 )
-                for result in successful_results:
-                    # Create a tree structure for the data
-                    tree = Tree(f"[bold green]{result.analysis_name}[/bold green]")
-                    if result.analysis_description:
+                for artifact_id, artifact_result in successful_results:
+                    definition = plan.runbook.artifacts.get(artifact_id)
+                    tree = Tree(f"[bold green]{artifact_id}[/bold green]")
+                    if definition and definition.name:
+                        tree.add(f"Name: [white]{definition.name}[/white]")
+                    if definition and definition.description:
                         tree.add(
-                            f"Description: [white]{result.analysis_description}[/white]"
+                            f"Description: [white]{definition.description}[/white]"
                         )
-                    tree.add(f"Input Schema: [blue]{result.input_schema}[/blue]")
-                    tree.add(f"Output Schema: [blue]{result.output_schema}[/blue]")
-
-                    if result.metadata:
-                        metadata_branch = tree.add("[yellow]Metadata[/yellow]")
-                        for key, value in result.metadata.model_dump().items():
-                            metadata_branch.add(f"{key}: {value}")
-
+                    tree.add(
+                        f"Duration: [blue]{artifact_result.duration_seconds:.2f}s[/blue]"
+                    )
                     console.print(tree)
-                    logger.debug("Analysis %s succeeded.", result.analysis_name)
 
     def format_component_list[T](
         self, components: dict[str, ComponentFactory[T]], component_type: str
@@ -186,29 +239,30 @@ class OutputFormatter:
             console.print(table)
         else:
             warning_panel = Panel(
-                f"[yellow]No {component_type} available. Register {component_type} to see them here.[/yellow]",
+                f"[yellow]No {component_type} available. "
+                f"Register {component_type} to see them here.[/yellow]",
                 title="⚠️  Warning",
                 border_style="yellow",
             )
             console.print(warning_panel)
-            logger.warning("No %s registered in executor", component_type)
+            logger.warning("No %s registered in registry", component_type)
 
-    def format_runbook_validation(self, runbook: Runbook) -> None:
-        """Format and print runbook validation results.
+    def format_plan_validation(self, plan: ExecutionPlan) -> None:
+        """Format and print plan validation results.
 
         Args:
-            runbook: Validated runbook YAML file
+            plan: Validated ExecutionPlan.
 
         """
+        runbook = plan.runbook
         # Create success panel
         success_content = f"""
 [green]✅ Runbook validation successful![/green]
 
 [bold]Name:[/bold] {runbook.name}
 [bold]Description:[/bold] {runbook.description}
-[bold]Connectors:[/bold] {len(runbook.connectors)}
-[bold]Analysers:[/bold] {len(runbook.analysers)}
-[bold]Execution Steps:[/bold] {len(runbook.execution)}
+[bold]Artifacts:[/bold] {len(runbook.artifacts)}
+[bold]DAG Depth:[/bold] {plan.dag.get_depth()}
         """.strip()
 
         panel = Panel(
@@ -216,25 +270,42 @@ class OutputFormatter:
         )
         console.print(panel)
 
-        # Show execution order as a tree
-        if runbook.execution:
-            execution_tree = Tree("[bold blue]🔄 Execution Order[/bold blue]")
-            for i, step in enumerate(runbook.execution, 1):
-                step_branch = execution_tree.add(
-                    f"[cyan]Step {i}: {step.analyser}[/cyan]"
-                )
-                step_branch.add(f"Connector: [yellow]{step.connector}[/yellow]")
-                step_branch.add(f"Input Schema: [blue]{step.input_schema}[/blue]")
-                if hasattr(step, "output_schema") and step.output_schema:
-                    step_branch.add(f"Output Schema: [blue]{step.output_schema}[/blue]")
+        # Show artifact DAG as a tree
+        if runbook.artifacts:
+            artifact_tree = Tree("[bold blue]🔄 Artifact Dependencies[/bold blue]")
 
-            console.print(execution_tree)
+            # Get topological order
+            sorter = plan.dag.create_sorter()
+            level = 0
+            while sorter.is_active():
+                ready = list(sorter.get_ready())
+                level_branch = artifact_tree.add(f"[dim]Level {level}[/dim]")
+                for artifact_id in ready:
+                    definition = runbook.artifacts[artifact_id]
+                    artifact_branch = level_branch.add(f"[cyan]{artifact_id}[/cyan]")
+                    if definition.source:
+                        artifact_branch.add(
+                            f"Source: [yellow]{definition.source.type}[/yellow]"
+                        )
+                    if definition.inputs:
+                        inputs = (
+                            definition.inputs
+                            if isinstance(definition.inputs, list)
+                            else [definition.inputs]
+                        )
+                        artifact_branch.add(f"Inputs: [blue]{', '.join(inputs)}[/blue]")
+                    if definition.transform:
+                        artifact_branch.add(
+                            f"Transform: [yellow]{definition.transform.type}[/yellow]"
+                        )
+                    if definition.output:
+                        artifact_branch.add("[green]📤 Output[/green]")
+                    sorter.done(artifact_id)
+                level += 1
 
-        logger.debug(
-            "Runbook details: connectors=%d, analysers=%d",
-            len(runbook.connectors),
-            len(runbook.analysers),
-        )
+            console.print(artifact_tree)
+
+        logger.debug("Runbook has %d artifacts", len(runbook.artifacts))
 
     def show_startup_banner(
         self,
@@ -262,9 +333,9 @@ class OutputFormatter:
         )
         console.print(startup_panel)
 
-    def show_analysis_completion(self) -> None:
-        """Show analysis completion message."""
-        console.print("\n[bold green]✅ Analysis completed![/bold green]")
+    def show_execution_completion(self) -> None:
+        """Show execution completion message."""
+        console.print("\n[bold green]✅ Execution completed![/bold green]")
 
     def show_file_save_success(self, file_path: Path) -> None:
         """Show successful file save message.
@@ -285,25 +356,168 @@ class OutputFormatter:
         console.print(f"\n[red]❌ {error_msg}[/red]")
 
     def show_completion_summary(
-        self, results: list[AnalysisResult], output_path: Path
+        self, result: ExecutionResult, output_path: Path
     ) -> None:
         """Show completion summary banner.
 
         Args:
-            results: Analysis results for summary statistics
-            output_path: Final output file path
+            result: ExecutionResult for summary statistics.
+            output_path: Final output file path.
 
         """
+        succeeded = sum(1 for ar in result.artifacts.values() if ar.success)
+        failed = sum(1 for ar in result.artifacts.values() if not ar.success)
+        skipped = len(result.skipped)
+
         completion_panel = Panel(
-            f"[bold green]✅ Analysis Complete[/bold green]\n\n"
-            f"[bold]Total Results:[/bold] {len(results)}\n"
-            f"[bold]Successful:[/bold] {sum(1 for r in results if r.success)}\n"
-            f"[bold]Failed:[/bold] {sum(1 for r in results if not r.success)}\n"
+            f"[bold green]✅ Execution Complete[/bold green]\n\n"
+            f"[bold]Total Artifacts:[/bold] {len(result.artifacts) + skipped}\n"
+            f"[bold]Succeeded:[/bold] {succeeded}\n"
+            f"[bold]Failed:[/bold] {failed}\n"
+            f"[bold]Skipped:[/bold] {skipped}\n"
+            f"[bold]Duration:[/bold] {result.total_duration_seconds:.2f}s\n"
             f"[bold]JSON Output:[/bold] {output_path}",
             title="🎉 Completion Summary",
             border_style="green",
         )
         console.print(completion_panel)
+
+
+def _determine_execution_status(failed_count: int, skipped_count: int) -> str:
+    """Determine execution status based on counts."""
+    if failed_count > 0:
+        return "failed"
+    if skipped_count > 0:
+        return "partial"
+    return "completed"
+
+
+def _build_output_entries(
+    result: ExecutionResult, plan: ExecutionPlan
+) -> list[dict[str, Any]]:
+    """Build output entries for successful artifacts with output: true."""
+    outputs: list[dict[str, Any]] = []
+    runbook = plan.runbook
+
+    for artifact_id, artifact_result in result.artifacts.items():
+        if not artifact_result.success:
+            continue
+
+        definition = runbook.artifacts.get(artifact_id)
+        if not definition or not definition.output:
+            continue
+
+        _, output_schema = plan.artifact_schemas.get(artifact_id, (None, None))
+
+        output_entry: dict[str, Any] = {
+            "artifact_id": artifact_id,
+            "duration_seconds": artifact_result.duration_seconds,
+        }
+
+        # Add optional metadata fields
+        if definition.name:
+            output_entry["name"] = definition.name
+        if definition.description:
+            output_entry["description"] = definition.description
+        if definition.contact:
+            output_entry["contact"] = definition.contact
+        if output_schema:
+            output_entry["schema"] = {
+                "name": output_schema.name,
+                "version": output_schema.version,
+            }
+        if artifact_result.message:
+            output_entry["content"] = artifact_result.message.content
+
+        outputs.append(output_entry)
+
+    return outputs
+
+
+def _build_export_output(
+    result: ExecutionResult,
+    plan: ExecutionPlan,
+    runbook_path: Path,
+    run_id: str,
+    timestamp: str,
+) -> dict[str, Any]:
+    """Build the export output dictionary.
+
+    Args:
+        result: ExecutionResult from DAGExecutor.
+        plan: ExecutionPlan with artifact definitions.
+        runbook_path: Path to the runbook file.
+        run_id: Unique run identifier.
+        timestamp: ISO8601 timestamp.
+
+    Returns:
+        Export dictionary ready for JSON serialization.
+
+    """
+    runbook = plan.runbook
+    failed_count = sum(1 for ar in result.artifacts.values() if not ar.success)
+    skipped_count = len(result.skipped)
+
+    # Build errors list
+    errors = [
+        {"artifact_id": aid, "error": ar.error}
+        for aid, ar in result.artifacts.items()
+        if not ar.success
+    ]
+
+    export_data: dict[str, Any] = {
+        "format_version": FORMAT_VERSION,
+        "run": {
+            "id": run_id,
+            "timestamp": timestamp,
+            "duration_seconds": result.total_duration_seconds,
+            "status": _determine_execution_status(failed_count, skipped_count),
+        },
+        "runbook": {
+            "path": str(runbook_path),
+            "name": runbook.name,
+            "description": runbook.description,
+        },
+        "summary": {
+            "total": len(result.artifacts) + skipped_count,
+            "succeeded": len(result.artifacts) - failed_count,
+            "failed": failed_count,
+            "skipped": skipped_count,
+        },
+        "outputs": _build_output_entries(result, plan),
+        "errors": errors,
+        "skipped": list(result.skipped),
+    }
+
+    if runbook.contact:
+        export_data["runbook"]["contact"] = runbook.contact
+
+    return export_data
+
+
+def _save_results_to_json(
+    result: ExecutionResult,
+    plan: ExecutionPlan,
+    runbook_path: Path,
+    output_path: Path,
+) -> None:
+    """Save execution results to JSON file.
+
+    Args:
+        result: ExecutionResult from DAGExecutor.
+        plan: ExecutionPlan with artifact definitions.
+        runbook_path: Path to the runbook file.
+        output_path: Path to save JSON output.
+
+    """
+    run_id = str(uuid.uuid4())
+    timestamp = datetime.now(UTC).isoformat()
+
+    export_data = _build_export_output(result, plan, runbook_path, run_id, timestamp)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(export_data, f, indent=2, default=str)
 
 
 def execute_runbook_command(
@@ -318,7 +532,7 @@ def execute_runbook_command(
     Args:
         runbook_path: Path to the runbook YAML file
         output_dir: Output directory for analysis results
-        output: Path to save results as JSON (now required, defaults to YYYYMMDDHHMMSS_analysis_results.json)
+        output: Path to save results as JSON
         verbose: Enable verbose output
         log_level: Logging level
 
@@ -326,26 +540,49 @@ def execute_runbook_command(
     effective_log_level = "DEBUG" if verbose else log_level
     setup_logging(level=effective_log_level)
 
-    formatter = OutputFormatter()
+    formatter = _OutputFormatter()
     formatter.show_startup_banner(runbook_path, output_dir, log_level, verbose)
 
     try:
-        # Run analysis
-        executor = Executor.create_with_built_ins()
+        # Build infrastructure
+        container = _build_service_container()
+        registry = ComponentRegistry(container)
 
+        # Plan execution
+        planner = Planner(registry)
         try:
-            results = executor.execute_runbook(runbook_path)
-            logger.info("Analysis completed with %d results", len(results))
-        except Exception as e:
-            logger.error("Analysis failed: %s", e)
+            plan = planner.plan(runbook_path)
+            logger.info(
+                "Execution plan created with %d artifacts",
+                len(plan.runbook.artifacts),
+            )
+        except OrchestrationError as e:
+            logger.error("Planning failed: %s", e)
             raise CLIError(
-                f"Failed to execute runbook analysis: {e}",
+                f"Failed to plan runbook execution: {e}",
                 command="run",
                 original_error=e,
             ) from e
 
-        formatter.show_analysis_completion()
-        formatter.format_analysis_results(results, verbose)
+        # Execute plan
+        executor = DAGExecutor(registry)
+        try:
+            result = asyncio.run(executor.execute(plan))
+            logger.info(
+                "Execution completed: %d artifacts, %.2fs",
+                len(result.artifacts),
+                result.total_duration_seconds,
+            )
+        except Exception as e:
+            logger.error("Execution failed: %s", e)
+            raise CLIError(
+                f"Failed to execute runbook: {e}",
+                command="run",
+                original_error=e,
+            ) from e
+
+        formatter.show_execution_completion()
+        formatter.format_execution_result(result, plan, verbose)
 
         # Save results to JSON file
         if output.is_absolute():
@@ -354,23 +591,21 @@ def execute_runbook_command(
             final_output_path = output_dir / output
 
         try:
-            AnalysisResultsExporter.save_to_json(
-                results, final_output_path, runbook_path
-            )
+            _save_results_to_json(result, plan, runbook_path, final_output_path)
             formatter.show_file_save_success(final_output_path)
-            logger.info("Analysis results saved to JSON file: %s", final_output_path)
+            logger.info("Results saved to JSON file: %s", final_output_path)
         except Exception as e:
-            error_msg = f"Failed to save analysis results to {final_output_path}: {e}"
+            error_msg = f"Failed to save results to {final_output_path}: {e}"
             logger.error(error_msg)
             formatter.show_file_save_error(error_msg)
             raise CLIError(error_msg, command="run", original_error=e) from e
 
-        formatter.show_completion_summary(results, final_output_path)
+        formatter.show_completion_summary(result, final_output_path)
 
     except CLIError as e:
-        logger.error("Analysis failed: %s", e)
+        logger.error("Execution failed: %s", e)
         error_panel = Panel(
-            f"[red]{e}[/red]", title="❌ Analysis failed", border_style="red"
+            f"[red]{e}[/red]", title="❌ Execution failed", border_style="red"
         )
         console.print(error_panel)
         raise typer.Exit(1) from e
@@ -386,13 +621,14 @@ def list_connectors_command(log_level: str = "INFO") -> None:
     setup_logging(level=log_level)
 
     try:
-        executor = Executor.create_with_built_ins()
+        container = _build_service_container()
+        registry = ComponentRegistry(container)
 
-        logger.debug("Getting available built-in connectors")
-        connectors = executor.list_available_connectors()
-        logger.info("Found %d available built-in connectors", len(connectors))
+        logger.debug("Getting available connectors from registry")
+        connectors = dict(registry.connector_factories)
+        logger.info("Found %d available connectors", len(connectors))
 
-        formatter = OutputFormatter()
+        formatter = _OutputFormatter()
         formatter.format_component_list(connectors, "connectors")
 
     except Exception as e:
@@ -421,13 +657,14 @@ def list_analysers_command(log_level: str = "INFO") -> None:
     setup_logging(level=log_level)
 
     try:
-        executor = Executor.create_with_built_ins()
+        container = _build_service_container()
+        registry = ComponentRegistry(container)
 
-        logger.debug("Getting available built-in analysers")
-        analysers = executor.list_available_analysers()
-        logger.info("Found %d available built-in analysers", len(analysers))
+        logger.debug("Getting available analysers from registry")
+        analysers = dict(registry.analyser_factories)
+        logger.info("Found %d available analysers", len(analysers))
 
-        formatter = OutputFormatter()
+        formatter = _OutputFormatter()
         formatter.format_component_list(analysers, "analysers")
 
     except Exception as e:
@@ -457,15 +694,36 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
     setup_logging(level=log_level)
 
     try:
-        # Load and validate runbook - this performs comprehensive validation including:
-        # - YAML syntax validation
-        # - Pydantic schema validation (required fields, types, constraints)
-        # - Business logic validation (unique names, cross-references)
-        # If validation fails, exceptions are raised and caught below
-        runbook = RunbookLoader.load(runbook_path)
+        # Build infrastructure
+        container = _build_service_container()
+        registry = ComponentRegistry(container)
 
-        formatter = OutputFormatter()
-        formatter.format_runbook_validation(runbook)
+        # Use Planner for validation - validates:
+        # - YAML syntax
+        # - Pydantic model validation
+        # - DAG cycle detection
+        # - Component existence
+        # - Schema compatibility
+        planner = Planner(registry)
+        plan = planner.plan(runbook_path)
+
+        formatter = _OutputFormatter()
+        formatter.format_plan_validation(plan)
+
+    except OrchestrationError as e:
+        logger.error("Runbook validation failed: %s", e)
+        cli_error = CLIError(
+            f"Runbook validation failed: {e}",
+            command="validate-runbook",
+            original_error=e,
+        )
+        error_panel = Panel(
+            f"[red]{cli_error}[/red]",
+            title="❌ Runbook validation failed",
+            border_style="red",
+        )
+        console.print(error_panel)
+        raise typer.Exit(1) from cli_error
 
     except Exception as e:
         logger.error("Runbook validation failed: %s", e)
@@ -483,25 +741,25 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
         raise typer.Exit(1) from cli_error
 
 
-def generate_schema_command(output: Path, log_level: str = "INFO") -> None:
-    """CLI command implementation for generating JSON schema.
+def generate_schema_command(output_path: Path, log_level: str = "INFO") -> None:
+    """CLI command implementation for generating runbook JSON schema.
 
     Args:
-        output: Output file path for generated schema
+        output_path: Path to save the generated schema
         log_level: Logging level
 
     """
     setup_logging(level=log_level)
 
     try:
-        RunbookSchemaGenerator.save_schema(output)
-        console.print(f"✅ Generated JSON schema: {output}")
-        logger.info("JSON schema generated successfully at %s", output)
+        RunbookSchemaGenerator.save_schema(output_path)
+        console.print(f"[green]✅ Schema generated successfully: {output_path}[/green]")
+        logger.info("Schema saved to %s", output_path)
 
     except Exception as e:
         logger.error("Schema generation failed: %s", e)
         cli_error = CLIError(
-            f"Failed to generate schema: {e}",
+            f"Schema generation failed: {e}",
             command="generate-schema",
             original_error=e,
         )

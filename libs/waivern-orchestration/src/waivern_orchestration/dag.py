@@ -78,11 +78,14 @@ class ExecutionDAG:
                 f"Cycle detected in artifact dependencies: {e}"
             ) from e
 
-    def get_sorter(self) -> TopologicalSorter[str]:
-        """Get a prepared TopologicalSorter for parallel execution.
+    def create_sorter(self) -> TopologicalSorter[str]:
+        """Create a new prepared TopologicalSorter for parallel execution.
+
+        Each call creates a fresh sorter instance - the sorter is stateful
+        and calling done() on one instance does not affect other instances.
 
         Returns:
-            A prepared TopologicalSorter that can be used for parallel execution.
+            A new, prepared TopologicalSorter that can be used for parallel execution.
 
         Raises:
             CycleDetectedError: If a cycle is detected in the dependency graph.
@@ -116,3 +119,34 @@ class ExecutionDAG:
 
         """
         return self._reverse_graph.get(artifact_id, set())
+
+    def get_depth(self) -> int:
+        """Get the depth (number of levels) in the DAG.
+
+        The depth is the number of sequential levels when traversing
+        the DAG in topological order. Root nodes (no dependencies) are
+        at level 0.
+
+        Returns:
+            The maximum depth of the DAG.
+
+        Raises:
+            CycleDetectedError: If a cycle is detected in the dependency graph.
+
+        """
+        if not self._artifacts:
+            return 0
+
+        sorter = self.create_sorter()
+        depth = 0
+
+        while sorter.is_active():
+            ready = sorter.get_ready()
+            ready_list = list(ready)
+            if not ready_list:
+                break
+            for artifact_id in ready_list:
+                sorter.done(artifact_id)
+            depth += 1
+
+        return depth

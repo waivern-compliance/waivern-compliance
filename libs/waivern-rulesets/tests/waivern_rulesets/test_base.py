@@ -99,23 +99,28 @@ class TestRulesetRegistry:
 
         assert registry1 is registry2
 
-    def test_registry_initialises_empty_registry(
+    def test_registry_can_be_cleared_to_empty(
         self, isolated_registry: RulesetRegistry
     ) -> None:
         """Test that registry can be cleared to empty state."""
         # Clear registry for this specific test that needs empty state
         isolated_registry.clear()
-        # Access private attribute for testing purposes
-        assert isolated_registry._registry == {}  # type: ignore[attr-defined]
 
-    def test_register_ruleset_class(self, isolated_registry: RulesetRegistry) -> None:
-        """Test registering a ruleset class."""
+        assert isolated_registry.is_empty()
+
+    def test_register_makes_ruleset_retrievable(
+        self, isolated_registry: RulesetRegistry
+    ) -> None:
+        """Test registering a ruleset makes it retrievable."""
         isolated_registry.register(
             "test_ruleset", ConcreteRuleset, ProcessingPurposeRule
         )
 
-        assert "test_ruleset" in isolated_registry._registry  # type: ignore[attr-defined]
-        assert isolated_registry._registry["test_ruleset"] is ConcreteRuleset  # type: ignore[attr-defined]
+        assert isolated_registry.is_registered("test_ruleset")
+        retrieved = isolated_registry.get_ruleset_class(
+            "test_ruleset", ProcessingPurposeRule
+        )
+        assert retrieved is ConcreteRuleset
 
     def test_get_registered_ruleset_class(
         self, isolated_registry: RulesetRegistry

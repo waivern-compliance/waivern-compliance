@@ -11,7 +11,7 @@ _LANGUAGE_REGISTRY: dict[str, Language] = {}
 _LANGUAGE_REGISTRY["php"] = Language(tree_sitter_php.language_php())
 
 
-def get_tree_sitter_language(name: str) -> Language:
+def _get_tree_sitter_language(name: str) -> Language:
     """Get a tree-sitter Language object for the specified language.
 
     Args:
@@ -32,7 +32,7 @@ def get_tree_sitter_language(name: str) -> Language:
     return _LANGUAGE_REGISTRY[name]
 
 
-def get_parser(name: str) -> Parser:
+def _get_parser(name: str) -> Parser:
     """Get a tree-sitter Parser object configured for the specified language.
 
     Args:
@@ -46,7 +46,7 @@ def get_parser(name: str) -> Parser:
 
     """
     parser = Parser()
-    parser.language = get_tree_sitter_language(name)
+    parser.language = _get_tree_sitter_language(name)
     return parser
 
 
@@ -86,8 +86,8 @@ class SourceCodeParser:
         self._validate_language_support(language)
 
         self.language = language
-        self.parser = get_parser(language)
-        self.tree_sitter_language = get_tree_sitter_language(language)
+        self.parser = _get_parser(language)
+        self.tree_sitter_language = _get_tree_sitter_language(language)
 
     @staticmethod
     def detect_language_from_file(file_path: Path) -> str:

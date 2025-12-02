@@ -147,6 +147,27 @@ class RulesetRegistry:
         self._registry.clear()
         self._type_mapping.clear()
 
+    def is_empty(self) -> bool:
+        """Check if the registry has no registered rulesets.
+
+        Returns:
+            True if no rulesets are registered, False otherwise.
+
+        """
+        return len(self._registry) == 0
+
+    def is_registered(self, name: str) -> bool:
+        """Check if a ruleset is registered under the given name.
+
+        Args:
+            name: The name to check.
+
+        Returns:
+            True if a ruleset is registered under this name, False otherwise.
+
+        """
+        return name in self._registry
+
     @classmethod
     def snapshot_state(cls) -> dict[str, Any]:
         """Capture current RulesetRegistry state for later restoration.

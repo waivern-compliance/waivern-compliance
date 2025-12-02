@@ -1,235 +1,254 @@
 # WCT Runbooks
 
-This directory contains various runbook configurations for different testing and analysis scenarios.
+Runbooks define compliance analysis pipelines using an artifact-centric format. Each runbook declares artifacts (data sources and transformations) and their dependencies, enabling parallel execution where possible.
+
+## Runbook Structure
+
+```yaml
+name: str                    # Required: Runbook name
+description: str             # Required: What this runbook analyses
+contact: str                 # Optional: Contact person
+
+config:                      # Optional: Execution settings
+  timeout: int               # Total timeout in seconds
+  max_concurrency: int       # Parallel artifacts (default: 10)
+
+artifacts:                   # Required: Artifact definitions
+  <artifact_id>:
+    # ... artifact definition
+```
+
+## Artifact Types
+
+### Source Artifacts
+
+Source artifacts extract data from external systems (databases, filesystems, APIs):
+
+```yaml
+artifacts:
+  mysql_data:
+    name: "MySQL Database Content"
+    description: "Extract data from MySQL database"
+    source:
+      type: "mysql"
+      properties:
+        max_rows_per_table: 10
+```
+
+**Fields:**
+- `source.type`: Connector type (e.g., `mysql`, `sqlite`, `filesystem`)
+- `source.properties`: Connector-specific configuration
+
+### Derived Artifacts
+
+Derived artifacts transform data from upstream artifacts:
+
+```yaml
+artifacts:
+  personal_data_findings:
+    name: "Personal Data Detection"
+    description: "Analyse database for PII"
+    inputs: mysql_data              # Reference to upstream artifact
+    transform:
+      type: "personal_data"
+      properties:
+        pattern_matching:
+          ruleset: "personal_data"
+    output: true                    # Include in final output
+```
+
+**Fields:**
+- `inputs`: Single artifact ID or list of IDs (fan-in)
+- `transform.type`: Analyser type (e.g., `personal_data`, `processing_purpose`, `data_subject`)
+- `transform.properties`: Analyser-specific configuration
+- `output`: Whether to include in results (default: false)
+
+### Fan-In (Multiple Inputs)
+
+Artifacts can consume from multiple upstream sources:
+
+```yaml
+artifacts:
+  combined_analysis:
+    inputs:
+      - mysql_findings
+      - filesystem_findings
+    transform:
+      type: "personal_data"
+    merge: "concatenate"           # Only strategy supported
+    output: true
+```
+
+## Pipeline Execution
+
+WCT automatically determines execution order from artifact dependencies:
+
+```yaml
+artifacts:
+  # Stage 1: Source extraction (runs in parallel)
+  php_files:
+    source:
+      type: "filesystem"
+      properties:
+        path: "./src"
+        include_patterns: ["*.php"]
+
+  # Stage 2: Parse source code
+  php_source_code:
+    inputs: php_files
+    transform:
+      type: "source_code_analyser"
+      properties:
+        language: "php"
+
+  # Stage 3: Analyse for processing purposes
+  processing_purposes:
+    inputs: php_source_code
+    transform:
+      type: "processing_purpose"
+    output: true
+```
+
+**Execution flow:**
+1. `php_files` extracts files (source artifact)
+2. `php_source_code` parses files (waits for step 1)
+3. `processing_purposes` analyses code (waits for step 2)
+
+Independent artifacts execute in parallel automatically.
 
 ## Available Runbooks
 
 ### Sample Runbooks (`samples/` directory)
 
 #### `samples/file_content_analysis.yaml`
-A simple demonstration runbook showing:
-- Basic file content analysis using the personal_data_analyser
+
+Simple demonstration runbook showing:
+- Basic file content analysis using personal_data analyser
 - Detection of personal data and sensitive information
-- Ideal for learning WCT basics and testing file analysis functionality
+- Ideal for learning WCT basics
 
 #### `samples/LAMP_stack.yaml`
-A comprehensive example runbook that demonstrates:
-- **Pipeline execution** (Filesystem → SourceCode → ProcessingPurpose)
-- Multi-step analyser chaining with `input_from`
-- MySQL database analysis
-- PHP source code analysis
-- Personal data detection across multiple data sources
-- Complete LAMP stack compliance analysis
+
+Comprehensive example demonstrating:
+- Multiple source artifacts (MySQL, filesystem)
+- Pipeline execution: Filesystem → SourceCode → ProcessingPurpose
+- Fan-out pattern (one source, multiple analysers)
+- Personal data, data subject, and processing purpose detection
+
+#### `samples/LAMP_stack_lite.yaml`
+
+Lightweight version of LAMP_stack without MySQL dependency.
 
 ## Usage
-
-Run any runbook from the project root:
 
 ```bash
 # Validate a runbook
 uv run wct validate-runbook runbooks/samples/file_content_analysis.yaml
 
-# Execute sample runbooks
+# Execute a runbook
 uv run wct run runbooks/samples/file_content_analysis.yaml
-uv run wct run runbooks/samples/LAMP_stack.yaml
+
+# Execute with verbose logging
+uv run wct run runbooks/samples/LAMP_stack.yaml -v
 
 # Execute with debug logging
 uv run wct run runbooks/samples/file_content_analysis.yaml --log-level DEBUG
-uv run wct run runbooks/samples/LAMP_stack.yaml -v
 ```
 
-## Pipeline Execution
+## IDE Support
 
-Pipeline execution enables multi-step analysis workflows where the output of one step becomes the input to the next. This is WCF's most powerful feature for complex compliance analysis.
-
-### When to Use Pipelines
-
-Use pipeline execution when you need to:
-- Transform data through multiple stages (e.g., parse → analyse → classify)
-- Chain analysers that require different input schemas
-- Reuse intermediate results across multiple downstream steps
-- Build modular, composable analysis workflows
-
-### Pipeline Basics
-
-**Key fields:**
-- `id`: Unique identifier for each step (required)
-- `input_from`: Reference to previous step's ID (pipeline mode)
-- `connector`: Extract from external source (connector mode)
-- `save_output`: Store step output for downstream steps (default: false)
-
-**Execution modes:**
-- **Connector mode:** Step has `connector` field - extracts from external source
-- **Pipeline mode:** Step has `input_from` field - reads from previous step's output
-
-### Example: Source Code Analysis Pipeline
-
-```yaml
-execution:
-  # Step 1: Read PHP files from filesystem
-  - id: "read_files"
-    connector: "filesystem"
-    analyser: "source_code_analyser"
-    input_schema: "standard_input"
-    output_schema: "source_code"
-    save_output: true  # Required for downstream steps
-
-  # Step 2: Analyse parsed code for processing purposes
-  - id: "analyse_purposes"
-    input_from: "read_files"  # Uses output from step 1
-    analyser: "processing_purpose_analyser"
-    input_schema: "source_code"
-    output_schema: "processing_purpose_finding"
-```
-
-**How it works:**
-1. `read_files` extracts files via filesystem connector
-2. `source_code_analyser` transforms standard_input → source_code schema
-3. `save_output: true` stores the Message for downstream use
-4. `analyse_purposes` reads from artifacts (no connector needed)
-5. Executor validates schema compatibility automatically
-
-### Schema Compatibility
-
-The executor validates that:
-- Step's input schema matches previous step's output schema
-- Analyser supports the input schema
-- Schema names and versions are compatible
-
-If schemas don't match, WCT provides clear error messages listing supported schemas.
-
-### Real-World Example
-
-See `samples/LAMP_stack.yaml` lines 174-191 for a complete pipeline:
-```yaml
-- id: "read_php_files"
-  connector: "php_files"
-  analyser: "source_code_analyser_for_php"
-  output_schema: "source_code"
-  save_output: true
-
-- id: "php_processing_purpose"
-  input_from: "read_php_files"
-  analyser: "processing_purpose_analyser_for_source_code"
-  input_schema: "source_code"
-```
-
-## Schema Version Specification
-
-Execution steps support optional version pinning for input and output schemas.
-
-### Auto-Selection (Recommended)
-
-By default, WCT automatically selects the latest compatible schema version:
-
-```yaml
-execution:
-  - name: "Analyse data"
-    connector: "mysql_connector"
-    analyser: "personal_data_analyser"
-    input_schema: "standard_input"
-    output_schema: "personal_data_finding"
-    # Versions auto-selected
-```
-
-### Explicit Version Pinning
-
-Pin specific schema versions when needed:
-
-```yaml
-execution:
-  - name: "Analyse data with specific versions"
-    connector: "mysql_connector"
-    analyser: "personal_data_analyser"
-    input_schema: "standard_input"
-    input_schema_version: "1.0.0"     # Pin input to v1.0.0
-    output_schema: "personal_data_finding"
-    output_schema_version: "1.0.0"    # Pin output to v1.0.0
-```
-
-**Version Format:** Must be semantic versioning `major.minor.patch` (e.g., "1.0.0", "2.10.5")
-
-### When to Pin Versions
-
-**Use auto-selection when:**
-- You want latest features and improvements
-- Components are regularly updated
-- You trust component maintainers
-
-**Pin versions when:**
-- Reproducible results required (compliance audits)
-- Testing specific version combinations
-- Avoiding breaking changes temporarily
-- Integration with external systems requiring specific format
-
-### Version Compatibility
-
-WCT validates version compatibility:
-- Connector must support requested input schema version
-- Analyser must support requested input schema version
-- Analyser must support requested output schema version
-
-If no compatible versions found, WCT provides clear error message with available versions.
-
-## Creating New Runbooks
-
-When creating new runbooks for specific scenarios:
-
-1. Use relative paths from project root (e.g., `./tests/...`)
-2. Follow the established naming convention: `scenario_description.yaml`
-3. Include appropriate metadata for compliance frameworks
-4. Document the purpose and expected outcomes
-
-### IDE Support for Runbook Creation
-
-For enhanced development experience with autocomplete, validation, and documentation:
+Generate JSON Schema for autocomplete and validation:
 
 ```bash
-# Generate JSON Schema for IDE support
 uv run wct generate-schema
 ```
 
-This enables real-time validation and autocomplete in VS Code, PyCharm, and other IDEs. See [IDE Integration Guide](../docs/ide-integration.md) for setup instructions.
+This enables real-time validation in VS Code, PyCharm, and other IDEs.
 
-### How Schema Generation Works
+## Field Reference
 
-WCT uses Pydantic models as the single source of truth for runbook validation:
+### Runbook Fields
 
-1. **Runtime validation**: Pydantic validates runbooks when `wct run` executes
-2. **IDE support**: JSON Schema is auto-generated from Pydantic via `model_json_schema()`
-3. **Single source**: One definition serves both purposes (no duplication)
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Runbook name |
+| `description` | string | Yes | What this runbook analyses |
+| `contact` | string | No | Contact person (e.g., "Name <email>") |
+| `config` | object | No | Execution configuration |
+| `artifacts` | object | Yes | Artifact definitions |
 
-When you run `wct generate-schema`, it:
-- Extracts JSON Schema from the Pydantic `Runbook` model
-- Adds WCT-specific metadata (version, title, description)
-- Outputs to file for IDE consumption
+### Config Fields
 
-This ensures runtime validation and IDE autocomplete are always in sync. Field descriptions, constraints, and validation rules defined in the Pydantic model automatically appear in both runtime errors and IDE tooltips.
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `timeout` | int | None | Total execution timeout (seconds) |
+| `max_concurrency` | int | 10 | Maximum parallel artifacts |
 
-**Regenerate schema after WCT updates:**
+### Artifact Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | No | Human-readable name |
+| `description` | string | No | What this artifact produces |
+| `contact` | string | No | Responsible person |
+| `source` | object | * | Data extraction config (source artifacts) |
+| `inputs` | string/list | * | Upstream artifact(s) (derived artifacts) |
+| `transform` | object | ** | Transformation config (derived artifacts) |
+| `merge` | string | No | Fan-in merge strategy ("concatenate") |
+| `output` | bool | No | Include in final output (default: false) |
+| `optional` | bool | No | Continue on failure (default: false) |
+
+\* Either `source` or `inputs` required (mutually exclusive)
+\** Required when `inputs` is specified
+
+### Source Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | string | Yes | Connector type |
+| `properties` | object | No | Connector configuration |
+
+### Transform Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | string | Yes | Analyser type |
+| `properties` | object | No | Analyser configuration |
+
+## Available Components
+
+List available connectors and analysers:
+
 ```bash
-wct generate-schema --output runbook.schema.json
+uv run wct ls-connectors
+uv run wct ls-analysers
 ```
 
-## Scenario Ideas
+### Connectors
 
-Future runbooks could include:
-- `database_only_analysis.yaml` - MySQL/database-specific analysis
-- `source_code_only_analysis.yaml` - Source code analysis without other connectors
-- `llm_validation_test.yaml` - Testing LLM validation features
-- `performance_test.yaml` - Large dataset performance testing
-- `wordpress_stack_analysis.yaml` - WordPress-specific compliance analysis
-- `api_security_analysis.yaml` - Focus on API key and authentication analysis
+- `mysql` - MySQL database extraction
+- `sqlite` - SQLite database extraction
+- `filesystem` - File and directory reading
 
-## Quick Start
+### Analysers
 
-For new users, start with the simple file analysis:
-```bash
-uv run wct run runbooks/samples/file_content_analysis.yaml -v
-```
+- `personal_data` - PII detection
+- `data_subject` - Data subject classification
+- `processing_purpose` - Processing purpose detection
+- `source_code_analyser` - Source code parsing
 
-This will analyse a sample file and demonstrate:
-- Email detection
-- API key detection
-- Password pattern detection
-- Risk scoring and severity classification
+## Creating New Runbooks
+
+1. Start with a sample runbook as template
+2. Define source artifacts for data extraction
+3. Define derived artifacts for analysis
+4. Set `output: true` on artifacts to include in results
+5. Validate with `wct validate-runbook`
+6. Test with `wct run`
+
+### Tips
+
+- Use meaningful artifact IDs (they appear in output)
+- Set `output: true` only on final analysis artifacts
+- Use `optional: true` for non-critical artifacts
+- Group related properties under `pattern_matching` and `llm_validation`

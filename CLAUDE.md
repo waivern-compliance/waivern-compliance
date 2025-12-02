@@ -25,7 +25,9 @@ waivern-compliance/
 │   ├── waivern-personal-data-analyser/  # Personal data analyser (standalone)
 │   ├── waivern-data-subject-analyser/  # Data subject analyser (standalone)
 │   ├── waivern-processing-purpose-analyser/  # Processing purpose analyser (standalone)
-│   └── waivern-data-export-analyser/  # Data export analyser (work in progress)
+│   ├── waivern-data-export-analyser/  # Data export analyser (work in progress)
+│   ├── waivern-orchestration/     # Runbook parsing, planning, and DAG execution
+│   └── waivern-artifact-store/    # In-memory artifact storage for execution
 └── apps/                           # Applications
     └── wct/                        # Waivern Compliance Tool (CLI application)
         ├── .env                    # App-specific configuration
@@ -52,6 +54,8 @@ waivern-compliance/
 - **waivern-data-subject-analyser**: Data subject analyser (standalone package)
 - **waivern-processing-purpose-analyser**: Processing purpose analyser (standalone package, supports both standard input and source code analysis)
 - **waivern-data-export-analyser**: Data export analyser with TCF vendor database (work in progress, not yet functional)
+- **waivern-orchestration**: Runbook parsing, execution planning (DAG), and parallel artifact execution
+- **waivern-artifact-store**: In-memory artifact storage for inter-artifact data passing during execution
 
 **Applications:**
 - **wct**: CLI tool that orchestrates compliance analysis by executing YAML runbooks using framework components
@@ -64,20 +68,20 @@ waivern-compliance/
 2. **Analysers** - Pure functions that process schema-validated data and produce compliance findings
 3. **Rulesets** - YAML-based pattern definitions for static compliance analysis
 4. **Schemas** - JSON Schema contracts that define component communication
-5. **Runbooks** - YAML configurations defining what to analyse and how (like Infrastructure as Code)
-6. **Executor** - Orchestrates runbook execution (lives in WCT application)
+5. **Runbooks** - YAML configurations defining artifacts and their dependencies (like Infrastructure as Code)
+6. **Orchestration** - Planner resolves dependencies and schemas; DAGExecutor runs artifacts in parallel
 
 ### Data Flow
 
 ```
-Runbook (YAML) → Executor → Connector → Schema Validation → Analyser → Findings (JSON)
+Runbook (YAML) → Planner → DAGExecutor → Connector/Analyser → Findings (JSON)
 ```
 
-1. User writes a runbook specifying connectors, analysers, and execution steps
-2. WCT Executor loads the runbook and validates configuration
-3. Connectors extract data and transform to WCF schemas
-4. Data flows through Message objects (automatic schema validation)
-5. Analysers process data using rulesets and/or LLM validation
+1. User writes a runbook defining artifacts (sources and transformations)
+2. Planner parses runbook, builds execution DAG, resolves schemas
+3. DAGExecutor runs artifacts in dependency order (parallel where possible)
+4. Connectors extract data; Analysers transform data
+5. Data flows through Message objects (automatic schema validation)
 6. Results are output as JSON files
 
 ### Schema-Driven Architecture
@@ -238,36 +242,37 @@ uv run wct test-llm  # Verify configuration
 
 ## Runbook Format
 
-Runbooks are YAML files that define compliance analysis pipelines:
+Runbooks use an artifact-centric format where each artifact is either a source (data extraction) or derived (transformation):
 
 ```yaml
 name: "Runbook Name"
 description: "What this runbook analyses"
 contact: "Contact Person <email@company.com>"
 
-connectors:
-  - name: "filesystem_reader"
-    type: "filesystem"
-    properties:
-      path: "./sample_file.txt"
+artifacts:
+  # Source artifact - extracts data
+  file_content:
+    source:
+      type: "filesystem"
+      properties:
+        path: "./sample_file.txt"
 
-analysers:
-  - name: "content_analyser"
-    type: "personal_data_analyser"
-    properties:
-      pattern_matching:
-        ruleset: "personal_data"
-        evidence_context_size: "medium"
-      llm_validation:
-        enable_llm_validation: true
-
-execution:
-  - name: "Analyse file content"
-    connector: "filesystem_reader"
-    analyser: "content_analyser"
-    input_schema: "standard_input"
-    output_schema: "personal_data_finding"
+  # Derived artifact - transforms data
+  personal_data_findings:
+    inputs: file_content
+    transform:
+      type: "personal_data"
+      properties:
+        pattern_matching:
+          ruleset: "personal_data"
+    output: true  # Include in final output
 ```
+
+**Key concepts:**
+- **Source artifacts** use `source` to extract data via connectors
+- **Derived artifacts** use `inputs` + `transform` to process upstream data
+- **`output: true`** marks artifacts for inclusion in results
+- Dependencies determine execution order (parallel where possible)
 
 **Sample Runbooks:**
 - `apps/wct/runbooks/samples/file_content_analysis.yaml` - Simple file analysis

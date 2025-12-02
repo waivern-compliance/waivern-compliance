@@ -1,7 +1,7 @@
 # Task 6: Update Documentation and Clean Up Old Code
 
 - **Phase:** 4 - Finalisation
-- **Status:** TODO
+- **Status:** DONE
 - **GitHub Issue:** #247 (close via PR)
 - **Prerequisites:** Task 5 (CLI and runbook migration)
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)
@@ -13,13 +13,13 @@ Tasks 1-5 implemented and integrated the new orchestration system. This final ta
 ## Purpose
 
 1. Update user-facing documentation for the artifact-centric format
-2. Remove deprecated code (old Executor, old runbook models)
+2. ~~Remove deprecated code (old Executor, old runbook models)~~ ✅ Done in Task 5
 3. Update CLAUDE.md with new runbook format
 4. Move design docs from `active/` to `completed/`
 
 ## Problem
 
-Documentation still references the old three-section runbook format. Old code remains in the codebase alongside new code. This creates confusion and maintenance burden.
+Documentation still references the old three-section runbook format. ~~Old code remains in the codebase alongside new code.~~ This creates confusion and maintenance burden.
 
 ## Decisions Made
 
@@ -130,10 +130,10 @@ Add note pointing to implementation:
 - [ ] No references to old format remain
 - [ ] Links between docs work
 
-#### Code Removal
-- [ ] No imports of removed modules
-- [ ] All tests pass after removal
-- [ ] No dead code warnings
+#### Code Removal (✅ Done in Task 5)
+- [x] No imports of removed modules
+- [x] All tests pass after removal
+- [x] No dead code warnings
 
 #### Integration
 - [ ] `wct run` works with documented examples
@@ -143,11 +143,6 @@ Add note pointing to implementation:
 ### Validation Commands
 
 ```bash
-# Verify no references to old format
-grep -r "connectors:" apps/wct/runbooks/
-grep -r "analysers:" apps/wct/runbooks/
-grep -r "execution:" apps/wct/runbooks/
-
 # Run all tests
 uv run pytest -v
 
@@ -161,7 +156,7 @@ uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml
 
 ## Implementation Notes
 
-- Search codebase thoroughly for old format references
-- Check test fixtures for old format runbooks
-- Update any integration tests that use old format
+- ~~Search codebase thoroughly for old format references~~ ✅ Done
+- ~~Check test fixtures for old format runbooks~~ ✅ Done
+- ~~Update any integration tests that use old format~~ ✅ Done
 - Reference ADR-0003 when documenting fan-in behaviour (only "concatenate" merge supported in Phase 1)

@@ -1,4 +1,4 @@
-"""Shared test fixtures and helpers for waivern-orchestration tests."""
+"""Shared test helpers for waivern-orchestration tests."""
 
 from typing import Any
 from unittest.mock import MagicMock
@@ -12,7 +12,7 @@ from waivern_core.schemas import Schema
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 
 from waivern_orchestration.dag import ExecutionDAG
-from waivern_orchestration.models import ArtifactDefinition, Runbook
+from waivern_orchestration.models import ArtifactDefinition, Runbook, RunbookConfig
 from waivern_orchestration.planner import ExecutionPlan
 
 
@@ -136,6 +136,7 @@ def create_test_message(
 def create_simple_plan(
     artifacts: dict[str, ArtifactDefinition],
     artifact_schemas: dict[str, tuple[Schema | None, Schema]] | None = None,
+    runbook_config: RunbookConfig | None = None,
 ) -> ExecutionPlan:
     """Create a simple ExecutionPlan for testing.
 
@@ -143,16 +144,20 @@ def create_simple_plan(
         artifacts: Dict of artifact ID to definition.
         artifact_schemas: Optional pre-resolved schemas. If not provided,
             defaults to (None, test_schema/1.0.0) for each artifact.
+        runbook_config: Optional RunbookConfig for execution settings.
 
     Returns:
         ExecutionPlan ready for execution.
 
     """
-    runbook = Runbook(
-        name="Test Runbook",
-        description="Test description",
-        artifacts=artifacts,
-    )
+    runbook_kwargs: dict[str, object] = {
+        "name": "Test Runbook",
+        "description": "Test description",
+        "artifacts": artifacts,
+    }
+    if runbook_config is not None:
+        runbook_kwargs["config"] = runbook_config
+    runbook = Runbook(**runbook_kwargs)  # pyright: ignore[reportArgumentType]
     dag = ExecutionDAG(artifacts)
 
     if artifact_schemas is None:
