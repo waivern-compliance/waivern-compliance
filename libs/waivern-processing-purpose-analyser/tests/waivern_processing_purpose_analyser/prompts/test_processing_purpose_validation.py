@@ -15,7 +15,7 @@ from waivern_processing_purpose_analyser.schemas.types import (
 class TestProcessingPurposeValidationPrompt:
     """Test processing purpose validation prompt generation focusing on behaviour."""
 
-    def _create_test_finding(
+    def create_test_finding(
         self,
         purpose: str = "Test Purpose",
         purpose_category: str = "OPERATIONAL",
@@ -51,7 +51,7 @@ class TestProcessingPurposeValidationPrompt:
         """Test that prompt generation works with basic finding data."""
         # Arrange
         findings = [
-            self._create_test_finding(
+            self.create_test_finding(
                 purpose="Customer Service",
                 purpose_category="OPERATIONAL",
                 risk_level="low",
@@ -77,7 +77,7 @@ class TestProcessingPurposeValidationPrompt:
     def test_conservative_mode_enables_flag_for_review_option(self) -> None:
         """Test that conservative mode includes flag_for_review action option."""
         # Arrange
-        findings = [self._create_test_finding()]
+        findings = [self.create_test_finding()]
 
         # Act
         prompt = get_processing_purpose_validation_prompt(findings, "conservative")
@@ -88,7 +88,7 @@ class TestProcessingPurposeValidationPrompt:
     def test_standard_mode_excludes_flag_for_review_option(self) -> None:
         """Test that standard mode does not include flag_for_review action option."""
         # Arrange
-        findings = [self._create_test_finding()]
+        findings = [self.create_test_finding()]
 
         # Act
         prompt = get_processing_purpose_validation_prompt(findings, "standard")
@@ -100,7 +100,7 @@ class TestProcessingPurposeValidationPrompt:
         """Test that high-risk findings trigger appropriate warnings in conservative mode."""
         # Arrange
         high_risk_findings = [
-            self._create_test_finding(
+            self.create_test_finding(
                 purpose="AI Training",
                 purpose_category="AI_AND_ML",
                 risk_level="high",
@@ -123,7 +123,7 @@ class TestProcessingPurposeValidationPrompt:
         for category in sensitive_categories:
             # Arrange
             findings = [
-                self._create_test_finding(
+                self.create_test_finding(
                     purpose_category=category,
                     risk_level="medium",
                 )
@@ -143,7 +143,7 @@ class TestProcessingPurposeValidationPrompt:
         """Test that security category alone doesn't trigger privacy-sensitive warnings."""
         # Arrange
         findings = [
-            self._create_test_finding(
+            self.create_test_finding(
                 purpose="Security",
                 purpose_category="SECURITY",
                 risk_level="high",
@@ -161,13 +161,13 @@ class TestProcessingPurposeValidationPrompt:
     def test_always_uses_array_response_format(self) -> None:
         """Test that response format is always array-based for consistency."""
         # Test single finding
-        single_finding = [self._create_test_finding()]
+        single_finding = [self.create_test_finding()]
         prompt_single = get_processing_purpose_validation_prompt(
             single_finding, "standard"
         )
 
         # Test multiple findings
-        multiple_findings = [self._create_test_finding(), self._create_test_finding()]
+        multiple_findings = [self.create_test_finding(), self.create_test_finding()]
         prompt_multiple = get_processing_purpose_validation_prompt(
             multiple_findings, "standard"
         )
@@ -181,7 +181,7 @@ class TestProcessingPurposeValidationPrompt:
     def test_conservative_mode_extends_reasoning_length(self) -> None:
         """Test that conservative mode allows longer reasoning explanations."""
         # Arrange
-        findings = [self._create_test_finding()]
+        findings = [self.create_test_finding()]
 
         # Act
         standard_prompt = get_processing_purpose_validation_prompt(findings, "standard")
@@ -197,7 +197,7 @@ class TestProcessingPurposeValidationPrompt:
         """Test that evidence is properly formatted in the prompt."""
         # Arrange
         findings = [
-            self._create_test_finding(
+            self.create_test_finding(
                 evidence=["evidence 1", "evidence 2", "evidence 3"]
             )
         ]
@@ -219,7 +219,7 @@ class TestProcessingPurposeValidationPrompt:
     def test_validation_mode_fallback(self) -> None:
         """Test that invalid validation modes fall back to standard behaviour."""
         # Arrange
-        findings = [self._create_test_finding()]
+        findings = [self.create_test_finding()]
 
         # Act
         prompt = get_processing_purpose_validation_prompt(findings, "invalid_mode")

@@ -562,7 +562,7 @@ class TestVendorDatabaseProtection:
         conn.commit()
         conn.close()
 
-    def _capture_original_data_state(self, temp_db_path):
+    def capture_original_data_state(self, temp_db_path):
         """Helper to capture original data state for verification."""
         conn = sqlite3.connect(temp_db_path)
         original_state = {
@@ -595,7 +595,7 @@ class TestVendorDatabaseProtection:
         conn.close()
         return original_state
 
-    def _verify_data_preservation(self, temp_db_path, original_state):
+    def verify_data_preservation(self, temp_db_path, original_state):
         """Helper to verify all original data is preserved exactly."""
         conn = sqlite3.connect(temp_db_path)
 
@@ -664,7 +664,7 @@ class TestVendorDatabaseProtection:
         """
         # Set up comprehensive test data
         self._setup_comprehensive_test_data(temp_db_path)
-        original_state = self._capture_original_data_state(temp_db_path)
+        original_state = self.capture_original_data_state(temp_db_path)
 
         # Create invalid JSON that will cause import to fail
         invalid_json_data = {
@@ -793,21 +793,21 @@ class TestVendorDatabaseProtection:
         Important: Vendor IDs are primary keys referenced by other WCT components
         """
         # Setup database and perform initial import
-        initial_data = self._setup_vendor_consistency_test_data()
-        self._perform_vendor_import_and_get_results(
+        initial_data = self.setup_vendor_consistency_test_data()
+        self.perform_vendor_import_and_get_results(
             temp_db_path, temp_json_path, initial_data
         )
 
         # Perform update import with modifications
-        updated_data = self._create_updated_vendor_data(initial_data)
-        self._perform_vendor_import_and_get_results(
+        updated_data = self.create_updated_vendor_data(initial_data)
+        self.perform_vendor_import_and_get_results(
             temp_db_path, temp_json_path, updated_data
         )
 
         # Verify vendor ID consistency
-        self._verify_vendor_id_consistency(temp_db_path)
+        self.verify_vendor_id_consistency(temp_db_path)
 
-    def _setup_vendor_consistency_test_data(self):
+    def setup_vendor_consistency_test_data(self):
         """Setup initial test data for vendor consistency testing."""
         return {
             "gvlSpecificationVersion": 3,
@@ -851,9 +851,7 @@ class TestVendorDatabaseProtection:
             },
         }
 
-    def _perform_vendor_import_and_get_results(
-        self, temp_db_path, temp_json_path, data
-    ):
+    def perform_vendor_import_and_get_results(self, temp_db_path, temp_json_path, data):
         """Perform vendor import and return vendor results."""
         # Always ensure database exists with proper schema
         create_db_path = (
@@ -940,7 +938,7 @@ class TestVendorDatabaseProtection:
 
         return vendors
 
-    def _create_updated_vendor_data(self, initial_data):
+    def create_updated_vendor_data(self, initial_data):
         """Create updated vendor data with modifications."""
         updated_data = initial_data.copy()
         updated_data["vendorListVersion"] = 101
@@ -957,7 +955,7 @@ class TestVendorDatabaseProtection:
         }
         return updated_data
 
-    def _verify_vendor_id_consistency(self, temp_db_path):
+    def verify_vendor_id_consistency(self, temp_db_path):
         """Verify vendor ID consistency after updates."""
         conn = sqlite3.connect(temp_db_path)
         cursor = conn.cursor()

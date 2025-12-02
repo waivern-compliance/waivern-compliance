@@ -22,6 +22,7 @@ from waivern_orchestration.models import (
 )
 from waivern_orchestration.parser import parse_runbook, parse_runbook_from_dict
 from waivern_orchestration.planner import ExecutionPlan, Planner
+from waivern_orchestration.schema import RunbookSchemaGenerator
 
 __all__ = [
     # Models
@@ -43,6 +44,8 @@ __all__ = [
     "Planner",
     # Executor
     "DAGExecutor",
+    # Schema
+    "RunbookSchemaGenerator",
     # Errors
     "ComponentNotFoundError",
     "CycleDetectedError",

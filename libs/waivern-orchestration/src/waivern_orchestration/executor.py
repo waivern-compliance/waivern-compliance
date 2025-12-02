@@ -97,7 +97,7 @@ class DAGExecutor:
         ctx: _ExecutionContext,
     ) -> None:
         """Execute artifacts in topological order with parallel batches."""
-        sorter = plan.dag.get_sorter()
+        sorter = plan.dag.create_sorter()
 
         while sorter.is_active():
             # Get ready artifacts once (store result to avoid multiple calls)

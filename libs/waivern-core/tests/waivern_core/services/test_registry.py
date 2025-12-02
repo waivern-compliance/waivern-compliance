@@ -51,8 +51,8 @@ class TestComponentRegistry:
             # Act - access connector_factories
             _ = registry.connector_factories
 
-            # Assert - entry_points was called for both groups
-            assert mock_ep.call_count == 2
+            # Assert - entry_points called for schemas, connectors, analysers
+            assert mock_ep.call_count == 3
 
     def test_analyser_factories_triggers_discovery(self) -> None:
         """Verify accessing analyser_factories triggers entry point discovery."""
@@ -66,8 +66,8 @@ class TestComponentRegistry:
             # Act - access analyser_factories
             _ = registry.analyser_factories
 
-            # Assert - entry_points was called for both groups
-            assert mock_ep.call_count == 2
+            # Assert - entry_points called for schemas, connectors, analysers
+            assert mock_ep.call_count == 3
 
     def test_discovery_called_only_once(self) -> None:
         """Verify _discover_components called exactly once despite multiple accesses."""
@@ -84,8 +84,8 @@ class TestComponentRegistry:
             _ = registry.connector_factories
             _ = registry.analyser_factories
 
-        # Assert - entry_points called only twice (once per group, single discovery)
-        assert mock_ep.call_count == 2
+        # Assert - entry_points called only 3 times (schemas, connectors, analysers)
+        assert mock_ep.call_count == 3
 
     def test_discovered_connector_factory_accessible_by_name(self) -> None:
         """Verify discovered connector factories are accessible by entry point name."""
@@ -161,3 +161,100 @@ class TestComponentRegistry:
 
         # Assert - factory class instantiated with container
         mock_factory_class.assert_called_once_with(container)
+
+
+class TestComponentRegistrySchemaDiscovery:
+    """Test suite for schema entry point discovery behaviour.
+
+    These tests verify that accessing component factories triggers
+    schema registration via entry points, ensuring schemas from
+    component packages are available before components use them.
+    """
+
+    def test_accessing_factories_invokes_schema_entry_points(self) -> None:
+        """Schema entry points are invoked when accessing component factories."""
+        # Arrange
+        container = ServiceContainer()
+        registry = ComponentRegistry(container)
+
+        mock_register_func = MagicMock()
+        mock_schema_ep = MagicMock()
+        mock_schema_ep.name = "test_schema"
+        mock_schema_ep.load.return_value = mock_register_func
+
+        with patch("waivern_core.services.registry.entry_points") as mock_entry_points:
+            mock_entry_points.side_effect = lambda group: (
+                [mock_schema_ep] if group == "waivern.schemas" else []
+            )
+
+            # Act - access factories (triggers discovery)
+            _ = registry.connector_factories
+
+        # Assert - schema registration function was invoked
+        mock_register_func.assert_called_once()
+
+    def test_failed_schema_entry_point_does_not_block_component_discovery(self) -> None:
+        """Component discovery succeeds even when schema entry point fails."""
+        # Arrange
+        container = ServiceContainer()
+        registry = ComponentRegistry(container)
+
+        # Schema entry point that raises an exception
+        mock_register_func = MagicMock(side_effect=Exception("Schema load failed"))
+        mock_schema_ep = MagicMock()
+        mock_schema_ep.name = "failing_schema"
+        mock_schema_ep.load.return_value = mock_register_func
+
+        # Valid connector factory
+        mock_factory_class = MagicMock()
+        mock_factory_instance = MagicMock()
+        mock_factory_class.return_value = mock_factory_instance
+
+        mock_connector_ep = MagicMock()
+        mock_connector_ep.name = "test_connector"
+        mock_connector_ep.load.return_value = mock_factory_class
+
+        with patch("waivern_core.services.registry.entry_points") as mock_entry_points:
+            mock_entry_points.side_effect = lambda group: {
+                "waivern.schemas": [mock_schema_ep],
+                "waivern.connectors": [mock_connector_ep],
+                "waivern.analysers": [],
+            }.get(group, [])
+
+            # Act - should succeed despite schema entry point failure
+            factories = registry.connector_factories
+
+        # Assert - connector factory discovered successfully
+        assert "test_connector" in factories
+        assert factories["test_connector"] is mock_factory_instance
+
+    def test_all_schema_entry_points_invoked(self) -> None:
+        """All registered schema entry points are invoked during discovery."""
+        # Arrange
+        container = ServiceContainer()
+        registry = ComponentRegistry(container)
+
+        mock_register_func_1 = MagicMock()
+        mock_register_func_2 = MagicMock()
+
+        mock_schema_ep_1 = MagicMock()
+        mock_schema_ep_1.name = "schema_package_1"
+        mock_schema_ep_1.load.return_value = mock_register_func_1
+
+        mock_schema_ep_2 = MagicMock()
+        mock_schema_ep_2.name = "schema_package_2"
+        mock_schema_ep_2.load.return_value = mock_register_func_2
+
+        with patch("waivern_core.services.registry.entry_points") as mock_entry_points:
+            mock_entry_points.side_effect = lambda group: (
+                [mock_schema_ep_1, mock_schema_ep_2]
+                if group == "waivern.schemas"
+                else []
+            )
+
+            # Act
+            _ = registry.connector_factories
+
+        # Assert - both schema entry points were invoked
+        mock_register_func_1.assert_called_once()
+        mock_register_func_2.assert_called_once()

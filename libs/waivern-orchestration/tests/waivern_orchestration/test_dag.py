@@ -90,7 +90,7 @@ class TestExecutionDAGExecutionOrder:
         }
 
         dag = ExecutionDAG(artifacts)
-        sorter = dag.get_sorter()
+        sorter = dag.create_sorter()
 
         # Get execution order
         order = []
@@ -111,7 +111,7 @@ class TestExecutionDAGExecutionOrder:
         }
 
         dag = ExecutionDAG(artifacts)
-        sorter = dag.get_sorter()
+        sorter = dag.create_sorter()
 
         # All three should be ready at once
         ready = sorter.get_ready()
@@ -129,7 +129,7 @@ class TestExecutionDAGExecutionOrder:
         }
 
         dag = ExecutionDAG(artifacts)
-        sorter = dag.get_sorter()
+        sorter = dag.create_sorter()
 
         # A and B ready first
         ready = sorter.get_ready()
@@ -146,14 +146,14 @@ class TestExecutionDAGExecutionOrder:
         ready = sorter.get_ready()
         assert "C" in ready
 
-    def test_dag_get_sorter_returns_prepared_sorter(self) -> None:
-        """get_sorter() returns a usable TopologicalSorter that can iterate."""
+    def test_dag_create_sorter_returns_prepared_sorter(self) -> None:
+        """create_sorter() returns a usable TopologicalSorter that can iterate."""
         artifacts = {
             "A": ArtifactDefinition(source=SourceConfig(type="filesystem")),
         }
 
         dag = ExecutionDAG(artifacts)
-        sorter = dag.get_sorter()
+        sorter = dag.create_sorter()
 
         # Should be able to use get_ready() without calling prepare()
         ready = sorter.get_ready()
@@ -212,6 +212,96 @@ class TestExecutionDAGCycleDetection:
             dag.validate()
 
 
+class TestExecutionDAGDepth:
+    """Tests for DAG depth calculation."""
+
+    def test_empty_dag_has_zero_depth(self) -> None:
+        """Empty artifact dictionary results in depth 0."""
+        artifacts: dict[str, ArtifactDefinition] = {}
+
+        dag = ExecutionDAG(artifacts)
+
+        assert dag.get_depth() == 0
+
+    def test_single_source_artifact_has_depth_one(self) -> None:
+        """Single source artifact has depth 1 (one level to execute)."""
+        artifacts = {
+            "source": ArtifactDefinition(source=SourceConfig(type="filesystem")),
+        }
+
+        dag = ExecutionDAG(artifacts)
+
+        assert dag.get_depth() == 1
+
+    def test_parallel_sources_have_depth_one(self) -> None:
+        """Multiple independent source artifacts execute in one level."""
+        artifacts = {
+            "A": ArtifactDefinition(source=SourceConfig(type="filesystem")),
+            "B": ArtifactDefinition(source=SourceConfig(type="mysql")),
+            "C": ArtifactDefinition(source=SourceConfig(type="sqlite")),
+        }
+
+        dag = ExecutionDAG(artifacts)
+
+        assert dag.get_depth() == 1
+
+    def test_linear_chain_depth_equals_chain_length(self) -> None:
+        """Linear chain A → B → C has depth 3 (three sequential levels)."""
+        artifacts = {
+            "A": ArtifactDefinition(source=SourceConfig(type="filesystem")),
+            "B": ArtifactDefinition(
+                inputs="A", transform=TransformConfig(type="analyser")
+            ),
+            "C": ArtifactDefinition(
+                inputs="B", transform=TransformConfig(type="analyser")
+            ),
+        }
+
+        dag = ExecutionDAG(artifacts)
+
+        assert dag.get_depth() == 3
+
+    def test_fan_in_has_depth_two(self) -> None:
+        """Fan-in pattern (A, B → C) has depth 2: sources then merger."""
+        artifacts = {
+            "A": ArtifactDefinition(source=SourceConfig(type="filesystem")),
+            "B": ArtifactDefinition(source=SourceConfig(type="mysql")),
+            "C": ArtifactDefinition(
+                inputs=["A", "B"],
+                transform=TransformConfig(type="merger"),
+            ),
+        }
+
+        dag = ExecutionDAG(artifacts)
+
+        assert dag.get_depth() == 2
+
+    def test_complex_dag_depth_equals_longest_path(self) -> None:
+        """Complex DAG depth is the longest path from any root to any leaf.
+
+        Structure:
+            A (source) → B (transform) → D (transform)
+            C (source) ─────────────────↗
+
+        Longest path is A → B → D = 3 levels.
+        """
+        artifacts = {
+            "A": ArtifactDefinition(source=SourceConfig(type="filesystem")),
+            "B": ArtifactDefinition(
+                inputs="A", transform=TransformConfig(type="analyser")
+            ),
+            "C": ArtifactDefinition(source=SourceConfig(type="mysql")),
+            "D": ArtifactDefinition(
+                inputs=["B", "C"],
+                transform=TransformConfig(type="merger"),
+            ),
+        }
+
+        dag = ExecutionDAG(artifacts)
+
+        assert dag.get_depth() == 3
+
+
 class TestExecutionDAGEdgeCases:
     """Tests for edge cases and special scenarios."""
 
@@ -222,5 +312,5 @@ class TestExecutionDAGEdgeCases:
         dag = ExecutionDAG(artifacts)
         dag.validate()  # Should not raise
 
-        sorter = dag.get_sorter()
+        sorter = dag.create_sorter()
         assert not sorter.is_active()  # Nothing to process

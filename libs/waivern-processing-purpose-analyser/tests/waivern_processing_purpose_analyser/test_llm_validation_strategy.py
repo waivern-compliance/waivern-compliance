@@ -19,7 +19,7 @@ from waivern_processing_purpose_analyser.schemas.types import (
 class TestProcessingPurposeValidationStrategy:
     """Test processing purpose validation strategy behavior."""
 
-    def _create_test_finding(
+    def create_test_finding(
         self,
         purpose: str = "Test Purpose",
         purpose_category: str = "OPERATIONAL",
@@ -64,8 +64,8 @@ class TestProcessingPurposeValidationStrategy:
     def test_filters_false_positives(self) -> None:
         """Test that false positive findings are filtered out."""
         findings = [
-            self._create_test_finding(purpose="Documentation Example"),
-            self._create_test_finding(purpose="Customer Service"),
+            self.create_test_finding(purpose="Documentation Example"),
+            self.create_test_finding(purpose="Customer Service"),
         ]
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
@@ -102,8 +102,8 @@ class TestProcessingPurposeValidationStrategy:
     def test_keeps_all_true_positives(self) -> None:
         """Test that all true positive findings are kept."""
         findings = [
-            self._create_test_finding(purpose="Customer Support"),
-            self._create_test_finding(purpose="Order Processing"),
+            self.create_test_finding(purpose="Customer Support"),
+            self.create_test_finding(purpose="Order Processing"),
         ]
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
@@ -141,7 +141,7 @@ class TestProcessingPurposeValidationStrategy:
 
     def test_error_handling_returns_original_findings(self) -> None:
         """Test that LLM errors return original findings safely."""
-        findings = [self._create_test_finding(purpose="Test Purpose")]
+        findings = [self.create_test_finding(purpose="Test Purpose")]
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
 
@@ -159,7 +159,7 @@ class TestProcessingPurposeValidationStrategy:
 
     def test_handles_malformed_json_response(self) -> None:
         """Test graceful handling of malformed JSON responses."""
-        findings = [self._create_test_finding(purpose="Test Purpose")]
+        findings = [self.create_test_finding(purpose="Test Purpose")]
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
 
@@ -177,7 +177,7 @@ class TestProcessingPurposeValidationStrategy:
 
     def test_handles_flag_for_review_action(self) -> None:
         """Test that flag_for_review action keeps findings."""
-        findings = [self._create_test_finding(purpose="High Risk Processing")]
+        findings = [self.create_test_finding(purpose="High Risk Processing")]
         config = LLMValidationConfig(llm_validation_mode="conservative")
         mock_llm_service = Mock(spec=AnthropicLLMService)
 

@@ -93,8 +93,8 @@ ExecutionDAG
     Check for cycles using TopologicalSorter.prepare()
     Raises CycleDetectedError if cycles found
 
-  - get_sorter() -> TopologicalSorter[str]
-    Return prepared sorter for parallel execution
+  - create_sorter() -> TopologicalSorter[str]
+    Create new prepared sorter for parallel execution
 
   - get_dependents(artifact_id: str) -> set[str]
     Return all artifacts that depend on this one
@@ -173,7 +173,7 @@ from .dag import ExecutionDAG
 #### 1. Linear chain (A → B → C)
 - Create artifacts where C depends on B, B depends on A
 - Build DAG and verify dependencies correct
-- Verify get_sorter() returns valid sorter
+- Verify create_sorter() returns valid sorter
 
 #### 2. Parallel independent artifacts
 - Create multiple source artifacts (no dependencies)

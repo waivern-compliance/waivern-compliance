@@ -14,11 +14,12 @@ from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDe
 from waivern_orchestration.executor import DAGExecutor
 from waivern_orchestration.models import (
     ArtifactDefinition,
+    RunbookConfig,
     SourceConfig,
     TransformConfig,
 )
 
-from .conftest import (
+from .test_helpers import (
     create_mock_connector_factory,
     create_mock_registry,
     create_simple_plan,
@@ -493,12 +494,11 @@ class TestDAGExecutorConcurrency:
         artifact_schemas: dict[str, tuple[Schema | None, Schema]] = {
             f"data_{i}": (None, output_schema) for i in range(5)
         }
-        plan = create_simple_plan(artifacts, artifact_schemas)
-
-        # Override config to set max_concurrency=2
-        from waivern_orchestration.models import RunbookConfig
-
-        object.__setattr__(plan.runbook, "config", RunbookConfig(max_concurrency=2))
+        plan = create_simple_plan(
+            artifacts,
+            artifact_schemas,
+            runbook_config=RunbookConfig(max_concurrency=2),
+        )
 
         registry = create_mock_registry(
             with_container=True, connector_factories={"source": connector_factory}
@@ -653,12 +653,12 @@ class TestDAGExecutorTimeout:
         artifact_schemas: dict[str, tuple[Schema | None, Schema]] = {
             f"data_{i}": (None, output_schema) for i in range(5)
         }
-        plan = create_simple_plan(artifacts, artifact_schemas)
-
         # Set 1 second timeout - connectors take 2s each, so timeout will occur
-        from waivern_orchestration.models import RunbookConfig
-
-        object.__setattr__(plan.runbook, "config", RunbookConfig(timeout=1))
+        plan = create_simple_plan(
+            artifacts,
+            artifact_schemas,
+            runbook_config=RunbookConfig(timeout=1),
+        )
 
         registry = create_mock_registry(
             with_container=True, connector_factories={"slow": connector_factory}

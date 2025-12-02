@@ -9,7 +9,7 @@ from waivern_core.schemas.base import Schema
 class TestConnectorAutoDiscovery:
     """Tests for auto-discovery of supported output schemas."""
 
-    def _create_test_connector_with_schemas(
+    def create_test_connector_with_schemas(
         self, schema_files: dict[str, str]
     ) -> list[Schema]:
         """Helper to create test connector and return discovered schemas.
@@ -65,7 +65,7 @@ class TestConnectorAutoDiscovery:
 
     def test_auto_discovery_finds_single_schema_version(self) -> None:
         """Test auto-discovery finds a single schema file."""
-        schemas = self._create_test_connector_with_schemas(
+        schemas = self.create_test_connector_with_schemas(
             {"standard_input_1_0_0.py": "# Schema producer"}
         )
 
@@ -75,7 +75,7 @@ class TestConnectorAutoDiscovery:
 
     def test_auto_discovery_finds_multiple_schema_versions(self) -> None:
         """Test auto-discovery finds multiple versions of same schema."""
-        schemas = self._create_test_connector_with_schemas(
+        schemas = self.create_test_connector_with_schemas(
             {
                 "standard_input_1_0_0.py": "# Schema producer v1.0.0",
                 "standard_input_1_1_0.py": "# Schema producer v1.1.0",
@@ -89,7 +89,7 @@ class TestConnectorAutoDiscovery:
 
     def test_auto_discovery_parses_multi_word_schema_names(self) -> None:
         """Test correct parsing of schema names with underscores."""
-        schemas = self._create_test_connector_with_schemas(
+        schemas = self.create_test_connector_with_schemas(
             {"personal_data_finding_1_0_0.py": "# Schema producer"}
         )
 
@@ -99,13 +99,13 @@ class TestConnectorAutoDiscovery:
 
     def test_auto_discovery_returns_empty_list_when_no_directory(self) -> None:
         """Test graceful handling when schema_producers/ doesn't exist."""
-        schemas = self._create_test_connector_with_schemas({})  # No schema files
+        schemas = self.create_test_connector_with_schemas({})  # No schema files
 
         assert schemas == []
 
     def test_auto_discovery_skips_private_files(self) -> None:
         """Test that __init__.py and _private.py files are ignored."""
-        schemas = self._create_test_connector_with_schemas(
+        schemas = self.create_test_connector_with_schemas(
             {
                 "__init__.py": "# Init file",
                 "_helper.py": "# Helper file",
@@ -120,7 +120,7 @@ class TestConnectorAutoDiscovery:
 
     def test_auto_discovery_skips_invalid_filename_formats(self) -> None:
         """Test files without proper version format are ignored."""
-        schemas = self._create_test_connector_with_schemas(
+        schemas = self.create_test_connector_with_schemas(
             {
                 "invalid.py": "# No version",
                 "schema_1_0.py": "# Only two version parts",
@@ -135,7 +135,7 @@ class TestConnectorAutoDiscovery:
 
     def test_auto_discovery_ignores_non_python_files(self) -> None:
         """Test only .py files are processed."""
-        schemas = self._create_test_connector_with_schemas(
+        schemas = self.create_test_connector_with_schemas(
             {
                 "schema_1_0_0.txt": "# Text file",
                 "schema_1_0_0.md": "# Markdown file",
@@ -183,7 +183,7 @@ class TestConnectorAutoDiscovery:
 
     def test_auto_discovery_version_parsing_correctness(self) -> None:
         """Test version numbers are correctly parsed and formatted."""
-        schemas = self._create_test_connector_with_schemas(
+        schemas = self.create_test_connector_with_schemas(
             {"schema_2_5_11.py": "# Schema with double-digit version"}
         )
 

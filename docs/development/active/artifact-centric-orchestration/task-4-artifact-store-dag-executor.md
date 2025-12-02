@@ -124,7 +124,7 @@ async function execute(plan):
     store = container.get_service(ArtifactStore)
     store.clear()
 
-    sorter = plan.dag.get_sorter()
+    sorter = plan.dag.create_sorter()
     results = {}
     skipped = set()
 

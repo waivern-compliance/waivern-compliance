@@ -189,7 +189,7 @@ The DAG is implicit in the `inputs` relationships:
 ```python
 async def execute(artifacts: dict[str, ArtifactDef]):
     dag = build_dag(artifacts)  # inputs → dependencies
-    sorter = dag.get_sorter()
+    sorter = dag.create_sorter()
 
     while sorter.is_active():
         ready = sorter.get_ready()

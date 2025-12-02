@@ -162,7 +162,7 @@ class Planner:
         """
         result: dict[str, tuple[Schema | None, Schema]] = {}
 
-        sorter = dag.get_sorter()
+        sorter = dag.create_sorter()
         while sorter.is_active():
             for artifact_id in sorter.get_ready():
                 definition = runbook.artifacts[artifact_id]

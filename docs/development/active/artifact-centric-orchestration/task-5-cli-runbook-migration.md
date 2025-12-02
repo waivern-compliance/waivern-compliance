@@ -1,7 +1,7 @@
 # Task 5: Update CLI and Migrate Sample Runbooks
 
 - **Phase:** 3 - Integration
-- **Status:** TODO
+- **Status:** DONE
 - **GitHub Issue:** #246 (close via PR)
 - **Prerequisites:** Task 4 (DAGExecutor)
 - **Design:** [artifact-centric-orchestration-design.md](../artifact-centric-orchestration-design.md)
@@ -112,19 +112,24 @@ Each exporter reads from ExecutionResult (or ExecutionStore in future) and adds 
 
 ## Implementation
 
-### Files to Modify/Create/Delete
+### Files Modified/Created/Deleted
 
 ```
 apps/wct/src/wct/
-├── cli.py             # MODIFY: update run, validate, ls-* commands
-├── executor.py        # DELETE: replaced by DAGExecutor
-├── runbook.py         # DELETE: replaced by waivern_orchestration models
-└── analysis.py        # DELETE: AnalysisResult replaced by ExecutionResult
+├── cli.py             # MODIFIED: updated run, validate, ls-*, added generate-schema
+├── executor.py        # DELETED: replaced by DAGExecutor
+├── runbook.py         # DELETED: replaced by waivern_orchestration models
+├── analysis.py        # DELETED: AnalysisResult replaced by ExecutionResult
+└── schemas/runbook.py # DELETED: replaced by waivern_orchestration schema
 
 apps/wct/tests/
-├── test_executor.py   # DELETE
-├── test_runbook.py    # DELETE
-└── test_cli.py        # UPDATE
+├── test_executor.py                # DELETED
+├── test_runbook.py                 # DELETED
+├── test_cli.py                     # DELETED (E2E tests in cli/test_cli_e2e.py)
+├── test_analysis.py                # DELETED
+├── test_executor_version_matching.py # DELETED
+├── test_runbook_version_validation.py # DELETED
+└── integration/test_sqlite_e2e.py  # DELETED
 ```
 
 ### Changes Required
