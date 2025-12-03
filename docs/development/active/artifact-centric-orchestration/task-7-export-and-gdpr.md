@@ -132,26 +132,22 @@ class Analyser(ABC):
 
 **3. Update `ComponentFactory`:**
 
+Factory only handles instantiation. All metadata lives on component classes.
+
 ```python
 # waivern_core/component_factory.py
 
 class ComponentFactory[T](ABC):
-    # Existing methods...
-
+    @property
     @abstractmethod
-    def get_input_requirements(self) -> list[list[InputRequirement]]:
-        """Get supported input schema combinations."""
+    def component_class(self) -> type[T]:
+        """Return the component class this factory creates."""
         ...
 
-    @classmethod
-    def get_compliance_frameworks(cls) -> list[str]:
-        """Declare compliance frameworks this component's output supports.
-
-        Returns:
-            List of framework identifiers (e.g., ["GDPR", "UK_GDPR"]),
-            or empty list for generic/framework-agnostic components.
-        """
-        return []  # Default: generic component
+    @abstractmethod
+    def create(self, properties: dict[str, Any]) -> T:
+        """Create a component instance."""
+        ...
 ```
 
 **4. Add `AnalyserContractTest` base class:**
@@ -172,13 +168,13 @@ class AnalyserContractTest(ABC):
     def test_input_requirements_not_empty(self):
         """Input requirements must have at least one combination."""
         factory = self.get_analyser_factory()
-        requirements = factory.get_input_requirements()
+        requirements = factory.component_class.get_input_requirements()
         assert len(requirements) > 0, "get_input_requirements() must return at least one combination"
 
     def test_no_duplicate_combinations(self):
         """Each combination must be unique."""
         factory = self.get_analyser_factory()
-        requirements = factory.get_input_requirements()
+        requirements = factory.component_class.get_input_requirements()
 
         seen = set()
         for combo in requirements:
@@ -189,8 +185,8 @@ class AnalyserContractTest(ABC):
     def test_readers_exist_for_all_requirements(self):
         """Readers must exist for all declared input schemas."""
         factory = self.get_analyser_factory()
-        requirements = factory.get_input_requirements()
-        supported = factory.get_input_schemas()
+        requirements = factory.component_class.get_input_requirements()
+        supported = factory.component_class.get_supported_input_schemas()
         supported_set = {(s.name, s.version) for s in supported}
 
         for combo in requirements:
@@ -202,7 +198,7 @@ class AnalyserContractTest(ABC):
     def test_no_empty_combinations(self):
         """Each combination must have at least one requirement."""
         factory = self.get_analyser_factory()
-        requirements = factory.get_input_requirements()
+        requirements = factory.component_class.get_input_requirements()
 
         for i, combo in enumerate(requirements):
             assert len(combo) > 0, f"Combination {i} is empty"
@@ -260,7 +256,7 @@ def _resolve_derived_schema(
 
     provided_set = self._collect_provided_schemas(input_refs, resolved)
     factory = self._registry.analyser_factories[definition.transform.type]
-    requirements = factory.get_input_requirements()
+    requirements = factory.component_class.get_input_requirements()
 
     matched = self._find_matching_requirement(artifact_id, provided_set, requirements)
     self._validate_readers_exist(artifact_id, factory, matched)
@@ -308,7 +304,7 @@ def _validate_readers_exist(
     requirements: list[InputRequirement],
 ) -> None:
     """Validate analyser has readers for all required schemas."""
-    supported_inputs = factory.get_input_schemas()
+    supported_inputs = factory.component_class.get_supported_input_schemas()
     supported_set = {(s.name, s.version) for s in supported_inputs}
 
     for req in requirements:
@@ -566,7 +562,7 @@ def _detect_exporter(
         analyser_type = definition.transform.type
         if analyser_type in registry.analyser_factories:
             factory = registry.analyser_factories[analyser_type]
-            frameworks.update(factory.get_compliance_frameworks())
+            frameworks.update(factory.component_class.get_compliance_frameworks())
 
     # Map frameworks to exporter
     if len(frameworks) == 1:
@@ -713,20 +709,7 @@ libs/waivern-gdpr-analyser/
 
 ### Key Files
 
-**1. `factory.py`:**
-
-```python
-class GdprArticle30AnalyserFactory(ComponentFactory[Analyser]):
-    """Factory for GDPR Article 30 analyser."""
-
-    @classmethod
-    def get_compliance_frameworks(cls) -> list[str]:
-        return ["GDPR"]  # Declares this is a GDPR-specific component
-
-    # ... other factory methods ...
-```
-
-**2. `analysers/article_30.py`:**
+**1. `analysers/article_30.py`:**
 
 ```python
 class GdprArticle30Analyser(Analyser):
@@ -736,6 +719,10 @@ class GdprArticle30Analyser(Analyser):
     @override
     def get_name(cls) -> str:
         return "gdpr_article_30"
+
+    @classmethod
+    def get_compliance_frameworks(cls) -> list[str]:
+        return ["GDPR"]  # Declares this is a GDPR-specific component
 
     @classmethod
     @override
@@ -847,7 +834,7 @@ class GdprArticle30Analyser(Analyser):
         return results
 ```
 
-**3. `schemas/json_schemas/gdpr_article_30_finding/1.0.0/gdpr_article_30_finding.json`:**
+**2. `schemas/json_schemas/gdpr_article_30_finding/1.0.0/gdpr_article_30_finding.json`:**
 
 ```json
 {
@@ -903,7 +890,7 @@ class GdprArticle30Analyser(Analyser):
 }
 ```
 
-**4. Entry point in `pyproject.toml`:**
+**3. Entry point in `pyproject.toml`:**
 
 ```toml
 [project.entry-points."waivern.analysers"]
@@ -995,7 +982,7 @@ description: "Generate Records of Processing Activities for GDPR compliance"
 contact: "DPO <dpo@company.com>"
 
 # Note: No compliance_framework field needed - exporter is auto-detected
-# from the gdpr_article_30 analyser's get_compliance_frameworks() declaration
+# from the GdprArticle30Analyser.get_compliance_frameworks() classmethod
 
 artifacts:
   # Source extraction

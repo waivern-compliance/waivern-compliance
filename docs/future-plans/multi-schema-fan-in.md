@@ -200,14 +200,21 @@ class Analyser(ABC):
         return importlib.import_module(f"{package}.schema_readers.{module_name}")
 ```
 
-### ComponentFactory Update
+### Factory Role
+
+`ComponentFactory` only handles instantiation. All metadata methods (`get_input_requirements()`, `get_compliance_frameworks()`, etc.) live on the component classes as classmethods. The factory provides access to the component class:
 
 ```python
 class ComponentFactory[T](ABC):
-    # Existing methods...
+    @property
+    @abstractmethod
+    def component_class(self) -> type[T]:
+        """Return the component class this factory creates."""
+        ...
 
-    def get_input_requirements(self) -> list[list[InputRequirement]]:
-        """Get supported input schema combinations."""
+    @abstractmethod
+    def create(self, properties: dict[str, Any]) -> T:
+        """Create a component instance."""
         ...
 ```
 
@@ -270,7 +277,7 @@ def _resolve_derived_schema(
     provided_set = self._collect_provided_schemas(input_refs, resolved)
 
     factory = self._registry.analyser_factories[definition.transform.type]
-    requirements = factory.get_input_requirements()
+    requirements = factory.component_class.get_input_requirements()
 
     matched = self._find_matching_requirement(
         artifact_id, provided_set, requirements
@@ -320,7 +327,7 @@ def _validate_readers_exist(
     requirements: list[InputRequirement],
 ) -> None:
     """Validate analyser has readers for all required schemas."""
-    supported_inputs = factory.get_input_schemas()
+    supported_inputs = factory.component_class.get_supported_input_schemas()
     supported_set = {(s.name, s.version) for s in supported_inputs}
 
     for req in requirements:
@@ -376,13 +383,13 @@ class AnalyserContractTest(ABC):
     def test_input_requirements_not_empty(self):
         """Input requirements must have at least one combination."""
         factory = self.get_analyser_factory()
-        requirements = factory.get_input_requirements()
+        requirements = factory.component_class.get_input_requirements()
         assert len(requirements) > 0, "get_input_requirements() must return at least one combination"
 
     def test_no_duplicate_combinations(self):
         """Each combination must be unique."""
         factory = self.get_analyser_factory()
-        requirements = factory.get_input_requirements()
+        requirements = factory.component_class.get_input_requirements()
 
         seen = set()
         for combo in requirements:
@@ -393,8 +400,8 @@ class AnalyserContractTest(ABC):
     def test_readers_exist_for_all_requirements(self):
         """Readers must exist for all declared input schemas."""
         factory = self.get_analyser_factory()
-        requirements = factory.get_input_requirements()
-        supported = factory.get_input_schemas()
+        requirements = factory.component_class.get_input_requirements()
+        supported = factory.component_class.get_supported_input_schemas()
         supported_set = {(s.name, s.version) for s in supported}
 
         for combo in requirements:
@@ -406,7 +413,7 @@ class AnalyserContractTest(ABC):
     def test_no_empty_combinations(self):
         """Each combination must have at least one requirement."""
         factory = self.get_analyser_factory()
-        requirements = factory.get_input_requirements()
+        requirements = factory.component_class.get_input_requirements()
 
         for i, combo in enumerate(requirements):
             assert len(combo) > 0, f"Combination {i} is empty"
@@ -733,12 +740,12 @@ Findings → Each finding retains its source for audit trail
 
 This is consistent across all analysers - no per-analyser strategy decisions.
 
-### Why Analyser-Level Compliance Framework?
+### Why Component-Level Compliance Framework?
 
-Compliance frameworks are declared by **analysers**, not runbooks:
+Compliance frameworks are declared by **components** (Analysers, Connectors), not runbooks:
 
 ```python
-class ComponentFactory[T](ABC):
+class Analyser(ABC):
     @classmethod
     def get_compliance_frameworks(cls) -> list[str]:
         """Declare compliance frameworks this component's output supports.
@@ -753,33 +760,33 @@ class ComponentFactory[T](ABC):
 **Examples:**
 ```python
 # Generic analyser
-class PersonalDataAnalyserFactory(ComponentFactory[Analyser]):
+class PersonalDataAnalyser(Analyser):
     @classmethod
     def get_compliance_frameworks(cls) -> list[str]:
         return []  # Generic building block
 
 # GDPR-specific analyser
-class GdprArticle30AnalyserFactory(ComponentFactory[Analyser]):
+class GdprArticle30Analyser(Analyser):
     @classmethod
     def get_compliance_frameworks(cls) -> list[str]:
         return ["GDPR"]
 
 # Multi-framework analyser
-class CrossBorderTransferAnalyserFactory(ComponentFactory[Analyser]):
+class CrossBorderTransferAnalyser(Analyser):
     @classmethod
     def get_compliance_frameworks(cls) -> list[str]:
         return ["GDPR", "UK_GDPR", "SWISS_DPA"]
 ```
 
-**Why analyser-level, not runbook-level:**
+**Why component-level, not runbook-level:**
 
-1. **Single source of truth** - Analyser knows what frameworks its output supports
-2. **No mismatch** - Can't declare GDPR runbook with non-GDPR analysers
-3. **Auto-discovery** - Exporter selection based on what analysers actually produced
+1. **Single source of truth** - Component knows what frameworks its output supports
+2. **No mismatch** - Can't declare GDPR runbook with non-GDPR components
+3. **Auto-discovery** - Exporter selection based on what components actually produced
 4. **Explicit** - Not relying on schema naming conventions
 
 **Consumer behaviour:**
-- After execution, WCT examines analyser factories used
+- After execution, WCT examines component classes via factories
 - Collects all declared compliance frameworks
 - Single framework → use matching exporter
 - Multiple frameworks → user must specify or use generic JSON
@@ -800,10 +807,13 @@ See [Export Architecture](./export-architecture.md) for full details.
 **Task A: Update waivern-core**
 - Add `InputRequirement` dataclass
 - Update `Analyser` base class:
-  - Add `get_input_requirements()` (replace `get_supported_input_schemas()`)
+  - Add `get_input_requirements()` classmethod (replace `get_supported_input_schemas()`)
+  - Add `get_compliance_frameworks()` classmethod
   - Update `process()` signature
   - Add `_load_reader_for_schema()` helper
-- Update `ComponentFactory`
+- Update `Connector` base class:
+  - Add `get_compliance_frameworks()` classmethod
+- Update `ComponentFactory` to expose `component_class` property
 - Add `AnalyserContractTest` base class
 
 **Task B: Update waivern-orchestration**

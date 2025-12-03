@@ -56,23 +56,17 @@ The current system produces generic JSON output with execution results. Complian
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Analyser Compliance Framework Declaration
+## Component Compliance Framework Declaration
 
-### ComponentFactory Extension
+### Component Classmethods
 
-Analysers declare which compliance frameworks their output supports via `get_compliance_frameworks()`:
+Components (Analysers, Connectors) declare which compliance frameworks their output supports via classmethods. Factories only handle instantiation.
 
 ```python
-# waivern-core/component_factory.py
+# waivern-core/base_analyser.py
 
-class ComponentFactory[T](ABC):
-    """Factory for creating component instances."""
-
-    @classmethod
-    @abstractmethod
-    def get_output_schemas(cls) -> list[Schema]:
-        """Return output schemas this component produces."""
-        ...
+class Analyser(ABC):
+    """Base class for analysers."""
 
     @classmethod
     def get_compliance_frameworks(cls) -> list[str]:
@@ -83,30 +77,58 @@ class ComponentFactory[T](ABC):
             or empty list for generic/framework-agnostic components.
         """
         return []  # Default: generic component
+
+    # ... other methods (get_input_requirements, process, etc.)
 ```
 
-### Analyser Examples
+```python
+# waivern-core/base_connector.py
+
+class Connector(ABC):
+    """Base class for connectors."""
+
+    @classmethod
+    def get_compliance_frameworks(cls) -> list[str]:
+        """Declare compliance frameworks this component's output supports.
+
+        Returns:
+            List of framework identifiers (e.g., ["GDPR", "UK_GDPR"]),
+            or empty list for generic/framework-agnostic components.
+        """
+        return []  # Default: generic component
+
+    # ... other methods (extract, etc.)
+```
+
+### Examples
 
 ```python
 # Generic analyser - usable across any framework
-class PersonalDataAnalyserFactory(ComponentFactory[Analyser]):
+class PersonalDataAnalyser(Analyser):
     @classmethod
     def get_compliance_frameworks(cls) -> list[str]:
         return []  # Generic building block
 
 
 # GDPR-specific analyser
-class GdprArticle30AnalyserFactory(ComponentFactory[Analyser]):
+class GdprArticle30Analyser(Analyser):
     @classmethod
     def get_compliance_frameworks(cls) -> list[str]:
         return ["GDPR"]
 
 
 # Multi-framework analyser
-class CrossBorderTransferAnalyserFactory(ComponentFactory[Analyser]):
+class CrossBorderTransferAnalyser(Analyser):
     @classmethod
     def get_compliance_frameworks(cls) -> list[str]:
         return ["GDPR", "UK_GDPR", "SWISS_DPA"]
+
+
+# GDPR-specific connector
+class GdprConsentConnector(Connector):
+    @classmethod
+    def get_compliance_frameworks(cls) -> list[str]:
+        return ["GDPR"]
 ```
 
 ### Discovery Flow
@@ -519,7 +541,7 @@ def _detect_exporter(
     plan: ExecutionPlan,
     registry: ComponentRegistry,
 ) -> str:
-    """Auto-detect exporter based on analyser compliance frameworks.
+    """Auto-detect exporter based on component compliance frameworks.
 
     Args:
         result: Execution result with artifact outcomes.
@@ -536,14 +558,22 @@ def _detect_exporter(
             continue
 
         definition = plan.runbook.artifacts.get(artifact_id)
-        if definition is None or definition.transform is None:
+        if definition is None:
             continue
 
-        # Get analyser factory and check its compliance frameworks
-        analyser_type = definition.transform.type
-        if analyser_type in registry.analyser_factories:
-            factory = registry.analyser_factories[analyser_type]
-            frameworks.update(factory.get_compliance_frameworks())
+        # Check connector compliance frameworks
+        if definition.source is not None:
+            connector_type = definition.source.type
+            if connector_type in registry.connector_factories:
+                factory = registry.connector_factories[connector_type]
+                frameworks.update(factory.component_class.get_compliance_frameworks())
+
+        # Check analyser compliance frameworks
+        if definition.transform is not None:
+            analyser_type = definition.transform.type
+            if analyser_type in registry.analyser_factories:
+                factory = registry.analyser_factories[analyser_type]
+                frameworks.update(factory.component_class.get_compliance_frameworks())
 
     # Map frameworks to exporter
     if len(frameworks) == 1:
@@ -644,7 +674,7 @@ apps/wct/src/wct/
 
 ### Task C: Export Foundation
 
-1. Add `get_compliance_frameworks()` method to `ComponentFactory` in waivern-core
+1. Add `get_compliance_frameworks()` classmethod to `Analyser` and `Connector` base classes in waivern-core
 2. Create `wct/exporters/` module structure
 3. Implement `Exporter` protocol
 4. Implement `ExporterRegistry`
