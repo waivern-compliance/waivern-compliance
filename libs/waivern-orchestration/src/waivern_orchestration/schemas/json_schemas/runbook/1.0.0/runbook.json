@@ -1,0 +1,290 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "$defs": {
+    "ArtifactDefinition": {
+      "description": "Definition of a single artifact in a runbook.",
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "contact": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contact"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "inputs": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inputs"
+        },
+        "transform": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransformConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "merge": {
+          "const": "concatenate",
+          "default": "concatenate",
+          "title": "Merge",
+          "type": "string"
+        },
+        "input_schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Schema"
+        },
+        "output_schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Schema"
+        },
+        "output": {
+          "default": false,
+          "title": "Output",
+          "type": "boolean"
+        },
+        "optional": {
+          "default": false,
+          "title": "Optional",
+          "type": "boolean"
+        },
+        "execute": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExecuteConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "ArtifactDefinition",
+      "type": "object"
+    },
+    "ExecuteConfig": {
+      "description": "Configuration for child runbook execution (Phase 2).",
+      "properties": {
+        "mode": {
+          "const": "child",
+          "title": "Mode",
+          "type": "string"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        },
+        "cost_limit": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Limit"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "ExecuteConfig",
+      "type": "object"
+    },
+    "RunbookConfig": {
+      "description": "Optional execution configuration for a runbook.",
+      "properties": {
+        "timeout": {
+          "default": 300,
+          "title": "Timeout",
+          "type": "integer"
+        },
+        "max_concurrency": {
+          "default": 10,
+          "title": "Max Concurrency",
+          "type": "integer"
+        },
+        "max_child_depth": {
+          "default": 3,
+          "title": "Max Child Depth",
+          "type": "integer"
+        },
+        "cost_limit": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Limit"
+        }
+      },
+      "title": "RunbookConfig",
+      "type": "object"
+    },
+    "SourceConfig": {
+      "description": "Configuration for a source artifact (connector).",
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true,
+          "title": "Properties"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "SourceConfig",
+      "type": "object"
+    },
+    "TransformConfig": {
+      "description": "Configuration for a transform (analyser).",
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true,
+          "title": "Properties"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "TransformConfig",
+      "type": "object"
+    }
+  },
+  "description": "Waivern Compliance Framework runbook configuration schema",
+  "properties": {
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "contact": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Contact"
+    },
+    "config": {
+      "$ref": "#/$defs/RunbookConfig"
+    },
+    "artifacts": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ArtifactDefinition"
+      },
+      "title": "Artifacts",
+      "type": "object"
+    }
+  },
+  "required": [
+    "name",
+    "description"
+  ],
+  "title": "Waivern Runbook",
+  "type": "object"
+}
