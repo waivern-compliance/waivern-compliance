@@ -334,7 +334,7 @@ async def _produce_derived(
     ctx: _ExecutionContext,
 ) -> Message:
     """Produce a derived artifact from its inputs."""
-    input_refs = self._normalize_inputs(definition.inputs)
+    input_refs = self._normalise_inputs(definition.inputs)
     _, output_schema = plan.artifact_schemas[artifact_id]
 
     if definition.transform is None:
@@ -730,7 +730,7 @@ class GdprArticle30AnalyserFactory(ComponentFactory[Analyser]):
 
 ```python
 class GdprArticle30Analyser(Analyser):
-    """Synthesizes findings into GDPR Article 30 RoPA structure."""
+    """Synthesises findings into GDPR Article 30 RoPA structure."""
 
     @classmethod
     @override
@@ -786,7 +786,7 @@ class GdprArticle30Analyser(Analyser):
         purposes = self._read_by_schema(inputs, "processing_purpose_finding")
         subjects = self._read_by_schema(inputs, "data_subject_finding")
 
-        # Synthesize into Article 30 structure
+        # Synthesise into Article 30 structure
         activities = self._build_processing_activities(
             personal_data,
             purposes,

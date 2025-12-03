@@ -197,7 +197,7 @@ class Exporter(Protocol):
             organisation: Optional organisation config for compliance exports
 
         Returns:
-            Export dictionary ready for JSON serialization
+            Export dictionary ready for JSON serialisation
         """
         ...
 ```

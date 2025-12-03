@@ -266,7 +266,7 @@ def _resolve_derived_schema(
     resolved: dict[str, tuple[Any, Schema]],
 ) -> tuple[list[InputRequirement], Schema]:
     """Resolve schemas for a derived artifact."""
-    input_refs = self._normalize_inputs(definition.inputs)
+    input_refs = self._normalise_inputs(definition.inputs)
     provided_set = self._collect_provided_schemas(input_refs, resolved)
 
     factory = self._registry.analyser_factories[definition.transform.type]
@@ -342,7 +342,7 @@ async def _produce_derived(
     ctx: _ExecutionContext,
 ) -> Message:
     """Produce a derived artifact from its inputs."""
-    input_refs = self._normalize_inputs(definition.inputs)
+    input_refs = self._normalise_inputs(definition.inputs)
 
     # Retrieve input messages from store
     input_messages = [ctx.store.get(ref) for ref in input_refs]
@@ -443,7 +443,7 @@ libs/waivern-gdpr-analyser/
 
 ```python
 class GdprArticle30Analyser(Analyser):
-    """Synthesizes findings into GDPR Article 30 RoPA structure."""
+    """Synthesises findings into GDPR Article 30 RoPA structure."""
 
     @classmethod
     @override
@@ -499,7 +499,7 @@ class GdprArticle30Analyser(Analyser):
         purposes = self._read_by_schema(inputs, "processing_purpose_finding")
         subjects = self._read_by_schema(inputs, "data_subject_finding")
 
-        # Synthesize into Article 30 structure
+        # Synthesise into Article 30 structure
         activities = self._build_processing_activities(
             personal_data,
             purposes,
