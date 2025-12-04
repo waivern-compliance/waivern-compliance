@@ -1,21 +1,21 @@
-# Task 7: Export Infrastructure and GDPR Analyser
+# Task 7: Export Infrastructure and Multi-Schema Fan-In
 
 - **Phase:** 4 - Export & Regulatory Analysers
 - **Status:** TODO
 - **GitHub Issue:** TBD
 - **Prerequisites:** Tasks 1-6 (artifact-centric orchestration complete)
 - **Design:** [Multi-Schema Fan-In](../../../future-plans/multi-schema-fan-in.md), [Export Architecture](../../../future-plans/export-architecture.md)
+- **Follow-on:** [GDPR Complete](../../../future-plans/gdpr-complete.md)
 
 ## Context
 
-Tasks 1-6 implemented the artifact-centric orchestration system with Planner and DAGExecutor. This task adds multi-schema fan-in support, export infrastructure, and the first regulatory analyser (GDPR Article 30).
+Tasks 1-6 implemented the artifact-centric orchestration system with Planner and DAGExecutor. This task adds multi-schema fan-in support and export infrastructure - the foundation for regulatory analysers.
 
 ## Purpose
 
 1. Enable analysers to consume multiple inputs with different schemas
 2. Create export infrastructure for regulation-specific output formats
-3. Implement GDPR Article 30 analyser as proof of concept
-4. Validate the end-to-end regulatory analysis pipeline
+3. Prepare the foundation for regulatory synthesisers (GDPR, etc.)
 
 ## Problem
 
@@ -23,20 +23,19 @@ The current system has limitations:
 
 1. **Fan-in limitation:** All inputs must have the same schema
 2. **Export limitation:** Only generic JSON output, no regulation-specific formatting
-3. **No regulatory synthesis:** Cannot combine findings into regulatory structures
 
 ## Scope
 
-This task is split into sub-tasks for incremental delivery:
+This task focuses on **infrastructure only**. GDPR-specific implementation is tracked separately in [GDPR Complete](../../../future-plans/gdpr-complete.md).
+
+Sub-tasks for incremental delivery:
 
 - **Task 7a:** Multi-schema analyser support in waivern-core (refactor analyser interface)
 - **Task 7b:** Multi-schema fan-in in waivern-orchestration
 - **Task 7c:** Migrate existing analysers to new interface
 - **Task 7d:** Export infrastructure in wct
 - **Task 7e:** Organisation config enhancement
-- **Task 7f:** GDPR analyser package
-- **Task 7g:** GDPR exporter
-- **Task 7h:** Sample runbook and documentation
+- **Task 7f:** Sample runbook and documentation
 
 ---
 
@@ -674,366 +673,55 @@ class OrganisationLoader:
 
 ---
 
-## Task 7f: GDPR Analyser Package
-
-### Package Structure
-
-```
-libs/waivern-gdpr-analyser/
-├── pyproject.toml
-├── scripts/
-│   ├── lint.sh
-│   ├── format.sh
-│   └── type-check.sh
-└── src/waivern_gdpr_analyser/
-    ├── __init__.py
-    ├── factory.py
-    ├── models.py
-    ├── analysers/
-    │   ├── __init__.py
-    │   └── article_30.py
-    ├── schema_readers/
-    │   ├── __init__.py
-    │   ├── personal_data_finding_1_0_0.py
-    │   ├── processing_purpose_finding_1_0_0.py
-    │   └── data_subject_finding_1_0_0.py
-    ├── schema_producers/
-    │   ├── __init__.py
-    │   └── gdpr_article_30_finding_1_0_0.py
-    └── schemas/
-        └── json_schemas/
-            └── gdpr_article_30_finding/
-                └── 1.0.0/
-                    └── gdpr_article_30_finding.json
-```
-
-### Key Files
-
-**1. `analysers/article_30.py`:**
-
-```python
-class GdprArticle30Analyser(Analyser):
-    """Synthesises findings into GDPR Article 30 RoPA structure."""
-
-    @classmethod
-    @override
-    def get_name(cls) -> str:
-        return "gdpr_article_30"
-
-    @classmethod
-    def get_compliance_frameworks(cls) -> list[str]:
-        return ["GDPR"]  # Declares this is a GDPR-specific component
-
-    @classmethod
-    @override
-    def get_input_requirements(cls) -> list[list[InputRequirement]]:
-        return [
-            # Option 1: All three finding types
-            [
-                InputRequirement("personal_data_finding", "1.0.0"),
-                InputRequirement("processing_purpose_finding", "1.0.0"),
-                InputRequirement("data_subject_finding", "1.0.0"),
-            ],
-            # Option 2: Without data subjects (optional in some contexts)
-            [
-                InputRequirement("personal_data_finding", "1.0.0"),
-                InputRequirement("processing_purpose_finding", "1.0.0"),
-            ],
-        ]
-
-    @override
-    def process(
-        self,
-        inputs: list[Message],
-        output_schema: Schema,
-    ) -> Message:
-        schemas = frozenset((msg.schema.name, msg.schema.version) for msg in inputs)
-
-        if schemas == {
-            ("personal_data_finding", "1.0.0"),
-            ("processing_purpose_finding", "1.0.0"),
-            ("data_subject_finding", "1.0.0"),
-        }:
-            return self._process_full(inputs, output_schema)
-        elif schemas == {
-            ("personal_data_finding", "1.0.0"),
-            ("processing_purpose_finding", "1.0.0"),
-        }:
-            return self._process_without_subjects(inputs, output_schema)
-        else:
-            raise ValueError(f"Unexpected schema combination: {schemas}")
-
-    def _process_full(
-        self,
-        inputs: list[Message],
-        output_schema: Schema,
-    ) -> Message:
-        # Read each input with appropriate reader
-        personal_data = self._read_by_schema(inputs, "personal_data_finding")
-        purposes = self._read_by_schema(inputs, "processing_purpose_finding")
-        subjects = self._read_by_schema(inputs, "data_subject_finding")
-
-        # Synthesise into Article 30 structure
-        activities = self._build_processing_activities(
-            personal_data,
-            purposes,
-            subjects,
-        )
-        gaps = self._identify_compliance_gaps(activities)
-
-        # Produce output
-        producer = self._load_producer(output_schema)
-        content = producer.produce(
-            processing_activities=activities,
-            compliance_gaps=gaps,
-            requires_human_review=len(gaps) > 0,
-        )
-
-        output = Message(schema=output_schema, content=content)
-        output.validate()
-        return output
-
-    def _process_without_subjects(
-        self,
-        inputs: list[Message],
-        output_schema: Schema,
-    ) -> Message:
-        personal_data = self._read_by_schema(inputs, "personal_data_finding")
-        purposes = self._read_by_schema(inputs, "processing_purpose_finding")
-
-        activities = self._build_processing_activities(
-            personal_data,
-            purposes,
-            subjects=[],
-        )
-        gaps = self._identify_compliance_gaps(activities)
-        gaps.append("Data subjects not analysed")
-
-        producer = self._load_producer(output_schema)
-        content = producer.produce(
-            processing_activities=activities,
-            compliance_gaps=gaps,
-            requires_human_review=True,
-        )
-
-        output = Message(schema=output_schema, content=content)
-        output.validate()
-        return output
-
-    def _read_by_schema(
-        self,
-        inputs: list[Message],
-        schema_name: str,
-    ) -> list[Any]:
-        """Find and read all inputs matching schema name."""
-        results = []
-        for msg in inputs:
-            if msg.schema.name == schema_name:
-                reader = self._load_reader_for_schema(msg.schema)
-                results.extend(reader.read(msg.content))
-        return results
-```
-
-**2. `schemas/json_schemas/gdpr_article_30_finding/1.0.0/gdpr_article_30_finding.json`:**
-
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "version": "1.0.0",
-  "type": "object",
-  "properties": {
-    "processing_activities": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "purpose": { "type": "string" },
-          "legal_basis": { "type": ["string", "null"] },
-          "legal_basis_status": {
-            "type": "string",
-            "enum": ["determined", "inferred", "requires_review"]
-          },
-          "data_categories": { "type": "array", "items": { "type": "string" } },
-          "special_category_data": { "type": "boolean" },
-          "data_subject_categories": { "type": "array", "items": { "type": "string" } },
-          "retention_period": { "type": ["string", "null"] },
-          "retention_status": {
-            "type": "string",
-            "enum": ["determined", "from_policy", "requires_review"]
-          },
-          "evidence": { "type": "array" }
-        }
-      }
-    },
-    "compliance_gaps": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "field": { "type": "string" },
-          "activity": { "type": "string" },
-          "severity": { "type": "string", "enum": ["critical", "important", "minor"] },
-          "message": { "type": "string" }
-        }
-      }
-    },
-    "summary": {
-      "type": "object",
-      "properties": {
-        "total_activities": { "type": "integer" },
-        "activities_with_gaps": { "type": "integer" },
-        "requires_human_review": { "type": "boolean" }
-      }
-    }
-  },
-  "required": ["processing_activities", "compliance_gaps", "summary"]
-}
-```
-
-**3. Entry point in `pyproject.toml`:**
-
-```toml
-[project.entry-points."waivern.analysers"]
-gdpr_article_30 = "waivern_gdpr_analyser.factory:GdprArticle30AnalyserFactory"
-```
-
-### Tests
-
-- Inherit from `AnalyserContractTest` for contract validation
-- `test_article_30_process_full_combination`
-- `test_article_30_process_without_subjects`
-- `test_article_30_identifies_compliance_gaps`
-- `test_article_30_same_schema_fan_in` - multiple personal_data inputs merged
-
----
-
-## Task 7g: GDPR Exporter
-
-### Implementation
-
-```
-apps/wct/src/wct/exporters/gdpr/
-├── __init__.py
-└── exporter.py
-```
-
-**`exporter.py`:**
-
-```python
-class GdprExporter:
-    # Schema this exporter requires (internal implementation detail)
-    _REQUIRED_SCHEMA = "gdpr_article_30_finding"
-
-    @property
-    def name(self) -> str:
-        return "gdpr"
-
-    @property
-    def supported_frameworks(self) -> list[str]:
-        return ["GDPR", "UK_GDPR"]
-
-    def validate(self, result, plan) -> list[str]:
-        """Validate GDPR export requirements."""
-        errors = []
-
-        # Check for required schema in output artifacts
-        has_required_schema = False
-        for artifact_id, artifact_result in result.artifacts.items():
-            if not artifact_result.success:
-                continue
-            _, output_schema = plan.artifact_schemas.get(artifact_id, (None, None))
-            if output_schema and output_schema.name == self._REQUIRED_SCHEMA:
-                has_required_schema = True
-                break
-
-        if not has_required_schema:
-            errors.append(
-                f"GDPR export requires {self._REQUIRED_SCHEMA} schema. "
-                "Add a gdpr_article_30 analyser to your pipeline."
-            )
-        return errors
-
-    def export(self, result, plan, organisation=None) -> dict[str, Any]:
-        output = build_core_export(result, plan)
-        output["gdpr"] = {
-            "article_30_1_a": self._build_article_30(result, plan, organisation)
-        }
-        return output
-```
-
-### Tests
-
-- `test_gdpr_exporter_validates_required_schema`
-- `test_gdpr_exporter_includes_organisation`
-- `test_gdpr_exporter_warns_missing_organisation`
-- `test_gdpr_exporter_supported_frameworks`
-
----
-
-## Task 7h: Sample Runbook and Documentation
+## Task 7f: Sample Runbook and Documentation
 
 ### Sample Runbook
 
-**`apps/wct/runbooks/samples/gdpr_article_30_analysis.yaml`:**
+Update existing sample runbooks to demonstrate multi-schema fan-in:
+
+**`apps/wct/runbooks/samples/multi_source_analysis.yaml`:**
 
 ```yaml
-name: "GDPR Article 30 RoPA Analysis"
-description: "Generate Records of Processing Activities for GDPR compliance"
-contact: "DPO <dpo@company.com>"
-
-# Note: No compliance_framework field needed - exporter is auto-detected
-# from the GdprArticle30Analyser.get_compliance_frameworks() classmethod
+name: "Multi-Source Compliance Analysis"
+description: "Analyse data from multiple sources with fan-in"
+contact: "Compliance Team <compliance@company.com>"
 
 artifacts:
-  # Source extraction
-  db_schema:
+  # Multiple source extractions
+  mysql_schema:
     source:
       type: mysql
       properties:
         host: "${MYSQL_HOST}"
         database: "${MYSQL_DATABASE}"
 
-  # Technical findings (parallel)
+  sqlite_schema:
+    source:
+      type: sqlite
+      properties:
+        path: "./data/local.db"
+
+  # Same-schema fan-in: multiple sources → single analyser
+  # All inputs are merged before analysis (cross-source correlation)
   personal_data_findings:
-    inputs: db_schema
+    inputs:
+      - mysql_schema
+      - sqlite_schema
     transform:
       type: personal_data
       properties:
         pattern_matching:
           ruleset: "personal_data"
-
-  processing_purposes:
-    inputs: db_schema
-    transform:
-      type: processing_purpose
-
-  data_subjects:
-    inputs: db_schema
-    transform:
-      type: data_subject
-
-  # Regulatory synthesis
-  gdpr_ropa:
-    name: "GDPR Records of Processing Activities"
-    description: "Article 30(1)(a) compliant processing record"
-    inputs:
-      - personal_data_findings
-      - processing_purposes
-      - data_subjects
-    transform:
-      type: gdpr_article_30
-      properties:
-        jurisdiction: "EU"
-        flag_missing: true
     output: true
 ```
 
 ### Documentation Updates
 
-1. Update `apps/wct/runbooks/README.md` with multi-schema example
-2. Update `CLAUDE.md` with GDPR analyser info
+1. Update `apps/wct/runbooks/README.md` with multi-schema fan-in example
+2. Update `CLAUDE.md` with new analyser interface
 3. Create ADR for multi-schema fan-in pattern
 4. Update architecture documentation
+5. Add reference to [GDPR Complete](../../../future-plans/gdpr-complete.md) for regulatory analyser examples
 
 ---
 
@@ -1048,14 +736,10 @@ uv run pytest -v
 # Run specific test files
 uv run pytest libs/waivern-core/tests/ -v
 uv run pytest libs/waivern-orchestration/tests/ -v
-uv run pytest libs/waivern-gdpr-analyser/tests/ -v
 uv run pytest apps/wct/tests/test_exporters.py -v
 
-# Run GDPR sample runbook
-uv run wct run apps/wct/runbooks/samples/gdpr_article_30_analysis.yaml
-
-# Verify GDPR export
-cat output/results.json | jq '.gdpr.article_30_1_a'
+# Run multi-source sample runbook
+uv run wct run apps/wct/runbooks/samples/multi_source_analysis.yaml
 
 # Full dev-checks
 ./scripts/dev-checks.sh
@@ -1064,14 +748,13 @@ cat output/results.json | jq '.gdpr.article_30_1_a'
 ### Integration Test
 
 ```python
-def test_gdpr_article_30_end_to_end():
-    """Test full GDPR pipeline from runbook to export."""
-    # 1. Parse runbook
-    # 2. Plan execution
+def test_multi_schema_fan_in_end_to_end():
+    """Test multi-schema fan-in from runbook to export."""
+    # 1. Parse runbook with multiple inputs
+    # 2. Plan execution (verify input requirement matching)
     # 3. Execute (mocked connectors)
     # 4. Verify analyser receives list[Message] input
-    # 5. Verify GDPR exporter produces correct output
-    # 6. Verify organisation metadata included
+    # 5. Verify JSON exporter produces correct output
 ```
 
 ## Implementation Order
@@ -1081,8 +764,16 @@ def test_gdpr_article_30_end_to_end():
 3. **Task 7c** - Migrate existing analysers (breaking change, all at once)
 4. **Task 7d** - Export foundation (protocol, registry, JsonExporter)
 5. **Task 7e** - Organisation enhancement (multi-jurisdiction)
-6. **Task 7f** - GDPR analyser package
-7. **Task 7g** - GDPR exporter
-8. **Task 7h** - Sample runbook and docs
+6. **Task 7f** - Sample runbook and docs
 
 Each sub-task should pass `./scripts/dev-checks.sh` before proceeding.
+
+## Follow-on Work
+
+After Task 7 is complete, the infrastructure is ready for regulatory analysers. See [GDPR Complete](../../../future-plans/gdpr-complete.md) for the full GDPR implementation plan including:
+
+- DataTransferAnalyser (complete the existing stub)
+- RetentionAnalyser
+- LegalBasisAnalyser
+- GdprArticle30Analyser (multi-schema fan-in synthesiser)
+- GDPRExporter
