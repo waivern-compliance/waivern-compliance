@@ -69,6 +69,9 @@ class DAGExecutor:
         store = self._registry.container.get_service(ArtifactStore)
 
         # Create thread pool for sync->async bridging
+        logger.debug(
+            "Creating ThreadPoolExecutor with max_workers=%d", config.max_concurrency
+        )
         with ThreadPoolExecutor(max_workers=config.max_concurrency) as thread_pool:
             ctx = _ExecutionContext(
                 store=store,
@@ -84,6 +87,7 @@ class DAGExecutor:
                 self._mark_remaining_as_skipped(plan, ctx)
                 logger.warning("Execution timed out after %d seconds", config.timeout)
 
+        logger.debug("ThreadPoolExecutor shutdown complete")
         total_duration = time.monotonic() - start_time
         return ExecutionResult(
             artifacts=ctx.results,
@@ -97,6 +101,7 @@ class DAGExecutor:
         ctx: _ExecutionContext,
     ) -> None:
         """Execute artifacts in topological order with parallel batches."""
+        logger.debug("Starting DAG execution")
         sorter = plan.dag.create_sorter()
 
         while sorter.is_active():
@@ -104,15 +109,21 @@ class DAGExecutor:
             all_ready = list(sorter.get_ready())
             ready = [aid for aid in all_ready if aid not in ctx.skipped]
 
-            if not ready:
-                # Mark skipped artifacts as done so sorter can progress
-                for aid in all_ready:
+            # Mark skipped artifacts as done immediately so sorter can progress
+            skipped_in_batch = [aid for aid in all_ready if aid in ctx.skipped]
+            if skipped_in_batch:
+                logger.debug("Marking skipped artifacts as done: %s", skipped_in_batch)
+                for aid in skipped_in_batch:
                     sorter.done(aid)
+
+            if not ready:
                 continue
 
+            logger.debug("Starting batch execution for artifacts: %s", ready)
             tasks = [self._produce(aid, plan, ctx) for aid in ready]
 
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+            logger.debug("Batch execution complete for artifacts: %s", ready)
 
             for aid, result in zip(ready, batch_results, strict=True):
                 if isinstance(result, BaseException):
@@ -132,6 +143,8 @@ class DAGExecutor:
                         self._skip_dependents(aid, plan, ctx)
                 sorter.done(aid)
 
+        logger.debug("DAG execution complete")
+
     async def _produce(
         self,
         artifact_id: str,
@@ -139,6 +152,7 @@ class DAGExecutor:
         ctx: _ExecutionContext,
     ) -> ArtifactResult:
         """Produce a single artifact."""
+        logger.debug("Starting production of artifact: %s", artifact_id)
         start_time = time.monotonic()
         definition = plan.runbook.artifacts[artifact_id]
 
@@ -163,6 +177,9 @@ class DAGExecutor:
                 ctx.store.save(artifact_id, message)
 
                 duration = time.monotonic() - start_time
+                logger.debug(
+                    "Artifact %s completed successfully (%.2fs)", artifact_id, duration
+                )
                 return ArtifactResult(
                     artifact_id=artifact_id,
                     success=True,
@@ -172,6 +189,9 @@ class DAGExecutor:
 
             except Exception as e:
                 duration = time.monotonic() - start_time
+                logger.debug(
+                    "Artifact %s failed: %s (%.2fs)", artifact_id, str(e), duration
+                )
                 if definition.optional:
                     logger.warning("Optional artifact '%s' failed: %s", artifact_id, e)
                 return ArtifactResult(
