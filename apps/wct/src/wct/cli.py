@@ -102,17 +102,10 @@ def _build_service_container() -> ServiceContainer:
 class _OutputFormatter:
     """Handles formatting CLI output for different commands."""
 
-    def _get_status_text(self, success: bool) -> str:
-        """Get colour-coded status text.
-
-        Args:
-            success: Whether the artifact succeeded.
-
-        Returns:
-            Colour-coded status text.
-
-        """
-        return "[green]Success[/green]" if success else "[red]Failed[/red]"
+    # Status text constants
+    STATUS_SUCCESS = "[green]Success[/green]"
+    STATUS_FAILED = "[red]Failed[/red]"
+    STATUS_SKIPPED = "[yellow]Skipped[/yellow]"
 
     def _get_schema_text(self, plan: ExecutionPlan, artifact_id: str) -> str:
         """Get schema text for verbose output.
@@ -157,9 +150,12 @@ class _OutputFormatter:
             table.add_column("Schema", style="yellow")
 
         for artifact_id, artifact_result in result.artifacts.items():
+            status = (
+                self.STATUS_SUCCESS if artifact_result.success else self.STATUS_FAILED
+            )
             row = [
                 artifact_id,
-                self._get_status_text(artifact_result.success),
+                status,
                 f"{artifact_result.duration_seconds:.2f}s",
             ]
             if verbose:
@@ -168,7 +164,7 @@ class _OutputFormatter:
 
         # Show skipped artifacts
         for artifact_id in result.skipped:
-            row = [artifact_id, "[yellow]Skipped[/yellow]", "-"]
+            row = [artifact_id, self.STATUS_SKIPPED, "-"]
             if verbose:
                 row.append("-")
             table.add_row(*row)
