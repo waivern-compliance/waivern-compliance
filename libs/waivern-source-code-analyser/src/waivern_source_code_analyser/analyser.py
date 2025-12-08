@@ -93,7 +93,6 @@ class SourceCodeAnalyser(Analyser):
             source_str = "standard_input"
 
             for message in inputs:
-                message.validate()
                 input_data = message.content
                 files_list = input_data.get("data", [])
                 all_files.extend(files_list)
@@ -182,9 +181,6 @@ class SourceCodeAnalyser(Analyser):
                 content=result_data,
                 schema=output_schema,
             )
-
-            # Validate the output message against the output schema
-            output_message.validate()
 
             logger.info(
                 f"SourceCodeAnalyser processed {total_files} files, {total_lines} lines"

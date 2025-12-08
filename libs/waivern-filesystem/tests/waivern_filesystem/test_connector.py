@@ -145,7 +145,6 @@ class TestFilesystemConnector:
         assert isinstance(result, Message)
         assert result.id == f"Content from {sample_file.name}"
         assert result.schema == standard_input_schema
-        assert result.schema_validated is True
 
         # Check content structure
         content = result.content
@@ -171,7 +170,6 @@ class TestFilesystemConnector:
         result = connector.extract(standard_input_schema)
 
         assert isinstance(result, Message)
-        assert result.schema_validated is True
 
         # Check content structure
         content = result.content

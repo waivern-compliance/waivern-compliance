@@ -129,7 +129,6 @@ class DataSubjectAnalyser(Analyser):
         # Merge all input data items (same-schema fan-in)
         all_data_items: list[StandardInputDataItemModel[BaseMetadata]] = []
         for message in inputs:
-            message.validate()
             reader = self._load_reader(message.schema)
             typed_data = cast(
                 StandardInputDataModel[BaseMetadata], reader.read(message.content)
@@ -201,7 +200,6 @@ class DataSubjectAnalyser(Analyser):
             schema=output_schema,
         )
 
-        # Validate the output message against the output schema
         output_message.validate()
 
         logger.info(

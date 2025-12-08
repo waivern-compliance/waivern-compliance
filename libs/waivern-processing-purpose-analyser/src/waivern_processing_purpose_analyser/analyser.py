@@ -130,7 +130,6 @@ class ProcessingPurposeAnalyser(Analyser):
 
         # This analyser accepts alternative schemas, so we expect one message
         message = inputs[0]
-        message.validate()
         input_schema = message.schema
 
         logger.debug(f"Processing data with schema: {input_schema.name}")
@@ -317,9 +316,6 @@ class ProcessingPurposeAnalyser(Analyser):
             content=result_data,
             schema=output_schema,
         )
-
-        # Validate the output message against the output schema
-        output_message.validate()
 
         logger.info(
             f"ProcessingPurposeAnalyser processed with {len(result_data['findings'])} findings"

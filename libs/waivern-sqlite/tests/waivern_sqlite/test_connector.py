@@ -656,9 +656,6 @@ class TestSQLiteConnectorEdgeCases:
             connector = SQLiteConnector(config)
             result_message = connector.extract(Schema("standard_input", "1.0.0"))
 
-            # Message should validate successfully (this is called internally in extract)
-            assert result_message.schema_validated is True
-
             # Should validate against StandardInputSchema
             assert result_message.schema is not None
             assert result_message.schema.name == "standard_input"
