@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from waivern_core.schemas.base import Schema
+from waivern_core.schemas import Schema
 
 
 class TestConnectorAutoDiscovery:
@@ -36,7 +36,7 @@ class TestConnectorAutoDiscovery:
             connector_file.write_text(
                 "from waivern_core.base_connector import Connector\n"
                 "from waivern_core.message import Message\n"
-                "from waivern_core.schemas.base import Schema\n\n"
+                "from waivern_core.schemas import Schema\n\n"
                 "class TestConnector(Connector):\n"
                 "    @classmethod\n"
                 "    def get_name(cls) -> str:\n"
@@ -152,7 +152,7 @@ class TestConnectorAutoDiscovery:
 
         from waivern_core.base_connector import Connector
         from waivern_core.message import Message
-        from waivern_core.schemas.base import Schema
+        from waivern_core.schemas import Schema
 
         class CustomConnector(Connector):
             @classmethod

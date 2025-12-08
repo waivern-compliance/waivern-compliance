@@ -21,7 +21,7 @@
         "PYTHONPATH": "${workspaceFolder}/src"
     },
     "yaml.schemas": {
-        "./apps/wct/src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json": "apps/wct/runbooks/**/*.yaml"
+        "./apps/wct/runbook.schema.json": "apps/wct/runbooks/**/*.yaml"
     },
     "yaml.format.enable": true,
     "yaml.validate": true,

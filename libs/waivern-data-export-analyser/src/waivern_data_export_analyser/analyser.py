@@ -3,7 +3,7 @@
 import logging
 from typing import override
 
-from waivern_core import Analyser
+from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
@@ -41,8 +41,8 @@ class DataExportAnalyser(Analyser):
 
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[Schema]:
-        """Return list of supported input schemas.
+    def get_input_requirements(cls) -> list[list[InputRequirement]]:
+        """Declare supported input schema combinations.
 
         Returns:
             Empty list - analyser not yet implemented
@@ -64,16 +64,14 @@ class DataExportAnalyser(Analyser):
     @override
     def process(
         self,
-        input_schema: Schema,
+        inputs: list[Message],
         output_schema: Schema,
-        message: Message,
     ) -> Message:
         """Process data and return findings.
 
         Args:
-            input_schema: Input schema for data validation
+            inputs: List of input messages (same schema, fan-in supported)
             output_schema: Output schema for result validation
-            message: Input data message
 
         Returns:
             Empty message - analyser not yet implemented

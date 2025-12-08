@@ -38,7 +38,9 @@ from waivern_core.services import (
     ServiceFactory,
     ServiceProvider,
 )
-from waivern_core.testing import ComponentFactoryContractTests
+from waivern_core.testing import AnalyserContractTests, ComponentFactoryContractTests
+from waivern_core.types import InputRequirement
+from waivern_core.utils import update_analyses_chain
 
 __all__ = [
     # Version
@@ -57,6 +59,7 @@ __all__ = [
     "RuleComplianceData",
     "RulesetData",
     # Dependency Injection
+    "AnalyserContractTests",
     "BaseComponentConfiguration",
     "BaseServiceConfiguration",
     "ComponentConfig",
@@ -67,6 +70,10 @@ __all__ = [
     "ServiceDescriptor",
     "ServiceFactory",
     "ServiceProvider",
+    # Types
+    "InputRequirement",
+    # Utilities
+    "update_analyses_chain",
     # Errors
     "WaivernError",
     "AnalyserConfigError",

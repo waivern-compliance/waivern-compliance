@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel
 
-from waivern_core.schemas.base import (
+from waivern_core.schemas import (
     JsonSchemaLoader,
     Schema,
     SchemaLoader,

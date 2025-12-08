@@ -42,16 +42,17 @@ class TestSourceCodeAnalyserInitialisation:
         assert name == "source_code_analyser"
         assert isinstance(name, str)
 
-    def test_get_supported_input_schemas_returns_standard_input(self):
+    def test_get_input_requirements_returns_standard_input(self):
         """Test that analyser supports standard_input schema."""
         # Act
-        schemas = SourceCodeAnalyser.get_supported_input_schemas()
+        requirements = SourceCodeAnalyser.get_input_requirements()
 
         # Assert
-        assert isinstance(schemas, list)
-        assert len(schemas) == 1
-        assert schemas[0].name == "standard_input"
-        assert schemas[0].version == "1.0.0"
+        assert isinstance(requirements, list)
+        assert len(requirements) == 1  # One valid combination
+        assert len(requirements[0]) == 1  # One requirement in that combination
+        assert requirements[0][0].schema_name == "standard_input"
+        assert requirements[0][0].version == "1.0.0"
 
     def test_get_supported_output_schemas_returns_source_code(self):
         """Test that analyser supports source_code schema."""
@@ -121,9 +122,8 @@ class UserManager {
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [message],
             Schema("source_code", "1.0.0"),
-            message,
         )
 
         # Assert
@@ -220,9 +220,8 @@ class UserManager {
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [message],
             Schema("source_code", "1.0.0"),
-            message,
         )
 
         # Assert
@@ -274,9 +273,8 @@ class UserManager {
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [message],
             Schema("source_code", "1.0.0"),
-            message,
         )
 
         # Assert
@@ -319,9 +317,8 @@ class UserManager {
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [message],
             Schema("source_code", "1.0.0"),
-            message,
         )
 
         # Assert - file should be skipped
@@ -363,9 +360,8 @@ class UserManager {
 
         # Act - should not raise exception
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [message],
             Schema("source_code", "1.0.0"),
-            message,
         )
 
         # Assert - file skipped gracefully
@@ -396,9 +392,8 @@ class UserManager {
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [message],
             Schema("source_code", "1.0.0"),
-            message,
         )
 
         # Assert - valid structure with zero files
@@ -449,9 +444,8 @@ class UserManager {
 
             # Act
             result = analyser.process(
-                Schema("standard_input", "1.0.0"),
+                [message],
                 Schema("source_code", "1.0.0"),
-                message,
             )
 
             # Assert

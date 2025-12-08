@@ -1,7 +1,7 @@
 # Task 7: Export Infrastructure and Multi-Schema Fan-In
 
 - **Phase:** 4 - Export & Regulatory Analysers
-- **Status:** TODO
+- **Status:** IN_PROGRESS (Tasks 7a-7c complete)
 - **GitHub Issue:** TBD
 - **Prerequisites:** Tasks 1-6 (artifact-centric orchestration complete)
 - **Design:** [Multi-Schema Fan-In](../../../future-plans/multi-schema-fan-in.md), [Export Architecture](../../../future-plans/export-architecture.md)
@@ -41,16 +41,18 @@ Sub-tasks for incremental delivery:
 
 ## Task 7a: Multi-Schema Analyser Support (waivern-core)
 
+**Status:** DONE
+
 ### Changes
 
 **1. Add `InputRequirement` dataclass:**
 
 ```python
-# waivern_core/types.py (or base_analyser.py)
+# waivern_core/types.py
 
 from dataclasses import dataclass
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class InputRequirement:
     """Declares a required input schema."""
     schema_name: str
@@ -63,6 +65,11 @@ class InputRequirement:
 # waivern_core/base_analyser.py
 
 class Analyser(ABC):
+    @classmethod
+    @abstractmethod
+    def get_name(cls) -> str:
+        """Get the name of the analyser."""
+
     @classmethod
     @abstractmethod
     def get_input_requirements(cls) -> list[list[InputRequirement]]:
@@ -90,6 +97,12 @@ class Analyser(ABC):
         """
         ...
 
+    @classmethod
+    @abstractmethod
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        """Declare output schemas this analyser can produce."""
+        ...
+
     @abstractmethod
     def process(
         self,
@@ -108,30 +121,12 @@ class Analyser(ABC):
         """
         ...
 
-    # Remove get_supported_input_schemas() - replaced by get_input_requirements()
-
-    def _load_reader_for_schema(self, schema: Schema) -> ModuleType:
-        """Load reader module for a specific schema.
-
-        Helper method for analysers to load readers dynamically.
-
-        Args:
-            schema: The schema to load reader for
-
-        Returns:
-            Module with read() function
-
-        Raises:
-            ModuleNotFoundError: If no reader exists for this schema/version
-        """
-        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
-        package = self.__class__.__module__.rsplit('.', 1)[0]
-        return importlib.import_module(f"{package}.schema_readers.{module_name}")
+    # Removed: get_supported_input_schemas() - replaced by get_input_requirements()
 ```
 
 **3. Update `ComponentFactory`:**
 
-Factory only handles instantiation. All metadata lives on component classes.
+Factory handles instantiation and provides metadata access via `component_class`.
 
 ```python
 # waivern_core/component_factory.py
@@ -140,64 +135,73 @@ class ComponentFactory[T](ABC):
     @property
     @abstractmethod
     def component_class(self) -> type[T]:
-        """Return the component class this factory creates."""
+        """Return the component class this factory creates.
+
+        Used by executor to access class methods like get_input_requirements()
+        and get_supported_output_schemas() without instantiating the component.
+        """
         ...
 
     @abstractmethod
-    def create(self, properties: dict[str, Any]) -> T:
+    def create(self, config: ComponentConfig) -> T:
         """Create a component instance."""
         ...
+
+    @abstractmethod
+    def can_create(self, config: ComponentConfig) -> bool:
+        """Check if factory can create component with given config."""
+        ...
+
+    def get_service_dependencies(self) -> dict[str, type]:
+        """Declare service dependencies for DI container."""
+        return {}
 ```
 
-**4. Add `AnalyserContractTest` base class:**
+**4. Add `AnalyserContractTests` base class:**
 
 ```python
 # waivern_core/testing.py
 
-from abc import ABC, abstractmethod
+class AnalyserContractTests[T: Analyser]:
+    """Abstract contract tests that all Analyser implementations must pass.
 
-class AnalyserContractTest(ABC):
-    """Base test class for analyser contract validation."""
+    Required Fixtures:
+        analyser_class: The Analyser class (not instance) to test
 
-    @abstractmethod
-    def get_analyser_factory(self) -> ComponentFactory[Analyser]:
-        """Return the analyser factory to test."""
-        ...
+    Usage Pattern:
+        class TestPersonalDataAnalyserContract(AnalyserContractTests[PersonalDataAnalyser]):
+            @pytest.fixture
+            def analyser_class(self) -> type[PersonalDataAnalyser]:
+                return PersonalDataAnalyser
 
-    def test_input_requirements_not_empty(self):
+            # All contract tests run automatically
+    """
+
+    @pytest.fixture
+    def analyser_class(self) -> type[T]:
+        """Provide Analyser class to test. Subclasses MUST override."""
+        raise NotImplementedError(
+            "Subclass must provide 'analyser_class' fixture with Analyser class"
+        )
+
+    def test_input_requirements_not_empty(self, analyser_class: type[T]) -> None:
         """Input requirements must have at least one combination."""
-        factory = self.get_analyser_factory()
-        requirements = factory.component_class.get_input_requirements()
-        assert len(requirements) > 0, "get_input_requirements() must return at least one combination"
+        requirements = analyser_class.get_input_requirements()
+        assert len(requirements) > 0
 
-    def test_no_duplicate_combinations(self):
+    def test_no_duplicate_combinations(self, analyser_class: type[T]) -> None:
         """Each combination must be unique."""
-        factory = self.get_analyser_factory()
-        requirements = factory.component_class.get_input_requirements()
+        requirements = analyser_class.get_input_requirements()
+        seen: set[frozenset[tuple[str, str]]] = set()
 
-        seen = set()
         for combo in requirements:
             combo_set = frozenset((r.schema_name, r.version) for r in combo)
             assert combo_set not in seen, f"Duplicate combination: {combo_set}"
             seen.add(combo_set)
 
-    def test_readers_exist_for_all_requirements(self):
-        """Readers must exist for all declared input schemas."""
-        factory = self.get_analyser_factory()
-        requirements = factory.component_class.get_input_requirements()
-        supported = factory.component_class.get_supported_input_schemas()
-        supported_set = {(s.name, s.version) for s in supported}
-
-        for combo in requirements:
-            for req in combo:
-                assert (req.schema_name, req.version) in supported_set, (
-                    f"No reader for {req.schema_name}/{req.version}"
-                )
-
-    def test_no_empty_combinations(self):
+    def test_no_empty_combinations(self, analyser_class: type[T]) -> None:
         """Each combination must have at least one requirement."""
-        factory = self.get_analyser_factory()
-        requirements = factory.component_class.get_input_requirements()
+        requirements = analyser_class.get_input_requirements()
 
         for i, combo in enumerate(requirements):
             assert len(combo) > 0, f"Combination {i} is empty"
@@ -209,26 +213,33 @@ class AnalyserContractTest(ABC):
 # waivern_core/__init__.py
 
 from waivern_core.types import InputRequirement
-from waivern_core.testing import AnalyserContractTest
+from waivern_core.testing import AnalyserContractTests
 # ... existing exports ...
 
 __all__ = [
     # ... existing ...
     "InputRequirement",
-    "AnalyserContractTest",
+    "AnalyserContractTests",
 ]
 ```
 
 ### Tests
 
-- `test_input_requirement_creation` - dataclass creation and immutability
-- `test_input_requirement_equality` - two requirements with same values are equal
-- `test_load_reader_for_schema` - helper loads correct module
-- `test_analyser_contract_test_base` - contract tests work correctly
+**InputRequirement tests** (`test_input_requirement.py`):
+- `test_creation_with_valid_values` - dataclass creation
+- `test_immutability` - frozen dataclass cannot be modified
+- `test_equality_same_values` - two requirements with same values are equal
+- `test_equality_different_values` - different values are not equal
+- `test_hashable_for_sets` - can be used in sets
+- `test_hashable_for_dict_keys` - can be used as dict keys
+
+**AnalyserContractTests** - inherited by analyser test classes (Task 7c)
 
 ---
 
 ## Task 7b: Multi-Schema Fan-In (waivern-orchestration)
+
+**Status:** DONE
 
 ### Planner Changes
 
@@ -258,8 +269,6 @@ def _resolve_derived_schema(
     requirements = factory.component_class.get_input_requirements()
 
     matched = self._find_matching_requirement(artifact_id, provided_set, requirements)
-    self._validate_readers_exist(artifact_id, factory, matched)
-
     output_schema = self._get_output_schema(factory, definition)
     return (matched, output_schema)
 
@@ -296,23 +305,9 @@ def _find_matching_requirement(
     )
 
 
-def _validate_readers_exist(
-    self,
-    artifact_id: str,
-    factory: ComponentFactory,
-    requirements: list[InputRequirement],
-) -> None:
-    """Validate analyser has readers for all required schemas."""
-    supported_inputs = factory.component_class.get_supported_input_schemas()
-    supported_set = {(s.name, s.version) for s in supported_inputs}
-
-    for req in requirements:
-        if (req.schema_name, req.version) not in supported_set:
-            raise ComponentNotFoundError(
-                f"Artifact '{artifact_id}': analyser declares requirement for "
-                f"'{req.schema_name}/{req.version}' but has no reader for it"
-            )
 ```
+
+**Note:** Reader validation is handled at runtime when loading reader modules. If an analyser declares an `InputRequirement` but has no corresponding reader module, the error will be raised during `process()` when attempting to load the reader.
 
 ### Executor Changes
 
@@ -352,7 +347,6 @@ async def _produce_derived(
 
 - `test_planner_exact_set_matching_success` - matching combination found
 - `test_planner_exact_set_matching_no_match` - error when no combination matches
-- `test_planner_validates_readers_exist` - error on missing reader
 - `test_executor_passes_list_to_process` - inputs as list[Message]
 - `test_executor_same_schema_fan_in` - multiple messages of same schema
 
@@ -360,12 +354,14 @@ async def _produce_derived(
 
 ## Task 7c: Migrate Existing Analysers
 
+**Status:** DONE
+
 Update all existing analysers to the new interface:
 
 ### waivern-personal-data-analyser
 
 ```python
-# Before
+# Before (current state - needs migration)
 @classmethod
 def get_supported_input_schemas(cls) -> list[Schema]:
     return [Schema("standard_input", "1.0.0")]
@@ -375,7 +371,7 @@ def process(self, input_schema: Schema, output_schema: Schema, message: Message)
     data = reader.read(message.content)
     ...
 
-# After
+# After (new interface)
 @classmethod
 def get_input_requirements(cls) -> list[list[InputRequirement]]:
     return [
@@ -383,16 +379,17 @@ def get_input_requirements(cls) -> list[list[InputRequirement]]:
     ]
 
 def process(self, inputs: list[Message], output_schema: Schema) -> Message:
-    # Standard pattern: merge all inputs into one dataset
-    # This enables cross-source correlation while preserving item-level provenance
-    all_items = []
-    for msg in inputs:
-        reader = self._load_reader_for_schema(msg.schema)
-        all_items.extend(reader.read(msg.content).get("items", []))
-
-    # Analyse the combined dataset
-    # Each item retains source metadata (table, column, file path) for audit trail
+    # For single-input analysers, just use inputs[0]
+    message = inputs[0]
+    reader = self._load_reader(message.schema)
+    data = reader.read(message.content)
     ...
+
+    # For multi-input (fan-in) analysers, merge all inputs:
+    # all_items = []
+    # for msg in inputs:
+    #     reader = self._load_reader(msg.schema)
+    #     all_items.extend(reader.read(msg.content).get("items", []))
 ```
 
 ### Affected Packages
@@ -400,14 +397,31 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message:
 - waivern-personal-data-analyser
 - waivern-data-subject-analyser
 - waivern-processing-purpose-analyser
+- waivern-source-code-analyser
 - waivern-data-export-analyser (WIP)
 
 ### Tests
 
 Each analyser package should:
-1. Inherit from `AnalyserContractTest` for contract validation
+1. Inherit from `AnalyserContractTests` for contract validation
 2. Update unit tests for new `process()` signature
 3. Add tests for merge-first pattern (multiple inputs merged into one dataset)
+
+### Completion Notes
+
+Successfully migrated all analysers to the new multi-schema interface:
+- ✅ waivern-personal-data-analyser
+- ✅ waivern-data-subject-analyser
+- ✅ waivern-processing-purpose-analyser
+- ✅ waivern-source-code-analyser
+
+Additional improvements completed:
+- Fixed infinite loop bug in DAG executor when skipped artifacts mixed with executing ones
+- Removed redundant JSON schema validation (Pydantic already validates)
+- Added comprehensive debug logging to executor
+- Improved CLI table formatting (removed emojis, added colour-coded status)
+
+All 841 tests passing. Branch: `feature/multi-schema-analyser-support`
 
 ---
 

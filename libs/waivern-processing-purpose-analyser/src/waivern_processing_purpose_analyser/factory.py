@@ -2,7 +2,7 @@
 
 from typing import override
 
-from waivern_core import ComponentConfig, ComponentFactory, Schema
+from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
 from waivern_llm import BaseLLMService
 
@@ -49,16 +49,15 @@ class ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyse
         # Parse and validate configuration
         analyser_config = ProcessingPurposeAnalyserConfig.from_properties(config)
 
-        # Resolve LLM service from container
-        try:
-            llm_service = self._container.get_service(BaseLLMService)
-        except (ValueError, KeyError):
+        # Only resolve LLM service if validation is enabled (lazy loading)
+        if analyser_config.llm_validation.enable_llm_validation:
+            try:
+                llm_service = self._container.get_service(BaseLLMService)
+            except (ValueError, KeyError) as e:
+                msg = "LLM validation enabled but no LLM service available"
+                raise ValueError(msg) from e
+        else:
             llm_service = None
-
-        # Validate that LLM validation requirements can be met
-        if analyser_config.llm_validation.enable_llm_validation and llm_service is None:
-            msg = "LLM validation enabled but no LLM service available"
-            raise ValueError(msg)
 
         # Create analyser with resolved LLM service
         return ProcessingPurposeAnalyser(
@@ -93,35 +92,11 @@ class ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyse
 
         return True
 
+    @property
     @override
-    def get_component_name(self) -> str:
-        """Get component type name for registry lookup.
-
-        Returns:
-            Component type name: "processing_purpose_analyser"
-
-        """
-        return "processing_purpose_analyser"
-
-    @override
-    def get_input_schemas(self) -> list[Schema]:
-        """Get input schemas accepted by created analysers.
-
-        Returns:
-            List containing StandardInputSchema and SourceCodeSchema
-
-        """
-        return ProcessingPurposeAnalyser.get_supported_input_schemas()
-
-    @override
-    def get_output_schemas(self) -> list[Schema]:
-        """Get output schemas produced by created analysers.
-
-        Returns:
-            List containing ProcessingPurposeFindingSchema
-
-        """
-        return ProcessingPurposeAnalyser.get_supported_output_schemas()
+    def component_class(self) -> type[ProcessingPurposeAnalyser]:
+        """Get the component class this factory creates."""
+        return ProcessingPurposeAnalyser
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:

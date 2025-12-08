@@ -63,7 +63,6 @@ import pytest
 from waivern_core import (
     ComponentConfig,
     ComponentFactory,
-    Schema,
 )
 
 
@@ -80,12 +79,10 @@ class ComponentFactoryContractTests[T]:
 
     Contract Requirements:
         1. create() must return non-None component instance
-        2. get_component_name() must return non-empty string
-        3. get_input_schemas() must return list of Schema objects
-        4. get_output_schemas() must return list of Schema objects
-        5. can_create() must return boolean for valid config
-        6. can_create() must return boolean for invalid config
-        7. get_service_dependencies() must return dict
+        2. component_class must return the component type
+        3. can_create() must return boolean for valid config
+        4. can_create() must return boolean for invalid config
+        5. get_service_dependencies() must return dict
 
     Usage Pattern:
         class TestMyFactory(ComponentFactoryContractTests[MyComponent]):
@@ -173,67 +170,22 @@ class ComponentFactoryContractTests[T]:
         )
 
     # CONTRACT TEST 2
-    def test_get_component_name_returns_non_empty_string(
-        self, factory: ComponentFactory[T]
-    ):
-        """Verify factory.get_component_name() returns non-empty string identifier.
+    def test_component_class_returns_type(self, factory: ComponentFactory[T]):
+        """Verify factory.component_class returns the component type.
 
         Contract Requirement:
-            Must return string matching runbook YAML 'type:' field.
-            String must not be empty (executor needs identifier for registration).
+            Must return a type (class) that the factory creates.
 
         Why This Matters:
-            Executor uses component name to map runbook type declarations
-            (e.g., type: "personal_data_analyser") to factory instances.
+            Executor uses component_class to access class methods like
+            get_input_requirements() and get_supported_output_schemas()
+            without instantiating the component.
 
         """
-        name = factory.get_component_name()
-        assert isinstance(name, str), "Component name must be string type"
-        assert len(name) > 0, "Component name must not be empty string"
+        component_class = factory.component_class
+        assert isinstance(component_class, type), "component_class must return a type"
 
     # CONTRACT TEST 3
-    def test_get_input_schemas_returns_list_of_schemas(
-        self, factory: ComponentFactory[T]
-    ):
-        """Verify factory.get_input_schemas() returns list of Schema objects.
-
-        Contract Requirement:
-            Must return list (can be empty for connectors).
-            All elements must be Schema instances.
-
-        Why This Matters:
-            Executor uses input schemas for automatic connector-to-analyser
-            matching based on compatible data formats.
-
-        """
-        schemas = factory.get_input_schemas()
-        assert isinstance(schemas, list), "Input schemas must be list type"
-        assert all(isinstance(s, Schema) for s in schemas), (
-            "All input schema elements must be Schema instances"
-        )
-
-    # CONTRACT TEST 4
-    def test_get_output_schemas_returns_list_of_schemas(
-        self, factory: ComponentFactory[T]
-    ):
-        """Verify factory.get_output_schemas() returns list of Schema objects.
-
-        Contract Requirement:
-            Must return list (can be empty for analysers).
-            All elements must be Schema instances.
-
-        Why This Matters:
-            Executor uses output schemas to validate analyser findings match
-            expected formats and enable component chaining.
-
-        """
-        schemas = factory.get_output_schemas()
-        assert isinstance(schemas, list), "Output schemas must be list type"
-        assert all(isinstance(s, Schema) for s in schemas), (
-            "All output schema elements must be Schema instances"
-        )
-
-    # CONTRACT TEST 5
     def test_can_create_returns_bool_for_valid_config(
         self, factory: ComponentFactory[T], valid_config: ComponentConfig
     ):
@@ -256,7 +208,7 @@ class ComponentFactoryContractTests[T]:
             "can_create() should return True for valid_config fixture"
         )
 
-    # CONTRACT TEST 6
+    # CONTRACT TEST 4
     def test_can_create_returns_bool_for_invalid_config(
         self, factory: ComponentFactory[T]
     ):
@@ -279,7 +231,7 @@ class ComponentFactoryContractTests[T]:
             "not raise exception"
         )
 
-    # CONTRACT TEST 7
+    # CONTRACT TEST 5
     def test_get_service_dependencies_returns_dict(self, factory: ComponentFactory[T]):
         """Verify factory.get_service_dependencies() returns dict mapping.
 
@@ -326,25 +278,16 @@ class TestComponentFactoryDefaults:
         class MinimalFactory(ComponentFactory[object]):
             """Minimal factory with only abstract methods implemented."""
 
+            @property
+            @override
+            def component_class(self) -> type[object]:
+                """Return component class."""
+                return object
+
             @override
             def create(self, config: ComponentConfig) -> object:
                 """Create dummy component."""
-                return object()  # Dummy return
-
-            @override
-            def get_component_name(self) -> str:
-                """Return component name."""
-                return "minimal"
-
-            @override
-            def get_input_schemas(self) -> list[Schema]:
-                """Return empty input schemas."""
-                return []
-
-            @override
-            def get_output_schemas(self) -> list[Schema]:
-                """Return empty output schemas."""
-                return []
+                return object()
 
             @override
             def can_create(self, config: ComponentConfig) -> bool:

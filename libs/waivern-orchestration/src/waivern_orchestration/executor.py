@@ -69,6 +69,9 @@ class DAGExecutor:
         store = self._registry.container.get_service(ArtifactStore)
 
         # Create thread pool for sync->async bridging
+        logger.debug(
+            "Creating ThreadPoolExecutor with max_workers=%d", config.max_concurrency
+        )
         with ThreadPoolExecutor(max_workers=config.max_concurrency) as thread_pool:
             ctx = _ExecutionContext(
                 store=store,
@@ -84,6 +87,7 @@ class DAGExecutor:
                 self._mark_remaining_as_skipped(plan, ctx)
                 logger.warning("Execution timed out after %d seconds", config.timeout)
 
+        logger.debug("ThreadPoolExecutor shutdown complete")
         total_duration = time.monotonic() - start_time
         return ExecutionResult(
             artifacts=ctx.results,
@@ -97,6 +101,7 @@ class DAGExecutor:
         ctx: _ExecutionContext,
     ) -> None:
         """Execute artifacts in topological order with parallel batches."""
+        logger.debug("Starting DAG execution")
         sorter = plan.dag.create_sorter()
 
         while sorter.is_active():
@@ -104,15 +109,21 @@ class DAGExecutor:
             all_ready = list(sorter.get_ready())
             ready = [aid for aid in all_ready if aid not in ctx.skipped]
 
-            if not ready:
-                # Mark skipped artifacts as done so sorter can progress
-                for aid in all_ready:
+            # Mark skipped artifacts as done immediately so sorter can progress
+            skipped_in_batch = [aid for aid in all_ready if aid in ctx.skipped]
+            if skipped_in_batch:
+                logger.debug("Marking skipped artifacts as done: %s", skipped_in_batch)
+                for aid in skipped_in_batch:
                     sorter.done(aid)
+
+            if not ready:
                 continue
 
+            logger.debug("Starting batch execution for artifacts: %s", ready)
             tasks = [self._produce(aid, plan, ctx) for aid in ready]
 
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+            logger.debug("Batch execution complete for artifacts: %s", ready)
 
             for aid, result in zip(ready, batch_results, strict=True):
                 if isinstance(result, BaseException):
@@ -132,6 +143,8 @@ class DAGExecutor:
                         self._skip_dependents(aid, plan, ctx)
                 sorter.done(aid)
 
+        logger.debug("DAG execution complete")
+
     async def _produce(
         self,
         artifact_id: str,
@@ -139,13 +152,14 @@ class DAGExecutor:
         ctx: _ExecutionContext,
     ) -> ArtifactResult:
         """Produce a single artifact."""
+        logger.debug("Starting production of artifact: %s", artifact_id)
         start_time = time.monotonic()
         definition = plan.runbook.artifacts[artifact_id]
 
         async with ctx.semaphore:
             try:
                 # Get schemas from pre-resolved schemas
-                input_schema, output_schema = plan.artifact_schemas[artifact_id]
+                _input_schema, output_schema = plan.artifact_schemas[artifact_id]
 
                 if definition.source is not None:
                     message = await self._run_connector(
@@ -153,13 +167,8 @@ class DAGExecutor:
                     )
                 else:
                     # Derived artifact - get inputs from store
-                    if input_schema is None:
-                        raise ValueError(
-                            f"Derived artifact '{artifact_id}' has no input schema"
-                        )
                     message = await self._produce_derived(
                         definition,
-                        input_schema,
                         output_schema,
                         ctx.store,
                         ctx.thread_pool,
@@ -168,6 +177,9 @@ class DAGExecutor:
                 ctx.store.save(artifact_id, message)
 
                 duration = time.monotonic() - start_time
+                logger.debug(
+                    "Artifact %s completed successfully (%.2fs)", artifact_id, duration
+                )
                 return ArtifactResult(
                     artifact_id=artifact_id,
                     success=True,
@@ -177,6 +189,9 @@ class DAGExecutor:
 
             except Exception as e:
                 duration = time.monotonic() - start_time
+                logger.debug(
+                    "Artifact %s failed: %s (%.2fs)", artifact_id, str(e), duration
+                )
                 if definition.optional:
                     logger.warning("Optional artifact '%s' failed: %s", artifact_id, e)
                 return ArtifactResult(
@@ -232,8 +247,7 @@ class DAGExecutor:
     async def _run_analyser(
         self,
         transform: TransformConfig,
-        input_message: Message,
-        input_schema: Schema,
+        inputs: list[Message],
         output_schema: Schema,
         thread_pool: ThreadPoolExecutor,
     ) -> Message:
@@ -241,8 +255,7 @@ class DAGExecutor:
 
         Args:
             transform: Transform configuration with analyser type and properties.
-            input_message: The input message to process.
-            input_schema: The input schema for validation.
+            inputs: List of input messages to process.
             output_schema: The output schema for the result.
             thread_pool: ThreadPoolExecutor for sync->async bridging.
 
@@ -257,7 +270,7 @@ class DAGExecutor:
 
         def sync_process() -> Message:
             analyser = factory.create(transform.properties)
-            return analyser.process(input_schema, output_schema, input_message)
+            return analyser.process(inputs, output_schema)
 
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(thread_pool, sync_process)
@@ -265,7 +278,6 @@ class DAGExecutor:
     async def _produce_derived(
         self,
         definition: ArtifactDefinition,
-        input_schema: Schema,
         output_schema: Schema,
         store: ArtifactStore,
         thread_pool: ThreadPoolExecutor,
@@ -274,7 +286,6 @@ class DAGExecutor:
 
         Args:
             definition: The artifact definition with inputs.
-            input_schema: The input schema for this artifact.
             output_schema: The output schema for this artifact.
             store: The artifact store containing upstream artifacts.
             thread_pool: ThreadPoolExecutor for sync->async bridging.
@@ -294,15 +305,9 @@ class DAGExecutor:
         input_messages = [store.get(ref) for ref in input_refs]
 
         if definition.transform is not None:
-            # Analyser requires single input (fan-in with transform deferred to Phase 2)
-            if len(input_messages) != 1:
-                raise NotImplementedError(
-                    "Analyser with multiple inputs not yet supported (deferred to Phase 2)"
-                )
             return await self._run_analyser(
                 definition.transform,
-                input_messages[0],
-                input_schema,
+                input_messages,
                 output_schema,
                 thread_pool,
             )

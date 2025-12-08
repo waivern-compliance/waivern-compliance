@@ -102,6 +102,27 @@ def _build_service_container() -> ServiceContainer:
 class _OutputFormatter:
     """Handles formatting CLI output for different commands."""
 
+    # Status text constants
+    STATUS_SUCCESS = "[green]Success[/green]"
+    STATUS_FAILED = "[red]Failed[/red]"
+    STATUS_SKIPPED = "[yellow]Skipped[/yellow]"
+
+    def _get_schema_text(self, plan: ExecutionPlan, artifact_id: str) -> str:
+        """Get schema text for verbose output.
+
+        Args:
+            plan: ExecutionPlan with artifact definitions.
+            artifact_id: The artifact ID.
+
+        Returns:
+            Schema text or "N/A".
+
+        """
+        _, output_schema = plan.artifact_schemas.get(artifact_id, (None, None))
+        return (
+            f"{output_schema.name}/{output_schema.version}" if output_schema else "N/A"
+        )
+
     def format_execution_result(
         self,
         result: ExecutionResult,
@@ -123,35 +144,27 @@ class _OutputFormatter:
             header_style="bold magenta",
         )
         table.add_column("Artifact", style="cyan", no_wrap=True)
-        table.add_column("Status", style="green")
+        table.add_column("Status")
         table.add_column("Duration", style="blue")
         if verbose:
             table.add_column("Schema", style="yellow")
 
         for artifact_id, artifact_result in result.artifacts.items():
-            status_icon = "✅" if artifact_result.success else "❌"
-            status_text = (
-                f"{status_icon} {'Success' if artifact_result.success else 'Failed'}"
+            status = (
+                self.STATUS_SUCCESS if artifact_result.success else self.STATUS_FAILED
             )
-            duration_text = f"{artifact_result.duration_seconds:.2f}s"
-
-            row = [artifact_id, status_text, duration_text]
-
+            row = [
+                artifact_id,
+                status,
+                f"{artifact_result.duration_seconds:.2f}s",
+            ]
             if verbose:
-                # Get schema from plan
-                _, output_schema = plan.artifact_schemas.get(artifact_id, (None, None))
-                schema_text = (
-                    f"{output_schema.name}/{output_schema.version}"
-                    if output_schema
-                    else "N/A"
-                )
-                row.append(schema_text)
-
+                row.append(self._get_schema_text(plan, artifact_id))
             table.add_row(*row)
 
         # Show skipped artifacts
         for artifact_id in result.skipped:
-            row = [artifact_id, "⏭️ Skipped", "-"]
+            row = [artifact_id, self.STATUS_SKIPPED, "-"]
             if verbose:
                 row.append("-")
             table.add_row(*row)

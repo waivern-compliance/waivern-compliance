@@ -77,7 +77,8 @@ class ProcessingPurposePatternMatcher:
                     finding_metadata = None
                     if metadata:
                         finding_metadata = ProcessingPurposeFindingMetadata(
-                            source=metadata.source
+                            source=metadata.source,
+                            context=metadata.context,
                         )
 
                     compliance_data = [

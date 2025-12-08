@@ -369,17 +369,10 @@ class ComponentFactory(ABC, Generic[T]):
     def create(self, config: dict[str, Any]) -> T:
         """Create component with execution-specific config."""
 
+    @property
     @abstractmethod
-    def get_component_name(self) -> str:
-        """Get component type name (e.g., 'personal_data')."""
-
-    @abstractmethod
-    def get_input_schemas(self) -> list[Schema]:
-        """Get supported input schemas."""
-
-    @abstractmethod
-    def get_output_schemas(self) -> list[Schema]:
-        """Get supported output schemas."""
+    def component_class(self) -> type[T]:
+        """Get the component class (for accessing class methods like get_name())."""
 
     @abstractmethod
     def can_create(self, config: dict[str, Any]) -> bool:

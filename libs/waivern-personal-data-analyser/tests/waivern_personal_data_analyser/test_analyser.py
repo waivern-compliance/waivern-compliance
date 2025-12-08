@@ -12,15 +12,13 @@ from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )
-from waivern_core import Analyser, RuleComplianceData
-from waivern_core.errors import MessageValidationError
+from waivern_core import AnalyserContractTests, RuleComplianceData
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseFindingCompliance,
     BaseFindingEvidence,
     Schema,
 )
-from waivern_core.schemas.base import SchemaLoadError
 from waivern_llm import BaseLLMService
 from waivern_rulesets.personal_data import PersonalDataRule
 
@@ -105,15 +103,13 @@ class TestPersonalDataAnalyser:
         )
 
     @pytest.fixture
-    def mock_schema_modules(self) -> tuple[Mock, Mock]:
-        """Create mock reader and producer modules for testing dynamic loading.
+    def mock_reader_module(self) -> Mock:
+        """Create mock reader module for testing dynamic loading.
 
         Returns:
-            Tuple of (mock_reader_module, mock_producer_module) configured
-            with appropriate return values for process() testing.
+            Mock reader module configured with appropriate return values.
 
         """
-        # Setup mock reader module
         mock_reader = Mock()
         mock_reader.read.return_value = Mock(
             data=[],
@@ -124,75 +120,63 @@ class TestPersonalDataAnalyser:
             source=None,
             metadata={},
         )
-
-        # Setup mock producer module
-        mock_producer = Mock()
-        mock_producer.produce.return_value = {
-            "findings": [],
-            "summary": {
-                "total_findings": 0,
-                "high_risk_count": 0,
-                "special_category_count": 0,
-            },
-            "analysis_metadata": {
-                "ruleset_used": "personal_data",
-                "llm_validation_enabled": True,
-                "evidence_context_size": "medium",
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
-            },
-        }
-
-        return mock_reader, mock_producer
+        return mock_reader
 
     @pytest.fixture
     def sample_findings(self) -> list[PersonalDataFindingModel]:
-        """Create sample personal data findings for testing."""
+        """Create sample personal data findings for testing.
+
+        Note: matched_patterns contains keywords that the pattern matcher looks for
+        (e.g., "email", "phone"), not the actual data values.
+        """
         return [
             PersonalDataFindingModel(
-                type="email",
+                type="Basic Profile Information",
                 data_type="basic_profile",
                 risk_level=self.MEDIUM_RISK_LEVEL,
                 special_category=False,
-                matched_patterns=["support@example.com"],
+                matched_patterns=["email"],
                 compliance=[
                     BaseFindingCompliance(
                         regulation="GDPR",
                         relevance="Article 6 personal data processing",
                     )
-                ],  # TODO: Add proper compliance framework mappings
+                ],
                 evidence=[
                     BaseFindingEvidence(content="Contact us at support@example.com")
                 ],
                 metadata=PersonalDataFindingMetadata(source="contact_form.html"),
             ),
             PersonalDataFindingModel(
-                type="phone",
+                type="Basic Profile Information",
                 data_type="basic_profile",
-                risk_level=self.HIGH_RISK_LEVEL,
+                risk_level=self.MEDIUM_RISK_LEVEL,
                 special_category=False,
-                matched_patterns=["123-456-7890"],
+                matched_patterns=["telephone"],
                 compliance=[
                     BaseFindingCompliance(
                         regulation="GDPR",
                         relevance="Article 6 personal data processing",
                     )
-                ],  # TODO: Add proper compliance framework mappings
+                ],
                 evidence=[BaseFindingEvidence(content="call 123-456-7890")],
                 metadata=PersonalDataFindingMetadata(source="contact_form.html"),
             ),
             PersonalDataFindingModel(
-                type="email",
+                type="Basic Profile Information",
                 data_type="basic_profile",
                 risk_level=self.MEDIUM_RISK_LEVEL,
                 special_category=False,
-                matched_patterns=["john.doe@company.com"],
+                matched_patterns=["email"],
                 compliance=[
                     BaseFindingCompliance(
                         regulation="GDPR",
                         relevance="Article 6 personal data processing",
                     )
-                ],  # TODO: Add proper compliance framework mappings
-                evidence=[BaseFindingEvidence(content="john.doe@company.com")],
+                ],
+                evidence=[
+                    BaseFindingEvidence(content="User email: john.doe@company.com")
+                ],
                 metadata=PersonalDataFindingMetadata(source="user_database"),
             ),
         ]
@@ -205,15 +189,16 @@ class TestPersonalDataAnalyser:
         # Assert
         assert name == self.EXPECTED_ANALYSER_NAME
 
-    def test_get_supported_input_schemas_returns_standard_input(self) -> None:
-        """Test that the analyser supports standard_input schema."""
+    def test_get_input_requirements_returns_standard_input(self) -> None:
+        """Test that the analyser declares standard_input as input requirement."""
         # Act
-        input_schemas = PersonalDataAnalyser.get_supported_input_schemas()
+        requirements = PersonalDataAnalyser.get_input_requirements()
 
         # Assert
-        assert len(input_schemas) == 1
-        assert input_schemas[0].name == "standard_input"
-        assert input_schemas[0].version == "1.0.0"
+        assert len(requirements) == 1  # One valid combination
+        assert len(requirements[0]) == 1  # One requirement in that combination
+        assert requirements[0][0].schema_name == "standard_input"
+        assert requirements[0][0].version == "1.0.0"
 
     def test_get_supported_output_schemas_returns_personal_data_finding(self) -> None:
         """Test that the analyser outputs personal_data_finding schema."""
@@ -245,13 +230,10 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
-            input_schema = Schema("standard_input", "1.0.0")
             output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
-            result_message = analyser.process(
-                input_schema, output_schema, sample_input_message
-            )
+            result_message = analyser.process([sample_input_message], output_schema)
 
             # Assert - Basic message structure
             assert isinstance(result_message, Message)
@@ -289,13 +271,10 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
-            input_schema = Schema("standard_input", "1.0.0")
             output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
-            result_message = analyser.process(
-                input_schema, output_schema, sample_input_message
-            )
+            result_message = analyser.process([sample_input_message], output_schema)
 
             # Assert - Verify source field and data_type categorical information are included
             result_content = result_message.content
@@ -336,13 +315,10 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
-            input_schema = Schema("standard_input", "1.0.0")
             output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
-            result_message = analyser.process(
-                input_schema, output_schema, sample_input_message
-            )
+            result_message = analyser.process([sample_input_message], output_schema)
 
         # Assert - Verify analysis_metadata exists and has core standardised fields
         result_content = result_message.content
@@ -387,13 +363,10 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(filtered_findings, True),
         ):
-            input_schema = Schema("standard_input", "1.0.0")
             output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
-            result_message = analyser.process(
-                input_schema, output_schema, sample_input_message
-            )
+            result_message = analyser.process([sample_input_message], output_schema)
 
             # Assert - Verify validation summary is included if LLM validation runs
             result_content = result_message.content
@@ -421,9 +394,7 @@ class TestPersonalDataAnalyser:
 
     def test_process_excludes_validation_summary_when_llm_validation_disabled(
         self,
-        mock_llm_service: Mock,
         sample_input_message: Message,
-        sample_findings: list[PersonalDataFindingModel],
     ) -> None:
         """Test that validation summary is excluded when LLM validation is disabled."""
         # Arrange - using from_properties to demonstrate the flexibility
@@ -438,13 +409,10 @@ class TestPersonalDataAnalyser:
             llm_service=None,
         )
 
-        input_schema = Schema("standard_input", "1.0.0")
         output_schema = Schema("personal_data_finding", "1.0.0")
 
         # Act
-        result_message = analyser.process(
-            input_schema, output_schema, sample_input_message
-        )
+        result_message = analyser.process([sample_input_message], output_schema)
 
         # Assert
         result_content = result_message.content
@@ -452,9 +420,6 @@ class TestPersonalDataAnalyser:
 
     def test_process_excludes_validation_summary_when_no_findings(
         self,
-        valid_config: PersonalDataAnalyserConfig,
-        mock_llm_service: Mock,
-        sample_input_message: Message,
     ) -> None:
         """Test that validation summary is excluded when no findings are present."""
         # Arrange - use config with LLM validation disabled to avoid calling LLM
@@ -485,11 +450,10 @@ class TestPersonalDataAnalyser:
             schema=Schema("standard_input", "1.0.0"),
         )
 
-        input_schema = Schema("standard_input", "1.0.0")
         output_schema = Schema("personal_data_finding", "1.0.0")
 
         # Act
-        result_message = analyser.process(input_schema, output_schema, empty_message)
+        result_message = analyser.process([empty_message], output_schema)
 
         # Assert
         result_content = result_message.content
@@ -519,11 +483,10 @@ class TestPersonalDataAnalyser:
             schema=Schema("standard_input", "1.0.0"),
         )
 
-        input_schema = Schema("standard_input", "1.0.0")
         output_schema = Schema("personal_data_finding", "1.0.0")
 
         # Act
-        result_message = analyser.process(input_schema, output_schema, empty_message)
+        result_message = analyser.process([empty_message], output_schema)
 
         # Assert - Verify analyser handles empty data correctly
         assert isinstance(result_message, Message)
@@ -533,148 +496,9 @@ class TestPersonalDataAnalyser:
         assert result_content["summary"]["high_risk_count"] == 0
         assert result_content["summary"]["special_category_count"] == 0
 
-    def test_process_raises_error_with_invalid_schema(
-        self,
-        valid_config: PersonalDataAnalyserConfig,
-        mock_llm_service: Mock,
-    ) -> None:
-        """Test that process raises error when message schema doesn't match expected."""
-        # Arrange
-        analyser = PersonalDataAnalyser(
-            valid_config,
-            mock_llm_service,
-        )
-
-        # Create message with wrong schema
-        wrong_message = Message(
-            id="test_wrong_schema",
-            content={"some": "data"},
-            schema=Schema(
-                "source_code", "1.0.0"
-            ),  # Wrong schema - expected standard_input
-        )
-
-        input_schema = Schema("standard_input", "1.0.0")
-        output_schema = Schema("personal_data_finding", "1.0.0")
-
-        # Act & Assert
-        with pytest.raises(
-            SchemaLoadError,
-            match="Message schema .* does not match expected input schema",
-        ):
-            analyser.process(input_schema, output_schema, wrong_message)
-
-    def test_validate_input_message_passes_with_matching_schema_names(self) -> None:
-        """Test that validate_input_message passes when schema names match."""
-        # Arrange
-        message = Message(
-            id="test_message",
-            content={"schemaVersion": "1.0.0", "name": "test", "data": []},
-            schema=Schema("standard_input", "1.0.0"),
-        )
-        expected_schema = Schema("standard_input", "1.0.0")
-
-        # Act & Assert - should not raise any exception
-        Analyser.validate_input_message(message, expected_schema)
-
-    def test_validate_input_message_raises_error_when_message_has_no_schema(
-        self,
-    ) -> None:
-        """Test that validate_input_message raises error when message has no schema."""
-        # Arrange
-        message = Message(
-            id="test_message",
-            content={"schemaVersion": "1.0.0", "name": "test", "data": []},
-            schema=None,  # No schema attached
-        )
-        expected_schema = Schema("standard_input", "1.0.0")
-
-        # Act & Assert - should raise MessageValidationError
-        with pytest.raises(
-            MessageValidationError, match="No schema provided for validation"
-        ):
-            Analyser.validate_input_message(message, expected_schema)
-
-    def test_validate_input_message_passes_with_valid_message_content(self) -> None:
-        """Test that validate_input_message passes when message content is valid."""
-        # Arrange - create message with comprehensive valid standard_input content
-        valid_content = {
-            "schemaVersion": "1.0.0",
-            "name": "Comprehensive test data",
-            "data": [
-                {
-                    "content": "User email: john.doe@example.com, Phone: +1-555-123-4567",
-                    "metadata": {
-                        "source": "user_profile.html",
-                        "timestamp": "2024-01-01T00:00:00Z",
-                        "extraction_method": "html_parser",
-                    },
-                },
-                {
-                    "content": "Contact support at help@company.com or call our hotline",
-                    "metadata": {
-                        "source": "contact_page.html",
-                        "section": "footer",
-                        "confidence": 0.95,
-                    },
-                },
-            ],
-        }
-        message = Message(
-            id="test_message",
-            content=valid_content,
-            schema=Schema("standard_input", "1.0.0"),
-        )
-        expected_schema = Schema("standard_input", "1.0.0")
-
-        # Act & Assert - should not raise any exception
-        Analyser.validate_input_message(message, expected_schema)
-
-    def test_validate_input_message_raises_error_with_invalid_message_content(
-        self,
-    ) -> None:
-        """Test that validate_input_message raises error when message content is invalid."""
-        # Arrange - create message with invalid content (missing required fields)
-        invalid_content: dict[str, Any] = {
-            "schemaVersion": "1.0.0",
-            # Missing required 'name' field
-            "data": [],
-        }
-        message = Message(
-            id="test_message",
-            content=invalid_content,
-            schema=Schema("standard_input", "1.0.0"),
-        )
-        expected_schema = Schema("standard_input", "1.0.0")
-
-        # Act & Assert - should raise MessageValidationError due to schema validation failure
-        with pytest.raises(MessageValidationError, match="Schema validation failed"):
-            Analyser.validate_input_message(message, expected_schema)
-
-    def test_validate_input_message_raises_error_with_malformed_data_structure(
-        self,
-    ) -> None:
-        """Test that validate_input_message raises error with completely malformed data."""
-        # Arrange - create message with completely wrong structure
-        malformed_content = {
-            "wrong_field": "wrong_value",
-            "data": "should_be_array_not_string",
-        }
-        message = Message(
-            id="test_message",
-            content=malformed_content,
-            schema=Schema("standard_input", "1.0.0"),
-        )
-        expected_schema = Schema("standard_input", "1.0.0")
-
-        # Act & Assert - should raise MessageValidationError
-        with pytest.raises(MessageValidationError, match="Schema validation failed"):
-            Analyser.validate_input_message(message, expected_schema)
-
     def test_personal_data_finding_data_type_matches_rule_data_type(
         self,
         valid_config: PersonalDataAnalyserConfig,
-        mock_llm_service: Mock,
     ) -> None:
         """Test that finding.data_type matches the rule.data_type it was processed against."""
         # Arrange
@@ -724,11 +548,10 @@ class TestPersonalDataAnalyser:
                 schema=Schema("standard_input", "1.0.0"),
             )
 
-            input_schema = Schema("standard_input", "1.0.0")
             output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
-            result_message = analyser.process(input_schema, output_schema, test_message)
+            result_message = analyser.process([test_message], output_schema)
 
             # Assert - verify that finding.data_type matches rule.data_type
             result_content = result_message.content
@@ -743,7 +566,6 @@ class TestPersonalDataAnalyser:
     def test_process_creates_analysis_chain_entry(
         self,
         valid_config: PersonalDataAnalyserConfig,
-        mock_llm_service: Mock,
         sample_input_message: Message,
     ) -> None:
         """Test that analyser creates proper analysis chain entry.
@@ -759,9 +581,8 @@ class TestPersonalDataAnalyser:
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [sample_input_message],
             Schema("personal_data_finding", "1.0.0"),
-            sample_input_message,
         )
 
         # Assert
@@ -784,67 +605,88 @@ class TestPersonalDataAnalyser:
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
-        mock_schema_modules: tuple[Mock, Mock],
+        mock_reader_module: Mock,
     ) -> None:
         """Test that reader module is dynamically loaded for input schema."""
         # Arrange
         analyser = PersonalDataAnalyser(valid_config, mock_llm_service)
-        mock_reader, mock_producer = mock_schema_modules
 
         # Mock importlib.import_module to track dynamic loading
         with patch("importlib.import_module") as mock_import:
-            # Return different mocks based on module name
-            def import_side_effect(module_name: str) -> Mock:
-                if "schema_readers" in module_name:
-                    return mock_reader
-                elif "schema_producers" in module_name:
-                    return mock_producer
-                return Mock()
+            mock_import.return_value = mock_reader_module
 
-            mock_import.side_effect = import_side_effect
-
-            input_schema = Schema("standard_input", "1.0.0")
             output_schema = Schema("personal_data_finding", "1.0.0")
 
             # Act
-            analyser.process(input_schema, output_schema, sample_input_message)
+            analyser.process([sample_input_message], output_schema)
 
             # Assert - Verify reader module was dynamically imported
             mock_import.assert_any_call(
                 "waivern_personal_data_analyser.schema_readers.standard_input_1_0_0"
             )
 
-    def test_producer_module_is_loaded_dynamically(
-        self,
-        valid_config: PersonalDataAnalyserConfig,
-        mock_llm_service: Mock,
-        sample_input_message: Message,
-        mock_schema_modules: tuple[Mock, Mock],
-    ) -> None:
-        """Test that producer module is dynamically loaded for output schema."""
+    def test_produces_findings_from_all_input_sources(self) -> None:
+        """PersonalDataAnalyser produces findings from all provided input messages."""
         # Arrange
-        analyser = PersonalDataAnalyser(valid_config, mock_llm_service)
-        mock_reader, mock_producer = mock_schema_modules
+        config = PersonalDataAnalyserConfig.from_properties(
+            {"llm_validation": {"enable_llm_validation": False}}
+        )
+        analyser = PersonalDataAnalyser(config, llm_service=None)
 
-        # Mock importlib.import_module to track dynamic loading
-        with patch("importlib.import_module") as mock_import:
-            # Return different mocks based on module name
-            def import_side_effect(module_name: str) -> Mock:
-                if "schema_readers" in module_name:
-                    return mock_reader
-                elif "schema_producers" in module_name:
-                    return mock_producer
-                return Mock()
+        message1 = Message(
+            id="mysql_data",
+            content={
+                "schemaVersion": "1.0.0",
+                "name": "MySQL extraction",
+                "data": [
+                    {
+                        "content": "User email: john.doe@company.com, phone: 123-456",
+                        "metadata": {
+                            "source": "users_table",
+                            "connector_type": "mysql",
+                        },
+                    }
+                ],
+            },
+            schema=Schema("standard_input", "1.0.0"),
+        )
+        message2 = Message(
+            id="file_data",
+            content={
+                "schemaVersion": "1.0.0",
+                "name": "File extraction",
+                "data": [
+                    {
+                        "content": "Contact email: support@example.com",
+                        "metadata": {
+                            "source": "contact.html",
+                            "connector_type": "filesystem",
+                        },
+                    }
+                ],
+            },
+            schema=Schema("standard_input", "1.0.0"),
+        )
+        output_schema = Schema("personal_data_finding", "1.0.0")
 
-            mock_import.side_effect = import_side_effect
+        # Act
+        result = analyser.process([message1, message2], output_schema)
 
-            input_schema = Schema("standard_input", "1.0.0")
-            output_schema = Schema("personal_data_finding", "1.0.0")
+        # Assert - Findings from both sources appear in output
+        findings = result.content["findings"]
+        sources = {f["metadata"]["source"] for f in findings}
+        assert "users_table" in sources, "Should have findings from MySQL source"
+        assert "contact.html" in sources, "Should have findings from file source"
 
-            # Act
-            analyser.process(input_schema, output_schema, sample_input_message)
 
-            # Assert - Verify producer module was dynamically imported
-            mock_import.assert_any_call(
-                "waivern_personal_data_analyser.schema_producers.personal_data_finding_1_0_0"
-            )
+class TestPersonalDataAnalyserContract(AnalyserContractTests[PersonalDataAnalyser]):
+    """Contract tests for PersonalDataAnalyser.
+
+    Inherits from AnalyserContractTests to verify that PersonalDataAnalyser
+    meets the Analyser interface contract.
+    """
+
+    @pytest.fixture
+    def analyser_class(self) -> type[PersonalDataAnalyser]:
+        """Provide the analyser class for contract testing."""
+        return PersonalDataAnalyser

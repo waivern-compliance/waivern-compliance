@@ -8,10 +8,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, override
+from typing import Any, ClassVar, override
 
-from pydantic import BaseModel, ConfigDict, Field
-from waivern_core.schemas.base import JsonSchemaLoader, Schema, SchemaLoader
+from pydantic import BaseModel, Field
+from waivern_core.schemas import (
+    BaseSchemaOutput,
+    JsonSchemaLoader,
+    Schema,
+    SchemaLoader,
+)
 
 # Pydantic models for runtime validation and type safety
 
@@ -78,7 +83,7 @@ class SourceCodeFileMetadataModel(BaseModel):
 
     file_size: int
     line_count: int
-    last_modified: str
+    last_modified: str | None = None
 
 
 class SourceCodeFileDataModel(BaseModel):
@@ -101,24 +106,25 @@ class SourceCodeAnalysisMetadataModel(BaseModel):
     analysis_timestamp: str
 
 
-class SourceCodeDataModel(BaseModel):
-    """Pydantic model for complete source code analysis data."""
+class SourceCodeDataModel(BaseSchemaOutput):
+    """Pydantic model for complete source code analysis data.
 
-    schemaVersion: str
-    name: str
-    description: str
-    language: str
-    source: str
-    metadata: SourceCodeAnalysisMetadataModel
-    data: list[SourceCodeFileDataModel]
+    This model represents the full wire format for source code analysis results.
+    Extends BaseSchemaOutput for schema generation support.
+    """
 
-    model_config = ConfigDict(
-        # Allow extra fields for forward compatibility
-        extra="allow",
-        # Use enum values for validation
-        use_enum_values=True,
-        # Validate assignments for runtime safety
-        validate_assignment=True,
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+    schemaVersion: str = Field(description="Schema version identifier")
+    name: str = Field(description="Name of the source code analysis")
+    description: str = Field(description="Description of the analysis")
+    language: str = Field(description="Primary programming language")
+    source: str = Field(description="Source path or identifier")
+    metadata: SourceCodeAnalysisMetadataModel = Field(
+        description="Analysis metadata including file counts and timestamp"
+    )
+    data: list[SourceCodeFileDataModel] = Field(
+        description="List of analysed source code files"
     )
 
 

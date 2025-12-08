@@ -113,8 +113,6 @@ class SQLiteConnector(DatabaseConnector):
                 schema=output_schema,
             )
 
-            message.validate()
-
             return message
 
         except Exception as e:

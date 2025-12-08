@@ -302,8 +302,6 @@ class MySQLConnector(Connector):
                 schema=output_schema,
             )
 
-            message.validate()
-
             return message
 
         except Exception as e:

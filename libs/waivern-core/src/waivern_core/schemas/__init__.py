@@ -9,27 +9,31 @@ Available schemas:
 - Base types and validation utilities used by all components
 """
 
-from waivern_core.schemas.base import (
-    JsonSchemaLoader,
-    Schema,
-    SchemaLoader,
-    SchemaLoadError,
-    SchemaRegistry,
-)
-from waivern_core.schemas.standard_input import (
+from waivern_core.schemas.connector_types import (
     BaseMetadata,
     FilesystemMetadata,
     RelationalDatabaseMetadata,
-    StandardInputDataItemModel,
-    StandardInputDataModel,
 )
-from waivern_core.schemas.types import (
+from waivern_core.schemas.finding_types import (
     AnalysesChain,
     AnalysisChainEntry,
     BaseAnalysisOutputMetadata,
     BaseFindingCompliance,
     BaseFindingEvidence,
+    BaseFindingMetadata,
     BaseFindingModel,
+    BaseSchemaOutput,
+)
+from waivern_core.schemas.loader import (
+    JsonSchemaLoader,
+    SchemaLoader,
+    SchemaLoadError,
+)
+from waivern_core.schemas.registry import SchemaRegistry
+from waivern_core.schemas.schema import Schema
+from waivern_core.schemas.standard_input import (
+    StandardInputDataItemModel,
+    StandardInputDataModel,
 )
 from waivern_core.schemas.validation import DataParsingError, parse_data_model
 
@@ -40,19 +44,23 @@ __all__ = [
     "SchemaLoadError",
     "SchemaLoader",
     "SchemaRegistry",
-    # Shared input schema models (used by multiple connectors)
-    "StandardInputDataModel",
-    "StandardInputDataItemModel",
+    # Connector types (input metadata)
     "BaseMetadata",
     "RelationalDatabaseMetadata",
     "FilesystemMetadata",
-    # Base types and validation
+    # Standard input schema models
+    "StandardInputDataModel",
+    "StandardInputDataItemModel",
+    # Finding types (analyser output)
     "BaseFindingModel",
+    "BaseFindingMetadata",
     "BaseFindingCompliance",
     "BaseFindingEvidence",
     "AnalysisChainEntry",
     "AnalysesChain",
     "BaseAnalysisOutputMetadata",
+    "BaseSchemaOutput",
+    # Validation utilities
     "parse_data_model",
     "DataParsingError",
 ]

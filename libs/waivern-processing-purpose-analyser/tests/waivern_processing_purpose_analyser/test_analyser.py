@@ -146,9 +146,8 @@ class TestProcessingPurposeAnalyserInitialisation:
         )
 
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [message],
             Schema("processing_purpose_finding", "1.0.0"),
-            message,
         )
         metadata = result.content["analysis_metadata"]
         assert metadata["llm_validation_enabled"] is True
@@ -181,9 +180,8 @@ class TestProcessingPurposeAnalyserInitialisation:
         )
 
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [message],
             Schema("processing_purpose_finding", "1.0.0"),
-            message,
         )
         metadata = result.content["analysis_metadata"]
         assert metadata["llm_validation_enabled"] is False
@@ -201,17 +199,21 @@ class TestProcessingPurposeAnalyserInitialisation:
 class TestProcessingPurposeAnalyserSchemaSupport:
     """Test class for schema support methods."""
 
-    def test_get_supported_input_schemas_returns_expected_schemas(self) -> None:
-        """Test that get_supported_input_schemas returns expected input schemas."""
+    def test_get_input_requirements_returns_expected_schemas(self) -> None:
+        """Test that get_input_requirements returns expected input schema combinations."""
         # Act
-        schemas = ProcessingPurposeAnalyser.get_supported_input_schemas()
+        requirements = ProcessingPurposeAnalyser.get_input_requirements()
 
         # Assert
-        assert isinstance(schemas, list)
-        assert len(schemas) > 0
+        assert isinstance(requirements, list)
+        assert len(requirements) > 0
 
-        # Verify expected schema names are present
-        schema_names = {schema.name for schema in schemas}
+        # Flatten to get all schema names (each inner list is an alternative)
+        schema_names = set()
+        for combination in requirements:
+            for req in combination:
+                schema_names.add(req.schema_name)
+
         assert "standard_input" in schema_names
         assert "source_code" in schema_names
 
@@ -297,15 +299,12 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     def test_process_standard_input_returns_valid_message_for_empty_data(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: Schema,
         output_schema: Schema,
         empty_standard_input_message: Message,
     ) -> None:
         """Test that process returns valid message for empty standard input data."""
         # Act
-        result = analyser.process(
-            standard_input_schema, output_schema, empty_standard_input_message
-        )
+        result = analyser.process([empty_standard_input_message], output_schema)
 
         # Assert
         assert isinstance(result, Message)
@@ -321,15 +320,12 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     def test_process_standard_input_creates_findings_for_pattern_matches(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: Schema,
         output_schema: Schema,
         simple_standard_input_message: Message,
     ) -> None:
         """Test that process creates findings for pattern matches in standard input."""
         # Act
-        result = analyser.process(
-            standard_input_schema, output_schema, simple_standard_input_message
-        )
+        result = analyser.process([simple_standard_input_message], output_schema)
 
         # Assert
         assert isinstance(result, Message)
@@ -350,15 +346,12 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     def test_process_standard_input_creates_valid_summary(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: Schema,
         output_schema: Schema,
         simple_standard_input_message: Message,
     ) -> None:
         """Test that process creates valid summary for standard input processing."""
         # Act
-        result = analyser.process(
-            standard_input_schema, output_schema, simple_standard_input_message
-        )
+        result = analyser.process([simple_standard_input_message], output_schema)
 
         # Assert
         summary = result.content["summary"]
@@ -406,15 +399,12 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     def test_process_standard_input_creates_valid_analysis_metadata(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: Schema,
         output_schema: Schema,
         simple_standard_input_message: Message,
     ) -> None:
         """Test that process creates valid analysis metadata for standard input."""
         # Act
-        result = analyser.process(
-            standard_input_schema, output_schema, simple_standard_input_message
-        )
+        result = analyser.process([simple_standard_input_message], output_schema)
 
         # Assert
         metadata = result.content["analysis_metadata"]
@@ -474,7 +464,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         )
 
         # Act
-        result = analyser.process(standard_input_schema, output_schema, message)
+        result = analyser.process([message], output_schema)
 
         # Assert
         summary = result.content["summary"]
@@ -531,7 +521,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         )
 
         # Act
-        result = analyser.process(standard_input_schema, output_schema, message)
+        result = analyser.process([message], output_schema)
 
         # Assert
         findings = result.content["findings"]
@@ -564,11 +554,6 @@ class TestProcessingPurposeAnalyserErrorHandling:
         return Schema("standard_input", "1.0.0")
 
     @pytest.fixture
-    def source_code_schema(self) -> Schema:
-        """Create source code schema."""
-        return Schema("source_code", "1.0.0")
-
-    @pytest.fixture
     def output_schema(self) -> Schema:
         """Create output schema."""
         return Schema("processing_purpose_finding", "1.0.0")
@@ -584,6 +569,7 @@ class TestProcessingPurposeAnalyserErrorHandling:
         class UnsupportedSchema:
             def __init__(self) -> None:
                 self.name = "unsupported_schema"
+                self.version = "1.0.0"
                 # Provide schema property to avoid validation error
                 self.schema = {
                     "type": "object",
@@ -601,7 +587,7 @@ class TestProcessingPurposeAnalyserErrorHandling:
 
         # Act & Assert
         with pytest.raises(ValueError, match="Unsupported input schema"):
-            analyser.process(unsupported_schema, output_schema, message)  # type: ignore
+            analyser.process([message], output_schema)
 
     def test_process_creates_analysis_chain_entry(self) -> None:
         """Test that analyser creates proper analysis chain entry.
@@ -637,7 +623,7 @@ class TestProcessingPurposeAnalyserErrorHandling:
         )
 
         # Act
-        result = analyser.process(input_schema, output_schema, message)
+        result = analyser.process([message], output_schema)
 
         # Assert
         analysis_metadata = result.content["analysis_metadata"]
@@ -708,13 +694,12 @@ class TestProcessingPurposeAnalyserOutputValidation:
     def test_process_output_message_validates_against_schema(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: Schema,
         output_schema: Schema,
         test_message: Message,
     ) -> None:
         """Test that process creates output message that validates against schema."""
         # Act
-        result = analyser.process(standard_input_schema, output_schema, test_message)
+        result = analyser.process([test_message], output_schema)
 
         # Assert - if no exception is raised, validation passed
         assert isinstance(result, Message)
@@ -726,13 +711,12 @@ class TestProcessingPurposeAnalyserOutputValidation:
     def test_process_output_has_consistent_message_id(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: Schema,
         output_schema: Schema,
         test_message: Message,
     ) -> None:
         """Test that process creates output with consistent message ID."""
         # Act
-        result = analyser.process(standard_input_schema, output_schema, test_message)
+        result = analyser.process([test_message], output_schema)
 
         # Assert
         assert isinstance(result.id, str)
@@ -742,13 +726,12 @@ class TestProcessingPurposeAnalyserOutputValidation:
     def test_process_output_summary_reflects_findings_count(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: Schema,
         output_schema: Schema,
         test_message: Message,
     ) -> None:
         """Test that output summary correctly reflects findings count."""
         # Act
-        result = analyser.process(standard_input_schema, output_schema, test_message)
+        result = analyser.process([test_message], output_schema)
 
         # Assert
         content = result.content
@@ -766,13 +749,12 @@ class TestProcessingPurposeAnalyserOutputValidation:
     def test_null_values_omitted_from_json_output_standard_input(
         self,
         analyser: ProcessingPurposeAnalyser,
-        standard_input_schema: Schema,
         output_schema: Schema,
         test_message: Message,
     ) -> None:
         """Test that null values are omitted from JSON output for standard input (all three fields null)."""
         # Act
-        result = analyser.process(standard_input_schema, output_schema, test_message)
+        result = analyser.process([test_message], output_schema)
 
         # Assert - check that findings don't contain null fields
         content = result.content
@@ -783,3 +765,91 @@ class TestProcessingPurposeAnalyserOutputValidation:
             assert "service_category" not in finding
             assert "collection_type" not in finding
             assert "data_source" not in finding
+
+
+class TestProcessingPurposeAnalyserSourceCodeProcessing:
+    """Test class for source_code schema processing path.
+
+    TODO: These are stub tests that need implementation to verify the
+    source_code input flow through the analyser end-to-end.
+    """
+
+    @pytest.fixture
+    def analyser_no_llm(self) -> ProcessingPurposeAnalyser:
+        """Create analyser without LLM validation for faster tests."""
+        config = ProcessingPurposeAnalyserConfig.from_properties(
+            {"llm_validation": {"enable_llm_validation": False}}
+        )
+        return ProcessingPurposeAnalyser(config, llm_service=None)
+
+    @pytest.fixture
+    def source_code_schema(self) -> Schema:
+        """Create source code schema."""
+        return Schema("source_code", "1.0.0")
+
+    @pytest.fixture
+    def output_schema(self) -> Schema:
+        """Create output schema."""
+        return Schema("processing_purpose_finding", "1.0.0")
+
+    @pytest.mark.skip(reason="TODO: Implement source_code processing test")
+    def test_process_source_code_returns_valid_message(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        source_code_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that process returns valid message for source_code input."""
+        # TODO: Create source_code schema message with PHP code content
+        # TODO: Call analyser.process([message], output_schema)
+        # TODO: Assert valid message structure returned
+        pass
+
+    @pytest.mark.skip(reason="TODO: Implement source_code findings test")
+    def test_process_source_code_creates_findings_from_patterns(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        source_code_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that source_code processing creates findings for matched patterns."""
+        # TODO: Create source_code message with content that matches rulesets
+        # TODO: Call analyser.process([message], output_schema)
+        # TODO: Assert findings are created with correct purpose categories
+        pass
+
+    @pytest.mark.skip(reason="TODO: Implement source_code service integration test")
+    def test_process_source_code_detects_service_integrations(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        source_code_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that source_code processing detects service integration patterns."""
+        # TODO: Create source_code message with service integration patterns
+        # TODO: Assert findings include service_category field
+        pass
+
+    @pytest.mark.skip(reason="TODO: Implement source_code data collection test")
+    def test_process_source_code_detects_data_collection(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        source_code_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that source_code processing detects data collection patterns."""
+        # TODO: Create source_code message with data collection patterns
+        # TODO: Assert findings include collection_type and data_source fields
+        pass
+
+    @pytest.mark.skip(reason="TODO: Implement source_code structured elements test")
+    def test_process_source_code_analyses_structured_elements(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        source_code_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that source_code processing analyses imports, functions, and classes."""
+        # TODO: Create source_code message with structured elements (imports, functions, classes)
+        # TODO: Assert findings are created from structured element analysis
+        pass

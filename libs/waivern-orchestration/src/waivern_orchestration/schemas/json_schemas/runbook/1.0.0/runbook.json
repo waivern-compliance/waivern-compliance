@@ -87,18 +87,6 @@
           "title": "Merge",
           "type": "string"
         },
-        "input_schema": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Input Schema"
-        },
         "output_schema": {
           "anyOf": [
             {

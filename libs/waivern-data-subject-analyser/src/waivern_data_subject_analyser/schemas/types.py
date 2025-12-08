@@ -1,15 +1,25 @@
 """Schema data models for data subject findings."""
 
-from pydantic import BaseModel, ConfigDict, Field
-from waivern_core.schemas import BaseFindingModel
+from typing import ClassVar
+
+from pydantic import BaseModel, Field
+from waivern_core.schemas import (
+    BaseAnalysisOutputMetadata,
+    BaseFindingMetadata,
+    BaseFindingModel,
+    BaseSchemaOutput,
+)
 
 
-class DataSubjectFindingMetadata(BaseModel):
-    """Metadata for data subject findings."""
+class DataSubjectFindingMetadata(BaseFindingMetadata):
+    """Metadata for data subject findings.
 
-    source: str = Field(description="Source file or location where the data was found")
+    Extends BaseFindingMetadata which provides:
+    - source: str - Source file or location where the data was found
+    - context: dict[str, object] - Extensible context for pipeline metadata
+    """
 
-    model_config = ConfigDict(extra="forbid")
+    pass
 
 
 class DataSubjectFindingModel(BaseFindingModel):
@@ -25,4 +35,35 @@ class DataSubjectFindingModel(BaseFindingModel):
     )
     metadata: DataSubjectFindingMetadata | None = Field(
         default=None, description="Additional metadata about the finding"
+    )
+
+
+class DataSubjectSummary(BaseModel):
+    """Summary statistics for data subject findings."""
+
+    total_classifications: int = Field(
+        ge=0, description="Total number of data subject classifications"
+    )
+    categories_identified: list[str] = Field(
+        description="List of unique categories identified"
+    )
+
+
+class DataSubjectFindingOutput(BaseSchemaOutput):
+    """Complete output structure for data_subject_finding schema.
+
+    This model represents the full wire format for data subject analysis results,
+    including findings, summary statistics, and analysis metadata.
+    """
+
+    __schema_version__: ClassVar[str] = "1.0.0"
+
+    findings: list[DataSubjectFindingModel] = Field(
+        description="List of data subject findings from GDPR compliance analysis"
+    )
+    summary: DataSubjectSummary = Field(
+        description="Summary statistics of the data subject analysis"
+    )
+    analysis_metadata: BaseAnalysisOutputMetadata = Field(
+        description="Metadata about the analysis process"
     )

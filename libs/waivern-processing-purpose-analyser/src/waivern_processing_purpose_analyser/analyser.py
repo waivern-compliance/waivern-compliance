@@ -3,9 +3,9 @@
 import importlib
 import logging
 from types import ModuleType
-from typing import Any, override
+from typing import cast, override
 
-from waivern_core import Analyser
+from waivern_core import Analyser, InputRequirement, update_analyses_chain
 from waivern_core.message import Message
 from waivern_core.schemas import (
     AnalysisChainEntry,
@@ -18,7 +18,12 @@ from waivern_llm import BaseLLMService
 
 from .llm_validation_strategy import processing_purpose_validation_strategy
 from .pattern_matcher import ProcessingPurposePatternMatcher
-from .schemas.types import ProcessingPurposeFindingModel
+from .schemas.types import (
+    ProcessingPurposeFindingModel,
+    ProcessingPurposeFindingOutput,
+    ProcessingPurposeSummary,
+    ProcessingPurposeValidationSummary,
+)
 from .source_code_schema_input_handler import (
     SourceCodeSchemaDict,
     SourceCodeSchemaInputHandler,
@@ -26,15 +31,6 @@ from .source_code_schema_input_handler import (
 from .types import ProcessingPurposeAnalyserConfig
 
 logger = logging.getLogger(__name__)
-
-_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [
-    Schema("standard_input", "1.0.0"),
-    Schema("source_code", "1.0.0"),
-]
-
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [
-    Schema("processing_purpose_finding", "1.0.0")
-]
 
 
 class ProcessingPurposeAnalyser(Analyser):
@@ -91,51 +87,50 @@ class ProcessingPurposeAnalyser(Analyser):
             f"waivern_processing_purpose_analyser.schema_readers.{module_name}"
         )
 
-    def _load_producer(self, schema: Schema) -> ModuleType:
-        """Dynamically import producer module.
-
-        Python's import system automatically caches modules in sys.modules,
-        so repeated imports are fast and don't require manual caching.
-
-        Args:
-            schema: Output schema to load producer for
-
-        Returns:
-            Producer module with produce() function
-
-        Raises:
-            ModuleNotFoundError: If producer module doesn't exist for this version
-
-        """
-        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
-        return importlib.import_module(
-            f"waivern_processing_purpose_analyser.schema_producers.{module_name}"
-        )
-
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[Schema]:
-        """Return the input schemas supported by this analyser."""
-        return _SUPPORTED_INPUT_SCHEMAS
+    def get_input_requirements(cls) -> list[list[InputRequirement]]:
+        """Declare supported input schema combinations.
+
+        ProcessingPurposeAnalyser accepts either standard_input OR source_code schema.
+        Each is a valid alternative input.
+        """
+        return [
+            [InputRequirement("standard_input", "1.0.0")],
+            [InputRequirement("source_code", "1.0.0")],
+        ]
 
     @classmethod
     @override
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this analyser."""
-        return _SUPPORTED_OUTPUT_SCHEMAS
+        return [Schema("processing_purpose_finding", "1.0.0")]
 
     @override
     def process(
         self,
-        input_schema: Schema,
+        inputs: list[Message],
         output_schema: Schema,
-        message: Message,
     ) -> Message:
-        """Process data to identify processing purposes using dynamic reader/producer."""
+        """Process data to identify processing purposes.
+
+        Supports two input schema types:
+        - standard_input: Text-based content analysis
+        - source_code: PHP source code analysis
+
+        Args:
+            inputs: List of input messages (single message expected)
+            output_schema: Expected output schema
+
+        Returns:
+            Output message with processing purpose findings
+
+        """
         logger.info("Starting processing purpose analysis")
 
-        # Validate input message
-        Analyser.validate_input_message(message, input_schema)
+        # This analyser accepts alternative schemas, so we expect one message
+        message = inputs[0]
+        input_schema = message.schema
 
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
@@ -148,9 +143,13 @@ class ProcessingPurposeAnalyser(Analyser):
 
         # Process based on schema type
         if input_schema.name == "standard_input":
-            findings = self._process_standard_input_data(typed_data)
+            findings = self._process_standard_input_data(
+                cast(StandardInputDataModel[BaseMetadata], typed_data)
+            )
         elif input_schema.name == "source_code":
-            findings = self._process_source_code_data(typed_data)
+            findings = self._process_source_code_data(
+                cast(SourceCodeSchemaDict, typed_data)
+            )
         else:
             raise ValueError(f"Unsupported input schema: {input_schema.name}")
 
@@ -160,7 +159,7 @@ class ProcessingPurposeAnalyser(Analyser):
         )
 
         # Update analysis chain with this analyser
-        updated_chain_dicts = self.update_analyses_chain(
+        updated_chain_dicts = update_analyses_chain(
             message, "processing_purpose_analyser"
         )
         # Convert to strongly-typed models for WCT
@@ -258,7 +257,7 @@ class ProcessingPurposeAnalyser(Analyser):
         output_schema: Schema,
         analyses_chain: list[AnalysisChainEntry],
     ) -> Message:
-        """Create and validate output message using producer.
+        """Create and validate output message using output model.
 
         Args:
             original_findings: Original findings before LLM validation
@@ -301,14 +300,16 @@ class ProcessingPurposeAnalyser(Analyser):
             **extra_fields,
         )
 
-        # Load producer and transform to wire format
-        producer = self._load_producer(output_schema)
-        result_data = producer.produce(
+        # Create output model (Pydantic validates at construction)
+        output_model = ProcessingPurposeFindingOutput(
             findings=validated_findings,
             summary=summary,
             analysis_metadata=analysis_metadata,
             validation_summary=validation_summary,
         )
+
+        # Convert to wire format
+        result_data = output_model.model_dump(mode="json", exclude_none=True)
 
         output_message = Message(
             id="Processing_purpose_analysis",
@@ -316,33 +317,32 @@ class ProcessingPurposeAnalyser(Analyser):
             schema=output_schema,
         )
 
-        # Validate the output message against the output schema
-        output_message.validate()
-
-        logger.debug(f"Processing purpose analysis completed with data: {result_data}")
+        logger.info(
+            f"ProcessingPurposeAnalyser processed with {len(result_data['findings'])} findings"
+        )
 
         return output_message
 
     def _build_findings_summary(
         self, findings: list[ProcessingPurposeFindingModel]
-    ) -> dict[str, Any]:
+    ) -> ProcessingPurposeSummary:
         """Build summary statistics for processing purpose findings.
 
         Args:
             findings: List of validated findings
 
         Returns:
-            Summary statistics dictionary with purpose categories, risk levels, and totals
+            Summary statistics with purpose categories, risk levels, and totals
 
         """
         if not findings:
-            return {
-                "total_findings": 0,
-                "purposes_identified": 0,
-                "high_risk_count": 0,
-                "purpose_categories": {},
-                "risk_level_distribution": {"low": 0, "medium": 0, "high": 0},
-            }
+            return ProcessingPurposeSummary(
+                total_findings=0,
+                purposes_identified=0,
+                high_risk_count=0,
+                purpose_categories={},
+                risk_level_distribution={"low": 0, "medium": 0, "high": 0},
+            )
 
         # Count unique purposes and categories
         unique_purposes = set(f.purpose for f in findings)
@@ -359,19 +359,19 @@ class ProcessingPurposeAnalyser(Analyser):
                 risk_distribution.get(finding.risk_level, 0) + 1
             )
 
-        return {
-            "total_findings": len(findings),
-            "purposes_identified": len(unique_purposes),
-            "high_risk_count": risk_distribution["high"],
-            "purpose_categories": purpose_categories,
-            "risk_level_distribution": risk_distribution,
-        }
+        return ProcessingPurposeSummary(
+            total_findings=len(findings),
+            purposes_identified=len(unique_purposes),
+            high_risk_count=risk_distribution["high"],
+            purpose_categories=purpose_categories,
+            risk_level_distribution=risk_distribution,
+        )
 
     def _build_validation_summary(
         self,
         original_findings: list[ProcessingPurposeFindingModel],
         validated_findings: list[ProcessingPurposeFindingModel],
-    ) -> dict[str, Any]:
+    ) -> ProcessingPurposeValidationSummary:
         """Build LLM validation summary statistics for processing purposes.
 
         Args:
@@ -379,7 +379,7 @@ class ProcessingPurposeAnalyser(Analyser):
             validated_findings: Findings after validation
 
         Returns:
-            Validation summary dictionary with effectiveness metrics
+            Validation summary with effectiveness metrics
 
         """
         original_count = len(original_findings)
@@ -402,12 +402,12 @@ class ProcessingPurposeAnalyser(Analyser):
             f"({false_positives_removed} false positives removed, {validation_effectiveness:.1f}% effectiveness)"
         )
 
-        return {
-            "llm_validation_enabled": True,
-            "original_findings_count": original_count,
-            "validated_findings_count": validated_count,
-            "false_positives_removed": false_positives_removed,
-            "validation_effectiveness_percentage": round(validation_effectiveness, 1),
-            "validation_mode": self._config.llm_validation.llm_validation_mode,
-            "removed_purposes": sorted(list(removed_purposes)),
-        }
+        return ProcessingPurposeValidationSummary(
+            llm_validation_enabled=True,
+            original_findings_count=original_count,
+            validated_findings_count=validated_count,
+            false_positives_removed=false_positives_removed,
+            validation_effectiveness_percentage=round(validation_effectiveness, 1),
+            validation_mode=self._config.llm_validation.llm_validation_mode,
+            removed_purposes=sorted(list(removed_purposes)),
+        )

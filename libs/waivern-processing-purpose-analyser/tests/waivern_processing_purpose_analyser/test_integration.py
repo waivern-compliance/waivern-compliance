@@ -82,9 +82,8 @@ class TestProcessingPurposeAnalyserRealLLMIntegration:
 
         # Run analysis with real LLM
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [message],
             Schema("processing_purpose_finding", "1.0.0"),
-            message,
         )
 
         # Verify response structure
@@ -149,9 +148,8 @@ class TestProcessingPurposeAnalyserRealLLMIntegration:
 
         # Run analysis without LLM
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [message],
             Schema("processing_purpose_finding", "1.0.0"),
-            message,
         )
 
         # Verify response structure

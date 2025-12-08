@@ -76,16 +76,6 @@ class TestMessage:
         assert "Schema validation failed" in str(exc_info.value)
         assert message.schema_validated is False
 
-    def test_validate_message_no_schema(self) -> None:
-        """Test validation failure when no schema provided."""
-        message = Message(id="test-id", content={"test": "value"})
-
-        with pytest.raises(MessageValidationError) as exc_info:
-            message.validate()
-
-        assert "No schema provided for validation" in str(exc_info.value)
-        assert message.schema_validated is False
-
     def test_validate_message_no_content(self) -> None:
         """Test validation failure when no content provided."""
         schema = MockTypedSchema()

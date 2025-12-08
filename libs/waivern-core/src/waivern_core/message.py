@@ -11,7 +11,7 @@ from typing import Any, Self
 import jsonschema
 
 from waivern_core.errors import MessageValidationError
-from waivern_core.schemas.base import Schema, SchemaLoadError
+from waivern_core.schemas import Schema, SchemaLoadError
 
 
 @dataclass(slots=True)
@@ -28,9 +28,8 @@ class Message:
     content: dict[str, Any]
     """Content of the message, typically in WCF schema format."""
 
-    schema: Schema | None = None
-    """Schema to validate the content against. If not provided, the
-    default schema of the current analyser will be used."""
+    schema: Schema
+    """Schema to validate the content against."""
 
     context: dict[str, Any] | None = None
     """Optional context for the message, which can include additional metadata
@@ -51,10 +50,6 @@ class Message:
             MessageValidationError: If validation fails with detailed error information
 
         """
-        if not self.schema:
-            self.schema_validated = False
-            raise MessageValidationError("No schema provided for validation")
-
         if not self.content:
             self.schema_validated = False
             raise MessageValidationError("No content provided for validation")

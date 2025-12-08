@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 
 from waivern_core.message import Message
-from waivern_core.schemas.base import Schema
+from waivern_core.schemas import Schema
 
 logger = logging.getLogger(__name__)
 

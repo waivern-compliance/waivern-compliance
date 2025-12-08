@@ -41,15 +41,14 @@ Abstract base class for creating analysers and connectors with rich metadata.
 class ComponentFactory[T](ABC):
     def create(self, config: dict) -> T: ...
     def can_create(self, config: dict) -> bool: ...
-    def get_component_name(self) -> str: ...
-    def get_input_schemas(self) -> list[Schema]: ...
-    def get_output_schemas(self) -> list[Schema]: ...
+    @property
+    def component_class(self) -> type[T]: ...
 ```
 
 **Characteristics:**
 - Configuration passed to `create()` method (per-execution)
-- Schema declarations for component discovery
-- Component name maps to runbook `type:` field
+- `component_class` provides access to component's class methods (e.g., `get_name()`, `get_supported_output_schemas()`)
+- Component name obtained via `component_class.get_name()` maps to runbook `type:` field
 - Transient component instances
 - Uses Service Locator pattern (receives ServiceContainer)
 
@@ -59,14 +58,15 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
     def __init__(self, container: ServiceContainer) -> None:
         self._container = container
 
+    @property
+    def component_class(self) -> type[PersonalDataAnalyser]:
+        return PersonalDataAnalyser
+
     def create(self, config: dict) -> PersonalDataAnalyser:
         config_obj = PersonalDataAnalyserConfig.from_properties(config)
         # Resolve dependencies from container (Service Locator)
         llm_service = self._container.get_service(BaseLLMService)
         return PersonalDataAnalyser(config_obj, llm_service)
-
-    def get_component_name(self) -> str:
-        return "personal_data"
 ```
 
 **Service Locator Pattern:**

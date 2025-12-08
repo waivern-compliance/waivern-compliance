@@ -141,21 +141,32 @@ class DataSubjectPatternMatcher:
 
             if evidence:  # Only create finding if we have evidence
                 # Create metadata for the finding
-                finding_metadata = DataSubjectFindingMetadata(source=metadata.source)
+                finding_metadata = DataSubjectFindingMetadata(
+                    source=metadata.source,
+                    context=metadata.context,
+                )
 
                 # Create the finding
+                # TODO: The following fields are hardcoded and need proper implementation:
+                # 1. risk_level: Should be derived from matched rules or calculated based on
+                #    subject category sensitivity (e.g., "minor" → high, "employee" → medium)
+                # 2. compliance: Should come from DataSubjectRule.compliance field once added
+                #    to waivern-rulesets, similar to how PersonalDataRule has compliance
+                # 3. modifiers: Should use ruleset.risk_increasing_modifiers and
+                #    ruleset.risk_decreasing_modifiers with LLM validation to detect
+                #    cross-category regulatory modifiers (e.g., "vulnerable", "minor")
                 finding = DataSubjectFindingModel(
                     primary_category=category,
                     confidence_score=confidence_score,
-                    risk_level="medium",  # TODO: Implement proper risk assessment logic for data subjects
+                    risk_level="medium",
                     compliance=[
                         BaseFindingCompliance(
                             regulation="GDPR",
                             relevance="Article 30(1)(c) data subject categories",
                         )
-                    ],  # TODO: Add proper compliance framework mappings for data subject categories
+                    ],
                     evidence=evidence,
-                    modifiers=[],  # TODO: Implement modifier detection logic using ruleset.risk_increasing_modifiers and ruleset.risk_decreasing_modifiers with LLM validation
+                    modifiers=[],
                     matched_patterns=matched_patterns,
                     metadata=finding_metadata,
                 )
