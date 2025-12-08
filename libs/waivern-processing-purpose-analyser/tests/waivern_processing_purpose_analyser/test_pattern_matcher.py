@@ -171,8 +171,10 @@ class TestProcessingPurposePatternMatcher:
         assert finding.metadata is not None
         assert isinstance(finding.metadata, ProcessingPurposeFindingMetadata)
         assert finding.metadata.source == "test_file.php"
-        # Verify that metadata contains only the essential source field
-        assert len(finding.metadata.model_dump()) == 1
+        # Verify that metadata contains source and context fields
+        metadata_dict = finding.metadata.model_dump()
+        assert "source" in metadata_dict
+        assert "context" in metadata_dict
 
     def test_find_patterns_handles_none_metadata_gracefully(
         self,

@@ -5,7 +5,7 @@ from typing import override
 import pytest
 from waivern_core.base_connector import Connector
 from waivern_core.message import Message
-from waivern_core.schemas.base import Schema
+from waivern_core.schemas import Schema
 
 from waivern_connectors_database import DatabaseConnector
 

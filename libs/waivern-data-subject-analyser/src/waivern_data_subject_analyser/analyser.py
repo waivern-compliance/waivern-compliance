@@ -4,26 +4,29 @@ import importlib
 import logging
 from datetime import UTC, datetime
 from types import ModuleType
-from typing import override
+from typing import cast, override
 
-from waivern_core import Analyser
+from waivern_core import Analyser, InputRequirement, update_analyses_chain
 from waivern_core.message import Message
 from waivern_core.schemas import (
     AnalysisChainEntry,
     BaseAnalysisOutputMetadata,
+    BaseMetadata,
     Schema,
+    StandardInputDataItemModel,
+    StandardInputDataModel,
 )
 from waivern_llm import BaseLLMService
 
 from .pattern_matcher import DataSubjectPatternMatcher
-from .schemas.types import DataSubjectFindingModel
+from .schemas.types import (
+    DataSubjectFindingModel,
+    DataSubjectFindingOutput,
+    DataSubjectSummary,
+)
 from .types import DataSubjectAnalyserConfig
 
 logger = logging.getLogger(__name__)
-
-_SUPPORTED_INPUT_SCHEMAS: list[Schema] = [Schema("standard_input", "1.0.0")]
-
-_SUPPORTED_OUTPUT_SCHEMAS: list[Schema] = [Schema("data_subject_finding", "1.0.0")]
 
 
 class DataSubjectAnalyser(Analyser):
@@ -47,6 +50,14 @@ class DataSubjectAnalyser(Analyser):
         """
         self._config = config
         self._pattern_matcher = DataSubjectPatternMatcher(config.pattern_matching)
+        # TODO: LLM validation is not yet implemented for DataSubjectAnalyser.
+        # The llm_service is accepted for interface consistency with other analysers
+        # and to prepare for future implementation. When implementing:
+        # 1. Create llm_validation_strategy.py similar to personal-data-analyser
+        # 2. Add validation prompts in prompts/ directory
+        # 3. Call validation after pattern matching in process()
+        # 4. Add comprehensive tests for the validation strategy
+        # 5. Add integration tests (see personal-data-analyser's test_integration.py)
         self._llm_service = llm_service
 
     @classmethod
@@ -76,61 +87,58 @@ class DataSubjectAnalyser(Analyser):
             f"waivern_data_subject_analyser.schema_readers.{module_name}"
         )
 
-    def _load_producer(self, schema: Schema) -> ModuleType:
-        """Dynamically import producer module.
-
-        Python's import system automatically caches modules in sys.modules,
-        so repeated imports are fast and don't require manual caching.
-
-        Args:
-            schema: Output schema to load producer for
-
-        Returns:
-            Producer module with produce() function
-
-        Raises:
-            ModuleNotFoundError: If producer module doesn't exist for this version
-
-        """
-        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
-        return importlib.import_module(
-            f"waivern_data_subject_analyser.schema_producers.{module_name}"
-        )
-
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[Schema]:
-        """Return the input schemas supported by this analyser."""
-        return _SUPPORTED_INPUT_SCHEMAS
+    def get_input_requirements(cls) -> list[list[InputRequirement]]:
+        """Declare supported input schema combinations.
+
+        DataSubjectAnalyser accepts standard_input schema.
+        Multiple messages of the same schema are supported (fan-in).
+        """
+        return [
+            [InputRequirement("standard_input", "1.0.0")],
+        ]
 
     @classmethod
     @override
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this analyser."""
-        return _SUPPORTED_OUTPUT_SCHEMAS
+        return [Schema("data_subject_finding", "1.0.0")]
 
     @override
     def process(
         self,
-        input_schema: Schema,
+        inputs: list[Message],
         output_schema: Schema,
-        message: Message,
     ) -> Message:
-        """Process data to identify data subjects using dynamic reader/producer."""
+        """Process data to identify data subjects using dynamic reader/producer.
+
+        Supports same-schema fan-in: multiple standard_input messages are merged
+        before processing. Each data item retains its original metadata for tracing.
+
+        Args:
+            inputs: List of input messages (same schema, fan-in supported).
+            output_schema: Expected output schema.
+
+        Returns:
+            Output message with findings from all inputs combined.
+
+        """
         logger.info("Starting data subject analysis")
 
-        # Validate input message
-        Analyser.validate_input_message(message, input_schema)
-
-        logger.debug(f"Processing data with schema: {input_schema.name}")
-
-        # Load reader and transform to canonical Pydantic model
-        reader = self._load_reader(input_schema)
-        typed_data = reader.read(message.content)
+        # Merge all input data items (same-schema fan-in)
+        all_data_items: list[StandardInputDataItemModel[BaseMetadata]] = []
+        for message in inputs:
+            message.validate()
+            reader = self._load_reader(message.schema)
+            typed_data = cast(
+                StandardInputDataModel[BaseMetadata], reader.read(message.content)
+            )
+            all_data_items.extend(typed_data.data)
 
         # Process each data item using the pattern matcher
         findings: list[DataSubjectFindingModel] = []
-        for data_item in typed_data.data:
+        for data_item in all_data_items:
             content = data_item.content
             metadata = data_item.metadata
 
@@ -138,10 +146,8 @@ class DataSubjectAnalyser(Analyser):
             item_findings = self._pattern_matcher.find_patterns(content, metadata)
             findings.extend(item_findings)
 
-        # Update analysis chain with this analyser
-        updated_chain_dicts = self.update_analyses_chain(
-            message, "data_subject_analyser"
-        )
+        # Update analysis chain using first input message
+        updated_chain_dicts = update_analyses_chain(inputs[0], "data_subject_analyser")
         # Convert to strongly-typed models for WCT
         updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
 
@@ -154,7 +160,7 @@ class DataSubjectAnalyser(Analyser):
         output_schema: Schema,
         analyses_chain: list[AnalysisChainEntry],
     ) -> Message:
-        """Create output message with data subject findings using producer.
+        """Create output message with data subject findings using output model.
 
         Args:
             findings: List of data subject findings
@@ -166,13 +172,10 @@ class DataSubjectAnalyser(Analyser):
 
         """
         # Create summary statistics
-        total_classifications = len(findings)
-        categories_identified = list(set(f.primary_category for f in findings))
-
-        summary = {
-            "total_classifications": total_classifications,
-            "categories_identified": categories_identified,
-        }
+        summary = DataSubjectSummary(
+            total_classifications=len(findings),
+            categories_identified=list(set(f.primary_category for f in findings)),
+        )
 
         # Create analysis metadata for chaining support
         analysis_metadata = BaseAnalysisOutputMetadata(
@@ -182,13 +185,15 @@ class DataSubjectAnalyser(Analyser):
             analyses_chain=analyses_chain,
         )
 
-        # Load producer and transform to wire format
-        producer = self._load_producer(output_schema)
-        result_data = producer.produce(
+        # Create output model (Pydantic validates at construction)
+        output_model = DataSubjectFindingOutput(
             findings=findings,
             summary=summary,
             analysis_metadata=analysis_metadata,
         )
+
+        # Convert to wire format
+        result_data = output_model.model_dump(mode="json", exclude_none=True)
 
         output_message = Message(
             id=f"data_subject_analysis_{datetime.now(UTC).isoformat()}",

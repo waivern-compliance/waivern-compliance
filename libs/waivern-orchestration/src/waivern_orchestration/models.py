@@ -52,7 +52,6 @@ class ArtifactDefinition(BaseModel):
     merge: Literal["concatenate"] = "concatenate"
 
     # Schema override (optional)
-    input_schema: str | None = None
     output_schema: str | None = None
 
     # Behaviour

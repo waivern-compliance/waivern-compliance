@@ -72,7 +72,8 @@ class PersonalDataPatternMatcher:
                     finding_metadata = None
                     if metadata:
                         finding_metadata = PersonalDataFindingMetadata(
-                            source=metadata.source
+                            source=metadata.source,
+                            context=metadata.context,
                         )
 
                     compliance_data = [

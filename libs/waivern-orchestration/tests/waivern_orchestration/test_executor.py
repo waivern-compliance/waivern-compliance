@@ -7,7 +7,6 @@ from unittest.mock import MagicMock
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.in_memory import InMemoryArtifactStore
 from waivern_core import Message
-from waivern_core.component_factory import ComponentFactory
 from waivern_core.schemas import Schema
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 
@@ -83,10 +82,11 @@ class TestDAGExecutorDependencies:
 
         def create_tracking_factory(name: str) -> MagicMock:
             """Create a factory that tracks when its connector is called."""
-            factory = MagicMock(spec=ComponentFactory)
-            factory.get_component_name.return_value = name
-            factory.get_output_schemas.return_value = [output_schema]
-            factory.get_input_schemas.return_value = []
+            factory = MagicMock()
+            mock_class = MagicMock()
+            mock_class.get_name.return_value = name
+            mock_class.get_supported_output_schemas.return_value = [output_schema]
+            factory.component_class = mock_class
 
             mock_connector = MagicMock()
 
@@ -239,10 +239,11 @@ class TestDAGExecutorErrorHandling:
         output_schema = Schema("standard_input", "1.0.0")
 
         # Create a factory that raises an exception
-        failing_factory = MagicMock(spec=ComponentFactory)
-        failing_factory.get_component_name.return_value = "failing_source"
-        failing_factory.get_output_schemas.return_value = [output_schema]
-        failing_factory.get_input_schemas.return_value = []
+        failing_factory = MagicMock()
+        mock_class = MagicMock()
+        mock_class.get_name.return_value = "failing_source"
+        mock_class.get_supported_output_schemas.return_value = [output_schema]
+        failing_factory.component_class = mock_class
         failing_connector = MagicMock()
         failing_connector.extract.side_effect = RuntimeError("Connection failed")
         failing_factory.create.return_value = failing_connector
@@ -282,9 +283,11 @@ class TestDAGExecutorErrorHandling:
         # Arrange - optional artifact that fails
         output_schema = Schema("standard_input", "1.0.0")
 
-        failing_factory = MagicMock(spec=ComponentFactory)
-        failing_factory.get_component_name.return_value = "failing"
-        failing_factory.get_output_schemas.return_value = [output_schema]
+        failing_factory = MagicMock()
+        mock_class = MagicMock()
+        mock_class.get_name.return_value = "failing"
+        mock_class.get_supported_output_schemas.return_value = [output_schema]
+        failing_factory.component_class = mock_class
         failing_connector = MagicMock()
         failing_connector.extract.side_effect = RuntimeError("Optional failed")
         failing_factory.create.return_value = failing_connector
@@ -356,10 +359,11 @@ class TestDAGExecutorTransform:
         )
 
         # Create mock analyser factory with process method
-        analyser_factory = MagicMock(spec=ComponentFactory)
-        analyser_factory.get_component_name.return_value = "personal_data_analyser"
-        analyser_factory.get_input_schemas.return_value = [source_schema]
-        analyser_factory.get_output_schemas.return_value = [output_schema]
+        analyser_factory = MagicMock()
+        mock_analyser_class = MagicMock()
+        mock_analyser_class.get_name.return_value = "personal_data_analyser"
+        mock_analyser_class.get_supported_output_schemas.return_value = [output_schema]
+        analyser_factory.component_class = mock_analyser_class
         mock_analyser = MagicMock()
         mock_analyser.process.return_value = analysed_message
         analyser_factory.create.return_value = mock_analyser
@@ -476,10 +480,11 @@ class TestDAGExecutorConcurrency:
             return message
 
         # Create factory with tracking extract
-        connector_factory = MagicMock(spec=ComponentFactory)
-        connector_factory.get_component_name.return_value = "source"
-        connector_factory.get_output_schemas.return_value = [output_schema]
-        connector_factory.get_input_schemas.return_value = []
+        connector_factory = MagicMock()
+        mock_class = MagicMock()
+        mock_class.get_name.return_value = "source"
+        mock_class.get_supported_output_schemas.return_value = [output_schema]
+        connector_factory.component_class = mock_class
         mock_connector = MagicMock()
         mock_connector.extract.side_effect = tracking_extract
         connector_factory.create.return_value = mock_connector
@@ -635,10 +640,11 @@ class TestDAGExecutorTimeout:
             return create_test_message({"files": []})
 
         # Create slow connector factory
-        connector_factory = MagicMock(spec=ComponentFactory)
-        connector_factory.get_component_name.return_value = "slow"
-        connector_factory.get_output_schemas.return_value = [output_schema]
-        connector_factory.get_input_schemas.return_value = []
+        connector_factory = MagicMock()
+        mock_class = MagicMock()
+        mock_class.get_name.return_value = "slow"
+        mock_class.get_supported_output_schemas.return_value = [output_schema]
+        connector_factory.component_class = mock_class
         mock_connector = MagicMock()
         mock_connector.extract.side_effect = slow_extract
         connector_factory.create.return_value = mock_connector

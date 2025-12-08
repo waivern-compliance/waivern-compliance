@@ -342,7 +342,7 @@ class Planner:
             ComponentNotFoundError: If factory has no output schemas.
 
         """
-        output_schemas = factory.get_output_schemas()
+        output_schemas = factory.component_class.get_supported_output_schemas()
         if not output_schemas:
             raise ComponentNotFoundError(f"{component_desc} has no output schemas")
         return output_schemas[0]

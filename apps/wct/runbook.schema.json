@@ -2,52 +2,21 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "version": "1.0.0",
   "$defs": {
-    "AnalyserConfig": {
-      "description": "Pydantic model for analyser configuration.",
+    "ArtifactDefinition": {
+      "description": "Definition of a single artifact in a runbook.",
       "properties": {
         "name": {
-          "description": "Analyser instance name",
-          "minLength": 1,
-          "pattern": "^[a-zA-Z0-9._-]+$",
-          "title": "Name",
-          "type": "string"
-        },
-        "type": {
-          "description": "Analyser type identifier",
-          "minLength": 1,
-          "title": "Type",
-          "type": "string"
-        },
-        "properties": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Analyser-specific configuration properties",
-          "title": "Properties"
-        },
-        "metadata": {
           "anyOf": [
             {
-              "$ref": "#/$defs/AnalysisMetadata"
+              "type": "string"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Optional metadata for the analyser"
-        }
-      },
-      "required": [
-        "name",
-        "type"
-      ],
-      "title": "AnalyserConfig",
-      "type": "object"
-    },
-    "AnalysisMetadata": {
-      "additionalProperties": true,
-      "description": "Metadata for analysis results.\n\nThis model provides a extensible structure for metadata that can be\nextended in the future for specific metadata types.\n\nFor additional fields beyond those defined, use model_validate():\n    metadata = AnalysisMetadata.model_validate({\"description\": \"...\", \"custom\": \"value\"})",
-      "properties": {
+          "title": "Name"
+        },
         "description": {
           "anyOf": [
             {
@@ -58,63 +27,7 @@
             }
           ],
           "default": null,
-          "description": "Description of the analysis or metadata context",
           "title": "Description"
-        }
-      },
-      "title": "AnalysisMetadata",
-      "type": "object"
-    },
-    "ConnectorConfig": {
-      "description": "Pydantic model for connector configuration.",
-      "properties": {
-        "name": {
-          "description": "Connector instance name",
-          "minLength": 1,
-          "pattern": "^[a-zA-Z0-9._-]+$",
-          "title": "Name",
-          "type": "string"
-        },
-        "type": {
-          "description": "Connector type identifier",
-          "minLength": 1,
-          "title": "Type",
-          "type": "string"
-        },
-        "properties": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Connector-specific configuration properties",
-          "title": "Properties"
-        }
-      },
-      "required": [
-        "name",
-        "type"
-      ],
-      "title": "ConnectorConfig",
-      "type": "object"
-    },
-    "ExecutionStep": {
-      "description": "Pipeline execution step with explicit data flow.\n\nEach step is either:\n- Connector-based: Reads from external source (connector + optional analyser)\n- Input-based: Transforms previous step output (input_from + analyser)\n\nSteps are mutually exclusive: connector XOR input_from.",
-      "properties": {
-        "id": {
-          "description": "Unique identifier for this step (required for pipeline chaining)",
-          "minLength": 1,
-          "pattern": "^[a-zA-Z0-9._-]+$",
-          "title": "Id",
-          "type": "string"
-        },
-        "name": {
-          "description": "Human-readable name for this execution step",
-          "minLength": 1,
-          "title": "Name",
-          "type": "string"
-        },
-        "description": {
-          "description": "Description of what this execution step does (can be empty)",
-          "title": "Description",
-          "type": "string"
         },
         "contact": {
           "anyOf": [
@@ -126,66 +39,55 @@
             }
           ],
           "default": null,
-          "description": "Optional contact information for this execution step",
           "title": "Contact"
         },
-        "connector": {
+        "source": {
           "anyOf": [
             {
-              "minLength": 1,
-              "pattern": "^[a-zA-Z0-9._-]+$",
+              "$ref": "#/$defs/SourceConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "inputs": {
+          "anyOf": [
+            {
               "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Name of connector instance (for connector-based steps)",
-          "title": "Connector"
+          "title": "Inputs"
         },
-        "input_from": {
+        "transform": {
           "anyOf": [
             {
-              "pattern": "^[a-zA-Z0-9._-]+$",
-              "type": "string"
+              "$ref": "#/$defs/TransformConfig"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "description": "Step ID to read input from (for input-based steps)",
-          "title": "Input From"
+          "default": null
         },
-        "analyser": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "pattern": "^[a-zA-Z0-9._-]+$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Name of analyser instance to use (optional for connector-only steps)",
-          "title": "Analyser"
-        },
-        "input_schema": {
-          "description": "Schema name for connector output or previous step output validation",
-          "minLength": 1,
-          "title": "Input Schema",
+        "merge": {
+          "const": "concatenate",
+          "default": "concatenate",
+          "title": "Merge",
           "type": "string"
         },
         "output_schema": {
-          "description": "Schema name for analyser output validation",
-          "minLength": 1,
-          "title": "Output Schema",
-          "type": "string"
-        },
-        "input_schema_version": {
           "anyOf": [
             {
               "type": "string"
@@ -195,57 +97,152 @@
             }
           ],
           "default": null,
-          "description": "Optional specific version for input schema (auto-select latest if not specified)",
-          "title": "Input Schema Version"
+          "title": "Output Schema"
         },
-        "output_schema_version": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Optional specific version for output schema (auto-select latest if not specified)",
-          "title": "Output Schema Version"
-        },
-        "save_output": {
+        "output": {
           "default": false,
-          "description": "Whether to save output for use by subsequent steps",
-          "title": "Save Output",
+          "title": "Output",
           "type": "boolean"
         },
-        "context": {
-          "additionalProperties": true,
-          "description": "Optional execution metadata and runtime configuration",
-          "title": "Context",
-          "type": "object"
+        "optional": {
+          "default": false,
+          "title": "Optional",
+          "type": "boolean"
+        },
+        "execute": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExecuteConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "ArtifactDefinition",
+      "type": "object"
+    },
+    "ExecuteConfig": {
+      "description": "Configuration for child runbook execution (Phase 2).",
+      "properties": {
+        "mode": {
+          "const": "child",
+          "title": "Mode",
+          "type": "string"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        },
+        "cost_limit": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Limit"
         }
       },
       "required": [
-        "id",
-        "name",
-        "description",
-        "input_schema",
-        "output_schema"
+        "mode"
       ],
-      "title": "ExecutionStep",
+      "title": "ExecuteConfig",
+      "type": "object"
+    },
+    "RunbookConfig": {
+      "description": "Optional execution configuration for a runbook.",
+      "properties": {
+        "timeout": {
+          "default": 300,
+          "title": "Timeout",
+          "type": "integer"
+        },
+        "max_concurrency": {
+          "default": 10,
+          "title": "Max Concurrency",
+          "type": "integer"
+        },
+        "max_child_depth": {
+          "default": 3,
+          "title": "Max Child Depth",
+          "type": "integer"
+        },
+        "cost_limit": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Limit"
+        }
+      },
+      "title": "RunbookConfig",
+      "type": "object"
+    },
+    "SourceConfig": {
+      "description": "Configuration for a source artifact (connector).",
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true,
+          "title": "Properties"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "SourceConfig",
+      "type": "object"
+    },
+    "TransformConfig": {
+      "description": "Configuration for a transform (analyser).",
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true,
+          "title": "Properties"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "TransformConfig",
       "type": "object"
     }
   },
-  "description": "Waivern Compliance Tool runbook configuration schema",
+  "description": "Waivern Compliance Framework runbook configuration schema",
   "properties": {
     "name": {
-      "description": "Runbook display name",
-      "minLength": 1,
       "title": "Name",
       "type": "string"
     },
     "description": {
-      "description": "Runbook description explaining its purpose",
-      "minLength": 1,
       "title": "Description",
       "type": "string"
     },
@@ -259,44 +256,23 @@
         }
       ],
       "default": null,
-      "description": "Optional contact information for this runbook",
       "title": "Contact"
     },
-    "connectors": {
-      "description": "List of data source connectors",
-      "items": {
-        "$ref": "#/$defs/ConnectorConfig"
-      },
-      "minItems": 1,
-      "title": "Connectors",
-      "type": "array"
+    "config": {
+      "$ref": "#/$defs/RunbookConfig"
     },
-    "analysers": {
-      "description": "List of analysis processors",
-      "items": {
-        "$ref": "#/$defs/AnalyserConfig"
+    "artifacts": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ArtifactDefinition"
       },
-      "minItems": 1,
-      "title": "Analysers",
-      "type": "array"
-    },
-    "execution": {
-      "description": "Execution pipeline steps",
-      "items": {
-        "$ref": "#/$defs/ExecutionStep"
-      },
-      "minItems": 1,
-      "title": "Execution",
-      "type": "array"
+      "title": "Artifacts",
+      "type": "object"
     }
   },
   "required": [
     "name",
-    "description",
-    "connectors",
-    "analysers",
-    "execution"
+    "description"
   ],
-  "title": "WCT Runbook",
+  "title": "Waivern Runbook",
   "type": "object"
 }

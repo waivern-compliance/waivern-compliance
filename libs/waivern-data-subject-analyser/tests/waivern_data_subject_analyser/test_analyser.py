@@ -6,6 +6,7 @@ This test module focuses on testing the public API of DataSubjectAnalyser.
 import json
 from datetime import datetime
 
+from waivern_core import InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseFindingEvidence,
@@ -42,15 +43,24 @@ class TestDataSubjectAnalyserIdentity:
 class TestDataSubjectAnalyserSchemaSupport:
     """Test class for schema support declarations."""
 
-    def test_get_supported_input_schemas_includes_standard_input(self) -> None:
+    def test_get_input_requirements_includes_standard_input(self) -> None:
         """Test that analyser supports standard_input schema."""
-        input_schemas = DataSubjectAnalyser.get_supported_input_schemas()
+        input_requirements = DataSubjectAnalyser.get_input_requirements()
 
-        assert isinstance(input_schemas, list)
-        assert len(input_schemas) > 0
+        assert isinstance(input_requirements, list)
+        assert len(input_requirements) > 0
 
-        schema_names = {schema.name for schema in input_schemas}
-        assert "standard_input" in schema_names
+        # Check that standard_input is in one of the requirement sets
+        all_schema_names = {
+            req.schema_name for req_set in input_requirements for req in req_set
+        }
+        assert "standard_input" in all_schema_names
+
+        # Verify it returns InputRequirement objects
+        first_req = input_requirements[0][0]
+        assert isinstance(first_req, InputRequirement)
+        assert first_req.schema_name == "standard_input"
+        assert first_req.version == "1.0.0"
 
     def test_get_supported_output_schemas_returns_data_subject_finding(self) -> None:
         """Test that analyser outputs data_subject_finding schema."""
@@ -87,7 +97,7 @@ class TestDataSubjectAnalyserProcessing:
         )
 
         # Act
-        result = analyser.process(input_schema, output_schema, message)
+        result = analyser.process([message], output_schema)
 
         # Assert
         assert isinstance(result, Message)
@@ -130,7 +140,7 @@ class TestDataSubjectAnalyserProcessing:
         )
 
         # Act
-        result = analyser.process(input_schema, output_schema, message)
+        result = analyser.process([message], output_schema)
 
         # Assert
         assert isinstance(result, Message)
@@ -176,7 +186,7 @@ class TestDataSubjectAnalyserProcessing:
         )
 
         # Act
-        result = analyser.process(input_schema, output_schema, message)
+        result = analyser.process([message], output_schema)
 
         # Assert that result can be serialised to JSON (would fail before fix)
         # This should not raise a TypeError about datetime serialisation
@@ -253,7 +263,7 @@ class TestDataSubjectAnalyserProcessing:
         )
 
         # Act
-        result = analyser.process(input_schema, output_schema, message)
+        result = analyser.process([message], output_schema)
 
         # Assert
         findings = result.content["findings"]
@@ -307,7 +317,7 @@ class TestDataSubjectAnalyserProcessing:
         )
 
         # Act
-        result = analyser.process(input_schema, output_schema, message)
+        result = analyser.process([message], output_schema)
 
         # Assert
         analysis_metadata = result.content["analysis_metadata"]

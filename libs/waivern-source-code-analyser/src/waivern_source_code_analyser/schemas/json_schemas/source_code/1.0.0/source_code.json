@@ -1,212 +1,412 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "version": "1.0.0",
-  "type": "object",
-  "properties": {
-    "schemaVersion": {
-      "type": "string"
-    },
-    "name": {
-      "type": "string"
-    },
-    "description": {
-      "type": "string"
-    },
-    "language": {
-      "type": "string",
-      "description": "Programming language detected (php, javascript, python, etc.)"
-    },
-    "source": {
-      "type": "string",
-      "description": "Source path or identifier"
-    },
-    "metadata": {
-      "type": "object",
+  "$defs": {
+    "SourceCodeAnalysisMetadataModel": {
+      "description": "Pydantic model for source code analysis metadata.",
       "properties": {
         "total_files": {
+          "title": "Total Files",
           "type": "integer"
         },
         "total_lines": {
+          "title": "Total Lines",
           "type": "integer"
         },
         "analysis_timestamp": {
-          "type": "string",
-          "format": "date-time"
+          "title": "Analysis Timestamp",
+          "type": "string"
         }
       },
-      "additionalProperties": true
+      "required": [
+        "total_files",
+        "total_lines",
+        "analysis_timestamp"
+      ],
+      "title": "SourceCodeAnalysisMetadataModel",
+      "type": "object"
     },
-    "data": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "file_path": {
-            "type": "string",
-            "description": "Relative path to the source file"
-          },
-          "language": {
-            "type": "string",
-            "description": "Detected programming language for this file"
-          },
-          "syntax_tree": {
-            "type": "object",
-            "description": "Simplified AST representation",
-            "additionalProperties": true
-          },
-          "functions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "line_start": {
-                  "type": "integer"
-                },
-                "line_end": {
-                  "type": "integer"
-                },
-                "parameters": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string"
-                      },
-                      "type": {
-                        "type": ["string", "null"]
-                      },
-                      "default_value": {
-                        "type": ["string", "null"]
-                      }
-                    },
-                    "required": ["name"]
-                  }
-                },
-                "return_type": {
-                  "type": ["string", "null"]
-                },
-                "visibility": {
-                  "type": ["string", "null"],
-                  "enum": ["public", "private", "protected", null]
-                },
-                "is_static": {
-                  "type": "boolean"
-                },
-                "docstring": {
-                  "type": ["string", "null"]
-                }
-              },
-              "required": ["name", "line_start", "line_end"]
-            }
-          },
-          "classes": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "line_start": {
-                  "type": "integer"
-                },
-                "line_end": {
-                  "type": "integer"
-                },
-                "extends": {
-                  "type": ["string", "null"]
-                },
-                "implements": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "properties": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string"
-                      },
-                      "type": {
-                        "type": ["string", "null"]
-                      },
-                      "visibility": {
-                        "type": "string",
-                        "enum": ["public", "private", "protected"]
-                      },
-                      "is_static": {
-                        "type": "boolean"
-                      },
-                      "default_value": {
-                        "type": ["string", "null"]
-                      }
-                    },
-                    "required": ["name"]
-                  }
-                },
-                "methods": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/properties/data/items/properties/functions/items"
-                  }
-                }
-              },
-              "required": ["name", "line_start", "line_end"]
-            }
-          },
-          "imports": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "module": {
-                  "type": "string"
-                },
-                "alias": {
-                  "type": ["string", "null"]
-                },
-                "line": {
-                  "type": "integer"
-                },
-                "type": {
-                  "type": "string",
-                  "enum": ["require", "require_once", "include", "include_once", "use", "import"]
-                }
-              },
-              "required": ["module", "line", "type"]
-            }
-          },
-          "raw_content": {
-            "type": "string",
-            "description": "Full source code content for pattern analysis in analysers"
-          },
-          "metadata": {
-            "type": "object",
-            "properties": {
-              "file_size": {
-                "type": "integer"
-              },
-              "line_count": {
-                "type": "integer"
-              },
-              "last_modified": {
-                "type": "string",
-                "format": "date-time"
-              }
-            },
-            "additionalProperties": true
-          }
+    "SourceCodeClassModel": {
+      "description": "Pydantic model for source code classes.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
         },
-        "required": ["file_path", "language", "raw_content", "metadata"]
-      }
+        "line_start": {
+          "title": "Line Start",
+          "type": "integer"
+        },
+        "line_end": {
+          "title": "Line End",
+          "type": "integer"
+        },
+        "extends": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Extends"
+        },
+        "implements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Implements",
+          "type": "array"
+        },
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SourceCodeClassPropertyModel"
+          },
+          "title": "Properties"
+        },
+        "methods": {
+          "items": {
+            "$ref": "#/$defs/SourceCodeFunctionModel"
+          },
+          "title": "Methods",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "line_start",
+        "line_end"
+      ],
+      "title": "SourceCodeClassModel",
+      "type": "object"
+    },
+    "SourceCodeClassPropertyModel": {
+      "description": "Pydantic model for source code class properties.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        },
+        "visibility": {
+          "default": "public",
+          "title": "Visibility",
+          "type": "string"
+        },
+        "is_static": {
+          "default": false,
+          "title": "Is Static",
+          "type": "boolean"
+        },
+        "default_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Value"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "SourceCodeClassPropertyModel",
+      "type": "object"
+    },
+    "SourceCodeFileDataModel": {
+      "description": "Pydantic model for source code file data (structural extraction only).",
+      "properties": {
+        "file_path": {
+          "title": "File Path",
+          "type": "string"
+        },
+        "language": {
+          "title": "Language",
+          "type": "string"
+        },
+        "raw_content": {
+          "title": "Raw Content",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/SourceCodeFileMetadataModel"
+        },
+        "functions": {
+          "items": {
+            "$ref": "#/$defs/SourceCodeFunctionModel"
+          },
+          "title": "Functions",
+          "type": "array"
+        },
+        "classes": {
+          "items": {
+            "$ref": "#/$defs/SourceCodeClassModel"
+          },
+          "title": "Classes",
+          "type": "array"
+        },
+        "imports": {
+          "items": {
+            "$ref": "#/$defs/SourceCodeImportModel"
+          },
+          "title": "Imports",
+          "type": "array"
+        }
+      },
+      "required": [
+        "file_path",
+        "language",
+        "raw_content",
+        "metadata"
+      ],
+      "title": "SourceCodeFileDataModel",
+      "type": "object"
+    },
+    "SourceCodeFileMetadataModel": {
+      "description": "Pydantic model for source code file metadata.",
+      "properties": {
+        "file_size": {
+          "title": "File Size",
+          "type": "integer"
+        },
+        "line_count": {
+          "title": "Line Count",
+          "type": "integer"
+        },
+        "last_modified": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Modified"
+        }
+      },
+      "required": [
+        "file_size",
+        "line_count"
+      ],
+      "title": "SourceCodeFileMetadataModel",
+      "type": "object"
+    },
+    "SourceCodeFunctionModel": {
+      "description": "Pydantic model for source code functions.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "line_start": {
+          "title": "Line Start",
+          "type": "integer"
+        },
+        "line_end": {
+          "title": "Line End",
+          "type": "integer"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/SourceCodeFunctionParameterModel"
+          },
+          "title": "Parameters",
+          "type": "array"
+        },
+        "return_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Return Type"
+        },
+        "visibility": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Visibility"
+        },
+        "is_static": {
+          "default": false,
+          "title": "Is Static",
+          "type": "boolean"
+        },
+        "docstring": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Docstring"
+        }
+      },
+      "required": [
+        "name",
+        "line_start",
+        "line_end"
+      ],
+      "title": "SourceCodeFunctionModel",
+      "type": "object"
+    },
+    "SourceCodeFunctionParameterModel": {
+      "description": "Pydantic model for source code function parameters.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        },
+        "default_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Value"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "SourceCodeFunctionParameterModel",
+      "type": "object"
+    },
+    "SourceCodeImportModel": {
+      "description": "Pydantic model for source code imports.",
+      "properties": {
+        "module": {
+          "title": "Module",
+          "type": "string"
+        },
+        "line": {
+          "title": "Line",
+          "type": "integer"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "alias": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alias"
+        }
+      },
+      "required": [
+        "module",
+        "line",
+        "type"
+      ],
+      "title": "SourceCodeImportModel",
+      "type": "object"
     }
   },
-  "required": ["schemaVersion", "name", "language", "data"]
+  "description": "Pydantic model for complete source code analysis data.\n\nThis model represents the full wire format for source code analysis results.\nExtends BaseSchemaOutput for schema generation support.",
+  "properties": {
+    "schemaVersion": {
+      "description": "Schema version identifier",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "name": {
+      "description": "Name of the source code analysis",
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "description": "Description of the analysis",
+      "title": "Description",
+      "type": "string"
+    },
+    "language": {
+      "description": "Primary programming language",
+      "title": "Language",
+      "type": "string"
+    },
+    "source": {
+      "description": "Source path or identifier",
+      "title": "Source",
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/SourceCodeAnalysisMetadataModel",
+      "description": "Analysis metadata including file counts and timestamp"
+    },
+    "data": {
+      "description": "List of analysed source code files",
+      "items": {
+        "$ref": "#/$defs/SourceCodeFileDataModel"
+      },
+      "title": "Data",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "name",
+    "description",
+    "language",
+    "source",
+    "metadata",
+    "data"
+  ],
+  "title": "SourceCodeDataModel",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
 }

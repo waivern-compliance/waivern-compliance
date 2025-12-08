@@ -4,7 +4,7 @@ import abc
 from typing import override
 
 from waivern_core.base_connector import Connector
-from waivern_core.schemas.base import Schema
+from waivern_core.schemas import Schema
 
 
 class DatabaseConnector(Connector, abc.ABC):

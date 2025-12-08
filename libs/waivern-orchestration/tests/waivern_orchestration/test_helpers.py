@@ -7,7 +7,6 @@ from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
 from waivern_artifact_store.factory import ArtifactStoreFactory
 from waivern_core import Message
-from waivern_core.component_factory import ComponentFactory
 from waivern_core.schemas import Schema
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 
@@ -33,10 +32,13 @@ def create_mock_connector_factory(
         Mock ComponentFactory for a connector.
 
     """
-    factory = MagicMock(spec=ComponentFactory)
-    factory.get_component_name.return_value = name
-    factory.get_output_schemas.return_value = output_schemas
-    factory.get_input_schemas.return_value = []
+    factory = MagicMock()
+
+    # Mock component_class with its class methods
+    mock_class = MagicMock()
+    mock_class.get_name.return_value = name
+    mock_class.get_supported_output_schemas.return_value = output_schemas
+    factory.component_class = mock_class
 
     if extract_result is not None:
         mock_connector = MagicMock()
@@ -50,6 +52,7 @@ def create_mock_analyser_factory(
     name: str,
     input_schemas: list[Schema],
     output_schemas: list[Schema],
+    process_result: Message | None = None,
 ) -> MagicMock:
     """Create a mock analyser factory.
 
@@ -57,15 +60,31 @@ def create_mock_analyser_factory(
         name: Component name.
         input_schemas: List of input schemas the analyser accepts.
         output_schemas: List of output schemas the analyser produces.
+        process_result: Optional message to return from process().
+            If provided, creates a mock analyser that returns this message.
 
     Returns:
         Mock ComponentFactory for an analyser.
 
     """
-    factory = MagicMock(spec=ComponentFactory)
-    factory.get_component_name.return_value = name
-    factory.get_input_schemas.return_value = input_schemas
-    factory.get_output_schemas.return_value = output_schemas
+    factory = MagicMock()
+
+    # Mock component_class with its class methods
+    mock_class = MagicMock()
+    mock_class.get_name.return_value = name
+    mock_class.get_supported_output_schemas.return_value = output_schemas
+    # Convert input_schemas to InputRequirement-style format
+    # For simplicity, each schema becomes a single-item combination
+    mock_class.get_input_requirements.return_value = [
+        [MagicMock(schema_name=s.name, version=s.version)] for s in input_schemas
+    ]
+    factory.component_class = mock_class
+
+    if process_result is not None:
+        mock_analyser = MagicMock()
+        mock_analyser.process.return_value = process_result
+        factory.create.return_value = mock_analyser
+
     return factory
 
 

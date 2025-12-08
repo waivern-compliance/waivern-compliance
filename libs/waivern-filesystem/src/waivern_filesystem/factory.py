@@ -2,7 +2,7 @@
 
 from typing import override
 
-from waivern_core import ComponentConfig, ComponentFactory, Schema
+from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
 
 from .config import FilesystemConnectorConfig
@@ -64,20 +64,11 @@ class FilesystemConnectorFactory(ComponentFactory[FilesystemConnector]):
 
         return True
 
+    @property
     @override
-    def get_component_name(self) -> str:
-        """Get the component type name for connector registration."""
-        return "filesystem_connector"
-
-    @override
-    def get_input_schemas(self) -> list[Schema]:
-        """Get the input schemas this connector accepts."""
-        return []
-
-    @override
-    def get_output_schemas(self) -> list[Schema]:
-        """Get the output schemas this connector produces."""
-        return [Schema("standard_input", "1.0.0")]
+    def component_class(self) -> type[FilesystemConnector]:
+        """Get the component class this factory creates."""
+        return FilesystemConnector
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:

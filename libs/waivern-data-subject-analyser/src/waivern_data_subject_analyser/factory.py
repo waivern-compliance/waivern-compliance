@@ -2,7 +2,7 @@
 
 from typing import override
 
-from waivern_core import ComponentConfig, ComponentFactory, Schema
+from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
 from waivern_llm import BaseLLMService
 
@@ -83,20 +83,11 @@ class DataSubjectAnalyserFactory(ComponentFactory[DataSubjectAnalyser]):
 
         return True
 
+    @property
     @override
-    def get_component_name(self) -> str:
-        """Get component type name for registry lookup."""
-        return "data_subject_analyser"
-
-    @override
-    def get_input_schemas(self) -> list[Schema]:
-        """Get input schemas accepted by created analysers."""
-        return DataSubjectAnalyser.get_supported_input_schemas()
-
-    @override
-    def get_output_schemas(self) -> list[Schema]:
-        """Get output schemas produced by created analysers."""
-        return DataSubjectAnalyser.get_supported_output_schemas()
+    def component_class(self) -> type[DataSubjectAnalyser]:
+        """Get the component class this factory creates."""
+        return DataSubjectAnalyser
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:

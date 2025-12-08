@@ -2,7 +2,7 @@
 
 from typing import override
 
-from waivern_core import ComponentConfig, ComponentFactory, Schema
+from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
 from waivern_llm import BaseLLMService
 
@@ -93,35 +93,11 @@ class ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyse
 
         return True
 
+    @property
     @override
-    def get_component_name(self) -> str:
-        """Get component type name for registry lookup.
-
-        Returns:
-            Component type name: "processing_purpose_analyser"
-
-        """
-        return "processing_purpose_analyser"
-
-    @override
-    def get_input_schemas(self) -> list[Schema]:
-        """Get input schemas accepted by created analysers.
-
-        Returns:
-            List containing StandardInputSchema and SourceCodeSchema
-
-        """
-        return ProcessingPurposeAnalyser.get_supported_input_schemas()
-
-    @override
-    def get_output_schemas(self) -> list[Schema]:
-        """Get output schemas produced by created analysers.
-
-        Returns:
-            List containing ProcessingPurposeFindingSchema
-
-        """
-        return ProcessingPurposeAnalyser.get_supported_output_schemas()
+    def component_class(self) -> type[ProcessingPurposeAnalyser]:
+        """Get the component class this factory creates."""
+        return ProcessingPurposeAnalyser
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:

@@ -27,8 +27,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
-from waivern_core.schemas import Schema
-
 type ComponentConfig = dict[str, Any]
 
 
@@ -72,6 +70,10 @@ class ComponentFactory[T](ABC):
         ...     def __init__(self, container: ServiceContainer):
         ...         self._container = container
         ...
+        ...     @property
+        ...     def component_class(self) -> type[PersonalDataAnalyser]:
+        ...         return PersonalDataAnalyser
+        ...
         ...     def create(self, config: ComponentConfig) -> PersonalDataAnalyser:
         ...         analyser_config = PersonalDataAnalyserConfig.from_properties(config)
         ...         # Resolve dependencies from container
@@ -80,15 +82,6 @@ class ComponentFactory[T](ABC):
         ...         except ValueError:
         ...             llm_service = None
         ...         return PersonalDataAnalyser(analyser_config, llm_service)
-        ...
-        ...     def get_component_name(self) -> str:
-        ...         return "personal_data_analyser"
-        ...
-        ...     def get_input_schemas(self) -> list[Schema]:
-        ...         return [Schema("standard_input", "1.0.0")]
-        ...
-        ...     def get_output_schemas(self) -> list[Schema]:
-        ...         return [Schema("personal_data_finding", "1.0.0")]
         ...
         ...     def can_create(self, config: ComponentConfig) -> bool:
         ...         # Validate config and check service availability
@@ -137,54 +130,25 @@ class ComponentFactory[T](ABC):
         """
         ...
 
+    @property
     @abstractmethod
-    def get_component_name(self) -> str:
-        """Get the component type name used in runbooks.
+    def component_class(self) -> type[T]:
+        """Get the component class this factory creates.
 
-        This name is used in runbook YAML files to identify which component
-        type to use. It must be unique across all components of the same kind
-        (analyser or connector).
+        This property provides access to the component class for calling
+        class methods like get_name(), get_input_requirements(), and
+        get_supported_output_schemas() without instantiating the component.
 
         Returns:
-            Component type name (e.g., "personal_data_analyser", "mysql")
+            The component class type.
 
         Example:
-            >>> factory.get_component_name()
+            >>> factory.component_class.get_name()
             'personal_data_analyser'
-
-        """
-        ...
-
-    @abstractmethod
-    def get_input_schemas(self) -> list[Schema]:
-        """Get the list of input schemas this component supports.
-
-        The executor uses this for schema-based component matching. A component
-        can support multiple input schemas if it can handle different data formats.
-
-        Returns:
-            List of Schema objects this component can process.
-
-        Example:
-            >>> factory.get_input_schemas()
-            [Schema("standard_input", "1.0.0"), Schema("source_code", "1.0.0")]
-
-        """
-        ...
-
-    @abstractmethod
-    def get_output_schemas(self) -> list[Schema]:
-        """Get the list of output schemas this component produces.
-
-        The executor uses this for schema-based component chaining. A component
-        can produce multiple output schemas if it generates different finding types.
-
-        Returns:
-            List of Schema objects this component produces.
-
-        Example:
-            >>> factory.get_output_schemas()
-            [PersonalDataFindingSchema()]
+            >>> factory.component_class.get_input_requirements()
+            [[InputRequirement("standard_input", "1.0.0")]]
+            >>> factory.component_class.get_supported_output_schemas()
+            [Schema("personal_data_finding", "1.0.0")]
 
         """
         ...

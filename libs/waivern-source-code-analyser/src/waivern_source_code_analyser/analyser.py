@@ -1,13 +1,11 @@
 """Source code analyser for WCF."""
 
-import importlib
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
-from types import ModuleType
 from typing import Any, override
 
-from waivern_core import Analyser
+from waivern_core import Analyser, InputRequirement
 from waivern_core.errors import AnalyserProcessingError
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
@@ -15,6 +13,14 @@ from waivern_core.schemas import Schema
 from waivern_source_code_analyser.analyser_config import SourceCodeAnalyserConfig
 from waivern_source_code_analyser.extractors import ClassExtractor, FunctionExtractor
 from waivern_source_code_analyser.parser import SourceCodeParser
+from waivern_source_code_analyser.schemas import (
+    SourceCodeAnalysisMetadataModel,
+    SourceCodeClassModel,
+    SourceCodeDataModel,
+    SourceCodeFileDataModel,
+    SourceCodeFileMetadataModel,
+    SourceCodeFunctionModel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +49,15 @@ class SourceCodeAnalyser(Analyser):
 
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[Schema]:
-        """Return the input schemas supported by this analyser."""
-        return [Schema("standard_input", "1.0.0")]
+    def get_input_requirements(cls) -> list[list[InputRequirement]]:
+        """Declare supported input schema combinations.
+
+        SourceCodeAnalyser accepts standard_input schema (file content).
+        Multiple messages of the same schema are supported (fan-in).
+        """
+        return [
+            [InputRequirement("standard_input", "1.0.0")],
+        ]
 
     @classmethod
     @override
@@ -53,37 +65,20 @@ class SourceCodeAnalyser(Analyser):
         """Return the output schemas supported by this analyser."""
         return [Schema("source_code", "1.0.0")]
 
-    def _load_producer(self, schema: Schema) -> ModuleType:
-        """Dynamically import producer module.
-
-        Args:
-            schema: The schema to load producer for
-
-        Returns:
-            Producer module with produce() function
-
-        Raises:
-            ModuleNotFoundError: If producer module doesn't exist for this version
-
-        """
-        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
-        return importlib.import_module(
-            f"waivern_source_code_analyser.schema_producers.{module_name}"
-        )
-
     @override
     def process(
         self,
-        input_schema: Schema,
+        inputs: list[Message],
         output_schema: Schema,
-        message: Message,
     ) -> Message:
         """Process standard_input data to produce source_code output.
 
+        Supports same-schema fan-in: multiple standard_input messages are merged
+        before processing. Each file entry retains its original metadata for tracing.
+
         Args:
-            input_schema: Input schema (standard_input)
+            inputs: List of input messages (same schema, fan-in supported)
             output_schema: Output schema (source_code)
-            message: Input message with file content
 
         Returns:
             Message containing parsed source code structure
@@ -93,19 +88,25 @@ class SourceCodeAnalyser(Analyser):
 
         """
         try:
-            # Validate input message
-            Analyser.validate_input_message(message, input_schema)
+            # Merge all input data items (same-schema fan-in)
+            all_files: list[dict[str, Any]] = []
+            source_str = "standard_input"
 
-            # Extract file data from standard_input
-            input_data = message.content
-            files_list = input_data.get("data", [])
+            for message in inputs:
+                message.validate()
+                input_data = message.content
+                files_list = input_data.get("data", [])
+                all_files.extend(files_list)
+                # Use first non-default source
+                if source_str == "standard_input" and input_data.get("source"):
+                    source_str = input_data["source"]
 
             # Parse each file
-            parsed_files: list[dict[str, Any]] = []
+            parsed_files: list[SourceCodeFileDataModel] = []
             total_files = 0
             total_lines = 0
 
-            for file_entry in files_list:
+            for file_entry in all_files:
                 source_code = file_entry["content"]
                 file_metadata = file_entry["metadata"]
                 file_path_str = file_metadata.get(
@@ -133,7 +134,7 @@ class SourceCodeAnalyser(Analyser):
                     parser = SourceCodeParser(language)
                     root_node = parser.parse(source_code)
 
-                    # Extract structural information
+                    # Extract structural information (returns typed model)
                     file_data = self._extract_file_data(
                         file_path, language, root_node, source_code
                     )
@@ -146,35 +147,50 @@ class SourceCodeAnalyser(Analyser):
                     logger.error(f"Failed to parse source: {file_path_str}: {e}")
                     continue
 
-            # Determine source and language for output
-            source_str = input_data.get("source", "standard_input")
+            # Determine language for output
             detected_language = self._config.language or (
-                parsed_files[0]["language"] if parsed_files else "unknown"
+                parsed_files[0].language if parsed_files else "unknown"
             )
 
-            # Load producer and transform to wire format
-            producer = self._load_producer(output_schema)
-            output_data = producer.produce(
-                schema_version=output_schema.version,
-                source_config={
-                    "path_name": Path(source_str).name
-                    if source_str != "standard_input"
-                    else "analysed_files",
-                    "path_str": source_str,
-                    "language": detected_language,
-                },
-                analysis_summary={
-                    "total_files": total_files,
-                    "total_lines": total_lines,
-                },
-                files_data=parsed_files,
+            # Determine path name for output
+            path_name = (
+                Path(source_str).name
+                if source_str != "standard_input"
+                else "analysed_files"
             )
 
-            return Message(
-                id="Source code analysis",
-                content=output_data,
+            # Create output model (Pydantic validates at construction)
+            output_model = SourceCodeDataModel(
+                schemaVersion=output_schema.version,
+                name=f"source_code_analysis_{path_name}",
+                description=f"Source code analysis of {source_str}",
+                language=detected_language,
+                source=source_str,
+                metadata=SourceCodeAnalysisMetadataModel(
+                    total_files=total_files,
+                    total_lines=total_lines,
+                    analysis_timestamp=datetime.now(UTC).isoformat(),
+                ),
+                data=parsed_files,  # Already typed as list[SourceCodeFileDataModel]
+            )
+
+            # Convert to wire format
+            result_data = output_model.model_dump(mode="json", exclude_none=True)
+
+            output_message = Message(
+                id="Source_code_analysis",
+                content=result_data,
                 schema=output_schema,
             )
+
+            # Validate the output message against the output schema
+            output_message.validate()
+
+            logger.info(
+                f"SourceCodeAnalyser processed {total_files} files, {total_lines} lines"
+            )
+
+            return output_message
 
         except Exception as e:
             logger.error(f"Failed to process source code: {e}")
@@ -202,7 +218,7 @@ class SourceCodeAnalyser(Analyser):
         language: str,
         root_node: Any,  # noqa: ANN401  # Tree-sitter AST nodes are C bindings
         source_code: str,
-    ) -> dict[str, Any]:
+    ) -> SourceCodeFileDataModel:
         """Extract analysis data from a parsed file.
 
         Args:
@@ -212,7 +228,7 @@ class SourceCodeAnalyser(Analyser):
             source_code: Original source code
 
         Returns:
-            File analysis data dictionary
+            Strongly typed file data model
 
         """
         # Initialise extractors
@@ -228,19 +244,22 @@ class SourceCodeAnalyser(Analyser):
             mtime = file_path.stat().st_mtime
             last_modified = datetime.fromtimestamp(mtime, tz=UTC).isoformat()
 
-        # Extract pure structural information
-        file_data = {
-            "file_path": str(file_path),
-            "language": language,
-            "raw_content": source_code,
-            "functions": function_extractor.extract(root_node, source_code),
-            "classes": class_extractor.extract(root_node, source_code),
-            "imports": [],  # TODO: Implement import extractor
-            "metadata": {
-                "file_size": len(source_code.encode("utf-8")),
-                "line_count": line_count,
-                "last_modified": last_modified,
-            },
-        }
+        # Extract structural information
+        # TODO: Update extractors to return Pydantic models directly for full type safety
+        functions_data = function_extractor.extract(root_node, source_code)
+        classes_data = class_extractor.extract(root_node, source_code)
 
-        return file_data
+        # Build strongly typed model
+        return SourceCodeFileDataModel(
+            file_path=str(file_path),
+            language=language,
+            raw_content=source_code,
+            functions=[SourceCodeFunctionModel(**f) for f in functions_data],
+            classes=[SourceCodeClassModel(**c) for c in classes_data],
+            imports=[],  # TODO: Implement import extractor
+            metadata=SourceCodeFileMetadataModel(
+                file_size=len(source_code.encode("utf-8")),
+                line_count=line_count,
+                last_modified=last_modified,
+            ),
+        )

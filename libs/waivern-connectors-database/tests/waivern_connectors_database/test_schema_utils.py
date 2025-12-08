@@ -2,7 +2,7 @@
 
 import pytest
 from waivern_core.errors import ConnectorConfigError
-from waivern_core.schemas.base import Schema
+from waivern_core.schemas import Schema
 
 from waivern_connectors_database import DatabaseSchemaUtils
 

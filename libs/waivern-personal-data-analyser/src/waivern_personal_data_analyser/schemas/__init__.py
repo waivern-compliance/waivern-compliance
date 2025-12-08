@@ -5,8 +5,18 @@ To use the personal_data_finding schema:
     schema = Schema("personal_data_finding", "1.0.0")
 """
 
-from .types import PersonalDataFindingModel
+from .types import (
+    PersonalDataFindingMetadata,
+    PersonalDataFindingModel,
+    PersonalDataFindingOutput,
+    PersonalDataSummary,
+    PersonalDataValidationSummary,
+)
 
 __all__ = [
+    "PersonalDataFindingMetadata",
     "PersonalDataFindingModel",
+    "PersonalDataFindingOutput",
+    "PersonalDataSummary",
+    "PersonalDataValidationSummary",
 ]

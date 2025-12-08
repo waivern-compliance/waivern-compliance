@@ -2,6 +2,26 @@
 
 Uses dict-based schema handling with TypedDict for type safety.
 No dependency on source code analyser package - relies on Message validation.
+
+TODO: Architecture improvements to consider:
+
+1. TypedDict Modelling: The TypedDict definitions (SourceCodeFunctionDict,
+   SourceCodeClassDict, etc.) have fields "omitted for brevity". Consider
+   completing these definitions to match the full source_code JSON schema,
+   or importing from a shared location if source-code-analyser exposes them.
+
+2. Pattern Matching Consolidation: This handler duplicates pattern matching
+   logic from ProcessingPurposePatternMatcher. Both do:
+   - Case-insensitive pattern matching against rulesets
+   - Creating ProcessingPurposeFindingModel with compliance/evidence
+
+   Consider extracting a shared base class or utility that both can use,
+   with the key difference being evidence extraction strategy:
+   - pattern_matcher: uses EvidenceExtractor for context windows
+   - source_code_handler: uses line-by-line evidence with line numbers
+
+   The structured element analysis (imports, functions, classes) is unique
+   to source code and should remain here.
 """
 
 from typing import NotRequired, TypedDict
@@ -353,7 +373,10 @@ class SourceCodeSchemaInputHandler:
 
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
-            purpose_category="operational",  # DataCollectionRule doesn't have purpose_category
+            # TODO: DataCollectionRule doesn't have purpose_category - consider adding
+            # purpose_category to DataCollectionRule in waivern-rulesets, or derive it
+            # from collection_type/data_source to avoid hardcoding "operational"
+            purpose_category="operational",
             risk_level=rule.risk_level,
             compliance=compliance_data,
             matched_patterns=matched_patterns,

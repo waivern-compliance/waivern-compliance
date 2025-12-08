@@ -145,7 +145,7 @@ class DAGExecutor:
         async with ctx.semaphore:
             try:
                 # Get schemas from pre-resolved schemas
-                input_schema, output_schema = plan.artifact_schemas[artifact_id]
+                _input_schema, output_schema = plan.artifact_schemas[artifact_id]
 
                 if definition.source is not None:
                     message = await self._run_connector(
@@ -153,13 +153,8 @@ class DAGExecutor:
                     )
                 else:
                     # Derived artifact - get inputs from store
-                    if input_schema is None:
-                        raise ValueError(
-                            f"Derived artifact '{artifact_id}' has no input schema"
-                        )
                     message = await self._produce_derived(
                         definition,
-                        input_schema,
                         output_schema,
                         ctx.store,
                         ctx.thread_pool,
@@ -232,8 +227,7 @@ class DAGExecutor:
     async def _run_analyser(
         self,
         transform: TransformConfig,
-        input_message: Message,
-        input_schema: Schema,
+        inputs: list[Message],
         output_schema: Schema,
         thread_pool: ThreadPoolExecutor,
     ) -> Message:
@@ -241,8 +235,7 @@ class DAGExecutor:
 
         Args:
             transform: Transform configuration with analyser type and properties.
-            input_message: The input message to process.
-            input_schema: The input schema for validation.
+            inputs: List of input messages to process.
             output_schema: The output schema for the result.
             thread_pool: ThreadPoolExecutor for sync->async bridging.
 
@@ -257,7 +250,7 @@ class DAGExecutor:
 
         def sync_process() -> Message:
             analyser = factory.create(transform.properties)
-            return analyser.process(input_schema, output_schema, input_message)
+            return analyser.process(inputs, output_schema)
 
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(thread_pool, sync_process)
@@ -265,7 +258,6 @@ class DAGExecutor:
     async def _produce_derived(
         self,
         definition: ArtifactDefinition,
-        input_schema: Schema,
         output_schema: Schema,
         store: ArtifactStore,
         thread_pool: ThreadPoolExecutor,
@@ -274,7 +266,6 @@ class DAGExecutor:
 
         Args:
             definition: The artifact definition with inputs.
-            input_schema: The input schema for this artifact.
             output_schema: The output schema for this artifact.
             store: The artifact store containing upstream artifacts.
             thread_pool: ThreadPoolExecutor for sync->async bridging.
@@ -294,15 +285,9 @@ class DAGExecutor:
         input_messages = [store.get(ref) for ref in input_refs]
 
         if definition.transform is not None:
-            # Analyser requires single input (fan-in with transform deferred to Phase 2)
-            if len(input_messages) != 1:
-                raise NotImplementedError(
-                    "Analyser with multiple inputs not yet supported (deferred to Phase 2)"
-                )
             return await self._run_analyser(
                 definition.transform,
-                input_messages[0],
-                input_schema,
+                input_messages,
                 output_schema,
                 thread_pool,
             )

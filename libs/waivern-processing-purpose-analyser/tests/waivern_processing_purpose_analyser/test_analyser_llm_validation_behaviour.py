@@ -100,9 +100,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [test_message_with_patterns],
             Schema("processing_purpose_finding", "1.0.0"),
-            test_message_with_patterns,
         )
 
         # Assert - LLM service should be called for validation
@@ -147,9 +146,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [test_message_with_patterns],
             Schema("processing_purpose_finding", "1.0.0"),
-            test_message_with_patterns,
         )
 
         # Assert - Should have fewer findings due to false positive filtering
@@ -206,9 +204,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [test_message_with_patterns],
             Schema("processing_purpose_finding", "1.0.0"),
-            test_message_with_patterns,
         )
 
         # Assert - LLM service should not be called
@@ -231,9 +228,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [test_message_with_patterns],
             Schema("processing_purpose_finding", "1.0.0"),
-            test_message_with_patterns,
         )
 
         # Assert - Should return original findings without validation
@@ -260,9 +256,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [test_message_with_patterns],
             Schema("processing_purpose_finding", "1.0.0"),
-            test_message_with_patterns,
         )
 
         # Assert - Should return original findings despite error
@@ -304,9 +299,8 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
 
         # Act
         result = analyser.process(
-            Schema("standard_input", "1.0.0"),
+            [test_message],
             Schema("processing_purpose_finding", "1.0.0"),
-            test_message,
         )
 
         # Assert - LLM should not be called when no findings exist

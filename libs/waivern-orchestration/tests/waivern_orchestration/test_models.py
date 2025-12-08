@@ -141,14 +141,12 @@ class TestArtifactMetadata:
         assert artifact.contact == "team@example.com"
 
     def test_artifact_schema_override_fields(self) -> None:
-        """Artifact should accept optional input_schema and output_schema fields."""
+        """Artifact should accept optional output_schema field."""
         artifact = ArtifactDefinition(
             inputs="source_data",
             transform=TransformConfig(type="analyser", properties={}),
-            input_schema="custom_input/1.0.0",
             output_schema="custom_output/1.0.0",
         )
-        assert artifact.input_schema == "custom_input/1.0.0"
         assert artifact.output_schema == "custom_output/1.0.0"
 
     def test_artifact_optional_field(self) -> None:

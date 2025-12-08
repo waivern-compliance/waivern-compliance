@@ -2,7 +2,7 @@
 
 from typing import override
 
-from waivern_core import ComponentConfig, ComponentFactory, Schema
+from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
 
 from .analyser import DataExportAnalyser
@@ -65,35 +65,11 @@ class DataExportAnalyserFactory(ComponentFactory[DataExportAnalyser]):
 
         return True
 
+    @property
     @override
-    def get_component_name(self) -> str:
-        """Get component type name for registry lookup.
-
-        Returns:
-            Component type name: "data_export_analyser"
-
-        """
-        return "data_export_analyser"
-
-    @override
-    def get_input_schemas(self) -> list[Schema]:
-        """Get input schemas accepted by created analysers.
-
-        Returns:
-            Empty list - analyser not yet implemented
-
-        """
-        return DataExportAnalyser.get_supported_input_schemas()
-
-    @override
-    def get_output_schemas(self) -> list[Schema]:
-        """Get output schemas produced by created analysers.
-
-        Returns:
-            Empty list - analyser not yet implemented
-
-        """
-        return DataExportAnalyser.get_supported_output_schemas()
+    def component_class(self) -> type[DataExportAnalyser]:
+        """Get the component class this factory creates."""
+        return DataExportAnalyser
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:

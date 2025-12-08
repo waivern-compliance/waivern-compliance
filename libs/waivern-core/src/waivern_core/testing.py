@@ -9,8 +9,8 @@ import pytest
 from waivern_core import (
     ComponentConfig,
     ComponentFactory,
-    Schema,
 )
+from waivern_core.base_analyser import Analyser
 
 
 class ComponentFactoryContractTests[T]:
@@ -26,11 +26,9 @@ class ComponentFactoryContractTests[T]:
 
     Contract Requirements:
         1. create() must return non-None component instance
-        2. get_component_name() must return non-empty string
-        3. get_input_schemas() must return list of Schema objects
-        4. get_output_schemas() must return list of Schema objects
-        5. can_create() must return boolean for valid config
-        6. get_service_dependencies() must return dict
+        2. component_class must return the component type
+        3. can_create() must return boolean for valid config
+        4. get_service_dependencies() must return dict
 
     Usage Pattern:
         class TestMyFactory(ComponentFactoryContractTests[MyComponent]):
@@ -118,67 +116,22 @@ class ComponentFactoryContractTests[T]:
         )
 
     # CONTRACT TEST 2
-    def test_get_component_name_returns_non_empty_string(
-        self, factory: ComponentFactory[T]
-    ) -> None:
-        """Verify factory.get_component_name() returns non-empty string identifier.
+    def test_component_class_returns_type(self, factory: ComponentFactory[T]) -> None:
+        """Verify factory.component_class returns the component type.
 
         Contract Requirement:
-            Must return string matching runbook YAML 'type:' field.
-            String must not be empty (executor needs identifier for registration).
+            Must return a type (class) that the factory creates.
 
         Why This Matters:
-            Executor uses component name to map runbook type declarations
-            (e.g., type: "personal_data_analyser") to factory instances.
+            Executor uses component_class to access class methods like
+            get_input_requirements() and get_supported_output_schemas()
+            without instantiating the component.
 
         """
-        name = factory.get_component_name()
-        assert isinstance(name, str), "Component name must be string type"
-        assert len(name) > 0, "Component name must not be empty string"
+        component_class = factory.component_class
+        assert isinstance(component_class, type), "component_class must return a type"
 
     # CONTRACT TEST 3
-    def test_get_input_schemas_returns_list_of_schemas(
-        self, factory: ComponentFactory[T]
-    ) -> None:
-        """Verify factory.get_input_schemas() returns list of Schema objects.
-
-        Contract Requirement:
-            Must return list (can be empty for connectors).
-            All elements must be Schema instances.
-
-        Why This Matters:
-            Executor uses input schemas for automatic connector-to-analyser
-            matching based on compatible data formats.
-
-        """
-        schemas = factory.get_input_schemas()
-        assert isinstance(schemas, list), "Input schemas must be list type"
-        assert all(isinstance(s, Schema) for s in schemas), (
-            "All input schema elements must be Schema instances"
-        )
-
-    # CONTRACT TEST 4
-    def test_get_output_schemas_returns_list_of_schemas(
-        self, factory: ComponentFactory[T]
-    ) -> None:
-        """Verify factory.get_output_schemas() returns list of Schema objects.
-
-        Contract Requirement:
-            Must return list (can be empty for analysers).
-            All elements must be Schema instances.
-
-        Why This Matters:
-            Executor uses output schemas to validate analyser findings match
-            expected formats and enable component chaining.
-
-        """
-        schemas = factory.get_output_schemas()
-        assert isinstance(schemas, list), "Output schemas must be list type"
-        assert all(isinstance(s, Schema) for s in schemas), (
-            "All output schema elements must be Schema instances"
-        )
-
-    # CONTRACT TEST 5
     def test_can_create_returns_bool_for_valid_config(
         self, factory: ComponentFactory[T], valid_config: ComponentConfig
     ) -> None:
@@ -201,7 +154,7 @@ class ComponentFactoryContractTests[T]:
             "can_create() should return True for valid_config fixture"
         )
 
-    # CONTRACT TEST 6
+    # CONTRACT TEST 4
     def test_get_service_dependencies_returns_dict(
         self, factory: ComponentFactory[T]
     ) -> None:
@@ -221,4 +174,107 @@ class ComponentFactoryContractTests[T]:
         # Cannot assert empty/non-empty as different factories have different needs
 
 
-__all__ = ["ComponentFactoryContractTests"]
+class AnalyserContractTests[T: Analyser]:
+    """Abstract contract tests that all Analyser implementations must pass.
+
+    This class defines behavioural requirements for Analyser implementations.
+    Concrete analyser test classes should inherit from this to automatically
+    verify contract compliance.
+
+    Required Fixtures:
+        analyser_class: The Analyser class (not instance) to test
+
+    Contract Requirements:
+        1. get_input_requirements() must return at least one combination
+        2. Each input requirement combination must be unique
+        3. Each combination must have at least one requirement
+
+    Usage Pattern:
+        class TestPersonalDataAnalyserContract(AnalyserContractTests[PersonalDataAnalyser]):
+            @pytest.fixture
+            def analyser_class(self) -> type[PersonalDataAnalyser]:
+                return PersonalDataAnalyser
+
+            # All contract tests run automatically
+
+    Design Decision:
+        We test the class directly (not factory) because input requirements
+        are class-level declarations, not instance-level behaviour.
+
+    """
+
+    @pytest.fixture
+    def analyser_class(self) -> type[T]:
+        """Provide Analyser class to test.
+
+        Subclasses MUST override this fixture to provide their analyser class.
+
+        Raises:
+            NotImplementedError: If subclass doesn't override this fixture
+
+        Example:
+            @pytest.fixture
+            def analyser_class(self) -> type[PersonalDataAnalyser]:
+                return PersonalDataAnalyser
+
+        """
+        raise NotImplementedError(
+            "Subclass must provide 'analyser_class' fixture with Analyser class"
+        )
+
+    # CONTRACT TEST 1
+    def test_input_requirements_not_empty(self, analyser_class: type[T]) -> None:
+        """Verify analyser declares at least one input requirement combination.
+
+        Contract Requirement:
+            get_input_requirements() must return at least one combination.
+
+        Why This Matters:
+            Planner uses input requirements to match schemas. An analyser with
+            no requirements cannot be used in any pipeline.
+
+        """
+        requirements = analyser_class.get_input_requirements()
+        assert len(requirements) > 0, (
+            "get_input_requirements() must return at least one combination"
+        )
+
+    # CONTRACT TEST 2
+    def test_no_duplicate_combinations(self, analyser_class: type[T]) -> None:
+        """Verify each input requirement combination is unique.
+
+        Contract Requirement:
+            No two combinations should contain the same set of schemas.
+
+        Why This Matters:
+            Duplicate combinations create ambiguity in schema matching.
+            Planner cannot determine which combination to use.
+
+        """
+        requirements = analyser_class.get_input_requirements()
+        seen: set[frozenset[tuple[str, str]]] = set()
+
+        for combo in requirements:
+            combo_set = frozenset((r.schema_name, r.version) for r in combo)
+            assert combo_set not in seen, f"Duplicate combination: {combo_set}"
+            seen.add(combo_set)
+
+    # CONTRACT TEST 3
+    def test_no_empty_combinations(self, analyser_class: type[T]) -> None:
+        """Verify each combination has at least one requirement.
+
+        Contract Requirement:
+            Each combination list must contain at least one InputRequirement.
+
+        Why This Matters:
+            Empty combinations are meaningless - an analyser must declare
+            what schemas it accepts.
+
+        """
+        requirements = analyser_class.get_input_requirements()
+
+        for i, combo in enumerate(requirements):
+            assert len(combo) > 0, f"Combination {i} is empty"
+
+
+__all__ = ["AnalyserContractTests", "ComponentFactoryContractTests"]
