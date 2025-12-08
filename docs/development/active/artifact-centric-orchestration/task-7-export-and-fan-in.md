@@ -239,6 +239,8 @@ __all__ = [
 
 ## Task 7b: Multi-Schema Fan-In (waivern-orchestration)
 
+**Status:** DONE
+
 ### Planner Changes
 
 **1. Update `_resolve_derived_schema()`:**
