@@ -1,7 +1,7 @@
 # Task 7: Export Infrastructure and Multi-Schema Fan-In
 
 - **Phase:** 4 - Export & Regulatory Analysers
-- **Status:** IN_PROGRESS (Task 7a complete)
+- **Status:** IN_PROGRESS (Tasks 7a-7c complete)
 - **GitHub Issue:** TBD
 - **Prerequisites:** Tasks 1-6 (artifact-centric orchestration complete)
 - **Design:** [Multi-Schema Fan-In](../../../future-plans/multi-schema-fan-in.md), [Export Architecture](../../../future-plans/export-architecture.md)
@@ -352,6 +352,8 @@ async def _produce_derived(
 
 ## Task 7c: Migrate Existing Analysers
 
+**Status:** DONE
+
 Update all existing analysers to the new interface:
 
 ### waivern-personal-data-analyser
@@ -402,6 +404,22 @@ Each analyser package should:
 1. Inherit from `AnalyserContractTests` for contract validation
 2. Update unit tests for new `process()` signature
 3. Add tests for merge-first pattern (multiple inputs merged into one dataset)
+
+### Completion Notes
+
+Successfully migrated all analysers to the new multi-schema interface:
+- ✅ waivern-personal-data-analyser
+- ✅ waivern-data-subject-analyser
+- ✅ waivern-processing-purpose-analyser
+- ✅ waivern-source-code-analyser
+
+Additional improvements completed:
+- Fixed infinite loop bug in DAG executor when skipped artifacts mixed with executing ones
+- Removed redundant JSON schema validation (Pydantic already validates)
+- Added comprehensive debug logging to executor
+- Improved CLI table formatting (removed emojis, added colour-coded status)
+
+All 841 tests passing. Branch: `feature/multi-schema-analyser-support`
 
 ---
 

@@ -416,12 +416,14 @@ All data flow uses Message objects:
 - Configuration via dedicated Config class (Pydantic model)
 
 **When creating analysers:**
-- Implement `get_supported_input_schemas()` and `get_supported_output_schemas()` returning `list[Schema]`
-- Implement `process_data(message: Message) -> Message`
+- Implement `get_input_requirements()` returning `list[list[InputRequirement]]` (declares supported input combinations)
+- Implement `get_supported_output_schemas()` returning `list[Schema]`
+- Implement `process(inputs: list[Message], output_schema: Schema) -> Message`
 - NO need to implement validation - handled by Message mechanism
 - Create a `ComponentFactory[Analyser]` for instantiation
 - Configuration via dedicated Config class (Pydantic model)
 - Use `@override` decorators for abstract methods
+- Inherit test class from `AnalyserContractTests` for automatic contract validation
 
 **Schema files:**
 - JSON Schema files in `{package}/schemas/json_schemas/{name}/{version}/{name}.json`
