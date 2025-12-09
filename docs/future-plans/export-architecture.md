@@ -20,7 +20,7 @@ The current system produces generic JSON output with execution results. Complian
 ## Design Principles
 
 1. **Exporters are presentation layer** - They format, not analyse
-2. **Analysers declare compliance frameworks** - ComponentFactory declares which frameworks its output supports
+2. **Analysers declare compliance frameworks** - Components declare which frameworks they support via classmethods
 3. **Schema-based discovery** - Exporter auto-selected based on analyser framework declarations
 4. **CLI can override** - Flexibility for one-off needs
 5. **Separation of concerns** - Framework produces findings, app formats output
@@ -145,7 +145,7 @@ For each successful artifact with transform:
 Get analyser factory from registry
        │
        ▼
-Call factory.get_compliance_frameworks()
+Call factory.component_class.get_compliance_frameworks()
        │
        ▼
 Collect all declared frameworks

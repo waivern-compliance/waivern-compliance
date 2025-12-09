@@ -74,6 +74,17 @@ class Connector(abc.ABC):
 
         return schemas
 
+    @classmethod
+    def get_compliance_frameworks(cls) -> list[str]:
+        """Declare compliance frameworks this component's output supports.
+
+        Returns:
+            List of framework identifiers (e.g., ["GDPR", "UK_GDPR"]),
+            or empty list for generic/framework-agnostic components.
+
+        """
+        return []
+
     @abc.abstractmethod
     def extract(self, output_schema: Schema) -> Message:
         """Extract data from the source and return in WCF schema format.
