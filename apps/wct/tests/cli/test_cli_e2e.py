@@ -342,3 +342,61 @@ class TestWCTCLIE2E:
         - Output follows CoreExport format
         """
         pytest.skip("Multiple framework-specific analysers not yet implemented")
+
+    def test_wct_cli_rejects_invalid_exporter_with_helpful_message(
+        self, tmp_path: Path
+    ) -> None:
+        """CLI rejects invalid exporter with helpful error message."""
+        # Arrange
+        runbook_path = Path("apps/wct/runbooks/samples/file_content_analysis.yaml")
+        assert runbook_path.exists(), f"Runbook not found: {runbook_path}"
+
+        output_dir = tmp_path / "invalid_exporter_test"
+        output_dir.mkdir()
+
+        # Act - Execute with invalid exporter
+        result = subprocess.run(  # noqa: S603
+            [  # noqa: S607
+                "uv",
+                "run",
+                "wct",
+                "run",
+                str(runbook_path),
+                "--output-dir",
+                str(output_dir),
+                "--exporter",
+                "invalid_exporter",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+
+        # Assert - Command should fail
+        assert result.returncode == 1, (
+            f"Expected CLI to fail with invalid exporter, but got return code {result.returncode}"
+        )
+
+        # Assert - Error message should mention unknown exporter and show available
+        assert "Unknown exporter 'invalid_exporter'" in result.stderr or (
+            "Unknown exporter 'invalid_exporter'" in result.stdout
+        )
+        assert "Available:" in result.stderr or "Available:" in result.stdout
+        assert "json" in result.stderr or "json" in result.stdout
+
+    @pytest.mark.skip(
+        reason="TODO: Requires multiple exporters (e.g., GDPR exporter) "
+        "to test override meaningfully - currently auto-detection always returns 'json'"
+    )
+    def test_wct_cli_respects_manual_exporter_override(self, tmp_path: Path) -> None:
+        """CLI respects --exporter flag to override auto-detection.
+
+        This test will be implemented when we have multiple exporters (e.g., GDPR exporter).
+
+        Expected behaviour:
+        - Runbook with GDPR analyser would auto-detect "gdpr" exporter
+        - But `--exporter json` overrides to use "json" exporter
+        - Output follows CoreExport format (not GdprExport format)
+        """
+        pytest.skip("Multiple exporters not yet implemented")

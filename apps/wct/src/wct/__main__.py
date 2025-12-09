@@ -34,7 +34,7 @@ app = typer.Typer(name="waivern-compliance-tool")
 
 
 @app.command()
-def run(
+def run(  # noqa: PLR0913 - CLI entry point with many options
     runbook: Annotated[
         Path,
         typer.Argument(
@@ -85,11 +85,20 @@ def run(
             case_sensitive=False,
         ),
     ] = "INFO",
+    exporter: Annotated[
+        str | None,
+        typer.Option(
+            "--exporter",
+            help="Specify exporter to use (overrides auto-detection). Available: json, gdpr, ccpa",
+            rich_help_panel="Output",
+        ),
+    ] = None,
 ) -> None:
     """Execute a runbook with configurable output options and logging.
 
     Example:
         wct run compliance-runbook.yaml --output-dir ./results --output report.json -v
+        wct run compliance-runbook.yaml --exporter json
 
     """
     # Set default output directory if not provided
@@ -101,7 +110,7 @@ def run(
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output = Path(f"{timestamp}_analysis_results.json")
 
-    execute_runbook_command(runbook, output_dir, output, verbose, log_level)
+    execute_runbook_command(runbook, output_dir, output, verbose, log_level, exporter)
 
 
 @app.command(name="ls-connectors")

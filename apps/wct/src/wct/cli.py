@@ -485,6 +485,7 @@ def _export_results(
     plan: ExecutionPlan,
     registry: ComponentRegistry,
     output_path: Path,
+    exporter_override: str | None = None,
 ) -> None:
     """Export execution results to file.
 
@@ -493,15 +494,29 @@ def _export_results(
         plan: Execution plan with runbook metadata.
         registry: Component registry for factory lookup.
         output_path: Path to save JSON output.
+        exporter_override: Manual exporter selection (overrides auto-detection).
 
     Raises:
         CLIError: If export fails.
 
     """
-    # Detect and get exporter
-    exporter_name = _detect_exporter(result, plan, registry)
-    logger.info("Using exporter: %s", exporter_name)
-    exporter = ExporterRegistry.get(exporter_name)
+    # Use manual override if provided, otherwise auto-detect
+    if exporter_override:
+        exporter_name = exporter_override
+        logger.info("Using manually specified exporter: %s", exporter_name)
+    else:
+        exporter_name = _detect_exporter(result, plan, registry)
+        logger.info("Using auto-detected exporter: %s", exporter_name)
+
+    # Get exporter from registry
+    try:
+        exporter = ExporterRegistry.get(exporter_name)
+    except ValueError as e:
+        raise CLIError(
+            str(e),
+            command="run",
+            original_error=e,
+        ) from e
 
     # Export to file
     try:
@@ -516,12 +531,13 @@ def _export_results(
         raise CLIError(error_msg, command="run", original_error=e) from e
 
 
-def execute_runbook_command(
+def execute_runbook_command(  # noqa: PLR0913 - Matches CLI entry point signature
     runbook_path: Path,
     output_dir: Path,
     output: Path,
     verbose: bool = False,
     log_level: str = "INFO",
+    exporter_override: str | None = None,
 ) -> None:
     """CLI command implementation for running analyses.
 
@@ -531,6 +547,7 @@ def execute_runbook_command(
         output: Path to save results as JSON
         verbose: Enable verbose output
         log_level: Logging level
+        exporter_override: Manual exporter selection (overrides auto-detection)
 
     """
     effective_log_level = "DEBUG" if verbose else log_level
@@ -553,7 +570,7 @@ def execute_runbook_command(
 
         # Export results
         final_output_path = output if output.is_absolute() else output_dir / output
-        _export_results(result, plan, registry, final_output_path)
+        _export_results(result, plan, registry, final_output_path, exporter_override)
         formatter.show_file_save_success(final_output_path)
         formatter.show_completion_summary(result, final_output_path)
 
