@@ -20,7 +20,7 @@ The current system produces generic JSON output with execution results. Complian
 ## Design Principles
 
 1. **Exporters are presentation layer** - They format, not analyse
-2. **Analysers declare compliance frameworks** - ComponentFactory declares which frameworks its output supports
+2. **Analysers declare compliance frameworks** - Components declare which frameworks they support via classmethods
 3. **Schema-based discovery** - Exporter auto-selected based on analyser framework declarations
 4. **CLI can override** - Flexibility for one-off needs
 5. **Separation of concerns** - Framework produces findings, app formats output
@@ -145,7 +145,7 @@ For each successful artifact with transform:
 Get analyser factory from registry
        │
        ▼
-Call factory.get_compliance_frameworks()
+Call factory.component_class.get_compliance_frameworks()
        │
        ▼
 Collect all declared frameworks
@@ -209,17 +209,21 @@ class Exporter(Protocol):
         self,
         result: ExecutionResult,
         plan: ExecutionPlan,
-        organisation: OrganisationConfig | None = None,
     ) -> dict[str, Any]:
         """Export execution results to structured format.
 
         Args:
             result: Execution results with artifact data
             plan: Execution plan with runbook metadata
-            organisation: Optional organisation config for compliance exports
 
         Returns:
             Export dictionary ready for JSON serialisation
+
+        Note:
+            Organisation configuration is passed at exporter initialization
+            for framework-specific exporters (e.g., GdprExporter), not at
+            export time. This enables proper dependency injection and cleaner
+            exporter design.
         """
         ...
 ```
@@ -260,6 +264,8 @@ class ExporterRegistry:
 ```python
 # apps/wct/src/wct/exporters/json_exporter.py
 
+from wct.exporters.core import build_core_export
+
 class JsonExporter:
     """Generic JSON exporter - formats any framework."""
 
@@ -278,41 +284,55 @@ class JsonExporter:
         self,
         result: ExecutionResult,
         plan: ExecutionPlan,
-        organisation: OrganisationConfig | None = None,
     ) -> dict[str, Any]:
-        return build_core_export(result, plan)
+        """Export to generic JSON format.
 
+        Returns CoreExport model as dictionary for JSON serialization.
+        """
+        core_export = build_core_export(result, plan)
+        return core_export.model_dump()  # Pydantic model → dict
+```
 
-def build_core_export(result: ExecutionResult, plan: ExecutionPlan) -> dict[str, Any]:
+```python
+# apps/wct/src/wct/exporters/core.py
+
+def build_core_export(result: ExecutionResult, plan: ExecutionPlan) -> CoreExport:
     """Build core export format shared by all exporters.
 
     This is the base format that regulation-specific exporters extend.
-    """
-    runbook = plan.runbook
+    Returns a validated Pydantic model for runtime validation.
 
-    return {
-        "format_version": "2.0.0",
-        "run": {
-            "id": str(uuid.uuid4()),
-            "timestamp": datetime.now(UTC).isoformat(),
-            "duration_seconds": result.total_duration_seconds,
-            "status": _determine_status(result),
-        },
-        "runbook": {
-            "name": runbook.name,
-            "description": runbook.description,
-            "contact": runbook.contact,
-        },
-        "summary": {
-            "total": len(result.artifacts) + len(result.skipped),
-            "succeeded": sum(1 for a in result.artifacts.values() if a.success),
-            "failed": sum(1 for a in result.artifacts.values() if not a.success),
-            "skipped": len(result.skipped),
-        },
-        "outputs": _build_outputs(result, plan),
-        "errors": _build_errors(result),
-        "skipped": list(result.skipped),
-    }
+    Args:
+        result: ExecutionResult with run_id and start_timestamp already populated
+        plan: ExecutionPlan with runbook metadata
+
+    Returns:
+        CoreExport Pydantic model (convert to dict via .model_dump())
+
+    Note:
+        ExecutionResult now contains run_id and start_timestamp (generated
+        at execution time by DAGExecutor), so they don't need to be passed
+        separately. This was an architectural improvement to move metadata
+        generation upstream in the execution pipeline.
+    """
+    return CoreExport(
+        format_version="2.0.0",
+        run=RunInfo(
+            id=result.run_id,
+            timestamp=result.start_timestamp,
+            duration_seconds=result.total_duration_seconds,
+            status=_calculate_status(result),
+        ),
+        runbook=RunbookInfo(
+            name=plan.runbook.name,
+            description=plan.runbook.description,
+            contact=plan.runbook.contact,
+        ),
+        summary=_calculate_summary(result),
+        outputs=_build_output_entries(result, plan),
+        errors=_build_error_entries(result),
+        skipped=_build_skipped_list(result),
+    )
 ```
 
 ## GDPR Exporter
@@ -321,10 +341,22 @@ def build_core_export(result: ExecutionResult, plan: ExecutionPlan) -> dict[str,
 # apps/wct/src/wct/exporters/gdpr/exporter.py
 
 class GdprExporter:
-    """GDPR-compliant exporter with Article 30 support."""
+    """GDPR-compliant exporter with Article 30 support.
+
+    Organisation configuration is passed at initialization for proper
+    dependency injection, not at export time.
+    """
 
     # Schema this exporter requires (internal implementation detail)
     _REQUIRED_SCHEMA = "gdpr_article_30_finding"
+
+    def __init__(self, organisation: OrganisationConfig | None = None) -> None:
+        """Initialize GDPR exporter with organisation configuration.
+
+        Args:
+            organisation: Organisation metadata for GDPR compliance exports
+        """
+        self._organisation = organisation
 
     @property
     def name(self) -> str:
@@ -360,14 +392,18 @@ class GdprExporter:
         self,
         result: ExecutionResult,
         plan: ExecutionPlan,
-        organisation: OrganisationConfig | None = None,
     ) -> dict[str, Any]:
+        """Export to GDPR Article 30 format.
+
+        Uses organisation config provided at initialization.
+        """
         # Start with core format
-        output = build_core_export(result, plan)
+        core_export = build_core_export(result, plan)
+        output = core_export.model_dump()
 
         # Add GDPR section
         output["gdpr"] = {
-            "article_30_1_a": self._build_article_30(result, plan, organisation)
+            "article_30_1_a": self._build_article_30(result, plan)
         }
 
         return output
@@ -376,32 +412,31 @@ class GdprExporter:
         self,
         result: ExecutionResult,
         plan: ExecutionPlan,
-        organisation: OrganisationConfig | None,
     ) -> dict[str, Any]:
         section: dict[str, Any] = {}
 
-        # Organisation metadata
-        if organisation:
+        # Organisation metadata from initialization
+        if self._organisation:
             section["data_controller"] = {
-                "name": organisation.data_controller.name,
-                "address": organisation.data_controller.address,
-                "contact_email": organisation.data_controller.contact_email,
+                "name": self._organisation.data_controller.name,
+                "address": self._organisation.data_controller.address,
+                "contact_email": self._organisation.data_controller.contact_email,
             }
-            if organisation.data_controller.company_nr:
-                section["data_controller"]["company_nr"] = organisation.data_controller.company_nr
-            if organisation.data_controller.jurisdictions:
-                section["data_controller"]["jurisdictions"] = organisation.data_controller.jurisdictions
+            if self._organisation.data_controller.company_nr:
+                section["data_controller"]["company_nr"] = self._organisation.data_controller.company_nr
+            if self._organisation.data_controller.jurisdictions:
+                section["data_controller"]["jurisdictions"] = self._organisation.data_controller.jurisdictions
 
-            if organisation.dpo:
-                section["dpo"] = organisation.dpo.model_dump(exclude_none=True)
+            if self._organisation.dpo:
+                section["dpo"] = self._organisation.dpo.model_dump(exclude_none=True)
 
-            if organisation.representatives:
+            if self._organisation.representatives:
                 section["representatives"] = [
-                    r.model_dump(exclude_none=True) for r in organisation.representatives
+                    r.model_dump(exclude_none=True) for r in self._organisation.representatives
                 ]
 
-            if organisation.data_retention:
-                section["data_retention"] = organisation.data_retention.model_dump(exclude_none=True)
+            if self._organisation.data_retention:
+                section["data_retention"] = self._organisation.data_retention.model_dump(exclude_none=True)
         else:
             section["_warning"] = "Organisation configuration not provided"
 

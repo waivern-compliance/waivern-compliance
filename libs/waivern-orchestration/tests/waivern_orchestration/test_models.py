@@ -257,6 +257,8 @@ class TestExecutionResult:
     def test_execution_result_fields(self) -> None:
         """ExecutionResult should have all required fields."""
         result = ExecutionResult(
+            run_id="123e4567-e89b-12d3-a456-426614174000",
+            start_timestamp="2024-01-15T10:30:00+00:00",
             artifacts={
                 "data": ArtifactResult(
                     artifact_id="data",
@@ -267,6 +269,8 @@ class TestExecutionResult:
             skipped={"optional_step"},
             total_duration_seconds=5.5,
         )
+        assert result.run_id == "123e4567-e89b-12d3-a456-426614174000"
+        assert result.start_timestamp == "2024-01-15T10:30:00+00:00"
         assert "data" in result.artifacts
         assert result.artifacts["data"].success is True
         assert "optional_step" in result.skipped

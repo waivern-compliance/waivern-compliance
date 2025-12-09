@@ -78,6 +78,17 @@ class Analyser(abc.ABC):
 
         """
 
+    @classmethod
+    def get_compliance_frameworks(cls) -> list[str]:
+        """Declare compliance frameworks this component's output supports.
+
+        Returns:
+            List of framework identifiers (e.g., ["GDPR", "UK_GDPR"]),
+            or empty list for generic/framework-agnostic components.
+
+        """
+        return []
+
     @abc.abstractmethod
     def process(
         self,
