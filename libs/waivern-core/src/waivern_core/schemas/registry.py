@@ -7,9 +7,20 @@ enabling packages to contribute their own schemas without modifying waivern-core
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import ClassVar, TypedDict
 
 from waivern_core.schemas.loader import JsonSchemaLoader
+
+
+class SchemaRegistryState(TypedDict):
+    """State snapshot for SchemaRegistry.
+
+    Used for test isolation - captures and restores registry state
+    to prevent test pollution.
+    """
+
+    search_paths: list[Path]
+    initialised: bool
 
 
 class SchemaRegistry:
@@ -100,14 +111,14 @@ class SchemaRegistry:
         cls._loader = None
 
     @classmethod
-    def snapshot_state(cls) -> dict[str, Any]:
+    def snapshot_state(cls) -> SchemaRegistryState:
         """Capture current SchemaRegistry state for later restoration.
 
         This is primarily used for test isolation - save state before tests,
         restore after tests to prevent global state pollution.
 
         Returns:
-            Dictionary containing all mutable state
+            State dictionary containing all mutable registry state
 
         """
         return {
@@ -117,7 +128,7 @@ class SchemaRegistry:
         }
 
     @classmethod
-    def restore_state(cls, state: dict[str, Any]) -> None:
+    def restore_state(cls, state: SchemaRegistryState) -> None:
         """Restore SchemaRegistry state from a previously captured snapshot.
 
         This is primarily used for test isolation - restore state after tests

@@ -10,8 +10,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from waivern_artifact_store.base import ArtifactStore
 from waivern_core import Message, Schema
@@ -62,6 +64,9 @@ class DAGExecutor:
             ExecutionResult containing artifact results and skipped artifacts.
 
         """
+        # Generate run metadata at execution start
+        run_id = str(uuid.uuid4())
+        start_timestamp = datetime.now(UTC).isoformat()
         start_time = time.monotonic()
         config = plan.runbook.config
 
@@ -90,6 +95,8 @@ class DAGExecutor:
         logger.debug("ThreadPoolExecutor shutdown complete")
         total_duration = time.monotonic() - start_time
         return ExecutionResult(
+            run_id=run_id,
+            start_timestamp=start_timestamp,
             artifacts=ctx.results,
             skipped=ctx.skipped,
             total_duration_seconds=total_duration,

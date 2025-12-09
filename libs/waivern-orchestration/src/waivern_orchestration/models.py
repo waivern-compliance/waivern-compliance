@@ -101,6 +101,8 @@ class ArtifactResult(BaseModel):
 class ExecutionResult(BaseModel):
     """Result of executing a complete runbook."""
 
+    run_id: str = Field(..., description="Unique run identifier (UUID)")
+    start_timestamp: str = Field(..., description="ISO8601 timestamp with timezone")
     artifacts: dict[str, ArtifactResult] = Field(default_factory=dict)
     skipped: set[str] = Field(default_factory=set)
     total_duration_seconds: float

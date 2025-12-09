@@ -624,6 +624,66 @@ class TestDAGExecutorObservability:
         # Assert
         assert result.artifacts["data"].duration_seconds >= 0
 
+    def test_execution_result_contains_valid_run_id(self) -> None:
+        """ExecutionResult.run_id is a valid UUID."""
+        from uuid import UUID
+
+        # Arrange
+        output_schema = Schema("standard_input", "1.0.0")
+        message = create_test_message({"files": []})
+        connector_factory = create_mock_connector_factory(
+            "filesystem", [output_schema], message
+        )
+
+        artifacts = {
+            "data": ArtifactDefinition(
+                source=SourceConfig(type="filesystem", properties={})
+            )
+        }
+        plan = create_simple_plan(artifacts, {"data": (None, output_schema)})
+
+        registry = create_mock_registry(
+            with_container=True, connector_factories={"filesystem": connector_factory}
+        )
+        executor = DAGExecutor(registry)
+
+        # Act
+        result = asyncio.run(executor.execute(plan))
+
+        # Assert - can parse as UUID without error
+        uuid_obj = UUID(result.run_id)
+        assert str(uuid_obj) == result.run_id
+
+    def test_execution_result_contains_iso8601_timestamp(self) -> None:
+        """ExecutionResult.start_timestamp is ISO8601 format with timezone."""
+        from datetime import datetime
+
+        # Arrange
+        output_schema = Schema("standard_input", "1.0.0")
+        message = create_test_message({"files": []})
+        connector_factory = create_mock_connector_factory(
+            "filesystem", [output_schema], message
+        )
+
+        artifacts = {
+            "data": ArtifactDefinition(
+                source=SourceConfig(type="filesystem", properties={})
+            )
+        }
+        plan = create_simple_plan(artifacts, {"data": (None, output_schema)})
+
+        registry = create_mock_registry(
+            with_container=True, connector_factories={"filesystem": connector_factory}
+        )
+        executor = DAGExecutor(registry)
+
+        # Act
+        result = asyncio.run(executor.execute(plan))
+
+        # Assert - can parse as ISO8601 with timezone
+        timestamp = datetime.fromisoformat(result.start_timestamp)
+        assert timestamp.tzinfo is not None
+
 
 class TestDAGExecutorTimeout:
     """Tests for timeout behaviour in DAGExecutor."""

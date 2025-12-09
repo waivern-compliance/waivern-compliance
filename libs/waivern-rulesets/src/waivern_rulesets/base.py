@@ -2,7 +2,7 @@
 
 import abc
 import logging
-from typing import Any, override
+from typing import Any, TypedDict, override
 
 from waivern_core import BaseRule, BaseRuleset, RulesetError
 
@@ -63,6 +63,17 @@ class RulesetAlreadyRegisteredError(RulesetError):
     """Raised when attempting to register a ruleset that already exists."""
 
     pass
+
+
+class RulesetRegistryState(TypedDict):
+    """State snapshot for RulesetRegistry.
+
+    Used for test isolation - captures and restores registry state
+    to prevent test pollution.
+    """
+
+    registry: dict[str, type[AbstractRuleset[Any]]]
+    type_mapping: dict[str, type[BaseRule]]
 
 
 class RulesetRegistry:
@@ -169,14 +180,14 @@ class RulesetRegistry:
         return name in self._registry
 
     @classmethod
-    def snapshot_state(cls) -> dict[str, Any]:
+    def snapshot_state(cls) -> RulesetRegistryState:
         """Capture current RulesetRegistry state for later restoration.
 
         This is primarily used for test isolation - save state before tests,
         restore after tests to prevent global state pollution.
 
         Returns:
-            Dictionary containing all mutable state
+            State dictionary containing all mutable registry state
 
         """
         instance = cls()
@@ -186,7 +197,7 @@ class RulesetRegistry:
         }
 
     @classmethod
-    def restore_state(cls, state: dict[str, Any]) -> None:
+    def restore_state(cls, state: RulesetRegistryState) -> None:
         """Restore RulesetRegistry state from a previously captured snapshot.
 
         This is primarily used for test isolation - restore state after tests

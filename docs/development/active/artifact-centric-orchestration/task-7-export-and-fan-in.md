@@ -446,7 +446,6 @@ apps/wct/src/wct/
 ```python
 from typing import Any, Protocol
 from waivern_orchestration import ExecutionPlan, ExecutionResult
-from wct.organisation import OrganisationConfig
 
 class Exporter(Protocol):
     @property
@@ -472,8 +471,15 @@ class Exporter(Protocol):
         self,
         result: ExecutionResult,
         plan: ExecutionPlan,
-        organisation: OrganisationConfig | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Export execution results to structured format.
+
+        Note:
+            Organisation configuration is passed at exporter initialization
+            for framework-specific exporters (e.g., GdprExporter), not at
+            export time. This enables proper dependency injection.
+        """
+        ...
 ```
 
 **2. Create `registry.py`:**
@@ -505,15 +511,49 @@ Extract `build_core_export()` from current `cli.py`:
 def build_core_export(
     result: ExecutionResult,
     plan: ExecutionPlan,
-    run_id: str | None = None,
-) -> dict[str, Any]:
-    """Build core export format shared by all exporters."""
-    # ... existing _build_export_output logic ...
+) -> CoreExport:
+    """Build core export format shared by all exporters.
+
+    Returns a validated Pydantic model for runtime validation.
+
+    Args:
+        result: ExecutionResult with run_id and start_timestamp already populated
+        plan: ExecutionPlan with runbook metadata
+
+    Returns:
+        CoreExport Pydantic model (convert to dict via .model_dump())
+
+    Note:
+        ExecutionResult now contains run_id and start_timestamp (generated
+        at execution time by DAGExecutor), so they don't need to be passed
+        separately. This was an architectural improvement to move metadata
+        generation upstream in the execution pipeline.
+    """
+    return CoreExport(
+        format_version="2.0.0",
+        run=RunInfo(
+            id=result.run_id,
+            timestamp=result.start_timestamp,
+            duration_seconds=result.total_duration_seconds,
+            status=_calculate_status(result),
+        ),
+        runbook=RunbookInfo(
+            name=plan.runbook.name,
+            description=plan.runbook.description,
+            contact=plan.runbook.contact,
+        ),
+        summary=_calculate_summary(result),
+        outputs=_build_output_entries(result, plan),
+        errors=_build_error_entries(result),
+        skipped=_build_skipped_list(result),
+    )
 ```
 
 **4. Create `json_exporter.py`:**
 
 ```python
+from wct.exporters.core import build_core_export
+
 class JsonExporter:
     @property
     def name(self) -> str:
@@ -524,10 +564,15 @@ class JsonExporter:
         return []  # Any framework (generic)
 
     def validate(self, result, plan) -> list[str]:
-        return []
+        return []  # Always valid
 
-    def export(self, result, plan, organisation=None) -> dict[str, Any]:
-        return build_core_export(result, plan)
+    def export(self, result, plan) -> dict[str, Any]:
+        """Export to generic JSON format.
+
+        Returns CoreExport model as dictionary for JSON serialization.
+        """
+        core_export = build_core_export(result, plan)
+        return core_export.model_dump()  # Pydantic model → dict
 ```
 
 **5. Update `cli.py`:**
