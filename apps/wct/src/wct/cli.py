@@ -583,6 +583,68 @@ def execute_runbook_command(  # noqa: PLR0913 - Matches CLI entry point signatur
         raise typer.Exit(1) from e
 
 
+def list_exporters_command(log_level: str = "INFO") -> None:
+    """CLI command implementation for listing exporters.
+
+    Args:
+        log_level: Logging level
+
+    """
+    setup_logging(level=log_level)
+
+    try:
+        # Initialise exporters to ensure they're registered
+        _initialise_exporters()
+
+        exporter_names = ExporterRegistry.list_exporters()
+        logger.info("Found %d available exporters", len(exporter_names))
+
+        if exporter_names:
+            # Create a rich table for exporters
+            table = Table(
+                title="🔧 Available Exporters",
+                show_header=True,
+                header_style="bold magenta",
+            )
+            table.add_column("Name", style="cyan", no_wrap=True)
+            table.add_column("Frameworks", style="white")
+
+            for name in exporter_names:
+                exporter = ExporterRegistry.get(name)
+                frameworks = exporter.supported_frameworks
+                frameworks_str = (
+                    ", ".join(frameworks) if frameworks else "Any (generic)"
+                )
+                table.add_row(name, frameworks_str)
+                logger.debug("Exporter %s: %s", name, frameworks_str)
+
+            console.print(table)
+        else:
+            warning_panel = Panel(
+                "[yellow]No exporters available. "
+                "Register exporters to see them here.[/yellow]",
+                title="⚠️  Warning",
+                border_style="yellow",
+            )
+            console.print(warning_panel)
+            logger.warning("No exporters registered in registry")
+
+    except Exception as e:
+        logger.error("Failed to list exporters: %s", e)
+        cli_error = CLIError(
+            f"Unable to retrieve available exporters: {e}",
+            command="ls-exporters",
+            original_error=e,
+        )
+        error_panel = Panel(
+            f"[red]{cli_error}[/red]",
+            title="❌ Failed to list exporters",
+            border_style="red",
+        )
+        console.print(error_panel)
+        raise typer.Exit(1) from cli_error
+
+
 def list_connectors_command(log_level: str = "INFO") -> None:
     """CLI command implementation for listing connectors.
 

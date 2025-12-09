@@ -385,6 +385,34 @@ class TestWCTCLIE2E:
         assert "Available:" in result.stderr or "Available:" in result.stdout
         assert "json" in result.stderr or "json" in result.stdout
 
+    def test_wct_cli_lists_available_exporters(self) -> None:
+        """CLI lists available exporters with their supported frameworks."""
+        # Act - Execute ls-exporters command
+        result = subprocess.run(
+            ["uv", "run", "wct", "ls-exporters"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+        # Assert - Command should succeed
+        assert result.returncode == 0, (
+            f"wct ls-exporters failed with return code {result.returncode}.\\n"
+            f"STDOUT: {result.stdout}\\n"
+            f"STDERR: {result.stderr}"
+        )
+
+        # Assert - Output should contain JSON exporter
+        assert "json" in result.stdout.lower(), (
+            "Expected to find 'json' exporter in output"
+        )
+
+        # Assert - Output should indicate framework support
+        assert "any" in result.stdout.lower() or "generic" in result.stdout.lower(), (
+            "Expected JSON exporter to show 'Any (generic)' framework support"
+        )
+
     @pytest.mark.skip(
         reason="TODO: Requires multiple exporters (e.g., GDPR exporter) "
         "to test override meaningfully - currently auto-detection always returns 'json'"
