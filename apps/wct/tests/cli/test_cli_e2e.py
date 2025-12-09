@@ -399,4 +399,7 @@ class TestWCTCLIE2E:
         - But `--exporter json` overrides to use "json" exporter
         - Output follows CoreExport format (not GdprExport format)
         """
+        # TODO: Implement this test when GDPR exporter is available
+        # Need runbook with GDPR analyser that would auto-detect "gdpr" exporter
+        # Then test that --exporter json overrides to use JSON exporter instead
         pytest.skip("Multiple exporters not yet implemented")
