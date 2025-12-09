@@ -5,10 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import uuid
-from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, override
+from typing import override
 
 import typer
 from rich.console import Console
@@ -29,13 +27,12 @@ from waivern_orchestration import (
     RunbookSchemaGenerator,
 )
 
+from wct.exporters.json_exporter import JsonExporter
+from wct.exporters.registry import ExporterRegistry
 from wct.logging import setup_logging
 
 logger = logging.getLogger(__name__)
 console = Console()
-
-# Export format version
-FORMAT_VERSION = "2.0.0"
 
 
 class CLIError(Exception):
@@ -70,6 +67,16 @@ class CLIError(Exception):
         if self.command:
             return f"CLI command '{self.command}' failed: {base_message}"
         return base_message
+
+
+def _initialise_exporters() -> None:
+    """Initialise and register all exporters.
+
+    Registers framework-agnostic exporters. Framework-specific exporters
+    (e.g., GdprExporter) are registered when their configuration becomes available.
+    """
+    ExporterRegistry.register(JsonExporter())
+    logger.debug("Registered JsonExporter")
 
 
 def _build_service_container() -> ServiceContainer:
@@ -396,149 +403,141 @@ class _OutputFormatter:
         console.print(completion_panel)
 
 
-def _determine_execution_status(failed_count: int, skipped_count: int) -> str:
-    """Determine execution status based on counts."""
-    if failed_count > 0:
-        return "failed"
-    if skipped_count > 0:
-        return "partial"
-    return "completed"
-
-
-def _build_output_entries(
-    result: ExecutionResult, plan: ExecutionPlan
-) -> list[dict[str, Any]]:
-    """Build output entries for successful artifacts with output: true."""
-    outputs: list[dict[str, Any]] = []
-    runbook = plan.runbook
-
-    for artifact_id, artifact_result in result.artifacts.items():
-        if not artifact_result.success:
-            continue
-
-        definition = runbook.artifacts.get(artifact_id)
-        if not definition or not definition.output:
-            continue
-
-        _, output_schema = plan.artifact_schemas.get(artifact_id, (None, None))
-
-        output_entry: dict[str, Any] = {
-            "artifact_id": artifact_id,
-            "duration_seconds": artifact_result.duration_seconds,
-        }
-
-        # Add optional metadata fields
-        if definition.name:
-            output_entry["name"] = definition.name
-        if definition.description:
-            output_entry["description"] = definition.description
-        if definition.contact:
-            output_entry["contact"] = definition.contact
-        if output_schema:
-            output_entry["schema"] = {
-                "name": output_schema.name,
-                "version": output_schema.version,
-            }
-        if artifact_result.message:
-            output_entry["content"] = artifact_result.message.content
-
-        outputs.append(output_entry)
-
-    return outputs
-
-
-def _build_export_output(
-    result: ExecutionResult,
-    plan: ExecutionPlan,
-    runbook_path: Path,
-    run_id: str,
-    timestamp: str,
-) -> dict[str, Any]:
-    """Build the export output dictionary.
-
-    Args:
-        result: ExecutionResult from DAGExecutor.
-        plan: ExecutionPlan with artifact definitions.
-        runbook_path: Path to the runbook file.
-        run_id: Unique run identifier.
-        timestamp: ISO8601 timestamp.
+def _setup_infrastructure() -> ComponentRegistry:
+    """Set up infrastructure for runbook execution.
 
     Returns:
-        Export dictionary ready for JSON serialization.
+        Configured ComponentRegistry with services.
 
     """
-    runbook = plan.runbook
-    failed_count = sum(1 for ar in result.artifacts.values() if not ar.success)
-    skipped_count = len(result.skipped)
-
-    # Build errors list
-    errors = [
-        {"artifact_id": aid, "error": ar.error}
-        for aid, ar in result.artifacts.items()
-        if not ar.success
-    ]
-
-    export_data: dict[str, Any] = {
-        "format_version": FORMAT_VERSION,
-        "run": {
-            "id": run_id,
-            "timestamp": timestamp,
-            "duration_seconds": result.total_duration_seconds,
-            "status": _determine_execution_status(failed_count, skipped_count),
-        },
-        "runbook": {
-            "path": str(runbook_path),
-            "name": runbook.name,
-            "description": runbook.description,
-        },
-        "summary": {
-            "total": len(result.artifacts) + skipped_count,
-            "succeeded": len(result.artifacts) - failed_count,
-            "failed": failed_count,
-            "skipped": skipped_count,
-        },
-        "outputs": _build_output_entries(result, plan),
-        "errors": errors,
-        "skipped": list(result.skipped),
-    }
-
-    if runbook.contact:
-        export_data["runbook"]["contact"] = runbook.contact
-
-    return export_data
+    _initialise_exporters()
+    container = _build_service_container()
+    registry = ComponentRegistry(container)
+    logger.debug("Infrastructure setup complete")
+    return registry
 
 
-def _save_results_to_json(
-    result: ExecutionResult,
-    plan: ExecutionPlan,
-    runbook_path: Path,
-    output_path: Path,
-) -> None:
-    """Save execution results to JSON file.
+def _plan_runbook(runbook_path: Path, registry: ComponentRegistry) -> ExecutionPlan:
+    """Plan runbook execution.
 
     Args:
-        result: ExecutionResult from DAGExecutor.
-        plan: ExecutionPlan with artifact definitions.
-        runbook_path: Path to the runbook file.
-        output_path: Path to save JSON output.
+        runbook_path: Path to the runbook YAML file.
+        registry: Component registry for factory lookup.
+
+    Returns:
+        Execution plan with artifact definitions.
+
+    Raises:
+        CLIError: If planning fails.
 
     """
-    run_id = str(uuid.uuid4())
-    timestamp = datetime.now(UTC).isoformat()
+    planner = Planner(registry)
+    try:
+        plan = planner.plan(runbook_path)
+        logger.info(
+            "Execution plan created with %d artifacts",
+            len(plan.runbook.artifacts),
+        )
+        return plan
+    except OrchestrationError as e:
+        logger.error("Planning failed: %s", e)
+        raise CLIError(
+            f"Failed to plan runbook execution: {e}",
+            command="run",
+            original_error=e,
+        ) from e
 
-    export_data = _build_export_output(result, plan, runbook_path, run_id, timestamp)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8") as f:
-        json.dump(export_data, f, indent=2, default=str)
+def _execute_plan(plan: ExecutionPlan, registry: ComponentRegistry) -> ExecutionResult:
+    """Execute runbook plan.
+
+    Args:
+        plan: Execution plan with artifact definitions.
+        registry: Component registry for factory lookup.
+
+    Returns:
+        Execution result with artifact outcomes.
+
+    Raises:
+        CLIError: If execution fails.
+
+    """
+    executor = DAGExecutor(registry)
+    try:
+        result = asyncio.run(executor.execute(plan))
+        logger.info(
+            "Execution completed: %d artifacts, %.2fs",
+            len(result.artifacts),
+            result.total_duration_seconds,
+        )
+        return result
+    except Exception as e:
+        logger.error("Execution failed: %s", e)
+        raise CLIError(
+            f"Failed to execute runbook: {e}",
+            command="run",
+            original_error=e,
+        ) from e
 
 
-def execute_runbook_command(
+def _export_results(
+    result: ExecutionResult,
+    plan: ExecutionPlan,
+    registry: ComponentRegistry,
+    output_path: Path,
+    exporter_override: str | None = None,
+) -> None:
+    """Export execution results to file.
+
+    Args:
+        result: Execution result with artifact outcomes.
+        plan: Execution plan with runbook metadata.
+        registry: Component registry for factory lookup.
+        output_path: Path to save JSON output.
+        exporter_override: Manual exporter selection (overrides auto-detection).
+
+    Raises:
+        CLIError: If export fails.
+
+    """
+    # Use manual override if provided, otherwise auto-detect
+    if exporter_override:
+        exporter_name = exporter_override
+        logger.info("Using manually specified exporter: %s", exporter_name)
+    else:
+        exporter_name = _detect_exporter(result, plan, registry)
+        logger.info("Using auto-detected exporter: %s", exporter_name)
+
+    # Get exporter from registry
+    try:
+        exporter = ExporterRegistry.get(exporter_name)
+    except ValueError as e:
+        raise CLIError(
+            str(e),
+            command="run",
+            original_error=e,
+        ) from e
+
+    # Export to file
+    try:
+        export_data = exporter.export(result, plan)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("w", encoding="utf-8") as f:
+            json.dump(export_data, f, indent=2, default=str)
+        logger.info("Results saved to JSON file: %s", output_path)
+    except Exception as e:
+        error_msg = f"Failed to save results to {output_path}: {e}"
+        logger.error(error_msg)
+        raise CLIError(error_msg, command="run", original_error=e) from e
+
+
+def execute_runbook_command(  # noqa: PLR0913 - Matches CLI entry point signature
     runbook_path: Path,
     output_dir: Path,
     output: Path,
     verbose: bool = False,
     log_level: str = "INFO",
+    exporter_override: str | None = None,
 ) -> None:
     """CLI command implementation for running analyses.
 
@@ -548,6 +547,7 @@ def execute_runbook_command(
         output: Path to save results as JSON
         verbose: Enable verbose output
         log_level: Logging level
+        exporter_override: Manual exporter selection (overrides auto-detection)
 
     """
     effective_log_level = "DEBUG" if verbose else log_level
@@ -557,62 +557,21 @@ def execute_runbook_command(
     formatter.show_startup_banner(runbook_path, output_dir, log_level, verbose)
 
     try:
-        # Build infrastructure
-        container = _build_service_container()
-        registry = ComponentRegistry(container)
+        # Setup infrastructure
+        registry = _setup_infrastructure()
 
-        # Plan execution
-        planner = Planner(registry)
-        try:
-            plan = planner.plan(runbook_path)
-            logger.info(
-                "Execution plan created with %d artifacts",
-                len(plan.runbook.artifacts),
-            )
-        except OrchestrationError as e:
-            logger.error("Planning failed: %s", e)
-            raise CLIError(
-                f"Failed to plan runbook execution: {e}",
-                command="run",
-                original_error=e,
-            ) from e
+        # Plan and execute
+        plan = _plan_runbook(runbook_path, registry)
+        result = _execute_plan(plan, registry)
 
-        # Execute plan
-        executor = DAGExecutor(registry)
-        try:
-            result = asyncio.run(executor.execute(plan))
-            logger.info(
-                "Execution completed: %d artifacts, %.2fs",
-                len(result.artifacts),
-                result.total_duration_seconds,
-            )
-        except Exception as e:
-            logger.error("Execution failed: %s", e)
-            raise CLIError(
-                f"Failed to execute runbook: {e}",
-                command="run",
-                original_error=e,
-            ) from e
-
+        # Display results
         formatter.show_execution_completion()
         formatter.format_execution_result(result, plan, verbose)
 
-        # Save results to JSON file
-        if output.is_absolute():
-            final_output_path = output
-        else:
-            final_output_path = output_dir / output
-
-        try:
-            _save_results_to_json(result, plan, runbook_path, final_output_path)
-            formatter.show_file_save_success(final_output_path)
-            logger.info("Results saved to JSON file: %s", final_output_path)
-        except Exception as e:
-            error_msg = f"Failed to save results to {final_output_path}: {e}"
-            logger.error(error_msg)
-            formatter.show_file_save_error(error_msg)
-            raise CLIError(error_msg, command="run", original_error=e) from e
-
+        # Export results
+        final_output_path = output if output.is_absolute() else output_dir / output
+        _export_results(result, plan, registry, final_output_path, exporter_override)
+        formatter.show_file_save_success(final_output_path)
         formatter.show_completion_summary(result, final_output_path)
 
     except CLIError as e:
@@ -622,6 +581,68 @@ def execute_runbook_command(
         )
         console.print(error_panel)
         raise typer.Exit(1) from e
+
+
+def list_exporters_command(log_level: str = "INFO") -> None:
+    """CLI command implementation for listing exporters.
+
+    Args:
+        log_level: Logging level
+
+    """
+    setup_logging(level=log_level)
+
+    try:
+        # Initialise exporters to ensure they're registered
+        _initialise_exporters()
+
+        exporter_names = ExporterRegistry.list_exporters()
+        logger.info("Found %d available exporters", len(exporter_names))
+
+        if exporter_names:
+            # Create a rich table for exporters
+            table = Table(
+                title="🔧 Available Exporters",
+                show_header=True,
+                header_style="bold magenta",
+            )
+            table.add_column("Name", style="cyan", no_wrap=True)
+            table.add_column("Frameworks", style="white")
+
+            for name in exporter_names:
+                exporter = ExporterRegistry.get(name)
+                frameworks = exporter.supported_frameworks
+                frameworks_str = (
+                    ", ".join(frameworks) if frameworks else "Any (generic)"
+                )
+                table.add_row(name, frameworks_str)
+                logger.debug("Exporter %s: %s", name, frameworks_str)
+
+            console.print(table)
+        else:
+            warning_panel = Panel(
+                "[yellow]No exporters available. "
+                "Register exporters to see them here.[/yellow]",
+                title="⚠️  Warning",
+                border_style="yellow",
+            )
+            console.print(warning_panel)
+            logger.warning("No exporters registered in registry")
+
+    except Exception as e:
+        logger.error("Failed to list exporters: %s", e)
+        cli_error = CLIError(
+            f"Unable to retrieve available exporters: {e}",
+            command="ls-exporters",
+            original_error=e,
+        )
+        error_panel = Panel(
+            f"[red]{cli_error}[/red]",
+            title="❌ Failed to list exporters",
+            border_style="red",
+        )
+        console.print(error_panel)
+        raise typer.Exit(1) from cli_error
 
 
 def list_connectors_command(log_level: str = "INFO") -> None:
@@ -752,6 +773,73 @@ def validate_runbook_command(runbook_path: Path, log_level: str = "INFO") -> Non
         )
         console.print(error_panel)
         raise typer.Exit(1) from cli_error
+
+
+def _framework_to_exporter(framework: str) -> str:
+    """Map compliance framework to exporter name.
+
+    Args:
+        framework: Compliance framework identifier.
+
+    Returns:
+        Exporter name for the framework.
+
+    """
+    mapping = {
+        "GDPR": "gdpr",
+        "UK_GDPR": "gdpr",
+        "CCPA": "ccpa",
+    }
+    return mapping.get(framework, "json")
+
+
+def _detect_exporter(
+    result: ExecutionResult,
+    plan: ExecutionPlan,
+    registry: ComponentRegistry,
+) -> str:
+    """Auto-detect exporter based on analyser compliance frameworks.
+
+    Examines analyser factories used in successful artifacts and collects
+    their declared compliance frameworks.
+
+    Args:
+        result: Execution result with artifact outcomes.
+        plan: Execution plan with runbook definitions.
+        registry: Component registry for factory lookup.
+
+    Returns:
+        Exporter name based on detected frameworks.
+
+    """
+    frameworks: set[str] = set()
+
+    for artifact_id, artifact_result in result.artifacts.items():
+        if not artifact_result.success:
+            continue
+
+        definition = plan.runbook.artifacts.get(artifact_id)
+        if definition is None or definition.transform is None:
+            continue
+
+        # Get analyser factory and check its compliance frameworks
+        analyser_type = definition.transform.type
+        if analyser_type in registry.analyser_factories:
+            factory = registry.analyser_factories[analyser_type]
+            frameworks.update(factory.component_class.get_compliance_frameworks())
+
+    # Map frameworks to exporter
+    if len(frameworks) == 1:
+        return _framework_to_exporter(frameworks.pop())
+    elif len(frameworks) > 1:
+        # Multiple frameworks detected - fall back to JSON
+        logger.info(
+            "Multiple compliance frameworks detected: %s. Using JSON exporter.",
+            frameworks,
+        )
+        return "json"
+    else:
+        return "json"  # All generic analysers
 
 
 def generate_schema_command(output_path: Path, log_level: str = "INFO") -> None:

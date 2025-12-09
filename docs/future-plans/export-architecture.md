@@ -1,8 +1,8 @@
 # Export Architecture Design
 
-- **Status:** Design Proposal
-- **Last Updated:** 2025-12-03
-- **Related:** [Multi-Schema Fan-In](./multi-schema-fan-in.md), [Artifact-Centric Runbook](./artifact-centric-runbook.md)
+- **Status:** Partially Implemented (Core infrastructure complete, framework-specific exporters pending)
+- **Last Updated:** 2025-12-09
+- **Related:** [Multi-Schema Fan-In](./multi-schema-fan-in.md), [Artifact-Centric Runbook](./artifact-centric-runbook.md), [Export Re-Export Command](./export-re-export-command.md)
 
 ## Overview
 
@@ -705,21 +705,21 @@ apps/wct/src/wct/
 └── cli.py                    # Updated with export support
 ```
 
-## Implementation Tasks
+## Implementation Status
 
-### Task C: Export Foundation
+### Task C: Export Foundation ✅ COMPLETE
 
-1. Add `get_compliance_frameworks()` classmethod to `Analyser` and `Connector` base classes in waivern-core
-2. Create `wct/exporters/` module structure
-3. Implement `Exporter` protocol
-4. Implement `ExporterRegistry`
-5. Implement `_detect_exporter()` for schema-based discovery
-6. Extract `build_core_export()` from current CLI
-7. Implement `JsonExporter`
-8. Add `--exporter` flag to `wct run`
-9. Add `wct export` command
-10. Add `wct ls-exporters` command
-11. Register exporters at app startup
+1. ✅ Add `get_compliance_frameworks()` classmethod to `Analyser` and `Connector` base classes in waivern-core
+2. ✅ Create `wct/exporters/` module structure
+3. ✅ Implement `Exporter` protocol
+4. ✅ Implement `ExporterRegistry`
+5. ✅ Implement `_detect_exporter()` for schema-based discovery
+6. ✅ Extract `build_core_export()` from current CLI
+7. ✅ Implement `JsonExporter`
+8. ✅ Add `--exporter` flag to `wct run`
+9. ⏸️ Add `wct export` command - **DEFERRED** (see [Export Re-Export Command](./export-re-export-command.md))
+10. ✅ Add `wct ls-exporters` command
+11. ✅ Register exporters at app startup
 
 ### Task D: Organisation Config Enhancement
 

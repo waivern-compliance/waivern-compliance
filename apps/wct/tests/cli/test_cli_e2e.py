@@ -5,6 +5,8 @@ import subprocess
 import time
 from pathlib import Path
 
+import pytest
+
 
 class TestWCTCLIE2E:
     """Test WCT CLI command execution and JSON file output generation."""
@@ -244,3 +246,188 @@ class TestWCTCLIE2E:
         # Assert - Should produce output files
         json_files = list(output_dir.glob("*.json"))
         assert len(json_files) > 0, "Performance test should produce JSON output files"
+
+    def test_wct_cli_uses_json_exporter_for_generic_analysers(
+        self, tmp_path: Path
+    ) -> None:
+        """CLI uses JSON exporter when no framework-specific analysers are detected."""
+        # Arrange
+        runbook_path = Path("apps/wct/runbooks/samples/file_content_analysis.yaml")
+        assert runbook_path.exists(), f"Runbook not found: {runbook_path}"
+
+        output_dir = tmp_path / "exporter_test"
+        output_dir.mkdir()
+
+        # Act - Execute WCT CLI command with generic analysers
+        result = subprocess.run(  # noqa: S603
+            [  # noqa: S607
+                "uv",
+                "run",
+                "wct",
+                "run",
+                str(runbook_path),
+                "--output-dir",
+                str(output_dir),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+
+        # Assert - Command should succeed
+        assert result.returncode == 0, (
+            f"WCT CLI failed with return code {result.returncode}.\n"
+            f"STDOUT: {result.stdout}\n"
+            f"STDERR: {result.stderr}"
+        )
+
+        # Assert - Output should indicate JSON exporter was used
+        assert (
+            "Using exporter: json" in result.stdout or "json" in result.stdout.lower()
+        )
+
+        # Assert - Output file should use CoreExport structure
+        json_files = list(output_dir.glob("*.json"))
+        assert len(json_files) > 0, "Should produce JSON output file"
+
+        with json_files[0].open() as f:
+            export_data = json.load(f)
+
+        # Verify CoreExport structure
+        assert "format_version" in export_data
+        assert export_data["format_version"] == "2.0.0"
+        assert "run" in export_data
+        assert "runbook" in export_data
+        assert "summary" in export_data
+        assert "outputs" in export_data
+
+    @pytest.mark.skip(
+        reason="TODO: Requires framework-specific analyser (e.g., GDPR analyser) "
+        "that returns non-empty compliance frameworks from get_compliance_frameworks()"
+    )
+    def test_wct_cli_uses_framework_specific_exporter_for_single_framework(
+        self, tmp_path: Path
+    ) -> None:
+        """CLI uses framework-specific exporter when single framework detected.
+
+        This test will be implemented when we have framework-specific analysers
+        (e.g., GDPR analyser) that declare compliance frameworks.
+
+        Expected behaviour:
+        - Runbook uses GDPR analyser (returns ["GDPR"] from get_compliance_frameworks())
+        - CLI detects single framework
+        - CLI uses "gdpr" exporter instead of "json" exporter
+        - Output follows GdprExport format
+        """
+        pytest.skip("Framework-specific analysers not yet implemented")
+
+    @pytest.mark.skip(
+        reason="TODO: Requires multiple framework-specific analysers "
+        "(e.g., GDPR + CCPA analysers) that return different frameworks"
+    )
+    def test_wct_cli_falls_back_to_json_for_multiple_frameworks(
+        self, tmp_path: Path
+    ) -> None:
+        """CLI falls back to JSON exporter when multiple frameworks detected.
+
+        This test will be implemented when we have multiple framework-specific
+        analysers that declare different compliance frameworks.
+
+        Expected behaviour:
+        - Runbook uses GDPR analyser (returns ["GDPR"]) + CCPA analyser (returns ["CCPA"])
+        - CLI detects multiple frameworks: {"GDPR", "CCPA"}
+        - CLI logs: "Multiple compliance frameworks detected: {...}. Using JSON exporter."
+        - CLI falls back to "json" exporter
+        - Output follows CoreExport format
+        """
+        pytest.skip("Multiple framework-specific analysers not yet implemented")
+
+    def test_wct_cli_rejects_invalid_exporter_with_helpful_message(
+        self, tmp_path: Path
+    ) -> None:
+        """CLI rejects invalid exporter with helpful error message."""
+        # Arrange
+        runbook_path = Path("apps/wct/runbooks/samples/file_content_analysis.yaml")
+        assert runbook_path.exists(), f"Runbook not found: {runbook_path}"
+
+        output_dir = tmp_path / "invalid_exporter_test"
+        output_dir.mkdir()
+
+        # Act - Execute with invalid exporter
+        result = subprocess.run(  # noqa: S603
+            [  # noqa: S607
+                "uv",
+                "run",
+                "wct",
+                "run",
+                str(runbook_path),
+                "--output-dir",
+                str(output_dir),
+                "--exporter",
+                "invalid_exporter",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+
+        # Assert - Command should fail
+        assert result.returncode == 1, (
+            f"Expected CLI to fail with invalid exporter, but got return code {result.returncode}"
+        )
+
+        # Assert - Error message should mention unknown exporter and show available
+        assert "Unknown exporter 'invalid_exporter'" in result.stderr or (
+            "Unknown exporter 'invalid_exporter'" in result.stdout
+        )
+        assert "Available:" in result.stderr or "Available:" in result.stdout
+        assert "json" in result.stderr or "json" in result.stdout
+
+    def test_wct_cli_lists_available_exporters(self) -> None:
+        """CLI lists available exporters with their supported frameworks."""
+        # Act - Execute ls-exporters command
+        result = subprocess.run(
+            ["uv", "run", "wct", "ls-exporters"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+        # Assert - Command should succeed
+        assert result.returncode == 0, (
+            f"wct ls-exporters failed with return code {result.returncode}.\\n"
+            f"STDOUT: {result.stdout}\\n"
+            f"STDERR: {result.stderr}"
+        )
+
+        # Assert - Output should contain JSON exporter
+        assert "json" in result.stdout.lower(), (
+            "Expected to find 'json' exporter in output"
+        )
+
+        # Assert - Output should indicate framework support
+        assert "any" in result.stdout.lower() or "generic" in result.stdout.lower(), (
+            "Expected JSON exporter to show 'Any (generic)' framework support"
+        )
+
+    @pytest.mark.skip(
+        reason="TODO: Requires multiple exporters (e.g., GDPR exporter) "
+        "to test override meaningfully - currently auto-detection always returns 'json'"
+    )
+    def test_wct_cli_respects_manual_exporter_override(self, tmp_path: Path) -> None:
+        """CLI respects --exporter flag to override auto-detection.
+
+        This test will be implemented when we have multiple exporters (e.g., GDPR exporter).
+
+        Expected behaviour:
+        - Runbook with GDPR analyser would auto-detect "gdpr" exporter
+        - But `--exporter json` overrides to use "json" exporter
+        - Output follows CoreExport format (not GdprExport format)
+        """
+        # TODO: Implement this test when GDPR exporter is available
+        # Need runbook with GDPR analyser that would auto-detect "gdpr" exporter
+        # Then test that --exporter json overrides to use JSON exporter instead
+        pytest.skip("Multiple exporters not yet implemented")

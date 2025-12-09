@@ -3,7 +3,7 @@
 This module provides the command-line interface for the Waivern Compliance Tool,
 including commands for:
 - Running compliance runbooks
-- Listing available connectors and analysers
+- Listing available connectors, analysers, and exporters
 - Validating runbooks
 - Testing LLM connectivity
 """
@@ -22,6 +22,7 @@ from wct.cli import (
     generate_schema_command,
     list_analysers_command,
     list_connectors_command,
+    list_exporters_command,
     validate_runbook_command,
 )
 
@@ -34,7 +35,7 @@ app = typer.Typer(name="waivern-compliance-tool")
 
 
 @app.command()
-def run(
+def run(  # noqa: PLR0913 - CLI entry point with many options
     runbook: Annotated[
         Path,
         typer.Argument(
@@ -85,11 +86,20 @@ def run(
             case_sensitive=False,
         ),
     ] = "INFO",
+    exporter: Annotated[
+        str | None,
+        typer.Option(
+            "--exporter",
+            help="Specify exporter to use (overrides auto-detection). Available: json, gdpr, ccpa",
+            rich_help_panel="Output",
+        ),
+    ] = None,
 ) -> None:
     """Execute a runbook with configurable output options and logging.
 
     Example:
         wct run compliance-runbook.yaml --output-dir ./results --output report.json -v
+        wct run compliance-runbook.yaml --exporter json
 
     """
     # Set default output directory if not provided
@@ -101,7 +111,7 @@ def run(
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output = Path(f"{timestamp}_analysis_results.json")
 
-    execute_runbook_command(runbook, output_dir, output, verbose, log_level)
+    execute_runbook_command(runbook, output_dir, output, verbose, log_level, exporter)
 
 
 @app.command(name="ls-connectors")
@@ -132,6 +142,21 @@ def list_available_analysers(
 ) -> None:
     """List available (built-in & registered) analysers."""
     list_analysers_command(log_level)
+
+
+@app.command(name="ls-exporters")
+def list_available_exporters(
+    log_level: Annotated[
+        str,
+        typer.Option(
+            "--log-level",
+            help="Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+            case_sensitive=False,
+        ),
+    ] = "INFO",
+) -> None:
+    """List available exporters."""
+    list_exporters_command(log_level)
 
 
 @app.command(name="validate-runbook")

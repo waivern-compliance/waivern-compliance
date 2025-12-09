@@ -1,11 +1,11 @@
 # Task 7: Export Infrastructure and Multi-Schema Fan-In
 
 - **Phase:** 4 - Export & Regulatory Analysers
-- **Status:** IN_PROGRESS (Tasks 7a-7c complete)
+- **Status:** COMPLETE (Core infrastructure 7a-7d done, 7e-7f deferred)
 - **GitHub Issue:** TBD
 - **Prerequisites:** Tasks 1-6 (artifact-centric orchestration complete)
 - **Design:** [Multi-Schema Fan-In](../../../future-plans/multi-schema-fan-in.md), [Export Architecture](../../../future-plans/export-architecture.md)
-- **Follow-on:** [GDPR Complete](../../../future-plans/gdpr-complete.md)
+- **Follow-on:** [GDPR Complete](../../../future-plans/gdpr-complete.md), [Organisation Config Enhancement](../../../future-plans/organisation-config-enhancement.md), [Export Re-Export Command](../../../future-plans/export-re-export-command.md)
 
 ## Context
 
@@ -30,12 +30,12 @@ This task focuses on **infrastructure only**. GDPR-specific implementation is tr
 
 Sub-tasks for incremental delivery:
 
-- **Task 7a:** Multi-schema analyser support in waivern-core (refactor analyser interface)
-- **Task 7b:** Multi-schema fan-in in waivern-orchestration
-- **Task 7c:** Migrate existing analysers to new interface
-- **Task 7d:** Export infrastructure in wct
-- **Task 7e:** Organisation config enhancement
-- **Task 7f:** Sample runbook and documentation
+- **Task 7a:** Multi-schema analyser support in waivern-core (refactor analyser interface) ✅ DONE
+- **Task 7b:** Multi-schema fan-in in waivern-orchestration ✅ DONE
+- **Task 7c:** Migrate existing analysers to new interface ✅ DONE
+- **Task 7d:** Export infrastructure in wct ✅ DONE
+- **Task 7e:** Organisation config enhancement ⏸️ DEFERRED (see [Organisation Config Enhancement](../../../future-plans/organisation-config-enhancement.md))
+- **Task 7f:** Sample runbook and documentation ⏸️ DEFERRED (see [Organisation Config Enhancement](../../../future-plans/organisation-config-enhancement.md))
 
 ---
 
@@ -427,6 +427,8 @@ All 841 tests passing. Branch: `feature/multi-schema-analyser-support`
 
 ## Task 7d: Export Infrastructure (wct)
 
+**Status:** DONE
+
 ### Directory Structure
 
 ```
@@ -653,17 +655,66 @@ The compliance framework is **not** declared in the Runbook. Instead, it is disc
 
 ### Tests
 
-- `test_exporter_registry_register_and_get`
-- `test_exporter_registry_unknown_raises`
-- `test_json_exporter_produces_core_format`
-- `test_detect_exporter_single_framework`
-- `test_detect_exporter_multiple_frameworks_uses_json`
-- `test_detect_exporter_no_frameworks_uses_json`
-- `test_cli_export_command`
+- ✅ `test_exporter_registry_register_and_get`
+- ✅ `test_exporter_registry_unknown_raises`
+- ✅ `test_json_exporter_produces_core_format`
+- ✅ `test_wct_cli_uses_json_exporter_for_generic_analysers`
+- ✅ `test_wct_cli_rejects_invalid_exporter_with_helpful_message`
+- ✅ `test_wct_cli_lists_available_exporters`
+- ⏸️ `test_wct_cli_uses_framework_specific_exporter_for_single_framework` (skipped - awaiting GDPR analyser)
+- ⏸️ `test_wct_cli_falls_back_to_json_for_multiple_frameworks` (skipped - awaiting multiple framework analysers)
+- ⏸️ `test_wct_cli_respects_manual_exporter_override` (skipped - awaiting GDPR exporter)
+
+### Completion Notes
+
+Successfully implemented core export infrastructure:
+
+**Completed:**
+1. ✅ Added `get_compliance_frameworks()` classmethod to `Analyser` and `Connector` base classes
+2. ✅ Created `Exporter` protocol (`wct/exporters/protocol.py`)
+3. ✅ Implemented `ExporterRegistry` with register/get/list operations
+4. ✅ Extracted `build_core_export()` shared logic into `wct/exporters/core.py`
+5. ✅ Implemented `JsonExporter` as default exporter
+6. ✅ Implemented `_detect_exporter()` for compliance framework-based auto-detection
+7. ✅ Refactored CLI for maintainability (extracted helper functions following SRP)
+8. ✅ Added `--exporter` flag to `wct run` for manual override
+9. ✅ Implemented `wct ls-exporters` command
+10. ✅ Comprehensive E2E integration tests
+
+**Deferred (see [Export Re-Export Command](../../../future-plans/export-re-export-command.md)):**
+- ⏸️ `wct export` command - requires execution persistence infrastructure
+
+**Key design decisions:**
+- Compliance frameworks discovered from analysers, not declared in runbooks
+- Organisation config passed at exporter initialization (DI pattern), not export time
+- Exporter auto-detection with manual override capability
+- Integration tests defer framework-specific scenarios until GDPR exporter exists
+
+All tests passing (875 passed, 15 skipped). Branch: `feature/exporter-detection`
 
 ---
 
 ## Task 7e: Organisation Config Enhancement
+
+**Status:** DEFERRED (see [Organisation Config Enhancement](../../../future-plans/organisation-config-enhancement.md))
+
+**Rationale:** Multi-jurisdiction organisation config has no consumer until GDPR exporter exists. Implementing config enhancement before GDPR exporter risks premature design based on speculative requirements rather than actual needs.
+
+**Moved to:** [Organisation Config Enhancement](../../../future-plans/organisation-config-enhancement.md) for implementation after GDPR analyser and exporter.
+
+---
+
+## Task 7f: Sample Runbook and Documentation
+
+**Status:** DEFERRED (see [Organisation Config Enhancement](../../../future-plans/organisation-config-enhancement.md))
+
+**Rationale:** Sample runbooks demonstrating organisation config → GDPR export flow require GDPR exporter to exist. Multi-schema fan-in is already demonstrated in existing runbooks.
+
+**Moved to:** [Organisation Config Enhancement](../../../future-plans/organisation-config-enhancement.md) for implementation after GDPR analyser and exporter.
+
+---
+
+## ~~Task 7e: Organisation Config Enhancement~~ (Original Design - DEFERRED)
 
 ### Changes
 
@@ -732,7 +783,7 @@ class OrganisationLoader:
 
 ---
 
-## Task 7f: Sample Runbook and Documentation
+## ~~Task 7f: Sample Runbook and Documentation~~ (Original Design - DEFERRED)
 
 ### Sample Runbook
 
@@ -818,21 +869,39 @@ def test_multi_schema_fan_in_end_to_end():
 
 ## Implementation Order
 
-1. **Task 7a** - Core infrastructure (InputRequirement, unified process(), contract tests)
-2. **Task 7b** - Orchestration support (Planner exact set matching, Executor)
-3. **Task 7c** - Migrate existing analysers (breaking change, all at once)
-4. **Task 7d** - Export foundation (protocol, registry, JsonExporter)
-5. **Task 7e** - Organisation enhancement (multi-jurisdiction)
-6. **Task 7f** - Sample runbook and docs
+1. ✅ **Task 7a** - Core infrastructure (InputRequirement, unified process(), contract tests)
+2. ✅ **Task 7b** - Orchestration support (Planner exact set matching, Executor)
+3. ✅ **Task 7c** - Migrate existing analysers (breaking change, all at once)
+4. ✅ **Task 7d** - Export foundation (protocol, registry, JsonExporter)
+5. ⏸️ **Task 7e** - Organisation enhancement (multi-jurisdiction) - DEFERRED
+6. ⏸️ **Task 7f** - Sample runbook and docs - DEFERRED
 
-Each sub-task should pass `./scripts/dev-checks.sh` before proceeding.
+**Tasks 7a-7d complete.** Tasks 7e-7f deferred to [Organisation Config Enhancement](../../../future-plans/organisation-config-enhancement.md) for implementation after GDPR analyser and exporter.
+
+## Task 7 Summary
+
+**Core infrastructure complete (7a-7d):**
+- ✅ Multi-schema analyser interface with InputRequirement
+- ✅ Planner and Executor support for multi-schema fan-in
+- ✅ All analysers migrated to new interface
+- ✅ Export infrastructure (protocol, registry, auto-detection, JsonExporter)
+- ✅ CLI commands: `wct run --exporter`, `wct ls-exporters`
+
+**Deferred to future work:**
+- ⏸️ Organisation config enhancement - see [Organisation Config Enhancement](../../../future-plans/organisation-config-enhancement.md)
+- ⏸️ Sample runbooks and documentation - see [Organisation Config Enhancement](../../../future-plans/organisation-config-enhancement.md)
+- ⏸️ `wct export` command - see [Export Re-Export Command](../../../future-plans/export-re-export-command.md)
+
+**Rationale for deferral:** Avoid premature design. Implement GDPR analyser and exporter first to discover actual requirements, then enhance organisation config and documentation based on real needs.
 
 ## Follow-on Work
 
-After Task 7 is complete, the infrastructure is ready for regulatory analysers. See [GDPR Complete](../../../future-plans/gdpr-complete.md) for the full GDPR implementation plan including:
+The infrastructure is ready for regulatory analysers. Next step: [GDPR Complete](../../../future-plans/gdpr-complete.md) for full GDPR implementation including:
 
 - DataTransferAnalyser (complete the existing stub)
 - RetentionAnalyser
 - LegalBasisAnalyser
 - GdprArticle30Analyser (multi-schema fan-in synthesiser)
-- GDPRExporter
+- GdprExporter
+
+After GDPR implementation, return to deferred tasks with evidence-based requirements.
