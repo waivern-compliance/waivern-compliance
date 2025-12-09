@@ -1,322 +1,232 @@
-# Lightweight DAG Orchestration Layer for WCT
+# DAG Orchestration Evolution
 
-- **Status:** Phase 1 Implemented
-- **Last Updated:** 2025-12-02
-- **Related:** [Artifact-Centric Runbook](./artifact-centric-runbook.md), [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md)
+- **Status:** Phase 1 Complete, Phase 2 Planning
+- **Last Updated:** 2025-12-09
+- **Related:** [Artifact-Centric Runbook](./artifact-centric-runbook.md), [Execution Persistence](./execution-persistence.md)
 
-> **Implementation:** Phase 1 (Planner, DAGExecutor, ArtifactStore) is complete. See [completed design](../development/completed/artifact-centric-orchestration-design.md) for implementation details.
+## Current State
 
-## Overview
+Phase 1 orchestration is complete (see [implementation](../development/completed/artifact-centric-orchestration-design.md)): Planner validates runbooks and builds execution plans; DAGExecutor runs artifacts in parallel using `graphlib.TopologicalSorter`. The system handles dependency resolution, schema validation, and basic error propagation.
 
-Design for a lightweight DAG orchestration layer using Python's stdlib `graphlib.TopologicalSorter` with asyncio-native parallel execution. The layer focuses purely on step sequencing and parallel execution - complex behaviours (HTTP, polling, retries) remain at the analyser/service layer.
+**Foundation capabilities:**
+- Parallel execution respecting dependencies
+- Schema compatibility validation at plan time
+- Multi-schema fan-in support for analysers
+- Error propagation (skip dependents on failure)
 
-## Design Decisions
+## Remaining Challenges
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| DAG Library | `graphlib.TopologicalSorter` | Stdlib, zero deps, designed for parallel execution |
-| Parallelism | Always parallel | Independent steps run concurrently by default |
-| Fan-in | Supported | `input_from` accepts list of step IDs |
-| Error Handling | Minimal | `continue_on_error` per step, skip dependents on failure |
-| Execution Model | asyncio + ThreadPool | Async orchestration, sync analysers via thread pool |
+**Observability gap:** Execution happens in-memory with minimal visibility. No way to inspect artifacts after execution, understand why steps failed, or visualise execution flow.
 
-## Architecture
+**Persistence gap:** Results exist only during execution. Cannot re-export, audit historical runs, or build on previous analysis without re-execution.
 
-### Separation of Concerns
+**Debugging difficulty:** No step-through capability, limited insight into data flowing between artifacts, hard to diagnose schema mismatches or transformation issues.
 
-The orchestration layer is split into **Planner** (builds execution plan) and **Executor** (runs the plan):
+## Phase 2: Enhanced Observability and Debugging
 
-```
-┌─────────────────────────────────────────────────────────┐
-│              waivern-orchestration (package)            │
-│                                                         │
-│  Planner                                                │
-│    ├── Parse runbook                                    │
-│    ├── Build artifact dependency graph (DAG)            │
-│    ├── Validate (cycles, missing refs, schema compat)   │
-│    └── Produce immutable ExecutionPlan                  │
-│                                                         │
-│  Dependencies: waivern-core only                        │
-└─────────────────────────────────────────────────────────┘
-                          │
-                          │ ExecutionPlan
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│              Executor (in wct or other apps)            │
-│                                                         │
-│    ├── Execute plan (parallel, respecting deps)         │
-│    ├── Manage ArtifactStore                             │
-│    ├── Handle errors (skip dependents)                  │
-│    ├── Spawn child executors (recursive runbooks)       │
-│    └── Track progress, costs, timing                    │
-└─────────────────────────────────────────────────────────┘
+### Design Goals
+
+1. **Artifact inspection** - View artifact contents and metadata after execution
+2. **Execution replay** - Understand what happened during historical runs
+3. **Visual debugging** - See data flow and dependencies
+4. **Step-through execution** - Debug runbooks interactively
+
+### Artifact Inspection
+
+**Problem:** Artifacts only exist during execution. Cannot inspect what data flowed between steps or diagnose issues post-execution.
+
+**Design:**
+
+```bash
+# View artifact contents from past run
+wct inspect <run-id> <artifact-id>
+
+# Example
+wct inspect run_20251209_143022 personal_data_findings
 ```
 
-### Interface Contract
+**Requirements:**
+- ExecutionStore persists execution metadata (run ID, timestamps, status, errors)
+- ArtifactStore persists artifact messages (schema, content, metadata)
+- Run ID correlates execution with artifacts
 
-```python
-# waivern-orchestration package
+**See:** [Execution Persistence](./execution-persistence.md) for storage design.
 
-class ExecutionPlan:
-    """Immutable, validated execution plan."""
-    dag: ExecutionDAG
-    artifacts: dict[str, ArtifactDef]
+### DAG Visualisation
 
-class Planner:
-    """Builds execution plans from runbooks."""
-    def plan(self, runbook_path: Path) -> ExecutionPlan: ...
-    def plan_from_dict(self, runbook: dict) -> ExecutionPlan: ...
+**Problem:** Hard to understand runbook execution flow, dependency relationships, and critical path.
 
-# Executor protocol (implemented by apps)
+**Design:**
 
-class Executor(Protocol):
-    """Any executor must implement this."""
-    def execute(self, plan: ExecutionPlan) -> ExecutionResult: ...
+```bash
+# Generate visual DAG from runbook
+wct visualise <runbook> --format mermaid
+
+# Show execution status (requires run ID)
+wct visualise <runbook> --run <run-id>
 ```
 
-### Benefits of Separation
+**Output example (Mermaid):**
 
-| Concern | Planner | Executor |
-|---------|---------|----------|
-| Validation | All upfront | None needed |
-| DAG building | Yes | Just follows plan |
-| Testability | Test graph logic | Test execution logic |
-| Reuse | Visualization, dry-run, validation | Different runtimes |
+```mermaid
+graph TD
+    A[db_schema] --> B[personal_data]
+    A --> C[processing_purposes]
+    B --> D[gdpr_article30]
+    C --> D
 
-### Schema Validation at Plan Time
-
-The Planner validates schema compatibility **before execution** using the component registry:
-
-```python
-class Planner:
-    def __init__(self, registry: ComponentRegistry):
-        self._registry = registry
-
-    def plan(self, runbook_path: Path) -> ExecutionPlan:
-        runbook = self._parse(runbook_path)
-        dag = self._build_dag(runbook.artifacts)
-        self._validate_dag(dag)
-        self._validate_schemas(runbook.artifacts)
-        return ExecutionPlan(dag=dag, artifacts=runbook.artifacts)
-
-    def _validate_schemas(self, artifacts: dict[str, ArtifactDef]) -> None:
-        for artifact_id, defn in artifacts.items():
-            if defn.source:
-                # Validate connector outputs schema
-                connector = self._registry.get_connector(defn.source.type)
-                output_schema = connector.get_output_schema()
-            if defn.transform:
-                # Validate analyser input/output compatibility
-                analyser = self._registry.get_analyser(defn.transform.type)
-                input_schema = analyser.get_input_schema()
-                # Validate upstream produces compatible schema
-                ...
+    style A fill:#90EE90
+    style B fill:#90EE90
+    style C fill:#FF6B6B
+    style D fill:#FFA500
 ```
 
-**Validation Responsibilities:**
+**Status colours:**
+- Green: Completed successfully
+- Red: Failed
+- Orange: Skipped (dependency failed)
+- Grey: Not yet executed
 
-| Validation | Stage | Description |
-|------------|-------|-------------|
-| YAML parsing | Plan | Runbook syntax and structure |
-| Cycle detection | Plan | No circular dependencies |
-| Missing refs | Plan | All `from` references exist |
-| Schema compatibility | Plan | Upstream output matches downstream input |
-| Component existence | Plan | All connectors/analysers registered |
-| Runtime errors | Execute | Connection failures, data issues |
+**Considerations:**
+- Use Planner to generate DAG (no execution needed)
+- Mermaid format for GitHub/docs integration
+- DOT format for Graphviz rendering
+- Optional: Load execution status from persisted run
 
-### Executor Variants
+### Step-Through Debugger
 
-- **LocalExecutor** - Current WCT implementation
-- **DryRunExecutor** - Validation only, no execution
-- **DebugExecutor** - Step-through with breakpoints
-- **DistributedExecutor** - Future, for scale-out
+**Problem:** Cannot debug runbook execution interactively. Must add logging and re-run entire workflow.
 
-## Core Components
+**Design:**
 
-### ExecutionDAG
+```bash
+# Run with breakpoints
+wct debug <runbook>
 
-```python
-from graphlib import TopologicalSorter
-
-@dataclass
-class StepNode:
-    step_id: str
-    step: ExecutionStep
-    dependencies: set[str]
-    continue_on_error: bool = False
-
-class ExecutionDAG:
-    def __init__(self, steps: list[ExecutionStep]) -> None:
-        self._nodes: dict[str, StepNode] = {}
-        self._build_graph(steps)
-
-    def _extract_dependencies(self, input_from: str | list[str] | None) -> set[str]:
-        if input_from is None:
-            return set()
-        if isinstance(input_from, str):
-            return {input_from}
-        return set(input_from)  # Fan-in support
-
-    def validate(self) -> None:
-        graph = {n.step_id: n.dependencies for n in self._nodes.values()}
-        ts = TopologicalSorter(graph)
-        ts.prepare()  # Raises CycleError if cycles
-
-    def create_sorter(self) -> TopologicalSorter[str]:
-        graph = {n.step_id: n.dependencies for n in self._nodes.values()}
-        ts = TopologicalSorter(graph)
-        ts.prepare()
-        return ts
+# Interactive session
+[wct-debug] Breaking before artifact: personal_data_findings
+[wct-debug] Input schemas: standard_input:1.0.0
+[wct-debug] Commands: continue (c), inspect (i), skip (s), quit (q)
+> i db_schema
+{
+  "schema": "standard_input:1.0.0",
+  "content": { "items": [...] }
+}
+> c
+[wct-debug] Breaking after artifact: personal_data_findings
+[wct-debug] Output: 42 findings, 3 high-risk
+> c
 ```
 
-### DAGExecutor
+**Implementation approach:**
+- DebugExecutor variant with breakpoint support
+- Interactive shell (cmd/prompt_toolkit)
+- Pause before/after each artifact
+- Inspect inputs, outputs, configuration
+- Continue, skip, or abort execution
 
-```python
-class DAGExecutor:
-    def __init__(self, dag: ExecutionDAG, max_concurrency: int = 10) -> None:
-        self._dag = dag
-        self._semaphore = asyncio.Semaphore(max_concurrency)
-        self._thread_pool = ThreadPoolExecutor(max_workers=max_concurrency)
+**Considerations:**
+- CLI-only (no GUI)
+- Breakpoints configurable via flag or runbook annotation
+- Must integrate with existing error handling
 
-    async def execute(self, context: ExecutionContext, step_fn) -> list[StepResult]:
-        results: list[StepResult] = []
-        sorter = self._dag.create_sorter()
+### Execution Timeline Analysis
 
-        while sorter.is_active():
-            ready_ids = sorter.get_ready()
-            executable = [sid for sid in ready_ids if sid not in context.skipped_steps]
+**Problem:** Cannot identify performance bottlenecks or understand parallel execution efficiency.
 
-            # Execute ready steps in parallel
-            tasks = [self._execute_step(sid, context, step_fn) for sid in executable]
-            step_results = await asyncio.gather(*tasks)
+**Design:**
 
-            for result in step_results:
-                results.append(result)
-                sorter.done(result.step_id)
-                if not result.success:
-                    self._handle_failure(result, context)
-
-        return results
-
-    def _handle_failure(self, result: StepResult, context: ExecutionContext) -> None:
-        node = self._dag.get_node(result.step_id)
-        context.failed_steps.add(result.step_id)
-        if not node.continue_on_error:
-            self._skip_dependents(result.step_id, context)
+```bash
+wct timeline <run-id>
 ```
 
-## Schema Changes
+**Output:**
+```
+Execution Timeline (run_20251209_143022)
+Total: 45.2s | Parallel efficiency: 78%
 
-### ExecutionStep Extension
+00:00 ████████████ db_schema (12.3s)
+00:12 ████████ personal_data (8.1s)
+00:12 ██████████ processing_purposes (10.2s)
+00:22 ███████████████████ gdpr_article30 (19.4s)
 
-```python
-class ExecutionStep(BaseModel):
-    # CHANGED: Support list for fan-in
-    input_from: str | list[str] | None = Field(
-        default=None,
-        description="Step ID(s) to read input from. List for fan-in."
-    )
-
-    # NEW: Merge strategy for fan-in
-    merge_strategy: Literal["concatenate", "first"] = Field(
-        default="concatenate",
-        description="How to merge multiple inputs"
-    )
-
-    # Existing context field - used for continue_on_error
-    context: dict[str, Any] = Field(default_factory=dict)
+Critical path: db_schema → processing_purposes → gdpr_article30 (41.9s)
 ```
 
-## Usage Examples
+**Considerations:**
+- Requires ExecutionStore with artifact timing
+- Show wall-clock time, not CPU time
+- Identify critical path (longest dependency chain)
+- Calculate parallel efficiency (actual time vs sequential time)
+- Useful for optimising expensive analysers
 
-### Fan-in Pattern
+## Phase 3: Advanced Execution Modes
 
-```yaml
-execution:
-  - id: "extract_mysql"
-    connector: "mysql_db"
-    analyser: "personal_data_analyser"
-    output_schema: "personal_data_finding"
-    save_output: true
+### Distributed Execution
 
-  - id: "extract_files"
-    connector: "log_files"
-    analyser: "personal_data_analyser"
-    output_schema: "personal_data_finding"
-    save_output: true
+**Problem:** Large runbooks with expensive analysers cannot scale beyond single machine.
 
-  - id: "merge_findings"
-    input_from:
-      - "extract_mysql"
-      - "extract_files"
-    merge_strategy: "concatenate"
-    analyser: "findings_aggregator"
-    output_schema: "personal_data_finding"
+**Design considerations:**
+- DAGExecutor variant that dispatches artifacts to remote workers
+- Worker pool (Docker containers, Lambda functions, etc.)
+- Centralized ArtifactStore for data passing
+- Requires serializable artifact messages (already true)
+
+**Challenges:**
+- Network reliability and retry logic
+- Cost management (LLM API calls distributed across workers)
+- Debugging distributed failures
+
+**Not planned:** This requires significant infrastructure investment. Current single-machine execution is sufficient for foreseeable workloads.
+
+### Dry-Run Mode
+
+**Problem:** Want to validate runbook without executing connectors or analysers.
+
+**Design:**
+
+```bash
+wct run <runbook> --dry-run
 ```
 
-### Error Handling
+**Behaviour:**
+- Planner validates runbook (schema compatibility, cycles, missing refs)
+- Executor generates mock artifacts matching declared schemas
+- No actual connector/analyser execution
+- Shows execution plan and predicted data flow
 
-```yaml
-execution:
-  - id: "optional_llm_step"
-    connector: "my_connector"
-    analyser: "llm_analyser"
-    save_output: true
-    context:
-      continue_on_error: true  # Continue even if this fails
+**Use cases:**
+- Runbook development and testing
+- CI validation before deployment
+- Schema compatibility verification
 
-  - id: "dependent_step"
-    input_from: "optional_llm_step"
-    analyser: "processor"
-    # Skipped if optional_llm_step fails (unless continue_on_error: true)
-```
+## Design Principles
 
-## Observability
+**Simplicity:** Use stdlib where possible (`graphlib.TopologicalSorter`, `asyncio`). Avoid orchestration frameworks.
 
-### Must Have (v1)
+**Separation:** Planner validates and builds plan; Executor runs it. Clean interface enables multiple executor variants.
 
-**Step-by-step logging:**
-```
-[INFO] Starting artifact: db_schema
-[INFO] Completed artifact: db_schema (1.2s)
-[INFO] Starting artifacts: db_findings, log_findings (parallel)
-[INFO] Completed artifact: db_findings (3.4s)
-[ERROR] Failed artifact: log_findings - ConnectionError
-[WARN] Skipping artifact: combined_findings (dependency failed)
-```
+**Fail-fast:** Schema validation at plan time, not runtime. Errors caught before expensive execution.
 
-### Requires Artifact Persistence
+**Observable:** Execution visibility through logging, persistence, and inspection tools. No black-box execution.
 
-See [Execution Persistence](./execution-persistence.md) for full design.
+**Non-goals:** No distributed execution, no workflow persistence beyond artifact storage, no complex retry logic. Keep orchestration layer thin.
 
-**Artifact inspection:**
-- `wct inspect <run_id> <artifact_id>` - View artifact contents after execution
-- Requires persistent `ExecutionStore` and `ArtifactStore`
-- Run ID correlates execution metadata with artifacts
+## Implementation Dependencies
 
-### Nice to Have (Future)
+**Phase 2 (Observability):**
+- Execution Persistence (ExecutionStore + ArtifactStore) - Required for inspection and timeline
+- Planner DAG generation (already exists) - Required for visualisation
+- Rich terminal UI library (optional) - For better debugging experience
 
-**DAG visualisation:**
-- `wct visualize <runbook>` - Generate DOT/Mermaid graph
-- Shows artifact dependencies and execution order
-- Colour-coded by status (pending, running, completed, failed, skipped)
-
-**Execution timeline:**
-- Wall-clock timing per artifact
-- Parallel execution visibility
-- Critical path identification
-
-## What NOT to Implement
-
-1. **No workflow persistence** - Steps run in-memory only (future: pluggable store)
-2. **No distributed execution** - Single process, multi-threaded
-3. **No retry logic** - Retries belong at service/analyser layer
-4. **No complex error handlers** - Just skip dependents on failure
-5. **No observability infrastructure** - Standard logging is sufficient for v1
+**Phase 3 (Advanced Modes):**
+- Serializable artifact transport - Required for distributed execution
+- Mock schema generators - Required for dry-run mode
+- Worker orchestration infrastructure - Required for distributed execution
 
 ## Related Documents
 
-- [Artifact-Centric Runbook](./artifact-centric-runbook.md) - Runbook format design
-- [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md) - Service injection pattern
-- [Dynamic and Agentic Workflows](./dynamic-and-agentic-workflows.md) - Future evolution
-- [Remote Analyser Protocol](./remote-analyser-protocol.md) - Async remote services
+- [Execution Persistence](./execution-persistence.md) - Storage design for inspection and replay
+- [Artifact-Centric Runbook](./artifact-centric-runbook.md) - Runbook format
+- [Dynamic and Agentic Workflows](./dynamic-and-agentic-workflows.md) - Adaptive execution
+- [Completed Implementation](../development/completed/artifact-centric-orchestration-design.md) - Phase 1 details
