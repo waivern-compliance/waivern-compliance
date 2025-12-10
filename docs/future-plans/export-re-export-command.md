@@ -1,12 +1,32 @@
 # Export Re-Export Command (`wct export`)
 
 - **Status:** Deferred - Awaiting Execution Persistence
-- **Last Updated:** 2025-12-09
+- **Last Updated:** 2025-12-10
 - **Related:** [Export Architecture](./export-architecture.md), [Execution Persistence](./execution-persistence.md)
 
 ## Problem
 
 Users need to generate multiple compliance formats (GDPR, CCPA, etc.) from a single analysis run without re-executing the entire runbook. Currently, re-exporting requires re-running the analysis.
+
+## Architectural Decisions
+
+The following architectural decisions drive the design of the export and re-export functionality:
+
+1. **ExecutionResult is the single source of truth**
+   - `ExecutionResult` contains all execution metadata, artifact results, timing, and status information
+   - All export operations must work from `ExecutionResult` as the canonical data source
+   - In future, `ExecutionResult` should be persistable in a datastore (similar to artifacts) to enable historical access and re-export
+
+2. **Re-exporting operates on ExecutionResult, not re-execution**
+   - Re-export should load a previously saved `ExecutionResult` from persistent storage
+   - Re-export must NOT re-run the analysis pipeline
+   - This enables fast format conversion and supports SaaS deployments where users need historical access
+
+These decisions ensure that:
+- Export logic remains pure presentation layer (no analysis logic)
+- Performance is optimised (no unnecessary re-computation)
+- Historical data can be accessed without re-execution
+- Future persistence layer can be implemented cleanly
 
 ## Rationale for Deferral
 
