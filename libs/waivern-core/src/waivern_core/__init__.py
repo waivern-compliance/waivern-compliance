@@ -8,6 +8,7 @@ __version__ = "0.1.0"
 
 from waivern_core.base_analyser import Analyser
 from waivern_core.base_connector import Connector
+from waivern_core.base_processor import Processor
 from waivern_core.base_ruleset import BaseRuleset, RulesetError
 from waivern_core.component_factory import ComponentConfig, ComponentFactory
 from waivern_core.errors import (
@@ -19,6 +20,10 @@ from waivern_core.errors import (
     ConnectorError,
     ConnectorExtractionError,
     MessageValidationError,
+    ProcessorConfigError,
+    ProcessorError,
+    ProcessorInputError,
+    ProcessorProcessingError,
     WaivernError,
 )
 from waivern_core.message import Message
@@ -38,7 +43,11 @@ from waivern_core.services import (
     ServiceFactory,
     ServiceProvider,
 )
-from waivern_core.testing import AnalyserContractTests, ComponentFactoryContractTests
+from waivern_core.testing import (
+    AnalyserContractTests,
+    ComponentFactoryContractTests,
+    ProcessorContractTests,
+)
 from waivern_core.types import InputRequirement
 from waivern_core.utils import update_analyses_chain
 
@@ -50,6 +59,7 @@ __all__ = [
     "BaseRuleset",
     "Connector",
     "Message",
+    "Processor",
     "Schema",
     # Schema utilities
     "SchemaLoader",
@@ -58,13 +68,15 @@ __all__ = [
     "BaseRule",
     "RuleComplianceData",
     "RulesetData",
-    # Dependency Injection
+    # Testing
     "AnalyserContractTests",
+    "ComponentFactoryContractTests",
+    "ProcessorContractTests",
+    # Dependency Injection
     "BaseComponentConfiguration",
     "BaseServiceConfiguration",
     "ComponentConfig",
     "ComponentFactory",
-    "ComponentFactoryContractTests",
     "ComponentRegistry",
     "ServiceContainer",
     "ServiceDescriptor",
@@ -84,6 +96,10 @@ __all__ = [
     "ConnectorConfigError",
     "ConnectorExtractionError",
     "MessageValidationError",
+    "ProcessorConfigError",
+    "ProcessorError",
+    "ProcessorInputError",
+    "ProcessorProcessingError",
     "RulesetError",
     "SchemaLoadError",
 ]

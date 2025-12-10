@@ -9,12 +9,12 @@ The Waivern Compliance Framework provides:
 - **Framework Libraries** - Core abstractions, multi-provider LLM support, and built-in components
 - **WCT (Waivern Compliance Tool)** - CLI application for orchestrating compliance analysis
 - **Schema-Driven Architecture** - Type-safe component communication through JSON Schema
-- **Extensible Design** - Open standards for connectors, analysers, and rulesets
+- **Extensible Design** - Open standards for connectors, processors, and rulesets
 
 ### Core Components
 
 - **Connectors** - Extract data from sources (MySQL, SQLite, files, source code)
-- **Analysers** - Detect compliance issues (personal data, processing purposes, data subjects)
+- **Processors** - Detect compliance issues (personal data, processing purposes, data subjects)
 - **Rulesets** - YAML-based pattern definitions for static analysis
 - **Runbooks** - YAML configurations defining analysis pipelines
 - **Executor** - Orchestrates runbook execution with automatic schema matching
@@ -73,7 +73,7 @@ uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml -v
 ```bash
 # List components
 uv run wct ls-connectors
-uv run wct ls-analysers
+uv run wct ls-processors
 
 # Validate runbook
 uv run wct validate-runbook apps/wct/runbooks/samples/file_content_analysis.yaml
@@ -88,27 +88,30 @@ uv run wct generate-schema
 name: "Personal Data Analysis"
 description: "Detect personal data in files and databases"
 
-connectors:
-  - name: "filesystem_reader"
-    type: "filesystem"
-    properties:
-      path: "./sample_file.txt"
+artifacts:
+  # Source artifact - extracts data from filesystem
+  file_content:
+    name: "File Content Extraction"
+    description: "Read files from the filesystem"
+    source:
+      type: "filesystem"
+      properties:
+        path: "./sample_file.txt"
 
-analysers:
-  - name: "content_analyser"
-    type: "personal_data_analyser"
-    properties:
-      pattern_matching:
-        ruleset: "personal_data"
-        evidence_context_size: "medium"
-      llm_validation:
-        enable_llm_validation: true
-
-execution:
-  - connector: "filesystem_reader"
-    analyser: "content_analyser"
-    input_schema: "standard_input"
-    output_schema: "personal_data_finding"
+  # Derived artifact - processes file content for personal data
+  personal_data_findings:
+    name: "Personal Data Detection"
+    description: "Detect personal data patterns in content"
+    inputs: file_content
+    process:
+      type: "personal_data"
+      properties:
+        pattern_matching:
+          ruleset: "personal_data"
+          evidence_context_size: "medium"
+        llm_validation:
+          enable_llm_validation: true
+    output: true  # Include in final output
 ```
 
 **Sample Runbooks:**
@@ -127,7 +130,7 @@ waivern-compliance/
 │   ├── waivern-core/              # Core abstractions
 │   ├── waivern-llm/               # Multi-provider LLM support
 │   ├── waivern-connectors-*/      # Connectors (mysql, sqlite, filesystem, source-code)
-│   ├── waivern-analysers-*/       # Analysers (personal-data, data-subject, processing-purpose)
+│   ├── waivern-*-analyser/        # Analysers (personal-data, data-subject, processing-purpose)
 │   └── waivern-*-shared/          # Shared utilities (rulesets, analyser utils, database utils)
 └── apps/
     └── wct/                        # CLI application (plugin host)
@@ -240,7 +243,7 @@ class MyConnectorFactory(ComponentFactory[MyConnector]):
         return MyConnector(config)
 ```
 
-#### Analyser Example
+#### Processor Example
 
 ```python
 from typing import override

@@ -65,7 +65,7 @@ waivern-compliance/
 ### Core WCF Concepts
 
 1. **Connectors** - Extract data from sources (databases, files, APIs) and transform to WCF schemas
-2. **Analysers** - Pure functions that process schema-validated data and produce compliance findings
+2. **Processors** - Pure functions that process schema-validated data and produce compliance findings
 3. **Rulesets** - YAML-based pattern definitions for static compliance analysis
 4. **Schemas** - JSON Schema contracts that define component communication
 5. **Runbooks** - YAML configurations defining artifacts and their dependencies (like Infrastructure as Code)
@@ -150,7 +150,7 @@ uv run wct run apps/wct/runbooks/samples/LAMP_stack.yaml -v
 
 # List available components
 uv run wct ls-connectors
-uv run wct ls-analysers
+uv run wct ls-processors
 
 # Validate runbook
 uv run wct validate-runbook apps/wct/runbooks/samples/file_content_analysis.yaml
@@ -257,10 +257,10 @@ artifacts:
       properties:
         path: "./sample_file.txt"
 
-  # Derived artifact - transforms data
+  # Derived artifact - processes data
   personal_data_findings:
     inputs: file_content
-    transform:
+    process:
       type: "personal_data"
       properties:
         pattern_matching:
@@ -270,7 +270,7 @@ artifacts:
 
 **Key concepts:**
 - **Source artifacts** use `source` to extract data via connectors
-- **Derived artifacts** use `inputs` + `transform` to process upstream data
+- **Derived artifacts** use `inputs` + `process` to process upstream data
 - **`output: true`** marks artifacts for inclusion in results
 - Dependencies determine execution order (parallel where possible)
 

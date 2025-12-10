@@ -12,12 +12,12 @@ from waivern_orchestration import (
     ExecutionResult,
     MissingArtifactError,
     OrchestrationError,
+    ProcessConfig,
     Runbook,
     RunbookConfig,
     RunbookParseError,
     SchemaCompatibilityError,
     SourceConfig,
-    TransformConfig,
 )
 
 
@@ -35,19 +35,19 @@ class TestSourceArtifact:
 
 
 class TestDerivedArtifact:
-    """Tests for derived artifacts (transform-based)."""
+    """Tests for derived artifacts (processor-based)."""
 
     def test_derived_artifact_valid(self) -> None:
-        """Derived artifact with inputs and transform should be valid."""
+        """Derived artifact with inputs and process should be valid."""
         artifact = ArtifactDefinition(
             inputs="data_source",
-            transform=TransformConfig(
+            process=ProcessConfig(
                 type="personal_data_analyser", properties={"ruleset": "personal_data"}
             ),
         )
         assert artifact.inputs == "data_source"
-        assert artifact.transform is not None
-        assert artifact.transform.type == "personal_data_analyser"
+        assert artifact.process is not None
+        assert artifact.process.type == "personal_data_analyser"
         assert artifact.source is None
 
 
@@ -58,7 +58,7 @@ class TestFanInArtifact:
         """Fan-in artifact with multiple inputs should be valid."""
         artifact = ArtifactDefinition(
             inputs=["source_a", "source_b"],
-            transform=TransformConfig(type="merger", properties={}),
+            process=ProcessConfig(type="merger", properties={}),
             merge="concatenate",
         )
         assert artifact.inputs == ["source_a", "source_b"]
@@ -68,7 +68,7 @@ class TestFanInArtifact:
         """Merge strategy should default to 'concatenate'."""
         artifact = ArtifactDefinition(
             inputs=["source_a", "source_b"],
-            transform=TransformConfig(type="merger", properties={}),
+            process=ProcessConfig(type="merger", properties={}),
         )
         assert artifact.merge == "concatenate"
 
@@ -144,7 +144,7 @@ class TestArtifactMetadata:
         """Artifact should accept optional output_schema field."""
         artifact = ArtifactDefinition(
             inputs="source_data",
-            transform=TransformConfig(type="analyser", properties={}),
+            process=ProcessConfig(type="analyser", properties={}),
             output_schema="custom_output/1.0.0",
         )
         assert artifact.output_schema == "custom_output/1.0.0"
@@ -153,7 +153,7 @@ class TestArtifactMetadata:
         """Artifact should accept optional field to mark non-critical artifacts."""
         artifact = ArtifactDefinition(
             inputs="source_data",
-            transform=TransformConfig(type="analyser", properties={}),
+            process=ProcessConfig(type="analyser", properties={}),
             optional=True,
         )
         assert artifact.optional is True
@@ -161,7 +161,7 @@ class TestArtifactMetadata:
         # Default should be False
         artifact_default = ArtifactDefinition(
             inputs="source_data",
-            transform=TransformConfig(type="analyser", properties={}),
+            process=ProcessConfig(type="analyser", properties={}),
         )
         assert artifact_default.optional is False
 
@@ -190,7 +190,7 @@ class TestRunbook:
                 ),
                 "findings": ArtifactDefinition(
                     inputs="data",
-                    transform=TransformConfig(type="analyser", properties={}),
+                    process=ProcessConfig(type="analyser", properties={}),
                     output=True,
                 ),
             },

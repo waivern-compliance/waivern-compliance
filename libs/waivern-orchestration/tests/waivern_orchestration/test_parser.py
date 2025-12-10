@@ -26,7 +26,7 @@ artifacts:
 
   findings:
     inputs: data_source
-    transform:
+    process:
       type: analyser
       properties: {}
     output: true
@@ -206,7 +206,7 @@ class TestParseRunbookFromDict:
                 },
                 "findings": {
                     "inputs": "data_source",
-                    "transform": {"type": "analyser", "properties": {}},
+                    "process": {"type": "analyser", "properties": {}},
                     "output": True,
                 },
             },

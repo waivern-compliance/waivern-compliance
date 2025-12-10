@@ -64,7 +64,7 @@ class Planner:
             RunbookParseError: If runbook cannot be parsed.
             CycleDetectedError: If dependency cycle detected.
             MissingArtifactError: If artifact reference is invalid.
-            ComponentNotFoundError: If connector/analyser type not found.
+            ComponentNotFoundError: If connector/processor type not found.
             SchemaCompatibilityError: If schemas are incompatible.
 
         """
@@ -87,7 +87,7 @@ class Planner:
             RunbookParseError: If runbook structure is invalid.
             CycleDetectedError: If dependency cycle detected.
             MissingArtifactError: If artifact reference is invalid.
-            ComponentNotFoundError: If connector/analyser type not found.
+            ComponentNotFoundError: If connector/processor type not found.
             SchemaCompatibilityError: If schemas are incompatible.
 
         """
@@ -226,7 +226,7 @@ class Planner:
             Tuple of (input_schema, output_schema).
 
         Raises:
-            ComponentNotFoundError: If analyser type not found.
+            ComponentNotFoundError: If processor type not found.
             SchemaCompatibilityError: If fan-in inputs have incompatible schemas.
 
         """
@@ -241,8 +241,8 @@ class Planner:
         # Determine output schema - explicit override takes precedence
         if definition.output_schema is not None:
             output_schema = self._parse_schema_string(definition.output_schema)
-        elif definition.transform is not None:
-            output_schema = self._get_analyser_output_schema(definition.transform.type)
+        elif definition.process is not None:
+            output_schema = self._get_processor_output_schema(definition.process.type)
         else:
             # Pass-through: output equals input
             output_schema = input_schema
@@ -307,24 +307,24 @@ class Planner:
             version = "1.0.0"
         return Schema(name, version)
 
-    def _get_analyser_output_schema(self, analyser_type: str) -> Schema:
-        """Get output schema from an analyser factory.
+    def _get_processor_output_schema(self, processor_type: str) -> Schema:
+        """Get output schema from a processor factory.
 
         Args:
-            analyser_type: The analyser type name.
+            processor_type: The processor type name.
 
         Returns:
-            The analyser's output schema.
+            The processor's output schema.
 
         Raises:
-            ComponentNotFoundError: If analyser type not found or has no output schemas.
+            ComponentNotFoundError: If processor type not found or has no output schemas.
 
         """
-        if analyser_type not in self._registry.analyser_factories:
-            raise ComponentNotFoundError(f"Analyser type '{analyser_type}' not found")
+        if processor_type not in self._registry.processor_factories:
+            raise ComponentNotFoundError(f"Processor type '{processor_type}' not found")
 
-        factory = self._registry.analyser_factories[analyser_type]
-        return self._get_first_output_schema(factory, f"Analyser '{analyser_type}'")
+        factory = self._registry.processor_factories[processor_type]
+        return self._get_first_output_schema(factory, f"Processor '{processor_type}'")
 
     def _get_first_output_schema(
         self, factory: ComponentFactory[Any], component_desc: str

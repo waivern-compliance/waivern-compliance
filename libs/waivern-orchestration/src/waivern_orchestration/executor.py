@@ -2,7 +2,7 @@
 
 The DAGExecutor executes artifacts in parallel using asyncio, respecting
 dependency ordering from the ExecutionDAG. Sync components (connectors,
-analysers) are bridged to async via ThreadPoolExecutor.
+processors) are bridged to async via ThreadPoolExecutor.
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ from waivern_orchestration.models import (
     ArtifactDefinition,
     ArtifactResult,
     ExecutionResult,
+    ProcessConfig,
     SourceConfig,
-    TransformConfig,
 )
 from waivern_orchestration.planner import ExecutionPlan
 
@@ -251,33 +251,33 @@ class DAGExecutor:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(thread_pool, sync_extract)
 
-    async def _run_analyser(
+    async def _run_processor(
         self,
-        transform: TransformConfig,
+        process_config: ProcessConfig,
         inputs: list[Message],
         output_schema: Schema,
         thread_pool: ThreadPoolExecutor,
     ) -> Message:
-        """Run an analyser in the thread pool.
+        """Run a processor in the thread pool.
 
         Args:
-            transform: Transform configuration with analyser type and properties.
+            process_config: Process configuration with processor type and properties.
             inputs: List of input messages to process.
             output_schema: The output schema for the result.
             thread_pool: ThreadPoolExecutor for sync->async bridging.
 
         Returns:
-            Processed message from the analyser.
+            Processed message from the processor.
 
         Raises:
-            KeyError: If analyser type not found in registry.
+            KeyError: If processor type not found in registry.
 
         """
-        factory = self._registry.analyser_factories[transform.type]
+        factory = self._registry.processor_factories[process_config.type]
 
         def sync_process() -> Message:
-            analyser = factory.create(transform.properties)
-            return analyser.process(inputs, output_schema)
+            processor = factory.create(process_config.properties)
+            return processor.process(inputs, output_schema)
 
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(thread_pool, sync_process)
@@ -311,9 +311,9 @@ class DAGExecutor:
         # Retrieve input messages from store
         input_messages = [store.get(ref) for ref in input_refs]
 
-        if definition.transform is not None:
-            return await self._run_analyser(
-                definition.transform,
+        if definition.process is not None:
+            return await self._run_processor(
+                definition.process,
                 input_messages,
                 output_schema,
                 thread_pool,

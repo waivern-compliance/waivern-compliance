@@ -35,7 +35,7 @@ include = [
 packages = ["src/waivern_processing_purpose_analyser"]
 
 # Component discovery via entry points
-[project.entry-points."waivern.analysers"]
+[project.entry-points."waivern.processors"]
 processing_purpose = "waivern_processing_purpose_analyser:ProcessingPurposeAnalyserFactory"
 
 [project.entry-points."waivern.schemas"]

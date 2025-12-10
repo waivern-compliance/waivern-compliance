@@ -4,7 +4,7 @@ Command-line application for compliance analysis using the Waivern Compliance Fr
 
 ## Overview
 
-WCT is the CLI tool that orchestrates compliance analysis using connectors, analysers, and rulesets from the Waivern ecosystem. It reads YAML runbook configurations and executes compliance analysis pipelines.
+WCT is the CLI tool that orchestrates compliance analysis using connectors, processors, and rulesets from the Waivern ecosystem. It reads YAML runbook configurations and executes compliance analysis pipelines.
 
 ## Package Structure
 
@@ -83,7 +83,7 @@ See the [main README](../../README.md) for installation and usage instructions.
 # From workspace root
 uv run wct run runbooks/samples/file_content_analysis.yaml
 uv run wct ls-connectors
-uv run wct ls-analysers
+uv run wct ls-processors
 ```
 
 ## Testing

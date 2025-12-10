@@ -14,6 +14,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
 from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
+from waivern_core import Analyser
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 from waivern_llm import BaseLLMService
@@ -225,7 +226,7 @@ class _OutputFormatter:
 
         Args:
             components: Dictionary of component names to factories
-            component_type: Type name for display (e.g., "connectors", "analysers")
+            component_type: Type name for display (e.g., "connectors", "processors")
 
         """
         if components:
@@ -237,23 +238,22 @@ class _OutputFormatter:
             )
             table.add_column("Name", style="cyan", no_wrap=True)
             table.add_column("Description", style="white")
-            table.add_column("Factory", style="dim")
+            table.add_column("Class", style="dim")
 
             for name, factory in components.items():
-                # Get factory docstring for description
-                doc = factory.__class__.__doc__ or "No description available"
+                # Get component class docstring for description
+                component_class = factory.component_class
+                doc = component_class.__doc__ or "No description available"
                 # Take first line of docstring
                 description = doc.split("\n")[0].strip()
-                factory_name = (
-                    f"{factory.__class__.__module__}.{factory.__class__.__name__}"
-                )
+                class_name = f"{component_class.__module__}.{component_class.__name__}"
 
-                table.add_row(name, description, factory_name)
+                table.add_row(name, description, class_name)
                 logger.debug(
                     "%s %s: %s",
                     component_type.rstrip("s").title(),
                     name,
-                    factory.__class__.__name__,
+                    component_class.__name__,
                 )
 
             console.print(table)
@@ -314,9 +314,9 @@ class _OutputFormatter:
                             else [definition.inputs]
                         )
                         artifact_branch.add(f"Inputs: [blue]{', '.join(inputs)}[/blue]")
-                    if definition.transform:
+                    if definition.process:
                         artifact_branch.add(
-                            f"Transform: [yellow]{definition.transform.type}[/yellow]"
+                            f"Process: [yellow]{definition.process.type}[/yellow]"
                         )
                     if definition.output:
                         artifact_branch.add("[green]📤 Output[/green]")
@@ -681,8 +681,8 @@ def list_connectors_command(log_level: str = "INFO") -> None:
         raise typer.Exit(1) from cli_error
 
 
-def list_analysers_command(log_level: str = "INFO") -> None:
-    """CLI command implementation for listing analysers.
+def list_processors_command(log_level: str = "INFO") -> None:
+    """CLI command implementation for listing processors.
 
     Args:
         log_level: Logging level
@@ -694,23 +694,23 @@ def list_analysers_command(log_level: str = "INFO") -> None:
         container = _build_service_container()
         registry = ComponentRegistry(container)
 
-        logger.debug("Getting available analysers from registry")
-        analysers = dict(registry.analyser_factories)
-        logger.info("Found %d available analysers", len(analysers))
+        logger.debug("Getting available processors from registry")
+        processors = dict(registry.processor_factories)
+        logger.info("Found %d available processors", len(processors))
 
         formatter = _OutputFormatter()
-        formatter.format_component_list(analysers, "analysers")
+        formatter.format_component_list(processors, "processors")
 
     except Exception as e:
-        logger.error("Failed to list analysers: %s", e)
+        logger.error("Failed to list processors: %s", e)
         cli_error = CLIError(
-            f"Unable to retrieve available analysers: {e}",
-            command="ls-analysers",
+            f"Unable to retrieve available processors: {e}",
+            command="ls-processors",
             original_error=e,
         )
         error_panel = Panel(
             f"[red]{cli_error}[/red]",
-            title="❌ Failed to list analysers",
+            title="❌ Failed to list processors",
             border_style="red",
         )
         console.print(error_panel)
@@ -819,14 +819,17 @@ def _detect_exporter(
             continue
 
         definition = plan.runbook.artifacts.get(artifact_id)
-        if definition is None or definition.transform is None:
+        if definition is None or definition.process is None:
             continue
 
-        # Get analyser factory and check its compliance frameworks
-        analyser_type = definition.transform.type
-        if analyser_type in registry.analyser_factories:
-            factory = registry.analyser_factories[analyser_type]
-            frameworks.update(factory.component_class.get_compliance_frameworks())
+        # Get processor factory and check its compliance frameworks (if Analyser)
+        processor_type = definition.process.type
+        if processor_type in registry.processor_factories:
+            factory = registry.processor_factories[processor_type]
+            component_class = factory.component_class
+            # Only Analysers have compliance frameworks
+            if issubclass(component_class, Analyser):
+                frameworks.update(component_class.get_compliance_frameworks())
 
     # Map frameworks to exporter
     if len(frameworks) == 1:

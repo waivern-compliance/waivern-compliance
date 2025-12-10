@@ -15,10 +15,10 @@ from waivern_orchestration.models import (
     ArtifactResult,
     ExecuteConfig,
     ExecutionResult,
+    ProcessConfig,
     Runbook,
     RunbookConfig,
     SourceConfig,
-    TransformConfig,
 )
 from waivern_orchestration.parser import parse_runbook, parse_runbook_from_dict
 from waivern_orchestration.planner import ExecutionPlan, Planner
@@ -30,10 +30,10 @@ __all__ = [
     "ArtifactResult",
     "ExecuteConfig",
     "ExecutionResult",
+    "ProcessConfig",
     "Runbook",
     "RunbookConfig",
     "SourceConfig",
-    "TransformConfig",
     # DAG
     "ExecutionDAG",
     # Parser

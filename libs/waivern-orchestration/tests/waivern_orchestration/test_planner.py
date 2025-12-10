@@ -12,8 +12,8 @@ from waivern_orchestration import (
 from waivern_orchestration.planner import ExecutionPlan, Planner
 
 from .test_helpers import (
-    create_mock_analyser_factory,
     create_mock_connector_factory,
+    create_mock_processor_factory,
     create_mock_registry,
 )
 
@@ -55,8 +55,8 @@ class TestPlannerHappyPath:
         assert input_schema is None
         assert result_output_schema.name == "standard_input"
 
-    def test_plan_valid_derived_artifact_with_transform(self) -> None:
-        """Planner can plan derived artifact with transform (source → analyser chain)."""
+    def test_plan_valid_derived_artifact_with_process(self) -> None:
+        """Planner can plan derived artifact with process (source → processor chain)."""
         connector_output = Schema("standard_input", "1.0.0")
         analyser_input = Schema("standard_input", "1.0.0")
         analyser_output = Schema("personal_data_finding", "1.0.0")
@@ -64,13 +64,13 @@ class TestPlannerHappyPath:
         connector_factory = create_mock_connector_factory(
             "filesystem", [connector_output]
         )
-        analyser_factory = create_mock_analyser_factory(
+        analyser_factory = create_mock_processor_factory(
             "personal_data_analyser", [analyser_input], [analyser_output]
         )
 
         registry = create_mock_registry(
             connector_factories={"filesystem": connector_factory},
-            analyser_factories={"personal_data_analyser": analyser_factory},
+            processor_factories={"personal_data_analyser": analyser_factory},
         )
         planner = Planner(registry)
 
@@ -83,7 +83,7 @@ class TestPlannerHappyPath:
                 },
                 "findings": {
                     "inputs": "data_source",
-                    "transform": {
+                    "process": {
                         "type": "personal_data_analyser",
                         "properties": {},
                     },
@@ -106,8 +106,8 @@ class TestPlannerHappyPath:
         assert derived_input.name == "standard_input"
         assert derived_output.name == "personal_data_finding"
 
-    def test_plan_derived_artifact_without_transform_passthrough(self) -> None:
-        """Derived artifact without transform passes schema through (no analyser)."""
+    def test_plan_derived_artifact_without_process_passthrough(self) -> None:
+        """Derived artifact without process passes schema through (no processor)."""
         connector_factory = create_mock_connector_factory(
             "filesystem", [Schema("standard_input", "1.0.0")]
         )
@@ -177,7 +177,7 @@ class TestPlannerHappyPath:
         connector_factory = create_mock_connector_factory(
             "filesystem", [Schema("standard_input", "1.0.0")]
         )
-        analyser_factory = create_mock_analyser_factory(
+        analyser_factory = create_mock_processor_factory(
             "personal_data_analyser",
             [Schema("standard_input", "1.0.0")],
             [Schema("personal_data_finding", "1.0.0")],
@@ -185,7 +185,7 @@ class TestPlannerHappyPath:
 
         registry = create_mock_registry(
             connector_factories={"filesystem": connector_factory},
-            analyser_factories={"personal_data_analyser": analyser_factory},
+            processor_factories={"personal_data_analyser": analyser_factory},
         )
         planner = Planner(registry)
 
@@ -196,7 +196,7 @@ class TestPlannerHappyPath:
                 "source": {"source": {"type": "filesystem", "properties": {}}},
                 "findings": {
                     "inputs": "source",
-                    "transform": {
+                    "process": {
                         "type": "personal_data_analyser",
                         "properties": {},
                     },
@@ -339,7 +339,7 @@ class TestPlannerErrors:
                 "source": {"source": {"type": "filesystem", "properties": {}}},
                 "findings": {
                     "inputs": "source",
-                    "transform": {"type": "unknown_analyser", "properties": {}},
+                    "process": {"type": "unknown_analyser", "properties": {}},
                 },
             },
         }

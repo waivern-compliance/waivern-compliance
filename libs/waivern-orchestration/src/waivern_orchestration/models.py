@@ -13,8 +13,8 @@ class SourceConfig(BaseModel):
     properties: dict[str, Any] = Field(default_factory=dict)
 
 
-class TransformConfig(BaseModel):
-    """Configuration for a transform (analyser)."""
+class ProcessConfig(BaseModel):
+    """Configuration for a processor (analyser, orchestrator, etc.)."""
 
     type: str
     properties: dict[str, Any] = Field(default_factory=dict)
@@ -48,7 +48,7 @@ class ArtifactDefinition(BaseModel):
     # Source: exactly one of source or inputs must be set
     source: SourceConfig | None = None
     inputs: str | list[str] | None = None
-    transform: TransformConfig | None = None
+    process: ProcessConfig | None = None
     merge: Literal["concatenate"] = "concatenate"
 
     # Schema override (optional)

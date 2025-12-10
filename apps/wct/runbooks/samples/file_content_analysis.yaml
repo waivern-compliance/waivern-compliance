@@ -21,7 +21,7 @@ artifacts:
     name: "Personal Data Detection in Filesystem (Mock)"
     description: "Analyse file content for personal data using pattern matching and optional LLM validation"
     inputs: file_content
-    transform:
+    process:
       type: "personal_data"
       properties:
         pattern_matching:

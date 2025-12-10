@@ -48,23 +48,23 @@ def create_mock_connector_factory(
     return factory
 
 
-def create_mock_analyser_factory(
+def create_mock_processor_factory(
     name: str,
     input_schemas: list[Schema],
     output_schemas: list[Schema],
     process_result: Message | None = None,
 ) -> MagicMock:
-    """Create a mock analyser factory.
+    """Create a mock processor factory.
 
     Args:
         name: Component name.
-        input_schemas: List of input schemas the analyser accepts.
-        output_schemas: List of output schemas the analyser produces.
+        input_schemas: List of input schemas the processor accepts.
+        output_schemas: List of output schemas the processor produces.
         process_result: Optional message to return from process().
-            If provided, creates a mock analyser that returns this message.
+            If provided, creates a mock processor that returns this message.
 
     Returns:
-        Mock ComponentFactory for an analyser.
+        Mock ComponentFactory for a processor.
 
     """
     factory = MagicMock()
@@ -81,9 +81,9 @@ def create_mock_analyser_factory(
     factory.component_class = mock_class
 
     if process_result is not None:
-        mock_analyser = MagicMock()
-        mock_analyser.process.return_value = process_result
-        factory.create.return_value = mock_analyser
+        mock_processor = MagicMock()
+        mock_processor.process.return_value = process_result
+        factory.create.return_value = mock_processor
 
     return factory
 
@@ -106,14 +106,14 @@ def create_container_with_store() -> ServiceContainer:
 
 def create_mock_registry(
     connector_factories: dict[str, Any] | None = None,
-    analyser_factories: dict[str, Any] | None = None,
+    processor_factories: dict[str, Any] | None = None,
     with_container: bool = False,
 ) -> MagicMock:
     """Create a mock ComponentRegistry.
 
     Args:
         connector_factories: Dict of connector type to factory mock.
-        analyser_factories: Dict of analyser type to factory mock.
+        processor_factories: Dict of processor type to factory mock.
         with_container: If True, includes a real ServiceContainer with ArtifactStore.
             Required for executor tests that actually store artifacts.
 
@@ -123,7 +123,7 @@ def create_mock_registry(
     """
     registry = MagicMock(spec=ComponentRegistry)
     registry.connector_factories = connector_factories or {}
-    registry.analyser_factories = analyser_factories or {}
+    registry.processor_factories = processor_factories or {}
 
     if with_container:
         registry.container = create_container_with_store()

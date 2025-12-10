@@ -13,9 +13,9 @@ from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDe
 from waivern_orchestration.executor import DAGExecutor
 from waivern_orchestration.models import (
     ArtifactDefinition,
+    ProcessConfig,
     RunbookConfig,
     SourceConfig,
-    TransformConfig,
 )
 
 from .test_helpers import (
@@ -339,17 +339,17 @@ class TestDAGExecutorErrorHandling:
         assert "nonexistent_connector" in result.artifacts["data"].error
 
 
-class TestDAGExecutorTransform:
-    """Tests for transform (analyser) execution in DAGExecutor."""
+class TestDAGExecutorProcess:
+    """Tests for process (processor) execution in DAGExecutor."""
 
-    def test_execute_derived_with_transform(self) -> None:
-        """Derived artifact with transform executes analyser."""
+    def test_execute_derived_with_process(self) -> None:
+        """Derived artifact with process executes processor."""
         source_schema = Schema("standard_input", "1.0.0")
         output_schema = Schema("personal_data_finding", "1.0.0")
 
         source_message = create_test_message({"files": [{"content": "test"}]})
-        analysed_message = Message(
-            id="analysed",
+        processed_message = Message(
+            id="processed",
             content={"findings": [{"type": "email"}]},
             schema=output_schema,
         )
@@ -358,15 +358,15 @@ class TestDAGExecutorTransform:
             "filesystem", [source_schema], source_message
         )
 
-        # Create mock analyser factory with process method
-        analyser_factory = MagicMock()
-        mock_analyser_class = MagicMock()
-        mock_analyser_class.get_name.return_value = "personal_data_analyser"
-        mock_analyser_class.get_supported_output_schemas.return_value = [output_schema]
-        analyser_factory.component_class = mock_analyser_class
-        mock_analyser = MagicMock()
-        mock_analyser.process.return_value = analysed_message
-        analyser_factory.create.return_value = mock_analyser
+        # Create mock processor factory with process method
+        processor_factory = MagicMock()
+        mock_processor_class = MagicMock()
+        mock_processor_class.get_name.return_value = "personal_data_analyser"
+        mock_processor_class.get_supported_output_schemas.return_value = [output_schema]
+        processor_factory.component_class = mock_processor_class
+        mock_processor = MagicMock()
+        mock_processor.process.return_value = processed_message
+        processor_factory.create.return_value = mock_processor
 
         artifacts = {
             "source": ArtifactDefinition(
@@ -374,7 +374,7 @@ class TestDAGExecutorTransform:
             ),
             "findings": ArtifactDefinition(
                 inputs="source",
-                transform=TransformConfig(type="personal_data_analyser", properties={}),
+                process=ProcessConfig(type="personal_data_analyser", properties={}),
             ),
         }
         plan = create_simple_plan(
@@ -388,7 +388,7 @@ class TestDAGExecutorTransform:
         registry = create_mock_registry(
             with_container=True,
             connector_factories={"filesystem": connector_factory},
-            analyser_factories={"personal_data_analyser": analyser_factory},
+            processor_factories={"personal_data_analyser": processor_factory},
         )
         executor = DAGExecutor(registry)
 
@@ -398,11 +398,11 @@ class TestDAGExecutorTransform:
         # Assert
         assert result.artifacts["source"].success is True
         assert result.artifacts["findings"].success is True
-        assert result.artifacts["findings"].message == analysed_message
-        mock_analyser.process.assert_called_once()
+        assert result.artifacts["findings"].message == processed_message
+        mock_processor.process.assert_called_once()
 
-    def test_analyser_not_found_returns_error(self) -> None:
-        """Missing analyser type returns clear error message."""
+    def test_processor_not_found_returns_error(self) -> None:
+        """Missing processor type returns clear error message."""
         output_schema = Schema("standard_input", "1.0.0")
         message = create_test_message({"files": []})
 
@@ -414,35 +414,35 @@ class TestDAGExecutorTransform:
             "source_data": ArtifactDefinition(
                 source=SourceConfig(type="source", properties={})
             ),
-            "analysed": ArtifactDefinition(
+            "processed": ArtifactDefinition(
                 inputs="source_data",
-                transform=TransformConfig(type="nonexistent_analyser", properties={}),
+                process=ProcessConfig(type="nonexistent_processor", properties={}),
             ),
         }
         plan = create_simple_plan(
             artifacts,
             {
                 "source_data": (None, output_schema),
-                "analysed": (output_schema, output_schema),
+                "processed": (output_schema, output_schema),
             },
         )
 
-        # Registry has no analysers
+        # Registry has no processors
         registry = create_mock_registry(
             with_container=True,
             connector_factories={"source": connector_factory},
-            analyser_factories={},
+            processor_factories={},
         )
         executor = DAGExecutor(registry)
 
         # Act
         result = asyncio.run(executor.execute(plan))
 
-        # Assert - source succeeds, analyser fails
+        # Assert - source succeeds, processor fails
         assert result.artifacts["source_data"].success is True
-        assert result.artifacts["analysed"].success is False
-        assert result.artifacts["analysed"].error is not None
-        assert "nonexistent_analyser" in result.artifacts["analysed"].error
+        assert result.artifacts["processed"].success is False
+        assert result.artifacts["processed"].error is not None
+        assert "nonexistent_processor" in result.artifacts["processed"].error
 
 
 class TestDAGExecutorConcurrency:

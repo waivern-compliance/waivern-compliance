@@ -1,6 +1,6 @@
 # WCT Runbooks
 
-Runbooks define compliance analysis pipelines using an artifact-centric format. Each runbook declares artifacts (data sources and transformations) and their dependencies, enabling parallel execution where possible.
+Runbooks define compliance analysis pipelines using an artifact-centric format. Each runbook declares artifacts (data sources and processors) and their dependencies, enabling parallel execution where possible.
 
 ## Runbook Structure
 
@@ -49,7 +49,7 @@ artifacts:
     name: "Personal Data Detection"
     description: "Analyse database for PII"
     inputs: mysql_data              # Reference to upstream artifact
-    transform:
+    process:
       type: "personal_data"
       properties:
         pattern_matching:
@@ -59,8 +59,8 @@ artifacts:
 
 **Fields:**
 - `inputs`: Single artifact ID or list of IDs (fan-in)
-- `transform.type`: Analyser type (e.g., `personal_data`, `processing_purpose`, `data_subject`)
-- `transform.properties`: Analyser-specific configuration
+- `process.type`: Processor type (e.g., `personal_data`, `processing_purpose`, `data_subject`)
+- `process.properties`: Processor-specific configuration
 - `output`: Whether to include in results (default: false)
 
 ### Fan-In (Multiple Inputs)
@@ -73,7 +73,7 @@ artifacts:
     inputs:
       - mysql_findings
       - filesystem_findings
-    transform:
+    process:
       type: "personal_data"
     merge: "concatenate"           # Only strategy supported
     output: true
@@ -96,7 +96,7 @@ artifacts:
   # Stage 2: Parse source code
   php_source_code:
     inputs: php_files
-    transform:
+    process:
       type: "source_code_analyser"
       properties:
         language: "php"
@@ -104,7 +104,7 @@ artifacts:
   # Stage 3: Analyse for processing purposes
   processing_purposes:
     inputs: php_source_code
-    transform:
+    process:
       type: "processing_purpose"
     output: true
 ```
@@ -193,7 +193,7 @@ This enables real-time validation in VS Code, PyCharm, and other IDEs.
 | `contact` | string | No | Responsible person |
 | `source` | object | * | Data extraction config (source artifacts) |
 | `inputs` | string/list | * | Upstream artifact(s) (derived artifacts) |
-| `transform` | object | ** | Transformation config (derived artifacts) |
+| `process` | object | ** | Processor config (derived artifacts) |
 | `merge` | string | No | Fan-in merge strategy ("concatenate") |
 | `output` | bool | No | Include in final output (default: false) |
 | `optional` | bool | No | Continue on failure (default: false) |
@@ -208,20 +208,20 @@ This enables real-time validation in VS Code, PyCharm, and other IDEs.
 | `type` | string | Yes | Connector type |
 | `properties` | object | No | Connector configuration |
 
-### Transform Fields
+### Process Fields
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `type` | string | Yes | Analyser type |
-| `properties` | object | No | Analyser configuration |
+| `type` | string | Yes | Processor type |
+| `properties` | object | No | Processor configuration |
 
 ## Available Components
 
-List available connectors and analysers:
+List available connectors and processors:
 
 ```bash
 uv run wct ls-connectors
-uv run wct ls-analysers
+uv run wct ls-processors
 ```
 
 ### Connectors
@@ -230,7 +230,7 @@ uv run wct ls-analysers
 - `sqlite` - SQLite database extraction
 - `filesystem` - File and directory reading
 
-### Analysers
+### Processors
 
 - `personal_data` - PII detection
 - `data_subject` - Data subject classification

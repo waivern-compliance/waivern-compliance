@@ -5,8 +5,8 @@ import pytest
 from waivern_orchestration import (
     ArtifactDefinition,
     CycleDetectedError,
+    ProcessConfig,
     SourceConfig,
-    TransformConfig,
 )
 from waivern_orchestration.dag import ExecutionDAG
 
@@ -18,12 +18,8 @@ class TestExecutionDAGDependencies:
         """Linear chain A → B → C: B depends on A, C depends on B."""
         artifacts = {
             "A": ArtifactDefinition(source=SourceConfig(type="filesystem")),
-            "B": ArtifactDefinition(
-                inputs="A", transform=TransformConfig(type="analyser")
-            ),
-            "C": ArtifactDefinition(
-                inputs="B", transform=TransformConfig(type="analyser")
-            ),
+            "B": ArtifactDefinition(inputs="A", process=ProcessConfig(type="analyser")),
+            "C": ArtifactDefinition(inputs="B", process=ProcessConfig(type="analyser")),
         }
 
         dag = ExecutionDAG(artifacts)
@@ -49,7 +45,7 @@ class TestExecutionDAGDependencies:
             "B": ArtifactDefinition(source=SourceConfig(type="mysql")),
             "C": ArtifactDefinition(
                 inputs=["A", "B"],
-                transform=TransformConfig(type="merger"),
+                process=ProcessConfig(type="merger"),
             ),
         }
 
@@ -61,12 +57,8 @@ class TestExecutionDAGDependencies:
         """Fan-out: A → B and A → C means get_dependents(A) returns {B, C}."""
         artifacts = {
             "A": ArtifactDefinition(source=SourceConfig(type="filesystem")),
-            "B": ArtifactDefinition(
-                inputs="A", transform=TransformConfig(type="analyser")
-            ),
-            "C": ArtifactDefinition(
-                inputs="A", transform=TransformConfig(type="analyser")
-            ),
+            "B": ArtifactDefinition(inputs="A", process=ProcessConfig(type="analyser")),
+            "C": ArtifactDefinition(inputs="A", process=ProcessConfig(type="analyser")),
         }
 
         dag = ExecutionDAG(artifacts)
@@ -81,12 +73,8 @@ class TestExecutionDAGExecutionOrder:
         """Linear chain A → B → C: sorter yields A first, then B, then C."""
         artifacts = {
             "A": ArtifactDefinition(source=SourceConfig(type="filesystem")),
-            "B": ArtifactDefinition(
-                inputs="A", transform=TransformConfig(type="analyser")
-            ),
-            "C": ArtifactDefinition(
-                inputs="B", transform=TransformConfig(type="analyser")
-            ),
+            "B": ArtifactDefinition(inputs="A", process=ProcessConfig(type="analyser")),
+            "C": ArtifactDefinition(inputs="B", process=ProcessConfig(type="analyser")),
         }
 
         dag = ExecutionDAG(artifacts)
@@ -124,7 +112,7 @@ class TestExecutionDAGExecutionOrder:
             "B": ArtifactDefinition(source=SourceConfig(type="mysql")),
             "C": ArtifactDefinition(
                 inputs=["A", "B"],
-                transform=TransformConfig(type="merger"),
+                process=ProcessConfig(type="merger"),
             ),
         }
 
@@ -166,12 +154,8 @@ class TestExecutionDAGCycleDetection:
     def test_dag_direct_cycle_raises_error(self) -> None:
         """Direct cycle A → B → A: validate() raises CycleDetectedError."""
         artifacts = {
-            "A": ArtifactDefinition(
-                inputs="B", transform=TransformConfig(type="analyser")
-            ),
-            "B": ArtifactDefinition(
-                inputs="A", transform=TransformConfig(type="analyser")
-            ),
+            "A": ArtifactDefinition(inputs="B", process=ProcessConfig(type="analyser")),
+            "B": ArtifactDefinition(inputs="A", process=ProcessConfig(type="analyser")),
         }
 
         dag = ExecutionDAG(artifacts)
@@ -182,15 +166,9 @@ class TestExecutionDAGCycleDetection:
     def test_dag_indirect_cycle_raises_error(self) -> None:
         """Indirect cycle A → B → C → A: validate() raises CycleDetectedError."""
         artifacts = {
-            "A": ArtifactDefinition(
-                inputs="C", transform=TransformConfig(type="analyser")
-            ),
-            "B": ArtifactDefinition(
-                inputs="A", transform=TransformConfig(type="analyser")
-            ),
-            "C": ArtifactDefinition(
-                inputs="B", transform=TransformConfig(type="analyser")
-            ),
+            "A": ArtifactDefinition(inputs="C", process=ProcessConfig(type="analyser")),
+            "B": ArtifactDefinition(inputs="A", process=ProcessConfig(type="analyser")),
+            "C": ArtifactDefinition(inputs="B", process=ProcessConfig(type="analyser")),
         }
 
         dag = ExecutionDAG(artifacts)
@@ -201,9 +179,7 @@ class TestExecutionDAGCycleDetection:
     def test_dag_self_reference_raises_error(self) -> None:
         """Self-reference A → A: validate() raises CycleDetectedError."""
         artifacts = {
-            "A": ArtifactDefinition(
-                inputs="A", transform=TransformConfig(type="analyser")
-            ),
+            "A": ArtifactDefinition(inputs="A", process=ProcessConfig(type="analyser")),
         }
 
         dag = ExecutionDAG(artifacts)
@@ -249,12 +225,8 @@ class TestExecutionDAGDepth:
         """Linear chain A → B → C has depth 3 (three sequential levels)."""
         artifacts = {
             "A": ArtifactDefinition(source=SourceConfig(type="filesystem")),
-            "B": ArtifactDefinition(
-                inputs="A", transform=TransformConfig(type="analyser")
-            ),
-            "C": ArtifactDefinition(
-                inputs="B", transform=TransformConfig(type="analyser")
-            ),
+            "B": ArtifactDefinition(inputs="A", process=ProcessConfig(type="analyser")),
+            "C": ArtifactDefinition(inputs="B", process=ProcessConfig(type="analyser")),
         }
 
         dag = ExecutionDAG(artifacts)
@@ -268,7 +240,7 @@ class TestExecutionDAGDepth:
             "B": ArtifactDefinition(source=SourceConfig(type="mysql")),
             "C": ArtifactDefinition(
                 inputs=["A", "B"],
-                transform=TransformConfig(type="merger"),
+                process=ProcessConfig(type="merger"),
             ),
         }
 
@@ -280,20 +252,18 @@ class TestExecutionDAGDepth:
         """Complex DAG depth is the longest path from any root to any leaf.
 
         Structure:
-            A (source) → B (transform) → D (transform)
+            A (source) → B (process) → D (process)
             C (source) ─────────────────↗
 
         Longest path is A → B → D = 3 levels.
         """
         artifacts = {
             "A": ArtifactDefinition(source=SourceConfig(type="filesystem")),
-            "B": ArtifactDefinition(
-                inputs="A", transform=TransformConfig(type="analyser")
-            ),
+            "B": ArtifactDefinition(inputs="A", process=ProcessConfig(type="analyser")),
             "C": ArtifactDefinition(source=SourceConfig(type="mysql")),
             "D": ArtifactDefinition(
                 inputs=["B", "C"],
-                transform=TransformConfig(type="merger"),
+                process=ProcessConfig(type="merger"),
             ),
         }
 
