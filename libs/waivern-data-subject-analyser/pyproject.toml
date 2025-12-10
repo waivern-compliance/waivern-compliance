@@ -35,7 +35,7 @@ include = [
 packages = ["src/waivern_data_subject_analyser"]
 
 # Component discovery via entry points
-[project.entry-points."waivern.analysers"]
+[project.entry-points."waivern.processors"]
 data_subject = "waivern_data_subject_analyser:DataSubjectAnalyserFactory"
 
 [project.entry-points."waivern.schemas"]

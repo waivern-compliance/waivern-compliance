@@ -11,7 +11,7 @@ dependencies = [
     "pydantic>=2.11.5",
 ]
 
-[project.entry-points."waivern.analysers"]
+[project.entry-points."waivern.processors"]
 personal_data = "waivern_personal_data_analyser:PersonalDataAnalyserFactory"
 
 [project.entry-points."waivern.schemas"]

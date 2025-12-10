@@ -51,11 +51,11 @@ class TestComponentRegistry:
             # Act - access connector_factories
             _ = registry.connector_factories
 
-            # Assert - entry_points called for schemas, connectors, analysers
+            # Assert - entry_points called for schemas, connectors, processors
             assert mock_ep.call_count == 3
 
-    def test_analyser_factories_triggers_discovery(self) -> None:
-        """Verify accessing analyser_factories triggers entry point discovery."""
+    def test_processor_factories_triggers_discovery(self) -> None:
+        """Verify accessing processor_factories triggers entry point discovery."""
         # Arrange
         container = ServiceContainer()
 
@@ -63,10 +63,10 @@ class TestComponentRegistry:
             mock_ep.return_value = []
             registry = ComponentRegistry(container)
 
-            # Act - access analyser_factories
-            _ = registry.analyser_factories
+            # Act - access processor_factories
+            _ = registry.processor_factories
 
-            # Assert - entry_points called for schemas, connectors, analysers
+            # Assert - entry_points called for schemas, connectors, processors
             assert mock_ep.call_count == 3
 
     def test_discovery_called_only_once(self) -> None:
@@ -80,11 +80,11 @@ class TestComponentRegistry:
 
             # Act - access factories multiple times
             _ = registry.connector_factories
-            _ = registry.analyser_factories
+            _ = registry.processor_factories
             _ = registry.connector_factories
-            _ = registry.analyser_factories
+            _ = registry.processor_factories
 
-        # Assert - entry_points called only 3 times (schemas, connectors, analysers)
+        # Assert - entry_points called only 3 times (schemas, connectors, processors)
         assert mock_ep.call_count == 3
 
     def test_discovered_connector_factory_accessible_by_name(self) -> None:
@@ -113,8 +113,8 @@ class TestComponentRegistry:
         assert "test_connector" in factories
         assert factories["test_connector"] is mock_factory_instance
 
-    def test_discovered_analyser_factory_accessible_by_name(self) -> None:
-        """Verify discovered analyser factories are accessible by entry point name."""
+    def test_discovered_processor_factory_accessible_by_name(self) -> None:
+        """Verify discovered processor factories are accessible by entry point name."""
         # Arrange
         container = ServiceContainer()
         registry = ComponentRegistry(container)
@@ -124,20 +124,20 @@ class TestComponentRegistry:
         mock_factory_class.return_value = mock_factory_instance
 
         mock_ep = MagicMock()
-        mock_ep.name = "test_analyser"
+        mock_ep.name = "test_processor"
         mock_ep.load.return_value = mock_factory_class
 
         with patch("waivern_core.services.registry.entry_points") as mock_entry_points:
             mock_entry_points.side_effect = lambda group: (
-                [mock_ep] if group == "waivern.analysers" else []
+                [mock_ep] if group == "waivern.processors" else []
             )
 
             # Act
-            factories = registry.analyser_factories
+            factories = registry.processor_factories
 
         # Assert
-        assert "test_analyser" in factories
-        assert factories["test_analyser"] is mock_factory_instance
+        assert "test_processor" in factories
+        assert factories["test_processor"] is mock_factory_instance
 
     def test_factory_instantiated_with_container(self) -> None:
         """Verify factory classes are instantiated with the ServiceContainer."""
@@ -218,7 +218,7 @@ class TestComponentRegistrySchemaDiscovery:
             mock_entry_points.side_effect = lambda group: {
                 "waivern.schemas": [mock_schema_ep],
                 "waivern.connectors": [mock_connector_ep],
-                "waivern.analysers": [],
+                "waivern.processors": [],
             }.get(group, [])
 
             # Act - should succeed despite schema entry point failure

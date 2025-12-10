@@ -70,10 +70,10 @@
           "default": null,
           "title": "Inputs"
         },
-        "transform": {
+        "process": {
           "anyOf": [
             {
-              "$ref": "#/$defs/TransformConfig"
+              "$ref": "#/$defs/ProcessConfig"
             },
             {
               "type": "null"
@@ -216,8 +216,8 @@
       "title": "SourceConfig",
       "type": "object"
     },
-    "TransformConfig": {
-      "description": "Configuration for a transform (analyser).",
+    "ProcessConfig": {
+      "description": "Configuration for a processor (analyser, orchestrator, etc.).",
       "properties": {
         "type": {
           "title": "Type",
@@ -232,7 +232,7 @@
       "required": [
         "type"
       ],
-      "title": "TransformConfig",
+      "title": "ProcessConfig",
       "type": "object"
     }
   },

@@ -16,7 +16,7 @@ tree-sitter = [
 ]
 all = ["waivern-source-code-analyser[tree-sitter]"]
 
-[project.entry-points."waivern.analysers"]
+[project.entry-points."waivern.processors"]
 source_code_analyser = "waivern_source_code_analyser.analyser_factory:SourceCodeAnalyserFactory"
 
 [project.entry-points."waivern.schemas"]

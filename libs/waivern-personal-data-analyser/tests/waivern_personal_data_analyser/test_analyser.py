@@ -687,6 +687,6 @@ class TestPersonalDataAnalyserContract(AnalyserContractTests[PersonalDataAnalyse
     """
 
     @pytest.fixture
-    def analyser_class(self) -> type[PersonalDataAnalyser]:
-        """Provide the analyser class for contract testing."""
+    def processor_class(self) -> type[PersonalDataAnalyser]:
+        """Provide the processor class for contract testing."""
         return PersonalDataAnalyser

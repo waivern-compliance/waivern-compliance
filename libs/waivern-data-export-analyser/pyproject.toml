@@ -9,7 +9,7 @@ dependencies = [
     "pydantic>=2.11.5",
 ]
 
-[project.entry-points."waivern.analysers"]
+[project.entry-points."waivern.processors"]
 data_export = "waivern_data_export_analyser:DataExportAnalyserFactory"
 
 [project.entry-points."waivern.schemas"]

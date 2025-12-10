@@ -81,7 +81,7 @@ WCF uses Python entry points for automatic component discovery. When you install
 [project.entry-points."waivern.connectors"]
 my_connector = "my_package:create_my_connector_factory"
 
-[project.entry-points."waivern.analysers"]
+[project.entry-points."waivern.processors"]
 my_analyser = "my_package:create_my_analyser_factory"
 
 [project.entry-points."waivern.rulesets"]
@@ -548,7 +548,7 @@ dependencies = [
 [project.entry-points."waivern.connectors"]
 my_connector = "my_compliance:create_my_connector_factory"
 
-[project.entry-points."waivern.analysers"]
+[project.entry-points."waivern.processors"]
 my_analyser = "my_compliance:create_my_analyser_factory"
 ```
 

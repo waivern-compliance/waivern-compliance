@@ -11,6 +11,7 @@ from waivern_core import (
     ComponentFactory,
 )
 from waivern_core.base_analyser import Analyser
+from waivern_core.base_processor import Processor
 
 
 class ComponentFactoryContractTests[T]:
@@ -174,15 +175,15 @@ class ComponentFactoryContractTests[T]:
         # Cannot assert empty/non-empty as different factories have different needs
 
 
-class AnalyserContractTests[T: Analyser]:
-    """Abstract contract tests that all Analyser implementations must pass.
+class ProcessorContractTests[T: Processor]:
+    """Abstract contract tests that all Processor implementations must pass.
 
-    This class defines behavioural requirements for Analyser implementations.
-    Concrete analyser test classes should inherit from this to automatically
+    This class defines behavioural requirements for Processor implementations.
+    Concrete processor test classes should inherit from this to automatically
     verify contract compliance.
 
     Required Fixtures:
-        analyser_class: The Analyser class (not instance) to test
+        processor_class: The Processor class (not instance) to test
 
     Contract Requirements:
         1. get_input_requirements() must return at least one combination
@@ -190,10 +191,10 @@ class AnalyserContractTests[T: Analyser]:
         3. Each combination must have at least one requirement
 
     Usage Pattern:
-        class TestPersonalDataAnalyserContract(AnalyserContractTests[PersonalDataAnalyser]):
+        class TestMyProcessorContract(ProcessorContractTests[MyProcessor]):
             @pytest.fixture
-            def analyser_class(self) -> type[PersonalDataAnalyser]:
-                return PersonalDataAnalyser
+            def processor_class(self) -> type[MyProcessor]:
+                return MyProcessor
 
             # All contract tests run automatically
 
@@ -204,43 +205,43 @@ class AnalyserContractTests[T: Analyser]:
     """
 
     @pytest.fixture
-    def analyser_class(self) -> type[T]:
-        """Provide Analyser class to test.
+    def processor_class(self) -> type[T]:
+        """Provide Processor class to test.
 
-        Subclasses MUST override this fixture to provide their analyser class.
+        Subclasses MUST override this fixture to provide their processor class.
 
         Raises:
             NotImplementedError: If subclass doesn't override this fixture
 
         Example:
             @pytest.fixture
-            def analyser_class(self) -> type[PersonalDataAnalyser]:
+            def processor_class(self) -> type[PersonalDataAnalyser]:
                 return PersonalDataAnalyser
 
         """
         raise NotImplementedError(
-            "Subclass must provide 'analyser_class' fixture with Analyser class"
+            "Subclass must provide 'processor_class' fixture with Processor class"
         )
 
     # CONTRACT TEST 1
-    def test_input_requirements_not_empty(self, analyser_class: type[T]) -> None:
-        """Verify analyser declares at least one input requirement combination.
+    def test_input_requirements_not_empty(self, processor_class: type[T]) -> None:
+        """Verify processor declares at least one input requirement combination.
 
         Contract Requirement:
             get_input_requirements() must return at least one combination.
 
         Why This Matters:
-            Planner uses input requirements to match schemas. An analyser with
+            Planner uses input requirements to match schemas. A processor with
             no requirements cannot be used in any pipeline.
 
         """
-        requirements = analyser_class.get_input_requirements()
+        requirements = processor_class.get_input_requirements()
         assert len(requirements) > 0, (
             "get_input_requirements() must return at least one combination"
         )
 
     # CONTRACT TEST 2
-    def test_no_duplicate_combinations(self, analyser_class: type[T]) -> None:
+    def test_no_duplicate_combinations(self, processor_class: type[T]) -> None:
         """Verify each input requirement combination is unique.
 
         Contract Requirement:
@@ -251,7 +252,7 @@ class AnalyserContractTests[T: Analyser]:
             Planner cannot determine which combination to use.
 
         """
-        requirements = analyser_class.get_input_requirements()
+        requirements = processor_class.get_input_requirements()
         seen: set[frozenset[tuple[str, str]]] = set()
 
         for combo in requirements:
@@ -260,21 +261,52 @@ class AnalyserContractTests[T: Analyser]:
             seen.add(combo_set)
 
     # CONTRACT TEST 3
-    def test_no_empty_combinations(self, analyser_class: type[T]) -> None:
+    def test_no_empty_combinations(self, processor_class: type[T]) -> None:
         """Verify each combination has at least one requirement.
 
         Contract Requirement:
             Each combination list must contain at least one InputRequirement.
 
         Why This Matters:
-            Empty combinations are meaningless - an analyser must declare
+            Empty combinations are meaningless - a processor must declare
             what schemas it accepts.
 
         """
-        requirements = analyser_class.get_input_requirements()
+        requirements = processor_class.get_input_requirements()
 
         for i, combo in enumerate(requirements):
             assert len(combo) > 0, f"Combination {i} is empty"
 
 
-__all__ = ["AnalyserContractTests", "ComponentFactoryContractTests"]
+class AnalyserContractTests[T: Analyser](ProcessorContractTests[T]):
+    """Abstract contract tests that all Analyser implementations must pass.
+
+    Extends ProcessorContractTests with analyser-specific requirements.
+    Analysers inherit all processor contract tests plus any additional
+    analyser-specific tests.
+
+    Required Fixtures:
+        processor_class: The Analyser class (not instance) to test
+
+    Usage Pattern:
+        class TestPersonalDataAnalyserContract(AnalyserContractTests[PersonalDataAnalyser]):
+            @pytest.fixture
+            def processor_class(self) -> type[PersonalDataAnalyser]:
+                return PersonalDataAnalyser
+
+            # All contract tests run automatically (inherited from ProcessorContractTests)
+
+    Note:
+        Uses processor_class fixture for consistency with the base
+        ProcessorContractTests class.
+
+    """
+
+    pass
+
+
+__all__ = [
+    "AnalyserContractTests",
+    "ComponentFactoryContractTests",
+    "ProcessorContractTests",
+]

@@ -33,7 +33,7 @@ artifacts:
     description: "Scan SQLite database tables and columns for personally identifiable information"
     contact: "Emily Chen (Database Administrator) <emily.chen@company.co.uk>"
     inputs: sqlite_data
-    transform:
+    process:
       type: "personal_data"
       properties:
         pattern_matching:
@@ -51,7 +51,7 @@ artifacts:
     description: "Identify data subject categories from database content for GDPR Article 30(1)(c) compliance"
     contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
     inputs: sqlite_data
-    transform:
+    process:
       type: "data_subject"
       properties:
         pattern_matching:
@@ -68,7 +68,7 @@ artifacts:
     name: "Processing Purpose Analysis of Database Content"
     description: "Identify GDPR and CCPA compliance processing purposes from database content"
     inputs: sqlite_data
-    transform:
+    process:
       type: "processing_purpose"
       properties:
         pattern_matching:
@@ -88,7 +88,7 @@ artifacts:
     description: "Scan filesystem mock for personally identifiable information in files"
     contact: "Michael Brown (DevOps) <michael.brown@company.co.uk>"
     inputs: filesystem_data
-    transform:
+    process:
       type: "personal_data"
       properties:
         pattern_matching:
@@ -105,7 +105,7 @@ artifacts:
     name: "Processing Purpose Analysis of Filesystem Content"
     description: "Identify data processing purposes and compliance frameworks from filesystem content"
     inputs: filesystem_data
-    transform:
+    process:
       type: "processing_purpose"
       properties:
         pattern_matching:
