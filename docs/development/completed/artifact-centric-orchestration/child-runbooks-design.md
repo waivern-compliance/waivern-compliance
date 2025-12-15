@@ -1,9 +1,9 @@
-# Phase 3: Child Runbooks - Design Document
+# Child Runbooks - Design Document
 
-- **Status:** Design Complete
-- **Prerequisites:** Task 7 (Export Infrastructure and Multi-Schema Fan-In) complete
-- **Last Updated:** 2025-12-15
+- **Status:** Implementation Complete
+- **Completed:** 2025-12-15
 - **Note:** Field name changed from `schema` to `input_schema` to avoid Pydantic BaseModel attribute shadowing
+- **Deferred:** Sensitive input redaction (tests skipped pending implementation)
 
 ## Table of Contents
 
@@ -674,6 +674,9 @@ class ExecutionPlan:
     # NEW
     aliases: dict[str, str] = field(default_factory=dict)
     """Maps parent artifact names to namespaced child artifacts."""
+
+    reversed_aliases: dict[str, str] = field(default_factory=dict)
+    """Maps artifact IDs to alias names (reverse of aliases, for O(1) lookup)."""
 ```
 
 ---
@@ -976,50 +979,53 @@ Aliases:
 
 ---
 
-## Implementation Plan
+## Implementation Summary
 
-### Phase 1: Model Changes
+All implementation phases have been completed. The following summarises what was built:
 
-1. Add `RunbookInputDeclaration` model
-2. Add `RunbookOutputDeclaration` model
-3. Add `ChildRunbookConfig` model
-4. Update `RunbookConfig` with `template_paths`
-5. Update `Runbook` with `inputs` and `outputs`
-6. Update `ArtifactDefinition` with `child_runbook`
-7. Update `ArtifactResult` with `origin` and `alias`
-8. Update `ExecutionPlan` with `aliases`
-9. Add validation rules to models
+### Models (Complete)
 
-### Phase 2: Path Resolution
+- ✅ `RunbookInputDeclaration` - Declares expected inputs with schema, optional, default, sensitive flags
+- ✅ `RunbookOutputDeclaration` - Declares outputs that a runbook exposes
+- ✅ `ChildRunbookConfig` - Configuration for child runbook directive
+- ✅ `RunbookConfig.template_paths` - Directories to search for child runbooks
+- ✅ `Runbook.inputs` and `Runbook.outputs` - Top-level declarations
+- ✅ `ArtifactDefinition.child_runbook` - Child runbook directive on artifacts
+- ✅ `ArtifactResult.origin` and `ArtifactResult.alias` - Execution result metadata
+- ✅ `ExecutionPlan.aliases` and `ExecutionPlan.reversed_aliases` - Alias mappings
+- ✅ Model validators for all constraints
 
-1. Implement path security checks
-2. Implement template path search
-3. Add `template_paths` to configuration
-4. Unit tests for path resolution
+### Path Resolution (Complete)
 
-### Phase 3: Planner Flattening
+- ✅ Security checks (no absolute paths, no parent traversal)
+- ✅ Template path search
+- ✅ Comprehensive unit tests
 
-1. Implement circular reference detection
-2. Implement iterative flattening algorithm
-3. Implement input remapping
-4. Implement namespace generation
-5. Implement alias recording
-6. Implement schema validation for input mapping
-7. Update `Planner.plan()` to call flattening
-8. Comprehensive tests for flattening
+### Planner Flattening (Complete)
 
-### Phase 4: Executor Updates
+- ✅ `ChildRunbookFlattener` class with iterative queue-based algorithm
+- ✅ Circular reference detection
+- ✅ Input remapping (declared inputs → parent artifacts)
+- ✅ Namespace generation (`{runbook_name}__{uuid}__{artifact_id}`)
+- ✅ Alias recording for output mapping
+- ✅ Schema compatibility validation
+- ✅ Comprehensive tests (basic, nested, validation, edge cases)
 
-1. Add origin tracking to `ArtifactResult`
-2. Add alias lookup for results
-3. Update result formatting
+### Executor Updates (Complete)
 
-### Phase 5: Integration & Documentation
+- ✅ Origin tracking using shared `get_origin_from_artifact_id()` utility
+- ✅ Alias lookup using pre-computed `reversed_aliases` (O(1))
+- ✅ Result formatting with origin and alias metadata
 
-1. End-to-end integration tests
-2. Sample runbooks demonstrating composition
-3. User documentation
-4. Update CLAUDE.md with new patterns
+### Refactoring (Complete)
+
+- ✅ Extracted shared utilities to `utils.py` (schema parsing, namespace utilities)
+- ✅ Split large test file into focused modules
+- ✅ Shared fixtures in `conftest.py`
+
+### Deferred
+
+- ⏸️ Sensitive input redaction (3 tests skipped, implementation pending)
 
 ---
 
@@ -1065,6 +1071,6 @@ For larger deployments:
 
 ## References
 
-- [Multi-Schema Fan-In](../../../future-plans/multi-schema-fan-in.md)
-- [Artifact-Centric Orchestration Overview](./README.md)
+- [Child Runbook Composition (User Guide)](../../../../libs/waivern-orchestration/docs/child-runbook-composition.md)
+- [Artifact-Centric Orchestration Design](../artifact-centric-orchestration-design.md)
 - [WCF Core Components](../../../core-concepts/wcf-core-components.md)
