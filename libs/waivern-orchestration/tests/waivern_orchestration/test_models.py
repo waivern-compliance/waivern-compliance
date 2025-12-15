@@ -20,9 +20,13 @@ from waivern_orchestration import (
     SourceConfig,
 )
 
+# =============================================================================
+# Artifact Definition Tests
+# =============================================================================
 
-class TestSourceArtifact:
-    """Tests for source artifacts (connector-based)."""
+
+class TestArtifactDefinitionTypes:
+    """Tests for different artifact types (source, derived, fan-in)."""
 
     def test_source_artifact_valid(self) -> None:
         """Source artifact with source config should be valid."""
@@ -32,10 +36,6 @@ class TestSourceArtifact:
         assert artifact.source is not None
         assert artifact.source.type == "filesystem"
         assert artifact.inputs is None
-
-
-class TestDerivedArtifact:
-    """Tests for derived artifacts (processor-based)."""
 
     def test_derived_artifact_valid(self) -> None:
         """Derived artifact with inputs and process should be valid."""
@@ -49,10 +49,6 @@ class TestDerivedArtifact:
         assert artifact.process is not None
         assert artifact.process.type == "personal_data_analyser"
         assert artifact.source is None
-
-
-class TestFanInArtifact:
-    """Tests for fan-in artifacts (multiple inputs)."""
 
     def test_fan_in_artifact_valid(self) -> None:
         """Fan-in artifact with multiple inputs should be valid."""
@@ -73,7 +69,7 @@ class TestFanInArtifact:
         assert artifact.merge == "concatenate"
 
 
-class TestArtifactValidation:
+class TestArtifactDefinitionValidation:
     """Tests for artifact validation rules."""
 
     def test_source_xor_inputs_both_set_fails(self) -> None:
@@ -96,6 +92,11 @@ class TestArtifactValidation:
             "source" in str(exc_info.value).lower()
             or "inputs" in str(exc_info.value).lower()
         )
+
+
+# =============================================================================
+# Configuration Model Tests
+# =============================================================================
 
 
 class TestRunbookConfig:
@@ -125,7 +126,7 @@ class TestExecuteConfig:
         assert config.cost_limit == 1.5
 
 
-class TestArtifactMetadata:
+class TestArtifactDefinitionMetadata:
     """Tests for artifact metadata fields."""
 
     def test_artifact_metadata_fields(self) -> None:
@@ -174,6 +175,11 @@ class TestArtifactMetadata:
         assert artifact.execute is not None
         assert artifact.execute.mode == "child"
         assert artifact.execute.timeout == 120
+
+
+# =============================================================================
+# Runbook Model Tests
+# =============================================================================
 
 
 class TestRunbook:
@@ -232,6 +238,11 @@ class TestRunbook:
         assert runbook.config.max_child_depth == 3
 
 
+# =============================================================================
+# Execution Result Tests
+# =============================================================================
+
+
 class TestArtifactResult:
     """Tests for artifact execution result."""
 
@@ -275,6 +286,11 @@ class TestExecutionResult:
         assert result.artifacts["data"].success is True
         assert "optional_step" in result.skipped
         assert result.total_duration_seconds == 5.5
+
+
+# =============================================================================
+# Error Hierarchy Tests
+# =============================================================================
 
 
 class TestErrorHierarchy:
