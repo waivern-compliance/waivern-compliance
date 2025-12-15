@@ -1,10 +1,13 @@
 """Tests for child runbook flattening in the Planner."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
+from waivern_core.component_factory import ComponentFactory
 from waivern_core.schemas import Schema
+from waivern_core.services import ComponentRegistry
 
 from waivern_orchestration import (
     CircularRunbookError,
@@ -26,12 +29,74 @@ def write_runbook(path: Path, runbook: dict[str, object]) -> None:
     path.write_text(yaml.dump(runbook))
 
 
+# =============================================================================
+# Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def filesystem_connector_factory() -> ComponentFactory[Any]:
+    """Factory for filesystem connector producing standard_input schema."""
+    return create_mock_connector_factory(
+        "filesystem", [Schema("standard_input", "1.0.0")]
+    )
+
+
+@pytest.fixture
+def analyser_processor_factory() -> ComponentFactory[Any]:
+    """Factory for analyser processor: standard_input → finding."""
+    return create_mock_processor_factory(
+        "analyser",
+        [Schema("standard_input", "1.0.0")],
+        [Schema("finding", "1.0.0")],
+    )
+
+
+@pytest.fixture
+def summariser_processor_factory() -> ComponentFactory[Any]:
+    """Factory for summariser processor: finding → summary."""
+    return create_mock_processor_factory(
+        "summariser",
+        [Schema("finding", "1.0.0")],
+        [Schema("summary", "1.0.0")],
+    )
+
+
+@pytest.fixture
+def basic_registry(
+    filesystem_connector_factory: ComponentFactory[Any],
+    analyser_processor_factory: ComponentFactory[Any],
+) -> ComponentRegistry:
+    """Registry with filesystem connector and analyser processor."""
+    return create_mock_registry(
+        connector_factories={"filesystem": filesystem_connector_factory},
+        processor_factories={"analyser": analyser_processor_factory},
+    )
+
+
+@pytest.fixture
+def registry_with_summariser(
+    filesystem_connector_factory: ComponentFactory[Any],
+    analyser_processor_factory: ComponentFactory[Any],
+    summariser_processor_factory: ComponentFactory[Any],
+) -> ComponentRegistry:
+    """Registry with filesystem, analyser, and summariser."""
+    return create_mock_registry(
+        connector_factories={"filesystem": filesystem_connector_factory},
+        processor_factories={
+            "analyser": analyser_processor_factory,
+            "summariser": summariser_processor_factory,
+        },
+    )
+
+
 class TestBasicFlattening:
     """Tests for basic child runbook flattening."""
 
-    def test_plan_simple_child_runbook(self, tmp_path: Path) -> None:
+    def test_plan_simple_child_runbook(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Basic child runbook is flattened into parent plan."""
-        # Create child runbook
         child_path = tmp_path / "child.yaml"
         write_runbook(
             child_path,
@@ -53,7 +118,6 @@ class TestBasicFlattening:
             },
         )
 
-        # Create parent runbook
         parent_path = tmp_path / "parent.yaml"
         write_runbook(
             parent_path,
@@ -74,22 +138,7 @@ class TestBasicFlattening:
             },
         )
 
-        # Set up registry
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        # Plan should flatten child into parent
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # Parent artifacts should still exist
@@ -101,7 +150,9 @@ class TestBasicFlattening:
         ]
         assert len(child_artifact_ids) > 0
 
-    def test_plan_child_runbook_artifacts_namespaced(self, tmp_path: Path) -> None:
+    def test_plan_child_runbook_artifacts_namespaced(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Child artifacts receive unique namespace to prevent collisions."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -140,20 +191,7 @@ class TestBasicFlattening:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # Child artifact "processed" should be namespaced
@@ -165,7 +203,9 @@ class TestBasicFlattening:
             f"got: {list(plan.artifact_schemas.keys())}"
         )
 
-    def test_plan_child_runbook_input_remapped_to_parent(self, tmp_path: Path) -> None:
+    def test_plan_child_runbook_input_remapped_to_parent(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Child's declared inputs are remapped to parent artifacts."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -206,24 +246,10 @@ class TestBasicFlattening:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # The child's "result" artifact should depend on "parent_source"
-        # (the remapped input), not on a namespaced "input_data"
         dag = plan.dag
         namespaced_result = next(
             aid for aid in plan.artifact_schemas if "result" in aid and "__" in aid
@@ -232,7 +258,7 @@ class TestBasicFlattening:
         assert "parent_source" in deps
 
     def test_plan_child_runbook_internal_inputs_namespaced(
-        self, tmp_path: Path
+        self, tmp_path: Path, basic_registry: ComponentRegistry
     ) -> None:
         """Child's internal artifact references are namespaced."""
         child_path = tmp_path / "child.yaml"
@@ -276,20 +302,7 @@ class TestBasicFlattening:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # Both step1 and step2 should be namespaced
@@ -302,7 +315,9 @@ class TestBasicFlattening:
         deps = plan.dag.get_dependencies(step2_id)
         assert all("__" in dep or dep == "source" for dep in deps)
 
-    def test_plan_child_runbook_output_aliased(self, tmp_path: Path) -> None:
+    def test_plan_child_runbook_output_aliased(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Child's output artifact creates alias in parent."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -341,20 +356,7 @@ class TestBasicFlattening:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # ExecutionPlan should have aliases
@@ -365,7 +367,9 @@ class TestBasicFlattening:
 class TestMultipleOutputs:
     """Tests for child runbooks with multiple outputs."""
 
-    def test_plan_child_runbook_multiple_outputs(self, tmp_path: Path) -> None:
+    def test_plan_child_runbook_multiple_outputs(
+        self, tmp_path: Path, registry_with_summariser: ComponentRegistry
+    ) -> None:
         """output_mapping creates multiple aliases for child outputs."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -414,28 +418,7 @@ class TestMultipleOutputs:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        summariser_factory = create_mock_processor_factory(
-            "summariser",
-            [Schema("finding", "1.0.0")],
-            [Schema("summary", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={
-                "analyser": analyser_factory,
-                "summariser": summariser_factory,
-            },
-        )
-
-        planner = Planner(registry)
+        planner = Planner(registry_with_summariser)
         plan = planner.plan(parent_path)
 
         # Both aliases should exist
@@ -443,7 +426,7 @@ class TestMultipleOutputs:
         assert "child_summary" in plan.aliases
 
     def test_plan_child_runbook_multiple_outputs_all_aliased(
-        self, tmp_path: Path
+        self, tmp_path: Path, basic_registry: ComponentRegistry
     ) -> None:
         """Each mapped output in output_mapping creates an alias."""
         child_path = tmp_path / "child.yaml"
@@ -499,20 +482,7 @@ class TestMultipleOutputs:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # All three aliases should exist
@@ -524,9 +494,10 @@ class TestMultipleOutputs:
 class TestNestedComposition:
     """Tests for nested child runbook composition."""
 
-    def test_plan_nested_child_runbooks(self, tmp_path: Path) -> None:
+    def test_plan_nested_child_runbooks(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Child runbook can reference grandchild runbook."""
-        # Grandchild runbook
         grandchild_path = tmp_path / "grandchild.yaml"
         write_runbook(
             grandchild_path,
@@ -544,7 +515,6 @@ class TestNestedComposition:
             },
         )
 
-        # Child runbook that uses grandchild
         child_path = tmp_path / "child.yaml"
         write_runbook(
             child_path,
@@ -566,7 +536,6 @@ class TestNestedComposition:
             },
         )
 
-        # Parent runbook
         parent_path = tmp_path / "parent.yaml"
         write_runbook(
             parent_path,
@@ -587,20 +556,7 @@ class TestNestedComposition:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # Final alias should exist
@@ -610,9 +566,10 @@ class TestNestedComposition:
         namespaced = [aid for aid in plan.artifact_schemas if "__" in aid]
         assert len(namespaced) >= 1  # At least the grandchild's "processed"
 
-    def test_plan_deeply_nested_runbooks(self, tmp_path: Path) -> None:
+    def test_plan_deeply_nested_runbooks(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Multiple levels of nesting work correctly."""
-        # Level 3 (deepest)
         level3_path = tmp_path / "level3.yaml"
         write_runbook(
             level3_path,
@@ -630,7 +587,6 @@ class TestNestedComposition:
             },
         )
 
-        # Level 2
         level2_path = tmp_path / "level2.yaml"
         write_runbook(
             level2_path,
@@ -652,7 +608,6 @@ class TestNestedComposition:
             },
         )
 
-        # Level 1 (child)
         level1_path = tmp_path / "level1.yaml"
         write_runbook(
             level1_path,
@@ -674,7 +629,6 @@ class TestNestedComposition:
             },
         )
 
-        # Parent (Level 0)
         parent_path = tmp_path / "parent.yaml"
         write_runbook(
             parent_path,
@@ -695,20 +649,7 @@ class TestNestedComposition:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # Final alias should exist
@@ -718,9 +659,10 @@ class TestNestedComposition:
 class TestFlatteningValidation:
     """Tests for validation during flattening."""
 
-    def test_plan_circular_runbook_reference(self, tmp_path: Path) -> None:
+    def test_plan_circular_runbook_reference(
+        self, tmp_path: Path, filesystem_connector_factory: ComponentFactory[Any]
+    ) -> None:
         """Circular runbook reference (A→B→A) raises CircularRunbookError."""
-        # Create two runbooks that reference each other
         child_a = tmp_path / "child_a.yaml"
         write_runbook(
             child_a,
@@ -783,18 +725,17 @@ class TestFlatteningValidation:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
         registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory}
+            connector_factories={"filesystem": filesystem_connector_factory}
         )
 
         planner = Planner(registry)
         with pytest.raises(CircularRunbookError):
             planner.plan(parent_path)
 
-    def test_plan_missing_required_input_mapping(self, tmp_path: Path) -> None:
+    def test_plan_missing_required_input_mapping(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Unmapped required input raises MissingInputMappingError."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -835,26 +776,15 @@ class TestFlatteningValidation:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         with pytest.raises(MissingInputMappingError) as exc_info:
             planner.plan(parent_path)
 
         assert "required_input" in str(exc_info.value)
 
-    def test_plan_optional_input_not_mapped(self, tmp_path: Path) -> None:
+    def test_plan_optional_input_not_mapped(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Optional inputs do not require mapping."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -902,25 +832,14 @@ class TestFlatteningValidation:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         # Should not raise - optional input doesn't need mapping
         plan = planner.plan(parent_path)
         assert "child_result" in plan.aliases
 
-    def test_plan_schema_mismatch_raises_error(self, tmp_path: Path) -> None:
+    def test_plan_schema_mismatch_raises_error(
+        self, tmp_path: Path, filesystem_connector_factory: ComponentFactory[Any]
+    ) -> None:
         """Parent artifact schema mismatch with child input raises SchemaCompatibilityError."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -963,17 +882,14 @@ class TestFlatteningValidation:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem",
-            [Schema("standard_input", "1.0.0")],  # Different schema!
-        )
+        # Custom registry: filesystem produces standard_input, analyser expects database_schema
         analyser_factory = create_mock_processor_factory(
             "analyser",
             [Schema("database_schema", "1.0.0")],
             [Schema("finding", "1.0.0")],
         )
         registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
+            connector_factories={"filesystem": filesystem_connector_factory},
             processor_factories={"analyser": analyser_factory},
         )
 
@@ -981,7 +897,9 @@ class TestFlatteningValidation:
         with pytest.raises(SchemaCompatibilityError):
             planner.plan(parent_path)
 
-    def test_plan_invalid_output_reference(self, tmp_path: Path) -> None:
+    def test_plan_invalid_output_reference(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Output referencing non-existent child artifact raises InvalidOutputMappingError."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -1020,20 +938,7 @@ class TestFlatteningValidation:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         with pytest.raises(InvalidOutputMappingError) as exc_info:
             planner.plan(parent_path)
 
@@ -1043,7 +948,9 @@ class TestFlatteningValidation:
 class TestSchemaResolution:
     """Tests for schema resolution in flattened plans."""
 
-    def test_plan_child_artifact_schemas_resolved(self, tmp_path: Path) -> None:
+    def test_plan_child_artifact_schemas_resolved(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Flattened child artifacts have correctly resolved schemas."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -1082,20 +989,7 @@ class TestSchemaResolution:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # Find the namespaced analysis artifact
@@ -1108,7 +1002,9 @@ class TestSchemaResolution:
         assert input_schema.name == "standard_input"
         assert output_schema.name == "finding"
 
-    def test_plan_aliases_in_execution_plan(self, tmp_path: Path) -> None:
+    def test_plan_aliases_in_execution_plan(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """ExecutionPlan.aliases is populated with output aliases."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -1147,20 +1043,7 @@ class TestSchemaResolution:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # aliases dict should map alias → namespaced artifact
@@ -1175,7 +1058,9 @@ class TestSchemaResolution:
 class TestEdgeCases:
     """Tests for edge cases in child runbook flattening."""
 
-    def test_plan_child_with_default_input_value(self, tmp_path: Path) -> None:
+    def test_plan_child_with_default_input_value(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Default value is used when optional input is not mapped."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -1222,25 +1107,14 @@ class TestEdgeCases:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         # Should not raise - default value is used
         plan = planner.plan(parent_path)
         assert "child_result" in plan.aliases
 
-    def test_plan_multiple_children_same_parent(self, tmp_path: Path) -> None:
+    def test_plan_multiple_children_same_parent(
+        self, tmp_path: Path, basic_registry: ComponentRegistry
+    ) -> None:
         """Parent can have multiple child runbook artifacts."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -1288,20 +1162,7 @@ class TestEdgeCases:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={"analyser": analyser_factory},
-        )
-
-        planner = Planner(registry)
+        planner = Planner(basic_registry)
         plan = planner.plan(parent_path)
 
         # Both child aliases should exist
@@ -1311,7 +1172,9 @@ class TestEdgeCases:
         # They should point to different namespaced artifacts
         assert plan.aliases["child1_result"] != plan.aliases["child2_result"]
 
-    def test_plan_child_output_used_by_sibling(self, tmp_path: Path) -> None:
+    def test_plan_child_output_used_by_sibling(
+        self, tmp_path: Path, registry_with_summariser: ComponentRegistry
+    ) -> None:
         """One child's output can be used by another child."""
         child_path = tmp_path / "child.yaml"
         write_runbook(
@@ -1376,28 +1239,7 @@ class TestEdgeCases:
             },
         )
 
-        connector_factory = create_mock_connector_factory(
-            "filesystem", [Schema("standard_input", "1.0.0")]
-        )
-        analyser_factory = create_mock_processor_factory(
-            "analyser",
-            [Schema("standard_input", "1.0.0")],
-            [Schema("finding", "1.0.0")],
-        )
-        summariser_factory = create_mock_processor_factory(
-            "summariser",
-            [Schema("finding", "1.0.0")],
-            [Schema("summary", "1.0.0")],
-        )
-        registry = create_mock_registry(
-            connector_factories={"filesystem": connector_factory},
-            processor_factories={
-                "analyser": analyser_factory,
-                "summariser": summariser_factory,
-            },
-        )
-
-        planner = Planner(registry)
+        planner = Planner(registry_with_summariser)
         plan = planner.plan(parent_path)
 
         # Both aliases should exist
