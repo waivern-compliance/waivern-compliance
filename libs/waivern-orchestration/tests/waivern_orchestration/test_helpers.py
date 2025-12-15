@@ -1,8 +1,10 @@
 """Shared test helpers for waivern-orchestration tests."""
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
+import yaml
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
 from waivern_artifact_store.factory import ArtifactStoreFactory
@@ -189,9 +191,25 @@ def create_simple_plan(
         for aid in artifacts:
             artifact_schemas[aid] = (None, Schema("test_schema", "1.0.0"))
 
+    # Compute reversed aliases for O(1) lookup
+    resolved_aliases = aliases or {}
+    reversed_aliases = {v: k for k, v in resolved_aliases.items()}
+
     return ExecutionPlan(
         runbook=runbook,
         dag=dag,
         artifact_schemas=artifact_schemas,
-        aliases=aliases or {},
+        aliases=resolved_aliases,
+        reversed_aliases=reversed_aliases,
     )
+
+
+def write_runbook(path: Path, runbook: dict[str, object]) -> None:
+    """Write a runbook dictionary to a YAML file.
+
+    Args:
+        path: Path to write the runbook file.
+        runbook: Dictionary representing the runbook structure.
+
+    """
+    path.write_text(yaml.dump(runbook))

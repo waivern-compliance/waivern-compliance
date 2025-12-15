@@ -27,6 +27,7 @@ from waivern_orchestration.models import (
     SourceConfig,
 )
 from waivern_orchestration.planner import ExecutionPlan
+from waivern_orchestration.utils import get_origin_from_artifact_id
 
 logger = logging.getLogger(__name__)
 
@@ -337,8 +338,8 @@ class DAGExecutor:
     def _determine_origin(self, artifact_id: str) -> str:
         """Determine the origin of an artifact based on its ID.
 
-        Namespaced artifact IDs follow the format: {runbook_name}__{uuid}__{artifact_id}
-        These come from flattened child runbooks.
+        Delegates to the shared utility function to ensure consistent
+        namespace parsing across the codebase.
 
         Args:
             artifact_id: The artifact ID to check.
@@ -347,17 +348,12 @@ class DAGExecutor:
             'parent' for regular artifacts, 'child:{runbook_name}' for namespaced.
 
         """
-        if "__" in artifact_id:
-            # Extract runbook name from namespaced ID
-            runbook_name = artifact_id.split("__")[0]
-            return f"child:{runbook_name}"
-        return "parent"
+        return get_origin_from_artifact_id(artifact_id)
 
     def _find_alias(self, artifact_id: str, plan: ExecutionPlan) -> str | None:
         """Find the alias name for an artifact if one exists.
 
-        The plan.aliases dict maps alias names to artifact IDs.
-        This method performs a reverse lookup.
+        Uses the pre-computed reversed_aliases dict for O(1) lookup.
 
         Args:
             artifact_id: The artifact ID to find an alias for.
@@ -367,7 +363,4 @@ class DAGExecutor:
             The alias name if found, None otherwise.
 
         """
-        for alias_name, target_id in plan.aliases.items():
-            if target_id == artifact_id:
-                return alias_name
-        return None
+        return plan.reversed_aliases.get(artifact_id)

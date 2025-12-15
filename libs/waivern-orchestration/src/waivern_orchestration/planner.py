@@ -24,6 +24,7 @@ from waivern_orchestration.errors import (
 from waivern_orchestration.flattener import ChildRunbookFlattener
 from waivern_orchestration.models import ArtifactDefinition, Runbook
 from waivern_orchestration.parser import parse_runbook, parse_runbook_from_dict
+from waivern_orchestration.utils import parse_schema_string
 
 
 @dataclass(frozen=True)
@@ -35,12 +36,15 @@ class ExecutionPlan:
     - The ExecutionDAG for dependency ordering
     - Pre-resolved schemas for each artifact (input, output)
     - Aliases mapping parent artifact names to namespaced child artifacts
+    - Reversed aliases for O(1) lookup from artifact ID to alias name
     """
 
     runbook: Runbook
     dag: ExecutionDAG
     artifact_schemas: dict[str, tuple[Schema | None, Schema]]
     aliases: dict[str, str] = field(default_factory=dict)
+    reversed_aliases: dict[str, str] = field(default_factory=dict)
+    """Maps artifact IDs to alias names (reverse of aliases)."""
 
 
 class Planner:
@@ -136,11 +140,15 @@ class Planner:
         self._validate_refs(flattened_runbook)
         artifact_schemas = self._resolve_schemas(flattened_runbook, dag)
 
+        # Pre-compute reversed aliases for O(1) lookup from artifact ID to alias
+        reversed_aliases = {v: k for k, v in aliases.items()}
+
         return ExecutionPlan(
             runbook=flattened_runbook,
             dag=dag,
             artifact_schemas=artifact_schemas,
             aliases=aliases,
+            reversed_aliases=reversed_aliases,
         )
 
     def _validate_refs(self, runbook: Runbook) -> None:
@@ -225,7 +233,7 @@ class Planner:
 
         # Use explicit override if specified, otherwise infer from connector
         if definition.output_schema is not None:
-            output_schema = self._parse_schema_string(definition.output_schema)
+            output_schema = parse_schema_string(definition.output_schema)
         else:
             factory = self._registry.connector_factories[connector_type]
             output_schema = self._get_first_output_schema(
@@ -265,7 +273,7 @@ class Planner:
 
         # Determine output schema - explicit override takes precedence
         if definition.output_schema is not None:
-            output_schema = self._parse_schema_string(definition.output_schema)
+            output_schema = parse_schema_string(definition.output_schema)
         elif definition.process is not None:
             output_schema = self._get_processor_output_schema(definition.process.type)
         else:
@@ -310,27 +318,6 @@ class Planner:
                 )
 
         return first_schema
-
-    def _parse_schema_string(self, schema_str: str) -> Schema:
-        """Parse a schema string into a Schema object.
-
-        Supports formats:
-        - "schema_name" (defaults to version 1.0.0)
-        - "schema_name/1.0.0" (explicit version)
-
-        Args:
-            schema_str: Schema string from runbook.
-
-        Returns:
-            Schema object.
-
-        """
-        if "/" in schema_str:
-            name, version = schema_str.rsplit("/", 1)
-        else:
-            name = schema_str
-            version = "1.0.0"
-        return Schema(name, version)
 
     def _get_processor_output_schema(self, processor_type: str) -> Schema:
         """Get output schema from a processor factory.

@@ -8,7 +8,6 @@ into the parent's artifact structure. This is a plan-time operation that:
 4. Creates aliases for output mapping
 """
 
-import uuid
 from pathlib import Path
 
 from waivern_core.schemas import Schema
@@ -23,6 +22,11 @@ from waivern_orchestration.errors import (
 from waivern_orchestration.models import ArtifactDefinition, ChildRunbookConfig, Runbook
 from waivern_orchestration.parser import parse_runbook
 from waivern_orchestration.path_resolver import resolve_child_runbook_path
+from waivern_orchestration.utils import (
+    create_namespaced_id,
+    generate_namespace,
+    parse_schema_string,
+)
 
 # Type alias for queue items: (artifact_id, definition, parent_path, ancestors, context_remap)
 _QueueItem = tuple[
@@ -166,7 +170,7 @@ class ChildRunbookFlattener:
         output_names = self._get_output_names(artifact_id, child_config, child_runbook)
 
         # Generate unique namespace for child artifacts
-        namespace = self._generate_namespace(child_runbook.name)
+        namespace = generate_namespace(child_runbook.name)
 
         # Build input remapping for child artifacts
         child_input_remapping = dict(resolved_input_mapping)
@@ -184,9 +188,16 @@ class ChildRunbookFlattener:
         )
 
         # Create aliases for outputs
+        # Note: child_runbook.outputs is guaranteed to be non-None here because
+        # _get_output_names validates that outputs exist
+        outputs = child_runbook.outputs
+        if outputs is None:
+            raise ValueError(
+                "Child runbook outputs are None (should be validated earlier)"
+            )
         for output_name, parent_alias in output_names.items():
-            child_artifact = child_runbook.outputs[output_name].artifact  # type: ignore[index]
-            namespaced_artifact = f"{namespace}__{child_artifact}"
+            child_artifact = outputs[output_name].artifact
+            namespaced_artifact = create_namespaced_id(namespace, child_artifact)
             self._aliases[parent_alias] = namespaced_artifact
 
     def _resolve_input_mapping(
@@ -233,7 +244,7 @@ class ChildRunbookFlattener:
 
         """
         for child_artifact_id, child_def in child_runbook.artifacts.items():
-            namespaced_id = f"{namespace}__{child_artifact_id}"
+            namespaced_id = create_namespaced_id(namespace, child_artifact_id)
 
             # Remap inputs: declared inputs → parent artifacts,
             # internal refs → namespaced versions
@@ -370,7 +381,7 @@ class ChildRunbookFlattener:
                 parent_schema = self._get_artifact_output_schema(parent_def)
                 if parent_schema is not None:
                     # Parse the child's declared input schema
-                    child_schema = self._parse_schema_string(input_decl.input_schema)
+                    child_schema = parse_schema_string(input_decl.input_schema)
                     if (
                         parent_schema.name != child_schema.name
                         or parent_schema.version != child_schema.version
@@ -397,7 +408,7 @@ class ChildRunbookFlattener:
         """
         # If explicit output_schema is set, use it
         if definition.output_schema is not None:
-            return self._parse_schema_string(definition.output_schema)
+            return parse_schema_string(definition.output_schema)
 
         # For source artifacts, get schema from connector factory
         if definition.source is not None:
@@ -463,21 +474,6 @@ class ChildRunbookFlattener:
 
         return result
 
-    def _generate_namespace(self, runbook_name: str) -> str:
-        """Generate unique namespace for child runbook artifacts.
-
-        Args:
-            runbook_name: Name of the child runbook.
-
-        Returns:
-            Unique namespace string.
-
-        """
-        short_uuid = str(uuid.uuid4())[:8]
-        # Clean runbook name for use in identifier
-        clean_name = runbook_name.replace(" ", "_").replace("-", "_").lower()
-        return f"{clean_name}__{short_uuid}"
-
     def _remap_child_inputs(
         self,
         inputs: str | list[str] | None,
@@ -511,31 +507,10 @@ class ChildRunbookFlattener:
                 return input_remapping.get(inp, inp)
             # If it's an internal child artifact, namespace it
             if inp in child_artifact_ids:
-                return f"{namespace}__{inp}"
+                return create_namespaced_id(namespace, inp)
             # Otherwise return as-is (shouldn't happen in valid runbooks)
             return inp
 
         if isinstance(inputs, str):
             return remap_single(inputs)
         return [remap_single(inp) for inp in inputs]
-
-    def _parse_schema_string(self, schema_str: str) -> Schema:
-        """Parse a schema string into a Schema object.
-
-        Supports formats:
-        - "schema_name" (defaults to version 1.0.0)
-        - "schema_name/1.0.0" (explicit version)
-
-        Args:
-            schema_str: Schema string from runbook.
-
-        Returns:
-            Schema object.
-
-        """
-        if "/" in schema_str:
-            name, version = schema_str.rsplit("/", 1)
-        else:
-            name = schema_str
-            version = "1.0.0"
-        return Schema(name, version)
