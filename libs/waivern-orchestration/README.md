@@ -8,8 +8,9 @@ This package provides the artifact-centric runbook orchestration system, includi
 - **Errors**: Typed exceptions for orchestration failures
 - **Parser**: YAML runbook parsing with environment variable substitution
 - **DAG**: Dependency graph building and topological sorting
-- **Planner**: Upfront validation and execution planning
+- **Planner**: Upfront validation, execution planning, and child runbook flattening
 - **Executor**: Parallel artifact execution with asyncio
+- **Child Runbook Composition**: Modular, reusable runbook design through plan-time flattening
 
 ## Installation
 
@@ -33,3 +34,7 @@ runbook = Runbook(
     },
 )
 ```
+
+## Documentation
+
+- [Child Runbook Composition](docs/child-runbook-composition.md) - Guide to modular runbook design
