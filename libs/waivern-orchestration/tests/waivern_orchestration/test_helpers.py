@@ -156,6 +156,8 @@ def create_simple_plan(
     artifacts: dict[str, ArtifactDefinition],
     artifact_schemas: dict[str, tuple[Schema | None, Schema]] | None = None,
     runbook_config: RunbookConfig | None = None,
+    aliases: dict[str, str] | None = None,
+    runbook_name: str = "Test Runbook",
 ) -> ExecutionPlan:
     """Create a simple ExecutionPlan for testing.
 
@@ -164,13 +166,16 @@ def create_simple_plan(
         artifact_schemas: Optional pre-resolved schemas. If not provided,
             defaults to (None, test_schema/1.0.0) for each artifact.
         runbook_config: Optional RunbookConfig for execution settings.
+        aliases: Optional aliases mapping parent artifact names to namespaced
+            child artifact IDs.
+        runbook_name: Name for the runbook.
 
     Returns:
         ExecutionPlan ready for execution.
 
     """
     runbook_kwargs: dict[str, object] = {
-        "name": "Test Runbook",
+        "name": runbook_name,
         "description": "Test description",
         "artifacts": artifacts,
     }
@@ -188,4 +193,5 @@ def create_simple_plan(
         runbook=runbook,
         dag=dag,
         artifact_schemas=artifact_schemas,
+        aliases=aliases or {},
     )
