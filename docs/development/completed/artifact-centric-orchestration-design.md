@@ -1,67 +1,42 @@
 # Design: Artifact-Centric Orchestration
 
-- **Epics:** #189, #190
 - **Status:** Completed
-- **Last Updated:** 2025-12-02
+- **Last Updated:** 2025-12-15
 
 ## Overview
 
-Replace the current step-based runbook format and sequential executor with an artifact-centric model and DAG-based parallel execution.
+The artifact-centric orchestration system replaces the previous step-based runbook format with a unified artifact model and DAG-based parallel execution. This design treats data artifacts as first-class citizens, with transformations as edges between them.
 
-## Current State
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Current Architecture                                        │
-│                                                              │
-│  Runbook (3 sections)     Executor (sequential)              │
-│  ├── connectors: [...]    ├── for step in steps:            │
-│  ├── analysers: [...]     │     extract or get artifact      │
-│  └── execution: [...]     │     process                      │
-│                           │     save if save_output          │
-│                           └── return results                 │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Issues:**
-- Three separate sections with cross-references
-- Sequential execution (no parallelism)
-- `save_output: true` required for pipeline chaining
-- Schema resolution scattered across executor methods
-
-## Target State
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  New Architecture                                            │
+│  Architecture                                                │
 │                                                              │
 │  Runbook (1 section)      Planner           Executor         │
 │  └── artifacts:           ├── parse         ├── parallel     │
-│        a: source(...)     ├── build DAG     ├── async        │
-│        b: inputs: a       ├── validate      └── fan-in       │
-│        c: inputs: [a,b]   └── ExecutionPlan                  │
+│        a: source(...)     ├── flatten       ├── async        │
+│        b: inputs: a       ├── build DAG     └── fan-in       │
+│        c: inputs: [a,b]   ├── validate                       │
+│        d: child_runbook   └── ExecutionPlan                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Package Structure
 
 ```
-libs/
-└── waivern-orchestration/          # NEW PACKAGE
-    └── src/waivern_orchestration/
-        ├── __init__.py
-        ├── models.py               # ArtifactDef, ExecutionPlan
-        ├── parser.py               # YAML → models
-        ├── dag.py                  # ExecutionDAG (graphlib wrapper)
-        ├── planner.py              # Planner class
-        ├── executor.py             # DAGExecutor class
-        └── errors.py
-
-apps/wct/
-└── src/wct/
-    ├── executor.py                 # REMOVE: replaced by waivern_orchestration.executor
-    ├── runbook.py                  # REMOVE: import from waivern-orchestration
-    └── cli.py                      # UPDATE: use Planner + DAGExecutor
+libs/waivern-orchestration/
+└── src/waivern_orchestration/
+    ├── __init__.py
+    ├── models.py               # Runbook, ArtifactDefinition, ExecutionResult
+    ├── parser.py               # YAML → Runbook model
+    ├── dag.py                  # ExecutionDAG (graphlib wrapper)
+    ├── planner.py              # Planner class, ExecutionPlan
+    ├── flattener.py            # Child runbook flattening
+    ├── path_resolver.py        # Secure child runbook path resolution
+    ├── executor.py             # DAGExecutor class
+    ├── utils.py                # Shared utilities (schema parsing, namespacing)
+    └── errors.py               # Typed exceptions
 ```
 
 ## Data Models
@@ -74,23 +49,24 @@ class SourceConfig(BaseModel):
     type: str                           # e.g., "mysql", "filesystem"
     properties: dict[str, Any] = {}
 
-class TransformConfig(BaseModel):
-    """Analyser configuration for derived artifacts."""
-    type: str                           # e.g., "personal_data_analyser"
+class ProcessConfig(BaseModel):
+    """Processor configuration for derived artifacts."""
+    type: str                           # e.g., "personal_data"
     properties: dict[str, Any] = {}
+
+class ChildRunbookConfig(BaseModel):
+    """Configuration for child runbook composition."""
+    path: str                           # Relative path to child runbook
+    input_mapping: dict[str, str]       # Maps child input names to parent artifacts
+    output: str | None = None           # Single output (mutually exclusive with output_mapping)
+    output_mapping: dict[str, str] | None = None  # Multiple outputs
 
 class RunbookConfig(BaseModel):
     """Execution configuration for the runbook."""
     timeout: int | None = None          # Total execution timeout (seconds)
     cost_limit: float | None = None     # Total LLM cost cap
     max_concurrency: int = 10           # Max parallel artifacts
-    max_child_depth: int = 3            # Max recursive depth for child runbooks
-
-class ExecuteConfig(BaseModel):
-    """Configuration for recursive runbook execution (child override)."""
-    mode: Literal["child"] = "child"
-    timeout: int | None = None          # Override parent timeout for this child
-    cost_limit: float | None = None     # Override parent cost limit for this child
+    template_paths: list[str] = []      # Directories for child runbook search
 
 class ArtifactDefinition(BaseModel):
     """Single artifact in the runbook."""
@@ -99,28 +75,26 @@ class ArtifactDefinition(BaseModel):
     description: str | None = None      # What this artifact represents
     contact: str | None = None          # Responsible party
 
-    # Data source (mutually exclusive)
+    # Data source (mutually exclusive with inputs)
     source: SourceConfig | None = None
     inputs: str | list[str] | None = None
 
-    # Transformation
-    transform: TransformConfig | None = None
-    merge: Literal["concatenate"] = "concatenate"  # See ADR-0003
+    # Processing
+    process: ProcessConfig | None = None
+    child_runbook: ChildRunbookConfig | None = None  # Runbook composition
+    merge: Literal["concatenate"] = "concatenate"
 
     # Schema override (optional - inferred from components if not specified)
-    input_schema: str | None = None
     output_schema: str | None = None
 
     # Behaviour
     output: bool = False                # Export this artifact
     optional: bool = False              # Skip dependents on failure
 
-    # Recursive execution (Phase 2 - model now, implement later)
-    execute: ExecuteConfig | None = None  # Execute input artifact as child runbook
-
     @model_validator
-    def validate_source_xor_inputs(self) -> Self:
-        # source XOR inputs (not both, not neither)
+    def validate_artifact_type(self) -> Self:
+        # source XOR inputs (not both, not neither for non-child artifacts)
+        # child_runbook cannot combine with source or process
         ...
 ```
 
@@ -130,13 +104,18 @@ class ArtifactDefinition(BaseModel):
 class Runbook(BaseModel):
     """Artifact-centric runbook.
 
-    Also registered as a schema - enabling runbooks to be artifact outputs
-    for composable/recursive execution (agentic workflows).
+    Runbooks with `inputs` and `outputs` sections can be used as child runbooks
+    for composable/modular workflows.
     """
     name: str
     description: str
     contact: str | None = None
     config: RunbookConfig = Field(default_factory=RunbookConfig)
+
+    # Child runbook interface (optional)
+    inputs: dict[str, RunbookInputDeclaration] | None = None
+    outputs: dict[str, RunbookOutputDeclaration] | None = None
+
     artifacts: dict[str, ArtifactDefinition]
 ```
 
@@ -148,7 +127,9 @@ class ExecutionPlan:
     """Immutable, validated execution plan."""
     runbook: Runbook
     dag: ExecutionDAG
-    artifact_schemas: dict[str, tuple[Schema, Schema]]  # input, output per artifact
+    artifact_schemas: dict[str, tuple[Schema | None, Schema]]  # input, output per artifact
+    aliases: dict[str, str] = field(default_factory=dict)  # parent name → namespaced child
+    reversed_aliases: dict[str, str] = field(default_factory=dict)  # namespaced → parent name
 ```
 
 ## ExecutionDAG
@@ -181,59 +162,57 @@ class ExecutionDAG:
 Responsibilities:
 
 1. Parse YAML into Runbook model
-2. Build ExecutionDAG from artifact dependencies
-3. Validate: cycles, missing refs, schema compatibility
-4. Produce immutable ExecutionPlan
+2. Flatten child runbooks into parent (plan-time composition)
+3. Build ExecutionDAG from artifact dependencies
+4. Validate: cycles, missing refs, schema compatibility
+5. Produce immutable ExecutionPlan
 
-The Planner discovers components via entry points directly - self-contained with no external registry dependency:
+The Planner uses a ComponentRegistry for component discovery:
 
 ```python
 class Planner:
-    def __init__(self) -> None:
-        # Discover component factories from entry points
-        self._connector_factories = self._load_entry_points("waivern.connectors")
-        self._analyser_factories = self._load_entry_points("waivern.analysers")
-
-    def _load_entry_points(self, group: str) -> dict[str, ComponentFactory]:
-        """Load component factories from entry points."""
-        factories = {}
-        for ep in importlib.metadata.entry_points(group=group):
-            factories[ep.name] = ep.load()()
-        return factories
+    def __init__(self, registry: ComponentRegistry) -> None:
+        self._registry = registry
+        self._flattener = ChildRunbookFlattener(registry)
 
     def plan(self, runbook_path: Path) -> ExecutionPlan:
-        runbook = self._parse(runbook_path)
-        dag = ExecutionDAG(runbook.artifacts)
+        runbook = parse_runbook(runbook_path)
+
+        # Flatten child runbooks into parent
+        flattened_artifacts, aliases = self._flattener.flatten(runbook, runbook_path)
+
+        # Build DAG from flattened artifacts
+        dag = ExecutionDAG(flattened_artifacts)
         dag.validate()
-        self._validate_refs(runbook)
-        schemas = self._resolve_schemas(runbook)
-        return ExecutionPlan(runbook=runbook, dag=dag, artifact_schemas=schemas)
 
-    def _validate_refs(self, runbook: Runbook) -> None:
-        """Validate all `inputs` references point to existing artifacts."""
-        ...
+        # Validate references and resolve schemas
+        self._validate_refs(flattened_artifacts)
+        schemas = self._resolve_schemas(flattened_artifacts)
 
-    def _resolve_schemas(self, runbook: Runbook) -> dict[str, tuple[Schema, Schema]]:
-        """Resolve and validate schema compatibility for each artifact."""
-        ...
+        return ExecutionPlan(
+            runbook=runbook,
+            dag=dag,
+            artifact_schemas=schemas,
+            aliases=aliases,
+            reversed_aliases={v: k for k, v in aliases.items()},
+        )
 ```
 
 ## DAGExecutor
 
-Async orchestration with sync analyser execution via ThreadPoolExecutor:
+Async orchestration with sync processor execution via ThreadPoolExecutor:
 
 ```python
 class DAGExecutor:
-    def __init__(self, container: ServiceContainer) -> None:
-        self._container = container
+    def __init__(self, registry: ComponentRegistry) -> None:
+        self._registry = registry
 
     async def execute(self, plan: ExecutionPlan) -> ExecutionResult:
-        # Use config from runbook
         config = plan.runbook.config
         semaphore = asyncio.Semaphore(config.max_concurrency)
         thread_pool = ThreadPoolExecutor(max_workers=config.max_concurrency)
 
-        store = self._container.get_service(ArtifactStore)
+        store = self._registry.container.get_service(ArtifactStore)
         store.clear()
 
         sorter = plan.dag.create_sorter()
@@ -242,7 +221,7 @@ class DAGExecutor:
 
         while sorter.is_active():
             ready = [aid for aid in sorter.get_ready() if aid not in skipped]
-            tasks = [self._produce(aid, plan, store, skipped) for aid in ready]
+            tasks = [self._produce(aid, plan, store) for aid in ready]
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
 
             for aid, result in zip(ready, batch_results):
@@ -253,45 +232,25 @@ class DAGExecutor:
 
         return ExecutionResult(artifacts=results, skipped=skipped)
 
-    async def _produce(
-        self,
-        artifact_id: str,
-        plan: ExecutionPlan,
-        store: ArtifactStore,
-        skipped: set[str],
-    ) -> ArtifactResult:
-        async with self._semaphore:
-            defn = plan.runbook.artifacts[artifact_id]
+    async def _produce(self, artifact_id: str, plan: ExecutionPlan, store: ArtifactStore) -> ArtifactResult:
+        """Produce a single artifact."""
+        # Note: Child runbooks are flattened at plan time, so executor
+        # only sees regular source/derived artifacts
+        defn = plan.artifact_definitions[artifact_id]
 
-            if defn.source:
-                message = await self._run_connector(defn.source)
-            elif defn.execute:
-                # Phase 3: Recursive execution
-                message = await self._run_child_runbook(defn, store)
-            else:
-                input_messages = self._gather_inputs(defn.inputs, store)
-                merged = self._merge(input_messages)  # Always concatenate (ADR-0003)
-                message = await self._run_analyser(defn.transform, merged)
+        if defn.source:
+            message = await self._run_connector(defn.source)
+        else:
+            input_messages = [store.get(ref) for ref in self._normalise_inputs(defn.inputs)]
+            message = await self._run_processor(defn.process, input_messages)
 
-            store.save(artifact_id, message)
-            return ArtifactResult(artifact_id=artifact_id, success=True, message=message)
+        store.save(artifact_id, message)
 
-    async def _run_child_runbook(
-        self,
-        defn: ArtifactDefinition,
-        store: ArtifactStore,
-    ) -> Message:
-        """Execute input artifact as child runbook. (Phase 3)"""
-        raise NotImplementedError("Recursive runbook execution not yet implemented")
+        # Determine origin and alias for results
+        origin = get_origin_from_artifact_id(artifact_id)
+        alias = plan.reversed_aliases.get(artifact_id)
 
-    async def _run_connector(self, source: SourceConfig) -> Message:
-        """Run connector in thread pool (sync → async bridge)."""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            self._thread_pool,
-            self._sync_extract,
-            source,
-        )
+        return ArtifactResult(artifact_id=artifact_id, success=True, message=message, origin=origin, alias=alias)
 ```
 
 ## Schema Resolution
@@ -350,35 +309,6 @@ class ArtifactStore(ABC):
 
     @abstractmethod
     def list_artifacts(self) -> list[str]: ...  # NEW
-```
-
-### ScopedArtifactStore (Phase 3)
-
-For recursive runbook execution, child runbooks use a scoped store that can read parent artifacts but writes to its own namespace:
-
-```python
-class ScopedArtifactStore(ArtifactStore):
-    """Scoped store for child runbook execution.
-
-    - Child can read any parent artifact (inherited context)
-    - Child writes to its own namespace (no collision risk)
-    - Specified outputs promoted to parent on completion
-    """
-    def __init__(self, parent: ArtifactStore) -> None:
-        self._parent = parent
-        self._local: dict[str, Message] = {}
-
-    def get(self, artifact_id: str) -> Message:
-        if artifact_id in self._local:
-            return self._local[artifact_id]
-        return self._parent.get(artifact_id)  # Delegate to parent
-
-    def save(self, artifact_id: str, message: Message) -> None:
-        self._local[artifact_id] = message  # Always write locally
-
-    def promote(self, artifact_id: str, parent_id: str) -> None:
-        """Promote local artifact to parent store."""
-        self._parent.save(parent_id, self._local[artifact_id])
 ```
 
 ## CLI Changes
@@ -468,7 +398,7 @@ artifacts:
     name: "Log Files"
     description: "Raw log file content from application servers"
     source:
-      type: filesystem_connector
+      type: filesystem
       properties:
         path: "./logs"
 
@@ -477,57 +407,80 @@ artifacts:
     description: "Personal data detected in log files"
     contact: "DPO <dpo@company.com>"
     inputs: log_content
-    transform:
-      type: personal_data_analyser
+    process:
+      type: personal_data
       properties:
         llm_validation:
           enable_llm_validation: false
     output: true
 ```
 
-## Phased Implementation
+## Features Implemented
 
-### Phase 1 - Foundation (This Design)
+### Core Orchestration
 
-Core artifact-centric orchestration:
 - `waivern-orchestration` package with models, parser, DAG, planner, executor
 - `DAGExecutor` with parallel execution via asyncio + ThreadPoolExecutor
-- Entry point discovery for components
+- `ComponentRegistry` for centralised component discovery
 - Schema validation at plan time
-- Fan-in support with concatenate merge (same-schema only, see [ADR-0003](../../adr/0003-fan-in-handling-and-transformer-pattern.md))
+- Fan-in support with multi-schema matching via `InputRequirement`
 - `RunbookConfig` enforcement (timeout, cost_limit, max_concurrency)
 - `list_artifacts()` for observability
 
-### Phase 2 - Transformers (Deferred)
+### Multi-Schema Fan-In
 
-Multi-schema fan-in via Transformer components:
-- New component type: Transformer (multiple schemas in, single schema out)
-- New entry point group: `waivern.transformers`
-- Planner validates transformer input schemas match upstream outputs
-- Enables combining different data types (e.g., database schema + source code findings)
+Analysers can declare multiple supported input combinations:
 
-See [ADR-0003](../../adr/0003-fan-in-handling-and-transformer-pattern.md) and [Phase 2 Design](artifact-centric-orchestration/phase-2-transformers-design.md) for details.
+```python
+@classmethod
+def get_input_requirements(cls) -> list[list[InputRequirement]]:
+    return [
+        [InputRequirement("personal_data_finding", "1.0.0")],
+        [
+            InputRequirement("personal_data_finding", "1.0.0"),
+            InputRequirement("processing_purpose_finding", "1.0.0"),
+        ],
+    ]
+```
 
-### Phase 3 - Child Runbooks (Deferred)
+The Planner matches provided inputs against declared requirements using exact set matching.
 
-Recursive/composable runbook execution:
-- `_run_child_runbook()` implementation in DAGExecutor
-- `ScopedArtifactStore` implementation
-- Child depth tracking and `max_child_depth` enforcement
-- Runbook-as-schema registration
+### Child Runbook Composition
 
-See [Phase 3 Design](artifact-centric-orchestration/phase-3-child-runbooks-design.md) for details.
+Modular runbook design through plan-time flattening:
+- Child runbooks declare inputs/outputs as schema-validated contracts
+- Parent runbooks reference children via `child_runbook` directive
+- `ChildRunbookFlattener` inlines child artifacts with unique namespaces
+- Aliases map parent artifact names to namespaced child artifacts
+- Security constraints on path resolution (no absolute paths, no `..`)
 
-**Models included now** (`RunbookConfig`, `ExecuteConfig`, `execute` field) to avoid schema changes later.
+See [Child Runbook Composition](artifact-centric-orchestration/child-runbooks-design.md) for details.
+
+### Export Infrastructure
+
+- `Exporter` protocol for regulation-specific output formats
+- `ExporterRegistry` for exporter discovery
+- Auto-detection based on analyser compliance frameworks
+- `JsonExporter` as default generic exporter
+- CLI: `wct run --exporter`, `wct ls-exporters`
 
 ## Design Decisions
 
-1. **Component Discovery** - The Planner discovers components via entry points directly, making it self-contained with no external registry dependency.
+1. **Component Discovery** - The `ComponentRegistry` centralises component discovery via entry points. Both Planner and Executor share the same registry instance.
 
-2. **Schema Handling** - Schemas are inferred from component declarations by default, with optional explicit `input_schema`/`output_schema` overrides for future extensibility.
+2. **Schema Handling** - Schemas are inferred from component declarations by default, with optional explicit `output_schema` overrides for extensibility.
 
-3. **Artifact Metadata** - Per-artifact metadata (`name`, `description`, `contact`) is preserved as these are business requirements rather than functional requirements.
+3. **Artifact Metadata** - Per-artifact metadata (`name`, `description`, `contact`) is preserved as these are business requirements for compliance audit trails.
 
-4. **Fan-In Handling** - All fan-in inputs must have the same schema (name AND version). Different-schema fan-in requires explicit Transformer components (Phase 2). Only "concatenate" merge strategy is supported. See [ADR-0003](../../adr/0003-fan-in-handling-and-transformer-pattern.md).
+4. **Multi-Schema Fan-In** - Analysers declare supported input combinations via `InputRequirement`. The Planner validates provided inputs match exactly one declared combination.
 
-5. **Executor Location** - DAGExecutor lives in `waivern-orchestration` alongside Planner, keeping all orchestration logic in one package. WCT imports and wires these components together.
+5. **Plan-Time Flattening** - Child runbooks are flattened into the parent at plan time, producing a single unified DAG. The Executor has no composition awareness—it simply executes the flattened plan.
+
+6. **Namespace Isolation** - Child artifacts receive unique namespaces (`{runbook_name}__{uuid}__{artifact_id}`) to prevent collisions when the same child runbook is used multiple times.
+
+7. **Executor Location** - DAGExecutor lives in `waivern-orchestration` alongside Planner, keeping all orchestration logic in one package. WCT imports and wires these components together.
+
+## Related Documentation
+
+- [Child Runbook Composition](artifact-centric-orchestration/child-runbooks-design.md) - Detailed design for modular runbook composition
+- [Child Runbook User Guide](../../libs/waivern-orchestration/docs/child-runbook-composition.md) - How to use child runbooks
