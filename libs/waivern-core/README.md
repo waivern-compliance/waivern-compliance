@@ -30,6 +30,10 @@ class MyConnector(Connector):
     ...
 ```
 
+## Documentation
+
+- [Processor Input Requirements](docs/processor-input-requirements.md) - How processors declare and handle input schemas
+
 ## Dependencies
 
 Minimal dependencies by design:

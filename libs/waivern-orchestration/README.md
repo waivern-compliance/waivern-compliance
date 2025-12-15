@@ -37,4 +37,5 @@ runbook = Runbook(
 
 ## Documentation
 
+- [Runbook Format](docs/runbook-format.md) - Artifact-centric runbook structure and syntax
 - [Child Runbook Composition](docs/child-runbook-composition.md) - Guide to modular runbook design
