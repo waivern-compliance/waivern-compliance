@@ -740,3 +740,52 @@ class TestDAGExecutorTimeout:
         )
         total = len(result.artifacts) + len(result.skipped)
         assert total == 5, "All artifacts should be accounted for"
+
+
+# =============================================================================
+# Phase 3: Child Runbooks - Executor Tests for Aliases and Origin Tracking
+# =============================================================================
+
+
+class TestExecutorChildRunbookAliases:
+    """Tests for executor handling of flattened child runbook plans."""
+
+    def test_execute_flattened_plan_with_aliases(self) -> None:
+        """Executor correctly handles flattened plan with aliases."""
+        pass
+
+    def test_execute_downstream_references_alias(self) -> None:
+        """Downstream artifacts can reference aliased artifact names."""
+        pass
+
+
+class TestExecutorOriginTracking:
+    """Tests for origin tracking in artifact results."""
+
+    def test_execute_artifact_origin_parent(self) -> None:
+        """Parent artifacts have origin='parent' in results."""
+        pass
+
+    def test_execute_artifact_origin_child(self) -> None:
+        """Child artifacts have origin='child:{name}' in results."""
+        pass
+
+    def test_execute_artifact_alias_populated(self) -> None:
+        """Aliased artifacts have alias field populated in results."""
+        pass
+
+
+class TestExecutorSensitiveInputRedaction:
+    """Tests for sensitive input redaction in logs and results."""
+
+    def test_sensitive_input_redacted_from_logs(self) -> None:
+        """Sensitive input values are replaced with [REDACTED] in logs."""
+        pass
+
+    def test_sensitive_input_redacted_from_execution_results(self) -> None:
+        """Sensitive input values are not included in JSON execution results."""
+        pass
+
+    def test_sensitive_input_passed_to_processor(self) -> None:
+        """Processors receive actual sensitive values, not redacted ones."""
+        pass

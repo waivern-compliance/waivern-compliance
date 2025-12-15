@@ -23,3 +23,26 @@ class SchemaCompatibilityError(OrchestrationError):
 
 class ComponentNotFoundError(OrchestrationError):
     """Raised when a referenced component type is not found."""
+
+
+# Phase 3: Child runbook errors
+
+
+class InvalidPathError(OrchestrationError):
+    """Raised when a child runbook path is invalid (absolute or contains '..')."""
+
+
+class ChildRunbookNotFoundError(OrchestrationError):
+    """Raised when a child runbook file cannot be found."""
+
+
+class CircularRunbookError(OrchestrationError):
+    """Raised when circular runbook references are detected (A → B → A)."""
+
+
+class MissingInputMappingError(OrchestrationError):
+    """Raised when required child runbook inputs are not mapped."""
+
+
+class InvalidOutputMappingError(OrchestrationError):
+    """Raised when output mapping references non-existent child artifact."""

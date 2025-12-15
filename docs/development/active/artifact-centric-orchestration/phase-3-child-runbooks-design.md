@@ -2,7 +2,8 @@
 
 - **Status:** Design Complete
 - **Prerequisites:** Task 7 (Export Infrastructure and Multi-Schema Fan-In) complete
-- **Last Updated:** 2025-12-12
+- **Last Updated:** 2025-12-15
+- **Note:** Field name changed from `schema` to `input_schema` to avoid Pydantic BaseModel attribute shadowing
 
 ## Table of Contents
 
@@ -85,7 +86,7 @@ Parent Runbook                     Child Runbook (file)
 ┌─────────────────────┐           ┌─────────────────────────────┐
 │ artifacts:          │           │ inputs:                     │
 │   db_schema:        │           │   source_data:              │
-│     source: mysql   │           │     schema: standard_input  │
+│     source: mysql   │           │     input_schema: std_input │
 │                     │           │                             │
 │   child_analysis:   │──refs────▶│ artifacts:                  │
 │     inputs: db_schema           │   findings:                 │
@@ -152,10 +153,10 @@ Modern workflow tools (Dagster, Prefect, dbt) have moved toward strong typing af
 # Configuration passed as schema-validated input
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
 
   config:
-    schema: analysis_config/1.0.0  # Explicit contract
+    input_schema: analysis_config/1.0.0  # Explicit contract
     optional: true
     default:
       analysis_depth: "standard"
@@ -177,17 +178,17 @@ description: "Analyses data for personal information"
 
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
     description: "Data to analyse"
 
   config_data:
-    schema: analysis_config/1.0.0
+    input_schema: analysis_config/1.0.0
     optional: true
     default: null
     description: "Optional configuration overrides"
 
   api_credentials:
-    schema: credential/1.0.0
+    input_schema: credential/1.0.0
     sensitive: true
     description: "API credentials (redacted from logs)"
 
@@ -212,7 +213,7 @@ artifacts:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `schema` | string | Yes | Schema identifier (e.g., `standard_input/1.0.0`) |
+| `input_schema` | string | Yes | Schema identifier (e.g., `standard_input/1.0.0`) |
 | `optional` | boolean | No | If `true`, input doesn't need to be mapped (default: `false`) |
 | `default` | any | No | Default value if not mapped (requires `optional: true`) |
 | `sensitive` | boolean | No | If `true`, value is redacted from logs and execution results (default: `false`) |
@@ -243,7 +244,7 @@ If a runbook has an `inputs` section, it **cannot** have `source` artifacts. All
 # INVALID - has both inputs and source
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
 
 artifacts:
   db_data:
@@ -488,7 +489,7 @@ All validation occurs at plan time:
 class RunbookInputDeclaration(BaseModel):
     """Declares an expected input for a child runbook."""
 
-    schema: str
+    input_schema: str
     """Schema identifier (e.g., 'standard_input/1.0.0')."""
 
     optional: bool = False
@@ -731,7 +732,7 @@ The design supports Terraform-inspired patterns for reusable infrastructure:
 | Terraform Concept | WCF Equivalent | Status |
 |-------------------|----------------|--------|
 | Variables | `inputs` section | ✅ Included |
-| Variable types | `schema` field | ✅ Included |
+| Variable types | `input_schema` field | ✅ Included |
 | Optional variables | `optional` field | ✅ Included |
 | Default values | `default` field | ✅ Included |
 | Sensitive variables | `sensitive` field | ✅ Included |
@@ -757,11 +758,11 @@ description: "Reusable GDPR compliance analysis"
 
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
     description: "Data to analyse for GDPR compliance"
 
   analysis_depth:
-    schema: analysis_config/1.0.0
+    input_schema: analysis_config/1.0.0
     optional: true
     default:
       level: "standard"
@@ -769,7 +770,7 @@ inputs:
     description: "Analysis configuration (defaults to standard depth)"
 
   compliance_frameworks:
-    schema: framework_list/1.0.0
+    input_schema: framework_list/1.0.0
     optional: true
     default:
       frameworks: ["GDPR", "UK_GDPR"]
@@ -834,7 +835,7 @@ artifacts:
 name: "Personal Data Analysis"
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
 
 outputs:
   findings:
@@ -906,7 +907,7 @@ artifacts:
 name: "GDPR Suite"
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
 
 outputs:
   compliance_report:
@@ -943,7 +944,7 @@ artifacts:
 name: "Personal Data Analysis"
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
 
 outputs:
   findings:
