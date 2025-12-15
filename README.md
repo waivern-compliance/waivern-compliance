@@ -9,19 +9,15 @@ The Waivern Compliance Framework provides:
 - **Framework Libraries** - Core abstractions, multi-provider LLM support, and built-in components
 - **WCT (Waivern Compliance Tool)** - CLI application for orchestrating compliance analysis
 - **Schema-Driven Architecture** - Type-safe component communication through JSON Schema
-- **Extensible Design** - Open standards for connectors, processors, and rulesets
+- **Extensible Design** - Open standards for connectors, analysers, and rulesets
 
 ### Core Components
 
 - **Connectors** - Extract data from sources (MySQL, SQLite, files, source code)
-- **Processors** - Detect compliance issues (personal data, processing purposes, data subjects)
+- **Analysers** - Detect compliance issues (personal data, processing purposes, data subjects)
 - **Rulesets** - YAML-based pattern definitions for static analysis
 - **Runbooks** - YAML configurations defining artifacts and their dependencies
 - **Orchestration** - Planner validates and flattens runbooks; DAGExecutor runs artifacts in parallel
-
-📋 **[Development Roadmap](https://github.com/orgs/waivern-compliance/projects/3)** - Current progress and planned features
-
-🚀 Browse [good first issues](https://github.com/waivern-compliance/waivern-compliance/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
 ## Quick Start
 
@@ -73,7 +69,7 @@ uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml -v
 ```bash
 # List components
 uv run wct ls-connectors
-uv run wct ls-processors
+uv run wct ls-processors    # Lists analysers
 
 # Validate runbook
 uv run wct validate-runbook apps/wct/runbooks/samples/file_content_analysis.yaml
@@ -147,13 +143,13 @@ waivern-compliance/
 ### Data Flow
 
 ```
-Runbook (YAML) → Planner → DAGExecutor → Connector/Processor → Findings (JSON)
+Runbook (YAML) → Planner → DAGExecutor → Connector/Analyser → Findings (JSON)
 ```
 
 1. **Runbook** defines artifacts (sources and transformations) and their dependencies
 2. **Planner** parses runbook, flattens child runbooks, builds DAG, validates schemas
 3. **DAGExecutor** runs artifacts in dependency order (parallel where possible)
-4. **Connectors** extract data; **Processors** transform data
+4. **Connectors** extract data; **Analysers** transform and analyse data
 5. **Message objects** provide automatic schema validation
 6. **Results** output as structured JSON
 
@@ -243,7 +239,7 @@ class MyConnectorFactory(ComponentFactory[MyConnector]):
         return MyConnector(config)
 ```
 
-#### Processor Example
+#### Analyser Example
 
 ```python
 from typing import override
@@ -313,6 +309,8 @@ Runbooks support JSON Schema validation for:
 
 ## Contributing
 
+🚀 Browse [good first issues](https://github.com/waivern-compliance/waivern-compliance/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+
 1. Fork the repository
 2. Create a feature branch (`feature/your-feature-name`)
 3. Make your changes
@@ -333,6 +331,7 @@ Run `./scripts/dev-checks.sh` before committing.
 - **[WCF Core Concepts](docs/core-concepts/wcf-core-components.md)** - Framework architecture
 - **[Configuration Guide](docs/how-tos/configuration.md)** - Environment configuration
 - **[Runbook Documentation](apps/wct/runbooks/README.md)** - Runbook usage
+
 
 ## License
 
