@@ -3,10 +3,11 @@
 The Planner is responsible for:
 1. Parsing runbooks and building the execution DAG
 2. Validating references and schema compatibility
-3. Producing an immutable ExecutionPlan
+3. Delegating child runbook flattening to ChildRunbookFlattener
+4. Producing an immutable ExecutionPlan
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -20,8 +21,10 @@ from waivern_orchestration.errors import (
     MissingArtifactError,
     SchemaCompatibilityError,
 )
+from waivern_orchestration.flattener import ChildRunbookFlattener
 from waivern_orchestration.models import ArtifactDefinition, Runbook
 from waivern_orchestration.parser import parse_runbook, parse_runbook_from_dict
+from waivern_orchestration.utils import parse_schema_string
 
 
 @dataclass(frozen=True)
@@ -32,11 +35,16 @@ class ExecutionPlan:
     - The parsed and validated Runbook model
     - The ExecutionDAG for dependency ordering
     - Pre-resolved schemas for each artifact (input, output)
+    - Aliases mapping parent artifact names to namespaced child artifacts
+    - Reversed aliases for O(1) lookup from artifact ID to alias name
     """
 
     runbook: Runbook
     dag: ExecutionDAG
     artifact_schemas: dict[str, tuple[Schema | None, Schema]]
+    aliases: dict[str, str] = field(default_factory=dict)
+    reversed_aliases: dict[str, str] = field(default_factory=dict)
+    """Maps artifact IDs to alias names (reverse of aliases)."""
 
 
 class Planner:
@@ -50,6 +58,8 @@ class Planner:
 
         """
         self._registry = registry
+        self._runbook_path: Path | None = None
+        self._flattener = ChildRunbookFlattener(registry)
 
     def plan(self, runbook_path: Path) -> ExecutionPlan:
         """Plan execution from a runbook file.
@@ -66,8 +76,10 @@ class Planner:
             MissingArtifactError: If artifact reference is invalid.
             ComponentNotFoundError: If connector/processor type not found.
             SchemaCompatibilityError: If schemas are incompatible.
+            CircularRunbookError: If circular runbook references detected.
 
         """
+        self._runbook_path = runbook_path
         runbook = parse_runbook(runbook_path)
         return self._create_plan(runbook)
 
@@ -104,18 +116,39 @@ class Planner:
             Validated, immutable ExecutionPlan.
 
         """
+        # Flatten child runbooks into parent artifacts
+        flattened_artifacts, aliases = self._flattener.flatten(
+            runbook, self._runbook_path
+        )
+
+        # Create a new runbook with flattened artifacts
+        flattened_runbook = Runbook(
+            name=runbook.name,
+            description=runbook.description,
+            contact=runbook.contact,
+            config=runbook.config,
+            inputs=runbook.inputs,
+            outputs=runbook.outputs,
+            artifacts=flattened_artifacts,
+        )
+
         # Build DAG and validate for cycles
-        dag = ExecutionDAG(runbook.artifacts)
+        dag = ExecutionDAG(flattened_artifacts)
         dag.validate()
 
         # Validate references and resolve schemas
-        self._validate_refs(runbook)
-        artifact_schemas = self._resolve_schemas(runbook, dag)
+        self._validate_refs(flattened_runbook)
+        artifact_schemas = self._resolve_schemas(flattened_runbook, dag)
+
+        # Pre-compute reversed aliases for O(1) lookup from artifact ID to alias
+        reversed_aliases = {v: k for k, v in aliases.items()}
 
         return ExecutionPlan(
-            runbook=runbook,
+            runbook=flattened_runbook,
             dag=dag,
             artifact_schemas=artifact_schemas,
+            aliases=aliases,
+            reversed_aliases=reversed_aliases,
         )
 
     def _validate_refs(self, runbook: Runbook) -> None:
@@ -200,7 +233,7 @@ class Planner:
 
         # Use explicit override if specified, otherwise infer from connector
         if definition.output_schema is not None:
-            output_schema = self._parse_schema_string(definition.output_schema)
+            output_schema = parse_schema_string(definition.output_schema)
         else:
             factory = self._registry.connector_factories[connector_type]
             output_schema = self._get_first_output_schema(
@@ -240,7 +273,7 @@ class Planner:
 
         # Determine output schema - explicit override takes precedence
         if definition.output_schema is not None:
-            output_schema = self._parse_schema_string(definition.output_schema)
+            output_schema = parse_schema_string(definition.output_schema)
         elif definition.process is not None:
             output_schema = self._get_processor_output_schema(definition.process.type)
         else:
@@ -285,27 +318,6 @@ class Planner:
                 )
 
         return first_schema
-
-    def _parse_schema_string(self, schema_str: str) -> Schema:
-        """Parse a schema string into a Schema object.
-
-        Supports formats:
-        - "schema_name" (defaults to version 1.0.0)
-        - "schema_name/1.0.0" (explicit version)
-
-        Args:
-            schema_str: Schema string from runbook.
-
-        Returns:
-            Schema object.
-
-        """
-        if "/" in schema_str:
-            name, version = schema_str.rsplit("/", 1)
-        else:
-            name = schema_str
-            version = "1.0.0"
-        return Schema(name, version)
 
     def _get_processor_output_schema(self, processor_type: str) -> Schema:
         """Get output schema from a processor factory.

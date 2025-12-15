@@ -54,7 +54,7 @@ waivern-compliance/
 - **waivern-data-subject-analyser**: Data subject analyser (standalone package)
 - **waivern-processing-purpose-analyser**: Processing purpose analyser (standalone package, supports both standard input and source code analysis)
 - **waivern-data-export-analyser**: Data export analyser with TCF vendor database (work in progress, not yet functional)
-- **waivern-orchestration**: Runbook parsing, execution planning (DAG), and parallel artifact execution
+- **waivern-orchestration**: Runbook parsing, child runbook flattening, execution planning (DAG), and parallel artifact execution
 - **waivern-artifact-store**: In-memory artifact storage for inter-artifact data passing during execution
 
 **Applications:**

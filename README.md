@@ -16,8 +16,8 @@ The Waivern Compliance Framework provides:
 - **Connectors** - Extract data from sources (MySQL, SQLite, files, source code)
 - **Processors** - Detect compliance issues (personal data, processing purposes, data subjects)
 - **Rulesets** - YAML-based pattern definitions for static analysis
-- **Runbooks** - YAML configurations defining analysis pipelines
-- **Executor** - Orchestrates runbook execution with automatic schema matching
+- **Runbooks** - YAML configurations defining artifacts and their dependencies
+- **Orchestration** - Planner validates and flattens runbooks; DAGExecutor runs artifacts in parallel
 
 📋 **[Development Roadmap](https://github.com/orgs/waivern-compliance/projects/3)** - Current progress and planned features
 
@@ -147,14 +147,14 @@ waivern-compliance/
 ### Data Flow
 
 ```
-Runbook (YAML) → Executor → Connector → Schema Validation → Analyser → Findings (JSON)
+Runbook (YAML) → Planner → DAGExecutor → Connector/Processor → Findings (JSON)
 ```
 
-1. **Runbook** defines connectors, analysers, and execution steps
-2. **Executor** loads and validates configuration
-3. **Connectors** extract data and transform to WCF schemas
-4. **Message objects** provide automatic schema validation
-5. **Analysers** process data using rulesets and/or LLM validation
+1. **Runbook** defines artifacts (sources and transformations) and their dependencies
+2. **Planner** parses runbook, flattens child runbooks, builds DAG, validates schemas
+3. **DAGExecutor** runs artifacts in dependency order (parallel where possible)
+4. **Connectors** extract data; **Processors** transform data
+5. **Message objects** provide automatic schema validation
 6. **Results** output as structured JSON
 
 ### Schema-Driven Design
@@ -248,8 +248,7 @@ class MyConnectorFactory(ComponentFactory[MyConnector]):
 ```python
 from typing import override
 from pydantic import BaseModel
-from waivern_core import Analyser, Message, Schema, ComponentFactory
-from waivern_core.schemas import StandardInputSchema, BaseFindingSchema
+from waivern_core import Analyser, Message, Schema, ComponentFactory, InputRequirement
 
 class MyAnalyserConfig(BaseModel):
     """Configuration for MyAnalyser."""
@@ -266,8 +265,9 @@ class MyAnalyser(Analyser):
 
     @classmethod
     @override
-    def get_supported_input_schemas(cls) -> list[Schema]:
-        return [StandardInputSchema()]
+    def get_input_requirements(cls) -> list[list[InputRequirement]]:
+        # Declare supported input schema combinations
+        return [[InputRequirement("standard_input", "1.0.0")]]
 
     @classmethod
     @override
@@ -275,14 +275,16 @@ class MyAnalyser(Analyser):
         return [MyFindingSchema()]
 
     @override
-    def process_data(self, message: Message) -> Message:
-        # Input automatically validated
-        findings = self._analyse(message.content)
+    def process(self, inputs: list[Message], output_schema: Schema) -> Message:
+        # Process all input messages (supports fan-in)
+        findings = []
+        for message in inputs:
+            findings.extend(self._analyse(message.content))
 
         return Message(
-            id=f"results_{message.id}",
+            id="results",
             content={"findings": findings},
-            schema=MyFindingSchema()
+            schema=output_schema
         )
 
 class MyAnalyserFactory(ComponentFactory[MyAnalyser]):

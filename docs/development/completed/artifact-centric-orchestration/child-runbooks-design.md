@@ -1,8 +1,9 @@
-# Phase 3: Child Runbooks - Design Document
+# Child Runbooks - Design Document
 
-- **Status:** Design Complete
-- **Prerequisites:** Task 7 (Export Infrastructure and Multi-Schema Fan-In) complete
-- **Last Updated:** 2025-12-12
+- **Status:** Implementation Complete
+- **Completed:** 2025-12-15
+- **Note:** Field name changed from `schema` to `input_schema` to avoid Pydantic BaseModel attribute shadowing
+- **Deferred:** Sensitive input redaction (tests skipped pending implementation)
 
 ## Table of Contents
 
@@ -85,7 +86,7 @@ Parent Runbook                     Child Runbook (file)
 ┌─────────────────────┐           ┌─────────────────────────────┐
 │ artifacts:          │           │ inputs:                     │
 │   db_schema:        │           │   source_data:              │
-│     source: mysql   │           │     schema: standard_input  │
+│     source: mysql   │           │     input_schema: std_input │
 │                     │           │                             │
 │   child_analysis:   │──refs────▶│ artifacts:                  │
 │     inputs: db_schema           │   findings:                 │
@@ -152,10 +153,10 @@ Modern workflow tools (Dagster, Prefect, dbt) have moved toward strong typing af
 # Configuration passed as schema-validated input
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
 
   config:
-    schema: analysis_config/1.0.0  # Explicit contract
+    input_schema: analysis_config/1.0.0  # Explicit contract
     optional: true
     default:
       analysis_depth: "standard"
@@ -177,17 +178,17 @@ description: "Analyses data for personal information"
 
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
     description: "Data to analyse"
 
   config_data:
-    schema: analysis_config/1.0.0
+    input_schema: analysis_config/1.0.0
     optional: true
     default: null
     description: "Optional configuration overrides"
 
   api_credentials:
-    schema: credential/1.0.0
+    input_schema: credential/1.0.0
     sensitive: true
     description: "API credentials (redacted from logs)"
 
@@ -212,7 +213,7 @@ artifacts:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `schema` | string | Yes | Schema identifier (e.g., `standard_input/1.0.0`) |
+| `input_schema` | string | Yes | Schema identifier (e.g., `standard_input/1.0.0`) |
 | `optional` | boolean | No | If `true`, input doesn't need to be mapped (default: `false`) |
 | `default` | any | No | Default value if not mapped (requires `optional: true`) |
 | `sensitive` | boolean | No | If `true`, value is redacted from logs and execution results (default: `false`) |
@@ -243,7 +244,7 @@ If a runbook has an `inputs` section, it **cannot** have `source` artifacts. All
 # INVALID - has both inputs and source
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
 
 artifacts:
   db_data:
@@ -488,7 +489,7 @@ All validation occurs at plan time:
 class RunbookInputDeclaration(BaseModel):
     """Declares an expected input for a child runbook."""
 
-    schema: str
+    input_schema: str
     """Schema identifier (e.g., 'standard_input/1.0.0')."""
 
     optional: bool = False
@@ -673,6 +674,9 @@ class ExecutionPlan:
     # NEW
     aliases: dict[str, str] = field(default_factory=dict)
     """Maps parent artifact names to namespaced child artifacts."""
+
+    reversed_aliases: dict[str, str] = field(default_factory=dict)
+    """Maps artifact IDs to alias names (reverse of aliases, for O(1) lookup)."""
 ```
 
 ---
@@ -731,7 +735,7 @@ The design supports Terraform-inspired patterns for reusable infrastructure:
 | Terraform Concept | WCF Equivalent | Status |
 |-------------------|----------------|--------|
 | Variables | `inputs` section | ✅ Included |
-| Variable types | `schema` field | ✅ Included |
+| Variable types | `input_schema` field | ✅ Included |
 | Optional variables | `optional` field | ✅ Included |
 | Default values | `default` field | ✅ Included |
 | Sensitive variables | `sensitive` field | ✅ Included |
@@ -757,11 +761,11 @@ description: "Reusable GDPR compliance analysis"
 
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
     description: "Data to analyse for GDPR compliance"
 
   analysis_depth:
-    schema: analysis_config/1.0.0
+    input_schema: analysis_config/1.0.0
     optional: true
     default:
       level: "standard"
@@ -769,7 +773,7 @@ inputs:
     description: "Analysis configuration (defaults to standard depth)"
 
   compliance_frameworks:
-    schema: framework_list/1.0.0
+    input_schema: framework_list/1.0.0
     optional: true
     default:
       frameworks: ["GDPR", "UK_GDPR"]
@@ -834,7 +838,7 @@ artifacts:
 name: "Personal Data Analysis"
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
 
 outputs:
   findings:
@@ -906,7 +910,7 @@ artifacts:
 name: "GDPR Suite"
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
 
 outputs:
   compliance_report:
@@ -943,7 +947,7 @@ artifacts:
 name: "Personal Data Analysis"
 inputs:
   source_data:
-    schema: standard_input/1.0.0
+    input_schema: standard_input/1.0.0
 
 outputs:
   findings:
@@ -975,50 +979,53 @@ Aliases:
 
 ---
 
-## Implementation Plan
+## Implementation Summary
 
-### Phase 1: Model Changes
+All implementation phases have been completed. The following summarises what was built:
 
-1. Add `RunbookInputDeclaration` model
-2. Add `RunbookOutputDeclaration` model
-3. Add `ChildRunbookConfig` model
-4. Update `RunbookConfig` with `template_paths`
-5. Update `Runbook` with `inputs` and `outputs`
-6. Update `ArtifactDefinition` with `child_runbook`
-7. Update `ArtifactResult` with `origin` and `alias`
-8. Update `ExecutionPlan` with `aliases`
-9. Add validation rules to models
+### Models (Complete)
 
-### Phase 2: Path Resolution
+- ✅ `RunbookInputDeclaration` - Declares expected inputs with schema, optional, default, sensitive flags
+- ✅ `RunbookOutputDeclaration` - Declares outputs that a runbook exposes
+- ✅ `ChildRunbookConfig` - Configuration for child runbook directive
+- ✅ `RunbookConfig.template_paths` - Directories to search for child runbooks
+- ✅ `Runbook.inputs` and `Runbook.outputs` - Top-level declarations
+- ✅ `ArtifactDefinition.child_runbook` - Child runbook directive on artifacts
+- ✅ `ArtifactResult.origin` and `ArtifactResult.alias` - Execution result metadata
+- ✅ `ExecutionPlan.aliases` and `ExecutionPlan.reversed_aliases` - Alias mappings
+- ✅ Model validators for all constraints
 
-1. Implement path security checks
-2. Implement template path search
-3. Add `template_paths` to configuration
-4. Unit tests for path resolution
+### Path Resolution (Complete)
 
-### Phase 3: Planner Flattening
+- ✅ Security checks (no absolute paths, no parent traversal)
+- ✅ Template path search
+- ✅ Comprehensive unit tests
 
-1. Implement circular reference detection
-2. Implement iterative flattening algorithm
-3. Implement input remapping
-4. Implement namespace generation
-5. Implement alias recording
-6. Implement schema validation for input mapping
-7. Update `Planner.plan()` to call flattening
-8. Comprehensive tests for flattening
+### Planner Flattening (Complete)
 
-### Phase 4: Executor Updates
+- ✅ `ChildRunbookFlattener` class with iterative queue-based algorithm
+- ✅ Circular reference detection
+- ✅ Input remapping (declared inputs → parent artifacts)
+- ✅ Namespace generation (`{runbook_name}__{uuid}__{artifact_id}`)
+- ✅ Alias recording for output mapping
+- ✅ Schema compatibility validation
+- ✅ Comprehensive tests (basic, nested, validation, edge cases)
 
-1. Add origin tracking to `ArtifactResult`
-2. Add alias lookup for results
-3. Update result formatting
+### Executor Updates (Complete)
 
-### Phase 5: Integration & Documentation
+- ✅ Origin tracking using shared `get_origin_from_artifact_id()` utility
+- ✅ Alias lookup using pre-computed `reversed_aliases` (O(1))
+- ✅ Result formatting with origin and alias metadata
 
-1. End-to-end integration tests
-2. Sample runbooks demonstrating composition
-3. User documentation
-4. Update CLAUDE.md with new patterns
+### Refactoring (Complete)
+
+- ✅ Extracted shared utilities to `utils.py` (schema parsing, namespace utilities)
+- ✅ Split large test file into focused modules
+- ✅ Shared fixtures in `conftest.py`
+
+### Deferred
+
+- ⏸️ Sensitive input redaction (3 tests skipped, implementation pending)
 
 ---
 
@@ -1064,6 +1071,6 @@ For larger deployments:
 
 ## References
 
-- [Multi-Schema Fan-In](../../../future-plans/multi-schema-fan-in.md)
-- [Artifact-Centric Orchestration Overview](./README.md)
+- [Child Runbook Composition (User Guide)](../../../../libs/waivern-orchestration/docs/child-runbook-composition.md)
+- [Artifact-Centric Orchestration Design](../artifact-centric-orchestration-design.md)
 - [WCF Core Components](../../../core-concepts/wcf-core-components.md)

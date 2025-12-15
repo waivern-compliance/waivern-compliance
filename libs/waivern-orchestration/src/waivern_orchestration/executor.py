@@ -27,6 +27,7 @@ from waivern_orchestration.models import (
     SourceConfig,
 )
 from waivern_orchestration.planner import ExecutionPlan
+from waivern_orchestration.utils import get_origin_from_artifact_id
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +164,10 @@ class DAGExecutor:
         start_time = time.monotonic()
         definition = plan.runbook.artifacts[artifact_id]
 
+        # Determine origin and alias for this artifact
+        origin = self._determine_origin(artifact_id)
+        alias = self._find_alias(artifact_id, plan)
+
         async with ctx.semaphore:
             try:
                 # Get schemas from pre-resolved schemas
@@ -192,6 +197,8 @@ class DAGExecutor:
                     success=True,
                     message=message,
                     duration_seconds=duration,
+                    origin=origin,
+                    alias=alias,
                 )
 
             except Exception as e:
@@ -206,6 +213,8 @@ class DAGExecutor:
                     success=False,
                     error=str(e),
                     duration_seconds=duration,
+                    origin=origin,
+                    alias=alias,
                 )
 
     def _skip_dependents(
@@ -325,3 +334,33 @@ class DAGExecutor:
 
         # Fan-in: merge messages - deferred to Phase 2
         raise NotImplementedError("Fan-in message merge not yet implemented")
+
+    def _determine_origin(self, artifact_id: str) -> str:
+        """Determine the origin of an artifact based on its ID.
+
+        Delegates to the shared utility function to ensure consistent
+        namespace parsing across the codebase.
+
+        Args:
+            artifact_id: The artifact ID to check.
+
+        Returns:
+            'parent' for regular artifacts, 'child:{runbook_name}' for namespaced.
+
+        """
+        return get_origin_from_artifact_id(artifact_id)
+
+    def _find_alias(self, artifact_id: str, plan: ExecutionPlan) -> str | None:
+        """Find the alias name for an artifact if one exists.
+
+        Uses the pre-computed reversed_aliases dict for O(1) lookup.
+
+        Args:
+            artifact_id: The artifact ID to find an alias for.
+            plan: The execution plan containing aliases.
+
+        Returns:
+            The alias name if found, None otherwise.
+
+        """
+        return plan.reversed_aliases.get(artifact_id)
