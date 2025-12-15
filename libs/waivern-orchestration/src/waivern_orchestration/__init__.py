@@ -2,9 +2,14 @@
 
 from waivern_orchestration.dag import ExecutionDAG
 from waivern_orchestration.errors import (
+    ChildRunbookNotFoundError,
+    CircularRunbookError,
     ComponentNotFoundError,
     CycleDetectedError,
+    InvalidOutputMappingError,
+    InvalidPathError,
     MissingArtifactError,
+    MissingInputMappingError,
     OrchestrationError,
     RunbookParseError,
     SchemaCompatibilityError,
@@ -21,6 +26,7 @@ from waivern_orchestration.models import (
     SourceConfig,
 )
 from waivern_orchestration.parser import parse_runbook, parse_runbook_from_dict
+from waivern_orchestration.path_resolver import resolve_child_runbook_path
 from waivern_orchestration.planner import ExecutionPlan, Planner
 from waivern_orchestration.schema import RunbookSchemaGenerator
 
@@ -46,10 +52,17 @@ __all__ = [
     "DAGExecutor",
     # Schema
     "RunbookSchemaGenerator",
+    # Path Resolution
+    "resolve_child_runbook_path",
     # Errors
+    "ChildRunbookNotFoundError",
+    "CircularRunbookError",
     "ComponentNotFoundError",
     "CycleDetectedError",
+    "InvalidOutputMappingError",
+    "InvalidPathError",
     "MissingArtifactError",
+    "MissingInputMappingError",
     "OrchestrationError",
     "RunbookParseError",
     "SchemaCompatibilityError",
