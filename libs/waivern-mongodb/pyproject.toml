@@ -1,0 +1,69 @@
+[project]
+name = "waivern-mongodb"
+version = "0.1.0"
+description = "MongoDB connector for Waivern Compliance Framework"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "waivern-core",
+    "pymongo>=4.10.0",
+    "pydantic>=2.11.5",
+]
+
+# Entry point will be added when connector is implemented:
+# [project.entry-points."waivern.connectors"]
+# mongodb = "waivern_mongodb:MongoDBConnectorFactory"
+
+[project.scripts]
+seed-mongodb = "waivern_mongodb.scripts.seed_healthcare:main"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.29.2",
+    "ruff>=0.11.12",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+dev-mode-dirs = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/waivern_mongodb"]
+
+[tool.basedpyright]
+typeCheckingMode = "strict"
+reportImplicitOverride = "error"
+
+[tool.ruff]
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "ANN",    # flake8-annotations
+    "B",      # flake8-bugbear
+    "D",      # pydocstyle
+    "F",      # pyflakes
+    "I",      # isort
+    "PL",     # pylint
+    "RUF100", # unused-noqa-directive
+    "S",      # bandit
+    "UP",     # pyupgrade
+]
+ignore = [
+    "D203",    # incorrect-blank-line-before-class (conflicts with D211)
+    "D213",    # multi-line-summary-second-line (conflicts with D212)
+]
+
+[tool.ruff.lint.pydocstyle]
+ignore-decorators = ["typing.overload"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # Allow assert statements in tests
+    "ANN401",  # Allow Any type in test fixtures
+    "PLR2004", # Allow magic values in test assertions
+]
