@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import os
-from unittest.mock import patch
-
+import pytest
 from pydantic import ValidationError
 
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
+
+ARTIFACT_STORE_ENV_VARS = ["ARTIFACT_STORE_BACKEND"]
 
 
 class TestArtifactStoreConfiguration:
@@ -34,41 +34,41 @@ class TestArtifactStoreConfiguration:
         assert config.backend == "memory"
 
     def test_from_properties_falls_back_to_environment_variables_when_properties_empty(
-        self,
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test environment fallback when no properties provided."""
-        with patch.dict(
-            os.environ,
-            {"ARTIFACT_STORE_BACKEND": "memory"},
-            clear=True,
-        ):
-            config = ArtifactStoreConfiguration.from_properties({})
+        for var in ARTIFACT_STORE_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "memory")
 
-            assert config.backend == "memory"
+        config = ArtifactStoreConfiguration.from_properties({})
+
+        assert config.backend == "memory"
 
     def test_from_properties_uses_default_when_no_properties_or_environment(
-        self,
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test default backend used when no properties or environment variables."""
-        with patch.dict(os.environ, {}, clear=True):
-            config = ArtifactStoreConfiguration.from_properties({})
+        for var in ARTIFACT_STORE_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
 
-            assert config.backend == "memory"
+        config = ArtifactStoreConfiguration.from_properties({})
+
+        assert config.backend == "memory"
 
     def test_from_properties_prioritises_properties_over_environment_variables(
-        self,
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that explicit properties override environment."""
-        with patch.dict(
-            os.environ,
-            {"ARTIFACT_STORE_BACKEND": "memory"},
-            clear=True,
-        ):
-            # Explicit property should override environment
-            properties = {"backend": "memory"}
-            config = ArtifactStoreConfiguration.from_properties(properties)
+        for var in ARTIFACT_STORE_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "memory")
 
-            assert config.backend == "memory"
+        # Explicit property should override environment
+        properties = {"backend": "memory"}
+        config = ArtifactStoreConfiguration.from_properties(properties)
+
+        assert config.backend == "memory"
 
     def test_validation_rejects_unsupported_backend(self) -> None:
         """Test only 'memory' backend is accepted."""
@@ -113,18 +113,19 @@ class TestArtifactStoreConfiguration:
             error_msg = str(e).lower()
             assert "frozen" in error_msg or "immutable" in error_msg
 
-    def test_from_properties_handles_invalid_backend_from_environment(self) -> None:
+    def test_from_properties_handles_invalid_backend_from_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test validation error when environment variable has invalid backend."""
-        with patch.dict(
-            os.environ,
-            {"ARTIFACT_STORE_BACKEND": "invalid_backend"},
-            clear=True,
-        ):
-            try:
-                ArtifactStoreConfiguration.from_properties({})
-                assert False, (
-                    "Should have raised ValidationError for invalid backend from env"
-                )
-            except ValidationError as e:
-                error_msg = str(e).lower()
-                assert "backend" in error_msg or "memory" in error_msg
+        for var in ARTIFACT_STORE_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "invalid_backend")
+
+        try:
+            ArtifactStoreConfiguration.from_properties({})
+            assert False, (
+                "Should have raised ValidationError for invalid backend from env"
+            )
+        except ValidationError as e:
+            error_msg = str(e).lower()
+            assert "backend" in error_msg or "memory" in error_msg

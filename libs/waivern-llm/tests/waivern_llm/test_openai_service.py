@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import os
 from unittest.mock import Mock, patch
 
 import pytest
 from langchain_core.messages import AIMessage
 
 from waivern_llm import BaseLLMService, LLMConfigurationError, OpenAILLMService
+
+OPENAI_ENV_VARS = ["OPENAI_API_KEY", "OPENAI_MODEL"]
 
 
 class TestOpenAILLMServiceInitialisation:
@@ -21,62 +22,66 @@ class TestOpenAILLMServiceInitialisation:
         assert service.model_name == "gpt-4"
         # API key is private - service creation without error indicates it was set
 
-    def test_initialisation_with_environment_variables(self) -> None:
+    def test_initialisation_with_environment_variables(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test service initialisation using environment variables."""
-        with patch.dict(
-            os.environ,
-            {
-                "OPENAI_MODEL": "gpt-3.5-turbo",
-                "OPENAI_API_KEY": "env-api-key",
-            },
-        ):
-            service = OpenAILLMService()
+        monkeypatch.setenv("OPENAI_MODEL", "gpt-3.5-turbo")
+        monkeypatch.setenv("OPENAI_API_KEY", "env-api-key")
 
-            assert service.model_name == "gpt-3.5-turbo"
-            # API key is private - service creation without error indicates it was set
+        service = OpenAILLMService()
 
-    def test_initialisation_with_default_model(self) -> None:
+        assert service.model_name == "gpt-3.5-turbo"
+        # API key is private - service creation without error indicates it was set
+
+    def test_initialisation_with_default_model(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test service initialisation uses default model when not specified."""
-        with patch.dict(
-            os.environ,
-            {"OPENAI_API_KEY": "test-key"},
-            clear=True,
-        ):
-            service = OpenAILLMService()
+        for var in OPENAI_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
-            assert service.model_name == "gpt-4o"
-            # API key is private - service creation without error indicates it was set
+        service = OpenAILLMService()
 
-    def test_initialisation_parameter_overrides_environment(self) -> None:
+        assert service.model_name == "gpt-4o"
+        # API key is private - service creation without error indicates it was set
+
+    def test_initialisation_parameter_overrides_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that explicit parameters override environment variables."""
-        with patch.dict(
-            os.environ,
-            {
-                "OPENAI_MODEL": "env-model",
-                "OPENAI_API_KEY": "env-key",
-            },
-        ):
-            service = OpenAILLMService(model_name="param-model", api_key="param-key")
+        monkeypatch.setenv("OPENAI_MODEL", "env-model")
+        monkeypatch.setenv("OPENAI_API_KEY", "env-key")
 
-            assert service.model_name == "param-model"
-            # API key is private - service creation without error indicates it was set
+        service = OpenAILLMService(model_name="param-model", api_key="param-key")
 
-    def test_initialisation_missing_api_key_raises_error(self) -> None:
+        assert service.model_name == "param-model"
+        # API key is private - service creation without error indicates it was set
+
+    def test_initialisation_missing_api_key_raises_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that missing API key raises configuration error."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(LLMConfigurationError) as exc_info:
-                OpenAILLMService()
+        for var in OPENAI_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
 
-            assert "OpenAI API key is required" in str(exc_info.value)
-            assert "OPENAI_API_KEY" in str(exc_info.value)
+        with pytest.raises(LLMConfigurationError) as exc_info:
+            OpenAILLMService()
 
-    def test_initialisation_empty_api_key_raises_error(self) -> None:
+        assert "OpenAI API key is required" in str(exc_info.value)
+        assert "OPENAI_API_KEY" in str(exc_info.value)
+
+    def test_initialisation_empty_api_key_raises_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that empty API key raises configuration error."""
-        with patch.dict(os.environ, {"OPENAI_API_KEY": ""}):
-            with pytest.raises(LLMConfigurationError) as exc_info:
-                OpenAILLMService()
+        monkeypatch.setenv("OPENAI_API_KEY", "")
 
-            assert "OpenAI API key is required" in str(exc_info.value)
+        with pytest.raises(LLMConfigurationError) as exc_info:
+            OpenAILLMService()
+
+        assert "OpenAI API key is required" in str(exc_info.value)
 
 
 class TestOpenAILLMServiceDataAnalysis:

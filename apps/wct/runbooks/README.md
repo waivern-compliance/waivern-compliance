@@ -139,6 +139,35 @@ Comprehensive example demonstrating:
 
 Lightweight version of LAMP_stack without MySQL dependency.
 
+#### `samples/mongodb-personal-data.yaml`
+
+MongoDB database analysis demonstrating:
+- MongoDB connector for document database extraction
+- Personal data and data subject detection in NoSQL data
+- Healthcare domain sample data
+
+**Prerequisites:**
+1. Start MongoDB (e.g., via Docker):
+   ```bash
+   docker run -d --name mongodb -p 27017:27017 mongo:latest
+   ```
+
+2. Configure environment variables in `apps/wct/.env`:
+   ```bash
+   MONGODB_URI=mongodb://localhost:27017
+   MONGODB_DATABASE=waivern_healthcare
+   ```
+
+3. Seed the database with sample healthcare data:
+   ```bash
+   uv run python -m waivern_mongodb.scripts.seed_healthcare
+   ```
+
+4. Run the analysis:
+   ```bash
+   uv run wct run apps/wct/runbooks/samples/mongodb-personal-data.yaml
+   ```
+
 ## Usage
 
 ```bash
@@ -228,6 +257,7 @@ uv run wct ls-processors
 
 - `mysql` - MySQL database extraction
 - `sqlite` - SQLite database extraction
+- `mongodb` - MongoDB document database extraction
 - `filesystem` - File and directory reading
 
 ### Processors

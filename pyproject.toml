@@ -13,6 +13,7 @@ waivern-llm = { workspace = true }
 waivern-connectors-database = { workspace = true }
 waivern-data-export-analyser = { workspace = true }
 waivern-data-subject-analyser = { workspace = true }
+waivern-mongodb = { workspace = true }
 waivern-mysql = { workspace = true }
 waivern-orchestration = { workspace = true }
 waivern-filesystem = { workspace = true }

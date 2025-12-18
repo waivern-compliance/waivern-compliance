@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import os
 from unittest.mock import Mock, patch
 
 import pytest
 from langchain_core.messages import AIMessage
 
 from waivern_llm import BaseLLMService, GoogleLLMService, LLMConfigurationError
+
+GOOGLE_ENV_VARS = ["GOOGLE_API_KEY", "GOOGLE_MODEL"]
 
 
 class TestGoogleLLMServiceInitialisation:
@@ -21,62 +22,66 @@ class TestGoogleLLMServiceInitialisation:
         assert service.model_name == "gemini-1.5-pro"
         # API key is private - service creation without error indicates it was set
 
-    def test_initialisation_with_environment_variables(self) -> None:
+    def test_initialisation_with_environment_variables(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test service initialisation using environment variables."""
-        with patch.dict(
-            os.environ,
-            {
-                "GOOGLE_MODEL": "gemini-1.5-flash",
-                "GOOGLE_API_KEY": "env-api-key",
-            },
-        ):
-            service = GoogleLLMService()
+        monkeypatch.setenv("GOOGLE_MODEL", "gemini-1.5-flash")
+        monkeypatch.setenv("GOOGLE_API_KEY", "env-api-key")
 
-            assert service.model_name == "gemini-1.5-flash"
-            # API key is private - service creation without error indicates it was set
+        service = GoogleLLMService()
 
-    def test_initialisation_with_default_model(self) -> None:
+        assert service.model_name == "gemini-1.5-flash"
+        # API key is private - service creation without error indicates it was set
+
+    def test_initialisation_with_default_model(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test service initialisation uses default model when not specified."""
-        with patch.dict(
-            os.environ,
-            {"GOOGLE_API_KEY": "test-key"},
-            clear=True,
-        ):
-            service = GoogleLLMService()
+        for var in GOOGLE_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
 
-            assert service.model_name == "gemini-2.5-flash"
-            # API key is private - service creation without error indicates it was set
+        service = GoogleLLMService()
 
-    def test_initialisation_parameter_overrides_environment(self) -> None:
+        assert service.model_name == "gemini-2.5-flash"
+        # API key is private - service creation without error indicates it was set
+
+    def test_initialisation_parameter_overrides_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that explicit parameters override environment variables."""
-        with patch.dict(
-            os.environ,
-            {
-                "GOOGLE_MODEL": "env-model",
-                "GOOGLE_API_KEY": "env-key",
-            },
-        ):
-            service = GoogleLLMService(model_name="param-model", api_key="param-key")
+        monkeypatch.setenv("GOOGLE_MODEL", "env-model")
+        monkeypatch.setenv("GOOGLE_API_KEY", "env-key")
 
-            assert service.model_name == "param-model"
-            # API key is private - service creation without error indicates it was set
+        service = GoogleLLMService(model_name="param-model", api_key="param-key")
 
-    def test_initialisation_missing_api_key_raises_error(self) -> None:
+        assert service.model_name == "param-model"
+        # API key is private - service creation without error indicates it was set
+
+    def test_initialisation_missing_api_key_raises_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that missing API key raises configuration error."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(LLMConfigurationError) as exc_info:
-                GoogleLLMService()
+        for var in GOOGLE_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
 
-            assert "Google API key is required" in str(exc_info.value)
-            assert "GOOGLE_API_KEY" in str(exc_info.value)
+        with pytest.raises(LLMConfigurationError) as exc_info:
+            GoogleLLMService()
 
-    def test_initialisation_empty_api_key_raises_error(self) -> None:
+        assert "Google API key is required" in str(exc_info.value)
+        assert "GOOGLE_API_KEY" in str(exc_info.value)
+
+    def test_initialisation_empty_api_key_raises_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that empty API key raises configuration error."""
-        with patch.dict(os.environ, {"GOOGLE_API_KEY": ""}):
-            with pytest.raises(LLMConfigurationError) as exc_info:
-                GoogleLLMService()
+        monkeypatch.setenv("GOOGLE_API_KEY", "")
 
-            assert "Google API key is required" in str(exc_info.value)
+        with pytest.raises(LLMConfigurationError) as exc_info:
+            GoogleLLMService()
+
+        assert "Google API key is required" in str(exc_info.value)
 
     def test_google_service_implements_base_interface(self) -> None:
         """Test that GoogleLLMService correctly implements BaseLLMService."""
