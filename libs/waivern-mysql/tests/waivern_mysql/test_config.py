@@ -1,48 +1,29 @@
 """Tests for MySQLConnectorConfig."""
 
-import os
-from collections.abc import Generator
-from typing import Any
-from unittest.mock import patch
-
 import pytest
 from waivern_core.errors import ConnectorConfigError
 
 from waivern_mysql import MySQLConnectorConfig
 
-
-@pytest.fixture
-def clear_mysql_env_vars() -> Generator[None, None, None]:
-    """Clear MySQL environment variables for testing."""
-    env_vars_to_clear = [
-        "MYSQL_HOST",
-        "MYSQL_PORT",
-        "MYSQL_USER",
-        "MYSQL_PASSWORD",
-        "MYSQL_DATABASE",
-    ]
-
-    # Store original values
-    original_values: dict[str, str] = {}
-    for var in env_vars_to_clear:
-        if var in os.environ:
-            original_values[var] = os.environ[var]
-            del os.environ[var]
-
-    yield
-
-    # Restore original values
-    for var, value in original_values.items():
-        os.environ[var] = value
+MYSQL_ENV_VARS = [
+    "MYSQL_HOST",
+    "MYSQL_PORT",
+    "MYSQL_USER",
+    "MYSQL_PASSWORD",
+    "MYSQL_DATABASE",
+]
 
 
 class TestMySQLConnectorConfig:
     """Test MySQLConnectorConfig class."""
 
     def test_from_properties_with_minimal_config(
-        self, clear_mysql_env_vars: Any
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test from_properties applies correct defaults with minimal config."""
+        for var in MYSQL_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+
         config = MySQLConnectorConfig.from_properties(
             {
                 "host": "localhost",
@@ -60,8 +41,13 @@ class TestMySQLConnectorConfig:
         assert config.connect_timeout == 10  # Default
         assert config.max_rows_per_table == 10  # Default
 
-    def test_from_properties_with_full_config(self, clear_mysql_env_vars: Any) -> None:
+    def test_from_properties_with_full_config(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test from_properties respects all provided properties."""
+        for var in MYSQL_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+
         config = MySQLConnectorConfig.from_properties(
             {
                 "host": "testhost",
@@ -86,7 +72,9 @@ class TestMySQLConnectorConfig:
         assert config.connect_timeout == 30
         assert config.max_rows_per_table == 2000
 
-    def test_from_properties_uses_environment_variables(self) -> None:
+    def test_from_properties_uses_environment_variables(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test from_properties uses environment variables with priority over properties."""
         properties = {
             "host": "runbook_host",
@@ -96,16 +84,13 @@ class TestMySQLConnectorConfig:
             "database": "runbook_database",
         }
 
-        env_vars = {
-            "MYSQL_HOST": "env_host",
-            "MYSQL_PORT": "3309",
-            "MYSQL_USER": "env_user",
-            "MYSQL_PASSWORD": "env_password",
-            "MYSQL_DATABASE": "env_database",
-        }
+        monkeypatch.setenv("MYSQL_HOST", "env_host")
+        monkeypatch.setenv("MYSQL_PORT", "3309")
+        monkeypatch.setenv("MYSQL_USER", "env_user")
+        monkeypatch.setenv("MYSQL_PASSWORD", "env_password")
+        monkeypatch.setenv("MYSQL_DATABASE", "env_database")
 
-        with patch.dict(os.environ, env_vars):
-            config = MySQLConnectorConfig.from_properties(properties)
+        config = MySQLConnectorConfig.from_properties(properties)
 
         assert config.host == "env_host"
         assert config.port == 3309
@@ -114,35 +99,47 @@ class TestMySQLConnectorConfig:
         assert config.database == "env_database"
 
     def test_from_properties_missing_host_raises_error(
-        self, clear_mysql_env_vars: Any
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test from_properties raises error when host is missing."""
+        for var in MYSQL_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+
         with pytest.raises(ConnectorConfigError, match="MySQL host info is required"):
             MySQLConnectorConfig.from_properties({"user": "testuser"})
 
     def test_from_properties_missing_user_raises_error(
-        self, clear_mysql_env_vars: Any
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test from_properties raises error when user is missing."""
+        for var in MYSQL_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+
         with pytest.raises(ConnectorConfigError, match="MySQL user info is required"):
             MySQLConnectorConfig.from_properties({"host": "localhost"})
 
     def test_from_properties_invalid_port_env_var_raises_error(
-        self, clear_mysql_env_vars: Any
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test from_properties raises error for invalid MYSQL_PORT environment variable."""
-        properties = {"host": "localhost", "user": "testuser"}
+        for var in MYSQL_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("MYSQL_PORT", "invalid_port")
 
-        with patch.dict(os.environ, {"MYSQL_PORT": "invalid_port"}):
-            with pytest.raises(
-                ConnectorConfigError, match="Invalid MYSQL_PORT environment variable"
-            ):
-                MySQLConnectorConfig.from_properties(properties)
+        with pytest.raises(
+            ConnectorConfigError, match="Invalid MYSQL_PORT environment variable"
+        ):
+            MySQLConnectorConfig.from_properties(
+                {"host": "localhost", "user": "testuser"}
+            )
 
     def test_none_password_converts_to_empty_string(
-        self, clear_mysql_env_vars: Any
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that None password is converted to empty string."""
+        for var in MYSQL_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+
         config = MySQLConnectorConfig.from_properties(
             {"host": "localhost", "user": "testuser", "password": None}
         )

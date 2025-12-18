@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import os
 from unittest.mock import Mock, patch
 
 import pytest
 from langchain_core.messages import AIMessage
 
 from waivern_llm import AnthropicLLMService, LLMConfigurationError
+
+ANTHROPIC_ENV_VARS = ["ANTHROPIC_API_KEY", "ANTHROPIC_MODEL"]
 
 
 class TestAnthropicLLMServiceInitialisation:
@@ -23,63 +24,67 @@ class TestAnthropicLLMServiceInitialisation:
         assert service.model_name == "claude-3-sonnet-20240229"
         # API key is private - service creation without error indicates it was set
 
-    def test_initialisation_with_environment_variables(self) -> None:
+    def test_initialisation_with_environment_variables(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test service initialisation using environment variables."""
-        with patch.dict(
-            os.environ,
-            {
-                "ANTHROPIC_MODEL": "claude-3-opus-20240229",
-                "ANTHROPIC_API_KEY": "env-api-key",
-            },
-        ):
-            service = AnthropicLLMService()
+        monkeypatch.setenv("ANTHROPIC_MODEL", "claude-3-opus-20240229")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "env-api-key")
 
-            assert service.model_name == "claude-3-opus-20240229"
-            # API key is private - service creation without error indicates it was set
+        service = AnthropicLLMService()
 
-    def test_initialisation_with_default_model(self) -> None:
+        assert service.model_name == "claude-3-opus-20240229"
+        # API key is private - service creation without error indicates it was set
+
+    def test_initialisation_with_default_model(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test service initialisation uses default model when not specified."""
-        # Clear both ANTHROPIC_MODEL and set ANTHROPIC_API_KEY to ensure default is used
-        with patch.dict(
-            os.environ,
-            {"ANTHROPIC_API_KEY": "test-key"},
-            clear=True,  # Clear all env vars to ensure no ANTHROPIC_MODEL is present
-        ):
-            service = AnthropicLLMService()
+        # Clear ANTHROPIC_MODEL and set ANTHROPIC_API_KEY to ensure default is used
+        for var in ANTHROPIC_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
 
-            assert service.model_name == "claude-sonnet-4-5-20250929"
-            # API key is private - service creation without error indicates it was set
+        service = AnthropicLLMService()
 
-    def test_initialisation_parameter_overrides_environment(self) -> None:
+        assert service.model_name == "claude-sonnet-4-5-20250929"
+        # API key is private - service creation without error indicates it was set
+
+    def test_initialisation_parameter_overrides_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that explicit parameters override environment variables."""
-        with patch.dict(
-            os.environ,
-            {
-                "ANTHROPIC_MODEL": "env-model",
-                "ANTHROPIC_API_KEY": "env-key",
-            },
-        ):
-            service = AnthropicLLMService(model_name="param-model", api_key="param-key")
+        monkeypatch.setenv("ANTHROPIC_MODEL", "env-model")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "env-key")
 
-            assert service.model_name == "param-model"
-            # API key is private - service creation without error indicates it was set
+        service = AnthropicLLMService(model_name="param-model", api_key="param-key")
 
-    def test_initialisation_missing_api_key_raises_error(self) -> None:
+        assert service.model_name == "param-model"
+        # API key is private - service creation without error indicates it was set
+
+    def test_initialisation_missing_api_key_raises_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that missing API key raises configuration error."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(LLMConfigurationError) as exc_info:
-                AnthropicLLMService()
+        for var in ANTHROPIC_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
 
-            assert "Anthropic API key is required" in str(exc_info.value)
-            assert "ANTHROPIC_API_KEY" in str(exc_info.value)
+        with pytest.raises(LLMConfigurationError) as exc_info:
+            AnthropicLLMService()
 
-    def test_initialisation_empty_api_key_raises_error(self) -> None:
+        assert "Anthropic API key is required" in str(exc_info.value)
+        assert "ANTHROPIC_API_KEY" in str(exc_info.value)
+
+    def test_initialisation_empty_api_key_raises_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that empty API key raises configuration error."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""}):
-            with pytest.raises(LLMConfigurationError) as exc_info:
-                AnthropicLLMService()
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "")
 
-            assert "Anthropic API key is required" in str(exc_info.value)
+        with pytest.raises(LLMConfigurationError) as exc_info:
+            AnthropicLLMService()
+
+        assert "Anthropic API key is required" in str(exc_info.value)
 
 
 class TestAnthropicLLMServiceDataAnalysis:
