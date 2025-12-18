@@ -1,25 +1,34 @@
-"""Tests for MongoDB connector factory."""
+"""Tests for MongoDBConnectorFactory - Contract Tests Only."""
+
+import pytest
+from waivern_core import ComponentConfig, ComponentFactory
+from waivern_core.services.container import ServiceContainer
+from waivern_core.testing import ComponentFactoryContractTests
+
+from waivern_mongodb import MongoDBConnector, MongoDBConnectorFactory
+
+MONGODB_ENV_VARS = ["MONGODB_URI", "MONGODB_DATABASE"]
 
 
-class TestMongoDBConnectorFactory:
-    """Tests for MongoDBConnectorFactory."""
+class TestMongoDBConnectorFactory(ComponentFactoryContractTests[MongoDBConnector]):
+    """Test suite for MongoDBConnectorFactory.
 
-    def test_create_returns_connector_instance(self) -> None:
-        """Create returns a MongoDBConnector instance with valid config."""
-        pass
+    Inherits 6 contract tests from ComponentFactoryContractTests.
+    """
 
-    def test_can_create_returns_true_for_valid_config(self) -> None:
-        """can_create returns True when config has required fields."""
-        pass
+    @pytest.fixture
+    def factory(self) -> ComponentFactory[MongoDBConnector]:
+        """Provide factory instance for contract tests."""
+        container = ServiceContainer()
+        return MongoDBConnectorFactory(container)
 
-    def test_can_create_returns_false_for_invalid_config(self) -> None:
-        """can_create returns False when config is missing required fields."""
-        pass
+    @pytest.fixture
+    def valid_config(self, monkeypatch: pytest.MonkeyPatch) -> ComponentConfig:
+        """Provide valid configuration for contract tests."""
+        for var in MONGODB_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
 
-    def test_component_class_returns_connector_type(self) -> None:
-        """component_class property returns MongoDBConnector class."""
-        pass
-
-    def test_get_service_dependencies_returns_empty_dict(self) -> None:
-        """MongoDB connector has no infrastructure service dependencies."""
-        pass
+        return {
+            "uri": "mongodb://localhost:27017",
+            "database": "test_db",
+        }

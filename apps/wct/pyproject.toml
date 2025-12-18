@@ -49,6 +49,7 @@ dev = [
     "ruff>=0.11.12",
     # Install sample components for integration tests
     "waivern-connectors-database",  # Shared database connector base
+    "waivern-mongodb",
     "waivern-mysql",
     "waivern-filesystem",
     "waivern-sqlite",

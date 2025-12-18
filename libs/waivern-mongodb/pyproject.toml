@@ -10,9 +10,8 @@ dependencies = [
     "pydantic>=2.11.5",
 ]
 
-# Entry point will be added when connector is implemented:
-# [project.entry-points."waivern.connectors"]
-# mongodb = "waivern_mongodb:MongoDBConnectorFactory"
+[project.entry-points."waivern.connectors"]
+mongodb = "waivern_mongodb:MongoDBConnectorFactory"
 
 [project.scripts]
 seed-mongodb = "waivern_mongodb.scripts.seed_healthcare:main"

@@ -11,6 +11,7 @@ Available schemas:
 
 from waivern_core.schemas.connector_types import (
     BaseMetadata,
+    DocumentDatabaseMetadata,
     FilesystemMetadata,
     RelationalDatabaseMetadata,
 )
@@ -46,8 +47,9 @@ __all__ = [
     "SchemaRegistry",
     # Connector types (input metadata)
     "BaseMetadata",
-    "RelationalDatabaseMetadata",
+    "DocumentDatabaseMetadata",
     "FilesystemMetadata",
+    "RelationalDatabaseMetadata",
     # Standard input schema models
     "StandardInputDataModel",
     "StandardInputDataItemModel",

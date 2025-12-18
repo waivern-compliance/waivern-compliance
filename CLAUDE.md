@@ -15,6 +15,7 @@ waivern-compliance/
 │   ├── waivern-orchestration/         # Runbook parsing, flattening, DAG execution
 │   ├── waivern-artifact-store/        # In-memory artifact storage
 │   ├── waivern-connectors-database/   # Shared SQL utilities
+│   ├── waivern-mongodb/               # MongoDB connector
 │   ├── waivern-mysql/                 # MySQL connector
 │   ├── waivern-sqlite/                # SQLite connector
 │   ├── waivern-filesystem/            # Filesystem connector
@@ -97,6 +98,26 @@ uv run wct ls-processors            # List processors
 uv run wct validate-runbook <file>  # Validate runbook
 uv run wct test-llm                 # Test LLM config
 ```
+
+## UV Monorepo Workspace
+
+This is a **uv workspace** with multiple packages in `libs/` and `apps/`.
+
+```bash
+# Install ALL workspace packages (required for CLI and full testing)
+uv sync --all-groups --all-extras --all-packages
+
+# Basic sync (minimal dependencies only)
+uv sync
+```
+
+**Key concepts:**
+- `uv sync` alone only installs root dependencies (minimal)
+- `--all-packages` installs all workspace member packages
+- `--all-groups` includes dev dependencies from all packages
+- `--all-extras` includes optional dependencies
+- Entry points (connectors, processors) are discovered via `[project.entry-points]` in each package's `pyproject.toml`
+- Tests use `--import-mode=importlib` which imports from source directories without traditional installation
 
 ## Component Implementation
 

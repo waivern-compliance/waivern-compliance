@@ -537,8 +537,8 @@ Collections created:
     )
     parser.add_argument(
         "--database",
-        default="healthcare_booking",
-        help="Database name (default: healthcare_booking)",
+        default="waivern_healthcare",
+        help="Database name (default: waivern_healthcare)",
     )
     parser.add_argument(
         "--dry-run",
