@@ -16,8 +16,13 @@ from typing import Any, override
 
 import pymysql
 from waivern_connectors_database import (
+    ColumnMetadata,
     DatabaseExtractionUtils,
     DatabaseSchemaUtils,
+    RelationalExtractionMetadata,
+    RelationalProducerConfig,
+    ServerInfo,
+    TableMetadata,
 )
 from waivern_core.base_connector import Connector
 from waivern_core.errors import (
@@ -27,6 +32,7 @@ from waivern_core.message import Message
 from waivern_core.schemas import (
     RelationalDatabaseMetadata,
     Schema,
+    StandardInputDataItemModel,
 )
 
 from waivern_mysql.config import MySQLConnectorConfig
@@ -185,53 +191,64 @@ class MySQLConnector(Connector):
             logger.error(f"Query execution failed: {e}")
             raise ConnectorExtractionError(f"Query execution failed: {e}") from e
 
-    def _get_database_metadata(self) -> dict[str, Any]:
+    def _get_database_metadata(self) -> RelationalExtractionMetadata:
         """Extract database metadata including tables, columns, and constraints.
 
         Returns:
-            Dictionary containing database metadata
+            Typed extraction metadata with tables and server info
 
         """
         try:
-            metadata: dict[str, Any] = {
-                "database_name": self._config.database,
-                "tables": [],
-                "server_info": {},
-            }
+            tables_metadata: list[TableMetadata] = []
 
             with self._get_connection() as connection:
                 # Get server information
                 # Type ignore: it is a pymysql issue.
-                server_info = connection.get_server_info()  # type: ignore
-                metadata["server_info"] = {
-                    "version": server_info,
-                    "host": self._config.host,
-                    "port": self._config.port,
-                }
+                server_version = connection.get_server_info()  # type: ignore
+                server_info = ServerInfo(
+                    version=server_version,
+                    host=self._config.host,
+                    port=self._config.port,
+                )
 
                 # Get table information
-                tables: list[dict[str, Any]] = self._execute_query(
+                tables_raw: list[dict[str, Any]] = self._execute_query(
                     _TABLES_QUERY, (self._config.database,)
                 )
 
-                for table in tables:
-                    table_info: dict[str, Any] = {
-                        "name": table["TABLE_NAME"],
-                        "type": table["TABLE_TYPE"],
-                        "comment": table["TABLE_COMMENT"],
-                        "estimated_rows": table["TABLE_ROWS"],
-                        "columns": [],
-                    }
-
+                for table in tables_raw:
                     # Get column information for each table
-                    columns = self._execute_query(
+                    columns_raw = self._execute_query(
                         _COLUMNS_QUERY, (self._config.database, table["TABLE_NAME"])
                     )
-                    table_info["columns"] = columns
 
-                    metadata["tables"].append(table_info)
+                    columns_metadata = [
+                        ColumnMetadata(
+                            name=col["COLUMN_NAME"],
+                            data_type=col["DATA_TYPE"],
+                            is_nullable=col["IS_NULLABLE"] == "YES",
+                            default=col["COLUMN_DEFAULT"],
+                            comment=col["COLUMN_COMMENT"] or None,
+                            key=col["COLUMN_KEY"] or None,
+                            extra=col["EXTRA"] or None,
+                        )
+                        for col in columns_raw
+                    ]
 
-                return metadata
+                    table_metadata = TableMetadata(
+                        name=table["TABLE_NAME"],
+                        table_type=table["TABLE_TYPE"],
+                        comment=table["TABLE_COMMENT"] or None,
+                        estimated_rows=table["TABLE_ROWS"],
+                        columns=columns_metadata,
+                    )
+                    tables_metadata.append(table_metadata)
+
+                return RelationalExtractionMetadata(
+                    database_name=self._config.database,
+                    tables=tables_metadata,
+                    server_info=server_info,
+                )
 
         except Exception as e:
             logger.error(f"Failed to extract database metadata: {e}")
@@ -309,7 +326,7 @@ class MySQLConnector(Connector):
             raise ConnectorExtractionError(f"MySQL extraction failed: {e}") from e
 
     def _transform_for_standard_input_schema(
-        self, schema: Schema, metadata: dict[str, Any]
+        self, schema: Schema, metadata: RelationalExtractionMetadata
     ) -> dict[str, Any]:
         """Transform MySQL data for the 'standard_input' schema using producer module.
 
@@ -326,30 +343,30 @@ class MySQLConnector(Connector):
 
         Args:
             schema: The standard_input schema
-            metadata: Database metadata including table/column structure
+            metadata: Typed extraction metadata with tables and server info
 
         Returns:
             Standard_input schema compliant content with granular data items
 
         """
-        data_items: list[dict[str, Any]] = []
+        data_items: list[StandardInputDataItemModel[RelationalDatabaseMetadata]] = []
 
         # Extract actual cell data from each table
-        for table_info in metadata.get("tables", []):
-            table_data_items = self._extract_table_cell_data(table_info)
+        for table in metadata.tables:
+            table_data_items = self._extract_table_cell_data(table)
             data_items.extend(table_data_items)
 
         # Load the appropriate producer for this schema version
         producer = self._load_producer(schema)
 
-        # Prepare config data for producer
-        config_data = {
-            "host": self._config.host,
-            "port": self._config.port,
-            "database": self._config.database,
-            "user": self._config.user,
-            "max_rows_per_table": self._config.max_rows_per_table,
-        }
+        # Prepare typed config for producer
+        config_data = RelationalProducerConfig(
+            database=self._config.database,
+            max_rows_per_table=self._config.max_rows_per_table,
+            host=self._config.host,
+            port=self._config.port,
+            user=self._config.user,
+        )
 
         # Delegate transformation to producer
         return producer.produce(
@@ -360,23 +377,22 @@ class MySQLConnector(Connector):
         )
 
     def _extract_table_cell_data(
-        self, table_info: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+        self, table: TableMetadata
+    ) -> list[StandardInputDataItemModel[RelationalDatabaseMetadata]]:
         """Extract cell data from a single table.
 
         Args:
-            table_info: Table metadata including name and columns
+            table: Typed table metadata including name and columns
 
         Returns:
-            List of data items with cell content and metadata
+            List of typed data items with cell content and metadata
 
         """
-        data_items: list[dict[str, Any]] = []
-        table_name = table_info["name"]
+        data_items: list[StandardInputDataItemModel[RelationalDatabaseMetadata]] = []
 
         # Extract actual cell data from the table (limited by max_rows_per_table)
         try:
-            table_data = self._get_table_data(table_name)
+            table_data = self._get_table_data(table.name)
 
             for row_index, row in enumerate(table_data):
                 for column_name, cell_value in row.items():
@@ -384,42 +400,20 @@ class MySQLConnector(Connector):
                     if DatabaseExtractionUtils.filter_non_empty_cell(cell_value):
                         # Create RelationalDatabaseMetadata for the cell
                         cell_metadata = RelationalDatabaseMetadata(
-                            source=f"mysql_database_({self._config.database})_table_({table_name})_column_({column_name})_row_({row_index + 1})",
+                            source=f"mysql_database_({self._config.database})_table_({table.name})_column_({column_name})_row_({row_index + 1})",
                             connector_type=_CONNECTOR_NAME,
-                            table_name=table_name,
+                            table_name=table.name,
                             column_name=column_name,
                             schema_name=self._config.database,
                         )
 
-                        # Use utility to create the data item
+                        # Use utility to create the data item (returns typed model)
                         data_item = DatabaseExtractionUtils.create_cell_data_item(
                             cell_value, cell_metadata
                         )
-                        data_items.append(data_item.model_dump())
+                        data_items.append(data_item)
 
         except Exception as e:
-            logger.warning(f"Failed to extract data from table {table_name}: {e}")
+            logger.warning(f"Failed to extract data from table {table.name}: {e}")
 
         return data_items
-
-    def _get_column_data_type(
-        self, table_info: dict[str, Any], column_name: str
-    ) -> str:
-        """Get the SQL data type for a specific column.
-
-        Args:
-            table_info: Table metadata including columns
-            column_name: Name of the column
-
-        Returns:
-            SQL data type or "unknown" if not found
-
-        """
-        return next(
-            (
-                col.get("DATA_TYPE")
-                for col in table_info.get("columns", [])
-                if col.get("COLUMN_NAME") == column_name
-            ),
-            "unknown",
-        )
