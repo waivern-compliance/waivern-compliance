@@ -5,6 +5,7 @@ description = "MongoDB connector for Waivern Compliance Framework"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "waivern-connectors-database",
     "waivern-core",
     "pymongo>=4.10.0",
     "pydantic>=2.11.5",

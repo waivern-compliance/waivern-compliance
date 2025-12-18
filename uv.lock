@@ -1993,6 +1993,7 @@ source = { editable = "libs/waivern-mongodb" }
 dependencies = [
     { name = "pydantic" },
     { name = "pymongo" },
+    { name = "waivern-connectors-database" },
     { name = "waivern-core" },
 ]
 
@@ -2006,6 +2007,7 @@ dev = [
 requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "pymongo", specifier = ">=4.10.0" },
+    { name = "waivern-connectors-database", editable = "libs/waivern-connectors-database" },
     { name = "waivern-core", editable = "libs/waivern-core" },
 ]
 

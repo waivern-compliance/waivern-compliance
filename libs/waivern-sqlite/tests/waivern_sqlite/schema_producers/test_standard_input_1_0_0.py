@@ -2,6 +2,17 @@
 
 from pathlib import Path
 
+from waivern_connectors_database import (
+    ColumnMetadata,
+    RelationalExtractionMetadata,
+    RelationalProducerConfig,
+    TableMetadata,
+)
+from waivern_core.schemas import (
+    RelationalDatabaseMetadata,
+    StandardInputDataItemModel,
+)
+
 
 class TestStandardInputProducer:
     """Tests for standard_input schema v1.0.0 producer module."""
@@ -16,42 +27,50 @@ class TestStandardInputProducer:
         schema_version = "1.0.0"
         database_path = "/path/to/test.db"
 
-        metadata = {
-            "database_name": "test",
-            "tables": [
-                {
-                    "name": "users",
-                    "type": "BASE TABLE",
-                    "columns": [
-                        {
-                            "COLUMN_NAME": "email",
-                            "DATA_TYPE": "TEXT",
-                            "IS_NULLABLE": "NO",
-                        }
+        metadata = RelationalExtractionMetadata(
+            database_name="test",
+            tables=[
+                TableMetadata(
+                    name="users",
+                    table_type="BASE TABLE",
+                    comment=None,
+                    estimated_rows=10,
+                    columns=[
+                        ColumnMetadata(
+                            name="email",
+                            data_type="TEXT",
+                            is_nullable=False,
+                            default=None,
+                            comment=None,
+                            key=None,
+                            extra=None,
+                        )
                     ],
-                    "estimated_rows": 10,
-                }
+                )
             ],
-            "server_info": {"version": "SQLite 3.39.0"},
-        }
+            server_info=None,  # SQLite doesn't have server info
+        )
 
         data_items = [
-            {
-                "content": "test@example.com",
-                "metadata": {
-                    "source": "sqlite_database_(test)_table_(users)_column_(email)_row_(1)",
-                    "connector_type": "sqlite_connector",
-                    "table_name": "users",
-                    "column_name": "email",
-                    "schema_name": "test",
-                },
-            }
+            StandardInputDataItemModel(
+                content="test@example.com",
+                metadata=RelationalDatabaseMetadata(
+                    source="sqlite_database_(test)_table_(users)_column_(email)_row_(1)",
+                    connector_type="sqlite_connector",
+                    table_name="users",
+                    column_name="email",
+                    schema_name="test",
+                ),
+            )
         ]
 
-        config_data = {
-            "database_path": database_path,
-            "max_rows_per_table": 100,
-        }
+        config_data = RelationalProducerConfig(
+            database="test",
+            max_rows_per_table=100,
+            host=None,
+            port=None,
+            user=None,
+        )
 
         # Act
         result = standard_input_1_0_0.produce(
@@ -59,6 +78,7 @@ class TestStandardInputProducer:
             metadata=metadata,
             data_items=data_items,
             config_data=config_data,
+            database_path=database_path,
         )
 
         # Assert

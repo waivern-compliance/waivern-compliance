@@ -6,10 +6,14 @@ from types import ModuleType
 from typing import Any, cast, override
 
 from bson import ObjectId
-from pydantic import BaseModel, Field
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
+from waivern_connectors_database import (
+    CollectionMetadata,
+    DocumentExtractionMetadata,
+    DocumentProducerConfig,
+)
 from waivern_core import Schema
 from waivern_core.base_connector import Connector
 from waivern_core.errors import ConnectorExtractionError
@@ -23,29 +27,6 @@ from waivern_mongodb.config import MongoDBConnectorConfig
 
 # Type alias for MongoDB documents (schemaless by design)
 MongoDocument = dict[str, Any]
-
-
-class CollectionMetadata(BaseModel):
-    """Metadata for a single MongoDB collection."""
-
-    name: str = Field(description="Name of the collection")
-    document_count: int = Field(description="Estimated document count")
-
-
-class ExtractionMetadata(BaseModel):
-    """Metadata passed to the schema producer."""
-
-    collections: list[CollectionMetadata] = Field(
-        description="List of collection metadata"
-    )
-
-
-class ProducerConfig(BaseModel):
-    """Configuration passed to the schema producer."""
-
-    uri: str = Field(description="MongoDB connection URI")
-    database: str = Field(description="Database name")
-    sample_size: int = Field(description="Sample size per collection")
 
 
 logger = logging.getLogger(__name__)
@@ -151,8 +132,10 @@ class MongoDBConnector(Connector):
                     data_items.extend(doc_items)
 
             # Build typed metadata and config for producer
-            extraction_metadata = ExtractionMetadata(collections=collections_metadata)
-            producer_config = ProducerConfig(
+            extraction_metadata = DocumentExtractionMetadata(
+                collections=collections_metadata
+            )
+            producer_config = DocumentProducerConfig(
                 uri=self._config.uri,
                 database=self._config.database,
                 sample_size=self._config.sample_size,

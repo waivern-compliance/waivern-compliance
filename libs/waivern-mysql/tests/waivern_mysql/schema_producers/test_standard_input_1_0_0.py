@@ -1,5 +1,17 @@
 """Tests for standard_input v1.0.0 producer."""
 
+from waivern_connectors_database import (
+    ColumnMetadata,
+    RelationalExtractionMetadata,
+    RelationalProducerConfig,
+    ServerInfo,
+    TableMetadata,
+)
+from waivern_core.schemas import (
+    RelationalDatabaseMetadata,
+    StandardInputDataItemModel,
+)
+
 from waivern_mysql.schema_producers import standard_input_1_0_0
 
 
@@ -11,46 +23,50 @@ class TestStandardInputProducer:
         # Arrange
         schema_version = "1.0.0"
 
-        metadata = {
-            "database_name": "test_db",
-            "tables": [
-                {
-                    "name": "users",
-                    "type": "BASE TABLE",
-                    "comment": "",
-                    "estimated_rows": 10,
-                    "columns": [
-                        {
-                            "COLUMN_NAME": "email",
-                            "DATA_TYPE": "varchar",
-                            "IS_NULLABLE": "NO",
-                        }
+        metadata = RelationalExtractionMetadata(
+            database_name="test_db",
+            tables=[
+                TableMetadata(
+                    name="users",
+                    table_type="BASE TABLE",
+                    comment=None,
+                    estimated_rows=10,
+                    columns=[
+                        ColumnMetadata(
+                            name="email",
+                            data_type="varchar",
+                            is_nullable=False,
+                            default=None,
+                            comment=None,
+                            key=None,
+                            extra=None,
+                        )
                     ],
-                }
+                )
             ],
-            "server_info": {"version": "8.0.32", "host": "localhost", "port": 3306},
-        }
+            server_info=ServerInfo(version="8.0.32", host="localhost", port=3306),
+        )
 
         data_items = [
-            {
-                "content": "test@example.com",
-                "metadata": {
-                    "source": "mysql_database_(test_db)_table_(users)_column_(email)_row_(1)",
-                    "connector_type": "mysql_connector",
-                    "table_name": "users",
-                    "column_name": "email",
-                    "schema_name": "test_db",
-                },
-            }
+            StandardInputDataItemModel(
+                content="test@example.com",
+                metadata=RelationalDatabaseMetadata(
+                    source="mysql_database_(test_db)_table_(users)_column_(email)_row_(1)",
+                    connector_type="mysql_connector",
+                    table_name="users",
+                    column_name="email",
+                    schema_name="test_db",
+                ),
+            )
         ]
 
-        config_data = {
-            "host": "localhost",
-            "port": 3306,
-            "database": "test_db",
-            "user": "test_user",
-            "max_rows_per_table": 100,
-        }
+        config_data = RelationalProducerConfig(
+            host="localhost",
+            port=3306,
+            database="test_db",
+            user="test_user",
+            max_rows_per_table=100,
+        )
 
         # Act
         result = standard_input_1_0_0.produce(

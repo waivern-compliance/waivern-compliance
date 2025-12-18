@@ -2,20 +2,22 @@
 
 from typing import Any
 
+from waivern_connectors_database import (
+    DocumentExtractionMetadata,
+    DocumentProducerConfig,
+)
 from waivern_core.schemas import (
     DocumentDatabaseMetadata,
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
 
-from waivern_mongodb.connector import ExtractionMetadata, ProducerConfig
-
 
 def produce(
     schema_version: str,
-    metadata: ExtractionMetadata,
+    metadata: DocumentExtractionMetadata,
     data_items: list[StandardInputDataItemModel[DocumentDatabaseMetadata]],
-    config_data: ProducerConfig,
+    config_data: DocumentProducerConfig,
 ) -> dict[str, Any]:
     """Transform MongoDB data to standard_input v1.0.0 schema format.
 

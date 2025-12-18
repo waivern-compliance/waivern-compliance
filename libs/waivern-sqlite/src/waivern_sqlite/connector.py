@@ -8,15 +8,20 @@ from types import ModuleType
 from typing import Any, override
 
 from waivern_connectors_database import (
+    ColumnMetadata,
     DatabaseConnector,
     DatabaseExtractionUtils,
     DatabaseSchemaUtils,
+    RelationalExtractionMetadata,
+    RelationalProducerConfig,
+    TableMetadata,
 )
 from waivern_core.errors import ConnectorExtractionError
 from waivern_core.message import Message
 from waivern_core.schemas import (
     RelationalDatabaseMetadata,
     Schema,
+    StandardInputDataItemModel,
 )
 
 from waivern_sqlite.config import SQLiteConnectorConfig
@@ -119,11 +124,11 @@ class SQLiteConnector(DatabaseConnector):
             logger.error(f"SQLite extraction failed: {e}")
             raise ConnectorExtractionError(f"SQLite extraction failed: {e}") from e
 
-    def _get_database_metadata(self) -> dict[str, Any]:
+    def _get_database_metadata(self) -> RelationalExtractionMetadata:
         """Extract database metadata including tables, columns, and constraints.
 
         Returns:
-            Dictionary containing database metadata
+            Typed extraction metadata with tables (server_info is None for SQLite)
 
         """
         try:
@@ -134,22 +139,11 @@ class SQLiteConnector(DatabaseConnector):
                     f"SQLite database file not found: {self._config.database_path}"
                 )
 
-            metadata: dict[str, Any] = {
-                "database_name": db_path.stem,
-                "tables": [],
-                "server_info": {},
-            }
+            tables_metadata: list[TableMetadata] = []
 
             conn = sqlite3.connect(self._config.database_path)
             try:
-                # Get server information (SQLite version)
                 cursor = conn.cursor()
-                cursor.execute("SELECT sqlite_version()")
-                sqlite_version = cursor.fetchone()[0]
-                metadata["server_info"] = {
-                    "version": f"SQLite {sqlite_version}",
-                    "database_path": self._config.database_path,
-                }
 
                 # Get table information
                 cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
@@ -160,43 +154,46 @@ class SQLiteConnector(DatabaseConnector):
                     if not table_name.replace("_", "").replace("-", "").isalnum():
                         continue
 
-                    table_info: dict[str, Any] = {
-                        "name": table_name,
-                        "type": "BASE TABLE",
-                        "comment": "",
-                        "estimated_rows": 0,
-                        "columns": [],
-                    }
-
                     # Get column information for each table
                     cursor.execute(f"PRAGMA table_info(`{table_name}`)")
                     pragma_results = cursor.fetchall()
 
-                    for col_info in pragma_results:
-                        # pragma_results format: (cid, name, type, notnull, dflt_value, pk)
-                        column_info = {
-                            "COLUMN_NAME": col_info[1],
-                            "DATA_TYPE": col_info[2],
-                            "IS_NULLABLE": "NO" if col_info[3] else "YES",
-                            "COLUMN_DEFAULT": col_info[4],
-                            "COLUMN_COMMENT": "",
-                            "COLUMN_KEY": "PRI" if col_info[5] else "",
-                            "EXTRA": "",
-                        }
-                        table_info["columns"].append(column_info)
+                    columns_metadata = [
+                        ColumnMetadata(
+                            name=col_info[1],
+                            data_type=col_info[2] or "TEXT",
+                            is_nullable=not col_info[3],
+                            default=col_info[4],
+                            comment=None,
+                            key="PRI" if col_info[5] else None,
+                            extra=None,
+                        )
+                        for col_info in pragma_results
+                    ]
 
                     # Get estimated row count
+                    estimated_rows = 0
                     try:
                         cursor.execute(f"SELECT COUNT(*) FROM `{table_name}`")  # noqa: S608
-                        row_count = cursor.fetchone()[0]
-                        table_info["estimated_rows"] = row_count
+                        estimated_rows = cursor.fetchone()[0]
                     except sqlite3.Error:
-                        # If count fails, keep default 0
                         pass
 
-                    metadata["tables"].append(table_info)
+                    table_metadata = TableMetadata(
+                        name=table_name,
+                        table_type="BASE TABLE",
+                        comment=None,
+                        estimated_rows=estimated_rows,
+                        columns=columns_metadata,
+                    )
+                    tables_metadata.append(table_metadata)
 
-                return metadata
+                # SQLite is embedded, so server_info is None
+                return RelationalExtractionMetadata(
+                    database_name=db_path.stem,
+                    tables=tables_metadata,
+                    server_info=None,
+                )
 
             finally:
                 conn.close()
@@ -258,7 +255,7 @@ class SQLiteConnector(DatabaseConnector):
             return []
 
     def _transform_for_standard_input_schema(
-        self, schema: Schema, metadata: dict[str, Any]
+        self, schema: Schema, metadata: RelationalExtractionMetadata
     ) -> dict[str, Any]:
         """Transform SQLite data for the 'standard_input' schema using producer module.
 
@@ -275,27 +272,30 @@ class SQLiteConnector(DatabaseConnector):
 
         Args:
             schema: The standard_input schema
-            metadata: Database metadata including table/column structure
+            metadata: Typed extraction metadata with tables
 
         Returns:
             Standard_input schema compliant content with granular data items
 
         """
-        data_items: list[dict[str, Any]] = []
+        data_items: list[StandardInputDataItemModel[RelationalDatabaseMetadata]] = []
 
         # Extract actual cell data from each table
-        for table_info in metadata.get("tables", []):
-            table_data_items = self._extract_table_cell_data(table_info)
+        for table in metadata.tables:
+            table_data_items = self._extract_table_cell_data(table)
             data_items.extend(table_data_items)
 
         # Load the appropriate producer for this schema version
         producer = self._load_producer(schema)
 
-        # Prepare config data for producer
-        config_data = {
-            "database_path": self._config.database_path,
-            "max_rows_per_table": self._config.max_rows_per_table,
-        }
+        # Prepare typed config for producer (SQLite uses database name from path)
+        config_data = RelationalProducerConfig(
+            database=Path(self._config.database_path).stem,
+            max_rows_per_table=self._config.max_rows_per_table,
+            host=None,
+            port=None,
+            user=None,
+        )
 
         # Delegate transformation to producer
         return producer.produce(
@@ -303,26 +303,27 @@ class SQLiteConnector(DatabaseConnector):
             metadata=metadata,
             data_items=data_items,
             config_data=config_data,
+            database_path=self._config.database_path,
         )
 
     def _extract_table_cell_data(
-        self, table_info: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+        self, table: TableMetadata
+    ) -> list[StandardInputDataItemModel[RelationalDatabaseMetadata]]:
         """Extract cell data from a single table.
 
         Args:
-            table_info: Table metadata including name and columns
+            table: Typed table metadata including name and columns
 
         Returns:
-            List of data items with cell content and metadata
+            List of typed data items with cell content and metadata
 
         """
-        data_items: list[dict[str, Any]] = []
-        table_name = table_info["name"]
+        data_items: list[StandardInputDataItemModel[RelationalDatabaseMetadata]] = []
+        db_name = Path(self._config.database_path).stem
 
         # Extract actual cell data from the table (limited by max_rows_per_table)
         try:
-            table_data = self._get_table_data(table_name)
+            table_data = self._get_table_data(table.name)
 
             for row_index, row in enumerate(table_data):
                 for column_name, cell_value in row.items():
@@ -330,20 +331,20 @@ class SQLiteConnector(DatabaseConnector):
                     if DatabaseExtractionUtils.filter_non_empty_cell(cell_value):
                         # Create RelationalDatabaseMetadata for the cell
                         cell_metadata = RelationalDatabaseMetadata(
-                            source=f"sqlite_database_({Path(self._config.database_path).stem})_table_({table_name})_column_({column_name})_row_({row_index + 1})",
+                            source=f"sqlite_database_({db_name})_table_({table.name})_column_({column_name})_row_({row_index + 1})",
                             connector_type="sqlite_connector",
-                            table_name=table_name,
+                            table_name=table.name,
                             column_name=column_name,
-                            schema_name=Path(self._config.database_path).stem,
+                            schema_name=db_name,
                         )
 
-                        # Use utility to create the data item
+                        # Use utility to create the data item (returns typed model)
                         data_item = DatabaseExtractionUtils.create_cell_data_item(
                             cell_value, cell_metadata
                         )
-                        data_items.append(data_item.model_dump())
+                        data_items.append(data_item)
 
         except Exception as e:
-            logger.warning(f"Failed to extract data from table {table_name}: {e}")
+            logger.warning(f"Failed to extract data from table {table.name}: {e}")
 
         return data_items
