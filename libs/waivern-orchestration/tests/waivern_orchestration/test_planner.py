@@ -17,6 +17,10 @@ from .test_helpers import (
     create_mock_registry,
 )
 
+# =============================================================================
+# Planner Happy Path
+# =============================================================================
+
 
 class TestPlannerHappyPath:
     """Tests for successful planning scenarios."""
@@ -240,6 +244,11 @@ class TestPlannerHappyPath:
         assert output_schema.name != "standard_input"
 
 
+# =============================================================================
+# Schema String Parsing
+# =============================================================================
+
+
 class TestSchemaStringParsing:
     """Tests for schema string parsing via output_schema override."""
 
@@ -298,6 +307,11 @@ class TestSchemaStringParsing:
         _, output_schema = plan.artifact_schemas["data"]
         assert output_schema.name == "custom_output"
         assert output_schema.version == "2.0.0"
+
+
+# =============================================================================
+# Planner Errors
+# =============================================================================
 
 
 class TestPlannerErrors:
@@ -468,6 +482,11 @@ class TestPlannerErrors:
         assert "merged" in str(exc_info.value)
         assert "1.0.0" in str(exc_info.value)
         assert "2.0.0" in str(exc_info.value)
+
+
+# =============================================================================
+# Execution Plan
+# =============================================================================
 
 
 class TestExecutionPlan:

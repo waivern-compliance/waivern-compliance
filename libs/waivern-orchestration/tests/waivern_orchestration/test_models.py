@@ -2,7 +2,6 @@
 
 import pytest
 from pydantic import ValidationError
-from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 
 from waivern_orchestration import (
     ArtifactDefinition,
@@ -19,6 +18,8 @@ from waivern_orchestration import (
     SchemaCompatibilityError,
     SourceConfig,
 )
+
+from .test_helpers import create_message_with_execution
 
 # =============================================================================
 # Artifact Definition Tests
@@ -243,40 +244,15 @@ class TestRunbook:
 # =============================================================================
 
 
-def _create_test_message(  # noqa: PLR0913
-    content: dict[str, object],
-    status: str = "success",
-    error: str | None = None,
-    duration_seconds: float = 1.0,
-    origin: str = "parent",
-    alias: str | None = None,
-) -> Message:
-    """Create a test message with execution context."""
-    return Message(
-        id="test-id",
-        content=content,
-        schema=Schema("test_schema", "1.0.0"),
-        extensions=MessageExtensions(
-            execution=ExecutionContext(
-                status=status,  # type: ignore[arg-type]
-                error=error,
-                duration_seconds=duration_seconds,
-                origin=origin,
-                alias=alias,
-            )
-        ),
-    )
-
-
 class TestExecutionResult:
     """Tests for runbook execution result."""
 
     def test_execution_result_fields(self) -> None:
         """ExecutionResult should have all required fields."""
-        test_message = _create_test_message(
+        test_message = create_message_with_execution(
             content={"data": "test"},
             status="success",
-            duration_seconds=1.0,
+            duration=1.0,
         )
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",

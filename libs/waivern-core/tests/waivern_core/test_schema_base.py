@@ -14,6 +14,10 @@ from waivern_core.schemas import (
     SchemaRegistry,
 )
 
+# =============================================================================
+# JSON Schema Loader
+# =============================================================================
+
 
 class TestJsonSchemaLoader:
     """Tests for JsonSchemaLoader."""
@@ -100,6 +104,11 @@ class TestJsonSchemaLoader:
         assert "1.0.0" in error_message
 
 
+# =============================================================================
+# Schema Creation & Basic Properties
+# =============================================================================
+
+
 class TestSchemaCreation:
     """Tests for creating Schema instances."""
 
@@ -118,6 +127,11 @@ class TestSchemaCreation:
         assert schema1.name == "standard_input"
         assert schema2.name == "personal_data_finding"
         assert schema3.version == "1.1.0"
+
+
+# =============================================================================
+# Schema Equality & Hashing
+# =============================================================================
 
 
 class TestSchemaEquality:
@@ -183,6 +197,11 @@ class TestSchemaHashing:
         assert schema_dict[schema3] == "updated_handler"
 
 
+# =============================================================================
+# Schema Loading & Error Handling
+# =============================================================================
+
+
 class TestSchemaJsonLoading:
     """Tests for accessing JSON schema definitions through Schema."""
 
@@ -237,6 +256,11 @@ class TestSchemaErrorHandling:
         assert "2.0.0" in str(exc_info.value)
 
 
+# =============================================================================
+# String Representation
+# =============================================================================
+
+
 class TestSchemaStringRepresentation:
     """Tests for schema string representation."""
 
@@ -255,6 +279,11 @@ class TestSchemaStringRepresentation:
         assert repr_str == "Schema(name='standard_input', version='1.0.0')"
 
 
+# =============================================================================
+# Schema Loader Protocol
+# =============================================================================
+
+
 class TestSchemaLoader:
     """Tests for SchemaLoader protocol."""
 
@@ -266,6 +295,11 @@ class TestSchemaLoader:
         # Test method signature
         assert hasattr(loader, "load")
         assert callable(loader.load)
+
+
+# =============================================================================
+# Dependency Injection
+# =============================================================================
 
 
 class TestSchemaDependencyInjection:
@@ -333,6 +367,11 @@ class TestSchemaDependencyInjection:
         json_schema = schema_default.schema
         assert isinstance(json_schema, dict)
         assert json_schema["version"] == "1.0.0"
+
+
+# =============================================================================
+# Schema Registry
+# =============================================================================
 
 
 class TestSchemaRegistry:
@@ -410,6 +449,11 @@ class TestSchemaRegistry:
         json_schema = schema.schema
         assert isinstance(json_schema, dict)
         assert json_schema["version"] == "1.0.0"
+
+
+# =============================================================================
+# Serialisation
+# =============================================================================
 
 
 class TestSchemaSerialisation:
