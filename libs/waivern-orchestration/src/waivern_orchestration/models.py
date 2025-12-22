@@ -196,28 +196,17 @@ class Runbook(BaseModel):
         return self
 
 
-class ArtifactResult(BaseModel):
-    """Result of executing a single artifact."""
-
-    artifact_id: str
-    success: bool
-    message: Message | None = None
-    error: str | None = None
-    duration_seconds: float
-
-    # Phase 3: child runbook tracking
-    origin: str = "parent"
-    """Origin of artifact: 'parent' or 'child:{runbook_name}'."""
-
-    alias: str | None = None
-    """Parent artifact name if this is an aliased child artifact."""
-
-
 class ExecutionResult(BaseModel):
-    """Result of executing a complete runbook."""
+    """Result of executing a complete runbook.
+
+    Each artifact that executed (success or failure) is represented as a Message
+    with execution metadata in extensions.execution. Failed artifacts have
+    status="error" and empty content. Skipped artifacts are tracked separately.
+    """
 
     run_id: str = Field(..., description="Unique run identifier (UUID)")
     start_timestamp: str = Field(..., description="ISO8601 timestamp with timezone")
-    artifacts: dict[str, ArtifactResult] = Field(default_factory=dict)
+    artifacts: dict[str, Message] = Field(default_factory=dict)
+    """Mapping from artifact_id to Message with extensions.execution populated."""
     skipped: set[str] = Field(default_factory=set)
     total_duration_seconds: float

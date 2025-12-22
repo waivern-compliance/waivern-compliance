@@ -1,14 +1,14 @@
 """Shared test helpers for waivern-orchestration tests."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import MagicMock
 
 import yaml
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
 from waivern_artifact_store.factory import ArtifactStoreFactory
-from waivern_core import Message
+from waivern_core import ExecutionContext, Message, MessageExtensions
 from waivern_core.schemas import Schema
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 
@@ -137,20 +137,68 @@ def create_test_message(
     content: dict[str, Any],
     schema: Schema | None = None,
 ) -> Message:
-    """Create a Message for testing.
+    """Create a Message for testing (without execution context).
+
+    Use this for messages that will have execution context added later
+    (e.g., by the executor). For messages with pre-populated execution
+    context, use create_message_with_execution().
 
     Args:
         content: Message content dict.
         schema: Optional schema. Defaults to standard_input/1.0.0.
 
     Returns:
-        Message instance.
+        Message instance without execution context.
 
     """
     return Message(
         id="test_message",
         content=content,
         schema=schema or Schema("standard_input", "1.0.0"),
+    )
+
+
+def create_message_with_execution(  # noqa: PLR0913
+    content: dict[str, Any] | None = None,
+    schema: Schema | None = None,
+    status: Literal["success", "error", "pending"] = "success",
+    error: str | None = None,
+    duration: float = 1.0,
+    origin: str = "parent",
+    alias: str | None = None,
+) -> Message:
+    """Create a Message with pre-populated execution context.
+
+    Use this for tests that need messages with execution metadata already
+    set (e.g., testing exporters, result processing). For messages that
+    will have execution context added by the executor, use create_test_message().
+
+    Args:
+        content: Message content dict. Defaults to empty dict.
+        schema: Optional schema. Defaults to test_schema/1.0.0.
+        status: Execution status. Defaults to "success".
+        error: Error message (typically used with status="error").
+        duration: Execution duration in seconds. Defaults to 1.0.
+        origin: Execution origin. Defaults to "parent".
+        alias: Alias for child runbook artifacts. Defaults to None.
+
+    Returns:
+        Message instance with execution context.
+
+    """
+    return Message(
+        id="test_message",
+        content=content or {},
+        schema=schema or Schema("test_schema", "1.0.0"),
+        extensions=MessageExtensions(
+            execution=ExecutionContext(
+                status=status,
+                error=error,
+                duration_seconds=duration,
+                origin=origin,
+                alias=alias,
+            )
+        ),
     )
 
 

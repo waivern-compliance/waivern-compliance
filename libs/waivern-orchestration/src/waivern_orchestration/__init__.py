@@ -17,7 +17,6 @@ from waivern_orchestration.errors import (
 from waivern_orchestration.executor import DAGExecutor
 from waivern_orchestration.models import (
     ArtifactDefinition,
-    ArtifactResult,
     ExecuteConfig,
     ExecutionResult,
     ProcessConfig,
@@ -33,7 +32,6 @@ from waivern_orchestration.schema import RunbookSchemaGenerator
 __all__ = [
     # Models
     "ArtifactDefinition",
-    "ArtifactResult",
     "ExecuteConfig",
     "ExecutionResult",
     "ProcessConfig",

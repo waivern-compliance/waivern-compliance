@@ -26,7 +26,7 @@ from waivern_core.errors import (
     ProcessorProcessingError,
     WaivernError,
 )
-from waivern_core.message import Message
+from waivern_core.message import ExecutionContext, Message, MessageExtensions
 from waivern_core.ruleset_types import BaseRule, RuleComplianceData, RulesetData
 from waivern_core.schemas import (
     JsonSchemaLoader,
@@ -59,6 +59,8 @@ __all__ = [
     "BaseRuleset",
     "Connector",
     "Message",
+    "MessageExtensions",
+    "ExecutionContext",
     "Processor",
     "Schema",
     # Schema utilities

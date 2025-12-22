@@ -10,6 +10,10 @@ from unittest.mock import MagicMock, patch
 
 from waivern_core.services import ComponentRegistry, ServiceContainer
 
+# =============================================================================
+# Component Registry Core
+# =============================================================================
+
 
 class TestComponentRegistry:
     """Test suite for ComponentRegistry."""
@@ -161,6 +165,11 @@ class TestComponentRegistry:
 
         # Assert - factory class instantiated with container
         mock_factory_class.assert_called_once_with(container)
+
+
+# =============================================================================
+# Schema Entry Point Discovery
+# =============================================================================
 
 
 class TestComponentRegistrySchemaDiscovery:

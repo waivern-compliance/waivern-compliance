@@ -1,59 +1,14 @@
 """Tests for JSON exporter."""
 
-from unittest.mock import Mock
+from waivern_orchestration import ExecutionPlan, ExecutionResult
 
-import pytest
-from waivern_orchestration import (
-    ArtifactDefinition,
-    ArtifactResult,
-    ExecutionPlan,
-    ExecutionResult,
-    Runbook,
-    SourceConfig,
-)
+# =============================================================================
+# Exporter Properties
+# =============================================================================
 
 
-class TestJsonExporter:
-    """Test suite for JsonExporter."""
-
-    @pytest.fixture
-    def minimal_runbook(self) -> Runbook:
-        """Create minimal valid runbook for testing."""
-        return Runbook(
-            name="Test Runbook",
-            description="Test description",
-            artifacts={
-                "art1": ArtifactDefinition(
-                    source=SourceConfig(type="test", properties={})
-                )
-            },
-        )
-
-    @pytest.fixture
-    def minimal_plan(self, minimal_runbook: Runbook) -> ExecutionPlan:
-        """Create minimal valid execution plan for testing."""
-        return ExecutionPlan(
-            runbook=minimal_runbook,
-            dag=Mock(),
-            artifact_schemas={},
-        )
-
-    @pytest.fixture
-    def minimal_result(self) -> ExecutionResult:
-        """Create minimal valid execution result for testing."""
-        return ExecutionResult(
-            run_id="test-id",
-            start_timestamp="2025-01-01T00:00:00+00:00",
-            artifacts={
-                "art1": ArtifactResult(
-                    artifact_id="art1",
-                    success=True,
-                    duration_seconds=1.0,
-                )
-            },
-            skipped=set(),
-            total_duration_seconds=1.0,
-        )
+class TestJsonExporterProperties:
+    """Tests for JsonExporter metadata properties."""
 
     def test_name_property_returns_json(self) -> None:
         """JsonExporter.name returns 'json'."""
@@ -68,6 +23,15 @@ class TestJsonExporter:
 
         exporter = JsonExporter()
         assert exporter.supported_frameworks == []
+
+
+# =============================================================================
+# Validation & Export
+# =============================================================================
+
+
+class TestJsonExporterExport:
+    """Tests for JsonExporter validation and export functionality."""
 
     def test_validate_returns_empty_list_for_any_result(
         self,
@@ -95,7 +59,6 @@ class TestJsonExporter:
         exporter = JsonExporter()
         export_result = exporter.export(minimal_result, minimal_plan)
 
-        # Should not raise any errors
         json_str = json.dumps(export_result, indent=2)
         assert isinstance(json_str, str)
         assert len(json_str) > 0

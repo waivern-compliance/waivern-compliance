@@ -11,25 +11,11 @@ These tests verify the service container's ability to:
 
 from waivern_core.services import ServiceContainer, ServiceDescriptor
 
+from .conftest import TestService, TestServiceFactory
 
-# Test service for use in tests
-class TestService:
-    """Simple test service for testing container behaviour."""
-
-    pass
-
-
-# Test factory that creates TestService instances
-class TestServiceFactory:
-    """Factory that creates TestService instances."""
-
-    def create(self) -> TestService:
-        """Create a new TestService instance."""
-        return TestService()
-
-    def can_create(self) -> bool:
-        """Check if factory can create service."""
-        return True
+# =============================================================================
+# Service Registration & Retrieval
+# =============================================================================
 
 
 class TestServiceContainer:

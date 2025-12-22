@@ -216,7 +216,7 @@ class DAGExecutor:
         store.clear()
 
         sorter = plan.dag.create_sorter()
-        results: dict[str, ArtifactResult] = {}
+        results: dict[str, Message] = {}
         skipped: set[str] = set()
 
         while sorter.is_active():
@@ -227,12 +227,12 @@ class DAGExecutor:
             for aid, result in zip(ready, batch_results):
                 results[aid] = result
                 sorter.done(aid)
-                if isinstance(result, Exception) or not result.success:
+                if isinstance(result, Exception) or not result.is_success:
                     self._skip_dependents(aid, plan.dag, skipped)
 
         return ExecutionResult(artifacts=results, skipped=skipped)
 
-    async def _produce(self, artifact_id: str, plan: ExecutionPlan, store: ArtifactStore) -> ArtifactResult:
+    async def _produce(self, artifact_id: str, plan: ExecutionPlan, store: ArtifactStore) -> Message:
         """Produce a single artifact."""
         # Note: Child runbooks are flattened at plan time, so executor
         # only sees regular source/derived artifacts
@@ -246,11 +246,12 @@ class DAGExecutor:
 
         store.save(artifact_id, message)
 
-        # Determine origin and alias for results
+        # Add execution context to message
         origin = get_origin_from_artifact_id(artifact_id)
         alias = plan.reversed_aliases.get(artifact_id)
+        execution = ExecutionContext(status="success", origin=origin, alias=alias)
 
-        return ArtifactResult(artifact_id=artifact_id, success=True, message=message, origin=origin, alias=alias)
+        return replace(message, extensions=MessageExtensions(execution=execution))
 ```
 
 ## Schema Resolution

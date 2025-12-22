@@ -15,6 +15,10 @@ from wct.logging import (
     setup_logging,
 )
 
+# =============================================================================
+# Configuration Loading
+# =============================================================================
+
 
 class TestLoggingConfiguration:
     """Test logging configuration functionality."""
@@ -84,6 +88,11 @@ class TestLoggingConfiguration:
         """Test that nonexistent file raises LoggingError."""
         with pytest.raises(LoggingError, match="Failed to read config file"):
             load_config(Path("/nonexistent/config.yaml"))
+
+
+# =============================================================================
+# Logging Setup
+# =============================================================================
 
 
 class TestLoggingSetup:
@@ -234,6 +243,11 @@ class TestLoggingSetup:
             root_logger.handlers = original_handlers
 
 
+# =============================================================================
+# Environment Integration
+# =============================================================================
+
+
 class TestEnvironmentIntegration:
     """Test environment-specific logging behavior."""
 
@@ -260,7 +274,11 @@ class TestEnvironmentIntegration:
             assert config_path.exists()
 
 
-# Integration test that mimics the verbose flag functionality
+# =============================================================================
+# Verbose Flag Integration
+# =============================================================================
+
+
 class TestVerboseFlagIntegration:
     """Integration tests for verbose flag functionality."""
 
