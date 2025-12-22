@@ -49,7 +49,6 @@ class TestMessage:
         assert message.id == "test-id"
         assert message.content == {"test": "value"}
         assert message.schema == schema
-        assert message.schema_validated is False
 
     def test_validate_message_success(self) -> None:
         """Test successful message validation with typed schema."""
@@ -58,8 +57,7 @@ class TestMessage:
 
         result = message.validate()
 
-        assert result == message  # Should return self for chaining
-        assert message.schema_validated is True
+        assert result is message  # Returns self for chaining
 
     def test_validate_message_invalid_content(self) -> None:
         """Test validation failure with invalid content."""
@@ -74,7 +72,6 @@ class TestMessage:
             message.validate()
 
         assert "Schema validation failed" in str(exc_info.value)
-        assert message.schema_validated is False
 
     def test_validate_message_no_content(self) -> None:
         """Test validation failure when no content provided."""
@@ -85,7 +82,6 @@ class TestMessage:
             message.validate()
 
         assert "No content provided for validation" in str(exc_info.value)
-        assert message.schema_validated is False
 
     def test_message_with_context(self) -> None:
         """Test message creation with context."""
@@ -106,4 +102,3 @@ class TestMessage:
         # Should be able to chain validation
         result = message.validate()
         assert result is message
-        assert message.schema_validated is True
