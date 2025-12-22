@@ -644,23 +644,21 @@ class ArtifactDefinition(BaseModel):
         return self
 ```
 
-### Updated: `ArtifactResult`
+### Execution Context in Message
+
+Execution metadata is stored in `Message.extensions.execution`:
 
 ```python
-class ArtifactResult(BaseModel):
-    artifact_id: str
-    success: bool
-    message: Message | None = None
+@dataclass
+class ExecutionContext:
+    status: Literal["pending", "success", "error"]
     error: str | None = None
-    duration_seconds: float
-
-    # NEW
-    origin: str = "parent"
-    """Origin of artifact: 'parent' or 'child:{runbook_name}'."""
-
-    alias: str | None = None
-    """Parent artifact name if this is an aliased child artifact."""
+    duration_seconds: float | None = None
+    origin: str = "parent"  # "parent" or "child:{runbook_name}"
+    alias: str | None = None  # Parent artifact name for aliased child artifacts
 ```
+
+Access via convenience properties: `message.is_success`, `message.execution_origin`, `message.execution_alias`.
 
 ### Updated: `ExecutionPlan`
 
@@ -991,7 +989,7 @@ All implementation phases have been completed. The following summarises what was
 - ✅ `RunbookConfig.template_paths` - Directories to search for child runbooks
 - ✅ `Runbook.inputs` and `Runbook.outputs` - Top-level declarations
 - ✅ `ArtifactDefinition.child_runbook` - Child runbook directive on artifacts
-- ✅ `ArtifactResult.origin` and `ArtifactResult.alias` - Execution result metadata
+- ✅ `Message.extensions.execution` - Execution metadata (origin, alias, status, duration)
 - ✅ `ExecutionPlan.aliases` and `ExecutionPlan.reversed_aliases` - Alias mappings
 - ✅ Model validators for all constraints
 

@@ -554,20 +554,27 @@ class ExecutionPlan:
     """Maps artifact IDs to alias names (reverse of aliases)."""
 ```
 
-#### ArtifactResult
+#### Execution Metadata
+
+Execution metadata is stored in `Message.extensions.execution`:
 
 ```python
-class ArtifactResult(BaseModel):
-    artifact_id: str
-    success: bool
-    message: Message | None = None
+@dataclass
+class ExecutionContext:
+    """Execution metadata populated by the executor."""
+    status: Literal["pending", "success", "error"]
     error: str | None = None
-    duration_seconds: float
-    origin: str = "parent"
-    """Origin of artifact: 'parent' or 'child:{runbook_name}'."""
-    alias: str | None = None
-    """Parent artifact name if this is an aliased child artifact."""
+    duration_seconds: float | None = None
+    origin: str = "parent"  # "parent" or "child:{runbook_name}"
+    alias: str | None = None  # Parent artifact name for aliased child artifacts
 ```
+
+Access via Message convenience properties:
+- `message.is_success` - Check if execution succeeded
+- `message.execution_error` - Get error message if failed
+- `message.execution_duration` - Get duration in seconds
+- `message.execution_origin` - Get origin ("parent" or "child:name")
+- `message.execution_alias` - Get alias for child runbook artifacts
 
 ---
 
@@ -726,7 +733,7 @@ Aliases:
 
 ## Execution Results
 
-Execution results provide full visibility into flattened artifacts:
+`ExecutionResult.artifacts` contains `Message` objects with execution metadata in `extensions.execution`:
 
 ```json
 {
@@ -735,25 +742,30 @@ Execution results provide full visibility into flattened artifacts:
   "total_duration_seconds": 5.3,
   "artifacts": {
     "db_schema": {
-      "artifact_id": "db_schema",
-      "success": true,
-      "origin": "parent",
-      "alias": null,
-      "duration_seconds": 1.2
-    },
-    "analysis_workflow__a1b2c3d4__validated": {
-      "artifact_id": "analysis_workflow__a1b2c3d4__validated",
-      "success": true,
-      "origin": "child:analysis_workflow",
-      "alias": null,
-      "duration_seconds": 0.8
+      "id": "msg-001",
+      "content": { "tables": [...] },
+      "schema": { "name": "standard_input", "version": "1.0.0" },
+      "extensions": {
+        "execution": {
+          "status": "success",
+          "duration_seconds": 1.2,
+          "origin": "parent",
+          "alias": null
+        }
+      }
     },
     "analysis_workflow__a1b2c3d4__findings": {
-      "artifact_id": "analysis_workflow__a1b2c3d4__findings",
-      "success": true,
-      "origin": "child:analysis_workflow",
-      "alias": "child_analysis",
-      "duration_seconds": 2.1
+      "id": "msg-002",
+      "content": { "findings": [...] },
+      "schema": { "name": "personal_data_finding", "version": "1.0.0" },
+      "extensions": {
+        "execution": {
+          "status": "success",
+          "duration_seconds": 2.1,
+          "origin": "child:analysis_workflow",
+          "alias": "child_analysis"
+        }
+      }
     }
   },
   "skipped": []
