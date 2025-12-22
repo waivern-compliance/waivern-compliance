@@ -157,14 +157,13 @@ class _OutputFormatter:
         if verbose:
             table.add_column("Schema", style="yellow")
 
-        for artifact_id, artifact_result in result.artifacts.items():
-            status = (
-                self.STATUS_SUCCESS if artifact_result.success else self.STATUS_FAILED
-            )
+        for artifact_id, message in result.artifacts.items():
+            status = self.STATUS_SUCCESS if message.is_success else self.STATUS_FAILED
+            duration = message.execution_duration or 0.0
             row = [
                 artifact_id,
                 status,
-                f"{artifact_result.duration_seconds:.2f}s",
+                f"{duration:.2f}s",
             ]
             if verbose:
                 row.append(self._get_schema_text(plan, artifact_id))
@@ -181,31 +180,31 @@ class _OutputFormatter:
 
         # Show detailed error information for failed results
         failed_results = [
-            (aid, ar) for aid, ar in result.artifacts.items() if not ar.success
+            (aid, msg) for aid, msg in result.artifacts.items() if not msg.is_success
         ]
         if failed_results:
             console.print("\n[bold red]❌ Failed Artifact Details:[/bold red]")
-            for artifact_id, artifact_result in failed_results:
+            for artifact_id, message in failed_results:
                 error_panel = Panel(
-                    f"[red]{artifact_result.error}[/red]",
+                    f"[red]{message.execution_error}[/red]",
                     title=f"Error in {artifact_id}",
                     border_style="red",
                 )
                 console.print(error_panel)
                 logger.error(
-                    "Artifact %s failed: %s", artifact_id, artifact_result.error
+                    "Artifact %s failed: %s", artifact_id, message.execution_error
                 )
 
         # Show successful results in verbose mode
         if verbose:
             successful_results = [
-                (aid, ar) for aid, ar in result.artifacts.items() if ar.success
+                (aid, msg) for aid, msg in result.artifacts.items() if msg.is_success
             ]
             if successful_results:
                 console.print(
                     "\n[bold green]✅ Successful Artifact Details:[/bold green]"
                 )
-                for artifact_id, artifact_result in successful_results:
+                for artifact_id, message in successful_results:
                     definition = plan.runbook.artifacts.get(artifact_id)
                     tree = Tree(f"[bold green]{artifact_id}[/bold green]")
                     if definition and definition.name:
@@ -214,9 +213,8 @@ class _OutputFormatter:
                         tree.add(
                             f"Description: [white]{definition.description}[/white]"
                         )
-                    tree.add(
-                        f"Duration: [blue]{artifact_result.duration_seconds:.2f}s[/blue]"
-                    )
+                    duration = message.execution_duration or 0.0
+                    tree.add(f"Duration: [blue]{duration:.2f}s[/blue]")
                     console.print(tree)
 
     def format_component_list[T](
@@ -385,8 +383,8 @@ class _OutputFormatter:
             output_path: Final output file path.
 
         """
-        succeeded = sum(1 for ar in result.artifacts.values() if ar.success)
-        failed = sum(1 for ar in result.artifacts.values() if not ar.success)
+        succeeded = sum(1 for msg in result.artifacts.values() if msg.is_success)
+        failed = sum(1 for msg in result.artifacts.values() if not msg.is_success)
         skipped = len(result.skipped)
 
         completion_panel = Panel(
@@ -814,8 +812,8 @@ def _detect_exporter(
     """
     frameworks: set[str] = set()
 
-    for artifact_id, artifact_result in result.artifacts.items():
-        if not artifact_result.success:
+    for artifact_id, message in result.artifacts.items():
+        if not message.is_success:
             continue
 
         definition = plan.runbook.artifacts.get(artifact_id)

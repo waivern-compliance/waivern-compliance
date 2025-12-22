@@ -1,8 +1,49 @@
 """Tests for core export functionality."""
 
+from typing import Any
 from unittest.mock import Mock
 
+from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 from waivern_orchestration import ExecutionPlan, ExecutionResult, Runbook
+
+
+def _success_message(
+    content: dict[str, Any] | None = None,
+    duration: float = 1.0,
+    schema: Schema | None = None,
+) -> Message:
+    """Create a successful Message with execution context for testing."""
+    return Message(
+        id="test_msg",
+        content=content or {},
+        schema=schema or Schema("test_schema", "1.0.0"),
+        extensions=MessageExtensions(
+            execution=ExecutionContext(
+                status="success",
+                duration_seconds=duration,
+            )
+        ),
+    )
+
+
+def _error_message(
+    error: str,
+    duration: float = 1.0,
+    schema: Schema | None = None,
+) -> Message:
+    """Create a failed Message with execution context for testing."""
+    return Message(
+        id="test_msg",
+        content={},
+        schema=schema or Schema("test_schema", "1.0.0"),
+        extensions=MessageExtensions(
+            execution=ExecutionContext(
+                status="error",
+                error=error,
+                duration_seconds=duration,
+            )
+        ),
+    )
 
 
 class TestBuildCoreExport:
@@ -107,8 +148,6 @@ class TestBuildCoreExport:
 
     def test_completed_status_when_all_succeed(self) -> None:
         """Status is completed when all artifacts succeed."""
-        from waivern_orchestration import ArtifactResult
-
         from wct.exporters.core import build_core_export
 
         # Arrange
@@ -118,16 +157,8 @@ class TestBuildCoreExport:
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
             artifacts={
-                "art1": ArtifactResult(
-                    artifact_id="art1",
-                    success=True,
-                    duration_seconds=1.0,
-                ),
-                "art2": ArtifactResult(
-                    artifact_id="art2",
-                    success=True,
-                    duration_seconds=2.0,
-                ),
+                "art1": _success_message(duration=1.0),
+                "art2": _success_message(duration=2.0),
             },
             skipped=set(),
             total_duration_seconds=3.0,
@@ -141,8 +172,6 @@ class TestBuildCoreExport:
 
     def test_failed_status_when_any_fail(self) -> None:
         """Status is failed when any artifact fails."""
-        from waivern_orchestration import ArtifactResult
-
         from wct.exporters.core import build_core_export
 
         # Arrange
@@ -152,17 +181,8 @@ class TestBuildCoreExport:
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
             artifacts={
-                "art1": ArtifactResult(
-                    artifact_id="art1",
-                    success=True,
-                    duration_seconds=1.0,
-                ),
-                "art2": ArtifactResult(
-                    artifact_id="art2",
-                    success=False,
-                    error="Something went wrong",
-                    duration_seconds=2.0,
-                ),
+                "art1": _success_message(duration=1.0),
+                "art2": _error_message("Something went wrong", duration=2.0),
             },
             skipped=set(),
             total_duration_seconds=3.0,
@@ -176,8 +196,6 @@ class TestBuildCoreExport:
 
     def test_partial_status_when_artifacts_skipped(self) -> None:
         """Status is partial when artifacts skipped but none failed."""
-        from waivern_orchestration import ArtifactResult
-
         from wct.exporters.core import build_core_export
 
         # Arrange
@@ -186,13 +204,7 @@ class TestBuildCoreExport:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={
-                "art1": ArtifactResult(
-                    artifact_id="art1",
-                    success=True,
-                    duration_seconds=1.0,
-                ),
-            },
+            artifacts={"art1": _success_message(duration=1.0)},
             skipped={"art2", "art3"},
             total_duration_seconds=1.0,
         )
@@ -205,8 +217,6 @@ class TestBuildCoreExport:
 
     def test_errors_list_contains_failed_artifacts(self) -> None:
         """Errors list includes artifact_id and error message for failures."""
-        from waivern_orchestration import ArtifactResult
-
         from wct.exporters.core import build_core_export
 
         # Arrange
@@ -216,18 +226,8 @@ class TestBuildCoreExport:
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
             artifacts={
-                "art1": ArtifactResult(
-                    artifact_id="art1",
-                    success=False,
-                    error="Database connection failed",
-                    duration_seconds=1.0,
-                ),
-                "art2": ArtifactResult(
-                    artifact_id="art2",
-                    success=False,
-                    error="Timeout exceeded",
-                    duration_seconds=2.0,
-                ),
+                "art1": _error_message("Database connection failed", duration=1.0),
+                "art2": _error_message("Timeout exceeded", duration=2.0),
             },
             skipped=set(),
             total_duration_seconds=3.0,
@@ -246,8 +246,6 @@ class TestBuildCoreExport:
 
     def test_skipped_list_contains_skipped_artifact_ids(self) -> None:
         """Skipped list contains IDs of skipped artifacts."""
-        from waivern_orchestration import ArtifactResult
-
         from wct.exporters.core import build_core_export
 
         # Arrange
@@ -256,13 +254,7 @@ class TestBuildCoreExport:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={
-                "art1": ArtifactResult(
-                    artifact_id="art1",
-                    success=True,
-                    duration_seconds=1.0,
-                ),
-            },
+            artifacts={"art1": _success_message(duration=1.0)},
             skipped={"art2", "art3", "art4"},
             total_duration_seconds=1.0,
         )
@@ -276,8 +268,6 @@ class TestBuildCoreExport:
 
     def test_summary_counts_are_accurate(self) -> None:
         """Summary total/succeeded/failed/skipped counts match reality."""
-        from waivern_orchestration import ArtifactResult
-
         from wct.exporters.core import build_core_export
 
         # Arrange
@@ -287,22 +277,9 @@ class TestBuildCoreExport:
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
             artifacts={
-                "success1": ArtifactResult(
-                    artifact_id="success1",
-                    success=True,
-                    duration_seconds=1.0,
-                ),
-                "success2": ArtifactResult(
-                    artifact_id="success2",
-                    success=True,
-                    duration_seconds=1.0,
-                ),
-                "failed1": ArtifactResult(
-                    artifact_id="failed1",
-                    success=False,
-                    error="Error",
-                    duration_seconds=1.0,
-                ),
+                "success1": _success_message(duration=1.0),
+                "success2": _success_message(duration=1.0),
+                "failed1": _error_message("Error", duration=1.0),
             },
             skipped={"skipped1", "skipped2"},
             total_duration_seconds=3.0,
@@ -319,17 +296,11 @@ class TestBuildCoreExport:
 
     def test_outputs_only_include_artifacts_with_output_true(self) -> None:
         """Only artifacts marked output:true appear in outputs list."""
-        from waivern_core import Schema
-
-        # Arrange
-        from waivern_orchestration import (
-            ArtifactDefinition,
-            ArtifactResult,
-            SourceConfig,
-        )
+        from waivern_orchestration import ArtifactDefinition, SourceConfig
 
         from wct.exporters.core import build_core_export
 
+        # Arrange
         artifacts = {
             "art1": ArtifactDefinition(
                 source=SourceConfig(type="test", properties={}),
@@ -355,34 +326,14 @@ class TestBuildCoreExport:
                 "art3": (None, schema),
             },
         )
-        from waivern_core import Message
-
-        message1 = Message(id="m1", content={"data": "test1"}, schema=schema)
-        message2 = Message(id="m2", content={"data": "test2"}, schema=schema)
-        message3 = Message(id="m3", content={"data": "test3"}, schema=schema)
 
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
             artifacts={
-                "art1": ArtifactResult(
-                    artifact_id="art1",
-                    success=True,
-                    message=message1,
-                    duration_seconds=1.0,
-                ),
-                "art2": ArtifactResult(
-                    artifact_id="art2",
-                    success=True,
-                    message=message2,
-                    duration_seconds=1.0,
-                ),
-                "art3": ArtifactResult(
-                    artifact_id="art3",
-                    success=True,
-                    message=message3,
-                    duration_seconds=1.0,
-                ),
+                "art1": _success_message({"data": "test1"}, schema=schema),
+                "art2": _success_message({"data": "test2"}, schema=schema),
+                "art3": _success_message({"data": "test3"}, schema=schema),
             },
             skipped=set(),
             total_duration_seconds=3.0,
@@ -397,12 +348,7 @@ class TestBuildCoreExport:
 
     def test_output_entry_includes_schema_info(self) -> None:
         """Output entries include schema name/version when available."""
-        from waivern_core import Message, Schema
-        from waivern_orchestration import (
-            ArtifactDefinition,
-            ArtifactResult,
-            SourceConfig,
-        )
+        from waivern_orchestration import ArtifactDefinition, SourceConfig
 
         from wct.exporters.core import build_core_export
 
@@ -418,18 +364,10 @@ class TestBuildCoreExport:
             runbook=runbook, dag=Mock(), artifact_schemas={"art1": (None, schema)}
         )
 
-        message = Message(id="m1", content={"data": "test"}, schema=schema)
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={
-                "art1": ArtifactResult(
-                    artifact_id="art1",
-                    success=True,
-                    message=message,
-                    duration_seconds=1.0,
-                )
-            },
+            artifacts={"art1": _success_message({"data": "test"}, schema=schema)},
             skipped=set(),
             total_duration_seconds=1.0,
         )
@@ -445,12 +383,7 @@ class TestBuildCoreExport:
 
     def test_output_entry_includes_artifact_metadata(self) -> None:
         """Output entries include name/description/contact when present."""
-        from waivern_core import Message, Schema
-        from waivern_orchestration import (
-            ArtifactDefinition,
-            ArtifactResult,
-            SourceConfig,
-        )
+        from waivern_orchestration import ArtifactDefinition, SourceConfig
 
         from wct.exporters.core import build_core_export
 
@@ -470,18 +403,10 @@ class TestBuildCoreExport:
             runbook=runbook, dag=Mock(), artifact_schemas={"art1": (None, schema)}
         )
 
-        message = Message(id="m1", content={"data": "test"}, schema=schema)
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={
-                "art1": ArtifactResult(
-                    artifact_id="art1",
-                    success=True,
-                    message=message,
-                    duration_seconds=1.0,
-                )
-            },
+            artifacts={"art1": _success_message({"data": "test"}, schema=schema)},
             skipped=set(),
             total_duration_seconds=1.0,
         )

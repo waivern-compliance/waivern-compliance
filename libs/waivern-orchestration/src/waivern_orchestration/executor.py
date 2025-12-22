@@ -12,16 +12,15 @@ import logging
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 
 from waivern_artifact_store.base import ArtifactStore
-from waivern_core import Message, Schema
+from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 from waivern_core.services import ComponentRegistry
 
 from waivern_orchestration.models import (
     ArtifactDefinition,
-    ArtifactResult,
     ExecutionResult,
     ProcessConfig,
     SourceConfig,
@@ -39,7 +38,7 @@ class _ExecutionContext:
     store: ArtifactStore
     semaphore: asyncio.Semaphore
     thread_pool: ThreadPoolExecutor
-    results: dict[str, ArtifactResult] = field(default_factory=dict)
+    results: dict[str, Message] = field(default_factory=dict)
     skipped: set[str] = field(default_factory=set)
 
 
@@ -135,19 +134,29 @@ class DAGExecutor:
 
             for aid, result in zip(ready, batch_results, strict=True):
                 if isinstance(result, BaseException):
-                    artifact_result = ArtifactResult(
+                    # Create error Message for unexpected exceptions
+                    _, output_schema = plan.artifact_schemas[aid]
+                    error_message = self._create_error_message(
                         artifact_id=aid,
-                        success=False,
-                        error=str(result),
-                        duration_seconds=0.0,
+                        schema=output_schema,
+                        execution_context=ExecutionContext(
+                            status="error",
+                            error=str(result),
+                            duration_seconds=0.0,
+                            origin=self._determine_origin(aid),
+                            alias=self._find_alias(aid, plan),
+                        ),
                     )
-                    ctx.results[aid] = artifact_result
+                    ctx.results[aid] = error_message
                     # Skip all dependents of failed artifact
                     self._skip_dependents(aid, plan, ctx)
                 else:
                     ctx.results[aid] = result
-                    # Also check if this artifact failed (success=False)
-                    if not result.success:
+                    # Check if this artifact failed (status="error")
+                    exec_ctx = (
+                        result.extensions.execution if result.extensions else None
+                    )
+                    if exec_ctx and exec_ctx.status == "error":
                         self._skip_dependents(aid, plan, ctx)
                 sorter.done(aid)
 
@@ -158,8 +167,14 @@ class DAGExecutor:
         artifact_id: str,
         plan: ExecutionPlan,
         ctx: _ExecutionContext,
-    ) -> ArtifactResult:
-        """Produce a single artifact."""
+    ) -> Message:
+        """Produce a single artifact.
+
+        Returns a Message with extensions.execution populated:
+        - On success: status="success", the actual content
+        - On failure: status="error", empty content
+
+        """
         logger.debug("Starting production of artifact: %s", artifact_id)
         start_time = time.monotonic()
         definition = plan.runbook.artifacts[artifact_id]
@@ -168,11 +183,11 @@ class DAGExecutor:
         origin = self._determine_origin(artifact_id)
         alias = self._find_alias(artifact_id, plan)
 
+        # Get schemas from pre-resolved schemas
+        _input_schema, output_schema = plan.artifact_schemas[artifact_id]
+
         async with ctx.semaphore:
             try:
-                # Get schemas from pre-resolved schemas
-                _input_schema, output_schema = plan.artifact_schemas[artifact_id]
-
                 if definition.source is not None:
                     message = await self._run_connector(
                         definition.source, output_schema, ctx.thread_pool
@@ -192,13 +207,18 @@ class DAGExecutor:
                 logger.debug(
                     "Artifact %s completed successfully (%.2fs)", artifact_id, duration
                 )
-                return ArtifactResult(
-                    artifact_id=artifact_id,
-                    success=True,
-                    message=message,
-                    duration_seconds=duration,
-                    origin=origin,
-                    alias=alias,
+
+                # Create new Message with execution context (don't mutate original)
+                return replace(
+                    message,
+                    extensions=MessageExtensions(
+                        execution=ExecutionContext(
+                            status="success",
+                            duration_seconds=duration,
+                            origin=origin,
+                            alias=alias,
+                        )
+                    ),
                 )
 
             except Exception as e:
@@ -208,13 +228,17 @@ class DAGExecutor:
                 )
                 if definition.optional:
                     logger.warning("Optional artifact '%s' failed: %s", artifact_id, e)
-                return ArtifactResult(
+
+                return self._create_error_message(
                     artifact_id=artifact_id,
-                    success=False,
-                    error=str(e),
-                    duration_seconds=duration,
-                    origin=origin,
-                    alias=alias,
+                    schema=output_schema,
+                    execution_context=ExecutionContext(
+                        status="error",
+                        error=str(e),
+                        duration_seconds=duration,
+                        origin=origin,
+                        alias=alias,
+                    ),
                 )
 
     def _skip_dependents(
@@ -364,3 +388,28 @@ class DAGExecutor:
 
         """
         return plan.reversed_aliases.get(artifact_id)
+
+    def _create_error_message(
+        self,
+        artifact_id: str,
+        schema: Schema,
+        execution_context: ExecutionContext,
+    ) -> Message:
+        """Create a Message representing a failed artifact execution.
+
+        Args:
+            artifact_id: The artifact ID that failed.
+            schema: The intended output schema.
+            execution_context: Pre-built execution context with error status.
+
+        Returns:
+            Message with empty content and error execution context.
+
+        """
+        return Message(
+            id=str(uuid.uuid4()),
+            content={},
+            schema=schema,
+            source=f"artifact:{artifact_id}",
+            extensions=MessageExtensions(execution=execution_context),
+        )

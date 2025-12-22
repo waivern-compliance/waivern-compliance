@@ -64,8 +64,8 @@ class TestDAGExecutorHappyPath:
 
         # Assert
         assert "data" in result.artifacts
-        assert result.artifacts["data"].success is True
-        assert result.artifacts["data"].message == expected_message
+        assert result.artifacts["data"].is_success
+        assert result.artifacts["data"].content == expected_message.content
         assert len(result.skipped) == 0
 
 
@@ -124,9 +124,9 @@ class TestDAGExecutorDependencies:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - A must execute before B, B must execute before C
-        assert result.artifacts["a"].success is True
-        assert result.artifacts["b"].success is True
-        assert result.artifacts["c"].success is True
+        assert result.artifacts["a"].is_success
+        assert result.artifacts["b"].is_success
+        assert result.artifacts["c"].is_success
         # A runs first (it's the only connector)
         assert execution_order[0] == "source"
 
@@ -170,10 +170,10 @@ class TestDAGExecutorDependencies:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - both artifacts completed successfully
-        assert result.artifacts["artifact_a"].success is True
-        assert result.artifacts["artifact_b"].success is True
-        assert result.artifacts["artifact_a"].message == message_a
-        assert result.artifacts["artifact_b"].message == message_b
+        assert result.artifacts["artifact_a"].is_success
+        assert result.artifacts["artifact_b"].is_success
+        assert result.artifacts["artifact_a"].content == message_a.content
+        assert result.artifacts["artifact_b"].content == message_b.content
 
 
 class TestDAGExecutorFanIn:
@@ -223,11 +223,13 @@ class TestDAGExecutorFanIn:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - sources succeed, but merge fails (not yet implemented)
-        assert result.artifacts["source_a"].success is True
-        assert result.artifacts["source_b"].success is True
-        assert result.artifacts["merged"].success is False
-        assert result.artifacts["merged"].error is not None
-        assert "not yet implemented" in result.artifacts["merged"].error
+        assert result.artifacts["source_a"].is_success
+        assert result.artifacts["source_b"].is_success
+        assert not result.artifacts["merged"].is_success
+        assert result.artifacts["merged"].execution_error is not None
+        assert "not yet implemented" in (
+            result.artifacts["merged"].execution_error or ""
+        )
 
 
 class TestDAGExecutorErrorHandling:
@@ -271,9 +273,9 @@ class TestDAGExecutorErrorHandling:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - source failed, dependent should be skipped
-        assert result.artifacts["source"].success is False
-        assert result.artifacts["source"].error is not None
-        assert "Connection failed" in result.artifacts["source"].error
+        assert not result.artifacts["source"].is_success
+        assert result.artifacts["source"].execution_error is not None
+        assert "Connection failed" in (result.artifacts["source"].execution_error or "")
         assert "dependent" in result.skipped
 
     def test_optional_artifact_failure_logs_warning(self, caplog: Any) -> None:
@@ -310,7 +312,7 @@ class TestDAGExecutorErrorHandling:
             result = asyncio.run(executor.execute(plan))
 
         # Assert - artifact failed but logged as warning
-        assert result.artifacts["optional_data"].success is False
+        assert not result.artifacts["optional_data"].is_success
         # Check that a warning was logged (not error)
         assert any("optional" in record.message.lower() for record in caplog.records)
 
@@ -334,9 +336,11 @@ class TestDAGExecutorErrorHandling:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - should fail with clear error about missing connector
-        assert result.artifacts["data"].success is False
-        assert result.artifacts["data"].error is not None
-        assert "nonexistent_connector" in result.artifacts["data"].error
+        assert not result.artifacts["data"].is_success
+        assert result.artifacts["data"].execution_error is not None
+        assert "nonexistent_connector" in (
+            result.artifacts["data"].execution_error or ""
+        )
 
 
 class TestDAGExecutorProcess:
@@ -396,9 +400,9 @@ class TestDAGExecutorProcess:
         result = asyncio.run(executor.execute(plan))
 
         # Assert
-        assert result.artifacts["source"].success is True
-        assert result.artifacts["findings"].success is True
-        assert result.artifacts["findings"].message == processed_message
+        assert result.artifacts["source"].is_success
+        assert result.artifacts["findings"].is_success
+        assert result.artifacts["findings"].content == processed_message.content
         mock_processor.process.assert_called_once()
 
     def test_processor_not_found_returns_error(self) -> None:
@@ -439,10 +443,12 @@ class TestDAGExecutorProcess:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - source succeeds, processor fails
-        assert result.artifacts["source_data"].success is True
-        assert result.artifacts["processed"].success is False
-        assert result.artifacts["processed"].error is not None
-        assert "nonexistent_processor" in result.artifacts["processed"].error
+        assert result.artifacts["source_data"].is_success
+        assert not result.artifacts["processed"].is_success
+        assert result.artifacts["processed"].execution_error is not None
+        assert "nonexistent_processor" in (
+            result.artifacts["processed"].execution_error or ""
+        )
 
 
 class TestDAGExecutorConcurrency:
@@ -515,7 +521,7 @@ class TestDAGExecutorConcurrency:
 
         # Assert - all completed and concurrency was limited
         assert len(result.artifacts) == 5
-        assert all(r.success for r in result.artifacts.values())
+        assert all(msg.is_success for msg in result.artifacts.values())
         assert max_concurrent_observed <= 2, (
             f"Expected max 2 concurrent, but observed {max_concurrent_observed}"
         )
@@ -598,7 +604,7 @@ class TestDAGExecutorObservability:
         assert result.total_duration_seconds > 0
 
     def test_artifact_result_contains_duration(self) -> None:
-        """Each ArtifactResult.duration_seconds is populated."""
+        """Each Message's extensions.execution.duration_seconds is populated."""
         # Arrange
         output_schema = Schema("standard_input", "1.0.0")
         message = create_test_message({"files": []})
@@ -622,7 +628,8 @@ class TestDAGExecutorObservability:
         result = asyncio.run(executor.execute(plan))
 
         # Assert
-        assert result.artifacts["data"].duration_seconds >= 0
+        duration = result.artifacts["data"].execution_duration
+        assert duration is not None and duration >= 0
 
     def test_execution_result_contains_valid_run_id(self) -> None:
         """ExecutionResult.run_id is a valid UUID."""
@@ -792,8 +799,8 @@ class TestExecutorChildRunbookAliases:
 
         # Assert - namespaced artifact executes successfully
         assert namespaced_id in result.artifacts
-        assert result.artifacts[namespaced_id].success is True
-        assert result.artifacts[namespaced_id].message == message
+        assert result.artifacts[namespaced_id].is_success
+        assert result.artifacts[namespaced_id].content == message.content
 
     def test_execute_downstream_references_namespaced_artifact(self) -> None:
         """Downstream artifacts can reference namespaced artifact IDs.
@@ -857,9 +864,9 @@ class TestExecutorChildRunbookAliases:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - both artifacts execute successfully
-        assert result.artifacts[namespaced_source].success is True
-        assert result.artifacts["analysis"].success is True
-        assert result.artifacts["analysis"].message == processed_message
+        assert result.artifacts[namespaced_source].is_success
+        assert result.artifacts["analysis"].is_success
+        assert result.artifacts["analysis"].content == processed_message.content
 
 
 class TestExecutorOriginTracking:
@@ -900,9 +907,9 @@ class TestExecutorOriginTracking:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - parent artifact has origin='parent'
-        assert result.artifacts["data"].success is True
-        assert result.artifacts["data"].origin == "parent"
-        assert result.artifacts["data"].alias is None
+        assert result.artifacts["data"].is_success
+        assert result.artifacts["data"].execution_origin == "parent"
+        assert result.artifacts["data"].execution_alias is None
 
     def test_execute_artifact_origin_child(self) -> None:
         """Child artifacts have origin='child:{name}' in results."""
@@ -932,8 +939,8 @@ class TestExecutorOriginTracking:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - child artifact has origin='child:analyser'
-        assert result.artifacts[namespaced_id].success is True
-        assert result.artifacts[namespaced_id].origin == "child:analyser"
+        assert result.artifacts[namespaced_id].is_success
+        assert result.artifacts[namespaced_id].execution_origin == "child:analyser"
 
     def test_execute_artifact_alias_populated(self) -> None:
         """Aliased artifacts have alias field populated in results."""
@@ -970,8 +977,8 @@ class TestExecutorOriginTracking:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - artifact has alias field populated
-        assert result.artifacts[namespaced_id].success is True
-        assert result.artifacts[namespaced_id].alias == "results"
+        assert result.artifacts[namespaced_id].is_success
+        assert result.artifacts[namespaced_id].execution_alias == "results"
 
     def test_execute_mixed_parent_and_child_artifacts(self) -> None:
         """Execution correctly tracks origin for mixed parent/child artifacts."""
@@ -1014,11 +1021,11 @@ class TestExecutorOriginTracking:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - parent has origin='parent', child has origin='child:processor'
-        assert result.artifacts[parent_id].origin == "parent"
-        assert result.artifacts[parent_id].alias is None
+        assert result.artifacts[parent_id].execution_origin == "parent"
+        assert result.artifacts[parent_id].execution_alias is None
 
-        assert result.artifacts[child_id].origin == "child:processor"
-        assert result.artifacts[child_id].alias == "processed_results"
+        assert result.artifacts[child_id].execution_origin == "child:processor"
+        assert result.artifacts[child_id].execution_alias == "processed_results"
 
 
 class TestExecutorSensitiveInputRedaction:

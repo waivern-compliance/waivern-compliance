@@ -97,7 +97,7 @@ def _calculate_status(
         Status string: "failed" if any failures, "partial" if skipped, else "completed".
 
     """
-    has_failures = any(not art.success for art in result.artifacts.values())
+    has_failures = any(not msg.is_success for msg in result.artifacts.values())
     has_skipped = len(result.skipped) > 0
 
     if has_failures:
@@ -119,9 +119,9 @@ def _build_error_entries(result: ExecutionResult) -> list[ErrorEntry]:
 
     """
     return [
-        ErrorEntry(artifact_id=art_id, error=art.error or "Unknown error")
-        for art_id, art in result.artifacts.items()
-        if not art.success
+        ErrorEntry(artifact_id=art_id, error=msg.execution_error or "Unknown error")
+        for art_id, msg in result.artifacts.items()
+        if not msg.is_success
     ]
 
 
@@ -148,8 +148,8 @@ def _calculate_summary(result: ExecutionResult) -> SummaryInfo:
         Summary statistics for the execution.
 
     """
-    succeeded = sum(1 for art in result.artifacts.values() if art.success)
-    failed = sum(1 for art in result.artifacts.values() if not art.success)
+    succeeded = sum(1 for msg in result.artifacts.values() if msg.is_success)
+    failed = sum(1 for msg in result.artifacts.values() if not msg.is_success)
     skipped = len(result.skipped)
     total = len(result.artifacts) + skipped
 
@@ -176,10 +176,10 @@ def _build_output_entries(
     """
     outputs: list[OutputEntry] = []
 
-    for art_id, art_result in result.artifacts.items():
+    for art_id, message in result.artifacts.items():
         # Only include successful artifacts marked output:true
         artifact_def = plan.runbook.artifacts.get(art_id)
-        if not artifact_def or not artifact_def.output or not art_result.success:
+        if not artifact_def or not artifact_def.output or not message.is_success:
             continue
 
         # Get schema info from plan
@@ -194,12 +194,12 @@ def _build_output_entries(
         outputs.append(
             OutputEntry(
                 artifact_id=art_id,
-                duration_seconds=art_result.duration_seconds,
+                duration_seconds=message.execution_duration or 0.0,
                 name=artifact_def.name,
                 description=artifact_def.description,
                 contact=artifact_def.contact,
                 schema=schema_info,
-                content=art_result.message.content if art_result.message else None,
+                content=message.content if message.content else None,
             )
         )
 

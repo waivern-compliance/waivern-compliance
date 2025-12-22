@@ -3,9 +3,9 @@
 from unittest.mock import Mock
 
 import pytest
+from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 from waivern_orchestration import (
     ArtifactDefinition,
-    ArtifactResult,
     ExecutionPlan,
     ExecutionResult,
     Runbook,
@@ -41,16 +41,21 @@ class TestJsonExporter:
     @pytest.fixture
     def minimal_result(self) -> ExecutionResult:
         """Create minimal valid execution result for testing."""
+        message = Message(
+            id="art1_msg",
+            content={},
+            schema=Schema("test_schema", "1.0.0"),
+            extensions=MessageExtensions(
+                execution=ExecutionContext(
+                    status="success",
+                    duration_seconds=1.0,
+                )
+            ),
+        )
         return ExecutionResult(
             run_id="test-id",
             start_timestamp="2025-01-01T00:00:00+00:00",
-            artifacts={
-                "art1": ArtifactResult(
-                    artifact_id="art1",
-                    success=True,
-                    duration_seconds=1.0,
-                )
-            },
+            artifacts={"art1": message},
             skipped=set(),
             total_duration_seconds=1.0,
         )

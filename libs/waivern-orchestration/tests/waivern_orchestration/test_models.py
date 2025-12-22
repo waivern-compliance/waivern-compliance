@@ -2,10 +2,10 @@
 
 import pytest
 from pydantic import ValidationError
+from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 
 from waivern_orchestration import (
     ArtifactDefinition,
-    ArtifactResult,
     ComponentNotFoundError,
     CycleDetectedError,
     ExecuteConfig,
@@ -243,23 +243,29 @@ class TestRunbook:
 # =============================================================================
 
 
-class TestArtifactResult:
-    """Tests for artifact execution result."""
-
-    def test_artifact_result_fields(self) -> None:
-        """ArtifactResult should have all required fields."""
-        result = ArtifactResult(
-            artifact_id="data_source",
-            success=True,
-            message=None,
-            error=None,
-            duration_seconds=1.5,
-        )
-        assert result.artifact_id == "data_source"
-        assert result.success is True
-        assert result.message is None
-        assert result.error is None
-        assert result.duration_seconds == 1.5
+def _create_test_message(  # noqa: PLR0913
+    content: dict[str, object],
+    status: str = "success",
+    error: str | None = None,
+    duration_seconds: float = 1.0,
+    origin: str = "parent",
+    alias: str | None = None,
+) -> Message:
+    """Create a test message with execution context."""
+    return Message(
+        id="test-id",
+        content=content,
+        schema=Schema("test_schema", "1.0.0"),
+        extensions=MessageExtensions(
+            execution=ExecutionContext(
+                status=status,  # type: ignore[arg-type]
+                error=error,
+                duration_seconds=duration_seconds,
+                origin=origin,
+                alias=alias,
+            )
+        ),
+    )
 
 
 class TestExecutionResult:
@@ -267,23 +273,24 @@ class TestExecutionResult:
 
     def test_execution_result_fields(self) -> None:
         """ExecutionResult should have all required fields."""
+        test_message = _create_test_message(
+            content={"data": "test"},
+            status="success",
+            duration_seconds=1.0,
+        )
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={
-                "data": ArtifactResult(
-                    artifact_id="data",
-                    success=True,
-                    duration_seconds=1.0,
-                )
-            },
+            artifacts={"data": test_message},
             skipped={"optional_step"},
             total_duration_seconds=5.5,
         )
         assert result.run_id == "123e4567-e89b-12d3-a456-426614174000"
         assert result.start_timestamp == "2024-01-15T10:30:00+00:00"
         assert "data" in result.artifacts
-        assert result.artifacts["data"].success is True
+        assert result.artifacts["data"].extensions is not None
+        assert result.artifacts["data"].extensions.execution is not None
+        assert result.artifacts["data"].extensions.execution.status == "success"
         assert "optional_step" in result.skipped
         assert result.total_duration_seconds == 5.5
 
@@ -666,40 +673,6 @@ class TestArtifactChildRunbook:
         assert artifact.source is None
         assert artifact.process is None
         assert artifact.inputs == ["source_a", "source_b"]
-
-
-class TestArtifactResultOriginAlias:
-    """Tests for origin and alias fields on ArtifactResult."""
-
-    def test_artifact_result_origin_field(self) -> None:
-        """ArtifactResult has origin field defaulting to 'parent'."""
-        result = ArtifactResult(
-            artifact_id="data_source",
-            success=True,
-            duration_seconds=1.5,
-        )
-        assert result.origin == "parent"
-
-    def test_artifact_result_alias_field(self) -> None:
-        """ArtifactResult has alias field defaulting to None."""
-        result = ArtifactResult(
-            artifact_id="data_source",
-            success=True,
-            duration_seconds=1.5,
-        )
-        assert result.alias is None
-
-    def test_artifact_result_child_origin(self) -> None:
-        """ArtifactResult origin can be set to 'child:{name}'."""
-        result = ArtifactResult(
-            artifact_id="analysis_workflow__a1b2c3d4__findings",
-            success=True,
-            duration_seconds=2.1,
-            origin="child:analysis_workflow",
-            alias="child_analysis",
-        )
-        assert result.origin == "child:analysis_workflow"
-        assert result.alias == "child_analysis"
 
 
 class TestNewErrorTypes:

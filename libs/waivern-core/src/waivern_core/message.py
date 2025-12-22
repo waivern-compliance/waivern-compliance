@@ -134,6 +134,48 @@ class Message:
     extensions: MessageExtensions | None = None
     """Optional typed metadata (execution, tracing, etc.)."""
 
+    # === Execution Context Convenience Properties ===
+
+    @property
+    def is_success(self) -> bool:
+        """Check if execution succeeded.
+
+        Returns False if no execution context is present.
+        """
+        if self.extensions and self.extensions.execution:
+            return self.extensions.execution.status == "success"
+        return False
+
+    @property
+    def execution_error(self) -> str | None:
+        """Get execution error message, if any."""
+        if self.extensions and self.extensions.execution:
+            return self.extensions.execution.error
+        return None
+
+    @property
+    def execution_duration(self) -> float | None:
+        """Get execution duration in seconds, if available."""
+        if self.extensions and self.extensions.execution:
+            return self.extensions.execution.duration_seconds
+        return None
+
+    @property
+    def execution_origin(self) -> str | None:
+        """Get execution origin (e.g., 'parent' or 'child:name')."""
+        if self.extensions and self.extensions.execution:
+            return self.extensions.execution.origin
+        return None
+
+    @property
+    def execution_alias(self) -> str | None:
+        """Get execution alias for child runbook artifacts."""
+        if self.extensions and self.extensions.execution:
+            return self.extensions.execution.alias
+        return None
+
+    # === Validation ===
+
     def validate(self) -> Self:
         """Validate the message content against its schema.
 
