@@ -25,6 +25,10 @@ from .test_helpers import (
     create_test_message,
 )
 
+# =============================================================================
+# Core Execution Tests - Happy Path, Dependencies, Fan-In
+# =============================================================================
+
 
 class TestDAGExecutorHappyPath:
     """Happy path tests for DAGExecutor."""
@@ -232,6 +236,11 @@ class TestDAGExecutorFanIn:
         )
 
 
+# =============================================================================
+# Error Handling
+# =============================================================================
+
+
 class TestDAGExecutorErrorHandling:
     """Tests for error handling in DAGExecutor."""
 
@@ -343,6 +352,11 @@ class TestDAGExecutorErrorHandling:
         )
 
 
+# =============================================================================
+# Process (Processor) Execution
+# =============================================================================
+
+
 class TestDAGExecutorProcess:
     """Tests for process (processor) execution in DAGExecutor."""
 
@@ -449,6 +463,11 @@ class TestDAGExecutorProcess:
         assert "nonexistent_processor" in (
             result.artifacts["processed"].execution_error or ""
         )
+
+
+# =============================================================================
+# Concurrency, Observability & Timeout
+# =============================================================================
 
 
 class TestDAGExecutorConcurrency:

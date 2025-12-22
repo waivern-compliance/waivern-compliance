@@ -6,6 +6,10 @@ from unittest.mock import Mock
 from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 from waivern_orchestration import ExecutionPlan, ExecutionResult, Runbook
 
+# =============================================================================
+# Test Fixtures
+# =============================================================================
+
 
 def _success_message(
     content: dict[str, Any] | None = None,
@@ -44,6 +48,11 @@ def _error_message(
             )
         ),
     )
+
+
+# =============================================================================
+# Basic Export Structure
+# =============================================================================
 
 
 class TestBuildCoreExport:
@@ -98,6 +107,15 @@ class TestBuildCoreExport:
         # Assert
         assert export.format_version == "2.0.0"
 
+
+# =============================================================================
+# Run Metadata - ID and Timestamp
+# =============================================================================
+
+
+class TestBuildCoreExportRunMetadata:
+    """Tests for run metadata (ID, timestamp) in exports."""
+
     def test_run_id_is_valid_uuid(self) -> None:
         """Verifies run.id can be parsed as UUID."""
         from uuid import UUID
@@ -145,6 +163,15 @@ class TestBuildCoreExport:
         # Assert - can parse as ISO8601 with timezone
         timestamp = datetime.fromisoformat(export.run.timestamp)
         assert timestamp.tzinfo is not None
+
+
+# =============================================================================
+# Run Status - Completed, Failed, Partial
+# =============================================================================
+
+
+class TestBuildCoreExportStatus:
+    """Tests for run status determination in exports."""
 
     def test_completed_status_when_all_succeed(self) -> None:
         """Status is completed when all artifacts succeed."""
@@ -215,6 +242,15 @@ class TestBuildCoreExport:
         # Assert - when artifacts are skipped but none failed, status should be "partial"
         assert export.run.status == "partial"
 
+
+# =============================================================================
+# Errors & Skipped Lists
+# =============================================================================
+
+
+class TestBuildCoreExportErrorsAndSkipped:
+    """Tests for errors and skipped lists in exports."""
+
     def test_errors_list_contains_failed_artifacts(self) -> None:
         """Errors list includes artifact_id and error message for failures."""
         from wct.exporters.core import build_core_export
@@ -266,6 +302,15 @@ class TestBuildCoreExport:
         assert len(export.skipped) == 3
         assert set(export.skipped) == {"art2", "art3", "art4"}
 
+
+# =============================================================================
+# Summary Counts
+# =============================================================================
+
+
+class TestBuildCoreExportSummary:
+    """Tests for summary statistics in exports."""
+
     def test_summary_counts_are_accurate(self) -> None:
         """Summary total/succeeded/failed/skipped counts match reality."""
         from wct.exporters.core import build_core_export
@@ -293,6 +338,15 @@ class TestBuildCoreExport:
         assert export.summary.succeeded == 2
         assert export.summary.failed == 1
         assert export.summary.skipped == 2
+
+
+# =============================================================================
+# Output Entries - Filtering, Schema, Metadata
+# =============================================================================
+
+
+class TestBuildCoreExportOutputs:
+    """Tests for output entries in exports."""
 
     def test_outputs_only_include_artifacts_with_output_true(self) -> None:
         """Only artifacts marked output:true appear in outputs list."""
@@ -419,6 +473,15 @@ class TestBuildCoreExport:
         assert export.outputs[0].name == "Artifact One"
         assert export.outputs[0].description == "First test artifact"
         assert export.outputs[0].contact == "dev@example.com"
+
+
+# =============================================================================
+# Runbook Metadata
+# =============================================================================
+
+
+class TestBuildCoreExportRunbookMetadata:
+    """Tests for runbook metadata in exports."""
 
     def test_runbook_contact_omitted_when_not_present(self) -> None:
         """Runbook.contact not in export when runbook has no contact."""
