@@ -170,6 +170,7 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message: ...
 - Preserve old context in comments during refactoring
 - Bypass quality checks
 - Mark tasks completed without running dev-checks
+- **Add `__init__.py` to test directories** - causes type checker to resolve test package instead of source package
 
 ## DO
 
