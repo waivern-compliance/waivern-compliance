@@ -95,9 +95,9 @@ class GitOperations:
     def collect_files(
         self,
         repo_dir: Path,
-        include_patterns: list[str] | None,
-        exclude_patterns: list[str] | None,
-        max_files: int,
+        include_patterns: list[str] | None = None,
+        exclude_patterns: list[str] | None = None,
+        max_files: int = 10000,
     ) -> list[Path]:
         """Collect files from repository matching patterns.
 
