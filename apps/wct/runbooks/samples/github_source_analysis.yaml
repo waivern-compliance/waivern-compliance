@@ -1,0 +1,54 @@
+name: "GitHub Source Code Analysis"
+description: >
+  Analyse source code fetched from a GitHub repository for personal data handling
+  and processing purposes. This runbook demonstrates how to use GitHubConnector
+  to clone a repository and analyse its source code for GDPR compliance.
+contact: "Security Team <security@company.co.uk>"
+
+artifacts:
+  # Source artifact - extract code from GitHub repository
+  github_source_code:
+    name: "GitHub Repository Source Code"
+    description: "Clone repository and extract PHP source files for analysis"
+    source:
+      type: "github"
+      properties:
+        repository: "waivern-compliance/waivern-compliance"
+        clone_strategy: "minimal"
+        # Only include the mock PHP files used for testing
+        include_patterns:
+          - "libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock_lite/source_code/*.php"
+          - "libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock/source_code/*.php"
+        max_files: 50
+
+  # Analysis artifacts
+  source_personal_data:
+    name: "Personal Data Detection in Source Code"
+    description: "Scan source code for personal data handling patterns and PII references"
+    contact: "Development Team <dev@company.co.uk>"
+    inputs: github_source_code
+    process:
+      type: "personal_data"
+      properties:
+        pattern_matching:
+          ruleset: "personal_data"
+          evidence_context_size: "large"
+          maximum_evidence_count: 5
+        llm_validation:
+          enable_llm_validation: false
+    output: true
+
+  source_processing_purpose:
+    name: "Processing Purpose Analysis in Source Code"
+    description: "Identify data processing purposes from code comments, variable names, and function signatures"
+    inputs: github_source_code
+    process:
+      type: "processing_purpose"
+      properties:
+        pattern_matching:
+          ruleset: "processing_purposes"
+          evidence_context_size: "medium"
+          maximum_evidence_count: 5
+        llm_validation:
+          enable_llm_validation: false
+    output: true
