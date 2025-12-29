@@ -8,6 +8,9 @@ from pydantic import Field, field_validator, model_validator
 from waivern_core import BaseComponentConfiguration
 from waivern_core.errors import ConnectorConfigError
 
+# Type alias for clone strategy - single source of truth
+CloneStrategy = Literal["minimal", "partial", "shallow", "full"]
+
 
 class GitHubConnectorConfig(BaseComponentConfiguration):
     """Configuration for GitHubConnector with Pydantic validation.
@@ -34,7 +37,7 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
         description="Maximum number of files to process",
         gt=0,
     )
-    clone_strategy: Literal["minimal", "partial", "shallow", "full"] = Field(
+    clone_strategy: CloneStrategy = Field(
         default="minimal",
         description="Clone strategy: minimal (fastest), partial, shallow, or full",
     )
