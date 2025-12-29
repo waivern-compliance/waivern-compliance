@@ -364,6 +364,105 @@ class TestGitHubConnectorDataItems:
         assert data[0]["metadata"]["connector_type"] == "github"
 
 
+class TestSparseCheckoutBehaviour:
+    """Tests for sparse checkout behaviour with different strategies."""
+
+    def test_minimal_strategy_calls_sparse_checkout_with_directory_paths(
+        self, tmp_path: Path
+    ) -> None:
+        """Minimal strategy calls sparse_checkout with directory paths, not globs."""
+        config = make_config(
+            clone_strategy="minimal",
+            include_patterns=["libs/waivern/tests/*.py", "src/components/*.tsx"],
+        )
+        connector = GitHubConnector(config)
+
+        with (
+            patch("waivern_github.connector.GitOperations") as mock_git_ops_class,
+            patch("waivern_github.connector.tempfile.mkdtemp") as mock_mkdtemp,
+            patch("waivern_github.connector.shutil.rmtree"),
+        ):
+            mock_mkdtemp.return_value = str(tmp_path)
+            mock_git_ops = MagicMock()
+            mock_git_ops_class.return_value = mock_git_ops
+            mock_git_ops.collect_files.return_value = []
+
+            connector.extract(Schema("standard_input", "1.0.0"))
+
+        # sparse_checkout should be called with directory paths (no globs)
+        mock_git_ops.sparse_checkout.assert_called_once()
+        call_args = mock_git_ops.sparse_checkout.call_args[0]
+        patterns = call_args[1]
+        # Should contain directory paths without wildcards
+        assert all("*" not in p for p in patterns)
+        assert set(patterns) == {"libs/waivern/tests", "src/components"}
+
+    def test_shallow_strategy_does_not_call_sparse_checkout(
+        self, tmp_path: Path
+    ) -> None:
+        """Shallow strategy does not call sparse_checkout."""
+        config = make_config(
+            clone_strategy="shallow",
+            include_patterns=["libs/**/*.py"],
+        )
+        connector = GitHubConnector(config)
+
+        with (
+            patch("waivern_github.connector.GitOperations") as mock_git_ops_class,
+            patch("waivern_github.connector.tempfile.mkdtemp") as mock_mkdtemp,
+            patch("waivern_github.connector.shutil.rmtree"),
+        ):
+            mock_mkdtemp.return_value = str(tmp_path)
+            mock_git_ops = MagicMock()
+            mock_git_ops_class.return_value = mock_git_ops
+            mock_git_ops.collect_files.return_value = []
+
+            connector.extract(Schema("standard_input", "1.0.0"))
+
+        mock_git_ops.sparse_checkout.assert_not_called()
+
+    def test_full_strategy_does_not_call_sparse_checkout(self, tmp_path: Path) -> None:
+        """Full strategy does not call sparse_checkout."""
+        config = make_config(
+            clone_strategy="full",
+            include_patterns=["src/*.py"],
+        )
+        connector = GitHubConnector(config)
+
+        with (
+            patch("waivern_github.connector.GitOperations") as mock_git_ops_class,
+            patch("waivern_github.connector.tempfile.mkdtemp") as mock_mkdtemp,
+            patch("waivern_github.connector.shutil.rmtree"),
+        ):
+            mock_mkdtemp.return_value = str(tmp_path)
+            mock_git_ops = MagicMock()
+            mock_git_ops_class.return_value = mock_git_ops
+            mock_git_ops.collect_files.return_value = []
+
+            connector.extract(Schema("standard_input", "1.0.0"))
+
+        mock_git_ops.sparse_checkout.assert_not_called()
+
+    def test_no_sparse_checkout_without_include_patterns(self, tmp_path: Path) -> None:
+        """No sparse_checkout call when include_patterns is not set."""
+        config = make_config(clone_strategy="minimal", include_patterns=None)
+        connector = GitHubConnector(config)
+
+        with (
+            patch("waivern_github.connector.GitOperations") as mock_git_ops_class,
+            patch("waivern_github.connector.tempfile.mkdtemp") as mock_mkdtemp,
+            patch("waivern_github.connector.shutil.rmtree"),
+        ):
+            mock_mkdtemp.return_value = str(tmp_path)
+            mock_git_ops = MagicMock()
+            mock_git_ops_class.return_value = mock_git_ops
+            mock_git_ops.collect_files.return_value = []
+
+            connector.extract(Schema("standard_input", "1.0.0"))
+
+        mock_git_ops.sparse_checkout.assert_not_called()
+
+
 class TestGitHubConnectorAuth:
     """Tests for authentication handling."""
 

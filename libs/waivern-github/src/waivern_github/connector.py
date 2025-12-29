@@ -82,9 +82,13 @@ class GitHubConnector(Connector):
             git_ops = GitOperations()
             git_ops.clone(self._config, clone_path)
 
-            # Apply sparse checkout if patterns configured
-            if self._config.include_patterns:
-                git_ops.sparse_checkout(clone_path, self._config.include_patterns)
+            # Apply sparse checkout for directory patterns with sparse-enabled strategies
+            # Note: git sparse-checkout only supports directory paths, not glob patterns
+            # File filtering with globs is handled by collect_files() using pathspec
+            if self._should_use_sparse_checkout():
+                directory_patterns = self._extract_directory_patterns()
+                if directory_patterns:
+                    git_ops.sparse_checkout(clone_path, directory_patterns)
 
             # Collect files
             files = git_ops.collect_files(
@@ -115,6 +119,48 @@ class GitHubConnector(Connector):
             # Clean up temporary directory
             if clone_dir:
                 shutil.rmtree(clone_dir, ignore_errors=True)
+
+    def _should_use_sparse_checkout(self) -> bool:
+        """Determine if sparse checkout should be used.
+
+        Returns:
+            True if clone strategy supports sparse and patterns are configured.
+
+        """
+        sparse_strategies = {"minimal", "partial"}
+        return (
+            self._config.clone_strategy in sparse_strategies
+            and self._config.include_patterns is not None
+        )
+
+    def _extract_directory_patterns(self) -> list[str]:
+        """Extract directory paths from include patterns for sparse checkout.
+
+        Git sparse-checkout only supports directory paths, not glob patterns.
+        This extracts the directory portions that can be used with sparse-checkout.
+
+        Returns:
+            List of directory paths suitable for sparse-checkout.
+
+        """
+        if not self._config.include_patterns:
+            return []
+
+        directories: set[str] = set()
+        for pattern in self._config.include_patterns:
+            # Remove glob wildcards to get the directory path
+            # e.g., "libs/foo/bar/*.php" -> "libs/foo/bar"
+            # e.g., "libs/**/source/*.py" -> "libs"
+            parts = pattern.split("/")
+            dir_parts: list[str] = []
+            for part in parts:
+                if "*" in part or "?" in part:
+                    break
+                dir_parts.append(part)
+            if dir_parts:
+                directories.add("/".join(dir_parts))
+
+        return list(directories)
 
     def _extract_files(
         self,
