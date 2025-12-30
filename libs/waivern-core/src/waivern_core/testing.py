@@ -11,6 +11,7 @@ from waivern_core import (
     ComponentFactory,
 )
 from waivern_core.base_analyser import Analyser
+from waivern_core.base_classifier import Classifier
 from waivern_core.base_processor import Processor
 
 
@@ -305,8 +306,56 @@ class AnalyserContractTests[T: Analyser](ProcessorContractTests[T]):
     pass
 
 
+class ClassifierContractTests[T: Classifier](ProcessorContractTests[T]):
+    """Abstract contract tests that all Classifier implementations must pass.
+
+    Extends ProcessorContractTests with classifier-specific requirements.
+    Classifiers inherit all processor contract tests plus framework declaration.
+
+    Required Fixtures:
+        processor_class: The Classifier class (not instance) to test
+
+    Contract Requirements:
+        1. All ProcessorContractTests requirements
+        2. get_framework() must return non-empty string
+
+    Usage Pattern:
+        class TestGDPRClassifierContract(ClassifierContractTests[GDPRClassifier]):
+            @pytest.fixture
+            def processor_class(self) -> type[GDPRClassifier]:
+                return GDPRClassifier
+
+            # All contract tests run automatically
+
+    Note:
+        Uses processor_class fixture for consistency with the base
+        ProcessorContractTests class.
+
+    """
+
+    # CONTRACT TEST: Classifier-specific
+    def test_get_framework_returns_non_empty_string(
+        self, processor_class: type[T]
+    ) -> None:
+        """Verify classifier declares its target framework.
+
+        Contract Requirement:
+            get_framework() must return a non-empty string identifying
+            the regulatory framework this classifier targets.
+
+        Why This Matters:
+            Classifiers are framework-specific by design. A classifier
+            without a declared framework cannot be matched to runbooks.
+
+        """
+        framework = processor_class.get_framework()
+        assert isinstance(framework, str), "get_framework() must return string"
+        assert len(framework) > 0, "get_framework() must return non-empty string"
+
+
 __all__ = [
     "AnalyserContractTests",
+    "ClassifierContractTests",
     "ComponentFactoryContractTests",
     "ProcessorContractTests",
 ]

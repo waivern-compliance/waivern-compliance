@@ -7,6 +7,7 @@ including dependency injection infrastructure for service management.
 __version__ = "0.1.0"
 
 from waivern_core.base_analyser import Analyser
+from waivern_core.base_classifier import Classifier
 from waivern_core.base_connector import Connector
 from waivern_core.base_processor import Processor
 from waivern_core.base_ruleset import BaseRuleset, RulesetError
@@ -45,6 +46,7 @@ from waivern_core.services import (
 )
 from waivern_core.testing import (
     AnalyserContractTests,
+    ClassifierContractTests,
     ComponentFactoryContractTests,
     ProcessorContractTests,
 )
@@ -57,6 +59,7 @@ __all__ = [
     # Base classes
     "Analyser",
     "BaseRuleset",
+    "Classifier",
     "Connector",
     "Message",
     "MessageExtensions",
@@ -72,6 +75,7 @@ __all__ = [
     "RulesetData",
     # Testing
     "AnalyserContractTests",
+    "ClassifierContractTests",
     "ComponentFactoryContractTests",
     "ProcessorContractTests",
     # Dependency Injection
