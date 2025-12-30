@@ -6,7 +6,7 @@
 
 ## Current State
 
-Phase 1 orchestration is complete (see [implementation](../development/completed/artifact-centric-orchestration-design.md)): Planner validates runbooks and builds execution plans; DAGExecutor runs artifacts in parallel using `graphlib.TopologicalSorter`. The system handles dependency resolution, schema validation, and basic error propagation.
+Phase 1 orchestration is complete (see [implementation](../architecture/artifact-centric-orchestration.md)): Planner validates runbooks and builds execution plans; DAGExecutor runs artifacts in parallel using `graphlib.TopologicalSorter`. The system handles dependency resolution, schema validation, and basic error propagation.
 
 **Foundation capabilities:**
 - Parallel execution respecting dependencies
@@ -229,4 +229,4 @@ wct run <runbook> --dry-run
 - [Execution Persistence](./execution-persistence.md) - Storage design for inspection and replay
 - [Artifact-Centric Runbook](./artifact-centric-runbook.md) - Runbook format
 - [Dynamic and Agentic Workflows](./dynamic-and-agentic-workflows.md) - Adaptive execution
-- [Completed Implementation](../development/completed/artifact-centric-orchestration-design.md) - Phase 1 details
+- [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md) - Phase 1 implementation
