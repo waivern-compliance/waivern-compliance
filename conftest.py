@@ -5,9 +5,14 @@ the entire monorepo workspace.
 """
 
 import pytest
+from dotenv import load_dotenv
 from waivern_core.schemas import SchemaRegistry
 from waivern_rulesets import RulesetRegistry
 from wct.exporters.registry import ExporterRegistry
+
+# Load environment variables from workspace root .env file
+# This provides API keys and credentials for integration tests and CLI
+load_dotenv()
 
 
 @pytest.fixture(autouse=True, scope="function")

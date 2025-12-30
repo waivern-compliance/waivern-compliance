@@ -1,7 +1,9 @@
-"""Integration tests for LLM DI flow.
+"""Service composition tests for LLM DI flow.
 
-Tests the complete integration of ServiceContainer, LLMServiceFactory,
-LLMServiceProvider, and LLMServiceConfiguration working together.
+Tests internal component composition: ServiceContainer, LLMServiceFactory,
+LLMServiceProvider, and LLMServiceConfiguration working together. These are NOT
+external integration tests (no @pytest.mark.integration) as they don't make real
+API calls - they test internal DI flow with mocked environment variables.
 """
 
 from __future__ import annotations
@@ -36,8 +38,8 @@ def clean_llm_env(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     return monkeypatch
 
 
-class TestLLMDIIntegration:
-    """Integration tests for the complete LLM DI system."""
+class TestLLMServiceComposition:
+    """Service composition tests for the complete LLM DI system."""
 
     @staticmethod
     def create_container_with_factory(
