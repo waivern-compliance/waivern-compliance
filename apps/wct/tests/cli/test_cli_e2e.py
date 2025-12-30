@@ -247,10 +247,10 @@ class TestWCTCLIE2E:
         json_files = list(output_dir.glob("*.json"))
         assert len(json_files) > 0, "Performance test should produce JSON output files"
 
-    def test_wct_cli_uses_json_exporter_for_generic_analysers(
+    def test_wct_cli_uses_json_exporter_when_no_framework_declared(
         self, tmp_path: Path
     ) -> None:
-        """CLI uses JSON exporter when no framework-specific analysers are detected."""
+        """CLI uses JSON exporter when no framework is declared in runbook."""
         # Arrange
         runbook_path = Path("apps/wct/runbooks/samples/file_content_analysis.yaml")
         assert runbook_path.exists(), f"Runbook not found: {runbook_path}"
@@ -303,45 +303,24 @@ class TestWCTCLIE2E:
         assert "outputs" in export_data
 
     @pytest.mark.skip(
-        reason="TODO: Requires framework-specific analyser (e.g., GDPR analyser) "
-        "that returns non-empty compliance frameworks from get_compliance_frameworks()"
+        reason="TODO: Requires framework-specific exporter (e.g., GDPR exporter) "
+        "and a runbook with 'framework: GDPR' declaration"
     )
-    def test_wct_cli_uses_framework_specific_exporter_for_single_framework(
+    def test_wct_cli_uses_framework_exporter_when_declared_in_runbook(
         self, tmp_path: Path
     ) -> None:
-        """CLI uses framework-specific exporter when single framework detected.
+        """CLI uses framework-specific exporter when framework is declared in runbook.
 
-        This test will be implemented when we have framework-specific analysers
-        (e.g., GDPR analyser) that declare compliance frameworks.
+        This test will be implemented when we have framework-specific exporters
+        (e.g., GDPR exporter).
 
         Expected behaviour:
-        - Runbook uses GDPR analyser (returns ["GDPR"] from get_compliance_frameworks())
-        - CLI detects single framework
+        - Runbook declares 'framework: GDPR' at root level
+        - CLI reads runbook.framework
         - CLI uses "gdpr" exporter instead of "json" exporter
         - Output follows GdprExport format
         """
-        pytest.skip("Framework-specific analysers not yet implemented")
-
-    @pytest.mark.skip(
-        reason="TODO: Requires multiple framework-specific analysers "
-        "(e.g., GDPR + CCPA analysers) that return different frameworks"
-    )
-    def test_wct_cli_falls_back_to_json_for_multiple_frameworks(
-        self, tmp_path: Path
-    ) -> None:
-        """CLI falls back to JSON exporter when multiple frameworks detected.
-
-        This test will be implemented when we have multiple framework-specific
-        analysers that declare different compliance frameworks.
-
-        Expected behaviour:
-        - Runbook uses GDPR analyser (returns ["GDPR"]) + CCPA analyser (returns ["CCPA"])
-        - CLI detects multiple frameworks: {"GDPR", "CCPA"}
-        - CLI logs: "Multiple compliance frameworks detected: {...}. Using JSON exporter."
-        - CLI falls back to "json" exporter
-        - Output follows CoreExport format
-        """
-        pytest.skip("Multiple framework-specific analysers not yet implemented")
+        pytest.skip("Framework-specific exporters not yet implemented")
 
     def test_wct_cli_rejects_invalid_exporter_with_helpful_message(
         self, tmp_path: Path
@@ -414,20 +393,18 @@ class TestWCTCLIE2E:
         )
 
     @pytest.mark.skip(
-        reason="TODO: Requires multiple exporters (e.g., GDPR exporter) "
-        "to test override meaningfully - currently auto-detection always returns 'json'"
+        reason="TODO: Requires framework-specific exporter (e.g., GDPR exporter) "
+        "to test override meaningfully"
     )
     def test_wct_cli_respects_manual_exporter_override(self, tmp_path: Path) -> None:
-        """CLI respects --exporter flag to override auto-detection.
+        """CLI respects --exporter flag to override framework-based selection.
 
-        This test will be implemented when we have multiple exporters (e.g., GDPR exporter).
+        This test will be implemented when we have framework-specific exporters
+        (e.g., GDPR exporter).
 
         Expected behaviour:
-        - Runbook with GDPR analyser would auto-detect "gdpr" exporter
+        - Runbook declares 'framework: GDPR' which would select "gdpr" exporter
         - But `--exporter json` overrides to use "json" exporter
         - Output follows CoreExport format (not GdprExport format)
         """
-        # TODO: Implement this test when GDPR exporter is available
-        # Need runbook with GDPR analyser that would auto-detect "gdpr" exporter
-        # Then test that --exporter json overrides to use JSON exporter instead
-        pytest.skip("Multiple exporters not yet implemented")
+        pytest.skip("Framework-specific exporters not yet implemented")
