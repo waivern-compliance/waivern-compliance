@@ -8,6 +8,14 @@ import pytest
 from waivern_rulesets import RulesetRegistry
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    """Configure custom markers."""
+    config.addinivalue_line(
+        "markers",
+        "integration: marks tests as integration tests (require real API calls)",
+    )
+
+
 @pytest.fixture
 def isolated_registry() -> RulesetRegistry:
     """Provide RulesetRegistry instance for tests that need it.

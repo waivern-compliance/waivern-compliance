@@ -41,9 +41,9 @@ class GitOperations:
         # Build clone URL
         clone_url = self._build_clone_url(config.repository, config.token)
 
-        # Build clone command based on strategy
+        # Build clone command based on strategy and ref
         clone_cmd = self._build_clone_command(
-            clone_url, target_dir, config.clone_strategy
+            clone_url, target_dir, config.clone_strategy, config.ref
         )
 
         # Execute clone
@@ -51,7 +51,14 @@ class GitOperations:
             clone_cmd, check=True, timeout=config.clone_timeout, capture_output=True
         )
 
-        # Checkout specified ref
+        # Checkout specified ref (only needed if ref wasn't specified in clone)
+        # With --branch, git already checks out the specified ref
+        if config.ref == "HEAD":
+            # HEAD is the default, no checkout needed
+            return
+
+        # For non-HEAD refs that were cloned with --branch, verify we're on the right ref
+        # This handles edge cases where the branch name differs from what was requested
         checkout_cmd = ["git", "-C", str(target_dir), "checkout", config.ref]
         subprocess.run(  # noqa: S603 - git command with controlled inputs
             checkout_cmd, check=True, timeout=config.clone_timeout, capture_output=True
@@ -64,11 +71,28 @@ class GitOperations:
         return f"{self.GITHUB_URL}/{repository}.git"
 
     def _build_clone_command(
-        self, clone_url: str, target_dir: Path, strategy: CloneStrategy
+        self, clone_url: str, target_dir: Path, strategy: CloneStrategy, ref: str
     ) -> list[str]:
-        """Build git clone command based on strategy."""
+        """Build git clone command based on strategy and ref.
+
+        Args:
+            clone_url: The repository URL to clone.
+            target_dir: Directory to clone into.
+            strategy: Clone strategy determining depth and filters.
+            ref: Git ref (branch/tag) to clone. If not "HEAD", adds --branch flag.
+
+        Returns:
+            List of command arguments for git clone.
+
+        """
         cmd = ["git", "clone"]
         cmd.extend(CLONE_STRATEGY_FLAGS[strategy])
+
+        # For shallow clones with non-HEAD refs, we must specify --branch
+        # otherwise git only fetches the default branch and checkout fails
+        if ref != "HEAD":
+            cmd.extend(["--branch", ref])
+
         cmd.extend([clone_url, str(target_dir)])
         return cmd
 
@@ -111,8 +135,12 @@ class GitOperations:
             List of file paths relative to repo_dir.
 
         """
-        # Gather all files recursively (excluding directories)
-        all_files = [f for f in repo_dir.rglob("*") if f.is_file()]
+        # Gather all files recursively (excluding directories and .git)
+        all_files = [
+            f
+            for f in repo_dir.rglob("*")
+            if f.is_file() and ".git" not in f.relative_to(repo_dir).parts
+        ]
 
         # Apply include patterns if specified
         if include_patterns:

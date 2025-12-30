@@ -1,7 +1,9 @@
-"""Integration tests for ArtifactStore ServiceContainer integration.
+"""Service composition tests for ArtifactStore with ServiceContainer.
 
-Tests the integration of ServiceContainer, ArtifactStoreFactory, and
-ArtifactStoreConfiguration working together.
+Tests internal component composition: ServiceContainer, ArtifactStoreFactory, and
+ArtifactStoreConfiguration working together. These are NOT external integration tests
+(no @pytest.mark.integration) as they don't require external services - they test
+internal DI flow and should run with regular unit tests.
 """
 
 from __future__ import annotations
@@ -14,8 +16,8 @@ from waivern_artifact_store.factory import ArtifactStoreFactory
 from waivern_artifact_store.in_memory import InMemoryArtifactStore
 
 
-class TestArtifactStoreServiceContainerIntegration:
-    """Integration tests for ArtifactStore with ServiceContainer."""
+class TestArtifactStoreServiceComposition:
+    """Service composition tests for ArtifactStore with ServiceContainer."""
 
     def test_singleton_behavior_returns_same_instance(self) -> None:
         """Test singleton lifetime returns same instance across multiple get_service calls."""

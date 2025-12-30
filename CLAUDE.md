@@ -193,7 +193,7 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message: ...
 ## Environment Configuration
 
 ```bash
-cp apps/wct/.env.example apps/wct/.env
+cp .env.example .env
 # Edit with API keys
 uv run wct test-llm
 ```
@@ -201,6 +201,9 @@ uv run wct test-llm
 **Priority:** Environment variables > `.env` file > Runbook properties > Code defaults
 
 **Key variables:** `ANTHROPIC_API_KEY`, `LLM_PROVIDER`, `MYSQL_*`
+
+**Note:** The `.env` file lives at the workspace root (same level as `pyproject.toml`).
+All commands (`uv run wct`, `uv run pytest`, etc.) should be run from the workspace root.
 
 ## Adding New Packages
 
