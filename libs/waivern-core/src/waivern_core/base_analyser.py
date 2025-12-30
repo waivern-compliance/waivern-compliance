@@ -1,7 +1,6 @@
 """Framework-level Analyser base class.
 
 Analyser is a Processor specialised for compliance analysis.
-It adds compliance framework declaration to the base Processor contract.
 """
 
 from __future__ import annotations
@@ -16,34 +15,21 @@ class Analyser(Processor):
     input data in defined schema(s), run analysis logic, and produce compliance
     findings in defined result schemas.
 
-    In addition to the base Processor contract, Analysers declare which
-    compliance frameworks (GDPR, CCPA, etc.) their output supports. This
-    enables automatic exporter selection based on the frameworks used in
-    a runbook.
+    The regulatory framework context is declared at the runbook level via the
+    `framework` field, not on individual analysers.
 
     Example:
         class PersonalDataAnalyser(Analyser):
             @classmethod
-            def get_compliance_frameworks(cls) -> list[str]:
-                return []  # Generic analyser, usable across any framework
+            def get_name(cls) -> str:
+                return "personal_data"
 
-        class GdprArticle30Analyser(Analyser):
             @classmethod
-            def get_compliance_frameworks(cls) -> list[str]:
-                return ["GDPR", "UK_GDPR"]  # GDPR-specific analyser
+            def get_input_requirements(cls) -> list[list[InputRequirement]]:
+                return [[InputRequirement("standard_input", "1.0.0")]]
+
+            def process(self, inputs: list[Message], output_schema: Schema) -> Message:
+                # Analysis logic here
+                ...
 
     """
-
-    @classmethod
-    def get_compliance_frameworks(cls) -> list[str]:
-        """Declare compliance frameworks this analyser's output supports.
-
-        This is used by the export infrastructure to auto-detect which
-        exporter to use based on the analysers in a runbook.
-
-        Returns:
-            List of framework identifiers (e.g., ["GDPR", "UK_GDPR"]),
-            or empty list for generic/framework-agnostic analysers.
-
-        """
-        return []

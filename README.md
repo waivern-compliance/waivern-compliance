@@ -103,7 +103,7 @@ artifacts:
       type: "personal_data"
       properties:
         pattern_matching:
-          ruleset: "personal_data"
+          ruleset: "local/personal_data/1.0.0"
           evidence_context_size: "medium"
         llm_validation:
           enable_llm_validation: true

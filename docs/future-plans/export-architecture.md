@@ -1,8 +1,8 @@
 # Export Architecture Design
 
 - **Status:** Partially Implemented (Core infrastructure complete, framework-specific exporters pending)
-- **Last Updated:** 2025-12-09
-- **Related:** [Multi-Schema Fan-In](./multi-schema-fan-in.md), [Artifact-Centric Runbook](./artifact-centric-runbook.md), [Export Re-Export Command](./export-re-export-command.md)
+- **Last Updated:** 2025-12-30
+- **Related:** [Multi-Schema Fan-In](./multi-schema-fan-in.md), [Artifact-Centric Runbook](./artifact-centric-runbook.md), [Export Re-Export Command](./export-re-export-command.md), [Regulatory Framework Architecture](./regulatory-framework-architecture.md)
 
 ## Overview
 
@@ -20,8 +20,8 @@ The current system produces generic JSON output with execution results. Complian
 ## Design Principles
 
 1. **Exporters are presentation layer** - They format, not analyse
-2. **Analysers declare compliance frameworks** - Components declare which frameworks they support via classmethods
-3. **Schema-based discovery** - Exporter auto-selected based on analyser framework declarations
+2. **Runbooks declare framework** - The regulatory framework is declared at the runbook root level via the `framework` field
+3. **Framework-based exporter selection** - Exporter is selected based on `runbook.framework`
 4. **CLI can override** - Flexibility for one-off needs
 5. **Separation of concerns** - Framework produces findings, app formats output
 
@@ -56,108 +56,37 @@ The current system produces generic JSON output with execution results. Complian
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Component Compliance Framework Declaration
+## Runbook Framework Declaration
 
-### Component Classmethods
+The regulatory framework is declared at the runbook root level:
 
-Components (Analysers, Connectors) declare which compliance frameworks their output supports via classmethods. Factories only handle instantiation.
+```yaml
+name: "GDPR Compliance Analysis"
+description: "Personal data and processing purpose analysis"
+framework: "GDPR"  # Declares the regulatory context
 
-```python
-# waivern-core/base_analyser.py
-
-class Analyser(ABC):
-    """Base class for analysers."""
-
-    @classmethod
-    def get_compliance_frameworks(cls) -> list[str]:
-        """Declare compliance frameworks this component's output supports.
-
-        Returns:
-            List of framework identifiers (e.g., ["GDPR", "UK_GDPR"]),
-            or empty list for generic/framework-agnostic components.
-        """
-        return []  # Default: generic component
-
-    # ... other methods (get_input_requirements, process, etc.)
+artifacts:
+  # ... artifact definitions
 ```
 
-```python
-# waivern-core/base_connector.py
+### Exporter Selection
 
-class Connector(ABC):
-    """Base class for connectors."""
-
-    @classmethod
-    def get_compliance_frameworks(cls) -> list[str]:
-        """Declare compliance frameworks this component's output supports.
-
-        Returns:
-            List of framework identifiers (e.g., ["GDPR", "UK_GDPR"]),
-            or empty list for generic/framework-agnostic components.
-        """
-        return []  # Default: generic component
-
-    # ... other methods (extract, etc.)
-```
-
-### Examples
-
-```python
-# Generic analyser - usable across any framework
-class PersonalDataAnalyser(Analyser):
-    @classmethod
-    def get_compliance_frameworks(cls) -> list[str]:
-        return []  # Generic building block
-
-
-# GDPR-specific analyser
-class GdprArticle30Analyser(Analyser):
-    @classmethod
-    def get_compliance_frameworks(cls) -> list[str]:
-        return ["GDPR"]
-
-
-# Multi-framework analyser
-class CrossBorderTransferAnalyser(Analyser):
-    @classmethod
-    def get_compliance_frameworks(cls) -> list[str]:
-        return ["GDPR", "UK_GDPR", "SWISS_DPA"]
-
-
-# GDPR-specific connector
-class GdprConsentConnector(Connector):
-    @classmethod
-    def get_compliance_frameworks(cls) -> list[str]:
-        return ["GDPR"]
-```
-
-### Discovery Flow
-
-The compliance framework is discovered from the analysers used in the runbook, not declared in the runbook itself:
+The exporter is selected based on the runbook's `framework` field:
 
 ```
-Execution completes
+Runbook parsed
        │
        ▼
-For each successful artifact with transform:
+Read runbook.framework
        │
        ▼
-Get analyser factory from registry
-       │
-       ▼
-Call factory.component_class.get_compliance_frameworks()
-       │
-       ▼
-Collect all declared frameworks
-       │
-       ▼
-Select exporter based on frameworks found
+Select matching exporter (or JSON if not set)
 ```
 
 **Selection logic:**
-- Single framework found → use matching exporter
-- Multiple frameworks → user must specify or use generic JSON
-- No frameworks (all generic) → use JSON exporter
+- Framework declared → use matching exporter (e.g., `GDPR` → `gdpr` exporter)
+- No framework declared → use JSON exporter
+- CLI `--exporter` flag → overrides automatic selection
 
 ## Exporter Protocol
 
@@ -546,8 +475,8 @@ def run(
     """Execute a runbook and export results."""
     # ... execution logic ...
 
-    # Determine export format from CLI override or auto-detect from analysers
-    export_format = exporter or _detect_exporter(result, plan, registry)
+    # Determine export format from CLI override or runbook framework
+    export_format = exporter or _detect_exporter(plan)
 
     # Get exporter
     exp = ExporterRegistry.get(export_format)
@@ -571,58 +500,20 @@ def run(
     _save_json(output_path, output_data)
 
 
-def _detect_exporter(
-    result: ExecutionResult,
-    plan: ExecutionPlan,
-    registry: ComponentRegistry,
-) -> str:
-    """Auto-detect exporter based on component compliance frameworks.
+def _detect_exporter(plan: ExecutionPlan) -> str:
+    """Select exporter based on runbook framework declaration.
 
     Args:
-        result: Execution result with artifact outcomes.
         plan: Execution plan with runbook definitions.
-        registry: Component registry for factory lookup.
 
     Returns:
-        Exporter name based on detected frameworks.
+        Exporter name based on runbook framework.
     """
-    frameworks: set[str] = set()
-
-    for artifact_id, artifact_result in result.artifacts.items():
-        if not artifact_result.success:
-            continue
-
-        definition = plan.runbook.artifacts.get(artifact_id)
-        if definition is None:
-            continue
-
-        # Check connector compliance frameworks
-        if definition.source is not None:
-            connector_type = definition.source.type
-            if connector_type in registry.connector_factories:
-                factory = registry.connector_factories[connector_type]
-                frameworks.update(factory.component_class.get_compliance_frameworks())
-
-        # Check analyser compliance frameworks
-        if definition.transform is not None:
-            analyser_type = definition.transform.type
-            if analyser_type in registry.analyser_factories:
-                factory = registry.analyser_factories[analyser_type]
-                frameworks.update(factory.component_class.get_compliance_frameworks())
-
-    # Map frameworks to exporter
-    if len(frameworks) == 1:
-        return _framework_to_exporter(frameworks.pop())
-    elif len(frameworks) > 1:
-        # Multiple frameworks detected - fall back to JSON
-        logger.info(
-            "Multiple compliance frameworks detected: %s. Using JSON exporter. "
-            "Use --exporter to specify a specific format.",
-            frameworks
-        )
+    framework = plan.runbook.framework
+    if framework is None:
         return "json"
-    else:
-        return "json"  # All generic analysers
+
+    return _framework_to_exporter(framework)
 
 
 def _framework_to_exporter(framework: str) -> str:
@@ -709,11 +600,11 @@ apps/wct/src/wct/
 
 ### Task C: Export Foundation ✅ COMPLETE
 
-1. ✅ Add `get_compliance_frameworks()` classmethod to `Analyser` and `Connector` base classes in waivern-core
+1. ✅ Add `framework` field to Runbook model
 2. ✅ Create `wct/exporters/` module structure
 3. ✅ Implement `Exporter` protocol
 4. ✅ Implement `ExporterRegistry`
-5. ✅ Implement `_detect_exporter()` for schema-based discovery
+5. ✅ Implement `_detect_exporter()` based on `runbook.framework`
 6. ✅ Extract `build_core_export()` from current CLI
 7. ✅ Implement `JsonExporter`
 8. ✅ Add `--exporter` flag to `wct run`

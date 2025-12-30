@@ -157,7 +157,7 @@ artifacts:
       type: personal_data             # Processor type
       properties:                     # Processor configuration
         pattern_matching:
-          ruleset: "personal_data"
+          ruleset: "local/personal_data/1.0.0"
         llm_validation:
           enable_llm_validation: true
     output: true                      # Include in final results
@@ -447,7 +447,7 @@ artifacts:
       type: personal_data
       properties:
         pattern_matching:
-          ruleset: "personal_data"
+          ruleset: "local/personal_data/1.0.0"
     output: true
 ```
 

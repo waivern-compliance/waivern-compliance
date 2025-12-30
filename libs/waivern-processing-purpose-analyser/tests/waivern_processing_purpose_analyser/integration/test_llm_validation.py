@@ -35,7 +35,7 @@ class TestProcessingPurposeAnalyserLLMIntegration:
         config = ProcessingPurposeAnalyserConfig.from_properties(
             {
                 "pattern_matching": {
-                    "ruleset": "processing_purposes",
+                    "ruleset": "local/processing_purposes/1.0.0",
                     "evidence_context_size": "medium",
                 },
                 "llm_validation": {

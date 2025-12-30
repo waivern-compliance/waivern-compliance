@@ -29,8 +29,8 @@ uv add waivern-rulesets
 ```python
 from waivern_rulesets import RulesetLoader, PersonalDataRule
 
-# Load a ruleset
-rules = RulesetLoader.load_ruleset("personal_data", PersonalDataRule)
+# Load a ruleset using URI format: provider/name/version
+rules = RulesetLoader.load_ruleset("local/personal_data/1.0.0", PersonalDataRule)
 
 # Access rule properties
 for rule in rules:

@@ -14,7 +14,6 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
 from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
-from waivern_core import Analyser
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 from waivern_llm import BaseLLMService
@@ -498,13 +497,13 @@ def _export_results(
         CLIError: If export fails.
 
     """
-    # Use manual override if provided, otherwise auto-detect
+    # Use manual override if provided, otherwise select based on runbook framework
     if exporter_override:
         exporter_name = exporter_override
         logger.info("Using manually specified exporter: %s", exporter_name)
     else:
-        exporter_name = _detect_exporter(result, plan, registry)
-        logger.info("Using auto-detected exporter: %s", exporter_name)
+        exporter_name = _detect_exporter(plan)
+        logger.info("Using exporter: %s", exporter_name)
 
     # Get exporter from registry
     try:
@@ -791,56 +790,21 @@ def _framework_to_exporter(framework: str) -> str:
     return mapping.get(framework, "json")
 
 
-def _detect_exporter(
-    result: ExecutionResult,
-    plan: ExecutionPlan,
-    registry: ComponentRegistry,
-) -> str:
-    """Auto-detect exporter based on analyser compliance frameworks.
-
-    Examines analyser factories used in successful artifacts and collects
-    their declared compliance frameworks.
+def _detect_exporter(plan: ExecutionPlan) -> str:
+    """Select exporter based on runbook framework declaration.
 
     Args:
-        result: Execution result with artifact outcomes.
         plan: Execution plan with runbook definitions.
-        registry: Component registry for factory lookup.
 
     Returns:
-        Exporter name based on detected frameworks.
+        Exporter name based on runbook framework.
 
     """
-    frameworks: set[str] = set()
-
-    for artifact_id, message in result.artifacts.items():
-        if not message.is_success:
-            continue
-
-        definition = plan.runbook.artifacts.get(artifact_id)
-        if definition is None or definition.process is None:
-            continue
-
-        # Get processor factory and check its compliance frameworks (if Analyser)
-        processor_type = definition.process.type
-        if processor_type in registry.processor_factories:
-            factory = registry.processor_factories[processor_type]
-            component_class = factory.component_class
-            # Only Analysers have compliance frameworks
-            if issubclass(component_class, Analyser):
-                frameworks.update(component_class.get_compliance_frameworks())
-
-    # Map frameworks to exporter
-    if len(frameworks) == 1:
-        return _framework_to_exporter(frameworks.pop())
-    elif len(frameworks) > 1:
-        # Multiple frameworks detected - fall back to JSON
-        logger.info(
-            "Multiple compliance frameworks detected: %s. Using JSON exporter.",
-            frameworks,
-        )
+    framework = plan.runbook.framework
+    if framework is None:
         return "json"
-    else:
-        return "json"  # All generic analysers
+
+    return _framework_to_exporter(framework)
 
 
 def generate_schema_command(output_path: Path, log_level: str = "INFO") -> None:

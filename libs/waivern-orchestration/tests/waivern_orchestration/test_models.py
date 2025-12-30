@@ -43,7 +43,8 @@ class TestArtifactDefinitionTypes:
         artifact = ArtifactDefinition(
             inputs="data_source",
             process=ProcessConfig(
-                type="personal_data_analyser", properties={"ruleset": "personal_data"}
+                type="personal_data_analyser",
+                properties={"ruleset": "local/personal_data/1.0.0"},
             ),
         )
         assert artifact.inputs == "data_source"
@@ -649,6 +650,44 @@ class TestArtifactChildRunbook:
         assert artifact.source is None
         assert artifact.process is None
         assert artifact.inputs == ["source_a", "source_b"]
+
+
+# =============================================================================
+# Runbook Framework Field Tests
+# =============================================================================
+
+
+class TestRunbookFramework:
+    """Tests for the framework field on Runbook model."""
+
+    def test_framework_field_is_optional(self) -> None:
+        """Framework field should be optional and default to None."""
+        runbook = Runbook(
+            name="Test Runbook",
+            description="A test runbook",
+            artifacts={
+                "data": ArtifactDefinition(
+                    source=SourceConfig(type="filesystem", properties={"path": "/tmp"})
+                )
+            },
+        )
+        assert runbook.framework is None
+
+    def test_framework_serialisation_preserves_value(self) -> None:
+        """Framework field should be preserved in serialisation."""
+        runbook = Runbook(
+            name="GDPR Runbook",
+            description="A GDPR compliance runbook",
+            framework="GDPR",
+            artifacts={
+                "data": ArtifactDefinition(
+                    source=SourceConfig(type="filesystem", properties={"path": "/tmp"})
+                )
+            },
+        )
+        data = runbook.model_dump(by_alias=True)
+        restored = Runbook.model_validate(data)
+        assert restored.framework == "GDPR"
 
 
 class TestNewErrorTypes:

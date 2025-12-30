@@ -81,10 +81,16 @@ function trackUserBehavior($userId) {
 ```python
 class SourceCodeSchemaInputHandler:
     def __init__(self):
-        # Load all three rulesets
-        self.processing_purposes_rules = RulesetLoader.load_ruleset("processing_purposes")
-        self.service_integrations_rules = RulesetLoader.load_ruleset("service_integrations")
-        self.data_collection_rules = RulesetLoader.load_ruleset("data_collection")
+        # Load all three rulesets using URI format
+        self.processing_purposes_rules = RulesetLoader.load_ruleset(
+            "local/processing_purposes/1.0.0", ProcessingPurposeRule
+        )
+        self.service_integrations_rules = RulesetLoader.load_ruleset(
+            "local/service_integrations/1.0.0", ServiceIntegrationRule
+        )
+        self.data_collection_rules = RulesetLoader.load_ruleset(
+            "local/data_collection/1.0.0", DataCollectionRule
+        )
 ```
 
 ### Analysis Flow

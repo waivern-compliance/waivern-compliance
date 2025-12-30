@@ -10,6 +10,9 @@ from waivern_rulesets.base import (
     RulesetLoader,
     RulesetNotFoundError,
     RulesetRegistry,
+    RulesetURI,
+    RulesetURIParseError,
+    UnsupportedProviderError,
 )
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
@@ -87,6 +90,68 @@ class TestRulesetClass:
 
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
             IncompleteRuleset()  # type: ignore[abstract]
+
+
+# =============================================================================
+# RulesetURI Parsing Tests
+# =============================================================================
+
+
+class TestRulesetURIParsing:
+    """Test suite for ruleset URI parsing."""
+
+    def test_parse_valid_uri(self) -> None:
+        """Test parsing a valid URI format."""
+        uri = RulesetURI.parse("local/personal_data/1.0.0")
+
+        assert uri.provider == "local"
+        assert uri.name == "personal_data"
+        assert uri.version == "1.0.0"
+
+    def test_parse_uri_with_different_versions(self) -> None:
+        """Test parsing URIs with various version formats."""
+        uri = RulesetURI.parse("local/processing_purposes/2.1.0")
+
+        assert uri.provider == "local"
+        assert uri.name == "processing_purposes"
+        assert uri.version == "2.1.0"
+
+    def test_parse_uri_rejects_missing_components(self) -> None:
+        """Test that URIs with missing components are rejected."""
+        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
+            RulesetURI.parse("personal_data")
+
+        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
+            RulesetURI.parse("local/personal_data")
+
+    def test_parse_uri_rejects_empty_components(self) -> None:
+        """Test that URIs with empty components are rejected."""
+        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
+            RulesetURI.parse("//1.0.0")
+
+        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
+            RulesetURI.parse("local//1.0.0")
+
+    def test_parse_uri_rejects_extra_components(self) -> None:
+        """Test that URIs with extra components are rejected."""
+        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
+            RulesetURI.parse("local/personal_data/1.0.0/extra")
+
+    def test_uri_str_representation(self) -> None:
+        """Test string representation of RulesetURI."""
+        uri = RulesetURI.parse("local/personal_data/1.0.0")
+        assert str(uri) == "local/personal_data/1.0.0"
+
+
+class TestRulesetLoaderProviderValidation:
+    """Test suite for provider validation in RulesetLoader."""
+
+    def test_unsupported_provider_raises_error(self) -> None:
+        """Test that unsupported providers raise UnsupportedProviderError."""
+        with pytest.raises(UnsupportedProviderError, match="remote"):
+            RulesetLoader.load_ruleset(
+                "remote/personal_data/1.0.0", ProcessingPurposeRule
+            )
 
 
 class TestRulesetRegistry:
@@ -210,8 +275,10 @@ class TestRulesetLoader:
             "test_ruleset", ConcreteRuleset, ProcessingPurposeRule
         )
 
-        # Load the ruleset
-        rules = RulesetLoader.load_ruleset("test_ruleset", ProcessingPurposeRule)
+        # Load the ruleset using URI format
+        rules = RulesetLoader.load_ruleset(
+            "local/test_ruleset/1.0.0", ProcessingPurposeRule
+        )
 
         assert isinstance(rules, tuple)
         assert len(rules) == 1
@@ -224,7 +291,7 @@ class TestRulesetLoader:
         with pytest.raises(
             RulesetNotFoundError, match="Ruleset nonexistent not registered"
         ):
-            RulesetLoader.load_ruleset("nonexistent", ProcessingPurposeRule)
+            RulesetLoader.load_ruleset("local/nonexistent/1.0.0", ProcessingPurposeRule)
 
     def test_load_ruleset_creates_instance_with_correct_name(
         self, isolated_registry: RulesetRegistry
@@ -259,7 +326,9 @@ class TestRulesetLoader:
             "name_tracking", NameTrackingRuleset, ProcessingPurposeRule
         )
 
-        rules = RulesetLoader.load_ruleset("name_tracking", ProcessingPurposeRule)
+        rules = RulesetLoader.load_ruleset(
+            "local/name_tracking/1.0.0", ProcessingPurposeRule
+        )
 
         assert len(rules) == 1
         assert rules[0].name == "rule_from_name_tracking"
@@ -273,7 +342,9 @@ class TestRulesetLoader:
         )
 
         # Should be callable without instantiating RulesetLoader
-        rules = RulesetLoader.load_ruleset("class_method_test", ProcessingPurposeRule)
+        rules = RulesetLoader.load_ruleset(
+            "local/class_method_test/1.0.0", ProcessingPurposeRule
+        )
 
         assert isinstance(rules, tuple)
         assert len(rules) == 1
@@ -320,8 +391,10 @@ class TestRulesetIntegration:
 
         isolated_registry.register("custom_rules", CustomRuleset, ProcessingPurposeRule)
 
-        # Load the ruleset
-        rules = RulesetLoader.load_ruleset("custom_rules", ProcessingPurposeRule)
+        # Load the ruleset using URI format
+        rules = RulesetLoader.load_ruleset(
+            "local/custom_rules/1.0.0", ProcessingPurposeRule
+        )
 
         # Verify the complete workflow
         expected_rule_count = 2

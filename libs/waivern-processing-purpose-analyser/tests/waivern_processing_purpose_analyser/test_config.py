@@ -16,7 +16,7 @@ class TestProcessingPurposeAnalyserConfig:
         config = ProcessingPurposeAnalyserConfig.from_properties({})
 
         # Verify pattern matching defaults
-        assert config.pattern_matching.ruleset == "processing_purposes"
+        assert config.pattern_matching.ruleset == "local/processing_purposes/1.0.0"
         assert config.pattern_matching.evidence_context_size == "medium"
         assert config.pattern_matching.maximum_evidence_count == 3
 
@@ -30,7 +30,7 @@ class TestProcessingPurposeAnalyserConfig:
         config = ProcessingPurposeAnalyserConfig.from_properties(
             {
                 "pattern_matching": {
-                    "ruleset": "custom_purposes",
+                    "ruleset": "local/custom_purposes/1.0.0",
                     "evidence_context_size": "large",
                     "maximum_evidence_count": 10,
                 },
@@ -43,7 +43,7 @@ class TestProcessingPurposeAnalyserConfig:
         )
 
         # Verify pattern matching config respected
-        assert config.pattern_matching.ruleset == "custom_purposes"
+        assert config.pattern_matching.ruleset == "local/custom_purposes/1.0.0"
         assert config.pattern_matching.evidence_context_size == "large"
         assert config.pattern_matching.maximum_evidence_count == 10
 
@@ -130,7 +130,7 @@ class TestProcessingPurposeAnalyserConfig:
     def test_from_properties_extra_fields_rejected(self):
         """Test from_properties rejects extra unknown fields."""
         invalid_properties = {
-            "pattern_matching": {"ruleset": "processing_purposes"},
+            "pattern_matching": {"ruleset": "local/processing_purposes/1.0.0"},
             "unknown_field": "should_not_be_accepted",
         }
 

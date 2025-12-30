@@ -67,7 +67,7 @@ class TestAnalysisChainSupport:
 
         # Act
         metadata = BaseAnalysisOutputMetadata(
-            ruleset_used="processing_purposes",
+            ruleset_used="local/processing_purposes/1.0.0",
             llm_validation_enabled=True,
             analyses_chain=existing_chain,
         )
@@ -160,7 +160,7 @@ class TestAnalysisChainSupport:
         extended_chain = existing_chain + [new_entry]
 
         metadata = BaseAnalysisOutputMetadata(
-            ruleset_used="processing_purposes",
+            ruleset_used="local/processing_purposes/1.0.0",
             llm_validation_enabled=False,
             analyses_chain=extended_chain,
         )

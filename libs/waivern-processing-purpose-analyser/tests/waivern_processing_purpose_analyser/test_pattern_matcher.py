@@ -21,13 +21,13 @@ class TestProcessingPurposePatternMatcher:
     """Test suite for ProcessingPurposePatternMatcher."""
 
     # Test constants - defined locally, not imported from implementation
-    TEST_RULESET_NAME = "processing_purposes"
+    TEST_RULESET_URI = "local/processing_purposes/1.0.0"
 
     @pytest.fixture
     def valid_config(self) -> PatternMatchingConfig:
         """Create a valid configuration for testing."""
         return PatternMatchingConfig(
-            ruleset=self.TEST_RULESET_NAME,
+            ruleset=self.TEST_RULESET_URI,
             evidence_context_size="medium",
             maximum_evidence_count=3,
         )

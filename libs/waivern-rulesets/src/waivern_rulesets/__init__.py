@@ -6,6 +6,9 @@ from waivern_rulesets.base import (
     RulesetLoader,
     RulesetNotFoundError,
     RulesetRegistry,
+    RulesetURI,
+    RulesetURIParseError,
+    UnsupportedProviderError,
 )
 
 # Import rule types for registration
@@ -45,9 +48,14 @@ for _ruleset_name, _ruleset_class, _rule_type in _BUILTIN_RULESETS:
     _registry.register(_ruleset_name, _ruleset_class, _rule_type)
 
 __all__ = [
+    # Errors
     "RulesetError",
-    "RulesetLoader",
     "RulesetNotFoundError",
+    "RulesetURIParseError",
+    "UnsupportedProviderError",
+    # URI and Loader
+    "RulesetURI",
+    "RulesetLoader",
     "RulesetRegistry",
     # Rulesets
     "PersonalDataRuleset",

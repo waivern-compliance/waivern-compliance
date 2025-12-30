@@ -17,7 +17,9 @@ class EvidenceContextSize(str, Enum):
 class PatternMatchingConfig(BaseModel):
     """Strongly typed configuration for pattern matching analysis."""
 
-    ruleset: str = Field(description="Name of the ruleset to use for pattern matching")
+    ruleset: str = Field(
+        description="Ruleset URI in format provider/name/version (e.g., 'local/personal_data/1.0.0')"
+    )
 
     evidence_context_size: str = Field(
         default="medium", description="Context size for evidence extraction"

@@ -35,7 +35,7 @@ Example:
     ...
     ...     @pytest.fixture
     ...     def valid_config(self) -> ComponentConfig:
-    ...         return {"pattern_matching": {"ruleset": "personal_data"}}
+    ...         return {"pattern_matching": {"ruleset": "local/personal_data/1.0.0"}}
     ...
     ...     # All 7 contract tests inherited automatically!
     ...     # Plus factory-specific tests here...
@@ -140,7 +140,7 @@ class ComponentFactoryContractTests[T]:
             @pytest.fixture
             def valid_config(self) -> ComponentConfig:
                 return {
-                    "pattern_matching": {"ruleset": "personal_data"},
+                    "pattern_matching": {"ruleset": "local/personal_data/1.0.0"},
                     "llm_validation": {"enable_llm_validation": True}
                 }
 

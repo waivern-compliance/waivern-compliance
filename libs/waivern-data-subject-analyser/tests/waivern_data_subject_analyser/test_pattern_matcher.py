@@ -19,7 +19,7 @@ class TestDataSubjectPatternMatcher:
         """Test pattern matching produces correct confidence scores."""
         # Arrange
         config = PatternMatchingConfig(
-            ruleset="data_subjects",
+            ruleset="local/data_subjects/1.0.0",
             evidence_context_size="medium",
             maximum_evidence_count=3,
         )
@@ -46,7 +46,7 @@ class TestDataSubjectPatternMatcher:
         """Test that pattern matching respects applicable context filtering."""
         # Arrange
         config = PatternMatchingConfig(
-            ruleset="data_subjects",
+            ruleset="local/data_subjects/1.0.0",
             evidence_context_size="medium",
             maximum_evidence_count=3,
         )

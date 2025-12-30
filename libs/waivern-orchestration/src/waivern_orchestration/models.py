@@ -161,6 +161,8 @@ class Runbook(BaseModel):
     name: str
     description: str
     contact: str | None = None
+    framework: str | None = None
+    """Regulatory framework this runbook targets (e.g., 'GDPR', 'CCPA')."""
     config: RunbookConfig = Field(default_factory=RunbookConfig)
 
     inputs: dict[str, RunbookInputDeclaration] | None = None

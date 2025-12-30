@@ -261,8 +261,10 @@ class TestProcessingPurposesIntegration:
             "loader_test", ProcessingPurposesRuleset, ProcessingPurposeRule
         )
 
-        # Load via RulesetLoader
-        rules = RulesetLoader.load_ruleset("loader_test", ProcessingPurposeRule)
+        # Load via RulesetLoader using URI format
+        rules = RulesetLoader.load_ruleset(
+            "local/loader_test/1.0.0", ProcessingPurposeRule
+        )
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0

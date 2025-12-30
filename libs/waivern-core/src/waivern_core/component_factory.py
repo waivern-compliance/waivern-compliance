@@ -14,7 +14,7 @@ Example:
     >>> factory = PersonalDataAnalyserFactory(container)
     >>>
     >>> # Component configuration dict (from runbook properties)
-    >>> config = {"pattern_matching": {"ruleset": "personal_data"}}
+    >>> config = {"pattern_matching": {"ruleset": "local/personal_data/1.0.0"}}
     >>>
     >>> # Component instance (transient) created by factory
     >>> # Factory resolves dependencies from container internally
@@ -122,7 +122,7 @@ class ComponentFactory[T](ABC):
         Example:
             >>> factory = PersonalDataAnalyserFactory(container)
             >>> config = {
-            ...     "pattern_matching": {"ruleset": "personal_data"},
+            ...     "pattern_matching": {"ruleset": "local/personal_data/1.0.0"},
             ...     "llm_validation": {"enable_llm_validation": True}
             ... }
             >>> analyser = factory.create(config)
@@ -173,7 +173,7 @@ class ComponentFactory[T](ABC):
             True if component can be created with this config, False otherwise
 
         Example:
-            >>> config = {"pattern_matching": {"ruleset": "personal_data"}}
+            >>> config = {"pattern_matching": {"ruleset": "local/personal_data/1.0.0"}}
             >>> factory.can_create(config)
             True
             >>> bad_config = {}

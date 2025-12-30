@@ -113,13 +113,13 @@ class BaseComponentConfiguration(BaseModel):
 
         # Create from properties dictionary (from runbook)
         config = PersonalDataAnalyserConfig.from_properties({
-            "pattern_matching": {"ruleset": "personal_data"},
+            "pattern_matching": {"ruleset": "local/personal_data/1.0.0"},
             "llm_validation": {"enable_llm_validation": True}
         })
 
         # Or direct instantiation
         config = PersonalDataAnalyserConfig(
-            pattern_matching=PatternMatchingConfig(ruleset="personal_data"),
+            pattern_matching=PatternMatchingConfig(ruleset="local/personal_data/1.0.0"),
             llm_validation=LLMValidationConfig(enable_llm_validation=True)
         )
         ```
@@ -157,7 +157,7 @@ class BaseComponentConfiguration(BaseModel):
         Example:
             ```python
             config = PersonalDataAnalyserConfig.from_properties({
-                "pattern_matching": {"ruleset": "personal_data"},
+                "pattern_matching": {"ruleset": "local/personal_data/1.0.0"},
                 "llm_validation": {"enable_llm_validation": True}
             })
             ```

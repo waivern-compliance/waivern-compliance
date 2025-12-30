@@ -57,7 +57,7 @@ class TestPersonalDataAnalyser:
         """Create a valid configuration for testing using direct instantiation."""
         return PersonalDataAnalyserConfig(
             pattern_matching=PatternMatchingConfig(
-                ruleset="personal_data",
+                ruleset="local/personal_data/1.0.0",
                 evidence_context_size="medium",
                 maximum_evidence_count=5,
             ),
@@ -341,7 +341,7 @@ class TestPersonalDataAnalyser:
         assert len(analysis_metadata["analyses_chain"]) >= 1, (
             "analyses_chain must have at least one entry as it's mandatory"
         )
-        assert analysis_metadata["ruleset_used"] == "personal_data"
+        assert analysis_metadata["ruleset_used"] == "local/personal_data/1.0.0"
 
     def test_process_includes_validation_summary_when_llm_validation_enabled(
         self,
