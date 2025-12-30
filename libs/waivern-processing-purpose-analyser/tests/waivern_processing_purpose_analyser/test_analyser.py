@@ -770,8 +770,9 @@ class TestProcessingPurposeAnalyserOutputValidation:
 class TestProcessingPurposeAnalyserSourceCodeProcessing:
     """Test class for source_code schema processing path.
 
-    TODO: These are stub tests that need implementation to verify the
-    source_code input flow through the analyser end-to-end.
+    This test class verifies the end-to-end integration of source_code schema
+    input through the analyser pipeline. Detailed pattern matching behaviour
+    is tested in test_source_code_schema_input_handler.py.
     """
 
     @pytest.fixture
@@ -792,64 +793,109 @@ class TestProcessingPurposeAnalyserSourceCodeProcessing:
         """Create output schema."""
         return Schema("processing_purpose_finding", "1.0.0")
 
-    @pytest.mark.skip(reason="TODO: Implement source_code processing test")
+    @pytest.fixture
+    def source_code_message(self, source_code_schema: Schema) -> Message:
+        """Create a valid source_code schema message with processing purpose patterns."""
+        content = {
+            "schemaVersion": "1.0.0",
+            "name": "Test PHP Analysis",
+            "description": "Test source code analysis for processing purposes",
+            "language": "php",
+            "source": "test_repo",
+            "metadata": {
+                "total_files": 1,
+                "total_lines": 15,
+                "analysis_timestamp": "2025-01-01T00:00:00Z",
+            },
+            "data": [
+                {
+                    "file_path": "/src/CustomerService.php",
+                    "language": "php",
+                    "raw_content": """<?php
+class CustomerService {
+    public function processPayment($amount) {
+        // Process customer payment
+        return $this->paymentGateway->charge($amount);
+    }
+
+    public function sendSupportEmail($message) {
+        // Send support email to customer
+        return $this->emailService->send($message);
+    }
+}
+""",
+                    "metadata": {
+                        "file_size": 350,
+                        "line_count": 15,
+                        "last_modified": "2025-01-01T00:00:00Z",
+                    },
+                    "functions": [
+                        {"name": "processPayment", "line_start": 3, "line_end": 6},
+                        {"name": "sendSupportEmail", "line_start": 8, "line_end": 11},
+                    ],
+                    "classes": [
+                        {"name": "CustomerService", "line_start": 2, "line_end": 12}
+                    ],
+                    "imports": [],
+                }
+            ],
+        }
+        return Message(
+            id="test_source_code",
+            content=content,
+            schema=source_code_schema,
+        )
+
     def test_process_source_code_returns_valid_message(
         self,
         analyser_no_llm: ProcessingPurposeAnalyser,
-        source_code_schema: Schema,
+        source_code_message: Message,
         output_schema: Schema,
     ) -> None:
-        """Test that process returns valid message for source_code input."""
-        # TODO: Create source_code schema message with PHP code content
-        # TODO: Call analyser.process([message], output_schema)
-        # TODO: Assert valid message structure returned
-        pass
+        """Test that process returns valid message for source_code input.
 
-    @pytest.mark.skip(reason="TODO: Implement source_code findings test")
-    def test_process_source_code_creates_findings_from_patterns(
-        self,
-        analyser_no_llm: ProcessingPurposeAnalyser,
-        source_code_schema: Schema,
-        output_schema: Schema,
-    ) -> None:
-        """Test that source_code processing creates findings for matched patterns."""
-        # TODO: Create source_code message with content that matches rulesets
-        # TODO: Call analyser.process([message], output_schema)
-        # TODO: Assert findings are created with correct purpose categories
-        pass
+        This end-to-end test verifies the full pipeline:
+        - source_code schema input is accepted
+        - Pattern matching generates findings
+        - Output message has correct structure (findings, summary, analysis_metadata)
+        - Output validates against processing_purpose_finding schema
+        """
+        # Act
+        result = analyser_no_llm.process([source_code_message], output_schema)
 
-    @pytest.mark.skip(reason="TODO: Implement source_code service integration test")
-    def test_process_source_code_detects_service_integrations(
-        self,
-        analyser_no_llm: ProcessingPurposeAnalyser,
-        source_code_schema: Schema,
-        output_schema: Schema,
-    ) -> None:
-        """Test that source_code processing detects service integration patterns."""
-        # TODO: Create source_code message with service integration patterns
-        # TODO: Assert findings include service_category field
-        pass
+        # Assert - Message structure
+        assert isinstance(result, Message)
+        assert result.schema == output_schema
+        assert isinstance(result.content, dict)
 
-    @pytest.mark.skip(reason="TODO: Implement source_code data collection test")
-    def test_process_source_code_detects_data_collection(
-        self,
-        analyser_no_llm: ProcessingPurposeAnalyser,
-        source_code_schema: Schema,
-        output_schema: Schema,
-    ) -> None:
-        """Test that source_code processing detects data collection patterns."""
-        # TODO: Create source_code message with data collection patterns
-        # TODO: Assert findings include collection_type and data_source fields
-        pass
+        # Assert - Required top-level fields
+        assert "findings" in result.content
+        assert "summary" in result.content
+        assert "analysis_metadata" in result.content
 
-    @pytest.mark.skip(reason="TODO: Implement source_code structured elements test")
-    def test_process_source_code_analyses_structured_elements(
-        self,
-        analyser_no_llm: ProcessingPurposeAnalyser,
-        source_code_schema: Schema,
-        output_schema: Schema,
-    ) -> None:
-        """Test that source_code processing analyses imports, functions, and classes."""
-        # TODO: Create source_code message with structured elements (imports, functions, classes)
-        # TODO: Assert findings are created from structured element analysis
-        pass
+        # Assert - Findings structure
+        findings = result.content["findings"]
+        assert isinstance(findings, list)
+        assert len(findings) > 0, "Should detect patterns in PHP code"
+
+        # Assert - Summary structure
+        summary = result.content["summary"]
+        assert isinstance(summary, dict)
+        assert "total_findings" in summary
+        assert "purposes_identified" in summary
+        assert "high_risk_count" in summary
+        assert "purpose_categories" in summary
+        assert "risk_level_distribution" in summary
+        assert summary["total_findings"] == len(findings)
+
+        # Assert - Analysis metadata structure
+        metadata = result.content["analysis_metadata"]
+        assert isinstance(metadata, dict)
+        assert "ruleset_used" in metadata
+        assert "llm_validation_enabled" in metadata
+        assert metadata["llm_validation_enabled"] is False
+        assert "analyser_version" in metadata
+        assert "analyses_chain" in metadata
+
+        # Assert - Output validates against schema
+        result.validate()  # Should not raise
