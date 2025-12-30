@@ -22,7 +22,9 @@ class ProcessingPurposeAnalyserConfig(BaseComponentConfiguration):
     """
 
     pattern_matching: PatternMatchingConfig = Field(
-        default_factory=lambda: PatternMatchingConfig(ruleset="processing_purposes"),
+        default_factory=lambda: PatternMatchingConfig(
+            ruleset="local/processing_purposes/1.0.0"
+        ),
         description="Pattern matching configuration",
     )
     llm_validation: LLMValidationConfig = Field(

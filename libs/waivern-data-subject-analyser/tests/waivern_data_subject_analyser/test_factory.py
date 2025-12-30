@@ -38,7 +38,7 @@ class TestDataSubjectAnalyserFactory(
     def valid_config(self) -> ComponentConfig:
         """Create valid configuration for testing."""
         return {
-            "pattern_matching": {"ruleset": "data_subjects"},
+            "pattern_matching": {"ruleset": "local/data_subjects/1.0.0"},
             "llm_validation": {"enable_llm_validation": False},
         }
 
@@ -49,7 +49,7 @@ class TestDataSubjectAnalyserFactory(
         factory = DataSubjectAnalyserFactory(container)
 
         config_requiring_llm = {
-            "pattern_matching": {"ruleset": "data_subjects"},
+            "pattern_matching": {"ruleset": "local/data_subjects/1.0.0"},
             "llm_validation": {"enable_llm_validation": True},
         }
 

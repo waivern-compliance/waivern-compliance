@@ -38,7 +38,7 @@ class TestProcessingPurposeAnalyserInitialisation:
     def valid_pattern_matching_config(self) -> PatternMatchingConfig:
         """Create valid pattern matching configuration."""
         return PatternMatchingConfig(
-            ruleset="processing_purposes",
+            ruleset="local/processing_purposes/1.0.0",
             evidence_context_size="medium",
             maximum_evidence_count=3,
         )
@@ -88,7 +88,7 @@ class TestProcessingPurposeAnalyserInitialisation:
         # Arrange
         properties = {
             "pattern_matching": {
-                "ruleset": "processing_purposes",
+                "ruleset": "local/processing_purposes/1.0.0",
                 "evidence_context_size": "large",
                 "maximum_evidence_count": 5,
             },

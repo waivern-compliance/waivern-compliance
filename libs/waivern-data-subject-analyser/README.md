@@ -28,7 +28,7 @@ from waivern_data_subject_analyser import (
 
 # Create analyser with LLM validation
 config = DataSubjectAnalyserConfig(
-    pattern_matching={"ruleset": "data_subjects"},
+    pattern_matching={"ruleset": "local/data_subjects/1.0.0"},
     llm_validation={"enable_llm_validation": True}
 )
 analyser = DataSubjectAnalyser(config)

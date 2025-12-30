@@ -98,8 +98,8 @@ class TestBaseComponentConfiguration:
             ruleset: str
 
         # Create instance
-        config = TestComponentConfig(ruleset="personal_data")
-        assert config.ruleset == "personal_data"
+        config = TestComponentConfig(ruleset="local/personal_data/1.0.0")
+        assert config.ruleset == "local/personal_data/1.0.0"
 
         # Attempt to modify the field - should raise ValidationError (frozen instance)
         try:
@@ -118,12 +118,15 @@ class TestBaseComponentConfiguration:
             evidence_context_size: str
 
         # Create configuration from properties dictionary (simulating runbook properties)
-        properties = {"ruleset": "personal_data", "evidence_context_size": "medium"}
+        properties = {
+            "ruleset": "local/personal_data/1.0.0",
+            "evidence_context_size": "medium",
+        }
         config = TestComponentConfig.from_properties(properties)
 
         # Verify configuration was created correctly
         assert isinstance(config, TestComponentConfig)
-        assert config.ruleset == "personal_data"
+        assert config.ruleset == "local/personal_data/1.0.0"
         assert config.evidence_context_size == "medium"
 
     def test_from_properties_rejects_extra_fields_not_in_model(self) -> None:
@@ -135,7 +138,7 @@ class TestBaseComponentConfiguration:
             ruleset: str
 
         # Attempt to create configuration with extra/unknown field
-        properties = {"ruleset": "personal_data", "unknown_field": "value"}
+        properties = {"ruleset": "local/personal_data/1.0.0", "unknown_field": "value"}
 
         try:
             TestComponentConfig.from_properties(properties)

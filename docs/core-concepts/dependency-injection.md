@@ -83,7 +83,7 @@ analysers:
     type: "personal_data_analyser"
     properties:
       pattern_matching:
-        ruleset: "personal_data"
+        ruleset: "local/personal_data/1.0.0"
       llm_validation:
         enable_llm_validation: true
 ```

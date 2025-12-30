@@ -8,6 +8,85 @@ from waivern_rulesets.data_collection import DataCollectionRule
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
 from waivern_analysers_shared.utilities import RulesetManager
+from waivern_analysers_shared.utilities.ruleset_manager import (
+    RulesetURI,
+    RulesetURIParseError,
+    UnsupportedProviderError,
+)
+
+# =============================================================================
+# RulesetURI Parsing Tests
+# =============================================================================
+
+
+class TestRulesetURIParsing:
+    """Test suite for ruleset URI parsing."""
+
+    def test_parse_valid_uri(self) -> None:
+        """Test parsing a valid URI format."""
+        uri = RulesetURI.parse("local/personal_data/1.0.0")
+
+        assert uri.provider == "local"
+        assert uri.name == "personal_data"
+        assert uri.version == "1.0.0"
+
+    def test_parse_uri_with_different_versions(self) -> None:
+        """Test parsing URIs with various version formats."""
+        uri = RulesetURI.parse("local/processing_purposes/2.1.0")
+
+        assert uri.provider == "local"
+        assert uri.name == "processing_purposes"
+        assert uri.version == "2.1.0"
+
+    def test_parse_uri_rejects_missing_components(self) -> None:
+        """Test that URIs with missing components are rejected."""
+        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
+            RulesetURI.parse("personal_data")
+
+        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
+            RulesetURI.parse("local/personal_data")
+
+    def test_parse_uri_rejects_empty_components(self) -> None:
+        """Test that URIs with empty components are rejected."""
+        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
+            RulesetURI.parse("//1.0.0")
+
+        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
+            RulesetURI.parse("local//1.0.0")
+
+    def test_parse_uri_rejects_extra_components(self) -> None:
+        """Test that URIs with extra components are rejected."""
+        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
+            RulesetURI.parse("local/personal_data/1.0.0/extra")
+
+    def test_uri_str_representation(self) -> None:
+        """Test string representation of RulesetURI."""
+        uri = RulesetURI.parse("local/personal_data/1.0.0")
+        assert str(uri) == "local/personal_data/1.0.0"
+
+
+class TestRulesetURIProviderValidation:
+    """Test suite for provider validation in RulesetManager."""
+
+    def setup_method(self) -> None:
+        """Clear cache before each test."""
+        RulesetManager.clear_cache()
+
+    def teardown_method(self) -> None:
+        """Clear cache after each test."""
+        RulesetManager.clear_cache()
+
+    def test_unsupported_provider_raises_error(self) -> None:
+        """Test that unsupported providers raise UnsupportedProviderError."""
+        with pytest.raises(UnsupportedProviderError, match="remote"):
+            RulesetManager.get_rules(
+                "remote/personal_data/1.0.0", ProcessingPurposeRule
+            )
+
+
+# =============================================================================
+# RulesetManager Core Tests
+# =============================================================================
 
 
 class TestRulesetManager:
@@ -39,9 +118,11 @@ class TestRulesetManager:
             "waivern_analysers_shared.utilities.ruleset_manager.RulesetLoader.load_ruleset"
         ) as mock_load:
             mock_load.return_value = test_rules
-            result = RulesetManager.get_rules("test_ruleset", ProcessingPurposeRule)
+            result = RulesetManager.get_rules(
+                "local/test_ruleset/1.0.0", ProcessingPurposeRule
+            )
 
-        # Assert
+        # Assert - RulesetLoader called with just the name, not the full URI
         mock_load.assert_called_once_with("test_ruleset", ProcessingPurposeRule)
         assert result == test_rules
         assert len(result) == 1
@@ -56,7 +137,9 @@ class TestRulesetManager:
             mock_load.side_effect = ValueError("Test error")
 
             with pytest.raises(ValueError, match="Test error"):
-                RulesetManager.get_rules("invalid_ruleset", ProcessingPurposeRule)
+                RulesetManager.get_rules(
+                    "local/invalid_ruleset/1.0.0", ProcessingPurposeRule
+                )
 
     def test_get_rules_handles_empty_ruleset(self) -> None:
         """Test that get_rules handles empty rulesets correctly."""
@@ -68,7 +151,9 @@ class TestRulesetManager:
             "waivern_analysers_shared.utilities.ruleset_manager.RulesetLoader.load_ruleset"
         ) as mock_load:
             mock_load.return_value = empty_rules
-            result = RulesetManager.get_rules("empty_ruleset", ProcessingPurposeRule)
+            result = RulesetManager.get_rules(
+                "local/empty_ruleset/1.0.0", ProcessingPurposeRule
+            )
 
         # Assert
         assert result == ()
@@ -94,12 +179,17 @@ class TestRulesetManager:
             mock_load.return_value = processing_rules
 
             result = RulesetManager.get_rules(
-                "processing_purposes", ProcessingPurposeRule
+                "local/processing_purposes/1.0.0", ProcessingPurposeRule
             )
 
             mock_load.assert_called_with("processing_purposes", ProcessingPurposeRule)
             assert len(result) == 1
             assert result[0].purpose_category == "ANALYTICS"
+
+
+# =============================================================================
+# RulesetManager Caching Tests
+# =============================================================================
 
 
 class TestRulesetManagerCaching:
@@ -132,8 +222,12 @@ class TestRulesetManagerCaching:
         ) as mock_load:
             mock_load.return_value = test_rules
 
-            result1 = RulesetManager.get_rules("test_cache", ProcessingPurposeRule)
-            result2 = RulesetManager.get_rules("test_cache", ProcessingPurposeRule)
+            result1 = RulesetManager.get_rules(
+                "local/test_cache/1.0.0", ProcessingPurposeRule
+            )
+            result2 = RulesetManager.get_rules(
+                "local/test_cache/1.0.0", ProcessingPurposeRule
+            )
 
         # Assert - Loader called only once, but both results are identical
         mock_load.assert_called_once_with("test_cache", ProcessingPurposeRule)
@@ -180,8 +274,12 @@ class TestRulesetManagerCaching:
 
             mock_load.side_effect = side_effect
 
-            result1 = RulesetManager.get_rules("multi_type", ProcessingPurposeRule)
-            result2 = RulesetManager.get_rules("multi_type", DataCollectionRule)
+            result1 = RulesetManager.get_rules(
+                "local/multi_type/1.0.0", ProcessingPurposeRule
+            )
+            result2 = RulesetManager.get_rules(
+                "local/multi_type/1.0.0", DataCollectionRule
+            )
 
         # Assert - Both rule types loaded separately
         assert mock_load.call_count == 2
@@ -214,16 +312,16 @@ class TestRulesetManagerCaching:
             mock_load.return_value = test_rules
 
             # First load - should call RulesetLoader
-            RulesetManager.get_rules("clear_test", ProcessingPurposeRule)
+            RulesetManager.get_rules("local/clear_test/1.0.0", ProcessingPurposeRule)
             assert mock_load.call_count == 1
 
             # Second load without clearing - should use cache (no additional calls)
-            RulesetManager.get_rules("clear_test", ProcessingPurposeRule)
+            RulesetManager.get_rules("local/clear_test/1.0.0", ProcessingPurposeRule)
             assert mock_load.call_count == 1
 
             # Clear cache
             RulesetManager.clear_cache()
 
             # Third load after clearing - should call RulesetLoader again
-            RulesetManager.get_rules("clear_test", ProcessingPurposeRule)
+            RulesetManager.get_rules("local/clear_test/1.0.0", ProcessingPurposeRule)
             assert mock_load.call_count == 2

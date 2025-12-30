@@ -32,7 +32,7 @@ from waivern_processing_purpose_analyser import ProcessingPurposeAnalyserFactory
 
 factory = ProcessingPurposeAnalyserFactory(service_container)
 analyser = factory.create({
-    "pattern_matching": {"ruleset": "processing_purposes"},
+    "pattern_matching": {"ruleset": "local/processing_purposes/1.0.0"},
     "llm_validation": {"enable_llm_validation": True}
 })
 

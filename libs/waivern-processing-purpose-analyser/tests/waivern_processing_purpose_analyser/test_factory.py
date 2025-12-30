@@ -70,7 +70,7 @@ class TestProcessingPurposeAnalyserFactory(
         """
         return {
             "pattern_matching": {
-                "ruleset": "processing_purposes",
+                "ruleset": "local/processing_purposes/1.0.0",
                 "evidence_context_size": "medium",
                 "maximum_evidence_count": 5,
             },
@@ -89,7 +89,7 @@ class TestProcessingPurposeAnalyserFactory(
         factory = ProcessingPurposeAnalyserFactory(container)
 
         config_requiring_llm = {
-            "pattern_matching": {"ruleset": "processing_purposes"},
+            "pattern_matching": {"ruleset": "local/processing_purposes/1.0.0"},
             "llm_validation": {"enable_llm_validation": True},
         }
 

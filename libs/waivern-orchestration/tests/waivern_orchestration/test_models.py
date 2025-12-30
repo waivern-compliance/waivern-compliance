@@ -43,7 +43,8 @@ class TestArtifactDefinitionTypes:
         artifact = ArtifactDefinition(
             inputs="data_source",
             process=ProcessConfig(
-                type="personal_data_analyser", properties={"ruleset": "personal_data"}
+                type="personal_data_analyser",
+                properties={"ruleset": "local/personal_data/1.0.0"},
             ),
         )
         assert artifact.inputs == "data_source"
