@@ -339,8 +339,8 @@ class TestDataSubjectsRulesetIntegration:
         """Test that DataSubjectsRuleset works with RulesetLoader."""
         isolated_registry.register("loader_test", DataSubjectsRuleset, DataSubjectRule)
 
-        # Load via RulesetLoader
-        rules = RulesetLoader.load_ruleset("loader_test", DataSubjectRule)
+        # Load via RulesetLoader using URI format
+        rules = RulesetLoader.load_ruleset("local/loader_test/1.0.0", DataSubjectRule)
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0

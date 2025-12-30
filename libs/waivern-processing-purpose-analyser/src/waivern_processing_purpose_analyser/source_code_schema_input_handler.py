@@ -131,13 +131,13 @@ class SourceCodeSchemaInputHandler:
         """
         # Load all three rulesets for comprehensive source code analysis with proper typing
         self._processing_purposes_rules = RulesetLoader.load_ruleset(
-            "processing_purposes", ProcessingPurposeRule
+            "local/processing_purposes/1.0.0", ProcessingPurposeRule
         )
         self._service_integrations_rules = RulesetLoader.load_ruleset(
-            "service_integrations", ServiceIntegrationRule
+            "local/service_integrations/1.0.0", ServiceIntegrationRule
         )
         self._data_collection_rules = RulesetLoader.load_ruleset(
-            "data_collection", DataCollectionRule
+            "local/data_collection/1.0.0", DataCollectionRule
         )
 
     def analyse_source_code_data(

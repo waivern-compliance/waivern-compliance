@@ -162,8 +162,10 @@ class TestDataCollectionIntegration:
             "loader_test", DataCollectionRuleset, DataCollectionRule
         )
 
-        # Load via RulesetLoader
-        rules = RulesetLoader.load_ruleset("loader_test", DataCollectionRule)
+        # Load via RulesetLoader using URI format
+        rules = RulesetLoader.load_ruleset(
+            "local/loader_test/1.0.0", DataCollectionRule
+        )
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0

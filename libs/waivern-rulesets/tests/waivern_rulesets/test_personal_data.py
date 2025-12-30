@@ -206,8 +206,8 @@ class TestPersonalDataIntegration:
         """Test that PersonalDataRuleset works with RulesetLoader."""
         isolated_registry.register("loader_test", PersonalDataRuleset, PersonalDataRule)
 
-        # Load via RulesetLoader
-        rules = RulesetLoader.load_ruleset("loader_test", PersonalDataRule)
+        # Load via RulesetLoader using URI format
+        rules = RulesetLoader.load_ruleset("local/loader_test/1.0.0", PersonalDataRule)
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0

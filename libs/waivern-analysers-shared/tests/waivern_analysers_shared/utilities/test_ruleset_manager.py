@@ -1,4 +1,11 @@
-"""Tests for RulesetManager utility."""
+"""Tests for RulesetManager utility.
+
+Note: Tests for RulesetURI parsing and provider validation are in
+waivern-rulesets/tests/waivern_rulesets/test_base.py since those types
+are defined in the waivern-rulesets package.
+
+This file tests the RulesetManager caching layer only.
+"""
 
 from typing import Any
 from unittest.mock import patch
@@ -8,81 +15,6 @@ from waivern_rulesets.data_collection import DataCollectionRule
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
 from waivern_analysers_shared.utilities import RulesetManager
-from waivern_analysers_shared.utilities.ruleset_manager import (
-    RulesetURI,
-    RulesetURIParseError,
-    UnsupportedProviderError,
-)
-
-# =============================================================================
-# RulesetURI Parsing Tests
-# =============================================================================
-
-
-class TestRulesetURIParsing:
-    """Test suite for ruleset URI parsing."""
-
-    def test_parse_valid_uri(self) -> None:
-        """Test parsing a valid URI format."""
-        uri = RulesetURI.parse("local/personal_data/1.0.0")
-
-        assert uri.provider == "local"
-        assert uri.name == "personal_data"
-        assert uri.version == "1.0.0"
-
-    def test_parse_uri_with_different_versions(self) -> None:
-        """Test parsing URIs with various version formats."""
-        uri = RulesetURI.parse("local/processing_purposes/2.1.0")
-
-        assert uri.provider == "local"
-        assert uri.name == "processing_purposes"
-        assert uri.version == "2.1.0"
-
-    def test_parse_uri_rejects_missing_components(self) -> None:
-        """Test that URIs with missing components are rejected."""
-        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
-            RulesetURI.parse("personal_data")
-
-        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
-            RulesetURI.parse("local/personal_data")
-
-    def test_parse_uri_rejects_empty_components(self) -> None:
-        """Test that URIs with empty components are rejected."""
-        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
-            RulesetURI.parse("//1.0.0")
-
-        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
-            RulesetURI.parse("local//1.0.0")
-
-    def test_parse_uri_rejects_extra_components(self) -> None:
-        """Test that URIs with extra components are rejected."""
-        with pytest.raises(RulesetURIParseError, match="Invalid ruleset URI format"):
-            RulesetURI.parse("local/personal_data/1.0.0/extra")
-
-    def test_uri_str_representation(self) -> None:
-        """Test string representation of RulesetURI."""
-        uri = RulesetURI.parse("local/personal_data/1.0.0")
-        assert str(uri) == "local/personal_data/1.0.0"
-
-
-class TestRulesetURIProviderValidation:
-    """Test suite for provider validation in RulesetManager."""
-
-    def setup_method(self) -> None:
-        """Clear cache before each test."""
-        RulesetManager.clear_cache()
-
-    def teardown_method(self) -> None:
-        """Clear cache after each test."""
-        RulesetManager.clear_cache()
-
-    def test_unsupported_provider_raises_error(self) -> None:
-        """Test that unsupported providers raise UnsupportedProviderError."""
-        with pytest.raises(UnsupportedProviderError, match="remote"):
-            RulesetManager.get_rules(
-                "remote/personal_data/1.0.0", ProcessingPurposeRule
-            )
-
 
 # =============================================================================
 # RulesetManager Core Tests
@@ -122,8 +54,10 @@ class TestRulesetManager:
                 "local/test_ruleset/1.0.0", ProcessingPurposeRule
             )
 
-        # Assert - RulesetLoader called with just the name, not the full URI
-        mock_load.assert_called_once_with("test_ruleset", ProcessingPurposeRule)
+        # Assert - RulesetLoader called with the full URI
+        mock_load.assert_called_once_with(
+            "local/test_ruleset/1.0.0", ProcessingPurposeRule
+        )
         assert result == test_rules
         assert len(result) == 1
         assert result[0].name == "test_purpose"
@@ -182,7 +116,9 @@ class TestRulesetManager:
                 "local/processing_purposes/1.0.0", ProcessingPurposeRule
             )
 
-            mock_load.assert_called_with("processing_purposes", ProcessingPurposeRule)
+            mock_load.assert_called_with(
+                "local/processing_purposes/1.0.0", ProcessingPurposeRule
+            )
             assert len(result) == 1
             assert result[0].purpose_category == "ANALYTICS"
 
@@ -230,7 +166,9 @@ class TestRulesetManagerCaching:
             )
 
         # Assert - Loader called only once, but both results are identical
-        mock_load.assert_called_once_with("test_cache", ProcessingPurposeRule)
+        mock_load.assert_called_once_with(
+            "local/test_cache/1.0.0", ProcessingPurposeRule
+        )
         assert result1 == result2
         assert result1 is result2  # Same cached object
         assert len(result1) == 1
@@ -283,8 +221,8 @@ class TestRulesetManagerCaching:
 
         # Assert - Both rule types loaded separately
         assert mock_load.call_count == 2
-        mock_load.assert_any_call("multi_type", ProcessingPurposeRule)
-        mock_load.assert_any_call("multi_type", DataCollectionRule)
+        mock_load.assert_any_call("local/multi_type/1.0.0", ProcessingPurposeRule)
+        mock_load.assert_any_call("local/multi_type/1.0.0", DataCollectionRule)
 
         assert result1 != result2
         assert isinstance(result1[0], ProcessingPurposeRule)

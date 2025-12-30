@@ -191,7 +191,7 @@ class TestServiceIntegrationsIntegration:
         """Test that ServiceIntegrationsRuleset works with RulesetLoader."""
         # Built-in ruleset is already registered, just test loading
         rules = RulesetLoader.load_ruleset(
-            "service_integrations", ServiceIntegrationRule
+            "local/service_integrations/1.0.0", ServiceIntegrationRule
         )
         assert isinstance(rules, tuple)
         assert len(rules) > 0
