@@ -22,6 +22,8 @@ There are no strict one-to-one relationships between analysers and input schemas
 
 Analysers behave like pure functions. They accept data in pre-defined input schemas and return results in pre-defined result schemas. Analysers don't know where the data originates; they only care whether the data matches the required input schema.
 
+Analysis often involves multiple stages: technical detection identifies data patterns, while framework-specific interpretation applies regulatory context (e.g., determining that health data triggers GDPR Article 9 requirements). This separation keeps core analysis reusable across different regulatory frameworks.
+
 In other words, the interaction between connectors and analysers is purely schema-driven.
 
 ## Rulesets
