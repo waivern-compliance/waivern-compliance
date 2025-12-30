@@ -1,11 +1,12 @@
-# Design: Artifact-Centric Orchestration
+# Artifact-Centric Orchestration Architecture
 
-- **Status:** Completed
-- **Last Updated:** 2025-12-15
+- **Status:** Implemented
+- **Last Updated:** 2025-12-30
+- **Related:** [Child Runbook Composition](child-runbook-composition.md), [DAG Orchestration Evolution](../future-plans/dag-orchestration-layer.md)
 
 ## Overview
 
-The artifact-centric orchestration system replaces the previous step-based runbook format with a unified artifact model and DAG-based parallel execution. This design treats data artifacts as first-class citizens, with transformations as edges between them.
+The artifact-centric orchestration system uses a unified artifact model with DAG-based parallel execution. Data artifacts are first-class citizens, with transformations as edges between them.
 
 ## Architecture
 
@@ -157,7 +158,9 @@ class ExecutionDAG:
         return ts
 ```
 
-## Planner
+## Component Responsibilities
+
+### Planner
 
 Responsibilities:
 
@@ -166,8 +169,6 @@ Responsibilities:
 3. Build ExecutionDAG from artifact dependencies
 4. Validate: cycles, missing refs, schema compatibility
 5. Produce immutable ExecutionPlan
-
-The Planner uses a ComponentRegistry for component discovery:
 
 ```python
 class Planner:
@@ -198,7 +199,7 @@ class Planner:
         )
 ```
 
-## DAGExecutor
+### DAGExecutor
 
 Async orchestration with sync processor execution via ThreadPoolExecutor:
 
@@ -234,8 +235,6 @@ class DAGExecutor:
 
     async def _produce(self, artifact_id: str, plan: ExecutionPlan, store: ArtifactStore) -> Message:
         """Produce a single artifact."""
-        # Note: Child runbooks are flattened at plan time, so executor
-        # only sees regular source/derived artifacts
         defn = plan.artifact_definitions[artifact_id]
 
         if defn.source:
@@ -254,45 +253,9 @@ class DAGExecutor:
         return replace(message, extensions=MessageExtensions(execution=execution))
 ```
 
-## Schema Resolution
+### ArtifactStore
 
-Schema resolution moves from executor to planner. The planner validates compatibility upfront using discovered component factories:
-
-```python
-def _resolve_schemas(self, runbook: Runbook) -> dict[str, tuple[Schema, Schema]]:
-    result = {}
-
-    for aid, defn in runbook.artifacts.items():
-        # Use explicit schema override if specified
-        if defn.output_schema:
-            explicit_output = self._get_schema(defn.output_schema)
-        else:
-            explicit_output = None
-
-        if defn.source:
-            factory = self._connector_factories[defn.source.type]
-            output_schema = explicit_output or factory.component_class.get_output_schema()
-
-            if defn.transform:
-                analyser_factory = self._analyser_factories[defn.transform.type]
-                self._validate_compatible(output_schema, analyser_factory.component_class.get_input_schema())
-                final_schema = analyser_factory.component_class.get_output_schema()
-            else:
-                final_schema = output_schema
-
-            result[aid] = (output_schema, final_schema)
-        else:
-            # Derived artifact - input schema from upstream
-            upstream_schemas = [result[up][1] for up in self._get_deps(defn)]
-            # Validate all upstream schemas are compatible
-            ...
-
-    return result
-```
-
-## ArtifactStore Changes
-
-Add `list_artifacts()` for observability:
+In-memory storage for artifacts during execution:
 
 ```python
 class ArtifactStore(ABC):
@@ -309,128 +272,40 @@ class ArtifactStore(ABC):
     def clear(self) -> None: ...
 
     @abstractmethod
-    def list_artifacts(self) -> list[str]: ...  # NEW
+    def list_artifacts(self) -> list[str]: ...
 ```
 
-## CLI Changes
+## Schema Resolution
 
-```bash
-# Existing (unchanged)
-wct run <runbook.yaml>
-wct validate-runbook <runbook.yaml>
+The Planner validates schema compatibility upfront using discovered component factories:
 
-# New
-wct inspect <runbook.yaml> <artifact_id>   # View artifact after execution
-wct visualize <runbook.yaml>               # Future: DAG visualization
+```python
+def _resolve_schemas(self, runbook: Runbook) -> dict[str, tuple[Schema, Schema]]:
+    result = {}
+
+    for aid, defn in runbook.artifacts.items():
+        # Use explicit schema override if specified
+        if defn.output_schema:
+            explicit_output = self._get_schema(defn.output_schema)
+        else:
+            explicit_output = None
+
+        if defn.source:
+            factory = self._connector_factories[defn.source.type]
+            output_schema = explicit_output or factory.component_class.get_output_schema()
+            result[aid] = (None, output_schema)
+        else:
+            # Derived artifact - input schema from upstream
+            upstream_schemas = [result[up][1] for up in self._get_deps(defn)]
+            # Validate upstream schemas match processor requirements
+            ...
+
+    return result
 ```
 
-## Error Handling
+## Multi-Schema Fan-In
 
-Per-artifact `optional` flag:
-
-```yaml
-artifacts:
-  llm_enriched:
-    inputs: findings
-    transform:
-      type: llm_enricher
-    optional: true  # Skip dependents on failure
-```
-
-When `optional: true` artifact fails:
-1. Log warning
-2. Mark as failed in results
-3. Skip all dependents
-4. Continue with independent branches
-
-## Observability
-
-Logging format:
-
-```
-[INFO] Starting artifact: db_schema
-[INFO] Completed artifact: db_schema (1.2s)
-[INFO] Starting artifacts: db_findings, log_findings (parallel)
-[INFO] Completed artifact: db_findings (3.4s)
-[ERROR] Failed artifact: log_findings - ConnectionError
-[WARN] Skipping artifact: combined_findings (dependency failed)
-[INFO] Execution complete: 3 succeeded, 1 failed, 1 skipped
-```
-
-## Sample Runbook Migration
-
-**Before (current):**
-```yaml
-connectors:
-  - name: "log_files"
-    type: "filesystem_connector"
-    properties:
-      path: "./logs"
-
-analysers:
-  - name: "pda"
-    type: "personal_data_analyser"
-    properties:
-      llm_validation:
-        enable_llm_validation: false
-
-execution:
-  - id: "analyse_logs"
-    name: "Analyse Logs"
-    connector: "log_files"
-    analyser: "pda"
-    input_schema: "standard_input"
-    output_schema: "personal_data_finding"
-```
-
-**After (artifact-centric):**
-```yaml
-name: "Log Analysis"
-description: "Analyse logs for personal data"
-contact: "Security Team <security@company.com>"
-
-config:
-  timeout: 1800              # 30 minutes max
-  cost_limit: 10.0           # $10 LLM budget
-  max_concurrency: 5
-
-artifacts:
-  log_content:
-    name: "Log Files"
-    description: "Raw log file content from application servers"
-    source:
-      type: filesystem
-      properties:
-        path: "./logs"
-
-  findings:
-    name: "Personal Data Findings"
-    description: "Personal data detected in log files"
-    contact: "DPO <dpo@company.com>"
-    inputs: log_content
-    process:
-      type: personal_data
-      properties:
-        llm_validation:
-          enable_llm_validation: false
-    output: true
-```
-
-## Features Implemented
-
-### Core Orchestration
-
-- `waivern-orchestration` package with models, parser, DAG, planner, executor
-- `DAGExecutor` with parallel execution via asyncio + ThreadPoolExecutor
-- `ComponentRegistry` for centralised component discovery
-- Schema validation at plan time
-- Fan-in support with multi-schema matching via `InputRequirement`
-- `RunbookConfig` enforcement (timeout, cost_limit, max_concurrency)
-- `list_artifacts()` for observability
-
-### Multi-Schema Fan-In
-
-Analysers can declare multiple supported input combinations:
+Analysers declare multiple supported input combinations:
 
 ```python
 @classmethod
@@ -446,9 +321,10 @@ def get_input_requirements(cls) -> list[list[InputRequirement]]:
 
 The Planner matches provided inputs against declared requirements using exact set matching.
 
-### Child Runbook Composition
+## Child Runbook Composition
 
 Modular runbook design through plan-time flattening:
+
 - Child runbooks declare inputs/outputs as schema-validated contracts
 - Parent runbooks reference children via `child_runbook` directive
 - `ChildRunbookFlattener` inlines child artifacts with unique namespaces
@@ -457,13 +333,39 @@ Modular runbook design through plan-time flattening:
 
 See [Child Runbook Composition](artifact-centric-orchestration/child-runbooks-design.md) for details.
 
-### Export Infrastructure
+## Error Handling
 
-- `Exporter` protocol for regulation-specific output formats
-- `ExporterRegistry` for exporter discovery
-- Auto-detection based on analyser compliance frameworks
-- `JsonExporter` as default generic exporter
-- CLI: `wct run --exporter`, `wct ls-exporters`
+Per-artifact `optional` flag controls failure propagation:
+
+```yaml
+artifacts:
+  llm_enriched:
+    inputs: findings
+    process:
+      type: llm_enricher
+    optional: true  # Skip dependents on failure
+```
+
+When an `optional: true` artifact fails:
+
+1. Log warning
+2. Mark as failed in results
+3. Skip all dependents
+4. Continue with independent branches
+
+## Observability
+
+Logging format during execution:
+
+```
+[INFO] Starting artifact: db_schema
+[INFO] Completed artifact: db_schema (1.2s)
+[INFO] Starting artifacts: db_findings, log_findings (parallel)
+[INFO] Completed artifact: db_findings (3.4s)
+[ERROR] Failed artifact: log_findings - ConnectionError
+[WARN] Skipping artifact: combined_findings (dependency failed)
+[INFO] Execution complete: 3 succeeded, 1 failed, 1 skipped
+```
 
 ## Design Decisions
 
@@ -483,5 +385,5 @@ See [Child Runbook Composition](artifact-centric-orchestration/child-runbooks-de
 
 ## Related Documentation
 
-- [Child Runbook Composition](artifact-centric-orchestration/child-runbooks-design.md) - Detailed design for modular runbook composition
+- [Child Runbook Composition](child-runbook-composition.md) - Detailed design for modular runbook composition
 - [Child Runbook User Guide](../../libs/waivern-orchestration/docs/child-runbook-composition.md) - How to use child runbooks
