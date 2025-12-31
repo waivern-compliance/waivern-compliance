@@ -1,6 +1,5 @@
 """Tests for LanguageRegistry."""
 
-from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -23,13 +22,15 @@ def _make_mock_language(name: str, extensions: list[str]) -> MagicMock:
 
 
 @pytest.fixture
-def clean_registry() -> Generator[LanguageRegistry, None, None]:
-    """Provide a clean registry for each test, restoring state afterwards."""
+def clean_registry() -> LanguageRegistry:
+    """Provide a clean registry for testing.
+
+    Note: State isolation is handled by the autouse fixture in conftest.py.
+    This fixture just provides a cleared registry as a starting point.
+    """
     registry = LanguageRegistry()
-    state = LanguageRegistry.snapshot_state()
     registry.clear()
-    yield registry
-    LanguageRegistry.restore_state(state)
+    return registry
 
 
 class TestLanguageRegistrySingleton:
