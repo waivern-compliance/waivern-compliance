@@ -11,12 +11,12 @@ from waivern_connectors_database import (
     ColumnMetadata,
     DatabaseConnector,
     DatabaseExtractionUtils,
-    DatabaseSchemaUtils,
     RelationalExtractionMetadata,
     RelationalProducerConfig,
     TableMetadata,
 )
-from waivern_core.errors import ConnectorExtractionError
+from waivern_core import validate_output_schema
+from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 from waivern_core.message import Message
 from waivern_core.schemas import (
     RelationalDatabaseMetadata,
@@ -99,9 +99,7 @@ class SQLiteConnector(DatabaseConnector):
                 f"Extracting data from SQLite database: {self._config.database_path}"
             )
 
-            output_schema = DatabaseSchemaUtils.validate_output_schema(
-                output_schema, _SUPPORTED_OUTPUT_SCHEMAS
-            )
+            validate_output_schema(output_schema, _SUPPORTED_OUTPUT_SCHEMAS)
 
             # Extract database metadata (connection test included)
             metadata = self._get_database_metadata()
@@ -120,6 +118,9 @@ class SQLiteConnector(DatabaseConnector):
 
             return message
 
+        except (ConnectorConfigError, ConnectorExtractionError):
+            # Re-raise connector errors as-is (don't wrap config errors)
+            raise
         except Exception as e:
             logger.error(f"SQLite extraction failed: {e}")
             raise ConnectorExtractionError(f"SQLite extraction failed: {e}") from e

@@ -10,7 +10,6 @@ This package provides common utilities and base classes for implementing SQL dat
 
 - **DatabaseConnector** - Abstract base class for SQL database connectors
 - **DatabaseExtractionUtils** - Utilities for cell filtering and data item creation
-- **DatabaseSchemaUtils** - Schema validation utilities
 
 ## Usage
 
@@ -20,7 +19,6 @@ This package is typically used as a dependency for specific database connector p
 from waivern_connectors_database import (
     DatabaseConnector,
     DatabaseExtractionUtils,
-    DatabaseSchemaUtils,
 )
 
 class MyDatabaseConnector(DatabaseConnector):

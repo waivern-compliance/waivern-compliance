@@ -7,6 +7,7 @@ from types import ModuleType
 from typing import Any, override
 
 import pathspec
+from waivern_core import validate_output_schema
 from waivern_core.base_connector import Connector
 from waivern_core.errors import (
     ConnectorConfigError,
@@ -68,23 +69,22 @@ class FilesystemConnector(Connector):
         )
 
     @override
-    def extract(
-        self,
-        output_schema: Schema | None = None,
-    ) -> Message:
+    def extract(self, output_schema: Schema) -> Message:
         """Extract file content and metadata.
 
         Args:
-            output_schema: Optional schema to use and validate against. Use the default
-            schema of the current analyser if not provided.
+            output_schema: Schema to validate against and use for output transformation.
 
         Returns:
-            Dictionary containing file content and metadata in WCF schema format
+            Message containing file content and metadata in WCF schema format.
+
+        Raises:
+            ConnectorConfigError: If schema is not supported.
+            ConnectorExtractionError: If extraction fails.
 
         """
         try:
-            output_schema = self._validate_is_supported_output_schema(output_schema)
-            # After validation, we know output_schema is not None
+            validate_output_schema(output_schema, self.get_supported_output_schemas())
 
             # Collect all files to process
             files_to_process = self.collect_files()
@@ -111,40 +111,14 @@ class FilesystemConnector(Connector):
 
             return message
 
+        except (ConnectorConfigError, ConnectorExtractionError):
+            # Re-raise connector errors as-is (don't wrap config errors)
+            raise
         except Exception as e:
             logger.error(f"Failed to extract from path {self._config.path}: {e}")
             raise ConnectorExtractionError(
                 f"Failed to read from path {self._config.path}: {e}"
             ) from e
-
-    def _validate_is_supported_output_schema(
-        self, output_schema: Schema | None
-    ) -> Schema:
-        """Validate that the provided schema is supported.
-
-        Args:
-            output_schema: The schema to validate
-
-        Returns:
-            The validated schema (or default if none provided)
-
-        Raises:
-            ConnectorConfigError: If schema is invalid or unsupported
-
-        """
-        supported_schemas = self.get_supported_output_schemas()
-
-        if not output_schema:
-            logger.warning("No schema provided, using default schema")
-            output_schema = supported_schemas[0]
-
-        supported_schema_names = [schema.name for schema in supported_schemas]
-        if output_schema.name not in supported_schema_names:
-            raise ConnectorConfigError(
-                f"Unsupported output schema: {output_schema.name}. Supported schemas: {supported_schema_names}"
-            )
-
-        return output_schema
 
     def _collect_file_data(self, files_to_process: list[Path]) -> list[dict[str, Any]]:
         """Collect file content and metadata for all files.

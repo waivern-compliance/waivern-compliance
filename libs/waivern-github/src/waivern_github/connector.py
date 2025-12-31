@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import override
 
-from waivern_core import Schema
+from waivern_core import Schema, validate_output_schema
 from waivern_core.base_connector import Connector
 from waivern_core.errors import ConnectorExtractionError
 from waivern_core.message import Message
@@ -64,13 +64,7 @@ class GitHubConnector(Connector):
 
         """
         # Validate output schema
-        if not any(
-            s.name == output_schema.name and s.version == output_schema.version
-            for s in _SUPPORTED_OUTPUT_SCHEMAS
-        ):
-            raise ConnectorExtractionError(
-                f"Unsupported output schema: {output_schema.name} {output_schema.version}"
-            )
+        validate_output_schema(output_schema, _SUPPORTED_OUTPUT_SCHEMAS)
 
         clone_dir: str | None = None
         try:

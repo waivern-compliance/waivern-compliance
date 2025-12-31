@@ -3,10 +3,9 @@
 import sqlite3
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock
 
 import pytest
-from waivern_core.errors import ConnectorExtractionError
+from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 from waivern_core.schemas import (
     RelationalDatabaseMetadata,
     Schema,
@@ -181,31 +180,6 @@ class TestSQLiteConnectorPublicAPI:
         assert output_schemas[0].name == "standard_input"
         assert output_schemas[0].version == "1.0.0"
 
-    def test_extract_without_schema_uses_default(self):
-        """Test extract without schema uses default schema."""
-        # Create a temporary empty database for testing
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_db:
-            temp_db_path = temp_db.name
-
-        try:
-            # Create empty database
-            conn = sqlite3.connect(temp_db_path)
-            conn.close()
-
-            # Create connector
-            config = SQLiteConnectorConfig.from_properties(
-                {"database_path": temp_db_path}
-            )
-            connector = SQLiteConnector(config)
-
-            # Extract with None schema - should use default
-            result_message = connector.extract(None)  # type: ignore[arg-type]
-            assert result_message.schema is not None
-            assert result_message.schema.name == "standard_input"
-
-        finally:
-            Path(temp_db_path).unlink(missing_ok=True)
-
     def test_extract_with_unsupported_schema_raises_error(self):
         """Test extract with unsupported schema raises error."""
         # Create a temporary empty database for testing
@@ -223,14 +197,11 @@ class TestSQLiteConnectorPublicAPI:
             )
             connector = SQLiteConnector(config)
 
-            # Create mock unsupported schema
-            mock_schema = Mock()
-            mock_schema.name = "unsupported_schema"
+            # Create unsupported schema
+            unsupported_schema = Schema("unsupported_schema", "1.0.0")
 
-            with pytest.raises(
-                ConnectorExtractionError, match="Unsupported output schema"
-            ):
-                connector.extract(mock_schema)
+            with pytest.raises(ConnectorConfigError, match="Unsupported output schema"):
+                connector.extract(unsupported_schema)
 
         finally:
             Path(temp_db_path).unlink(missing_ok=True)

@@ -3,7 +3,6 @@
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock
 
 import pytest
 from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
@@ -111,27 +110,14 @@ class TestFilesystemConnector:
         connector = FilesystemConnector(config)
         assert connector is not None
 
-    def test_extract_without_schema_uses_default(self, sample_file):
-        """Test extract without schema uses default schema."""
-        config = FilesystemConnectorConfig.from_properties({"path": str(sample_file)})
-        connector = FilesystemConnector(config)
-
-        result = connector.extract()
-
-        # Should successfully extract with default schema
-        assert result is not None
-        assert result.schema is not None
-        assert result.schema.name == "standard_input"
-
     def test_extract_with_unsupported_schema_raises_error(self, sample_file):
         """Test extract with unsupported schema raises error."""
         config = FilesystemConnectorConfig.from_properties({"path": str(sample_file)})
         connector = FilesystemConnector(config)
-        mock_schema = Mock()
-        mock_schema.name = "unsupported_schema"
+        unsupported_schema = Schema("unsupported_schema", "1.0.0")
 
-        with pytest.raises(ConnectorExtractionError, match="Unsupported output schema"):
-            connector.extract(mock_schema)
+        with pytest.raises(ConnectorConfigError, match="Unsupported output schema"):
+            connector.extract(unsupported_schema)
 
     def test_extract_single_file_with_standard_input_schema(
         self, sample_file, standard_input_schema

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from waivern_core import Schema
-from waivern_core.errors import ConnectorExtractionError
+from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 
 from waivern_github.config import GitHubConnectorConfig
 from waivern_github.connector import GitHubConnector
@@ -211,11 +211,11 @@ class TestGitHubConnectorExtraction:
         assert call_kwargs["max_files"] == 2
 
     def test_extract_raises_error_for_unsupported_schema(self) -> None:
-        """ConnectorExtractionError is raised for unsupported output schema."""
+        """ConnectorConfigError is raised for unsupported output schema."""
         config = make_config()
         connector = GitHubConnector(config)
 
-        with pytest.raises(ConnectorExtractionError, match="Unsupported.*schema"):
+        with pytest.raises(ConnectorConfigError, match="Unsupported.*schema"):
             connector.extract(Schema("unsupported_schema", "1.0.0"))
 
     def test_extract_raises_error_on_clone_failure(self, tmp_path: Path) -> None:
