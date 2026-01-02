@@ -1,9 +1,7 @@
 # Extending the Waivern Compliance Framework
 
-**Last Updated:** 2025-11-26
-**Related:** [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md)
-
-> **Note:** This document uses the legacy runbook format with `execution:` steps. It will be updated after the artifact-centric runbook design is implemented. See [Artifact-Centric Runbook](../future-plans/artifact-centric-runbook.md) for the upcoming format.
+**Last Updated:** 2026-01-02
+**Related:** [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md), [WCF Core Components](../core-concepts/wcf-core-components.md)
 
 ## Overview
 
@@ -14,7 +12,7 @@ The Waivern Compliance Framework (WCF) is designed to be extended. This document
 Before extending WCF, you should be familiar with:
 
 - **[WCF Core Components](../core-concepts/wcf-core-components.md)** - Understanding of connectors, analysers, schemas, and messages
-- **[Runbooks Documentation](../../apps/wct/runbooks/README.md)** - How WCT orchestrates components
+- **[Runbooks Documentation](../../apps/wct/runbooks/README.md)** - How WCT orchestrates components (artifact-centric format)
 - **Python 3.12+** - Modern Python features and type hints
 - **Dependency Injection** - ComponentFactory and ServiceContainer patterns
 
@@ -39,22 +37,36 @@ You can extend WCF by creating your own components:
 
 **Connectors** - Extract data from custom sources:
 ```python
-from waivern_core.connector import Connector, ConnectorConfig
+from waivern_core import Connector, Schema, Message
 
-class MyConnector(Connector):
-    def extract(self) -> Message:
+class MyConnector(Connector[MyConnectorConfig]):
+    @classmethod
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        return [Schema("my_output", "1.0.0")]
+
+    def extract(self, output_schema: Schema) -> Message:
         # Extract from your data source
-        pass
+        data = self._fetch_data()
+        return Message(content=data, schema=output_schema)
 ```
 
-**Analysers** - Implement custom compliance checks:
+**Processors (Analysers)** - Implement custom compliance checks:
 ```python
-from waivern_core.analyser import Analyser, AnalyserConfig
+from waivern_core import Processor, Schema, Message, InputRequirement
 
-class MyAnalyser(Analyser):
-    def process_data(self, message: Message) -> Message:
+class MyAnalyser(Processor[MyAnalyserConfig]):
+    @classmethod
+    def get_input_requirements(cls) -> list[list[InputRequirement]]:
+        return [[InputRequirement("standard_input", "1.0.0")]]
+
+    @classmethod
+    def get_supported_output_schemas(cls) -> list[Schema]:
+        return [Schema("my_finding", "1.0.0")]
+
+    def process(self, inputs: list[Message], output_schema: Schema) -> Message:
         # Your compliance analysis logic
-        pass
+        findings = self._analyse(inputs[0].content)
+        return Message(content=findings, schema=output_schema)
 ```
 
 **Rulesets** - Define pattern-based detection rules:
@@ -78,15 +90,25 @@ WCF uses Python entry points for automatic component discovery. When you install
 
 ```toml
 # your-package/pyproject.toml
+
+# Register connectors
 [project.entry-points."waivern.connectors"]
 my_connector = "my_package:create_my_connector_factory"
 
+# Register processors (analysers)
 [project.entry-points."waivern.processors"]
 my_analyser = "my_package:create_my_analyser_factory"
 
-[project.entry-points."waivern.rulesets"]
-my_ruleset = "my_package:create_my_ruleset_factory"
+# Register schemas for discovery
+[project.entry-points."waivern.schemas"]
+my_finding = "my_package.schemas:get_schema_path"
 ```
+
+**Available entry point groups:**
+- `waivern.connectors` - Data source connectors
+- `waivern.processors` - Analysers and processors
+- `waivern.schemas` - JSON schema discovery
+- `waivern.source_code_languages` - Language support for source code analysis
 
 ### Factory Functions
 
@@ -133,19 +155,29 @@ WCF supports remote analyser execution via HTTP API. This enables:
 
 ### Remote Analyser Protocol
 
+> **Note:** Remote analyser execution is a planned feature. See [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md) for the specification.
+
 Analysers can be hosted as HTTP services that implement the WCF remote analyser protocol:
 
 ```yaml
-# runbook.yaml
-analysers:
-  - name: "remote_analyser"
-    type: "custom_analyser"
-    execution:
-      mode: "remote"
-      endpoint: "https://my-analyser-service.com/api/v1"
-      authentication:
-        type: "api_key"
-        key: "${MY_API_KEY}"
+# runbook.yaml (planned format)
+artifacts:
+  data_source:
+    source:
+      type: "filesystem"
+      properties:
+        path: "./data"
+
+  analysis_result:
+    inputs: data_source
+    process:
+      type: "custom_analyser"
+      remote:
+        endpoint: "https://my-analyser-service.com/api/v1"
+        authentication:
+          type: "api_key"
+          key: "${MY_API_KEY}"
+    output: true
 ```
 
 When WCT encounters a remote analyser:
@@ -249,25 +281,37 @@ This provides a **low-friction upgrade path** - users keep their local setup but
 
 ### Configuration
 
+> **Note:** Remote rulesets are a planned feature.
+
 Configure analysers to use remote rulesets:
 
 ```yaml
-# runbook.yaml
-analysers:
-  - name: "personal_data_checker"
-    type: "personal_data_analyser"
-    properties:
-      ruleset:
-        source: "remote"
-        endpoint: "https://api.example.com/v1/rulesets"
-        ruleset_name: "gdpr_personal_data_patterns"
-        version: "2024.11"
-        authentication:
-          type: "api_key"
-          key: "${PATTERNS_API_KEY}"
-        cache:
-          enabled: true
-          ttl_seconds: 3600
+# runbook.yaml (planned format)
+artifacts:
+  file_content:
+    source:
+      type: "filesystem"
+      properties:
+        path: "./data"
+
+  personal_data_findings:
+    inputs: file_content
+    process:
+      type: "personal_data"
+      properties:
+        pattern_matching:
+          ruleset:
+            source: "remote"
+            endpoint: "https://api.example.com/v1/rulesets"
+            ruleset_name: "gdpr_personal_data_patterns"
+            version: "2024.11"
+            authentication:
+              type: "api_key"
+              key: "${PATTERNS_API_KEY}"
+            cache:
+              enabled: true
+              ttl_seconds: 3600
+    output: true
 ```
 
 ### Remote Ruleset Protocol
@@ -329,22 +373,31 @@ Accept: application/json
 
 ```yaml
 # Before: Using free community patterns
-analysers:
-  - name: "basic_checker"
-    type: "personal_data_analyser"
-    # Uses built-in OSS rulesets
+artifacts:
+  findings:
+    inputs: file_content
+    process:
+      type: "personal_data"
+      properties:
+        pattern_matching:
+          ruleset: "local/personal_data/1.0.0"  # Built-in OSS patterns
+    output: true
 
-# After: Upgrade to expert patterns with API key
-analysers:
-  - name: "expert_checker"
-    type: "personal_data_analyser"
-    properties:
-      ruleset:
-        source: "remote"
-        endpoint: "https://legal-patterns.example.com/v1/rulesets"
-        ruleset_name: "gdpr_legal_expert_patterns"
-        authentication:
-          api_key: "${LEGAL_PATTERNS_KEY}"
+# After: Upgrade to expert patterns with API key (planned)
+artifacts:
+  findings:
+    inputs: file_content
+    process:
+      type: "personal_data"
+      properties:
+        pattern_matching:
+          ruleset:
+            source: "remote"
+            endpoint: "https://legal-patterns.example.com/v1/rulesets"
+            ruleset_name: "gdpr_legal_expert_patterns"
+            authentication:
+              api_key: "${LEGAL_PATTERNS_KEY}"
+    output: true
 ```
 
 Same analyser, better patterns - no code changes required!
@@ -366,49 +419,49 @@ wct run my-runbook.yaml
 
 ### Self-Hosted Services
 
+> **Note:** Remote analyser hosting is a planned feature.
+
 Deploy your analysers as HTTP services:
 
 ```bash
 # Your service
 uvicorn my_analyser.api:app --host 0.0.0.0 --port 8000
-
-# Users configure endpoint in runbook
-analysers:
-  - name: "my_analyser"
-    execution:
-      endpoint: "https://my-analyser.example.com"
 ```
 
-### Hybrid Models
+### Hybrid Models (Planned)
 
 Combine local and remote components:
 
 ```yaml
-analysers:
-  # Local analyser (entry point)
-  - name: "pattern_matcher"
-    type: "personal_data_analyser"
-    properties:
-      pattern_matching:
-        enable: true
+# runbook.yaml (planned format)
+artifacts:
+  # Extract from database
+  database_content:
+    source:
+      type: "mysql"
+      properties:
+        host: "localhost"
+        database: "mydb"
 
-  # Remote analyser (your hosted service)
-  - name: "advanced_validator"
-    type: "my_advanced_analyser"
-    execution:
-      mode: "remote"
-      endpoint: "https://api.mycompany.com"
-
-execution:
   # Pattern match locally (fast, cheap)
-  - connector: "database"
-    analyser: "pattern_matcher"
-    output: "candidates"
+  candidates:
+    inputs: database_content
+    process:
+      type: "personal_data"
+      properties:
+        pattern_matching:
+          ruleset: "local/personal_data/1.0.0"
 
   # Validate remotely (your proprietary logic)
-  - analyser: "advanced_validator"
-    inputs: ["candidates"]
-    output: "validated_findings"
+  validated_findings:
+    inputs: candidates
+    process:
+      type: "my_advanced_analyser"
+      remote:
+        endpoint: "https://api.mycompany.com"
+        authentication:
+          api_key: "${MY_API_KEY}"
+    output: true
 ```
 
 ## Schema-Driven Extension
@@ -444,6 +497,69 @@ my-package/
 ```
 
 WCF discovers schemas automatically from installed packages.
+
+## Source Code Language Extensions
+
+The Source Code Analyser supports multiple programming languages through a plugin architecture. You can add support for new languages by implementing the `LanguageSupport` protocol.
+
+### Adding Language Support
+
+Create a language support module:
+
+```python
+# my_package/languages/rust/__init__.py
+from tree_sitter import Language, Node
+
+from waivern_source_code_analyser.languages.models import (
+    CallableModel,
+    LanguageExtractionResult,
+    TypeDefinitionModel,
+)
+
+
+class RustLanguageSupport:
+    """Rust language support for source code analysis."""
+
+    @property
+    def name(self) -> str:
+        return "rust"
+
+    @property
+    def file_extensions(self) -> list[str]:
+        return [".rs"]
+
+    def get_tree_sitter_language(self) -> Language:
+        import tree_sitter_rust as tsrust
+        return Language(tsrust.language())
+
+    def extract(self, root_node: Node, source_code: str) -> LanguageExtractionResult:
+        # Extract functions, structs, traits, enums, etc.
+        callables = self._extract_functions(root_node, source_code)
+        type_definitions = self._extract_types(root_node, source_code)
+        return LanguageExtractionResult(
+            callables=callables,
+            type_definitions=type_definitions,
+        )
+```
+
+### Registering Language Support
+
+Register via entry points:
+
+```toml
+# pyproject.toml
+[project.optional-dependencies]
+rust = ["tree-sitter-rust>=0.21.0"]
+
+[project.entry-points."waivern.source_code_languages"]
+rust = "my_package.languages.rust:RustLanguageSupport"
+```
+
+### Built-in Languages
+
+WCF includes support for:
+- **PHP** - Functions, classes, methods
+- **TypeScript** - Functions, arrow functions, classes, interfaces, enums, type aliases
 
 ## Package Distribution
 
@@ -570,9 +686,9 @@ Consider open-sourcing your components:
 
 ## Related Documents
 
-- [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md) - HTTP API specification
 - [WCF Core Components](../core-concepts/wcf-core-components.md) - Framework architecture
-- [Artifact-Centric Runbook](../future-plans/artifact-centric-runbook.md) - Upcoming runbook format
+- [Runbooks Documentation](../../apps/wct/runbooks/README.md) - Runbook format and examples
+- [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md) - HTTP API specification (planned)
 - [DAG Orchestration Layer](../future-plans/dag-orchestration-layer.md) - Execution engine design
 
 ## Enterprise Extensions

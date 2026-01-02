@@ -2,7 +2,7 @@
 
 - **Status:** Design Proposal
 - **Last Updated:** 2025-12-01
-- **Related:** [DAG Orchestration Layer](./dag-orchestration-layer.md), [Artifact-Centric Runbook](./artifact-centric-runbook.md)
+- **Related:** [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md)
 
 ## Problem
 
