@@ -10,17 +10,30 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-tree-sitter = [
+php = [
     "tree-sitter>=0.21.0",
     "tree-sitter-php>=0.22.0",
 ]
-all = ["waivern-source-code-analyser[tree-sitter]"]
+typescript = [
+    "tree-sitter>=0.21.0",
+    "tree-sitter-typescript>=0.23.0",
+]
+all-languages = [
+    "waivern-source-code-analyser[php,typescript]",
+]
+# Backwards compatibility
+tree-sitter = ["waivern-source-code-analyser[php]"]
+all = ["waivern-source-code-analyser[all-languages]"]
 
 [project.entry-points."waivern.processors"]
 source_code_analyser = "waivern_source_code_analyser.analyser_factory:SourceCodeAnalyserFactory"
 
 [project.entry-points."waivern.schemas"]
 source_code = "waivern_source_code_analyser:register_schemas"
+
+[project.entry-points."waivern.source_code_languages"]
+php = "waivern_source_code_analyser.languages.php:PHPLanguageSupport"
+typescript = "waivern_source_code_analyser.languages.typescript:TypeScriptLanguageSupport"
 
 [dependency-groups]
 dev = [

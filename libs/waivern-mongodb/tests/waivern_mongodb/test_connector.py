@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from bson import ObjectId
 from waivern_core import Schema
-from waivern_core.errors import ConnectorExtractionError
+from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 
 from waivern_mongodb import MongoDBConnector, MongoDBConnectorConfig
 
@@ -242,10 +242,10 @@ class TestMongoDBConnectorExtraction:
     def test_extract_raises_error_for_unsupported_schema(
         self, test_config: MongoDBConnectorConfig
     ) -> None:
-        """ConnectorExtractionError is raised for unsupported output schema."""
+        """ConnectorConfigError is raised for unsupported output schema."""
         connector = MongoDBConnector(test_config)
 
-        with pytest.raises(ConnectorExtractionError, match="Unsupported.*schema"):
+        with pytest.raises(ConnectorConfigError, match="Unsupported.*schema"):
             connector.extract(Schema("unsupported_schema", "1.0.0"))
 
 

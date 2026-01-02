@@ -2,7 +2,7 @@
 
 - **Status:** Design Proposal
 - **Last Updated:** 2025-11-26
-- **Related:** [DAG Orchestration Layer](./dag-orchestration-layer.md), [Artifact-Centric Runbook](./artifact-centric-runbook.md)
+- **Related:** [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md)
 
 ## Overview
 
@@ -146,6 +146,5 @@ class LegalReviewAnalyser(Analyser):
 
 ## Related Documents
 
-- [DAG Orchestration Layer](./dag-orchestration-layer.md) - Execution engine
-- [Artifact-Centric Runbook](./artifact-centric-runbook.md) - Runbook format design
+- [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md) - Execution engine
 - [Dynamic and Agentic Workflows](./dynamic-and-agentic-workflows.md) - Future evolution

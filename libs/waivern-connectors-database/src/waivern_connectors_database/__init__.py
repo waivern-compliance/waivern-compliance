@@ -12,13 +12,11 @@ from .models import (
     ServerInfo,
     TableMetadata,
 )
-from .schema_utils import DatabaseSchemaUtils
 
 __all__ = [
     # Base utilities
     "DatabaseConnector",
     "DatabaseExtractionUtils",
-    "DatabaseSchemaUtils",
     # Relational database models
     "ColumnMetadata",
     "TableMetadata",

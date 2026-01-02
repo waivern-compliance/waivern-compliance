@@ -18,14 +18,15 @@ import pymysql
 from waivern_connectors_database import (
     ColumnMetadata,
     DatabaseExtractionUtils,
-    DatabaseSchemaUtils,
     RelationalExtractionMetadata,
     RelationalProducerConfig,
     ServerInfo,
     TableMetadata,
 )
+from waivern_core import validate_output_schema
 from waivern_core.base_connector import Connector
 from waivern_core.errors import (
+    ConnectorConfigError,
     ConnectorExtractionError,
 )
 from waivern_core.message import Message
@@ -300,9 +301,7 @@ class MySQLConnector(Connector):
         try:
             logger.info(f"Extracting data from MySQL database: {self._config.database}")
 
-            output_schema = DatabaseSchemaUtils.validate_output_schema(
-                output_schema, _SUPPORTED_OUTPUT_SCHEMAS
-            )
+            validate_output_schema(output_schema, _SUPPORTED_OUTPUT_SCHEMAS)
 
             # Extract database metadata (connection test included)
             metadata = self._get_database_metadata()
@@ -321,6 +320,9 @@ class MySQLConnector(Connector):
 
             return message
 
+        except (ConnectorConfigError, ConnectorExtractionError):
+            # Re-raise connector errors as-is (don't wrap config errors)
+            raise
         except Exception as e:
             logger.error(f"MySQL extraction failed: {e}")
             raise ConnectorExtractionError(f"MySQL extraction failed: {e}") from e

@@ -1,10 +1,11 @@
 """Protocol for compliance exporters."""
 
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 from waivern_orchestration import ExecutionPlan, ExecutionResult
 
 
+@runtime_checkable
 class Exporter(Protocol):
     """Protocol for compliance exporters.
 

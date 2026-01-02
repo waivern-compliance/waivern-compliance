@@ -1,6 +1,6 @@
 # Testing Patterns
 
-**Last Updated:** 2025-12-10
+**Last Updated:** 2025-12-31
 
 This document describes testing patterns and best practices used in the Waivern Compliance Framework.
 
@@ -112,13 +112,21 @@ def test_another_exporter():
 
 The following singletons in the codebase use this pattern:
 
-1. **`ComponentRegistry`** (`libs/waivern-core/src/waivern_core/services/registry.py`)
-   - Manages connector and processor factories
-   - Fixture: `_isolate_component_registry` in workspace conftest.py
+1. **`SchemaRegistry`** (`libs/waivern-core/src/waivern_core/schemas/registry.py`)
+   - Manages schema definitions
+   - Fixture: `isolate_schema_registry` in workspace conftest.py
 
-2. **`ExporterRegistry`** (`apps/wct/src/wct/exporters/registry.py`)
+2. **`RulesetRegistry`** (`libs/waivern-rulesets/src/waivern_rulesets/base.py`)
+   - Manages ruleset definitions
+   - Fixture: `isolate_ruleset_registry` in workspace conftest.py
+
+3. **`ExporterRegistry`** (`apps/wct/src/wct/exporters/registry.py`)
    - Manages compliance exporters
-   - Fixture: `_isolate_exporter_registry` in workspace conftest.py
+   - Fixture: `isolate_exporter_registry` in workspace conftest.py
+
+4. **`LanguageRegistry`** (`libs/waivern-source-code-analyser/src/waivern_source_code_analyser/languages/registry.py`)
+   - Manages language support plugins for source code analysis
+   - Fixture: `isolate_language_registry` in workspace conftest.py
 
 ### When to Use This Pattern
 

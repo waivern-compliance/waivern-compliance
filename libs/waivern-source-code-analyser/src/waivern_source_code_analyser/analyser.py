@@ -5,21 +5,29 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, override
 
+from tree_sitter import Node
 from waivern_core import Analyser, InputRequirement
 from waivern_core.errors import AnalyserProcessingError
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
 from waivern_source_code_analyser.analyser_config import SourceCodeAnalyserConfig
-from waivern_source_code_analyser.extractors import ClassExtractor, FunctionExtractor
+from waivern_source_code_analyser.languages.models import (
+    CallableModel,
+    LanguageExtractionResult,
+    TypeDefinitionModel,
+)
+from waivern_source_code_analyser.languages.registry import LanguageRegistry
 from waivern_source_code_analyser.parser import SourceCodeParser
 from waivern_source_code_analyser.schemas import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeClassModel,
+    SourceCodeClassPropertyModel,
     SourceCodeDataModel,
     SourceCodeFileDataModel,
     SourceCodeFileMetadataModel,
     SourceCodeFunctionModel,
+    SourceCodeFunctionParameterModel,
 )
 
 logger = logging.getLogger(__name__)
@@ -212,7 +220,7 @@ class SourceCodeAnalyser(Analyser):
         self,
         file_path: Path,
         language: str,
-        root_node: Any,  # noqa: ANN401  # Tree-sitter AST nodes are C bindings
+        root_node: Node,
         source_code: str,
     ) -> SourceCodeFileDataModel:
         """Extract analysis data from a parsed file.
@@ -227,9 +235,13 @@ class SourceCodeAnalyser(Analyser):
             Strongly typed file data model
 
         """
-        # Initialise extractors
-        function_extractor = FunctionExtractor(language)
-        class_extractor = ClassExtractor(language)
+        # Get language support from registry
+        registry = LanguageRegistry()
+        registry.discover()
+        language_support = registry.get(language)
+
+        # Extract using language-specific extractor
+        extraction_result = language_support.extract(root_node, source_code)
 
         # Calculate line count
         line_count = source_code.count("\n") + 1
@@ -240,22 +252,134 @@ class SourceCodeAnalyser(Analyser):
             mtime = file_path.stat().st_mtime
             last_modified = datetime.fromtimestamp(mtime, tz=UTC).isoformat()
 
-        # Extract structural information
-        # TODO: Update extractors to return Pydantic models directly for full type safety
-        functions_data = function_extractor.extract(root_node, source_code)
-        classes_data = class_extractor.extract(root_node, source_code)
+        # Convert extraction result to schema models
+        functions = self._convert_callables_to_functions(extraction_result)
+        classes = self._convert_type_definitions_to_classes(extraction_result)
 
         # Build strongly typed model
         return SourceCodeFileDataModel(
             file_path=str(file_path),
             language=language,
             raw_content=source_code,
-            functions=[SourceCodeFunctionModel(**f) for f in functions_data],
-            classes=[SourceCodeClassModel(**c) for c in classes_data],
+            functions=functions,
+            classes=classes,
             imports=[],  # TODO: Implement import extractor
             metadata=SourceCodeFileMetadataModel(
                 file_size=len(source_code.encode("utf-8")),
                 line_count=line_count,
                 last_modified=last_modified,
             ),
+        )
+
+    def _convert_callables_to_functions(
+        self, result: LanguageExtractionResult
+    ) -> list[SourceCodeFunctionModel]:
+        """Convert extracted callables to schema function models.
+
+        Only includes standalone callables (functions, arrow functions), not methods.
+        Methods are included within their containing class.
+
+        Args:
+            result: Language extraction result
+
+        Returns:
+            List of function models for the schema
+
+        """
+        functions: list[SourceCodeFunctionModel] = []
+
+        # Include both regular functions and arrow functions (standalone callables)
+        standalone_kinds = {"function", "arrow_function"}
+        for callable_model in result.callables:
+            if callable_model.kind in standalone_kinds:
+                functions.append(self._callable_to_function_model(callable_model))
+
+        return functions
+
+    def _convert_type_definitions_to_classes(
+        self, result: LanguageExtractionResult
+    ) -> list[SourceCodeClassModel]:
+        """Convert extracted type definitions to schema class models.
+
+        Args:
+            result: Language extraction result
+
+        Returns:
+            List of class models for the schema
+
+        """
+        classes: list[SourceCodeClassModel] = []
+
+        for type_def in result.type_definitions:
+            classes.append(self._type_def_to_class_model(type_def))
+
+        return classes
+
+    def _callable_to_function_model(
+        self, callable_model: CallableModel
+    ) -> SourceCodeFunctionModel:
+        """Convert a CallableModel to SourceCodeFunctionModel.
+
+        Args:
+            callable_model: The callable model from extraction
+
+        Returns:
+            Schema-compatible function model
+
+        """
+        parameters = [
+            SourceCodeFunctionParameterModel(
+                name=p.name,
+                type=p.type,
+                default_value=p.default_value,
+            )
+            for p in callable_model.parameters
+        ]
+
+        return SourceCodeFunctionModel(
+            name=callable_model.name,
+            line_start=callable_model.line_start,
+            line_end=callable_model.line_end,
+            parameters=parameters,
+            return_type=callable_model.return_type,
+            visibility=callable_model.visibility,
+            is_static=callable_model.is_static,
+            docstring=callable_model.docstring,
+        )
+
+    def _type_def_to_class_model(
+        self, type_def: TypeDefinitionModel
+    ) -> SourceCodeClassModel:
+        """Convert a TypeDefinitionModel to SourceCodeClassModel.
+
+        Args:
+            type_def: The type definition model from extraction
+
+        Returns:
+            Schema-compatible class model
+
+        """
+        # Convert members to properties
+        properties = [
+            SourceCodeClassPropertyModel(
+                name=m.name,
+                type=m.type,
+                visibility=m.visibility or "public",
+                is_static=m.is_static,
+                default_value=m.default_value,
+            )
+            for m in type_def.members
+        ]
+
+        # Convert methods to function models
+        methods = [self._callable_to_function_model(m) for m in type_def.methods]
+
+        return SourceCodeClassModel(
+            name=type_def.name,
+            line_start=type_def.line_start,
+            line_end=type_def.line_end,
+            extends=type_def.extends,
+            implements=type_def.implements,
+            properties=properties,
+            methods=methods,
         )

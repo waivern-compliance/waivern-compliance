@@ -2,13 +2,29 @@
 
 from pathlib import Path
 
-import tree_sitter_php
 from tree_sitter import Language, Node, Parser
 from waivern_core.errors import ParserError
 
-# Language registry for individual language packages
-_LANGUAGE_REGISTRY: dict[str, Language] = {}
-_LANGUAGE_REGISTRY["php"] = Language(tree_sitter_php.language_php())
+from waivern_source_code_analyser.languages.registry import (
+    LanguageNotFoundError,
+    LanguageRegistry,
+)
+
+# Constants
+_DEFAULT_LANGUAGE = "php"
+_DEFAULT_ENCODING = "utf-8"
+
+
+def _get_registry() -> LanguageRegistry:
+    """Get the language registry with discovery performed.
+
+    Returns:
+        LanguageRegistry singleton with all languages discovered
+
+    """
+    registry = LanguageRegistry()
+    registry.discover()
+    return registry
 
 
 def _get_tree_sitter_language(name: str) -> Language:
@@ -24,12 +40,14 @@ def _get_tree_sitter_language(name: str) -> Language:
         ParserError: If the language is not supported
 
     """
-    if name not in _LANGUAGE_REGISTRY:
-        supported_languages: list[str] = list(_LANGUAGE_REGISTRY.keys())
+    try:
+        language_support = _get_registry().get(name)
+        return language_support.get_tree_sitter_language()
+    except LanguageNotFoundError as err:
+        supported_languages = _get_registry().list_languages()
         raise ParserError(
             f"Language '{name}' not supported. Available: {supported_languages}"
-        )
-    return _LANGUAGE_REGISTRY[name]
+        ) from err
 
 
 def _get_parser(name: str) -> Parser:
@@ -50,28 +68,12 @@ def _get_parser(name: str) -> Parser:
     return parser
 
 
-# Constants
-_DEFAULT_LANGUAGE = "php"
-_DEFAULT_ENCODING = "utf-8"
-
-
 class SourceCodeParser:
-    """Parser for source code using tree-sitter."""
+    """Parser for source code using tree-sitter.
 
-    # Supported languages and their file extensions
-    _SUPPORTED_LANGUAGES = {
-        "php": [".php", ".php3", ".php4", ".php5", ".phtml"],
-        # TODO: Add support to the below languages
-        # "javascript": [".js", ".jsx", ".mjs", ".cjs"],
-        # "python": [".py", ".pyx", ".pyi"],
-        # "java": [".java"],
-        # "cpp": [".cpp", ".cc", ".cxx", ".c++", ".hpp", ".h", ".hxx"],
-        # "c": [".c", ".h"],
-        # "typescript": [".ts", ".tsx"],
-        # "go": [".go"],
-        # "rust": [".rs"],
-        # "ruby": [".rb"],
-    }
+    Uses LanguageRegistry for dynamic language support discovery.
+    Languages are registered via entry points (waivern.source_code_languages).
+    """
 
     def __init__(self, language: str = _DEFAULT_LANGUAGE) -> None:
         """Initialise the parser.
@@ -105,11 +107,13 @@ class SourceCodeParser:
         """
         extension = file_path.suffix.lower()
 
-        for language, extensions in SourceCodeParser._SUPPORTED_LANGUAGES.items():
-            if extension in extensions:
-                return language
-
-        raise ParserError(f"Cannot detect language for file extension: {extension}")
+        try:
+            language_support = _get_registry().get_by_extension(extension)
+            return language_support.name
+        except LanguageNotFoundError as err:
+            raise ParserError(
+                f"Cannot detect language for file extension: {extension}"
+            ) from err
 
     def parse(self, source_code: str) -> Node:
         """Parse source code string.
@@ -136,10 +140,7 @@ class SourceCodeParser:
 
         """
         extension = file_path.suffix.lower()
-        return any(
-            extension in extensions
-            for extensions in SourceCodeParser._SUPPORTED_LANGUAGES.values()
-        )
+        return extension in _get_registry().list_extensions()
 
     def _validate_language_support(self, language: str) -> None:
         """Validate that a language is supported.
@@ -151,8 +152,9 @@ class SourceCodeParser:
             ParserError: If language is not supported
 
         """
-        if language not in self._SUPPORTED_LANGUAGES:
+        registry = _get_registry()
+        if not registry.is_registered(language):
             raise ParserError(
                 f"Unsupported language: {language}. "
-                f"Supported languages: {list(self._SUPPORTED_LANGUAGES.keys())}"
+                f"Supported languages: {registry.list_languages()}"
             )

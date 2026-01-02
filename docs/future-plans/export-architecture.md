@@ -2,7 +2,7 @@
 
 - **Status:** Partially Implemented (Core infrastructure complete, framework-specific exporters pending)
 - **Last Updated:** 2025-12-30
-- **Related:** [Multi-Schema Fan-In](./multi-schema-fan-in.md), [Artifact-Centric Runbook](./artifact-centric-runbook.md), [Export Re-Export Command](./export-re-export-command.md), [Regulatory Framework Architecture](./regulatory-framework-architecture.md)
+- **Related:** [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md), [Export Re-Export Command](./export-re-export-command.md), [Regulatory Framework Architecture](../architecture/regulatory-framework-architecture.md)
 
 ## Overview
 
@@ -677,6 +677,5 @@ This is already supported by the `gdpr_article_30_finding` schema from the GDPR 
 
 ## Related Documents
 
-- [Multi-Schema Fan-In](./multi-schema-fan-in.md)
-- [Artifact-Centric Runbook](./artifact-centric-runbook.md)
-- [DAG Orchestration Layer](./dag-orchestration-layer.md)
+- [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md)
+- [Export Re-Export Command](./export-re-export-command.md)

@@ -210,11 +210,10 @@ class TestMySQLConnectorPublicAPI:
             {"host": TEST_HOST, "user": TEST_USER}
         )
         connector = MySQLConnector(config)
-        mock_schema = Mock()
-        mock_schema.name = "unsupported_schema"
+        unsupported_schema = Schema("unsupported_schema", "1.0.0")
 
-        with pytest.raises(ConnectorExtractionError, match="Unsupported output schema"):
-            connector.extract(mock_schema)
+        with pytest.raises(ConnectorConfigError, match="Unsupported output schema"):
+            connector.extract(unsupported_schema)
 
 
 class TestMySQLConnectorDataExtraction:

@@ -2,7 +2,7 @@
 
 - **Status:** Implemented
 - **Last Updated:** 2025-12-30
-- **Related:** [Child Runbook Composition](child-runbook-composition.md), [DAG Orchestration Evolution](../future-plans/dag-orchestration-layer.md)
+- **Related:** [Child Runbook Composition](child-runbook-composition.md)
 
 ## Overview
 
@@ -331,7 +331,7 @@ Modular runbook design through plan-time flattening:
 - Aliases map parent artifact names to namespaced child artifacts
 - Security constraints on path resolution (no absolute paths, no `..`)
 
-See [Child Runbook Composition](artifact-centric-orchestration/child-runbooks-design.md) for details.
+See [Child Runbook Composition](child-runbook-composition.md) for details.
 
 ## Error Handling
 

@@ -18,11 +18,16 @@ class TestSourceCodeParserInitialisation:
 
         assert parser.language == "php"
 
-    def test_initialisation_with_php_language(self):
-        """Test that parser can be initialised with PHP language explicitly."""
-        parser = SourceCodeParser("php")
+    @pytest.mark.parametrize(
+        ("language",),
+        [("php",), ("typescript",)],
+        ids=["php", "typescript"],
+    )
+    def test_initialisation_with_supported_language(self, language: str) -> None:
+        """Test that parser initialises correctly with supported languages."""
+        parser = SourceCodeParser(language)
 
-        assert parser.language == "php"
+        assert parser.language == language
 
     def test_initialisation_with_unsupported_language(self):
         """Test that parser raises error for unsupported languages."""
@@ -44,55 +49,58 @@ class TestSourceCodeParserInitialisation:
 class TestLanguageDetection:
     """Test language detection from file extensions."""
 
-    def test_detect_php_from_standard_extension(self):
-        """Test detection of PHP from .php extension."""
-        with tempfile.NamedTemporaryFile(suffix=".php", delete=False) as f:
-            f.write(b"<?php echo 'test'; ?>")
-            f.flush()
-
-            try:
-                parser = SourceCodeParser()
-                detected_language = parser.detect_language_from_file(Path(f.name))
-
-                assert detected_language == "php"
-
-            finally:
-                Path(f.name).unlink()
-
-    def test_detect_php_from_alternative_extensions(self):
-        """Test detection of PHP from alternative extensions."""
-        php_extensions = [".php3", ".php4", ".php5", ".phtml"]
-
-        for ext in php_extensions:
+    @pytest.mark.parametrize(
+        ("language", "extensions"),
+        [
+            ("php", [".php", ".php3", ".php4", ".php5", ".phtml"]),
+            ("typescript", [".ts", ".tsx", ".mts", ".cts"]),
+        ],
+        ids=["php", "typescript"],
+    )
+    def test_detect_language_from_extensions(
+        self, language: str, extensions: list[str]
+    ) -> None:
+        """Test language detection from all supported extensions."""
+        for ext in extensions:
             with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
-                f.write(b"<?php echo 'test'; ?>")
+                f.write(b"// sample code")
                 f.flush()
 
                 try:
                     parser = SourceCodeParser()
                     detected_language = parser.detect_language_from_file(Path(f.name))
 
-                    assert detected_language == "php"
+                    assert detected_language == language, f"Failed for extension {ext}"
 
                 finally:
                     Path(f.name).unlink()
 
-    def test_detect_language_case_insensitive_extension(self):
+    @pytest.mark.parametrize(
+        ("language", "extension"),
+        [
+            ("php", ".PHP"),
+            ("typescript", ".TS"),
+        ],
+        ids=["php_uppercase", "typescript_uppercase"],
+    )
+    def test_detect_language_case_insensitive_extension(
+        self, language: str, extension: str
+    ) -> None:
         """Test that language detection handles case insensitive extensions."""
-        with tempfile.NamedTemporaryFile(suffix=".PHP", delete=False) as f:
-            f.write(b"<?php echo 'test'; ?>")
+        with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as f:
+            f.write(b"// sample code")
             f.flush()
 
             try:
                 parser = SourceCodeParser()
                 detected_language = parser.detect_language_from_file(Path(f.name))
 
-                assert detected_language == "php"
+                assert detected_language == language
 
             finally:
                 Path(f.name).unlink()
 
-    def test_detect_language_unsupported_extension(self):
+    def test_detect_language_unsupported_extension(self) -> None:
         """Test error handling for unsupported file extensions."""
         with tempfile.NamedTemporaryFile(suffix=".unsupported", delete=False) as f:
             f.write(b"some content")
@@ -107,7 +115,7 @@ class TestLanguageDetection:
             finally:
                 Path(f.name).unlink()
 
-    def test_detect_language_no_extension(self):
+    def test_detect_language_no_extension(self) -> None:
         """Test error handling for files without extension."""
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(b"<?php echo 'test'; ?>")
@@ -126,29 +134,45 @@ class TestLanguageDetection:
 class TestFileSupport:
     """Test file support checking functionality."""
 
-    def test_is_supported_file_php_extensions(self):
-        """Test that PHP extensions are recognised as supported."""
+    @pytest.mark.parametrize(
+        ("language", "extensions"),
+        [
+            ("php", [".php", ".php3", ".php4", ".php5", ".phtml"]),
+            ("typescript", [".ts", ".tsx", ".mts", ".cts"]),
+        ],
+        ids=["php", "typescript"],
+    )
+    def test_is_supported_file_language_extensions(
+        self, language: str, extensions: list[str]
+    ) -> None:
+        """Test that language extensions are recognised as supported."""
         parser = SourceCodeParser()
-        php_extensions = [".php", ".php3", ".php4", ".php5", ".phtml"]
 
-        for ext in php_extensions:
+        for ext in extensions:
             with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
                 try:
-                    assert parser.is_supported_file(Path(f.name)) is True
+                    assert parser.is_supported_file(Path(f.name)) is True, (
+                        f"Expected {language} extension {ext} to be supported"
+                    )
                 finally:
                     Path(f.name).unlink()
 
-    def test_is_supported_file_case_insensitive(self):
+    @pytest.mark.parametrize(
+        ("extension",),
+        [(".PHP",), (".TS",)],
+        ids=["php_uppercase", "typescript_uppercase"],
+    )
+    def test_is_supported_file_case_insensitive(self, extension: str) -> None:
         """Test that file support checking is case insensitive."""
         parser = SourceCodeParser()
 
-        with tempfile.NamedTemporaryFile(suffix=".PHP", delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as f:
             try:
                 assert parser.is_supported_file(Path(f.name)) is True
             finally:
                 Path(f.name).unlink()
 
-    def test_is_supported_file_unsupported_extensions(self):
+    def test_is_supported_file_unsupported_extensions(self) -> None:
         """Test that unsupported extensions return False."""
         parser = SourceCodeParser()
         unsupported_extensions = [".txt", ".py", ".js", ".java", ".cpp"]
@@ -160,7 +184,7 @@ class TestFileSupport:
                 finally:
                     Path(f.name).unlink()
 
-    def test_is_supported_file_no_extension(self):
+    def test_is_supported_file_no_extension(self) -> None:
         """Test that files without extension are not supported."""
         parser = SourceCodeParser()
 
@@ -233,22 +257,30 @@ class TestClass {
             finally:
                 Path(f.name).unlink()
 
-    def test_parse_php_file_with_syntax_errors(self):
-        """Test parsing of PHP file with syntax errors."""
-        invalid_php = "<?php\nfunction incomplete_function(\n?>"
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".php", delete=False) as f:
-            f.write(invalid_php)
+    @pytest.mark.parametrize(
+        ("language", "invalid_content", "suffix"),
+        [
+            ("php", "<?php\nfunction incomplete_function(\n?>", ".php"),
+            ("typescript", "function incomplete_function(\n", ".ts"),
+        ],
+        ids=["php", "typescript"],
+    )
+    def test_parse_file_with_syntax_errors(
+        self, language: str, invalid_content: str, suffix: str
+    ) -> None:
+        """Test parsing of file with syntax errors handles gracefully."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False) as f:
+            f.write(invalid_content)
             f.flush()
 
             try:
-                parser = SourceCodeParser("php")
+                parser = SourceCodeParser(language)
                 # Should not raise exception - tree-sitter handles invalid syntax gracefully
                 source_code = Path(f.name).read_text(encoding="utf-8")
                 root_node = parser.parse(source_code)
 
                 assert root_node is not None
-                assert source_code == invalid_php
+                assert source_code == invalid_content
                 # Tree-sitter should still create a program node
                 assert root_node.type == "program"
 
@@ -284,6 +316,84 @@ function func{i}($param) {{
                 assert root_node.type == "program"
                 # Should have many child nodes for all the functions
                 assert len(root_node.children) > 50
+
+            finally:
+                Path(f.name).unlink()
+
+    def test_parse_valid_typescript_file(self):
+        """Test parsing of valid TypeScript file."""
+        ts_content = """
+/**
+ * User interface for type definitions
+ */
+interface User {
+    id: number;
+    name: string;
+}
+
+function greet(user: User): string {
+    return `Hello, ${user.name}!`;
+}
+
+class UserService {
+    private users: User[] = [];
+
+    public getUser(id: number): User | undefined {
+        return this.users.find(u => u.id === id);
+    }
+}
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".ts", delete=False) as f:
+            f.write(ts_content)
+            f.flush()
+
+            try:
+                parser = SourceCodeParser("typescript")
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
+
+                # Verify return types
+                assert root_node is not None
+                assert isinstance(source_code, str)
+                assert source_code == ts_content
+
+                # Verify AST structure basics (tree-sitter Node has these attributes)
+                assert hasattr(root_node, "type")
+                assert hasattr(root_node, "children")
+                assert root_node.type == "program"
+
+            finally:
+                Path(f.name).unlink()
+
+    def test_parse_tsx_file_with_jsx(self):
+        """Test parsing of TSX file with JSX syntax."""
+        tsx_content = """
+import React from 'react';
+
+interface Props {
+    name: string;
+}
+
+const Greeting: React.FC<Props> = ({ name }) => {
+    return <div>Hello, {name}!</div>;
+};
+
+export default Greeting;
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tsx", delete=False) as f:
+            f.write(tsx_content)
+            f.flush()
+
+            try:
+                parser = SourceCodeParser("typescript")
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
+
+                assert root_node is not None
+                assert source_code == tsx_content
+                assert root_node.type == "program"
 
             finally:
                 Path(f.name).unlink()

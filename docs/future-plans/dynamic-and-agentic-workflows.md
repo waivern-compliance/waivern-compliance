@@ -2,7 +2,7 @@
 
 - **Status:** Future Vision
 - **Last Updated:** 2025-11-26
-- **Related:** [Artifact-Centric Runbook](./artifact-centric-runbook.md), [DAG Orchestration Layer](./dag-orchestration-layer.md), [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md)
+- **Related:** [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md), [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md)
 
 ## Vision
 
@@ -23,8 +23,7 @@ An analyser receives a privacy policy document:
 ### Phase 1 & 2: Foundation (Designed)
 
 **Now covered by:**
-- [Artifact-Centric Runbook](./artifact-centric-runbook.md) - Composable/recursive runbooks, `execute: child` directive
-- [DAG Orchestration Layer](./dag-orchestration-layer.md) - Planner/Executor separation, parallel execution
+- [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md) - Composable/recursive runbooks, Planner/Executor separation, parallel execution
 - [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md) - Service injection pattern
 
 The core infrastructure for child workflow execution and runbook generation is designed in these documents.
@@ -84,7 +83,6 @@ The core infrastructure for child workflow execution and runbook generation is d
 
 ## Related Documents
 
-- [Artifact-Centric Runbook](./artifact-centric-runbook.md) - Runbook format with composable execution
-- [DAG Orchestration Layer](./dag-orchestration-layer.md) - Execution engine
+- [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md) - Runbook format and execution engine
 - [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md) - Service injection pattern
 - [WCF Core Components](../core-concepts/wcf-core-components.md) - Framework architecture

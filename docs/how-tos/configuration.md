@@ -308,5 +308,5 @@ See individual package READMEs in `libs/waivern-*/` for component-specific confi
 
 - **Runbooks:** See `apps/wct/runbooks/README.md` for runbook configuration
 - **LLM Providers:** See `libs/waivern-llm/README.md` for provider setup
-- **Database Connectors:** See connector documentation in `apps/wct/src/wct/connectors/`
+- **Component Packages:** See individual package READMEs in `libs/waivern-*/`
 - **12-Factor App:** https://12factor.net/config
