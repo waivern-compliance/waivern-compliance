@@ -112,7 +112,9 @@ class PHPLanguageSupport:
             parameters = self._get_parameters(node, source_code)
             return_type = self._get_return_type(node, source_code)
             docstring = self._get_docstring(node, source_code)
-            visibility = self._get_visibility(node) if kind == "method" else None
+            visibility = (
+                self._get_visibility(node, source_code) if kind == "method" else None
+            )
             is_static = self._is_static(node) if kind == "method" else False
 
             return CallableModel(
@@ -267,18 +269,20 @@ class PHPLanguageSupport:
 
         return None
 
-    def _get_visibility(self, node: Node) -> str | None:
-        """Extract method visibility modifier."""
+    def _get_visibility(self, node: Node, source_code: str) -> str | None:
+        """Extract method visibility modifier.
+
+        Args:
+            node: The method node to extract visibility from
+            source_code: The full source code for text extraction
+
+        Returns:
+            Visibility string ('public', 'private', 'protected') or None
+
+        """
         for child in node.children:
             if child.type == "visibility_modifier":
-                # The text of visibility_modifier is 'public', 'private', or 'protected'
-                for grandchild in child.children:
-                    if grandchild.type in ["public", "private", "protected"]:
-                        return grandchild.type
-                # Fallback - check the node text directly
-                if child.child_count == 0:
-                    # It might be a terminal node
-                    return None
+                return get_node_text(child, source_code)
         return None
 
     def _is_static(self, node: Node) -> bool:

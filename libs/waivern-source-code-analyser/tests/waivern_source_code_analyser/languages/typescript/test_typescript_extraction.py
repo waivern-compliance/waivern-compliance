@@ -301,6 +301,34 @@ class TestTypeScriptCallableExtraction:
         for method in cls.methods:
             assert method.kind == "method"
 
+    def test_extract_method_visibility(self) -> None:
+        """Test extraction of method visibility modifiers."""
+        ts, root_node, source_code = _parse_ts(TS_CLASS_WITH_METHODS)
+
+        result = ts.extract(root_node, source_code)
+
+        cls = result.type_definitions[0]
+        methods_by_name = {m.name: m for m in cls.methods}
+
+        # Check visibility for each method
+        assert methods_by_name["validateEmail"].visibility == "public"
+        assert methods_by_name["processInternally"].visibility == "private"
+        assert methods_by_name["helper"].visibility == "protected"
+
+    def test_extract_method_static_modifier(self) -> None:
+        """Test extraction of static modifier on methods."""
+        ts, root_node, source_code = _parse_ts(TS_CLASS_WITH_METHODS)
+
+        result = ts.extract(root_node, source_code)
+
+        cls = result.type_definitions[0]
+        methods_by_name = {m.name: m for m in cls.methods}
+
+        # Only helper is static
+        assert methods_by_name["validateEmail"].is_static is False
+        assert methods_by_name["processInternally"].is_static is False
+        assert methods_by_name["helper"].is_static is True
+
 
 class TestTypeScriptTypeDefinitionExtraction:
     """Tests for extracting type definitions from TypeScript code."""
