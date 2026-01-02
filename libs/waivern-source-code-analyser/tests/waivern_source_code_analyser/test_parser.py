@@ -24,6 +24,12 @@ class TestSourceCodeParserInitialisation:
 
         assert parser.language == "php"
 
+    def test_initialisation_with_typescript_language(self):
+        """Test that parser can be initialised with TypeScript language."""
+        parser = SourceCodeParser("typescript")
+
+        assert parser.language == "typescript"
+
     def test_initialisation_with_unsupported_language(self):
         """Test that parser raises error for unsupported languages."""
         unsupported_languages = ["javascript", "python", "java", "unsupported_language"]
@@ -122,6 +128,56 @@ class TestLanguageDetection:
             finally:
                 Path(f.name).unlink()
 
+    def test_detect_typescript_from_standard_extension(self):
+        """Test detection of TypeScript from .ts extension."""
+        with tempfile.NamedTemporaryFile(suffix=".ts", delete=False) as f:
+            f.write(b"function hello(): string { return 'hello'; }")
+            f.flush()
+
+            try:
+                parser = SourceCodeParser()
+                detected_language = parser.detect_language_from_file(Path(f.name))
+
+                assert detected_language == "typescript"
+
+            finally:
+                Path(f.name).unlink()
+
+    def test_detect_typescript_from_all_extensions(self):
+        """Test detection of TypeScript from all TypeScript extensions."""
+        ts_extensions = [".ts", ".tsx", ".mts", ".cts"]
+
+        for ext in ts_extensions:
+            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
+                f.write(b"const x: number = 1;")
+                f.flush()
+
+                try:
+                    parser = SourceCodeParser()
+                    detected_language = parser.detect_language_from_file(Path(f.name))
+
+                    assert detected_language == "typescript", (
+                        f"Failed for extension {ext}"
+                    )
+
+                finally:
+                    Path(f.name).unlink()
+
+    def test_detect_typescript_case_insensitive_extension(self):
+        """Test that TypeScript detection handles case insensitive extensions."""
+        with tempfile.NamedTemporaryFile(suffix=".TS", delete=False) as f:
+            f.write(b"const x: number = 1;")
+            f.flush()
+
+            try:
+                parser = SourceCodeParser()
+                detected_language = parser.detect_language_from_file(Path(f.name))
+
+                assert detected_language == "typescript"
+
+            finally:
+                Path(f.name).unlink()
+
 
 class TestFileSupport:
     """Test file support checking functionality."""
@@ -147,6 +203,18 @@ class TestFileSupport:
                 assert parser.is_supported_file(Path(f.name)) is True
             finally:
                 Path(f.name).unlink()
+
+    def test_is_supported_file_typescript_extensions(self):
+        """Test that TypeScript extensions are recognised as supported."""
+        parser = SourceCodeParser()
+        ts_extensions = [".ts", ".tsx", ".mts", ".cts"]
+
+        for ext in ts_extensions:
+            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
+                try:
+                    assert parser.is_supported_file(Path(f.name)) is True
+                finally:
+                    Path(f.name).unlink()
 
     def test_is_supported_file_unsupported_extensions(self):
         """Test that unsupported extensions return False."""
@@ -284,6 +352,106 @@ function func{i}($param) {{
                 assert root_node.type == "program"
                 # Should have many child nodes for all the functions
                 assert len(root_node.children) > 50
+
+            finally:
+                Path(f.name).unlink()
+
+    def test_parse_valid_typescript_file(self):
+        """Test parsing of valid TypeScript file."""
+        ts_content = """
+/**
+ * User interface for type definitions
+ */
+interface User {
+    id: number;
+    name: string;
+}
+
+function greet(user: User): string {
+    return `Hello, ${user.name}!`;
+}
+
+class UserService {
+    private users: User[] = [];
+
+    public getUser(id: number): User | undefined {
+        return this.users.find(u => u.id === id);
+    }
+}
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".ts", delete=False) as f:
+            f.write(ts_content)
+            f.flush()
+
+            try:
+                parser = SourceCodeParser("typescript")
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
+
+                # Verify return types
+                assert root_node is not None
+                assert isinstance(source_code, str)
+                assert source_code == ts_content
+
+                # Verify AST structure basics (tree-sitter Node has these attributes)
+                assert hasattr(root_node, "type")
+                assert hasattr(root_node, "children")
+                assert root_node.type == "program"
+
+            finally:
+                Path(f.name).unlink()
+
+    def test_parse_typescript_file_with_syntax_errors(self):
+        """Test parsing of TypeScript file with syntax errors."""
+        invalid_ts = "function incomplete_function(\n"
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".ts", delete=False) as f:
+            f.write(invalid_ts)
+            f.flush()
+
+            try:
+                parser = SourceCodeParser("typescript")
+                # Should not raise exception - tree-sitter handles invalid syntax gracefully
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
+
+                assert root_node is not None
+                assert source_code == invalid_ts
+                # Tree-sitter should still create a program node
+                assert root_node.type == "program"
+
+            finally:
+                Path(f.name).unlink()
+
+    def test_parse_tsx_file_with_jsx(self):
+        """Test parsing of TSX file with JSX syntax."""
+        tsx_content = """
+import React from 'react';
+
+interface Props {
+    name: string;
+}
+
+const Greeting: React.FC<Props> = ({ name }) => {
+    return <div>Hello, {name}!</div>;
+};
+
+export default Greeting;
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tsx", delete=False) as f:
+            f.write(tsx_content)
+            f.flush()
+
+            try:
+                parser = SourceCodeParser("typescript")
+                source_code = Path(f.name).read_text(encoding="utf-8")
+                root_node = parser.parse(source_code)
+
+                assert root_node is not None
+                assert source_code == tsx_content
+                assert root_node.type == "program"
 
             finally:
                 Path(f.name).unlink()
