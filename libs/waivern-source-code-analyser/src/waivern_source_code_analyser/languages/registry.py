@@ -54,6 +54,10 @@ class LanguageRegistry:
         """Discover and register language plugins from entry points.
 
         Entry point group: waivern.source_code_languages
+
+        Languages are validated by calling get_tree_sitter_language() to ensure
+        the tree-sitter binding is actually installed. Languages with missing
+        bindings are silently skipped.
         """
         if self._discovered:
             return
@@ -63,6 +67,9 @@ class LanguageRegistry:
             try:
                 language_class = ep.load()
                 language = language_class()
+                # Validate the tree-sitter binding is available
+                # This triggers the deferred import in get_tree_sitter_language()
+                language.get_tree_sitter_language()
                 self.register(language)
             except ImportError:
                 # Language's tree-sitter binding not installed - skip
