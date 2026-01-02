@@ -50,3 +50,4 @@ Create an ADR when making decisions about:
 
 - [ADR-0001](0001-explicit-schema-loading-over-autodiscovery.md) - Use Explicit Configuration for Schema Loading
 - [ADR-0002](0002-dependency-injection-for-service-management.md) - Dependency Injection Container for Service Management
+- [ADR-0003](0003-fan-in-handling-and-transformer-pattern.md) - Fan-In Handling and Transformer Pattern for Multi-Schema Inputs

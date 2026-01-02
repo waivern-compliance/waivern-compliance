@@ -261,4 +261,4 @@ A legal firm's GDPR ruleset is consumed by the `GDPRClassifier`. The ruleset pro
 
 - [Export Architecture](../future-plans/export-architecture.md) - Exporter design and selection
 - [Business Logic Centric Analysers](../future-plans/business-logic-centric-analysers.md) - Related design thinking
-- [DAG Orchestration Layer](../future-plans/dag-orchestration-layer.md) - Execution model for pipelines
+- [Artifact-Centric Orchestration](artifact-centric-orchestration.md) - Execution model for pipelines

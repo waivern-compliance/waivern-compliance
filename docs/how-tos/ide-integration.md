@@ -149,7 +149,7 @@ When WCT is updated, regenerate your schema to get the latest features:
 wct generate-schema --output runbook.schema.json
 
 # Or use bundled schema (always current)
-cp src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json runbook.schema.json
+cp libs/waivern-orchestration/src/waivern_orchestration/schemas/json_schemas/runbook/1.0.0/runbook.json runbook.schema.json
 ```
 
 ### Version Management
@@ -157,7 +157,7 @@ cp src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json runbook.schema.json
 Schema files are versioned alongside WCT releases:
 
 - **Current version**: `1.0.0`
-- **Location**: `src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json`
+- **Location**: `libs/waivern-orchestration/src/waivern_orchestration/schemas/json_schemas/runbook/1.0.0/runbook.json`
 - **Auto-update**: Regenerate schema after WCT updates
 
 ### Remote Schema (Future)
@@ -238,30 +238,27 @@ name: "My Runbook"
 name: "Sample Personal Data Analysis"
 description: "Detect PII in customer database"
 
-connectors:
-  - name: "customer_db"
-    type: "mysql"
-    properties:
-      host: "${MYSQL_HOST}"
-      user: "${MYSQL_USER}"
-      password: "${MYSQL_PASSWORD}"
-      database: "customers"
-      tables: ["users", "profiles"]
+artifacts:
+  customer_data:
+    source:
+      type: mysql
+      properties:
+        host: "${MYSQL_HOST}"
+        user: "${MYSQL_USER}"
+        password: "${MYSQL_PASSWORD}"
+        database: customers
+        tables: ["users", "profiles"]
 
-analysers:
-  - name: "pii_detector"
-    type: "personal_data_analyser"
-    properties:
-      patterns: ["email", "phone", "ssn"]
-      validation_strategy: "llm"
-
-execution:
-  - name: "Database PII Scan"
-    description: "Comprehensive personal data detection across customer database"
-    connector: "customer_db"
-    analyser: "pii_detector"
-    input_schema: "standard_input"
-    output_schema: "personal_data_finding"
+  pii_findings:
+    inputs: customer_data
+    process:
+      type: personal_data
+      properties:
+        pattern_matching:
+          ruleset: "local/personal_data/1.0.0"
+        llm_validation:
+          enable_llm_validation: true
+    output: true
 ```
 
 ### Multi-Step Analysis
@@ -272,52 +269,52 @@ execution:
 name: "Comprehensive Compliance Audit"
 description: "Full compliance analysis including PII detection and processing purposes"
 
-connectors:
-  - name: "app_database"
-    type: "mysql"
-    properties:
-      host: "${DB_HOST}"
-      database: "application"
-      tables: ["users", "orders", "logs"]
+artifacts:
+  # Data sources
+  app_database:
+    source:
+      type: mysql
+      properties:
+        host: "${DB_HOST}"
+        database: application
+        tables: ["users", "orders", "logs"]
 
-  - name: "source_files"
-    type: "filesystem"
-    properties:
-      root_path: "/app/src"
-      include_patterns: ["*.php", "*.py", "*.js"]
+  source_files:
+    source:
+      type: source_code
+      properties:
+        root_path: "/app/src"
+        include_patterns: ["*.php", "*.ts"]
+        language: php
 
-analysers:
-  - name: "personal_data_scan"
-    type: "personal_data_analyser"
-    properties:
-      patterns: ["email", "phone", "address", "credit_card"]
+  # Personal data detection
+  db_personal_data:
+    inputs: app_database
+    process:
+      type: personal_data
+      properties:
+        pattern_matching:
+          ruleset: "local/personal_data/1.0.0"
+    output: true
 
-  - name: "purpose_analysis"
-    type: "processing_purpose_analyser"
-    properties:
-      patterns: ["marketing", "analytics", "authentication"]
+  code_personal_data:
+    inputs: source_files
+    process:
+      type: personal_data
+      properties:
+        pattern_matching:
+          ruleset: "local/personal_data/1.0.0"
+    output: true
 
-execution:
-  - name: "Database Personal Data Detection"
-    description: "Scan database tables for personally identifiable information"
-    connector: "app_database"
-    analyser: "personal_data_scan"
-    input_schema: "standard_input"
-    output_schema: "personal_data_finding"
-
-  - name: "Source Code Personal Data Detection"
-    description: "Analyse source code for embedded personal data patterns"
-    connector: "source_files"
-    analyser: "personal_data_scan"
-    input_schema: "source_code"
-    output_schema: "personal_data_finding"
-
-  - name: "Processing Purpose Analysis"
-    description: "Identify data processing purposes for GDPR compliance"
-    connector: "app_database"
-    analyser: "purpose_analysis"
-    input_schema: "standard_input"
-    output_schema: "processing_purpose_finding"
+  # Processing purpose analysis
+  processing_purposes:
+    inputs: app_database
+    process:
+      type: processing_purpose
+      properties:
+        pattern_matching:
+          ruleset: "local/processing_purpose/1.0.0"
+    output: true
 ```
 
 ## Next Steps
