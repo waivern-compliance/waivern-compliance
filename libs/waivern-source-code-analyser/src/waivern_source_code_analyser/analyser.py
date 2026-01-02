@@ -276,7 +276,7 @@ class SourceCodeAnalyser(Analyser):
     ) -> list[SourceCodeFunctionModel]:
         """Convert extracted callables to schema function models.
 
-        Only includes standalone functions (kind='function'), not methods.
+        Only includes standalone callables (functions, arrow functions), not methods.
         Methods are included within their containing class.
 
         Args:
@@ -288,8 +288,10 @@ class SourceCodeAnalyser(Analyser):
         """
         functions: list[SourceCodeFunctionModel] = []
 
+        # Include both regular functions and arrow functions (standalone callables)
+        standalone_kinds = {"function", "arrow_function"}
         for callable_model in result.callables:
-            if callable_model.kind == "function":
+            if callable_model.kind in standalone_kinds:
                 functions.append(self._callable_to_function_model(callable_model))
 
         return functions

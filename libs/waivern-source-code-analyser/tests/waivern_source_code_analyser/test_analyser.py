@@ -463,3 +463,228 @@ class UserManager {
             # Should be ISO 8601 format with timezone
             assert "T" in file_metadata["last_modified"]
             assert file_metadata["last_modified"].endswith("+00:00")
+
+
+class TestSourceCodeAnalyserTypeScriptProcessing:
+    """Test TypeScript language processing through the full pipeline."""
+
+    def test_process_single_typescript_file_with_functions_and_classes(self):
+        """Test analysing a single TypeScript file with functions and classes."""
+        # Arrange
+        ts_content = """
+/**
+ * User data processing function
+ */
+function processUserData(userData: UserData, options: Options): boolean {
+    return sanitiseData(userData);
+}
+
+/**
+ * User management class
+ */
+class UserManager {
+    private users: User[] = [];
+
+    /**
+     * Creates new user account
+     */
+    public createUser(userData: UserData): User {
+        return this.validateAndStore(userData);
+    }
+}
+"""
+
+        data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="TypeScript file analysis",
+            description="Single TypeScript file for testing",
+            source="/test/TestFile.ts",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content=ts_content,
+                    metadata=FilesystemMetadata(
+                        source="/test/TestFile.ts",
+                        connector_type="filesystem_connector",
+                        file_path="/test/TestFile.ts",
+                    ),
+                ),
+            ],
+        )
+
+        message = Message(
+            id="test_single_ts",
+            content=data.model_dump(exclude_none=True),
+            schema=Schema("standard_input", "1.0.0"),
+        )
+
+        config = SourceCodeAnalyserConfig.from_properties({})
+        analyser = SourceCodeAnalyser(config)
+
+        # Act
+        result = analyser.process(
+            [message],
+            Schema("source_code", "1.0.0"),
+        )
+
+        # Assert
+        assert isinstance(result, Message)
+        assert result.schema.name == "source_code"
+
+        content = result.content
+        assert len(content["data"]) == 1
+
+        file_data = content["data"][0]
+        assert file_data["language"] == "typescript"
+
+        # Verify function extracted
+        assert len(file_data["functions"]) >= 1
+        func = file_data["functions"][0]
+        assert func["name"] == "processUserData"
+
+        # Verify class extracted
+        assert len(file_data["classes"]) >= 1
+        cls = file_data["classes"][0]
+        assert cls["name"] == "UserManager"
+
+    def test_process_typescript_file_with_interfaces_and_types(self):
+        """Test analysing TypeScript file with interfaces and type aliases."""
+        # Arrange
+        ts_content = """
+/**
+ * User interface for type safety
+ */
+interface User {
+    id: number;
+    name: string;
+    email?: string;
+}
+
+/**
+ * API response type
+ */
+type ApiResponse = Success | Error | Loading;
+
+/**
+ * User status enumeration
+ */
+enum UserStatus {
+    Active = "active",
+    Inactive = "inactive"
+}
+"""
+
+        data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="TypeScript types analysis",
+            description="TypeScript file with interfaces and types",
+            source="/test/types.ts",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content=ts_content,
+                    metadata=FilesystemMetadata(
+                        source="/test/types.ts",
+                        connector_type="filesystem_connector",
+                        file_path="/test/types.ts",
+                    ),
+                ),
+            ],
+        )
+
+        message = Message(
+            id="test_ts_types",
+            content=data.model_dump(exclude_none=True),
+            schema=Schema("standard_input", "1.0.0"),
+        )
+
+        config = SourceCodeAnalyserConfig.from_properties({})
+        analyser = SourceCodeAnalyser(config)
+
+        # Act
+        result = analyser.process(
+            [message],
+            Schema("source_code", "1.0.0"),
+        )
+
+        # Assert
+        content = result.content
+        assert len(content["data"]) == 1
+
+        file_data = content["data"][0]
+        assert file_data["language"] == "typescript"
+
+        # Verify type definitions extracted (interfaces, types, enums become classes)
+        class_names = [c["name"] for c in file_data["classes"]]
+        assert "User" in class_names  # interface
+        assert "ApiResponse" in class_names  # type alias
+        assert "UserStatus" in class_names  # enum
+
+    def test_process_tsx_file_with_react_components(self):
+        """Test analysing TSX file with React components."""
+        # Arrange
+        tsx_content = """
+import React from 'react';
+
+interface GreetingProps {
+    name: string;
+    showIcon?: boolean;
+}
+
+/**
+ * Greeting component for user display
+ */
+const Greeting: React.FC<GreetingProps> = ({ name, showIcon }) => {
+    return <div>Hello, {name}!</div>;
+};
+
+export default Greeting;
+"""
+
+        data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="TSX file analysis",
+            description="React component file",
+            source="/test/Greeting.tsx",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content=tsx_content,
+                    metadata=FilesystemMetadata(
+                        source="/test/Greeting.tsx",
+                        connector_type="filesystem_connector",
+                        file_path="/test/Greeting.tsx",
+                    ),
+                ),
+            ],
+        )
+
+        message = Message(
+            id="test_tsx",
+            content=data.model_dump(exclude_none=True),
+            schema=Schema("standard_input", "1.0.0"),
+        )
+
+        config = SourceCodeAnalyserConfig.from_properties({})
+        analyser = SourceCodeAnalyser(config)
+
+        # Act
+        result = analyser.process(
+            [message],
+            Schema("source_code", "1.0.0"),
+        )
+
+        # Assert
+        content = result.content
+        assert len(content["data"]) == 1
+
+        file_data = content["data"][0]
+        assert file_data["language"] == "typescript"
+
+        # Verify interface extracted
+        class_names = [c["name"] for c in file_data["classes"]]
+        assert "GreetingProps" in class_names
+
+        # Verify arrow function component extracted
+        func_names = [f["name"] for f in file_data["functions"]]
+        assert "Greeting" in func_names
