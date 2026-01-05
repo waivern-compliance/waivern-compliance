@@ -521,7 +521,9 @@ class TestPersonalDataAnalyser:
         # Create real pattern matcher and mock its ruleset manager
         pattern_matcher = PersonalDataPatternMatcher(valid_config.pattern_matching)
         with patch.object(
-            pattern_matcher.ruleset_manager, "get_rules", return_value=[mock_rule]
+            pattern_matcher._ruleset_manager,  # pyright: ignore[reportPrivateUsage]
+            "get_rules",
+            return_value=[mock_rule],
         ):
             analyser = PersonalDataAnalyser(
                 valid_config,

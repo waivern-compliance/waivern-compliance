@@ -2,6 +2,8 @@
 
 from waivern_core.schemas import BaseFindingEvidence
 
+from waivern_analysers_shared.utilities.pattern_matcher import PatternMatcher
+
 
 class EvidenceExtractor:
     """Utility for extracting evidence snippets from content where patterns are found."""
@@ -50,26 +52,23 @@ class EvidenceExtractor:
 
         evidence_content_set: set[str] = set()  # Use set to avoid duplicate content
         evidence_items: list[BaseFindingEvidence] = []
-        content_lower = content.lower()
-        pattern_lower = pattern.lower()
 
-        # Find all pattern matches and extract evidence
-        start_pos = 0
-        while len(evidence_content_set) < max_evidence:
-            match_pos = self._find_next_match(content_lower, pattern_lower, start_pos)
-            if match_pos == -1:
+        # Use PatternMatcher for word boundary-aware matching
+        matcher = PatternMatcher()
+        matches = matcher.find_all(content, pattern)
+
+        # Extract evidence from each match position
+        for match_start, _match_end in matches:
+            if len(evidence_content_set) >= max_evidence:
                 break
 
             evidence_snippet = self._extract_evidence_snippet(
-                content, pattern, match_pos, context_size
+                content, pattern, match_start, context_size
             )
 
             if evidence_snippet and evidence_snippet not in evidence_content_set:
                 evidence_content_set.add(evidence_snippet)
                 evidence_items.append(BaseFindingEvidence(content=evidence_snippet))
-
-            # Move past this match to find the next occurrence
-            start_pos = match_pos + 1
 
             # For 'full' context, only include one snippet since it contains everything
             if self._is_full_context(context_size):
@@ -77,22 +76,6 @@ class EvidenceExtractor:
 
         # Return evidence items sorted by content for consistent ordering
         return sorted(evidence_items, key=lambda item: item.content)
-
-    def _find_next_match(
-        self, content_lower: str, pattern_lower: str, start_pos: int
-    ) -> int:
-        """Find the next occurrence of pattern in content starting from given position.
-
-        Args:
-            content_lower: Lowercase content to search in
-            pattern_lower: Lowercase pattern to find
-            start_pos: Position to start searching from
-
-        Returns:
-            Position of next match, or -1 if not found
-
-        """
-        return content_lower.find(pattern_lower, start_pos)
 
     def _extract_evidence_snippet(
         self, content: str, pattern: str, match_pos: int, context_size: str

@@ -131,7 +131,8 @@ class TestEvidenceExtractorContextSizes:
     def test_extract_evidence_with_small_context(self):
         """Test evidence extraction with small context size."""
         extractor = EvidenceExtractor()
-        long_content = "x" * 100 + "target_pattern" + "y" * 100
+        # Use dots as filler to create word boundaries around pattern
+        long_content = "." * 100 + " target_pattern " + "." * 100
         pattern = "target_pattern"
 
         evidence = extractor.extract_evidence(
@@ -147,7 +148,8 @@ class TestEvidenceExtractorContextSizes:
     def test_extract_evidence_with_medium_context(self):
         """Test evidence extraction with medium context size."""
         extractor = EvidenceExtractor()
-        long_content = "x" * 150 + "target_pattern" + "y" * 150
+        # Use dots as filler to create word boundaries around pattern
+        long_content = "." * 150 + " target_pattern " + "." * 150
         pattern = "target_pattern"
 
         evidence = extractor.extract_evidence(
@@ -162,7 +164,8 @@ class TestEvidenceExtractorContextSizes:
     def test_extract_evidence_with_large_context(self):
         """Test evidence extraction with large context size."""
         extractor = EvidenceExtractor()
-        long_content = "x" * 300 + "target_pattern" + "y" * 300
+        # Use dots as filler to create word boundaries around pattern
+        long_content = "." * 300 + " target_pattern " + "." * 300
         pattern = "target_pattern"
 
         evidence = extractor.extract_evidence(
@@ -207,7 +210,8 @@ class TestEvidenceExtractorContextSizes:
     def test_extract_evidence_unknown_context_defaults_to_small(self):
         """Test that unknown context size defaults to small behaviour."""
         extractor = EvidenceExtractor()
-        long_content = "x" * 100 + "target_pattern" + "y" * 100
+        # Use dots as filler to create word boundaries around pattern
+        long_content = "." * 100 + " target_pattern " + "." * 100
         pattern = "target_pattern"
 
         evidence = extractor.extract_evidence(
@@ -361,7 +365,8 @@ class TestEvidenceExtractorDefaultParameters:
     def test_extract_evidence_default_context_size(self):
         """Test that default context_size parameter works correctly."""
         extractor = EvidenceExtractor()
-        long_content = "x" * 100 + "target" + "y" * 100
+        # Use dots as filler to create word boundaries around pattern
+        long_content = "." * 100 + " target " + "." * 100
         pattern = "target"
 
         evidence = extractor.extract_evidence(long_content, pattern)
@@ -379,9 +384,10 @@ class TestEvidenceExtractorEllipsisHandling:
         """Test that ellipsis markers are added when content is truncated."""
         extractor = EvidenceExtractor()
         # Create content long enough to be truncated with small context
-        long_prefix = "a" * 200
-        long_suffix = "z" * 200
-        content = long_prefix + "target_pattern" + long_suffix
+        # Use dots as filler to create word boundaries around pattern
+        long_prefix = "." * 200
+        long_suffix = "." * 200
+        content = long_prefix + " target_pattern " + long_suffix
         pattern = "target_pattern"
 
         evidence = extractor.extract_evidence(
