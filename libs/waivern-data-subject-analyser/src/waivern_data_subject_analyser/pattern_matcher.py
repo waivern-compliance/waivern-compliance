@@ -46,7 +46,11 @@ relevant rules are evaluated for each data source type.
 """
 
 from waivern_analysers_shared.types import PatternMatchingConfig
-from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
+from waivern_analysers_shared.utilities import (
+    EvidenceExtractor,
+    PatternMatcher,
+    RulesetManager,
+)
 from waivern_core.schemas import BaseFindingCompliance, BaseMetadata
 from waivern_rulesets.data_subjects import DataSubjectRule
 
@@ -72,6 +76,7 @@ class DataSubjectPatternMatcher:
         self._evidence_extractor = EvidenceExtractor()
         self._ruleset_manager = RulesetManager()
         self._confidence_scorer = DataSubjectConfidenceScorer()
+        self._pattern_matcher = PatternMatcher()
 
     def find_patterns(
         self, content: str, metadata: BaseMetadata
@@ -92,7 +97,6 @@ class DataSubjectPatternMatcher:
 
         rules = self._ruleset_manager.get_rules(self._config.ruleset, DataSubjectRule)
         findings: list[DataSubjectFindingModel] = []
-        content_lower = content.lower()
 
         # Group matched rules and patterns by subject category for confidence calculation
         category_matched_data: dict[str, list[tuple[DataSubjectRule, list[str]]]] = {}
@@ -104,9 +108,10 @@ class DataSubjectPatternMatcher:
                 continue
 
             # Check each pattern in the rule and collect all matches
+            # Uses word boundary-aware matching to reduce false positives
             matched_patterns_for_rule: list[str] = []
             for pattern in rule.patterns:
-                if pattern.lower() in content_lower:
+                if self._pattern_matcher.matches(content, pattern):
                     matched_patterns_for_rule.append(pattern)
 
             # If any patterns matched, add the rule and its matched patterns

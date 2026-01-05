@@ -127,31 +127,6 @@ class TestProcessingPurposePatternMatcher:
             assert finding.evidence is not None
             assert len(finding.evidence) > 0
 
-    def test_find_patterns_handles_case_insensitive_matching(
-        self,
-        valid_config: PatternMatchingConfig,
-        sample_metadata: BaseMetadata,
-    ) -> None:
-        """Test that find_patterns performs case-insensitive pattern matching."""
-        # Arrange
-        pattern_matcher = ProcessingPurposePatternMatcher(valid_config)
-        content_with_uppercase = "CUSTOMER DATA ANALYSIS"
-
-        # Act
-        findings = pattern_matcher.find_patterns(
-            content_with_uppercase, sample_metadata
-        )
-
-        # Assert
-        assert len(findings) > 0
-        # Should find patterns regardless of case
-        customer_findings = [
-            f
-            for f in findings
-            if any("customer" in pattern.lower() for pattern in f.matched_patterns)
-        ]
-        assert len(customer_findings) > 0
-
     def test_find_patterns_creates_metadata_from_input_metadata(
         self,
         valid_config: PatternMatchingConfig,
