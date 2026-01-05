@@ -22,3 +22,6 @@ outputs/
 
 # Local development setup
 .d
+
+# Private runbooks
+apps/wct/runbooks/Private/
