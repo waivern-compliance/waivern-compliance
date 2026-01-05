@@ -10,7 +10,6 @@ description: >
     3. Seed database: uv run python -m waivern_mongodb.scripts.seed_healthcare
     4. Run: uv run wct run apps/wct/runbooks/samples/mongodb-personal-data.yaml
 contact: "Data Protection Team <dpo@company.co.uk>"
-
 artifacts:
   # Source artifact - extract data from MongoDB
   mongodb_data:
@@ -28,7 +27,7 @@ artifacts:
   # Personal data analysis on MongoDB content
   mongodb_personal_data:
     name: "Personal Data Detection in MongoDB"
-    description: "Scan MongoDB collections for personally identifiable information using pattern matching"
+    description: "Scan MongoDB collections for personally identifiable information"
     contact: "Data Protection Team <dpo@company.co.uk>"
     inputs: mongodb_data
     process:

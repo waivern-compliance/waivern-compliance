@@ -26,10 +26,13 @@ from wct.cli import (
     validate_runbook_command,
 )
 
-# Load environment variables from .env file in wct app directory if it exists
-# This allows app-specific configuration separate from workspace root
+# Load environment variables from .env files
+# Priority: app-specific (.env in wct app dir) > workspace root (.env)
+# Load workspace root first (lower priority), then app-specific (can override)
 _wct_app_dir = Path(__file__).parent.parent.parent
-load_dotenv(_wct_app_dir / ".env")
+_workspace_root = _wct_app_dir.parent.parent
+load_dotenv(_workspace_root / ".env")  # Workspace root config (shared across apps)
+load_dotenv(_wct_app_dir / ".env", override=True)  # App-specific overrides
 
 app = typer.Typer(name="waivern-compliance-tool")
 
