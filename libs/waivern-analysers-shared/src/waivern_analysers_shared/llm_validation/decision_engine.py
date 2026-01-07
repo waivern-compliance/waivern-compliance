@@ -47,7 +47,8 @@ class ValidationDecisionEngine:
             finding_identifier = get_identifier_func(finding)
             logger.info(
                 f"Removed false positive: {finding_identifier} "
-                f"(confidence: {result.confidence:.2f}) - {result.reasoning}"
+                f"(confidence: {result.confidence:.2f}) - {result.reasoning} | "
+                f"Finding: {finding}"
             )
             return False
 

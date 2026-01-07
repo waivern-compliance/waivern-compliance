@@ -218,7 +218,7 @@ class LLMValidationStrategy[T](ABC):
                 result, finding, self.get_finding_identifier
             )
 
-            # Determine if finding should be kept using optimized decision engine
+            # Determine if finding should be kept using optimised decision engine
             if ValidationDecisionEngine.should_keep_finding(
                 result, finding, self.get_finding_identifier
             ):
