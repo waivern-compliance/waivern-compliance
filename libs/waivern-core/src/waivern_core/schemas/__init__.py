@@ -23,6 +23,7 @@ from waivern_core.schemas.finding_types import (
     BaseFindingMetadata,
     BaseFindingModel,
     BaseSchemaOutput,
+    ChainEntryValidationStats,
 )
 from waivern_core.schemas.loader import (
     JsonSchemaLoader,
@@ -60,6 +61,7 @@ __all__ = [
     "AnalysesChain",
     "BaseAnalysisOutputMetadata",
     "BaseSchemaOutput",
+    "ChainEntryValidationStats",
     # Validation utilities
     "parse_data_model",
     "DataParsingError",

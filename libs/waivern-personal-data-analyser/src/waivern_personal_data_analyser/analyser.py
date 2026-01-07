@@ -12,6 +12,7 @@ from waivern_core.schemas import (
     AnalysisChainEntry,
     BaseAnalysisOutputMetadata,
     BaseMetadata,
+    ChainEntryValidationStats,
     Schema,
     StandardInputDataItemModel,
     StandardInputDataModel,
@@ -140,8 +141,21 @@ class PersonalDataAnalyser(Analyser):
         # Run LLM validation if enabled
         validated_findings = self._validate_findings_with_llm(findings)
 
+        # Build chain entry validation stats if validation actually ran
+        validation_applied = (
+            self._config.llm_validation.enable_llm_validation and len(findings) > 0
+        )
+        chain_validation_stats = ChainEntryValidationStats.from_counts(
+            validation_applied=validation_applied,
+            original_count=len(findings),
+            validated_count=len(validated_findings),
+            validation_mode=self._config.llm_validation.llm_validation_mode,
+        )
+
         # Update analysis chain using first input message
-        updated_chain_dicts = update_analyses_chain(inputs[0], "personal_data_analyser")
+        updated_chain_dicts = update_analyses_chain(
+            inputs[0], "personal_data_analyser", validation_stats=chain_validation_stats
+        )
         # Convert to strongly-typed models for WCT
         updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
 

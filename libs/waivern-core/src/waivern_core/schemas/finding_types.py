@@ -73,6 +73,59 @@ class BaseFindingModel(BaseModel):
     )
 
 
+class ChainEntryValidationStats(BaseModel):
+    """LLM validation statistics for an analysis chain entry.
+
+    Captures the impact of LLM validation on findings count.
+    Only included when validation actually ran and produced results.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    original_findings_count: int = Field(
+        ge=0, description="Number of findings before LLM validation"
+    )
+    validated_findings_count: int = Field(
+        ge=0, description="Number of findings after LLM validation"
+    )
+    false_positives_removed: int = Field(
+        ge=0, description="Number of false positives removed by LLM validation"
+    )
+    validation_mode: str = Field(
+        description="LLM validation mode used (e.g., 'standard', 'conservative')"
+    )
+
+    @classmethod
+    def from_counts(
+        cls,
+        validation_applied: bool,
+        original_count: int,
+        validated_count: int,
+        validation_mode: str,
+    ) -> ChainEntryValidationStats | None:
+        """Create validation stats from finding counts if validation was applied.
+
+        Args:
+            validation_applied: Whether LLM validation was actually applied
+            original_count: Number of findings before validation
+            validated_count: Number of findings after validation
+            validation_mode: LLM validation mode used
+
+        Returns:
+            ChainEntryValidationStats if validation was applied, None otherwise
+
+        """
+        if not validation_applied:
+            return None
+
+        return cls(
+            original_findings_count=original_count,
+            validated_findings_count=validated_count,
+            false_positives_removed=original_count - validated_count,
+            validation_mode=validation_mode,
+        )
+
+
 class AnalysisChainEntry(BaseModel):
     """Single entry in an analysis chain tracking sequence of analysers."""
 
@@ -84,6 +137,15 @@ class AnalysisChainEntry(BaseModel):
     ] = Field(
         default_factory=lambda: datetime.now(UTC),
         description="When this analysis was performed",
+    )
+    # Optional LLM validation fields - only present when validation ran
+    llm_validation_enabled: bool | None = Field(
+        default=None,
+        description="Whether LLM validation was enabled (only when validation ran)",
+    )
+    validation_statistics: ChainEntryValidationStats | None = Field(
+        default=None,
+        description="LLM validation statistics (only when validation ran)",
     )
 
 

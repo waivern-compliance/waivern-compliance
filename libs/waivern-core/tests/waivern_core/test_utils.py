@@ -91,6 +91,52 @@ class TestUpdateAnalysesChain:
         assert "execution_timestamp" in result[0]
         assert isinstance(result[0]["execution_timestamp"], datetime)
 
+    def test_includes_validation_fields_when_stats_provided(self) -> None:
+        """Chain entry includes validation fields when stats are provided."""
+        # Arrange
+        from waivern_core.schemas import ChainEntryValidationStats
+
+        message = Message(
+            id="test",
+            content={"data": "test"},
+            schema=Schema("standard_input", "1.0.0"),
+        )
+        stats = ChainEntryValidationStats(
+            original_findings_count=48,
+            validated_findings_count=2,
+            false_positives_removed=46,
+            validation_mode="conservative",
+        )
+
+        # Act
+        result = update_analyses_chain(message, "test_analyser", validation_stats=stats)
+
+        # Assert - validation fields should be present
+        assert len(result) == 1
+        assert result[0]["llm_validation_enabled"] is True
+        assert result[0]["validation_statistics"]["original_findings_count"] == 48
+        assert result[0]["validation_statistics"]["false_positives_removed"] == 46
+
+    def test_excludes_validation_fields_when_stats_none(self) -> None:
+        """Chain entry excludes validation fields when stats are None."""
+        # Arrange
+        message = Message(
+            id="test",
+            content={"data": "test"},
+            schema=Schema("standard_input", "1.0.0"),
+        )
+
+        # Act - call without validation_stats (defaults to None)
+        result = update_analyses_chain(message, "test_analyser")
+
+        # Assert - validation fields should NOT be present
+        assert len(result) == 1
+        assert "llm_validation_enabled" not in result[0]
+        assert "validation_statistics" not in result[0]
+        # But standard fields should be present
+        assert result[0]["order"] == 1
+        assert result[0]["analyser"] == "test_analyser"
+
 
 class TestValidateOutputSchema:
     """Tests for validate_output_schema() utility function."""

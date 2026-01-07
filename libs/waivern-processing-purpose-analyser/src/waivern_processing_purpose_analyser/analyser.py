@@ -11,6 +11,7 @@ from waivern_core.schemas import (
     AnalysisChainEntry,
     BaseAnalysisOutputMetadata,
     BaseMetadata,
+    ChainEntryValidationStats,
     Schema,
     StandardInputDataModel,
 )
@@ -158,9 +159,19 @@ class ProcessingPurposeAnalyser(Analyser):
             findings
         )
 
+        # Build chain entry validation stats if validation actually ran
+        chain_validation_stats = ChainEntryValidationStats.from_counts(
+            validation_applied=validation_applied,
+            original_count=len(findings),
+            validated_count=len(validated_findings),
+            validation_mode=self._config.llm_validation.llm_validation_mode,
+        )
+
         # Update analysis chain with this analyser
         updated_chain_dicts = update_analyses_chain(
-            message, "processing_purpose_analyser"
+            message,
+            "processing_purpose_analyser",
+            validation_stats=chain_validation_stats,
         )
         # Convert to strongly-typed models for WCT
         updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
