@@ -60,7 +60,7 @@ artifacts:
           llm_validation_mode: "conservative"
     output: true
 
-  logs_personal_data:
+  logs_personal_data_indicators:
     name: "Personal Data Detection in Log Files"
     description: "Scan log files for personally identifiable information using pattern matching and context analysis"
     contact: "Michael Brown (DevOps) <michael.brown@company.co.uk>"
@@ -69,13 +69,20 @@ artifacts:
       type: "personal_data"
       properties:
         pattern_matching:
-          ruleset: "local/personal_data/1.0.0"
+          ruleset: "local/personal_data_indicator/1.0.0"
           evidence_context_size: "large"
           maximum_evidence_count: 3
         llm_validation:
           enable_llm_validation: false
           llm_batch_size: 50
           llm_validation_mode: "conservative"
+
+  logs_gdpr_personal_data:
+    name: "GDPR Personal Data Classification (Logs)"
+    description: "Classify detected personal data indicators according to GDPR categories"
+    inputs: logs_personal_data_indicators
+    process:
+      type: "gdpr_personal_data_classifier"
     output: true
 
   logs_processing_purpose:
@@ -115,7 +122,7 @@ artifacts:
           confidence_threshold: 0.5
     output: true
 
-  mysql_personal_data:
+  mysql_personal_data_indicators:
     name: "Personal Data Detection in MySQL Database"
     description: "Scan MySQL database tables and columns for personally identifiable information using pattern matching"
     contact: "Emily Chen (Database Administrator) <emily.chen@company.co.uk>"
@@ -124,13 +131,20 @@ artifacts:
       type: "personal_data"
       properties:
         pattern_matching:
-          ruleset: "local/personal_data/1.0.0"
+          ruleset: "local/personal_data_indicator/1.0.0"
           evidence_context_size: "large"
           maximum_evidence_count: 3
         llm_validation:
           enable_llm_validation: false
           llm_batch_size: 80
           llm_validation_mode: "conservative"
+
+  mysql_gdpr_personal_data:
+    name: "GDPR Personal Data Classification (MySQL)"
+    description: "Classify detected personal data indicators according to GDPR categories"
+    inputs: mysql_personal_data_indicators
+    process:
+      type: "gdpr_personal_data_classifier"
     output: true
 
   mysql_data_subject:

@@ -24,10 +24,6 @@ from waivern_rulesets.gdpr_personal_data_classification import (
     GDPRPersonalDataClassificationRule,
     GDPRPersonalDataClassificationRuleset,
 )
-from waivern_rulesets.personal_data import (
-    PersonalDataRule,
-    PersonalDataRuleset,
-)
 from waivern_rulesets.personal_data_indicator import (
     PersonalDataIndicatorRule,
     PersonalDataIndicatorRuleset,
@@ -43,7 +39,6 @@ from waivern_rulesets.service_integrations import (
 
 # Built-in rulesets with their corresponding rule types
 _BUILTIN_RULESETS = [
-    ("personal_data", PersonalDataRuleset, PersonalDataRule),
     (
         "personal_data_indicator",
         PersonalDataIndicatorRuleset,
@@ -76,7 +71,6 @@ __all__ = [
     "RulesetLoader",
     "RulesetRegistry",
     # Rulesets
-    "PersonalDataRuleset",
     "PersonalDataIndicatorRuleset",
     "ProcessingPurposesRuleset",
     "DataCollectionRuleset",
@@ -84,7 +78,6 @@ __all__ = [
     "DataSubjectsRuleset",
     "GDPRPersonalDataClassificationRuleset",
     # Rule types
-    "PersonalDataRule",
     "PersonalDataIndicatorRule",
     "ProcessingPurposeRule",
     "DataCollectionRule",

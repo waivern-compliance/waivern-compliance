@@ -45,21 +45,30 @@ Derived artifacts transform data from upstream artifacts:
 
 ```yaml
 artifacts:
-  personal_data_findings:
+  # Detect personal data indicators
+  personal_data_indicators:
     name: "Personal Data Detection"
-    description: "Analyse database for PII"
-    inputs: mysql_data              # Reference to upstream artifact
+    description: "Detect PII patterns in database"
+    inputs: mysql_data
     process:
       type: "personal_data"
       properties:
         pattern_matching:
-          ruleset: "local/personal_data/1.0.0"
+          ruleset: "local/personal_data_indicator/1.0.0"
+
+  # Classify under GDPR framework
+  gdpr_personal_data:
+    name: "GDPR Classification"
+    description: "Classify indicators according to GDPR"
+    inputs: personal_data_indicators
+    process:
+      type: "gdpr_personal_data_classifier"
     output: true                    # Include in final output
 ```
 
 **Fields:**
 - `inputs`: Single artifact ID or list of IDs (fan-in)
-- `process.type`: Processor type (e.g., `personal_data`, `processing_purpose`, `data_subject`)
+- `process.type`: Processor type (e.g., `personal_data`, `gdpr_personal_data_classifier`, `data_subject`)
 - `process.properties`: Processor-specific configuration
 - `output`: Whether to include in results (default: false)
 
@@ -123,8 +132,8 @@ Independent artifacts execute in parallel automatically.
 #### `samples/file_content_analysis.yaml`
 
 Simple demonstration runbook showing:
+- Personal data detection and GDPR classification
 - Basic file content analysis using personal_data analyser
-- Detection of personal data and sensitive information
 - Ideal for learning WCT basics
 
 #### `samples/LAMP_stack.yaml`
@@ -262,7 +271,8 @@ uv run wct ls-processors
 
 ### Processors
 
-- `personal_data` - PII detection
+- `personal_data` - PII detection (outputs `personal_data_indicator/1.0.0`)
+- `gdpr_personal_data_classifier` - GDPR classification (outputs `gdpr_personal_data/1.0.0`)
 - `data_subject` - Data subject classification
 - `processing_purpose` - Processing purpose detection
 - `source_code_analyser` - Source code parsing

@@ -66,7 +66,7 @@ class TestPersonalDataAnalyserFactory(
         """
         return {
             "pattern_matching": {
-                "ruleset": "local/personal_data/1.0.0",
+                "ruleset": "local/personal_data_indicator/1.0.0",
                 "evidence_context_size": "medium",
                 "maximum_evidence_count": 5,
             },
@@ -85,7 +85,7 @@ class TestPersonalDataAnalyserFactory(
         factory = PersonalDataAnalyserFactory(container)
 
         config_requiring_llm = {
-            "pattern_matching": {"ruleset": "local/personal_data/1.0.0"},
+            "pattern_matching": {"ruleset": "local/personal_data_indicator/1.0.0"},
             "llm_validation": {"enable_llm_validation": True},
         }
 

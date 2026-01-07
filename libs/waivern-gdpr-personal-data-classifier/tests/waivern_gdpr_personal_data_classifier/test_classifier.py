@@ -227,7 +227,7 @@ class TestGDPRPersonalDataClassifier:
                 "total_findings": 0,
             },
             "analysis_metadata": {
-                "ruleset_used": "local/personal_data/1.0.0",
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
                 "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
@@ -268,7 +268,7 @@ class TestGDPRPersonalDataClassifier:
                 "total_findings": 2,
             },
             "analysis_metadata": {
-                "ruleset_used": "local/personal_data/1.0.0",
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
                 "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
@@ -302,7 +302,7 @@ class TestGDPRPersonalDataClassifier:
                 "total_findings": 1,
             },
             "analysis_metadata": {
-                "ruleset_used": "local/personal_data/1.0.0",
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
                 "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },

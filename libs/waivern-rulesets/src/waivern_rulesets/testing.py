@@ -67,8 +67,8 @@ class RulesetContractTests[RuleType: Rule]:
 
         Example:
             @pytest.fixture
-            def ruleset_class(self) -> type[AbstractRuleset[PersonalDataRule]]:
-                return PersonalDataRuleset
+            def ruleset_class(self) -> type[AbstractRuleset[PersonalDataIndicatorRule]]:
+                return PersonalDataIndicatorRuleset
 
         """
         raise NotImplementedError(
@@ -86,8 +86,8 @@ class RulesetContractTests[RuleType: Rule]:
 
         Example:
             @pytest.fixture
-            def rule_class(self) -> type[PersonalDataRule]:
-                return PersonalDataRule
+            def rule_class(self) -> type[PersonalDataIndicatorRule]:
+                return PersonalDataIndicatorRule
 
         """
         raise NotImplementedError(

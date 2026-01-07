@@ -16,20 +16,27 @@ artifacts:
         exclude_patterns: ["*.pyc", "__pycache__"]
         max_files: 100
 
-  # Analysis artifact - processes file content for personal data
-  personal_data_analysis:
+  # Personal data analysis pipeline
+  personal_data_indicators:
     name: "Personal Data Detection in Filesystem (Mock)"
-    description: "Analyse file content for personal data using pattern matching and optional LLM validation"
+    description: "Detect personal data indicators using pattern matching"
     inputs: file_content
     process:
       type: "personal_data"
       properties:
         pattern_matching:
-          ruleset: "local/personal_data/1.0.0"
+          ruleset: "local/personal_data_indicator/1.0.0"
           evidence_context_size: "large"
           maximum_evidence_count: 3
         llm_validation:
           enable_llm_validation: false
           llm_batch_size: 50
           llm_validation_mode: "standard"
+
+  gdpr_personal_data:
+    name: "GDPR Personal Data Classification"
+    description: "Classify detected personal data indicators according to GDPR categories"
+    inputs: personal_data_indicators
+    process:
+      type: "gdpr_personal_data_classifier"
     output: true

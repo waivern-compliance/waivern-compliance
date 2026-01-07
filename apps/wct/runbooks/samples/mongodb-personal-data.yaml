@@ -24,8 +24,8 @@ artifacts:
         # take precedence and are recommended for security reasons
         sample_size: 10
 
-  # Personal data analysis on MongoDB content
-  mongodb_personal_data:
+  # Personal data analysis pipeline
+  mongodb_personal_data_indicators:
     name: "Personal Data Detection in MongoDB"
     description: "Scan MongoDB collections for personally identifiable information"
     contact: "Data Protection Team <dpo@company.co.uk>"
@@ -34,13 +34,20 @@ artifacts:
       type: "personal_data"
       properties:
         pattern_matching:
-          ruleset: "local/personal_data/1.0.0"
+          ruleset: "local/personal_data_indicator/1.0.0"
           evidence_context_size: "large"
           maximum_evidence_count: 3
         llm_validation:
           enable_llm_validation: false
           llm_batch_size: 80
           llm_validation_mode: "conservative"
+
+  mongodb_gdpr_personal_data:
+    name: "GDPR Personal Data Classification (MongoDB)"
+    description: "Classify detected personal data indicators according to GDPR categories"
+    inputs: mongodb_personal_data_indicators
+    process:
+      type: "gdpr_personal_data_classifier"
     output: true
 
   # Data subject classification on MongoDB content

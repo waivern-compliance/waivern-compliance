@@ -21,8 +21,8 @@ artifacts:
           - "libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock/source_code/*.php"
         max_files: 50
 
-  # Analysis artifacts
-  source_personal_data:
+  # Personal data analysis
+  source_personal_data_indicators:
     name: "Personal Data Detection in Source Code"
     description: "Scan source code for personal data handling patterns and PII references"
     contact: "Development Team <dev@company.co.uk>"
@@ -31,11 +31,18 @@ artifacts:
       type: "personal_data"
       properties:
         pattern_matching:
-          ruleset: "local/personal_data/1.0.0"
+          ruleset: "local/personal_data_indicator/1.0.0"
           evidence_context_size: "large"
           maximum_evidence_count: 5
         llm_validation:
           enable_llm_validation: false
+
+  source_gdpr_personal_data:
+    name: "GDPR Personal Data Classification (Source Code)"
+    description: "Classify detected personal data indicators according to GDPR categories"
+    inputs: source_personal_data_indicators
+    process:
+      type: "gdpr_personal_data_classifier"
     output: true
 
   source_processing_purpose:
