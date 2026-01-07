@@ -74,13 +74,11 @@ class TestGDPRPersonalDataClassifier:
 
     def test_process_classifies_basic_profile_as_identification_data(self) -> None:
         """Test that basic_profile indicator is classified as identification_data."""
-        # Arrange: Create input message with basic_profile finding
         input_data = {
             "findings": [
                 {
                     "type": "email",
                     "data_type": "basic_profile",
-                    "special_category": False,
                     "risk_level": "medium",
                     "evidence": [{"content": "user@example.com"}],
                     "matched_patterns": ["email"],
@@ -89,7 +87,6 @@ class TestGDPRPersonalDataClassifier:
             "summary": {
                 "total_findings": 1,
                 "high_risk_count": 0,
-                "special_category_count": 0,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -108,7 +105,6 @@ class TestGDPRPersonalDataClassifier:
         # Act
         result = classifier.process([input_message], output_schema)
 
-        # Assert
         assert result.content["findings"][0]["gdpr_data_type"] == "identification_data"
         assert result.content["findings"][0]["special_category"] is False
 
@@ -119,7 +115,6 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "type": "medical_record",
                     "data_type": "health_data",
-                    "special_category": True,
                     "risk_level": "high",
                     "evidence": [{"content": "patient diagnosis"}],
                     "matched_patterns": ["medical"],
@@ -128,7 +123,6 @@ class TestGDPRPersonalDataClassifier:
             "summary": {
                 "total_findings": 1,
                 "high_risk_count": 1,
-                "special_category_count": 1,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -165,7 +159,6 @@ class TestGDPRPersonalDataClassifier:
             "summary": {
                 "total_findings": 1,
                 "high_risk_count": 0,
-                "special_category_count": 0,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -208,7 +201,6 @@ class TestGDPRPersonalDataClassifier:
             "summary": {
                 "total_findings": 1,
                 "high_risk_count": 0,
-                "special_category_count": 0,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -240,7 +232,6 @@ class TestGDPRPersonalDataClassifier:
             "summary": {
                 "total_findings": 0,
                 "high_risk_count": 0,
-                "special_category_count": 0,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -287,7 +278,6 @@ class TestGDPRPersonalDataClassifier:
             "summary": {
                 "total_findings": 2,
                 "high_risk_count": 1,
-                "special_category_count": 1,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -326,7 +316,6 @@ class TestGDPRPersonalDataClassifier:
             "summary": {
                 "total_findings": 1,
                 "high_risk_count": 0,
-                "special_category_count": 0,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
