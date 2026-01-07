@@ -4,6 +4,7 @@ This test module focuses on testing the public API of GDPRPersonalDataClassifier
 following black-box testing principles and TDD methodology.
 """
 
+import logging
 from typing import Any
 
 import pytest
@@ -398,6 +399,153 @@ class TestGDPRPersonalDataClassifier:
         # Should still work, metadata should be None
         finding = result.content["findings"][0]
         assert finding.get("metadata") is None
+
+
+# =============================================================================
+# Negative Tests (error paths and edge cases)
+# =============================================================================
+
+
+class TestGDPRPersonalDataClassifierErrorHandling:
+    """Test suite for error handling and edge cases."""
+
+    def test_process_raises_error_on_empty_inputs(self) -> None:
+        """Test that process raises ValueError when given empty inputs list."""
+        classifier = GDPRPersonalDataClassifier()
+        output_schema = Schema("gdpr_personal_data", "1.0.0")
+
+        with pytest.raises(ValueError, match="at least one input message"):
+            classifier.process([], output_schema)
+
+    def test_process_handles_malformed_metadata_gracefully(self) -> None:
+        """Test that non-dict metadata values don't crash the classifier."""
+        input_data = {
+            "findings": [
+                {
+                    "category": "email",
+                    "evidence": [{"content": "test@example.com"}],
+                    "matched_patterns": ["email"],
+                    "metadata": "not_a_dict",  # Malformed: string instead of dict
+                }
+            ],
+            "summary": {"total_findings": 1},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
+            },
+        }
+        input_message = Message(
+            id="test",
+            content=input_data,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+        classifier = GDPRPersonalDataClassifier()
+
+        # Should not crash, metadata should be None
+        result = classifier.process(
+            [input_message], Schema("gdpr_personal_data", "1.0.0")
+        )
+
+        finding = result.content["findings"][0]
+        assert finding.get("metadata") is None
+        assert finding["privacy_category"] == "identification_data"
+
+    def test_process_handles_list_metadata_gracefully(self) -> None:
+        """Test that list metadata values (another malformed type) don't crash."""
+        input_data = {
+            "findings": [
+                {
+                    "category": "email",
+                    "evidence": [{"content": "test@example.com"}],
+                    "matched_patterns": ["email"],
+                    "metadata": ["not", "a", "dict"],  # Malformed: list instead of dict
+                }
+            ],
+            "summary": {"total_findings": 1},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
+            },
+        }
+        input_message = Message(
+            id="test",
+            content=input_data,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+        classifier = GDPRPersonalDataClassifier()
+
+        result = classifier.process(
+            [input_message], Schema("gdpr_personal_data", "1.0.0")
+        )
+
+        finding = result.content["findings"][0]
+        assert finding.get("metadata") is None
+
+    def test_process_logs_warning_for_multiple_inputs(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test that multiple inputs logs a warning but processes first input."""
+        findings: list[dict[str, Any]] = []
+        input_data = {
+            "findings": findings,
+            "summary": {"total_findings": 0},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
+            },
+        }
+        input1 = Message(
+            id="first",
+            content=input_data,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+        input2 = Message(
+            id="second",
+            content=input_data,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+        classifier = GDPRPersonalDataClassifier()
+
+        with caplog.at_level(logging.WARNING):
+            result = classifier.process(
+                [input1, input2], Schema("gdpr_personal_data", "1.0.0")
+            )
+
+        # Should still produce valid output
+        assert result.schema.name == "gdpr_personal_data"
+
+        # Should have logged a warning
+        assert "received 2 inputs but only processes the first" in caplog.text
+
+    def test_process_handles_empty_findings_list(self) -> None:
+        """Test that empty findings list produces valid output with zero counts."""
+        findings: list[dict[str, Any]] = []
+        input_data = {
+            "findings": findings,
+            "summary": {"total_findings": 0},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
+            },
+        }
+        input_message = Message(
+            id="test",
+            content=input_data,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+        classifier = GDPRPersonalDataClassifier()
+
+        result = classifier.process(
+            [input_message], Schema("gdpr_personal_data", "1.0.0")
+        )
+
+        assert result.content["findings"] == []
+        assert result.content["summary"]["total_findings"] == 0
+        assert result.content["summary"]["special_category_count"] == 0
 
 
 class TestRulesetContractValidation:

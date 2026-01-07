@@ -1,7 +1,8 @@
 """GDPR personal data classifier implementation."""
 
 import logging
-from typing import Any, override
+from functools import cache
+from typing import Any, cast, override
 
 from waivern_core import InputRequirement, Schema, update_analyses_chain
 from waivern_core.base_classifier import Classifier
@@ -19,6 +20,36 @@ from waivern_gdpr_personal_data_classifier.schemas import (
 logger = logging.getLogger(__name__)
 
 
+@cache
+def _get_ruleset() -> GDPRPersonalDataClassificationRuleset:
+    """Get the cached GDPR classification ruleset.
+
+    The ruleset is loaded once and cached for all classifier instances.
+    """
+    return GDPRPersonalDataClassificationRuleset()
+
+
+@cache
+def _get_classification_map() -> dict[str, dict[str, Any]]:
+    """Build a cached lookup map from indicator category to GDPR classification.
+
+    This function is cached at module level to avoid rebuilding the map
+    for each classifier instance. The ruleset is static (loaded from YAML),
+    so caching is safe and improves performance in high-throughput pipelines.
+    """
+    ruleset = _get_ruleset()
+    classification_map: dict[str, dict[str, Any]] = {}
+    for rule in ruleset.get_rules():
+        for indicator_category in rule.indicator_categories:
+            classification_map[indicator_category] = {
+                "privacy_category": rule.privacy_category,
+                "special_category": rule.special_category,
+                "article_references": rule.article_references,
+                "lawful_bases": rule.lawful_bases,
+            }
+    return classification_map
+
+
 class GDPRPersonalDataClassifier(Classifier):
     """Classifier that enriches personal data findings with GDPR classification.
 
@@ -30,24 +61,8 @@ class GDPRPersonalDataClassifier(Classifier):
     """
 
     def __init__(self) -> None:
-        """Initialise the classifier with ruleset."""
-        self._ruleset = GDPRPersonalDataClassificationRuleset()
-        self._classification_map = self._build_classification_map()
-
-    def _build_classification_map(
-        self,
-    ) -> dict[str, dict[str, Any]]:
-        """Build a lookup map from indicator category to classification."""
-        classification_map: dict[str, dict[str, Any]] = {}
-        for rule in self._ruleset.get_rules():
-            for indicator_category in rule.indicator_categories:
-                classification_map[indicator_category] = {
-                    "privacy_category": rule.privacy_category,
-                    "special_category": rule.special_category,
-                    "article_references": rule.article_references,
-                    "lawful_bases": rule.lawful_bases,
-                }
-        return classification_map
+        """Initialise the classifier."""
+        self._classification_map = _get_classification_map()
 
     @classmethod
     @override
@@ -76,6 +91,19 @@ class GDPRPersonalDataClassifier(Classifier):
     @override
     def process(self, inputs: list[Message], output_schema: Schema) -> Message:
         """Process input findings and classify according to GDPR."""
+        if not inputs:
+            raise ValueError(
+                "GDPRPersonalDataClassifier requires at least one input message. "
+                "Received empty inputs list."
+            )
+
+        if len(inputs) > 1:
+            logger.warning(
+                "GDPRPersonalDataClassifier received %d inputs but only processes the first. "
+                "Extra inputs will be ignored. Consider merging inputs upstream.",
+                len(inputs),
+            )
+
         # Extract findings from input
         input_findings = inputs[0].content.get("findings", [])
 
@@ -93,8 +121,9 @@ class GDPRPersonalDataClassifier(Classifier):
         summary = self._build_summary(classified_findings)
 
         # Build analysis metadata
+        ruleset = _get_ruleset()
         analysis_metadata = BaseAnalysisOutputMetadata(
-            ruleset_used=f"local/{self._ruleset.name}/{self._ruleset.version}",
+            ruleset_used=f"local/{ruleset.name}/{ruleset.version}",
             llm_validation_enabled=False,
             analyses_chain=updated_chain,
         )
@@ -133,10 +162,12 @@ class GDPRPersonalDataClassifier(Classifier):
 
         # Propagate metadata from indicator finding
         metadata = None
-        if finding.get("metadata"):
+        raw_metadata = finding.get("metadata")
+        if isinstance(raw_metadata, dict):
+            meta_dict = cast(dict[str, Any], raw_metadata)
             metadata = GDPRPersonalDataFindingMetadata(
-                source=finding["metadata"].get("source", "unknown"),
-                context=finding["metadata"].get("context", {}),
+                source=meta_dict.get("source", "unknown"),
+                context=meta_dict.get("context", {}),
             )
 
         return GDPRPersonalDataFindingModel(
