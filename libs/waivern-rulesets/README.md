@@ -35,8 +35,7 @@ rules = RulesetLoader.load_ruleset("local/personal_data/1.0.0", PersonalDataRule
 # Access rule properties
 for rule in rules:
     print(f"{rule.name}: {rule.patterns}")
-    print(f"Risk level: {rule.risk_level}")
-    print(f"Special category: {rule.special_category}")
+    print(f"Data type: {rule.data_type}")
 ```
 
 ### Using the Registry

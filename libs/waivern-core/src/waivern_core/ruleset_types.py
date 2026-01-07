@@ -2,7 +2,7 @@
 
 This module defines the rule type hierarchy:
 
-- Rule: Base class with common properties (name, description, risk_level)
+- Rule: Base class with common properties (name, description)
 - DetectionRule: Pattern-based rules for detecting content (used by analysers)
 - ClassificationRule: Category mapping rules for regulatory interpretation (used by classifiers)
 

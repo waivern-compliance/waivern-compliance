@@ -3,10 +3,9 @@
 from typing import Any
 
 
-def get_personal_data_validation_prompt(  # noqa: PLR0913
+def get_personal_data_validation_prompt(
     finding_type: str,
-    risk_level: str,
-    special_category: str | None,
+    special_category: bool,
     matched_patterns: list[str],
     evidence: list[str] | None,
     source: str,
@@ -18,8 +17,7 @@ def get_personal_data_validation_prompt(  # noqa: PLR0913
 
     Args:
         finding_type: Type of personal data detected (e.g., 'email', 'phone')
-        risk_level: Risk level (low/medium/high)
-        special_category: GDPR special category (Y/N/null)
+        special_category: Whether this is GDPR Article 9 special category data
         matched_patterns: Patterns that were matched during detection
         evidence: List of evidence snippets where pattern was found
         source: Source location of the data (e.g., database table, file path)
@@ -31,13 +29,13 @@ def get_personal_data_validation_prompt(  # noqa: PLR0913
     evidence_text = (
         "\n".join(f"- {e}" for e in evidence) if evidence else "No evidence provided"
     )
+    special_cat_text = "Yes (Article 9)" if special_category else "No"
 
     return f"""You are an expert GDPR compliance analyst. Validate whether this detected pattern represents actual personal data or a false positive.
 
 **FINDING TO VALIDATE:**
 Type: {finding_type}
-Risk Level: {risk_level}
-Special Category: {special_category or "Not specified"}
+Special Category: {special_cat_text}
 Patterns: {", ".join(matched_patterns)}
 Source: {source}
 
@@ -95,8 +93,7 @@ def get_batch_validation_prompt(findings: list[dict[str, Any]]) -> str:
         findings_text.append(f"""
 Finding {i}:
   Type: {finding.get("type", "Unknown")}
-  Risk: {finding.get("risk_level", "Unknown")}
-  Special Category: {finding.get("special_category", "Not specified")}
+  Data Type: {finding.get("data_type", "Unknown")}
   Patterns: {", ".join(finding.get("matched_patterns", ["Unknown"]))}
   Source: {getattr(finding.get("metadata", {}), "source", "Unknown") if finding.get("metadata") else "Unknown"}
   Evidence:
@@ -141,23 +138,21 @@ Respond with valid JSON array only (no markdown formatting):
 Validate all {len(findings)} findings:"""
 
 
-def get_conservative_validation_prompt(  # noqa: PLR0913
+def get_conservative_validation_prompt(
     finding_type: str,
-    risk_level: str,
-    special_category: str | None,
+    special_category: bool,
     matched_patterns: list[str],
     evidence: list[str] | None,
     source: str,
 ) -> str:
-    """Generate a conservative validation prompt for high-risk or special category data.
+    """Generate a conservative validation prompt for special category data.
 
     This prompt errs on the side of caution for sensitive personal data,
     only marking as false positive when very confident.
 
     Args:
         finding_type: Type of personal data detected
-        risk_level: Risk level (low/medium/high)
-        special_category: GDPR special category (Y/N/null)
+        special_category: Whether this is GDPR Article 9 special category data
         matched_patterns: Patterns that were matched during detection
         evidence: List of evidence snippets where pattern was found
         source: Source location of the data
@@ -169,19 +164,17 @@ def get_conservative_validation_prompt(  # noqa: PLR0913
     evidence_text = (
         "\n".join(f"- {e}" for e in evidence) if evidence else "No evidence provided"
     )
+    special_cat_text = "Yes (Article 9)" if special_category else "No"
     sensitivity_note = ""
 
-    if special_category == "Y":
-        sensitivity_note = "\n**⚠️ SPECIAL CATEGORY DATA**: This is potentially sensitive personal data under GDPR (health, biometric, political, etc.). Use CONSERVATIVE validation."
-    elif risk_level == "high":
-        sensitivity_note = "\n**⚠️ HIGH RISK DATA**: This data carries significant privacy risk. Use CONSERVATIVE validation."
+    if special_category:
+        sensitivity_note = "\n**⚠️ SPECIAL CATEGORY DATA**: This is potentially sensitive personal data under GDPR Article 9 (health, biometric, political, etc.). Use CONSERVATIVE validation."
 
     return f"""You are an expert GDPR compliance analyst performing CONSERVATIVE validation for sensitive personal data.
 
 **FINDING TO VALIDATE:**
 Type: {finding_type}
-Risk Level: {risk_level}
-Special Category: {special_category or "Not specified"}
+Special Category: {special_cat_text}
 Patterns: {", ".join(matched_patterns)}
 Source: {source}
 {sensitivity_note}

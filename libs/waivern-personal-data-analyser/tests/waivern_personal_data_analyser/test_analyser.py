@@ -42,9 +42,6 @@ class TestPersonalDataAnalyser:
     # Test constants - defined locally, not imported from implementation
     EXPECTED_ANALYSER_NAME = "personal_data_analyser"
     EXPECTED_OUTPUT_MESSAGE_ID = "Personal_data_analysis"
-    HIGH_RISK_LEVEL = "high"
-    MEDIUM_RISK_LEVEL = "medium"
-    LOW_RISK_LEVEL = "low"
 
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
