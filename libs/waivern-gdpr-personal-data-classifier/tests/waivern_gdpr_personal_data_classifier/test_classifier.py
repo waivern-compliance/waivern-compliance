@@ -55,13 +55,13 @@ class TestGDPRPersonalDataClassifier:
 
         assert framework == "GDPR"
 
-    def test_get_input_requirements_accepts_personal_data_finding(self) -> None:
-        """Test that classifier accepts personal_data_finding/1.0.0 schema."""
+    def test_get_input_requirements_accepts_personal_data_indicator(self) -> None:
+        """Test that classifier accepts personal_data_indicator/1.0.0 schema."""
         requirements = GDPRPersonalDataClassifier.get_input_requirements()
 
         assert len(requirements) == 1
         assert len(requirements[0]) == 1
-        assert requirements[0][0].schema_name == "personal_data_finding"
+        assert requirements[0][0].schema_name == "personal_data_indicator"
         assert requirements[0][0].version == "1.0.0"
 
     def test_get_supported_output_schemas_returns_gdpr_personal_data(self) -> None:
@@ -79,14 +79,12 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "type": "email",
                     "data_type": "basic_profile",
-                    "risk_level": "medium",
                     "evidence": [{"content": "user@example.com"}],
                     "matched_patterns": ["email"],
                 }
             ],
             "summary": {
                 "total_findings": 1,
-                "high_risk_count": 0,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -97,7 +95,7 @@ class TestGDPRPersonalDataClassifier:
         input_message = Message(
             id="test_input",
             content=input_data,
-            schema=Schema("personal_data_finding", "1.0.0"),
+            schema=Schema("personal_data_indicator", "1.0.0"),
         )
         output_schema = Schema("gdpr_personal_data", "1.0.0")
         classifier = GDPRPersonalDataClassifier()
@@ -115,14 +113,12 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "type": "medical_record",
                     "data_type": "health_data",
-                    "risk_level": "high",
                     "evidence": [{"content": "patient diagnosis"}],
                     "matched_patterns": ["medical"],
                 }
             ],
             "summary": {
                 "total_findings": 1,
-                "high_risk_count": 1,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -133,7 +129,7 @@ class TestGDPRPersonalDataClassifier:
         input_message = Message(
             id="test",
             content=input_data,
-            schema=Schema("personal_data_finding", "1.0.0"),
+            schema=Schema("personal_data_indicator", "1.0.0"),
         )
         classifier = GDPRPersonalDataClassifier()
 
@@ -151,14 +147,12 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "type": "email",
                     "data_type": "basic_profile",
-                    "risk_level": "medium",
                     "evidence": [{"content": "test@example.com"}],
                     "matched_patterns": ["email"],
                 }
             ],
             "summary": {
                 "total_findings": 1,
-                "high_risk_count": 0,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -169,7 +163,7 @@ class TestGDPRPersonalDataClassifier:
         input_message = Message(
             id="test",
             content=input_data,
-            schema=Schema("personal_data_finding", "1.0.0"),
+            schema=Schema("personal_data_indicator", "1.0.0"),
         )
         classifier = GDPRPersonalDataClassifier()
 
@@ -193,14 +187,12 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "type": "email",
                     "data_type": "basic_profile",
-                    "risk_level": "medium",
                     "evidence": original_evidence,
                     "matched_patterns": ["email"],
                 }
             ],
             "summary": {
                 "total_findings": 1,
-                "high_risk_count": 0,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -211,7 +203,7 @@ class TestGDPRPersonalDataClassifier:
         input_message = Message(
             id="test",
             content=input_data,
-            schema=Schema("personal_data_finding", "1.0.0"),
+            schema=Schema("personal_data_indicator", "1.0.0"),
         )
         classifier = GDPRPersonalDataClassifier()
 
@@ -231,7 +223,6 @@ class TestGDPRPersonalDataClassifier:
             "findings": findings,
             "summary": {
                 "total_findings": 0,
-                "high_risk_count": 0,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -242,7 +233,7 @@ class TestGDPRPersonalDataClassifier:
         input_message = Message(
             id="test",
             content=input_data,
-            schema=Schema("personal_data_finding", "1.0.0"),
+            schema=Schema("personal_data_indicator", "1.0.0"),
         )
         classifier = GDPRPersonalDataClassifier()
 
@@ -263,21 +254,18 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "type": "email",
                     "data_type": "basic_profile",
-                    "risk_level": "medium",
                     "evidence": [{"content": "test@example.com"}],
                     "matched_patterns": ["email"],
                 },
                 {
                     "type": "medical_record",
                     "data_type": "health_data",
-                    "risk_level": "high",
                     "evidence": [{"content": "patient data"}],
                     "matched_patterns": ["medical"],
                 },
             ],
             "summary": {
                 "total_findings": 2,
-                "high_risk_count": 1,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -288,7 +276,7 @@ class TestGDPRPersonalDataClassifier:
         input_message = Message(
             id="test",
             content=input_data,
-            schema=Schema("personal_data_finding", "1.0.0"),
+            schema=Schema("personal_data_indicator", "1.0.0"),
         )
         classifier = GDPRPersonalDataClassifier()
 
@@ -298,7 +286,6 @@ class TestGDPRPersonalDataClassifier:
 
         summary = result.content["summary"]
         assert summary["total_findings"] == 2
-        assert summary["high_risk_count"] == 1
         assert summary["special_category_count"] == 1
 
     def test_process_handles_unmapped_indicator_category(self) -> None:
@@ -308,14 +295,12 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "type": "unknown_type",
                     "data_type": "unknown_category",
-                    "risk_level": "low",
                     "evidence": [{"content": "some data"}],
                     "matched_patterns": ["unknown"],
                 }
             ],
             "summary": {
                 "total_findings": 1,
-                "high_risk_count": 0,
             },
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data/1.0.0",
@@ -326,7 +311,7 @@ class TestGDPRPersonalDataClassifier:
         input_message = Message(
             id="test",
             content=input_data,
-            schema=Schema("personal_data_finding", "1.0.0"),
+            schema=Schema("personal_data_indicator", "1.0.0"),
         )
         classifier = GDPRPersonalDataClassifier()
 

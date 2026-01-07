@@ -53,12 +53,10 @@ class TestPersonalDataRule:
             patterns=("email", "e_mail"),
             data_type="basic_profile",
             special_category=False,
-            risk_level="medium",
         )
 
         assert rule.name == "email_rule"
         assert rule.special_category is False
-        assert rule.risk_level == "medium"
 
     def test_personal_data_rule_special_category_default(self) -> None:
         """Test PersonalDataRule special_category defaults to False."""
@@ -67,7 +65,6 @@ class TestPersonalDataRule:
             description="Basic rule",
             patterns=("test",),
             data_type="basic_profile",
-            risk_level="low",
         )
 
         assert rule.special_category is False
@@ -85,25 +82,9 @@ class TestPersonalDataRuleset:
         """Set up test fixtures for each test method."""
         self.ruleset = PersonalDataRuleset()
 
-    def test_rules_have_valid_risk_levels(self) -> None:
-        """Test that all rules have valid risk levels."""
+    def test_rules_have_patterns(self) -> None:
+        """Test that all rules have patterns defined."""
         rules = self.ruleset.get_rules()
-        valid_risk_levels = {"low", "medium", "high"}
 
         for rule in rules:
-            assert rule.risk_level in valid_risk_levels
-
-    def test_risk_level_distribution(self) -> None:
-        """Test that we have a reasonable distribution of risk levels."""
-        rules = self.ruleset.get_rules()
-        risk_counts = {"low": 0, "medium": 0, "high": 0}
-
-        for rule in rules:
-            risk_counts[rule.risk_level] += 1
-
-        # We should have rules at medium and high risk levels
-        assert risk_counts["medium"] > 0
-        assert risk_counts["high"] > 0
-
-        # Total should match expected
-        assert sum(risk_counts.values()) == len(rules)
+            assert len(rule.patterns) > 0

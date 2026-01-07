@@ -53,13 +53,11 @@ class TestDataCollectionRule:
             patterns=("$_POST", "form_data"),
             collection_type="form_data",
             data_source="http_post",
-            risk_level="medium",
         )
 
         assert rule.name == "form_data_rule"
         assert rule.collection_type == "form_data"
         assert rule.data_source == "http_post"
-        assert rule.risk_level == "medium"
 
 
 # =============================================================================
@@ -73,14 +71,6 @@ class TestDataCollectionRuleset:
     def setup_method(self) -> None:
         """Set up test fixtures for each test method."""
         self.ruleset = DataCollectionRuleset()
-
-    def test_rules_have_valid_risk_levels(self) -> None:
-        """Test that all rules have valid risk levels."""
-        rules = self.ruleset.get_rules()
-        valid_risk_levels = {"low", "medium", "high"}
-
-        for rule in rules:
-            assert rule.risk_level in valid_risk_levels
 
     def test_rules_have_collection_type_and_data_source(self) -> None:
         """Test that all rules have collection_type and data_source fields."""

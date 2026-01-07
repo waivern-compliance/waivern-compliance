@@ -66,7 +66,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: medium
 - name: employee_hr_system_indicators
   description: HR system integration patterns for employees
   patterns:
@@ -107,7 +106,6 @@ rules:
   applicable_contexts:
   - database
   - filesystem
-  risk_level: medium
 - name: employee_company_domain_email
   description: Company email domain patterns for employees
   patterns:
@@ -132,7 +130,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: low
 - name: former_employee_status_indicators
   description: Former employee status and termination patterns
   patterns:
@@ -172,7 +169,6 @@ rules:
   applicable_contexts:
   - database
   - filesystem
-  risk_level: medium
 - name: job_applicant_recruitment_indicators
   description: Job application and recruitment system patterns
   patterns:
@@ -216,7 +212,6 @@ rules:
   applicable_contexts:
   - database
   - filesystem
-  risk_level: medium
 - name: contractor_role_indicators
   description: External contractor and consultant patterns
   patterns:
@@ -256,7 +251,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: medium
 - name: director_executive_indicators
   description: Board members and executive governance patterns
   patterns:
@@ -297,7 +291,6 @@ rules:
   applicable_contexts:
   - database
   - filesystem
-  risk_level: high
 - name: customer_active_account_indicators
   description: Active customer account and subscription patterns
   patterns:
@@ -338,7 +331,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: medium
 - name: customer_transaction_indicators
   description: Customer transaction and purchase history patterns
   patterns:
@@ -378,7 +370,6 @@ rules:
   applicable_contexts:
   - database
   - filesystem
-  risk_level: medium
 - name: prospect_lead_management_indicators
   description: Lead management and prospective customer patterns
   patterns:
@@ -422,7 +413,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: low
 - name: prospect_trial_indicators
   description: Trial account and demo request patterns
   patterns:
@@ -464,7 +454,6 @@ rules:
   applicable_contexts:
   - database
   - filesystem
-  risk_level: low
 - name: former_customer_cancellation_indicators
   description: Former customer cancellation and churn patterns
   patterns:
@@ -505,7 +494,6 @@ rules:
   applicable_contexts:
   - database
   - filesystem
-  risk_level: low
 - name: visitor_web_analytics_indicators
   description: Website visitor and anonymous user patterns
   patterns:
@@ -550,7 +538,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: low
 - name: subscriber_email_marketing_indicators
   description: Email marketing and newsletter subscription patterns
   patterns:
@@ -594,7 +581,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: low
 - name: supplier_vendor_management_indicators
   description: Supplier and vendor management system patterns
   patterns:
@@ -640,7 +626,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: low
 - name: advisor_professional_services_indicators
   description: Professional advisors and consulting service patterns
   patterns:
@@ -685,7 +670,6 @@ rules:
   applicable_contexts:
   - database
   - filesystem
-  risk_level: medium
 - name: partner_business_alliance_indicators
   description: Business partner and strategic alliance patterns
   patterns:
@@ -730,7 +714,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: medium
 - name: patient_healthcare_indicators
   description: Healthcare patient record and EMR system patterns
   patterns:
@@ -776,7 +759,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: high
 - name: provider_healthcare_professional_indicators
   description: Healthcare provider and medical professional patterns
   patterns:
@@ -822,7 +804,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: medium
 - name: student_education_system_indicators
   description: Student information system and academic record patterns
   patterns:
@@ -870,7 +851,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: medium
 - name: guardian_parental_consent_indicators
   description: Parent and guardian consent and contact patterns
   patterns:
@@ -916,7 +896,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: medium
 - name: account_holder_financial_indicators
   description: Financial account holder and banking patterns
   patterns:
@@ -961,7 +940,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: high
 - name: beneficiary_insurance_pension_indicators
   description: Insurance and pension beneficiary patterns
   patterns:
@@ -1007,7 +985,6 @@ rules:
   applicable_contexts:
   - database
   - filesystem
-  risk_level: medium
 - name: user_authentication_contextual
   description: General user authentication and login patterns
   patterns:
@@ -1052,7 +1029,6 @@ rules:
   applicable_contexts:
   - database
   - source_code
-  risk_level: low
 - name: personal_information_contextual
   description: General personal information field patterns
   patterns:
@@ -1101,4 +1077,3 @@ rules:
   - database
   - filesystem
   - source_code
-  risk_level: low

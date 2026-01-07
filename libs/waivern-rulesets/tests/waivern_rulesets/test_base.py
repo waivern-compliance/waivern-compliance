@@ -40,7 +40,6 @@ class ConcreteRuleset(AbstractRuleset[ProcessingPurposeRule]):
                 name="test_rule",
                 description="Test rule for unit tests",
                 patterns=("test_pattern", "test_pattern_2"),
-                risk_level="low",
                 purpose_category="OPERATIONAL",
             ),
         )
@@ -317,7 +316,6 @@ class TestRulesetLoader:
                         name=f"rule_from_{self.name}",
                         description="Name tracking rule",
                         patterns=("test",),
-                        risk_level="low",
                         purpose_category="OPERATIONAL",
                     ),
                 )
@@ -377,14 +375,12 @@ class TestRulesetIntegration:
                         name="custom_rule_1",
                         description="First custom rule",
                         patterns=("custom1", "pattern1"),
-                        risk_level="medium",
                         purpose_category="ANALYTICS",
                     ),
                     ProcessingPurposeRule(
                         name="custom_rule_2",
                         description="Second custom rule",
                         patterns=("custom2",),
-                        risk_level="high",
                         purpose_category="OPERATIONAL",
                     ),
                 )
@@ -403,13 +399,11 @@ class TestRulesetIntegration:
         assert len(rules) == expected_rule_count
         assert rule0.name == "custom_rule_1"
         assert rule0.patterns == ("custom1", "pattern1")
-        assert rule0.risk_level == "medium"
         assert rule0.purpose_category == "ANALYTICS"
 
         rule1 = rules[1]
         assert rule1.name == "custom_rule_2"
         assert rule1.patterns == ("custom2",)
-        assert rule1.risk_level == "high"
         assert rule1.purpose_category == "OPERATIONAL"
 
     def test_ruleset_version_accessible_through_loader(
@@ -435,7 +429,6 @@ class TestRulesetIntegration:
                         name="versioned",
                         description="Versioned rule",
                         patterns=("test",),
-                        risk_level="medium",
                         purpose_category="OPERATIONAL",
                     ),
                 )

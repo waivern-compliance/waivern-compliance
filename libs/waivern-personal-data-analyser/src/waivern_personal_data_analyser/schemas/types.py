@@ -1,4 +1,4 @@
-"""Schema data models for personal data findings."""
+"""Schema data models for personal data indicator findings."""
 
 from typing import ClassVar
 
@@ -11,8 +11,8 @@ from waivern_core.schemas import (
 )
 
 
-class PersonalDataFindingMetadata(BaseFindingMetadata):
-    """Metadata for personal data findings.
+class PersonalDataIndicatorMetadata(BaseFindingMetadata):
+    """Metadata for personal data indicator findings.
 
     Extends BaseFindingMetadata which provides:
     - source: str - Source file or location where the data was found
@@ -22,35 +22,30 @@ class PersonalDataFindingMetadata(BaseFindingMetadata):
     pass
 
 
-class PersonalDataFindingModel(BaseFindingModel):
-    """Personal data finding structure."""
+class PersonalDataIndicatorModel(BaseFindingModel):
+    """Personal data indicator finding structure.
+
+    This is a framework-agnostic indicator that identifies personal data patterns.
+    Regulatory classification (e.g., GDPR special categories) is performed by
+    downstream classifiers.
+    """
 
     type: str = Field(
-        description="Type of personal data found (e.g., 'email', 'phone_number')"
+        description="Type of personal data indicator (e.g., 'email', 'phone_number')"
     )
     data_type: str = Field(
-        description="Categorical data type identifier from GDPR classification (e.g., 'basic_profile', 'health_data')"
+        description="Categorical data type identifier (e.g., 'basic_profile', 'health_data')"
     )
-    special_category: bool = Field(
-        default=False,
-        description="Whether this is GDPR Article 9 special category data",
-    )
-    metadata: PersonalDataFindingMetadata | None = Field(
+    metadata: PersonalDataIndicatorMetadata | None = Field(
         default=None, description="Additional metadata from the original data source"
     )
 
 
-class PersonalDataSummary(BaseModel):
-    """Summary statistics for personal data findings."""
+class PersonalDataIndicatorSummary(BaseModel):
+    """Summary statistics for personal data indicator findings."""
 
     total_findings: int = Field(
-        ge=0, description="Total number of personal data findings"
-    )
-    high_risk_count: int = Field(
-        ge=0, description="Number of high-risk personal data findings"
-    )
-    special_category_count: int = Field(
-        ge=0, description="Number of special category personal data findings under GDPR"
+        ge=0, description="Total number of personal data indicators found"
     )
 
 
@@ -72,19 +67,20 @@ class PersonalDataValidationSummary(BaseModel):
     validation_mode: str = Field(description="LLM validation mode used")
 
 
-class PersonalDataFindingOutput(BaseSchemaOutput):
-    """Complete output structure for personal_data_finding schema.
+class PersonalDataIndicatorOutput(BaseSchemaOutput):
+    """Complete output structure for personal_data_indicator schema.
 
-    This model represents the full wire format for personal data analysis results,
-    including findings, summary statistics, and analysis metadata.
+    This model represents the full wire format for personal data indicator results.
+    These indicators are framework-agnostic and can be consumed by regulatory
+    classifiers (e.g., GDPR, CCPA) for framework-specific enrichment.
     """
 
     __schema_version__: ClassVar[str] = "1.0.0"
 
-    findings: list[PersonalDataFindingModel] = Field(
-        description="List of personal data findings from GDPR compliance analysis"
+    findings: list[PersonalDataIndicatorModel] = Field(
+        description="List of personal data indicators found"
     )
-    summary: PersonalDataSummary = Field(
+    summary: PersonalDataIndicatorSummary = Field(
         description="Summary statistics of the personal data analysis"
     )
     analysis_metadata: BaseAnalysisOutputMetadata = Field(

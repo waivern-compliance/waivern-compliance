@@ -152,16 +152,12 @@ class DataSubjectPatternMatcher:
                 )
 
                 # Create the finding
-                # TODO: The following fields are hardcoded and need proper implementation:
-                # 1. risk_level: Should be derived from matched rules or calculated based on
-                #    subject category sensitivity (e.g., "minor" → high, "employee" → medium)
-                # 2. modifiers: Should use ruleset.risk_increasing_modifiers and
+                # TODO: modifiers should use ruleset.risk_increasing_modifiers and
                 #    ruleset.risk_decreasing_modifiers with LLM validation to detect
                 #    cross-category regulatory modifiers (e.g., "vulnerable", "minor")
                 finding = DataSubjectFindingModel(
                     primary_category=category,
                     confidence_score=confidence_score,
-                    risk_level="medium",
                     evidence=evidence,
                     modifiers=[],
                     matched_patterns=matched_patterns,

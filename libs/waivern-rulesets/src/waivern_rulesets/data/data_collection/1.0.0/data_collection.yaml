@@ -28,7 +28,6 @@ rules:
   - _POST[
   collection_type: form_data
   data_source: http_post
-  risk_level: medium
 - name: PHP GET Parameter Collection
   description: PHP GET parameter collection patterns
   patterns:
@@ -36,7 +35,6 @@ rules:
   - _GET[
   collection_type: url_parameters
   data_source: http_get
-  risk_level: medium
 - name: PHP Cookie Access
   description: PHP cookie access patterns
   patterns:
@@ -45,7 +43,6 @@ rules:
   - setcookie(
   collection_type: cookies
   data_source: browser_cookies
-  risk_level: medium
 - name: PHP Session Data Access
   description: PHP session data patterns
   patterns:
@@ -54,7 +51,6 @@ rules:
   - session_start
   collection_type: session_data
   data_source: server_session
-  risk_level: medium
 - name: HTML Form Input Fields
   description: HTML form input field patterns
   patterns:
@@ -65,7 +61,6 @@ rules:
   - <select
   collection_type: html_forms
   data_source: html_form
-  risk_level: low
 - name: JavaScript Client Storage
   description: JavaScript local storage and data access
   patterns:
@@ -75,7 +70,6 @@ rules:
   - FormData
   collection_type: client_storage
   data_source: browser_javascript
-  risk_level: medium
 - name: File Upload Processing
   description: File upload processing patterns
   patterns:
@@ -86,7 +80,6 @@ rules:
   - upload
   collection_type: file_upload
   data_source: uploaded_files
-  risk_level: high
 - name: SQL Database Queries
   description: SQL database query patterns for data retrieval and manipulation
   patterns:
@@ -109,7 +102,6 @@ rules:
   - sqlite_query
   collection_type: database_query
   data_source: database
-  risk_level: high
 - name: Database Connections and ORM
   description: Database connection and ORM patterns
   patterns:
@@ -134,4 +126,3 @@ rules:
   - ->delete(
   collection_type: database_connection
   data_source: database
-  risk_level: medium

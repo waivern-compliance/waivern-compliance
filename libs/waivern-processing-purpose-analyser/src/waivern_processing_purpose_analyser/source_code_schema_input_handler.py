@@ -318,7 +318,6 @@ class SourceCodeSchemaInputHandler:
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
             purpose_category=rule.purpose_category,  # Type-safe!
-            risk_level=rule.risk_level,
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
@@ -337,7 +336,6 @@ class SourceCodeSchemaInputHandler:
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
             purpose_category=rule.purpose_category,  # Type-safe!
-            risk_level=rule.risk_level,
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
@@ -360,7 +358,6 @@ class SourceCodeSchemaInputHandler:
             # purpose_category to DataCollectionRule in waivern-rulesets, or derive it
             # from collection_type/data_source to avoid hardcoding "operational"
             purpose_category="operational",
-            risk_level=rule.risk_level,
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(

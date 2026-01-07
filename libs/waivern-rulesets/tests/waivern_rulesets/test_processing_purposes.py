@@ -56,12 +56,10 @@ class TestProcessingPurposeRule:
             description="Analytics processing rule",
             patterns=("analytics", "tracking"),
             purpose_category="analytics",
-            risk_level="medium",
         )
 
         assert rule.name == "analytics_rule"
         assert rule.purpose_category == "analytics"
-        assert rule.risk_level == "medium"
 
 
 # =============================================================================
@@ -79,7 +77,6 @@ class TestProcessingPurposesRulesetData:
             description="Test rule",
             patterns=("test",),
             purpose_category="ANALYTICS",
-            risk_level="medium",
         )
 
         ruleset = ProcessingPurposesRulesetData(
@@ -102,7 +99,6 @@ class TestProcessingPurposesRulesetData:
             description="Test rule",
             patterns=("test",),
             purpose_category="INVALID_CATEGORY",
-            risk_level="medium",
         )
 
         with pytest.raises(ValidationError, match="invalid purpose_category"):
@@ -140,14 +136,6 @@ class TestProcessingPurposesRuleset:
     def setup_method(self) -> None:
         """Set up test fixtures for each test method."""
         self.ruleset = ProcessingPurposesRuleset()
-
-    def test_rules_have_valid_risk_levels(self) -> None:
-        """Test that all rules have valid risk levels."""
-        rules = self.ruleset.get_rules()
-        valid_risk_levels = {"low", "medium", "high"}
-
-        for rule in rules:
-            assert rule.risk_level in valid_risk_levels
 
     def test_rules_have_purpose_category_field(self) -> None:
         """Test that all rules have purpose_category field."""

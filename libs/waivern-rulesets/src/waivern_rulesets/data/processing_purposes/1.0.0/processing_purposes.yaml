@@ -35,7 +35,6 @@ rules:
   - kubeflow
   - feast
   purpose_category: ai_and_ml
-  risk_level: high
 - name: Artificial Intelligence Bias Testing
   description: Testing AI/ML models for bias and fairness issues
   patterns:
@@ -61,7 +60,6 @@ rules:
   - aws sagemaker clarify
   - parity ai
   purpose_category: ai_and_ml
-  risk_level: high
 - name: Artificial Intelligence Model Refinement
   description: Refining and improving AI/ML models for better performance
   patterns:
@@ -88,7 +86,6 @@ rules:
   - scale ai
   - labelbox
   purpose_category: ai_and_ml
-  risk_level: medium
 - name: Artificial Intelligence Performance Testing
   description: Testing AI/ML model performance, accuracy, and robustness
   patterns:
@@ -109,7 +106,6 @@ rules:
   - big-bench
   - decoding trust benchmark
   purpose_category: ai_and_ml
-  risk_level: medium
 - name: Artificial Intelligence Security Testing
   description: Testing AI/ML models for security vulnerabilities and threats
   patterns:
@@ -134,7 +130,6 @@ rules:
   - synack
   - shellgpt
   purpose_category: ai_and_ml
-  risk_level: low
 - name: Artificial Intelligence Compliance Management
   description: Managing AI/ML compliance, governance, and regulatory requirements
   patterns:
@@ -166,7 +161,6 @@ rules:
   - waivern
   - mineos
   purpose_category: ai_and_ml
-  risk_level: low
 - name: General Product and Service Delivery
   description: Delivering products and services to customers and users
   patterns:
@@ -187,7 +181,6 @@ rules:
   - Stibo DX
   - Dr Publish
   purpose_category: operational
-  risk_level: low
 - name: Customer Service and Support
   description: Providing customer service, support, and assistance
   patterns:
@@ -206,7 +199,6 @@ rules:
   - helpscout
   - liveagent
   purpose_category: operational
-  risk_level: low
 - name: Customization of Products and Services
   description: Customising products and services based on user preferences
   patterns:
@@ -218,7 +210,6 @@ rules:
   - ui
   - personalization
   purpose_category: operational
-  risk_level: low
 - name: User Identity and Login Management
   description: Managing user identity, authentication, and login processes
   patterns:
@@ -287,7 +278,6 @@ rules:
   - microsoft active directory
   - forgerock
   purpose_category: operational
-  risk_level: medium
 - name: Payment, Billing, and Invoicing
   description: Processing payments, billing, and financial transactions
   patterns:
@@ -328,7 +318,6 @@ rules:
   - Bank of America Merchant Services
   - Wells Fargo Merchant Services
   purpose_category: operational
-  risk_level: medium
 - name: Behavioral Data Analysis for Product Improvement
   description: Analysing user behaviour and data to improve products and services
   patterns:
@@ -363,7 +352,6 @@ rules:
   - SAS Analytics
   - IBM Watson Analytics
   purpose_category: analytics
-  risk_level: high
 - name: Dynamic Personalization of Products and Services
   description: Dynamically personalising products and services based on user data
   patterns:
@@ -392,7 +380,6 @@ rules:
   - Leanplum
   - Clevertap
   purpose_category: marketing_and_advertising
-  risk_level: high
 - name: Consumer Marketing Within Owned Products
   description: Marketing and promotional activities within company-owned products and platforms
   patterns:
@@ -412,7 +399,6 @@ rules:
   - mailjet
   - onesignal
   purpose_category: marketing_and_advertising
-  risk_level: medium
 - name: Targeted Marketing via Third-Party Platforms
   description: Targeted marketing and advertising through third-party platforms
   patterns:
@@ -429,7 +415,6 @@ rules:
   - twitter
   - linkedin ads
   purpose_category: marketing_and_advertising
-  risk_level: high
 - name: Third-Party Marketing via Owned Products
   description: Third-party marketing and advertising activities conducted through company-owned products
   patterns:
@@ -443,7 +428,6 @@ rules:
   - tiktok
   - third-party advertisers
   purpose_category: marketing_and_advertising
-  risk_level: high
 - name: Security, Fraud Prevention, and Abuse Detection
   description: Protecting against security threats, fraud, and platform abuse
   patterns:
@@ -462,4 +446,3 @@ rules:
   - veriff
   - feedzai
   purpose_category: security
-  risk_level: low

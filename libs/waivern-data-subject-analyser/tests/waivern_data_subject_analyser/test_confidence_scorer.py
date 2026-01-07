@@ -29,7 +29,6 @@ class TestDataSubjectConfidenceScorer:
                 indicator_type="primary",
                 confidence_weight=45,
                 applicable_contexts=["database"],
-                risk_level="medium",
             ),
             DataSubjectRule(
                 name="secondary_rule",
@@ -39,7 +38,6 @@ class TestDataSubjectConfidenceScorer:
                 indicator_type="secondary",
                 confidence_weight=25,
                 applicable_contexts=["database"],
-                risk_level="medium",
             ),
             DataSubjectRule(
                 name="contextual_rule",
@@ -49,7 +47,6 @@ class TestDataSubjectConfidenceScorer:
                 indicator_type="contextual",
                 confidence_weight=15,
                 applicable_contexts=["database"],
-                risk_level="medium",
             ),
         ]
 

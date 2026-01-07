@@ -57,7 +57,7 @@ For each finding, determine if it represents actual business processing (TRUE_PO
 **VALIDATION CRITERIA:**
 - TRUE_POSITIVE: Actual business processing activities affecting real users/customers
 - FALSE_POSITIVE: Documentation, examples, tutorials, code comments, configuration templates
-- Consider purpose category, risk level, and source context
+- Consider purpose category and source context
 - Assess source context (database vs. code vs. documentation)
 
 **CATEGORY-SPECIFIC GUIDANCE:**
@@ -96,7 +96,6 @@ def _build_findings_to_validate(findings: list[ProcessingPurposeFindingModel]) -
 Finding {i}:
   Purpose: {finding.purpose}
   Category: {finding.purpose_category}
-  Risk: {finding.risk_level}
   Patterns: {", ".join(finding.matched_patterns)}
   Source: {source}
   Evidence:
@@ -112,8 +111,7 @@ def _get_validation_approach(
 ) -> str:
     """Get validation approach section based on mode and findings."""
     if validation_mode == "conservative":
-        # Check if any findings are high-risk or sensitive categories
-        high_risk_findings = [f for f in findings if f.risk_level == "high"]
+        # Check if any findings are in sensitive categories
         sensitive_category_findings = [
             f
             for f in findings
@@ -121,10 +119,6 @@ def _get_validation_approach(
         ]
 
         warnings: list[str] = []
-        if high_risk_findings:
-            warnings.append(
-                "⚠️ HIGH RISK PROCESSING detected - use CONSERVATIVE validation"
-            )
         if sensitive_category_findings:
             warnings.append(
                 "⚠️ PRIVACY SENSITIVE categories detected - conservative approach required"
@@ -145,7 +139,7 @@ def _get_validation_approach(
         return """
 **STANDARD VALIDATION MODE:**
 - Balance false positive reduction with compliance requirements
-- Apply context-aware assessment considering purpose category and risk level
+- Apply context-aware assessment considering purpose category
 - Focus on clear business context indicators"""
 
 

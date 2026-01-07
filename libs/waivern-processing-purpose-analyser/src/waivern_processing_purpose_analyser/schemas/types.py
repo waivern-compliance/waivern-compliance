@@ -55,14 +55,8 @@ class ProcessingPurposeSummary(BaseModel):
     purposes_identified: int = Field(
         ge=0, description="Number of unique processing purposes identified"
     )
-    high_risk_count: int = Field(
-        ge=0, description="Number of high risk processing purpose findings"
-    )
     purpose_categories: dict[str, int] = Field(
         description="Count of findings by purpose category"
-    )
-    risk_level_distribution: dict[str, int] = Field(
-        description="Distribution of findings by risk level"
     )
 
 

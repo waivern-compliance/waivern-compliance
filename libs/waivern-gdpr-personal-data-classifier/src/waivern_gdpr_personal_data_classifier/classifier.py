@@ -42,7 +42,6 @@ class GDPRPersonalDataClassifier(Classifier):
                     "special_category": rule.special_category,
                     "article_references": rule.article_references,
                     "lawful_bases": rule.lawful_bases,
-                    "risk_level": rule.risk_level,
                 }
         return classification_map
 
@@ -62,7 +61,7 @@ class GDPRPersonalDataClassifier(Classifier):
     @override
     def get_input_requirements(cls) -> list[list[InputRequirement]]:
         """Declare supported input schema combinations."""
-        return [[InputRequirement("personal_data_finding", "1.0.0")]]
+        return [[InputRequirement("personal_data_indicator", "1.0.0")]]
 
     @classmethod
     @override
@@ -125,9 +124,6 @@ class GDPRPersonalDataClassifier(Classifier):
             special_category=classification.get("special_category", False),
             article_references=tuple(classification.get("article_references", ())),
             lawful_bases=tuple(classification.get("lawful_bases", ())),
-            risk_level=classification.get(
-                "risk_level", finding.get("risk_level", "medium")
-            ),
             evidence=finding.get("evidence", []),
             matched_patterns=finding.get("matched_patterns", []),
         )
@@ -138,6 +134,5 @@ class GDPRPersonalDataClassifier(Classifier):
         """Build summary statistics from classified findings."""
         return GDPRPersonalDataSummary(
             total_findings=len(findings),
-            high_risk_count=len([f for f in findings if f.risk_level == "high"]),
             special_category_count=len([f for f in findings if f.special_category]),
         )

@@ -56,9 +56,13 @@ class BaseFindingMetadata(BaseModel):
 
 
 class BaseFindingModel(BaseModel):
-    """Base model for all finding types with mandatory common fields."""
+    """Base model for all finding types with mandatory common fields.
 
-    risk_level: str = Field(description="Risk assessment level (low, medium, high)")
+    Risk assessment is intentionally excluded from this base model as it is
+    a framework-specific concern. Each regulatory classifier should define
+    its own risk model in its output schema.
+    """
+
     evidence: list[BaseFindingEvidence] = Field(
         min_length=1,
         description="Evidence items with content and timestamps for this finding",
@@ -67,15 +71,6 @@ class BaseFindingModel(BaseModel):
         min_length=1,
         description="Patterns that were matched during analysis",
     )
-
-    @field_validator("risk_level")
-    @classmethod
-    def validate_risk_level(cls, v: str) -> str:
-        """Validate risk level values."""
-        allowed = ["low", "medium", "high"]
-        if v not in allowed:
-            raise ValueError(f"risk_level must be one of {allowed}, got: {v}")
-        return v
 
 
 class AnalysisChainEntry(BaseModel):

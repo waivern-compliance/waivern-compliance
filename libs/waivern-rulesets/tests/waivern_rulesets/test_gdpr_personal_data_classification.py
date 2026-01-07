@@ -70,7 +70,6 @@ class TestGDPRPersonalDataClassificationRule:
             article_references=("Article 9(1)", "Article 9(2)(h)"),
             lawful_bases=("consent", "vital_interests"),
             indicator_categories=("health_data", "medical_records"),
-            risk_level="high",
         )
 
         assert rule.name == "Health Data Classification"
@@ -79,7 +78,6 @@ class TestGDPRPersonalDataClassificationRule:
         assert rule.article_references == ("Article 9(1)", "Article 9(2)(h)")
         assert rule.lawful_bases == ("consent", "vital_interests")
         assert rule.indicator_categories == ("health_data", "medical_records")
-        assert rule.risk_level == "high"
 
     def test_special_category_defaults_to_false(self) -> None:
         """Test GDPRPersonalDataClassificationRule special_category defaults to False."""
@@ -88,7 +86,6 @@ class TestGDPRPersonalDataClassificationRule:
             description="Classifies basic profile data",
             gdpr_data_type="identification_data",
             indicator_categories=("basic_profile",),
-            risk_level="medium",
         )
 
         assert rule.special_category is False
@@ -100,7 +97,6 @@ class TestGDPRPersonalDataClassificationRule:
             description="Test rule",
             gdpr_data_type="contact_data",
             indicator_categories=("email",),
-            risk_level="low",
         )
 
         assert rule.article_references == ()
@@ -112,7 +108,6 @@ class TestGDPRPersonalDataClassificationRule:
             description="Test rule",
             gdpr_data_type="contact_data",
             indicator_categories=("email",),
-            risk_level="low",
         )
 
         assert rule.lawful_bases == ()
@@ -126,7 +121,6 @@ class TestGDPRPersonalDataClassificationRule:
             description="Test rule",
             gdpr_data_type="financial_data",
             indicator_categories=indicator_cats,  # type: ignore[arg-type]
-            risk_level="high",
         )
 
         assert isinstance(rule.indicator_categories, tuple)
@@ -148,7 +142,6 @@ class TestGDPRPersonalDataClassificationRulesetData:
             description="Rule with invalid gdpr_data_type",
             gdpr_data_type="invalid_type",  # Not in master list
             indicator_categories=("basic_profile",),
-            risk_level="medium",
         )
 
         with pytest.raises(ValidationError, match="invalid gdpr_data_type"):
@@ -183,7 +176,6 @@ class TestGDPRPersonalDataClassificationRulesetData:
             description="Rule with invalid indicator categories",
             gdpr_data_type="health_data",
             indicator_categories=("invalid_category",),  # Not in master list
-            risk_level="high",
         )
 
         with pytest.raises(ValidationError, match="invalid indicator_categories"):
@@ -204,7 +196,6 @@ class TestGDPRPersonalDataClassificationRulesetData:
             gdpr_data_type="health_data",
             special_category=True,
             indicator_categories=("health_indicator",),
-            risk_level="high",
         )
 
         ruleset_data = GDPRPersonalDataClassificationRulesetData(

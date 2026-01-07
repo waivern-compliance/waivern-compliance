@@ -4,10 +4,10 @@ import pytest
 from pydantic import ValidationError
 from waivern_core.schemas import BaseFindingEvidence
 from waivern_personal_data_analyser.schemas import (
-    PersonalDataFindingModel,
+    PersonalDataIndicatorModel,
 )
 from waivern_personal_data_analyser.schemas.types import (
-    PersonalDataFindingMetadata,
+    PersonalDataIndicatorMetadata,
 )
 
 
@@ -21,14 +21,12 @@ class TestBaseFindingModelValidation:
         to provide evidence for compliance and audit purposes.
         """
         with pytest.raises(ValidationError) as exc_info:
-            PersonalDataFindingModel(
+            PersonalDataIndicatorModel(
                 type="email",
                 data_type="basic_profile",
-                risk_level="medium",
-                special_category=False,
                 matched_patterns=[],  # Empty patterns - should fail business requirement
                 evidence=[BaseFindingEvidence(content="test evidence")],
-                metadata=PersonalDataFindingMetadata(source="test_source"),
+                metadata=PersonalDataIndicatorMetadata(source="test_source"),
             )
 
         # Verify the validation error is about matched_patterns requirement
@@ -50,14 +48,12 @@ class TestBaseFindingModelValidation:
         why the pattern was matched for audit and review purposes.
         """
         with pytest.raises(ValidationError) as exc_info:
-            PersonalDataFindingModel(
+            PersonalDataIndicatorModel(
                 type="email",
                 data_type="basic_profile",
-                risk_level="medium",
-                special_category=False,
                 matched_patterns=["email"],
                 evidence=[],  # Empty evidence - should fail business requirement
-                metadata=PersonalDataFindingMetadata(source="test_source"),
+                metadata=PersonalDataIndicatorMetadata(source="test_source"),
             )
 
         # Verify the validation error is about evidence requirement

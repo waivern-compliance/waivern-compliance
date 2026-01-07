@@ -70,7 +70,6 @@ rules:
     indicator_categories:
       - "basic_profile"
       - "date_of_birth"
-    risk_level: "medium"
 
   - name: "Account and Subscription Data"
     description: "Data relating to user accounts and service usage"
@@ -81,7 +80,6 @@ rules:
       - "Article 6(1)(b)"
     indicator_categories:
       - "account_data"
-    risk_level: "medium"
 
   - name: "Financial Information"
     description: "Payment and financial data requiring enhanced protection"
@@ -94,7 +92,6 @@ rules:
     indicator_categories:
       - "payment_data"
       - "financial_data"
-    risk_level: "high"
 
   - name: "Behavioural and Interaction Data"
     description: "Data about user behaviour and interactions"
@@ -106,7 +103,6 @@ rules:
       - "Article 22"
     indicator_categories:
       - "behavioral_event_data"
-    risk_level: "medium"
 
   - name: "Technical Device Data"
     description: "Technical identifiers and device information"
@@ -117,7 +113,6 @@ rules:
       - "Recital 30"
     indicator_categories:
       - "technical_device_and_network_data"
-    risk_level: "medium"
 
   - name: "Derived and Inferred Data"
     description: "Data derived through profiling or algorithmic analysis"
@@ -129,7 +124,6 @@ rules:
       - "Article 14"
     indicator_categories:
       - "inferred_profile_data"
-    risk_level: "high"
 
   - name: "User Preferences and Interests"
     description: "Declared preferences and interest data"
@@ -140,7 +134,6 @@ rules:
       - "Article 6"
     indicator_categories:
       - "user_enriched_profile_data"
-    risk_level: "low"
 
   - name: "General Location Data"
     description: "Non-precise location information"
@@ -151,7 +144,6 @@ rules:
       - "Article 6"
     indicator_categories:
       - "location_data"
-    risk_level: "medium"
 
   - name: "User-Generated Content"
     description: "Content created and submitted by users"
@@ -163,7 +155,6 @@ rules:
       - "Article 17"
     indicator_categories:
       - "user_generated_content"
-    risk_level: "medium"
 
   # Article 9 Special Category Classifications
 
@@ -176,7 +167,6 @@ rules:
       - "Recital 51"
     indicator_categories:
       - "accurate_location"
-    risk_level: "high"
 
   - name: "Health Data (Article 9)"
     description: "Data concerning physical or mental health"
@@ -188,7 +178,6 @@ rules:
       - "Article 4(15)"
     indicator_categories:
       - "health_data"
-    risk_level: "high"
 
   - name: "Political Opinions (Article 9)"
     description: "Data revealing political opinions or trade union membership"
@@ -199,7 +188,6 @@ rules:
       - "Article 9(2)"
     indicator_categories:
       - "political_data"
-    risk_level: "high"
 
   - name: "Racial or Ethnic Origin (Article 9)"
     description: "Data revealing racial or ethnic origin"
@@ -210,7 +198,6 @@ rules:
       - "Article 9(2)"
     indicator_categories:
       - "racial_ethnic_data"
-    risk_level: "high"
 
   - name: "Religious or Philosophical Beliefs (Article 9)"
     description: "Data revealing religious or philosophical beliefs"
@@ -221,7 +208,6 @@ rules:
       - "Article 9(2)"
     indicator_categories:
       - "religious_philosophical_data"
-    risk_level: "high"
 
   - name: "Genetic Data (Article 9)"
     description: "Genetic data relating to inherited characteristics"
@@ -233,7 +219,6 @@ rules:
       - "Article 4(13)"
     indicator_categories:
       - "genetic_data"
-    risk_level: "high"
 
   - name: "Biometric Data (Article 9)"
     description: "Biometric data for unique identification"
@@ -245,7 +230,6 @@ rules:
       - "Article 4(14)"
     indicator_categories:
       - "biometric_data"
-    risk_level: "high"
 
   - name: "Sexual Orientation Data (Article 9)"
     description: "Data concerning sex life or sexual orientation"
@@ -256,4 +240,3 @@ rules:
       - "Article 9(2)"
     indicator_categories:
       - "sexual_orientation_data"
-    risk_level: "high"

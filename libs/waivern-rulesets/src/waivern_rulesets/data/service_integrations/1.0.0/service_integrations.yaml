@@ -30,7 +30,6 @@ rules:
   - upload
   service_category: cloud_infrastructure
   purpose_category: operational
-  risk_level: medium
 - name: Communication Services
   description: Email and communication service integrations
   patterns:
@@ -47,7 +46,6 @@ rules:
   - notification
   service_category: communication
   purpose_category: operational
-  risk_level: medium
 - name: Identity Management Services
   description: Third-party authentication and identity service integrations
   patterns:
@@ -63,7 +61,6 @@ rules:
   - identity
   service_category: identity_management
   purpose_category: operational
-  risk_level: high
 - name: Payment Processing Services
   description: Payment processing service integrations
   patterns:
@@ -77,7 +74,6 @@ rules:
   - charge
   service_category: payment_processing
   purpose_category: operational
-  risk_level: high
 - name: user_analytics
   description: User analytics and tracking service integrations
   patterns:
@@ -92,7 +88,6 @@ rules:
   - logrocket
   service_category: user_analytics
   purpose_category: analytics
-  risk_level: medium
 - name: social_media
   description: Social media platform integrations for marketing
   patterns:
@@ -107,4 +102,3 @@ rules:
   - social
   service_category: social_media
   purpose_category: marketing_and_advertising
-  risk_level: medium

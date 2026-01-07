@@ -89,7 +89,6 @@ class ProcessingPurposePatternMatcher:
                     finding = ProcessingPurposeFindingModel(
                         purpose=rule.name,
                         purpose_category=rule.purpose_category,
-                        risk_level=rule.risk_level,
                         matched_patterns=matched_patterns,
                         evidence=evidence,
                         metadata=finding_metadata,

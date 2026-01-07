@@ -61,7 +61,6 @@ class TestDataSubjectRule:
             indicator_type="primary",
             confidence_weight=40,
             applicable_contexts=["database", "source_code"],
-            risk_level="medium",
         )
 
         assert rule.name == "employee_rule"
@@ -84,7 +83,6 @@ class TestDataSubjectRule:
                 indicator_type="primary",
                 confidence_weight=0,  # Invalid: below minimum
                 applicable_contexts=["database"],
-                risk_level="low",
             )
 
         # Test maximum bound
@@ -99,7 +97,6 @@ class TestDataSubjectRule:
                 indicator_type="primary",
                 confidence_weight=51,  # Invalid: above maximum
                 applicable_contexts=["database"],
-                risk_level="low",
             )
 
     def test_data_subject_rule_indicator_type_validation(self) -> None:
@@ -114,7 +111,6 @@ class TestDataSubjectRule:
                 indicator_type=indicator_type,  # type: ignore
                 confidence_weight=25,
                 applicable_contexts=["database"],
-                risk_level="low",
             )
             assert rule.indicator_type == indicator_type
 
@@ -131,7 +127,6 @@ class TestDataSubjectRule:
                 indicator_type="invalid_type",  # Invalid literal value # type: ignore
                 confidence_weight=25,
                 applicable_contexts=["database"],
-                risk_level="low",
             )
 
 
@@ -153,7 +148,6 @@ class TestDataSubjectRulesetData:
             indicator_type="primary",
             confidence_weight=40,
             applicable_contexts=["database"],
-            risk_level="medium",
         )
 
         ruleset = DataSubjectRulesetData(
@@ -182,7 +176,6 @@ class TestDataSubjectRulesetData:
             indicator_type="primary",
             confidence_weight=40,
             applicable_contexts=["database"],
-            risk_level="medium",
         )
 
         with pytest.raises(ValidationError, match="invalid subject_category"):
@@ -208,7 +201,6 @@ class TestDataSubjectRulesetData:
             indicator_type="primary",
             confidence_weight=25,
             applicable_contexts=["database"],
-            risk_level="low",
         )
 
         # Valid modifiers should work
@@ -236,7 +228,6 @@ class TestDataSubjectRulesetData:
             indicator_type="primary",
             confidence_weight=40,
             applicable_contexts=["database"],
-            risk_level="medium",
         )
 
         rule2 = DataSubjectRule(
@@ -247,7 +238,6 @@ class TestDataSubjectRulesetData:
             indicator_type="secondary",
             confidence_weight=20,
             applicable_contexts=["database", "filesystem"],
-            risk_level="low",
         )
 
         with pytest.raises(ValidationError, match="Duplicate rule names found"):
@@ -272,7 +262,6 @@ class TestDataSubjectRulesetData:
             indicator_type="primary",
             confidence_weight=40,
             applicable_contexts=["invalid_context"],  # Not in master list
-            risk_level="medium",
         )
 
         with pytest.raises(ValidationError, match="invalid applicable_contexts"):

@@ -27,7 +27,9 @@ class GDPRPersonalDataFindingModel(BaseFindingModel):
     """GDPR personal data classification finding structure.
 
     Represents a personal data indicator that has been enriched with
-    GDPR-specific classification information.
+    GDPR-specific classification information. Risk is indicated by
+    special_category - Article 9 special category data requires
+    additional protections under GDPR.
     """
 
     # Original indicator information
@@ -41,7 +43,7 @@ class GDPRPersonalDataFindingModel(BaseFindingModel):
     )
     special_category: bool = Field(
         default=False,
-        description="Whether this is GDPR Article 9 special category data",
+        description="Whether this is GDPR Article 9 special category data (high risk)",
     )
     article_references: tuple[str, ...] = Field(
         default_factory=tuple,
@@ -73,12 +75,9 @@ class GDPRPersonalDataSummary(BaseModel):
     total_findings: int = Field(
         ge=0, description="Total number of classified personal data findings"
     )
-    high_risk_count: int = Field(
-        ge=0, description="Number of high-risk personal data findings"
-    )
     special_category_count: int = Field(
         ge=0,
-        description="Number of GDPR Article 9 special category personal data findings",
+        description="Number of GDPR Article 9 special category data (high risk under GDPR)",
     )
 
 

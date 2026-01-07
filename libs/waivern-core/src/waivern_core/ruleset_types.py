@@ -11,8 +11,6 @@ and runbook configuration, not by rule properties. This keeps rules framework-ag
 and gives runbook authors control over which rulesets apply to their compliance needs.
 """
 
-from typing import Literal
-
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -30,12 +28,11 @@ class Rule(BaseModel):
     Attributes:
         name: Unique identifier for this rule
         description: Human-readable description of what this rule does
-        risk_level: Risk assessment (low, medium, high)
 
     Note:
-        Compliance framework association is implicit via ruleset naming
-        (e.g., 'gdpr_personal_data_classification') rather than explicit
-        per-rule properties. This keeps detection rules framework-agnostic.
+        Risk assessment is intentionally excluded from this base class as it is
+        a framework-specific concern. Each regulatory classifier should define
+        its own risk model (e.g., GDPR uses special_category for risk).
 
     """
 
@@ -45,9 +42,6 @@ class Rule(BaseModel):
     description: str = Field(
         min_length=1,
         description="Human-readable description of what this rule does",
-    )
-    risk_level: Literal["low", "medium", "high"] = Field(
-        description="Risk level assessment"
     )
 
 

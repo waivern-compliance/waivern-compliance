@@ -120,13 +120,8 @@
       "type": "object"
     },
     "GDPRPersonalDataFindingModel": {
-      "description": "GDPR personal data classification finding structure.\n\nRepresents a personal data indicator that has been enriched with\nGDPR-specific classification information.",
+      "description": "GDPR personal data classification finding structure.\n\nRepresents a personal data indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nspecial_category - Article 9 special category data requires\nadditional protections under GDPR.",
       "properties": {
-        "risk_level": {
-          "description": "Risk assessment level (low, medium, high)",
-          "title": "Risk Level",
-          "type": "string"
-        },
         "evidence": {
           "description": "Evidence items with content and timestamps for this finding",
           "items": {
@@ -157,7 +152,7 @@
         },
         "special_category": {
           "default": false,
-          "description": "Whether this is GDPR Article 9 special category data",
+          "description": "Whether this is GDPR Article 9 special category data (high risk)",
           "title": "Special Category",
           "type": "boolean"
         },
@@ -199,7 +194,6 @@
         }
       },
       "required": [
-        "risk_level",
         "evidence",
         "matched_patterns",
         "indicator_type",
@@ -217,14 +211,8 @@
           "title": "Total Findings",
           "type": "integer"
         },
-        "high_risk_count": {
-          "description": "Number of high-risk personal data findings",
-          "minimum": 0,
-          "title": "High Risk Count",
-          "type": "integer"
-        },
         "special_category_count": {
-          "description": "Number of GDPR Article 9 special category personal data findings",
+          "description": "Number of GDPR Article 9 special category data (high risk under GDPR)",
           "minimum": 0,
           "title": "Special Category Count",
           "type": "integer"
@@ -232,7 +220,6 @@
       },
       "required": [
         "total_findings",
-        "high_risk_count",
         "special_category_count"
       ],
       "title": "GDPRPersonalDataSummary",

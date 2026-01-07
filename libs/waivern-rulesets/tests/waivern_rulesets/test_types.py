@@ -14,7 +14,6 @@ class TestDetectionRule:
             name="test_rule",
             description="A test rule",
             patterns=("pattern1", "pattern2"),
-            risk_level="low",
         )
 
         assert rule.name == "test_rule"
@@ -30,7 +29,6 @@ class TestDetectionRule:
                 name="empty_rule",
                 description="Rule with no patterns",
                 patterns=(),
-                risk_level="low",
             )
 
     def test_detection_rule_patterns_cannot_be_empty_strings(self) -> None:
@@ -42,7 +40,6 @@ class TestDetectionRule:
                 name="empty_pattern_rule",
                 description="Rule with empty pattern",
                 patterns=("valid_pattern", ""),
-                risk_level="low",
             )
 
     def test_detection_rule_attributes_are_immutable(self) -> None:
@@ -51,7 +48,6 @@ class TestDetectionRule:
             name="immutable_rule",
             description="Original description",
             patterns=("original",),
-            risk_level="low",
         )
 
         # Attempt to modify attributes should raise ValidationError (Pydantic frozen)

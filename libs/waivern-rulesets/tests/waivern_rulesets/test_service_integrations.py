@@ -55,13 +55,11 @@ class TestServiceIntegrationRule:
             patterns=("aws", "s3.amazonaws"),
             service_category="cloud_infrastructure",
             purpose_category="OPERATIONAL",
-            risk_level="medium",
         )
 
         assert rule.name == "aws_integration"
         assert rule.service_category == "cloud_infrastructure"
         assert rule.purpose_category == "OPERATIONAL"
-        assert rule.risk_level == "medium"
 
 
 # =============================================================================
@@ -75,14 +73,6 @@ class TestServiceIntegrationsRuleset:
     def setup_method(self) -> None:
         """Set up test fixtures for each test method."""
         self.ruleset = ServiceIntegrationsRuleset()
-
-    def test_rules_have_valid_risk_levels(self) -> None:
-        """Test that all rules have valid risk levels."""
-        rules = self.ruleset.get_rules()
-        valid_risk_levels = {"low", "medium", "high"}
-
-        for rule in rules:
-            assert rule.risk_level in valid_risk_levels
 
     def test_rules_have_service_category_and_purpose_category(self) -> None:
         """Test that all rules have service_category and purpose_category fields."""

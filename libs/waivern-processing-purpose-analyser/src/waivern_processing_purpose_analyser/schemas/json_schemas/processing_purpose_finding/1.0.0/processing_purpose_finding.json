@@ -122,11 +122,6 @@
     "ProcessingPurposeFindingModel": {
       "description": "Processing purpose finding structure.",
       "properties": {
-        "risk_level": {
-          "description": "Risk assessment level (low, medium, high)",
-          "title": "Risk Level",
-          "type": "string"
-        },
         "evidence": {
           "description": "Evidence items with content and timestamps for this finding",
           "items": {
@@ -209,7 +204,6 @@
         }
       },
       "required": [
-        "risk_level",
         "evidence",
         "matched_patterns",
         "purpose"
@@ -232,12 +226,6 @@
           "title": "Purposes Identified",
           "type": "integer"
         },
-        "high_risk_count": {
-          "description": "Number of high risk processing purpose findings",
-          "minimum": 0,
-          "title": "High Risk Count",
-          "type": "integer"
-        },
         "purpose_categories": {
           "additionalProperties": {
             "type": "integer"
@@ -245,22 +233,12 @@
           "description": "Count of findings by purpose category",
           "title": "Purpose Categories",
           "type": "object"
-        },
-        "risk_level_distribution": {
-          "additionalProperties": {
-            "type": "integer"
-          },
-          "description": "Distribution of findings by risk level",
-          "title": "Risk Level Distribution",
-          "type": "object"
         }
       },
       "required": [
         "total_findings",
         "purposes_identified",
-        "high_risk_count",
-        "purpose_categories",
-        "risk_level_distribution"
+        "purpose_categories"
       ],
       "title": "ProcessingPurposeSummary",
       "type": "object"

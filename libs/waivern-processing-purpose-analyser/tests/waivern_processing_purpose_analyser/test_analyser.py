@@ -337,7 +337,6 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             finding = findings[0]
             assert "purpose" in finding
             assert "purpose_category" in finding
-            assert "risk_level" in finding
             assert "matched_patterns" in finding
             assert "evidence" in finding
             assert "metadata" in finding
@@ -359,24 +358,14 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         assert isinstance(summary, dict)
         assert "total_findings" in summary
         assert "purposes_identified" in summary
-        assert "high_risk_count" in summary
         assert "purpose_categories" in summary
-        assert "risk_level_distribution" in summary
 
         assert isinstance(summary["total_findings"], int)
         assert isinstance(summary["purposes_identified"], int)
-        assert isinstance(summary["high_risk_count"], int)
         assert isinstance(summary["purpose_categories"], dict)
-        assert isinstance(summary["risk_level_distribution"], dict)
 
         assert summary["total_findings"] >= 0
         assert summary["purposes_identified"] >= 0
-        assert summary["high_risk_count"] >= 0
-
-        risk_dist = summary["risk_level_distribution"]
-        assert "low" in risk_dist and "medium" in risk_dist and "high" in risk_dist
-        for count in risk_dist.values():
-            assert isinstance(count, int) and count >= 0
 
         for category, count in summary["purpose_categories"].items():
             assert isinstance(category, str)
@@ -387,8 +376,6 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         if len(findings) > 0:
             actual_unique_purposes = len(set(f["purpose"] for f in findings))
             assert summary["purposes_identified"] == actual_unique_purposes
-            assert sum(risk_dist.values()) == summary["total_findings"]
-            assert summary["high_risk_count"] == risk_dist["high"]
             if summary["purpose_categories"]:
                 assert (
                     sum(summary["purpose_categories"].values())
@@ -470,13 +457,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
 
         assert summary["total_findings"] == 0
         assert summary["purposes_identified"] == 0
-        assert summary["high_risk_count"] == 0
         assert summary["purpose_categories"] == {}
-
-        risk_dist = summary["risk_level_distribution"]
-        assert risk_dist["low"] == 0
-        assert risk_dist["medium"] == 0
-        assert risk_dist["high"] == 0
 
     def test_process_standard_input_summary_handles_duplicate_purposes_correctly(
         self,
@@ -882,9 +863,7 @@ class CustomerService {
         assert isinstance(summary, dict)
         assert "total_findings" in summary
         assert "purposes_identified" in summary
-        assert "high_risk_count" in summary
         assert "purpose_categories" in summary
-        assert "risk_level_distribution" in summary
         assert summary["total_findings"] == len(findings)
 
         # Assert - Analysis metadata structure

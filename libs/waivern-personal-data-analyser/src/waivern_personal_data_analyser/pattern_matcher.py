@@ -9,14 +9,14 @@ from waivern_analysers_shared.utilities import (
 from waivern_core.schemas import BaseMetadata
 from waivern_rulesets.personal_data import PersonalDataRule
 
-from .schemas.types import PersonalDataFindingMetadata, PersonalDataFindingModel
+from .schemas.types import PersonalDataIndicatorMetadata, PersonalDataIndicatorModel
 
 
 class PersonalDataPatternMatcher:
     """Pattern matcher for personal data analysis.
 
     This class provides pattern matching functionality specifically for personal data
-    detection, creating structured findings for the PersonalDataAnalyser.
+    detection, creating structured indicators for the PersonalDataAnalyser.
     """
 
     def __init__(self, config: PatternMatchingConfig) -> None:
@@ -35,7 +35,7 @@ class PersonalDataPatternMatcher:
         self,
         content: str,
         metadata: BaseMetadata,
-    ) -> list[PersonalDataFindingModel]:
+    ) -> list[PersonalDataIndicatorModel]:
         """Find all personal data patterns in content.
 
         Args:
@@ -43,7 +43,7 @@ class PersonalDataPatternMatcher:
             metadata: Content metadata
 
         Returns:
-            List of personal data findings
+            List of personal data indicators
 
         """
         # Check if content is empty
@@ -51,7 +51,7 @@ class PersonalDataPatternMatcher:
             return []
 
         rules = self._ruleset_manager.get_rules(self.config.ruleset, PersonalDataRule)
-        findings: list[PersonalDataFindingModel] = []
+        findings: list[PersonalDataIndicatorModel] = []
 
         # Process each rule
         for rule in rules:
@@ -62,7 +62,7 @@ class PersonalDataPatternMatcher:
                 if self._pattern_matcher.matches(content, pattern):
                     matched_patterns.append(pattern)
 
-            # If any patterns matched, create a single finding for this rule
+            # If any patterns matched, create a single indicator for this rule
             if matched_patterns:
                 # Extract evidence using the first matched pattern as representative
                 evidence_matches = self._evidence_extractor.extract_evidence(
@@ -72,20 +72,18 @@ class PersonalDataPatternMatcher:
                     self.config.evidence_context_size,
                 )
 
-                if evidence_matches:  # Only create finding if we have evidence
-                    # Create personal data specific finding
+                if evidence_matches:  # Only create indicator if we have evidence
+                    # Create personal data indicator
                     finding_metadata = None
                     if metadata:
-                        finding_metadata = PersonalDataFindingMetadata(
+                        finding_metadata = PersonalDataIndicatorMetadata(
                             source=metadata.source,
                             context=metadata.context,
                         )
 
-                    finding = PersonalDataFindingModel(
+                    finding = PersonalDataIndicatorModel(
                         type=rule.name,
                         data_type=rule.data_type,
-                        risk_level=rule.risk_level,
-                        special_category=rule.special_category,
                         matched_patterns=matched_patterns,
                         evidence=evidence_matches,
                         metadata=finding_metadata,

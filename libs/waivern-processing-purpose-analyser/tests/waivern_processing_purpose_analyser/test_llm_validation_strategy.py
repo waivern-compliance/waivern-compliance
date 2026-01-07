@@ -23,7 +23,6 @@ class TestProcessingPurposeValidationStrategy:
         self,
         purpose: str = "Test Purpose",
         purpose_category: str = "OPERATIONAL",
-        risk_level: str = "low",
         matched_pattern: str = "test",
         source: str = "test_source",
     ) -> ProcessingPurposeFindingModel:
@@ -33,7 +32,6 @@ class TestProcessingPurposeValidationStrategy:
         return ProcessingPurposeFindingModel(
             purpose=purpose,
             purpose_category=purpose_category,
-            risk_level=risk_level,
             matched_patterns=[matched_pattern],
             evidence=[BaseFindingEvidence(content="test evidence")],
             metadata=metadata,

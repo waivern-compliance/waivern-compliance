@@ -88,7 +88,6 @@ rules:
   - updateprofile
   - saveprofile
   special_category: false
-  risk_level: medium
 - name: Account and Subscription Data
   description: Account and subscription related data
   data_type: account_data
@@ -108,7 +107,6 @@ rules:
   - order_history
   - transaction_log
   special_category: false
-  risk_level: medium
 - name: Payment and Billing Information
   description: Payment and billing information
   data_type: payment_data
@@ -127,7 +125,6 @@ rules:
   - receipt_id
   - billing_email
   special_category: false
-  risk_level: medium
 - name: Financial Identifiers and Data
   description: Financial identifiers and sensitive financial information
   data_type: financial_data
@@ -164,7 +161,6 @@ rules:
   - financial_rating
   - credit_history
   special_category: false
-  risk_level: high
 - name: User Behavioral and Interaction Data
   description: User behavioral and interaction data
   data_type: behavioral_event_data
@@ -193,7 +189,6 @@ rules:
   - scroll_depth
   - conversion_event
   special_category: false
-  risk_level: medium
 - name: Technical Device and Network Data
   description: Technical device and network identifiers
   data_type: technical_device_and_network_data
@@ -230,7 +225,6 @@ rules:
   - tracking_cookie
   - advertisement_id
   special_category: false
-  risk_level: medium
 - name: Inferred Profile Data
   description: Algorithmically inferred or predicted user characteristics
   data_type: inferred_profile_data
@@ -241,7 +235,6 @@ rules:
   - profiling
   - machine_learning
   special_category: false
-  risk_level: high
 - name: User-Declared Preferences and Interests
   description: User-declared preferences and interests
   data_type: user_enriched_profile_data
@@ -251,7 +244,6 @@ rules:
   - declared
   - user_provided
   special_category: false
-  risk_level: medium
 - name: General Location Information
   description: General location information
   data_type: location_data
@@ -283,7 +275,6 @@ rules:
   - approximate_location
   - region_code
   special_category: false
-  risk_level: medium
 - name: User-Generated Content
   description: Content created by users
   data_type: user_generated_content
@@ -293,7 +284,6 @@ rules:
   - feedback
   - message
   special_category: false
-  risk_level: medium
 - name: Precise Location Data (Article 9)
   description: Precise location data (GDPR Article 9 special category)
   data_type: accurate_location
@@ -322,7 +312,6 @@ rules:
   - tracking_point
   - geofence
   special_category: true
-  risk_level: high
 - name: Health and Medical Data (Article 9)
   description: Health and medical information (GDPR Article 9 special category)
   data_type: health_data
@@ -335,7 +324,6 @@ rules:
   - treatment
   - patient
   special_category: true
-  risk_level: high
 - name: Political Opinions Data (Article 9)
   description: Political opinions and trade union membership (GDPR Article 9 special category)
   data_type: political_data
@@ -349,7 +337,6 @@ rules:
   - socialist
   - activist
   special_category: true
-  risk_level: high
 - name: Racial or Ethnic Origin Data (Article 9)
   description: Racial or ethnic origin data (GDPR Article 9 special category)
   data_type: racial_ethnic_data
@@ -359,7 +346,6 @@ rules:
   - origin
   - nationality
   special_category: true
-  risk_level: high
 - name: Religious or Philosophical Beliefs (Article 9)
   description: Religious or philosophical beliefs (GDPR Article 9 special category)
   data_type: religious_philosophical_data
@@ -370,7 +356,6 @@ rules:
   - faith
   - creed
   special_category: true
-  risk_level: high
 - name: Genetic Information (Article 9)
   description: Genetic information (GDPR Article 9 special category)
   data_type: genetic_data
@@ -380,7 +365,6 @@ rules:
   - genome
   - sequence
   special_category: true
-  risk_level: high
 - name: Biometric Identifiers (Article 9)
   description: Biometric identifiers (GDPR Article 9 special category)
   data_type: biometric_data
@@ -392,7 +376,6 @@ rules:
   - face
   - voice
   special_category: true
-  risk_level: high
 - name: Sexual Orientation Data (Article 9)
   description: Sexual orientation and sex life data (GDPR Article 9 special category)
   data_type: sexual_orientation_data
@@ -402,7 +385,6 @@ rules:
   - sex_life
   - gender_identity
   special_category: true
-  risk_level: high
 - name: Date of Birth and Age Information
   description: Birth date and age-related information
   data_type: date_of_birth
@@ -424,4 +406,3 @@ rules:
   - date_born
   - born_on
   special_category: false
-  risk_level: medium

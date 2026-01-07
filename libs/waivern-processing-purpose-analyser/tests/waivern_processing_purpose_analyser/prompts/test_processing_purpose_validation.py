@@ -15,11 +15,10 @@ from waivern_processing_purpose_analyser.schemas.types import (
 class TestProcessingPurposeValidationPrompt:
     """Test processing purpose validation prompt generation focusing on behaviour."""
 
-    def create_test_finding(  # noqa: PLR0913
+    def create_test_finding(
         self,
         purpose: str = "Test Purpose",
         purpose_category: str = "OPERATIONAL",
-        risk_level: str = "low",
         matched_pattern: str = "test",
         evidence: list[str] | None = None,
         source: str = "test_source",
@@ -35,7 +34,6 @@ class TestProcessingPurposeValidationPrompt:
         return ProcessingPurposeFindingModel(
             purpose=purpose,
             purpose_category=purpose_category,
-            risk_level=risk_level,
             matched_patterns=[matched_pattern],
             evidence=evidence_items,
             metadata=metadata,
@@ -48,7 +46,6 @@ class TestProcessingPurposeValidationPrompt:
             self.create_test_finding(
                 purpose="Customer Service",
                 purpose_category="OPERATIONAL",
-                risk_level="low",
                 matched_pattern="zendesk",
                 evidence=["zendesk ticket system"],
                 source="database",
@@ -90,26 +87,6 @@ class TestProcessingPurposeValidationPrompt:
         # Assert - Standard mode should not offer flag_for_review option
         assert '"flag_for_review"' not in prompt
 
-    def test_high_risk_findings_trigger_conservative_warnings(self) -> None:
-        """Test that high-risk findings trigger appropriate warnings in conservative mode."""
-        # Arrange
-        high_risk_findings = [
-            self.create_test_finding(
-                purpose="AI Training",
-                purpose_category="AI_AND_ML",
-                risk_level="high",
-                matched_pattern="ml",
-            )
-        ]
-
-        # Act
-        prompt = get_processing_purpose_validation_prompt(
-            high_risk_findings, "conservative"
-        )
-
-        # Assert - Should warn about high-risk processing
-        assert "HIGH RISK PROCESSING" in prompt
-
     def test_privacy_sensitive_categories_trigger_warnings(self) -> None:
         """Test that privacy-sensitive categories trigger warnings when explicitly configured."""
         sensitive_categories = ["AI_AND_ML", "ANALYTICS", "MARKETING_AND_ADVERTISING"]
@@ -119,7 +96,6 @@ class TestProcessingPurposeValidationPrompt:
             findings = [
                 self.create_test_finding(
                     purpose_category=category,
-                    risk_level="medium",
                 )
             ]
 
@@ -140,17 +116,19 @@ class TestProcessingPurposeValidationPrompt:
             self.create_test_finding(
                 purpose="Security",
                 purpose_category="SECURITY",
-                risk_level="high",
                 matched_pattern="security",
             )
         ]
+        # Define which categories are privacy-sensitive (does not include SECURITY)
+        sensitive_categories = ["AI_AND_ML", "ANALYTICS", "MARKETING_AND_ADVERTISING"]
 
         # Act
-        prompt = get_processing_purpose_validation_prompt(findings, "conservative")
+        prompt = get_processing_purpose_validation_prompt(
+            findings, "conservative", sensitive_categories
+        )
 
-        # Assert - Should trigger high-risk but not privacy-sensitive warnings
-        assert "HIGH RISK PROCESSING" in prompt  # Due to high risk level
-        assert "PRIVACY SENSITIVE" not in prompt  # Security not privacy-sensitive
+        # Assert - SECURITY is not in the sensitive categories list
+        assert "PRIVACY SENSITIVE" not in prompt
 
     def test_always_uses_array_response_format(self) -> None:
         """Test that response format is always array-based for consistency."""
