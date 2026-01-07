@@ -1,145 +1,104 @@
-name: "service_integrations"
-version: "1.0.0"
-description: "Service integrations ruleset for detecting third-party service usage in source code, such as cloud platforms, payment processors, analytics services, and communication tools."
-
-# Master list of valid service integration categories
+name: service_integrations
+version: 1.0.0
+description: Service integrations ruleset for detecting third-party service usage in source code, such as cloud platforms,
+  payment processors, analytics services, and communication tools.
 service_categories:
-  - "cloud_infrastructure"
-  - "communication"
-  - "identity_management"
-  - "payment_processing"
-  - "user_analytics"
-  - "social_media"
-
-# Master list of valid purpose categories for service integrations (maps to processing purposes)
+- cloud_infrastructure
+- communication
+- identity_management
+- payment_processing
+- user_analytics
+- social_media
 purpose_categories:
-  - "operational"
-  - "analytics"
-  - "marketing_and_advertising"
-
+- operational
+- analytics
+- marketing_and_advertising
 rules:
-  # ===== CLOUD INFRASTRUCTURE SERVICES =====
-  - name: "Cloud Infrastructure Services"
-    description: "Cloud storage and platform service integrations"
-    patterns:
-      - "aws"
-      - "amazon"
-      - "s3.amazonaws"
-      - "firebase"
-      - "gcp"
-      - "google.cloud"
-      - "azure"
-      - "microsoft"
-      - "dropbox"
-      - "storage"
-      - "upload"
-    service_category: "cloud_infrastructure"
-    purpose_category: "operational"
-    risk_level: "medium"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Article 28 requires data processing agreements with cloud service providers as they act as data processors. Article 44-49 govern international data transfers, requiring adequacy decisions or appropriate safeguards for cloud storage outside the EU. Data localisation requirements may apply for certain cloud storage locations."
-
-  # ===== COMMUNICATION SERVICES =====
-  - name: "Communication Services"
-    description: "Email and communication service integrations"
-    patterns:
-      - "sendgrid"
-      - "mailchimp"
-      - "mailgun"
-      - "postmark"
-      - "twilio"
-      - "slack"
-      - "discord"
-      - "intercom"
-      - "zendesk"
-      - "sms"
-      - "notification"
-    service_category: "communication"
-    purpose_category: "operational"
-    risk_level: "medium"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Article 28 requires data processing agreements with communication service providers as they act as data processors when handling personal data in emails, messages, or notifications. Controllers must ensure processors implement appropriate technical and organisational measures."
-
-  # ===== IDENTITY MANAGEMENT SERVICES =====
-  - name: "Identity Management Services"
-    description: "Third-party authentication and identity service integrations"
-    patterns:
-      - "auth0"
-      - "okta"
-      - "onelogin"
-      - "oauth"
-      - "openid"
-      - "saml"
-      - "azure.ad"
-      - "authenticate"
-      - "authorization"
-      - "identity"
-    service_category: "identity_management"
-    purpose_category: "operational"
-    risk_level: "high"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Article 25 requires data protection by design and by default in identity systems. Article 28 applies to identity service providers as data processors. Special category data protections under Article 9 may apply if biometric authentication is used. Identity verification must have appropriate legal basis under Article 6."
-      - regulation: "CCPA"
-        relevance: "Identity verification services processing personal information for authentication require service provider agreements. Consumers have rights to request deletion and correction of identity data, though verification purposes may provide grounds for retention exceptions under CCPA Section 1798.105(d)."
-
-  # ===== PAYMENT PROCESSING SERVICES =====
-  - name: "Payment Processing Services"
-    description: "Payment processing service integrations"
-    patterns:
-      - "stripe"
-      - "paypal"
-      - "square"
-      - "braintree"
-      - "authorize.net"
-      - "worldpay"
-      - "adyen"
-      - "charge"
-    service_category: "payment_processing"
-    purpose_category: "operational"
-    risk_level: "high"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Article 28 requires data processing agreements with payment processors as they act as data processors. Article 25 mandates data protection by design and by default in payment systems. Financial data processing requires appropriate legal basis under Article 6 and enhanced security measures."
-
-  # ===== USER ANALYTICS SERVICES =====
-  - name: "user_analytics"
-    description: "User analytics and tracking service integrations"
-    patterns:
-      - "google-analytics"
-      - "googleanalytics"
-      - "gtag"
-      - "mixpanel"
-      - "amplitude"
-      - "segment"
-      - "hotjar"
-      - "fullstory"
-      - "logrocket"
-    service_category: "user_analytics"
-    purpose_category: "analytics"
-    risk_level: "medium"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Article 6 requires appropriate legal basis for analytics processing, typically legitimate interest with balancing test. Article 21 provides users right to object to analytics processing. Cookie-based analytics require consent under Cookie Directive. Analytics providers typically act as joint controllers or processors requiring appropriate agreements."
-
-  # ===== SOCIAL MEDIA SERVICES =====
-  - name: "social_media"
-    description: "Social media platform integrations for marketing"
-    patterns:
-      - "facebook"
-      - "fb.com"
-      - "twitter"
-      - "linkedin"
-      - "instagram"
-      - "tiktok"
-      - "youtube"
-      - "pinterest"
-      - "social"
-    service_category: "social_media"
-    purpose_category: "marketing_and_advertising"
-    risk_level: "medium"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Article 26 governs joint controller relationships when sharing data with social media platforms for marketing. Both parties must determine respective responsibilities through joint controller agreements. Users must be informed of joint processing and can exercise rights against either controller."
+- name: Cloud Infrastructure Services
+  description: Cloud storage and platform service integrations
+  patterns:
+  - aws
+  - amazon
+  - s3.amazonaws
+  - firebase
+  - gcp
+  - google.cloud
+  - azure
+  - microsoft
+  - dropbox
+  - storage
+  - upload
+  service_category: cloud_infrastructure
+  purpose_category: operational
+- name: Communication Services
+  description: Email and communication service integrations
+  patterns:
+  - sendgrid
+  - mailchimp
+  - mailgun
+  - postmark
+  - twilio
+  - slack
+  - discord
+  - intercom
+  - zendesk
+  - sms
+  - notification
+  service_category: communication
+  purpose_category: operational
+- name: Identity Management Services
+  description: Third-party authentication and identity service integrations
+  patterns:
+  - auth0
+  - okta
+  - onelogin
+  - oauth
+  - openid
+  - saml
+  - azure.ad
+  - authenticate
+  - authorization
+  - identity
+  service_category: identity_management
+  purpose_category: operational
+- name: Payment Processing Services
+  description: Payment processing service integrations
+  patterns:
+  - stripe
+  - paypal
+  - square
+  - braintree
+  - authorize.net
+  - worldpay
+  - adyen
+  - charge
+  service_category: payment_processing
+  purpose_category: operational
+- name: user_analytics
+  description: User analytics and tracking service integrations
+  patterns:
+  - google-analytics
+  - googleanalytics
+  - gtag
+  - mixpanel
+  - amplitude
+  - segment
+  - hotjar
+  - fullstory
+  - logrocket
+  service_category: user_analytics
+  purpose_category: analytics
+- name: social_media
+  description: Social media platform integrations for marketing
+  patterns:
+  - facebook
+  - fb.com
+  - twitter
+  - linkedin
+  - instagram
+  - tiktok
+  - youtube
+  - pinterest
+  - social
+  service_category: social_media
+  purpose_category: marketing_and_advertising

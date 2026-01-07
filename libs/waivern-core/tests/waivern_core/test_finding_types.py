@@ -19,7 +19,6 @@ from pydantic import Field
 
 from waivern_core.schemas import (
     BaseFindingMetadata,
-    BaseFindingModel,
     BaseSchemaOutput,
 )
 
@@ -50,35 +49,6 @@ class TestBaseFindingMetadataCustomValidators:
             },
         )
         assert metadata.context["string"] == "value"
-
-
-class TestBaseFindingModelCustomValidators:
-    """Tests for custom validators in BaseFindingModel."""
-
-    def test_risk_level_must_be_low_medium_or_high(self) -> None:
-        """Contract: risk_level only accepts low, medium, or high."""
-        with pytest.raises(ValueError, match="risk_level must be one of"):
-            BaseFindingModel.model_validate(
-                {
-                    "risk_level": "critical",  # Invalid
-                    "compliance": [{"regulation": "GDPR", "relevance": "Art 6"}],
-                    "evidence": [{"content": "test"}],
-                    "matched_patterns": ["pattern"],
-                }
-            )
-
-    @pytest.mark.parametrize("valid_level", ["low", "medium", "high"])
-    def test_risk_level_accepts_valid_values(self, valid_level: str) -> None:
-        """Contract: risk_level accepts low, medium, and high."""
-        model = BaseFindingModel.model_validate(
-            {
-                "risk_level": valid_level,
-                "compliance": [{"regulation": "GDPR", "relevance": "Art 6"}],
-                "evidence": [{"content": "test"}],
-                "matched_patterns": ["pattern"],
-            }
-        )
-        assert model.risk_level == valid_level
 
 
 class TestBaseSchemaOutputGeneration:

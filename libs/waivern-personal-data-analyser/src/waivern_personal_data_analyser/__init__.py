@@ -7,7 +7,7 @@ from waivern_core.schemas import SchemaRegistry
 
 from .analyser import PersonalDataAnalyser
 from .factory import PersonalDataAnalyserFactory
-from .schemas import PersonalDataFindingModel
+from .schemas import PersonalDataIndicatorModel
 from .types import PersonalDataAnalyserConfig
 
 
@@ -26,7 +26,7 @@ def register_schemas() -> None:
 __all__ = [
     "PersonalDataAnalyser",
     "PersonalDataAnalyserFactory",
-    "PersonalDataFindingModel",
+    "PersonalDataIndicatorModel",
     "PersonalDataAnalyserConfig",
     "register_schemas",
 ]

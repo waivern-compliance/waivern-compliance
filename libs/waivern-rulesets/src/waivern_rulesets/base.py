@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, TypedDict, override
 
-from waivern_core import BaseRule, BaseRuleset, RulesetError
+from waivern_core import BaseRuleset, Rule, RulesetError
 
 logger = logging.getLogger(__name__)
 
@@ -89,11 +89,11 @@ class RulesetURI:
         return f"{self.provider}/{self.name}/{self.version}"
 
 
-class AbstractRuleset[RuleType: BaseRule](BaseRuleset):
+class AbstractRuleset[RuleType: Rule](BaseRuleset):
     """WCT-specific ruleset implementation with Pydantic rule types.
 
     This extends the framework-level BaseRuleset with WCT-specific features:
-    - Strongly typed rules using Pydantic BaseRule models
+    - Strongly typed rules using Pydantic Rule models
     - Type-safe generic parameter for specific rule types
     - Logging support following WCT conventions
 
@@ -153,7 +153,7 @@ class RulesetRegistryState(TypedDict):
     """
 
     registry: dict[str, type[AbstractRuleset[Any]]]
-    type_mapping: dict[str, type[BaseRule]]
+    type_mapping: dict[str, type[Rule]]
 
 
 class RulesetRegistry:
@@ -161,7 +161,7 @@ class RulesetRegistry:
 
     _instance: "RulesetRegistry | None" = None
     _registry: dict[str, type[AbstractRuleset[Any]]]
-    _type_mapping: dict[str, type[BaseRule]]
+    _type_mapping: dict[str, type[Rule]]
 
     def __new__(cls, *args: Any, **kwargs: Any) -> "RulesetRegistry":  # noqa: ANN401  # Singleton pattern requires flexible constructor arguments
         """Create or return the singleton instance of RulesetRegistry.
@@ -179,7 +179,7 @@ class RulesetRegistry:
             cls._instance._type_mapping = {}
         return cls._instance
 
-    def register[T: BaseRule](
+    def register[T: Rule](
         self, name: str, ruleset_class: type[AbstractRuleset[T]], rule_type: type[T]
     ) -> None:
         """Register a ruleset class with its rule type.
@@ -200,7 +200,7 @@ class RulesetRegistry:
         self._registry[name] = ruleset_class
         self._type_mapping[name] = rule_type
 
-    def get_ruleset_class[T: BaseRule](
+    def get_ruleset_class[T: Rule](
         self, name: str, expected_rule_type: type[T]
     ) -> type[AbstractRuleset[T]]:
         """Get a registered ruleset class with type validation.
@@ -306,7 +306,7 @@ class RulesetLoader:
     _SUPPORTED_PROVIDERS = {"local"}
 
     @classmethod
-    def load_ruleset[T: BaseRule](
+    def load_ruleset[T: Rule](
         cls, ruleset_uri: str, rule_type: type[T]
     ) -> tuple[T, ...]:
         """Load a ruleset using URI format with provider validation.

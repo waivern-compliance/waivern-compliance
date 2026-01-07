@@ -4,7 +4,7 @@ import json
 from unittest.mock import Mock
 
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence
 from waivern_llm import AnthropicLLMService
 
 from waivern_processing_purpose_analyser.llm_validation_strategy import (
@@ -23,29 +23,17 @@ class TestProcessingPurposeValidationStrategy:
         self,
         purpose: str = "Test Purpose",
         purpose_category: str = "OPERATIONAL",
-        risk_level: str = "low",
         matched_pattern: str = "test",
-        **kwargs,
+        source: str = "test_source",
     ) -> ProcessingPurposeFindingModel:
         """Helper to create test finding objects."""
-        evidence = kwargs.get(
-            "evidence", [BaseFindingEvidence(content="test evidence")]
-        )
-        source = kwargs.get("source", "test_source")
-
-        metadata = ProcessingPurposeFindingMetadata(source=source) if source else None
+        metadata = ProcessingPurposeFindingMetadata(source=source)
 
         return ProcessingPurposeFindingModel(
             purpose=purpose,
             purpose_category=purpose_category,
-            risk_level=risk_level,
             matched_patterns=[matched_pattern],
-            compliance=[
-                BaseFindingCompliance(
-                    regulation="GDPR", relevance="GDPR processing purposes"
-                )
-            ],
-            evidence=evidence,
+            evidence=[BaseFindingEvidence(content="test evidence")],
             metadata=metadata,
         )
 

@@ -28,13 +28,10 @@ class TestSourceCodeSchemaInputHandler:
     EXPECTED_FINDING_FIELDS = [
         "purpose",
         "purpose_category",
-        "risk_level",
-        "compliance",
         "matched_patterns",
         "evidence",
         "metadata",
     ]
-    VALID_RISK_LEVELS = ["low", "medium", "high"]
 
     @pytest.fixture
     def handler(self) -> SourceCodeSchemaInputHandler:
@@ -265,7 +262,6 @@ class UserFormHandler {
             assert isinstance(finding, ProcessingPurposeFindingModel)
             for field in self.EXPECTED_FINDING_FIELDS:
                 assert hasattr(finding, field)
-            assert finding.risk_level in self.VALID_RISK_LEVELS
             assert isinstance(finding.evidence, list)
             assert len(finding.evidence) > 0
             assert finding.metadata is not None
@@ -479,16 +475,11 @@ class EmptyClass {
             assert isinstance(finding.purpose, str) and len(finding.purpose) > 0
             assert isinstance(finding.purpose_category, str)
             assert (
-                isinstance(finding.risk_level, str)
-                and finding.risk_level in self.VALID_RISK_LEVELS
-            )
-            assert (
                 isinstance(finding.matched_patterns, list)
                 and len(finding.matched_patterns) > 0
             )
 
-            # Verify list fields
-            assert isinstance(finding.compliance, list)
+            # Verify evidence list
             assert isinstance(finding.evidence, list) and len(finding.evidence) > 0
 
             # Verify each evidence item is an BaseFindingEvidence

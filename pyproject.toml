@@ -17,6 +17,7 @@ waivern-mongodb = { workspace = true }
 waivern-mysql = { workspace = true }
 waivern-orchestration = { workspace = true }
 waivern-filesystem = { workspace = true }
+waivern-gdpr-personal-data-classifier = { workspace = true }
 waivern-processing-purpose-analyser = { workspace = true }
 waivern-sqlite = { workspace = true }
 waivern-source-code-analyser = { workspace = true }

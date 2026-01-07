@@ -1,0 +1,256 @@
+# GDPR Personal Data Classification Ruleset
+# Maps granular personal data indicators to GDPR classifications
+
+name: "gdpr_personal_data_classification"
+version: "1.0.0"
+description: "Ruleset for classifying personal data indicators according to GDPR"
+
+# Master list of valid privacy categories (for reporting/governance)
+# Note: These are NOT GDPR-defined terms - they're from legal team for categorisation
+privacy_categories:
+  - "identification_data"
+  - "account_data"
+  - "financial_data"
+  - "behavioural_data"
+  - "technical_data"
+  - "derived_data"
+  - "preference_data"
+  - "location_data"
+  - "content_data"
+  - "health_data"
+  - "political_data"
+  - "racial_ethnic_data"
+  - "religious_philosophical_data"
+  - "genetic_data"
+  - "biometric_data"
+  - "sexual_orientation_data"
+
+# Valid indicator categories (from personal_data_indicator ruleset)
+indicator_categories:
+  - name
+  - email
+  - phone
+  - address
+  - date_of_birth
+  - government_id
+  - user_identifier
+  - account
+  - subscription
+  - payment
+  - financial
+  - user_activity
+  - analytics
+  - device
+  - network
+  - browser
+  - cookie
+  - inferred
+  - preference
+  - location
+  - precise_location
+  - user_content
+  - health
+  - political
+  - racial_ethnic
+  - religious
+  - genetic
+  - biometric
+  - sexual_orientation
+
+rules:
+  # =============================================================================
+  # Standard Personal Data (GDPR Article 4(1))
+  # =============================================================================
+
+  - name: "Identification Data"
+    description: "Personal data enabling direct identification of individuals"
+    privacy_category: "identification_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+    indicator_categories:
+      - name
+      - email
+      - phone
+      - address
+      - date_of_birth
+      - government_id
+      - user_identifier
+
+  - name: "Account Data"
+    description: "Data relating to user accounts and service usage"
+    privacy_category: "account_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+    indicator_categories:
+      - account
+      - subscription
+
+  - name: "Financial Data"
+    description: "Payment and financial data requiring enhanced protection"
+    privacy_category: "financial_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+      - "Article 32"
+    indicator_categories:
+      - payment
+      - financial
+
+  - name: "Behavioural Data"
+    description: "Data about user behaviour and interactions"
+    privacy_category: "behavioural_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+      - "Article 22"
+    indicator_categories:
+      - user_activity
+      - analytics
+
+  - name: "Technical Data"
+    description: "Technical identifiers and device information"
+    privacy_category: "technical_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Recital 30"
+    indicator_categories:
+      - device
+      - network
+      - browser
+      - cookie
+
+  - name: "Derived Data"
+    description: "Data derived through profiling or algorithmic analysis"
+    privacy_category: "derived_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 22"
+      - "Article 14"
+    indicator_categories:
+      - inferred
+
+  - name: "Preference Data"
+    description: "Declared preferences and interest data"
+    privacy_category: "preference_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+    indicator_categories:
+      - preference
+
+  - name: "General Location Data"
+    description: "Non-precise location information"
+    privacy_category: "location_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+    indicator_categories:
+      - location
+
+  - name: "User-Generated Content"
+    description: "Content created and submitted by users"
+    privacy_category: "content_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+      - "Article 17"
+    indicator_categories:
+      - user_content
+
+  # =============================================================================
+  # Special Category Data (GDPR Article 9)
+  # =============================================================================
+
+  - name: "Precise Location Data (Article 9)"
+    description: "Precise geolocation revealing movements and habits"
+    privacy_category: "location_data"
+    special_category: true
+    article_references:
+      - "Article 9"
+      - "Recital 51"
+    indicator_categories:
+      - precise_location
+
+  - name: "Health Data (Article 9)"
+    description: "Data concerning physical or mental health"
+    privacy_category: "health_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+      - "Article 4(15)"
+    indicator_categories:
+      - health
+
+  - name: "Political Opinions (Article 9)"
+    description: "Data revealing political opinions or trade union membership"
+    privacy_category: "political_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+    indicator_categories:
+      - political
+
+  - name: "Racial or Ethnic Origin (Article 9)"
+    description: "Data revealing racial or ethnic origin"
+    privacy_category: "racial_ethnic_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+    indicator_categories:
+      - racial_ethnic
+
+  - name: "Religious or Philosophical Beliefs (Article 9)"
+    description: "Data revealing religious or philosophical beliefs"
+    privacy_category: "religious_philosophical_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+    indicator_categories:
+      - religious
+
+  - name: "Genetic Data (Article 9)"
+    description: "Genetic data relating to inherited characteristics"
+    privacy_category: "genetic_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+      - "Article 4(13)"
+    indicator_categories:
+      - genetic
+
+  - name: "Biometric Data (Article 9)"
+    description: "Biometric data for unique identification"
+    privacy_category: "biometric_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+      - "Article 4(14)"
+    indicator_categories:
+      - biometric
+
+  - name: "Sexual Orientation Data (Article 9)"
+    description: "Data concerning sex life or sexual orientation"
+    privacy_category: "sexual_orientation_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+    indicator_categories:
+      - sexual_orientation

@@ -5,15 +5,15 @@ from unittest.mock import Mock
 
 import pytest
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence
 from waivern_llm import AnthropicLLMService
 
 from waivern_personal_data_analyser.llm_validation_strategy import (
     personal_data_validation_strategy,
 )
 from waivern_personal_data_analyser.schemas.types import (
-    PersonalDataFindingMetadata,
-    PersonalDataFindingModel,
+    PersonalDataIndicatorMetadata,
+    PersonalDataIndicatorModel,
 )
 
 
@@ -35,40 +35,22 @@ class TestPersonalDataValidationStrategy:
         return Mock(spec=AnthropicLLMService)
 
     @pytest.fixture
-    def sample_findings(self) -> list[PersonalDataFindingModel]:
+    def sample_findings(self) -> list[PersonalDataIndicatorModel]:
         """Create sample findings for testing."""
         return [
-            PersonalDataFindingModel(
-                type="email",
-                data_type="basic_profile",
-                risk_level="medium",
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="email",
                 matched_patterns=["test@example.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[
                     BaseFindingEvidence(content="Contact us at test@example.com")
                 ],
-                metadata=PersonalDataFindingMetadata(source="contact_form.php"),
+                metadata=PersonalDataIndicatorMetadata(source="contact_form.php"),
             ),
-            PersonalDataFindingModel(
-                type="phone",
-                data_type="basic_profile",
-                risk_level="high",
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="phone",
                 matched_patterns=["123-456-7890"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="Call us at 123-456-7890")],
-                metadata=PersonalDataFindingMetadata(source="customer_db"),
+                metadata=PersonalDataIndicatorMetadata(source="customer_db"),
             ),
         ]
 
@@ -77,7 +59,7 @@ class TestPersonalDataValidationStrategy:
     ) -> None:
         """Test that empty list is returned when no findings are provided."""
         # Arrange
-        findings: list[PersonalDataFindingModel] = []
+        findings: list[PersonalDataIndicatorModel] = []
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -91,7 +73,7 @@ class TestPersonalDataValidationStrategy:
 
     def test_validates_findings_and_keeps_true_positives(
         self,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
         llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
@@ -124,14 +106,14 @@ class TestPersonalDataValidationStrategy:
 
         # Assert
         assert len(result) == 2
-        assert result[0].type == "email"
-        assert result[1].type == "phone"
+        assert result[0].category == "email"
+        assert result[1].category == "phone"
         assert success is True
         mock_llm_service.analyse_data.assert_called_once()
 
     def test_filters_out_false_positive_findings(
         self,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
         llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
@@ -164,7 +146,7 @@ class TestPersonalDataValidationStrategy:
 
         # Assert
         assert len(result) == 1
-        assert result[0].type == "phone"
+        assert result[0].category == "phone"
         assert success is True
 
     def test_handles_mixed_validation_results_correctly(
@@ -173,50 +155,23 @@ class TestPersonalDataValidationStrategy:
         """Test handling of mixed validation results across multiple findings."""
         # Arrange
         findings = [
-            PersonalDataFindingModel(
-                type="email",
-                data_type="basic_profile",
-                risk_level="low",
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="email",
                 matched_patterns=["admin@domain.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="Email: admin@domain.com")],
-                metadata=PersonalDataFindingMetadata(source="config.txt"),
+                metadata=PersonalDataIndicatorMetadata(source="config.txt"),
             ),
-            PersonalDataFindingModel(
-                type="ssn",
-                data_type="identification",
-                risk_level="high",
-                special_category=True,
+            PersonalDataIndicatorModel(
+                category="government_id",
                 matched_patterns=["123-45-6789"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="SSN: 123-45-6789")],
-                metadata=PersonalDataFindingMetadata(source="employee_records"),
+                metadata=PersonalDataIndicatorMetadata(source="employee_records"),
             ),
-            PersonalDataFindingModel(
-                type="email",
-                data_type="basic_profile",
-                risk_level="medium",
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="email",
                 matched_patterns=["user@test.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="Example: user@test.com")],
-                metadata=PersonalDataFindingMetadata(source="documentation.md"),
+                metadata=PersonalDataIndicatorMetadata(source="documentation.md"),
             ),
         ]
 
@@ -257,9 +212,9 @@ class TestPersonalDataValidationStrategy:
 
         # Assert
         assert len(result) == 2
-        assert result[0].type == "email"
+        assert result[0].category == "email"
         assert "admin@domain.com" in result[0].matched_patterns
-        assert result[1].type == "ssn"
+        assert result[1].category == "government_id"
         assert success is True
 
     def test_processes_findings_in_configured_batches(
@@ -268,20 +223,11 @@ class TestPersonalDataValidationStrategy:
         """Test that findings are processed in batches according to configuration."""
         # Arrange
         findings = [
-            PersonalDataFindingModel(
-                type="email",
-                data_type="basic_profile",
-                risk_level="medium",
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="email",
                 matched_patterns=[f"user{i}@example.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content=f"Email: user{i}@example.com")],
-                metadata=PersonalDataFindingMetadata(source="database"),
+                metadata=PersonalDataIndicatorMetadata(source="database"),
             )
             for i in range(5)  # Create 5 findings
         ]
@@ -354,7 +300,7 @@ class TestPersonalDataValidationStrategy:
 
     def test_handles_llm_service_errors_gracefully(
         self,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
         llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
@@ -375,7 +321,7 @@ class TestPersonalDataValidationStrategy:
 
     def test_handles_malformed_llm_response_gracefully(
         self,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
         llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
@@ -396,7 +342,7 @@ class TestPersonalDataValidationStrategy:
 
     def test_handles_incomplete_validation_results(
         self,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
         llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
@@ -433,7 +379,7 @@ class TestPersonalDataValidationStrategy:
 
     def test_preserves_original_finding_objects(
         self,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
         llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
@@ -471,16 +417,16 @@ class TestPersonalDataValidationStrategy:
         assert result[1] is sample_findings[1]
         assert success is True
         # Verify all properties are unchanged
-        assert result[0].type == "email"
+        assert result[0].category == "email"
         assert len(result[0].evidence) == 1
         assert result[0].evidence[0].content == "Contact us at test@example.com"
-        assert result[1].type == "phone"
+        assert result[1].category == "phone"
         assert result[1].metadata is not None
         assert result[1].metadata.source == "customer_db"
 
     def test_handles_mismatched_result_count(
         self,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
         llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
@@ -508,7 +454,7 @@ class TestPersonalDataValidationStrategy:
         # Assert
         # Should only process the findings that have validation results
         assert len(result) == 1
-        assert result[0].type == "email"
+        assert result[0].category == "email"
         assert success is True
 
     def test_handles_various_batch_sizes(
@@ -517,20 +463,11 @@ class TestPersonalDataValidationStrategy:
         """Test handling of various batch sizes including edge cases."""
         # Arrange
         findings = [
-            PersonalDataFindingModel(
-                type="email",
-                data_type="basic_profile",
-                risk_level="medium",
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="email",
                 matched_patterns=[f"test{i}@example.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content=f"Email {i}")],
-                metadata=PersonalDataFindingMetadata(source="test"),
+                metadata=PersonalDataIndicatorMetadata(source="test"),
             )
             for i in range(3)
         ]
@@ -581,20 +518,11 @@ class TestPersonalDataValidationStrategy:
         """Test validation of a single finding."""
         # Arrange
         findings = [
-            PersonalDataFindingModel(
-                type="credit_card",
-                data_type="financial",
-                risk_level="high",
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="payment",
                 matched_patterns=["4111-1111-1111-1111"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="Card: 4111-1111-1111-1111")],
-                metadata=PersonalDataFindingMetadata(source="payment_form"),
+                metadata=PersonalDataIndicatorMetadata(source="payment_form"),
             )
         ]
 
@@ -626,20 +554,11 @@ class TestPersonalDataValidationStrategy:
         """Test validation of findings with complex metadata structures."""
         # Arrange
         findings = [
-            PersonalDataFindingModel(
-                type="phone",
-                data_type="basic_profile",
-                risk_level="medium",
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="phone",
                 matched_patterns=["+44 20 7946 0958"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="Contact: +44 20 7946 0958")],
-                metadata=PersonalDataFindingMetadata(source="customer_database"),
+                metadata=PersonalDataIndicatorMetadata(source="customer_database"),
             )
         ]
 
@@ -687,20 +606,11 @@ class TestPersonalDataValidationStrategy:
         """Test batch processing with various batch sizes."""
         # Arrange
         findings = [
-            PersonalDataFindingModel(
-                type="email",
-                data_type="basic_profile",
-                risk_level="medium",
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="email",
                 matched_patterns=[f"user{i}@test.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content=f"Email: user{i}@test.com")],
-                metadata=PersonalDataFindingMetadata(source="test"),
+                metadata=PersonalDataIndicatorMetadata(source="test"),
             )
             for i in range(3)
         ]

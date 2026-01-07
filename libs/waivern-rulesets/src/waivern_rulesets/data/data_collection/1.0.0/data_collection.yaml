@@ -1,182 +1,128 @@
-# Data Collection Ruleset
-# Patterns for detecting data collection mechanisms in source code
-
-name: "data_collection"
-version: "1.0.0"
-description: "Ruleset for detecting data collection patterns in source code"
-
-# Master list of valid data collection type categories
+name: data_collection
+version: 1.0.0
+description: Ruleset for detecting data collection patterns in source code
 collection_type_categories:
-  - "form_data"
-  - "url_parameters"
-  - "cookies"
-  - "session_data"
-  - "html_forms"
-  - "client_storage"
-  - "file_upload"
-  - "database_query"
-  - "database_connection"
-
-# Master list of valid data source categories
+- form_data
+- url_parameters
+- cookies
+- session_data
+- html_forms
+- client_storage
+- file_upload
+- database_query
+- database_connection
 data_source_categories:
-  - "http_post"
-  - "http_get"
-  - "browser_cookies"
-  - "server_session"
-  - "html_form"
-  - "browser_javascript"
-  - "uploaded_files"
-  - "database"
-
+- http_post
+- http_get
+- browser_cookies
+- server_session
+- html_form
+- browser_javascript
+- uploaded_files
+- database
 rules:
-  - name: "PHP POST Data Collection"
-    description: "PHP POST data collection patterns"
-    patterns:
-      - "$_POST["
-      - "_POST["
-    collection_type: "form_data"
-    data_source: "http_post"
-    risk_level: "medium"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Article 6 lawful basis required for processing form data, Article 13 information duties apply"
-
-  - name: "PHP GET Parameter Collection"
-    description: "PHP GET parameter collection patterns"
-    patterns:
-      - "$_GET["
-      - "_GET["
-    collection_type: "url_parameters"
-    data_source: "http_get"
-    risk_level: "medium"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "URL parameters may contain personal data requiring Article 6 lawful basis and Article 14 information duties"
-
-  - name: "PHP Cookie Access"
-    description: "PHP cookie access patterns"
-    patterns:
-      - "$_COOKIE["
-      - "_COOKIE["
-      - "setcookie("
-    collection_type: "cookies"
-    data_source: "browser_cookies"
-    risk_level: "medium"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Cookies containing personal data require Article 6 lawful basis and Article 7 consent where applicable"
-
-  - name: "PHP Session Data Access"
-    description: "PHP session data patterns"
-    patterns:
-      - "$_SESSION["
-      - "_SESSION["
-      - "session_start"
-    collection_type: "session_data"
-    data_source: "server_session"
-    risk_level: "medium"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Session data processing requires Article 6 lawful basis and appropriate retention periods under Article 5"
-
-  - name: "HTML Form Input Fields"
-    description: "HTML form input field patterns"
-    patterns:
-      - 'name="'
-      - "name='"
-      - "<input"
-      - "<textarea"
-      - "<select"
-    collection_type: "html_forms"
-    data_source: "html_form"
-    risk_level: "low"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "HTML forms collecting personal data require Article 13 information provision and Article 6 lawful basis"
-
-  - name: "JavaScript Client Storage"
-    description: "JavaScript local storage and data access"
-    patterns:
-      - "localStorage"
-      - "sessionStorage"
-      - "document.cookie"
-      - "FormData"
-    collection_type: "client_storage"
-    data_source: "browser_javascript"
-    risk_level: "medium"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Client-side storage of personal data requires Article 6 lawful basis and transparent information under Article 13"
-      - regulation: "ePrivacy"
-        relevance: "Browser storage mechanisms require consent when used for tracking or storing personal data"
-
-  - name: "File Upload Processing"
-    description: "File upload processing patterns"
-    patterns:
-      - "$_FILES["
-      - "move_uploaded_file"
-      - "is_uploaded_file"
-      - "file_get_contents"
-      - "upload"
-    collection_type: "file_upload"
-    data_source: "uploaded_files"
-    risk_level: "high"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "File uploads may contain personal data requiring Article 6 lawful basis, data minimisation under Article 5, and secure processing under Article 32"
-
-  - name: "SQL Database Queries"
-    description: "SQL database query patterns for data retrieval and manipulation"
-    patterns:
-      - "SELECT"
-      - "INSERT INTO"
-      - "UPDATE"
-      - "DELETE FROM"
-      - "WHERE email"
-      - "WHERE phone"
-      - "WHERE user_id"
-      - "WHERE customer_id"
-      - "FROM users"
-      - "FROM customers"
-      - "FROM profiles"
-      - "->prepare("
-      - "->execute("
-      - "mysqli_query"
-      - "mysql_query"
-      - "pg_query"
-      - "sqlite_query"
-    collection_type: "database_query"
-    data_source: "database"
-    risk_level: "high"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Database operations on personal data require Article 6 lawful basis, data accuracy under Article 5, and appropriate technical measures under Article 32"
-
-  - name: "Database Connections and ORM"
-    description: "Database connection and ORM patterns"
-    patterns:
-      - "PDO::"
-      - "new PDO("
-      - "mysqli_connect"
-      - "mysql_connect"
-      - "pg_connect"
-      - "new Database"
-      - "->connection"
-      - "::connection"
-      - "Eloquent::"
-      - "Model::"
-      - "ActiveRecord::"
-      - "->query("
-      - "->find("
-      - "->where("
-      - "->get("
-      - "->save("
-      - "->create("
-      - "->update("
-      - "->delete("
-    collection_type: "database_connection"
-    data_source: "database"
-    risk_level: "medium"
-    compliance:
-      - regulation: "GDPR"
-        relevance: "Database connections accessing personal data must implement appropriate security measures under Article 32 and ensure lawful processing under Article 6"
+- name: PHP POST Data Collection
+  description: PHP POST data collection patterns
+  patterns:
+  - $_POST[
+  - _POST[
+  collection_type: form_data
+  data_source: http_post
+- name: PHP GET Parameter Collection
+  description: PHP GET parameter collection patterns
+  patterns:
+  - $_GET[
+  - _GET[
+  collection_type: url_parameters
+  data_source: http_get
+- name: PHP Cookie Access
+  description: PHP cookie access patterns
+  patterns:
+  - $_COOKIE[
+  - _COOKIE[
+  - setcookie(
+  collection_type: cookies
+  data_source: browser_cookies
+- name: PHP Session Data Access
+  description: PHP session data patterns
+  patterns:
+  - $_SESSION[
+  - _SESSION[
+  - session_start
+  collection_type: session_data
+  data_source: server_session
+- name: HTML Form Input Fields
+  description: HTML form input field patterns
+  patterns:
+  - name="
+  - name='
+  - <input
+  - <textarea
+  - <select
+  collection_type: html_forms
+  data_source: html_form
+- name: JavaScript Client Storage
+  description: JavaScript local storage and data access
+  patterns:
+  - localStorage
+  - sessionStorage
+  - document.cookie
+  - FormData
+  collection_type: client_storage
+  data_source: browser_javascript
+- name: File Upload Processing
+  description: File upload processing patterns
+  patterns:
+  - $_FILES[
+  - move_uploaded_file
+  - is_uploaded_file
+  - file_get_contents
+  - upload
+  collection_type: file_upload
+  data_source: uploaded_files
+- name: SQL Database Queries
+  description: SQL database query patterns for data retrieval and manipulation
+  patterns:
+  - SELECT
+  - INSERT INTO
+  - UPDATE
+  - DELETE FROM
+  - WHERE email
+  - WHERE phone
+  - WHERE user_id
+  - WHERE customer_id
+  - FROM users
+  - FROM customers
+  - FROM profiles
+  - ->prepare(
+  - ->execute(
+  - mysqli_query
+  - mysql_query
+  - pg_query
+  - sqlite_query
+  collection_type: database_query
+  data_source: database
+- name: Database Connections and ORM
+  description: Database connection and ORM patterns
+  patterns:
+  - 'PDO::'
+  - new PDO(
+  - mysqli_connect
+  - mysql_connect
+  - pg_connect
+  - new Database
+  - ->connection
+  - ::connection
+  - 'Eloquent::'
+  - 'Model::'
+  - 'ActiveRecord::'
+  - ->query(
+  - ->find(
+  - ->where(
+  - ->get(
+  - ->save(
+  - ->create(
+  - ->update(
+  - ->delete(
+  collection_type: database_connection
+  data_source: database

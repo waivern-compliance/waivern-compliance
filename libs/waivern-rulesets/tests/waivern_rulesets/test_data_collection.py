@@ -1,12 +1,45 @@
 """Unit tests for DataCollectionRuleset class."""
 
-from waivern_core import RuleComplianceData
+import pytest
 
-from waivern_rulesets.base import RulesetLoader, RulesetRegistry
+from waivern_rulesets.base import AbstractRuleset
 from waivern_rulesets.data_collection import (
     DataCollectionRule,
     DataCollectionRuleset,
 )
+from waivern_rulesets.testing import RulesetContractTests
+
+# =============================================================================
+# Contract Tests (inherited from RulesetContractTests)
+# =============================================================================
+
+
+class TestDataCollectionRulesetContract(RulesetContractTests[DataCollectionRule]):
+    """Contract tests for DataCollectionRuleset.
+
+    Inherits all standard ruleset contract tests automatically.
+
+    """
+
+    @pytest.fixture
+    def ruleset_class(self) -> type[AbstractRuleset[DataCollectionRule]]:
+        """Provide the ruleset class to test."""
+        return DataCollectionRuleset
+
+    @pytest.fixture
+    def rule_class(self) -> type[DataCollectionRule]:
+        """Provide the rule class used by the ruleset."""
+        return DataCollectionRule
+
+    @pytest.fixture
+    def expected_name(self) -> str:
+        """Provide the expected canonical name of the ruleset."""
+        return "data_collection"
+
+
+# =============================================================================
+# Rule-specific Tests (unique to DataCollectionRule)
+# =============================================================================
 
 
 class TestDataCollectionRule:
@@ -20,157 +53,31 @@ class TestDataCollectionRule:
             patterns=("$_POST", "form_data"),
             collection_type="form_data",
             data_source="http_post",
-            risk_level="medium",
         )
 
         assert rule.name == "form_data_rule"
         assert rule.collection_type == "form_data"
         assert rule.data_source == "http_post"
-        assert rule.risk_level == "medium"
+
+
+# =============================================================================
+# Ruleset-specific Tests
+# =============================================================================
 
 
 class TestDataCollectionRuleset:
-    """Test cases for the DataCollectionRuleset class."""
+    """Test cases for DataCollectionRuleset-specific behaviour."""
 
     def setup_method(self) -> None:
         """Set up test fixtures for each test method."""
         self.ruleset = DataCollectionRuleset()
 
-    def test_name_property_returns_canonical_name(self) -> None:
-        """Test DataCollectionRuleset returns canonical name."""
-        ruleset = DataCollectionRuleset()
-
-        assert ruleset.name == "data_collection"
-
-    def test_version_property_returns_correct_string_format(self) -> None:
-        """Test that version property returns a non-empty string."""
-        version = self.ruleset.version
-
-        assert isinstance(version, str)
-        assert len(version) > 0
-        # Version should follow semantic versioning pattern (x.y.z)
-        parts = version.split(".")
-        assert len(parts) == 3
-        assert all(part.isdigit() for part in parts)
-
-    def test_get_rules_returns_tuple_of_rules_with_at_least_one_rule(self) -> None:
-        """Test that get_rules returns an immutable tuple of Rule objects."""
-        rules = self.ruleset.get_rules()
-
-        assert isinstance(rules, tuple)
-        assert len(rules) > 0
-        assert all(isinstance(rule, DataCollectionRule) for rule in rules)
-
-    def test_get_rules_returns_consistent_count(self) -> None:
-        """Test that get_rules returns a consistent number of rules."""
-        rules1 = self.ruleset.get_rules()
-        rules2 = self.ruleset.get_rules()
-
-        assert len(rules1) == len(rules2)
-
-    def test_rule_names_are_unique(self) -> None:
-        """Test that all rule names are unique."""
-        rules = self.ruleset.get_rules()
-        rule_names = [rule.name for rule in rules]
-
-        assert len(rule_names) == len(set(rule_names))
-
-    def test_rules_have_correct_structure(self) -> None:
-        """Test that each rule has the correct structure and required fields."""
+    def test_rules_have_collection_type_and_data_source(self) -> None:
+        """Test that all rules have collection_type and data_source fields."""
         rules = self.ruleset.get_rules()
 
         for rule in rules:
-            assert hasattr(rule, "name")
-            assert hasattr(rule, "description")
-            assert hasattr(rule, "patterns")
-            assert hasattr(rule, "risk_level")
-            assert hasattr(rule, "collection_type")
-            assert hasattr(rule, "data_source")
-
-            assert isinstance(rule.name, str)
-            assert isinstance(rule.description, str)
-            assert isinstance(rule.patterns, tuple)
-            assert isinstance(rule.risk_level, str)
             assert isinstance(rule.collection_type, str)
             assert isinstance(rule.data_source, str)
-
-            # Validate non-empty field contents
             assert len(rule.collection_type) > 0
             assert len(rule.data_source) > 0
-
-    def test_rules_have_valid_risk_levels(self) -> None:
-        """Test that all rules have valid risk levels."""
-        rules = self.ruleset.get_rules()
-        valid_risk_levels = {"low", "medium", "high"}
-
-        for rule in rules:
-            assert rule.risk_level in valid_risk_levels
-
-    def test_rules_have_non_empty_patterns(self) -> None:
-        """Test that all rules have non-empty pattern tuples."""
-        rules = self.ruleset.get_rules()
-
-        for rule in rules:
-            assert len(rule.patterns) > 0
-            assert all(isinstance(pattern, str) for pattern in rule.patterns)
-            assert all(len(pattern) > 0 for pattern in rule.patterns)
-
-    def test_rules_have_non_empty_names_and_descriptions(self) -> None:
-        """Test that all rules have non-empty names and descriptions."""
-        rules = self.ruleset.get_rules()
-
-        for rule in rules:
-            assert len(rule.name) > 0
-            assert len(rule.description) > 0
-
-    def test_rules_have_structured_compliance_data(self) -> None:
-        """Test that rules have structured compliance data."""
-        rules = self.ruleset.get_rules()
-
-        for rule in rules:
-            assert hasattr(rule, "compliance")
-            assert isinstance(rule.compliance, list)
-            assert len(rule.compliance) > 0
-
-            # Verify each compliance entry is a ComplianceData instance
-            for compliance_entry in rule.compliance:
-                assert isinstance(compliance_entry, RuleComplianceData)
-                assert hasattr(compliance_entry, "regulation")
-                assert hasattr(compliance_entry, "relevance")
-                assert isinstance(compliance_entry.regulation, str)
-                assert isinstance(compliance_entry.relevance, str)
-                assert len(compliance_entry.regulation) > 0
-                assert len(compliance_entry.relevance) > 0
-
-    def test_patterns_are_tuples_not_lists(self) -> None:
-        """Test that all patterns are stored as tuples, not lists."""
-        rules = self.ruleset.get_rules()
-
-        for rule in rules:
-            assert isinstance(rule.patterns, tuple)
-            assert not isinstance(rule.patterns, list)
-
-
-class TestDataCollectionIntegration:
-    """Integration tests for DataCollectionRuleset with other components."""
-
-    def test_ruleset_loader_integration(
-        self, isolated_registry: RulesetRegistry
-    ) -> None:
-        """Test that DataCollectionRuleset works with RulesetLoader."""
-        isolated_registry.register(
-            "loader_test", DataCollectionRuleset, DataCollectionRule
-        )
-
-        # Load via RulesetLoader using URI format
-        rules = RulesetLoader.load_ruleset(
-            "local/loader_test/1.0.0", DataCollectionRule
-        )
-
-        assert isinstance(rules, tuple)
-        assert len(rules) > 0
-        assert all(isinstance(rule, DataCollectionRule) for rule in rules)
-
-        # Should have the same rules as direct instantiation
-        direct_rules = DataCollectionRuleset().get_rules()
-        assert len(rules) == len(direct_rules)

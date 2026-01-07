@@ -332,39 +332,29 @@ class ProcessingPurposeAnalyser(Analyser):
             findings: List of validated findings
 
         Returns:
-            Summary statistics with purpose categories, risk levels, and totals
+            Summary statistics with purpose categories and totals
 
         """
         if not findings:
             return ProcessingPurposeSummary(
                 total_findings=0,
                 purposes_identified=0,
-                high_risk_count=0,
                 purpose_categories={},
-                risk_level_distribution={"low": 0, "medium": 0, "high": 0},
             )
 
         # Count unique purposes and categories
         unique_purposes = set(f.purpose for f in findings)
         purpose_categories: dict[str, int] = {}
-        risk_distribution = {"low": 0, "medium": 0, "high": 0}
 
         for finding in findings:
             # Count purpose categories
             category = finding.purpose_category or "uncategorised"
             purpose_categories[category] = purpose_categories.get(category, 0) + 1
 
-            # Count risk levels
-            risk_distribution[finding.risk_level] = (
-                risk_distribution.get(finding.risk_level, 0) + 1
-            )
-
         return ProcessingPurposeSummary(
             total_findings=len(findings),
             purposes_identified=len(unique_purposes),
-            high_risk_count=risk_distribution["high"],
             purpose_categories=purpose_categories,
-            risk_level_distribution=risk_distribution,
         )
 
     def _build_validation_summary(

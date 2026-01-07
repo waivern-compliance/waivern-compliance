@@ -1,6 +1,15 @@
-"""Pydantic-based types for structured rulesets."""
+"""Pydantic-based types for structured rulesets.
 
-from typing import Literal
+This module defines the rule type hierarchy:
+
+- Rule: Base class with common properties (name, description)
+- DetectionRule: Pattern-based rules for detecting content (used by analysers)
+- ClassificationRule: Category mapping rules for regulatory interpretation (used by classifiers)
+
+Note: Compliance framework association is determined by ruleset naming convention
+and runbook configuration, not by rule properties. This keeps rules framework-agnostic
+and gives runbook authors control over which rulesets apply to their compliance needs.
+"""
 
 from pydantic import (
     BaseModel,
@@ -10,35 +19,45 @@ from pydantic import (
 )
 
 
-class RuleComplianceData(BaseModel):
-    """Compliance information for a rule."""
+class Rule(BaseModel):
+    """Base class for all compliance rules.
 
-    regulation: str = Field(
-        min_length=1, description="Regulation name (e.g., GDPR, CCPA)"
-    )
-    relevance: str = Field(
-        min_length=1, description="Specific relevance to this regulation"
-    )
+    Contains the common properties that every rule must have,
+    regardless of whether it's a detection rule or classification rule.
 
+    Attributes:
+        name: Unique identifier for this rule
+        description: Human-readable description of what this rule does
 
-class BaseRule(BaseModel):
-    """Base rule class with minimal guaranteed properties."""
+    Note:
+        Risk assessment is intentionally excluded from this base class as it is
+        a framework-specific concern. Each regulatory classifier should define
+        its own risk model (e.g., GDPR uses special_category for risk).
+
+    """
 
     model_config = ConfigDict(frozen=True)
 
     name: str = Field(min_length=1, description="Unique name for this rule")
     description: str = Field(
         min_length=1,
-        description="Human-readable description of what this rule detects",
+        description="Human-readable description of what this rule does",
     )
+
+
+class DetectionRule(Rule):
+    """Pattern-based rule for detecting content in text.
+
+    Used by analysers to detect personal data, processing purposes,
+    data subjects, etc. by matching patterns against text content.
+
+    Attributes:
+        patterns: Tuple of patterns to match (case-insensitive word boundary matching)
+
+    """
+
     patterns: tuple[str, ...] = Field(
         min_length=1, description="Tuple of patterns to match"
-    )
-    risk_level: Literal["low", "medium", "high"] = Field(
-        description="Risk level assessment"
-    )
-    compliance: list[RuleComplianceData] = Field(
-        default_factory=list, description="Compliance information"
     )
 
     @field_validator("patterns")
@@ -52,15 +71,38 @@ class BaseRule(BaseModel):
         return patterns
 
 
-class RulesetData[RuleType: BaseRule](BaseModel):
-    """Base ruleset class with minimal guaranteed properties."""
+class ClassificationRule(Rule):
+    """Base class for rules that classify findings into regulatory categories.
+
+    Used by classifiers to map generic detection findings to framework-specific
+    classifications (e.g., GDPR data types, Article 9 special categories).
+
+    Unlike DetectionRule, this does not have patterns - it maps from
+    detection categories to regulatory interpretations.
+
+    Subclasses add framework-specific fields like:
+        - gdpr_data_type: GDPR data type classification
+        - special_category: Whether this is Article 9 special category data
+        - article_references: Relevant GDPR articles
+
+    """
+
+    pass
+
+
+class RulesetData[RuleType: Rule](BaseModel):
+    """Base ruleset data class for YAML parsing.
+
+    Generic over RuleType which can be Rule, DetectionRule, ClassificationRule,
+    or any subclass thereof.
+    """
 
     name: str = Field(min_length=1, description="Canonical name of the ruleset")
     version: str = Field(
         pattern=r"^\d+\.\d+\.\d+$", description='Semantic version (e.g., "1.0.0")'
     )
     description: str = Field(
-        min_length=1, description="Description of what this ruleset detects"
+        min_length=1, description="Description of what this ruleset does"
     )
     rules: list[RuleType] = Field(
         min_length=1, description="List of rules in this ruleset"

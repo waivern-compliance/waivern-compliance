@@ -138,28 +138,19 @@ def _analyse_single_file(self, file_data: SourceCodeFileDataModel):
 ```json
 {
   "purpose": "payment_processing",
-  "purpose_category": "operational",
-  "risk_level": "high",
-  "compliance": [
-    {
-      "regulation": "GDPR",
-      "relevance": "Payment processing requires lawful basis under Article 6(1)(b) for contract performance"
-    }
-  ],
-  "matched_pattern": "charge",
+  "purpose_category": "OPERATIONAL",
+  "matched_patterns": ["charge", "payment"],
   "evidence": [
-    "Function: chargeCustomer: Payment processing service integrations - charge",
-    "Matched: chargeCustomer"
+    {"content": "Function: chargeCustomer - Payment processing service integrations"}
   ],
   "metadata": {
     "source": "source_code",
-    "file_path": "models/Order.php",
-    "language": "php",
-    "analysis_type": "function_name_analysis",
-    "service_category": "payment_processing",
-    "description": "Payment processing service integrations",
-    "pattern": "charge"
-  }
+    "context": {
+      "file_path": "models/Order.php",
+      "language": "php"
+    }
+  },
+  "service_category": "payment_processing"
 }
 ```
 

@@ -1,8 +1,7 @@
 """Types for analyser findings.
 
 This module contains base types and models for analyser output,
-including finding metadata, evidence, compliance information,
-and analysis chain tracking.
+including finding metadata, evidence, and analysis chain tracking.
 """
 
 from __future__ import annotations
@@ -27,17 +26,6 @@ class BaseFindingEvidence(BaseModel):
     ] = Field(
         default_factory=lambda: datetime.now(UTC),
         description="When the evidence was collected",
-    )
-
-
-class BaseFindingCompliance(BaseModel):
-    """Compliance information for findings."""
-
-    regulation: str = Field(
-        ..., min_length=1, description="Regulation name (e.g., GDPR, CCPA)"
-    )
-    relevance: str = Field(
-        ..., min_length=1, description="Specific relevance to this regulation"
     )
 
 
@@ -68,12 +56,13 @@ class BaseFindingMetadata(BaseModel):
 
 
 class BaseFindingModel(BaseModel):
-    """Base model for all finding types with mandatory common fields."""
+    """Base model for all finding types with mandatory common fields.
 
-    risk_level: str = Field(description="Risk assessment level (low, medium, high)")
-    compliance: list[BaseFindingCompliance] = Field(
-        min_length=1, description="Compliance information for this finding"
-    )
+    Risk assessment is intentionally excluded from this base model as it is
+    a framework-specific concern. Each regulatory classifier should define
+    its own risk model in its output schema.
+    """
+
     evidence: list[BaseFindingEvidence] = Field(
         min_length=1,
         description="Evidence items with content and timestamps for this finding",
@@ -82,15 +71,6 @@ class BaseFindingModel(BaseModel):
         min_length=1,
         description="Patterns that were matched during analysis",
     )
-
-    @field_validator("risk_level")
-    @classmethod
-    def validate_risk_level(cls, v: str) -> str:
-        """Validate risk level values."""
-        allowed = ["low", "medium", "high"]
-        if v not in allowed:
-            raise ValueError(f"risk_level must be one of {allowed}, got: {v}")
-        return v
 
 
 class AnalysisChainEntry(BaseModel):

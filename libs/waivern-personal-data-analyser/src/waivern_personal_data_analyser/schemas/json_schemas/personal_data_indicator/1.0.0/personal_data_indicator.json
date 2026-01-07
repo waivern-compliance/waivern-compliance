@@ -77,29 +77,6 @@
       "title": "BaseAnalysisOutputMetadata",
       "type": "object"
     },
-    "BaseFindingCompliance": {
-      "description": "Compliance information for findings.",
-      "properties": {
-        "regulation": {
-          "description": "Regulation name (e.g., GDPR, CCPA)",
-          "minLength": 1,
-          "title": "Regulation",
-          "type": "string"
-        },
-        "relevance": {
-          "description": "Specific relevance to this regulation",
-          "minLength": 1,
-          "title": "Relevance",
-          "type": "string"
-        }
-      },
-      "required": [
-        "regulation",
-        "relevance"
-      ],
-      "title": "BaseFindingCompliance",
-      "type": "object"
-    },
     "BaseFindingEvidence": {
       "description": "Evidence item with content and collection timestamp.",
       "properties": {
@@ -120,9 +97,9 @@
       "title": "BaseFindingEvidence",
       "type": "object"
     },
-    "PersonalDataFindingMetadata": {
+    "PersonalDataIndicatorMetadata": {
       "additionalProperties": false,
-      "description": "Metadata for personal data findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "description": "Metadata for personal data indicator findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
       "properties": {
         "source": {
           "description": "Source file or location where the data was found",
@@ -139,26 +116,12 @@
       "required": [
         "source"
       ],
-      "title": "PersonalDataFindingMetadata",
+      "title": "PersonalDataIndicatorMetadata",
       "type": "object"
     },
-    "PersonalDataFindingModel": {
-      "description": "Personal data finding structure.",
+    "PersonalDataIndicatorModel": {
+      "description": "Personal data indicator finding structure.\n\nThis is a framework-agnostic indicator that identifies personal data patterns.\nRegulatory classification (e.g., GDPR special categories) is performed by\ndownstream classifiers.",
       "properties": {
-        "risk_level": {
-          "description": "Risk assessment level (low, medium, high)",
-          "title": "Risk Level",
-          "type": "string"
-        },
-        "compliance": {
-          "description": "Compliance information for this finding",
-          "items": {
-            "$ref": "#/$defs/BaseFindingCompliance"
-          },
-          "minItems": 1,
-          "title": "Compliance",
-          "type": "array"
-        },
         "evidence": {
           "description": "Evidence items with content and timestamps for this finding",
           "items": {
@@ -177,26 +140,15 @@
           "title": "Matched Patterns",
           "type": "array"
         },
-        "type": {
-          "description": "Type of personal data found (e.g., 'email', 'phone_number')",
-          "title": "Type",
+        "category": {
+          "description": "Category of personal data (e.g., 'email', 'phone', 'health')",
+          "title": "Category",
           "type": "string"
-        },
-        "data_type": {
-          "description": "Categorical data type identifier from GDPR classification (e.g., 'basic_profile', 'health_data')",
-          "title": "Data Type",
-          "type": "string"
-        },
-        "special_category": {
-          "default": false,
-          "description": "Whether this is GDPR Article 9 special category data",
-          "title": "Special Category",
-          "type": "boolean"
         },
         "metadata": {
           "anyOf": [
             {
-              "$ref": "#/$defs/PersonalDataFindingMetadata"
+              "$ref": "#/$defs/PersonalDataIndicatorMetadata"
             },
             {
               "type": "null"
@@ -207,44 +159,27 @@
         }
       },
       "required": [
-        "risk_level",
-        "compliance",
         "evidence",
         "matched_patterns",
-        "type",
-        "data_type"
+        "category"
       ],
-      "title": "PersonalDataFindingModel",
+      "title": "PersonalDataIndicatorModel",
       "type": "object"
     },
-    "PersonalDataSummary": {
-      "description": "Summary statistics for personal data findings.",
+    "PersonalDataIndicatorSummary": {
+      "description": "Summary statistics for personal data indicator findings.",
       "properties": {
         "total_findings": {
-          "description": "Total number of personal data findings",
+          "description": "Total number of personal data indicators found",
           "minimum": 0,
           "title": "Total Findings",
-          "type": "integer"
-        },
-        "high_risk_count": {
-          "description": "Number of high-risk personal data findings",
-          "minimum": 0,
-          "title": "High Risk Count",
-          "type": "integer"
-        },
-        "special_category_count": {
-          "description": "Number of special category personal data findings under GDPR",
-          "minimum": 0,
-          "title": "Special Category Count",
           "type": "integer"
         }
       },
       "required": [
-        "total_findings",
-        "high_risk_count",
-        "special_category_count"
+        "total_findings"
       ],
-      "title": "PersonalDataSummary",
+      "title": "PersonalDataIndicatorSummary",
       "type": "object"
     },
     "PersonalDataValidationSummary": {
@@ -290,18 +225,18 @@
       "type": "object"
     }
   },
-  "description": "Complete output structure for personal_data_finding schema.\n\nThis model represents the full wire format for personal data analysis results,\nincluding findings, summary statistics, and analysis metadata.",
+  "description": "Complete output structure for personal_data_indicator schema.\n\nThis model represents the full wire format for personal data indicator results.\nThese indicators are framework-agnostic and can be consumed by regulatory\nclassifiers (e.g., GDPR, CCPA) for framework-specific enrichment.",
   "properties": {
     "findings": {
-      "description": "List of personal data findings from GDPR compliance analysis",
+      "description": "List of personal data indicators found",
       "items": {
-        "$ref": "#/$defs/PersonalDataFindingModel"
+        "$ref": "#/$defs/PersonalDataIndicatorModel"
       },
       "title": "Findings",
       "type": "array"
     },
     "summary": {
-      "$ref": "#/$defs/PersonalDataSummary",
+      "$ref": "#/$defs/PersonalDataIndicatorSummary",
       "description": "Summary statistics of the personal data analysis"
     },
     "analysis_metadata": {
@@ -326,7 +261,7 @@
     "summary",
     "analysis_metadata"
   ],
-  "title": "PersonalDataFindingOutput",
+  "title": "PersonalDataIndicatorOutput",
   "type": "object",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "version": "1.0.0"

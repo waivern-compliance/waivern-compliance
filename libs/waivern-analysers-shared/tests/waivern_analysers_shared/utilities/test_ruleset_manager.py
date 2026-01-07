@@ -40,7 +40,6 @@ class TestRulesetManager:
                 name="test_purpose",
                 description="Test processing purpose",
                 patterns=("test_pattern",),
-                risk_level="low",
                 purpose_category="OPERATIONAL",
             ),
         )
@@ -101,7 +100,6 @@ class TestRulesetManager:
                 name="purpose_rule",
                 description="Test purpose",
                 patterns=("purpose_pattern",),
-                risk_level="medium",
                 purpose_category="ANALYTICS",
             ),
         )
@@ -147,7 +145,6 @@ class TestRulesetManagerCaching:
                 name="cached_rule",
                 description="Test caching",
                 patterns=("cache_test",),
-                risk_level="low",
                 purpose_category="OPERATIONAL",
             ),
         )
@@ -182,7 +179,6 @@ class TestRulesetManagerCaching:
                 name="processing_rule",
                 description="Processing rule",
                 patterns=("processing",),
-                risk_level="medium",
                 purpose_category="ANALYTICS",
             ),
         )
@@ -191,7 +187,6 @@ class TestRulesetManagerCaching:
                 name="data_rule",
                 description="Data rule",
                 patterns=("data",),
-                risk_level="high",
                 collection_type="form_data",
                 data_source="web_forms",
             ),
@@ -238,7 +233,6 @@ class TestRulesetManagerCaching:
                 name="clear_test",
                 description="Cache clear test",
                 patterns=("clear",),
-                risk_level="low",
                 purpose_category="OPERATIONAL",
             ),
         )

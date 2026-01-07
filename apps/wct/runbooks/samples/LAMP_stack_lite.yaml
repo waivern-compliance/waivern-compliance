@@ -28,7 +28,7 @@ artifacts:
         encoding: "utf-8"
 
   # SQLite analysis artifacts
-  sqlite_personal_data:
+  sqlite_personal_data_indicators:
     name: "Personal Data Detection in SQLite Database"
     description: "Scan SQLite database tables and columns for personally identifiable information"
     contact: "Emily Chen (Database Administrator) <emily.chen@company.co.uk>"
@@ -37,13 +37,20 @@ artifacts:
       type: "personal_data"
       properties:
         pattern_matching:
-          ruleset: "local/personal_data/1.0.0"
+          ruleset: "local/personal_data_indicator/1.0.0"
           evidence_context_size: "large"
           maximum_evidence_count: 3
         llm_validation:
           enable_llm_validation: false
           llm_batch_size: 80
           llm_validation_mode: "conservative"
+
+  sqlite_gdpr_personal_data:
+    name: "GDPR Personal Data Classification (SQLite)"
+    description: "Classify detected personal data indicators according to GDPR categories"
+    inputs: sqlite_personal_data_indicators
+    process:
+      type: "gdpr_personal_data_classifier"
     output: true
 
   sqlite_data_subject:
@@ -83,7 +90,7 @@ artifacts:
     output: true
 
   # Filesystem analysis artifacts
-  filesystem_personal_data:
+  filesystem_personal_data_indicators:
     name: "Personal Data Detection in Filesystem"
     description: "Scan filesystem mock for personally identifiable information in files"
     contact: "Michael Brown (DevOps) <michael.brown@company.co.uk>"
@@ -92,13 +99,20 @@ artifacts:
       type: "personal_data"
       properties:
         pattern_matching:
-          ruleset: "local/personal_data/1.0.0"
+          ruleset: "local/personal_data_indicator/1.0.0"
           evidence_context_size: "large"
           maximum_evidence_count: 3
         llm_validation:
           enable_llm_validation: false
           llm_batch_size: 50
           llm_validation_mode: "conservative"
+
+  filesystem_gdpr_personal_data:
+    name: "GDPR Personal Data Classification (Filesystem)"
+    description: "Classify detected personal data indicators according to GDPR categories"
+    inputs: filesystem_personal_data_indicators
+    process:
+      type: "gdpr_personal_data_classifier"
     output: true
 
   filesystem_processing_purpose:

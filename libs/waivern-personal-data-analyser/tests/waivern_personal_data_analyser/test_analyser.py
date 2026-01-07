@@ -12,15 +12,14 @@ from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )
-from waivern_core import AnalyserContractTests, RuleComplianceData
+from waivern_core import AnalyserContractTests
 from waivern_core.message import Message
 from waivern_core.schemas import (
-    BaseFindingCompliance,
     BaseFindingEvidence,
     Schema,
 )
 from waivern_llm import BaseLLMService
-from waivern_rulesets.personal_data import PersonalDataRule
+from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 
 from waivern_personal_data_analyser.analyser import (
     PersonalDataAnalyser,
@@ -29,8 +28,8 @@ from waivern_personal_data_analyser.pattern_matcher import (
     PersonalDataPatternMatcher,
 )
 from waivern_personal_data_analyser.schemas.types import (
-    PersonalDataFindingMetadata,
-    PersonalDataFindingModel,
+    PersonalDataIndicatorMetadata,
+    PersonalDataIndicatorModel,
 )
 from waivern_personal_data_analyser.types import (
     PersonalDataAnalyserConfig,
@@ -43,9 +42,6 @@ class TestPersonalDataAnalyser:
     # Test constants - defined locally, not imported from implementation
     EXPECTED_ANALYSER_NAME = "personal_data_analyser"
     EXPECTED_OUTPUT_MESSAGE_ID = "Personal_data_analysis"
-    HIGH_RISK_LEVEL = "high"
-    MEDIUM_RISK_LEVEL = "medium"
-    LOW_RISK_LEVEL = "low"
 
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
@@ -57,7 +53,7 @@ class TestPersonalDataAnalyser:
         """Create a valid configuration for testing using direct instantiation."""
         return PersonalDataAnalyserConfig(
             pattern_matching=PatternMatchingConfig(
-                ruleset="local/personal_data/1.0.0",
+                ruleset="local/personal_data_indicator/1.0.0",
                 evidence_context_size="medium",
                 maximum_evidence_count=5,
             ),
@@ -76,14 +72,14 @@ class TestPersonalDataAnalyser:
             "name": "Test personal data analysis",
             "data": [
                 {
-                    "content": "Contact us at support@example.com or call 123-456-7890",
+                    "content": "Contact email: support@example.com or phone: 123-456-7890",
                     "metadata": {
                         "source": "contact_form.html",
                         "connector_type": "filesystem",
                     },
                 },
                 {
-                    "content": "User profile: john.doe@company.com, phone: +44-20-1234-5678",
+                    "content": "User email: john.doe@company.com, phone: +44-20-1234-5678",
                     "metadata": {
                         "source": "user_database",
                         "connector_type": "test",
@@ -123,61 +119,34 @@ class TestPersonalDataAnalyser:
         return mock_reader
 
     @pytest.fixture
-    def sample_findings(self) -> list[PersonalDataFindingModel]:
+    def sample_findings(self) -> list[PersonalDataIndicatorModel]:
         """Create sample personal data findings for testing.
 
         Note: matched_patterns contains keywords that the pattern matcher looks for
         (e.g., "email", "phone"), not the actual data values.
         """
         return [
-            PersonalDataFindingModel(
-                type="Basic Profile Information",
-                data_type="basic_profile",
-                risk_level=self.MEDIUM_RISK_LEVEL,
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="email",
                 matched_patterns=["email"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[
                     BaseFindingEvidence(content="Contact us at support@example.com")
                 ],
-                metadata=PersonalDataFindingMetadata(source="contact_form.html"),
+                metadata=PersonalDataIndicatorMetadata(source="contact_form.html"),
             ),
-            PersonalDataFindingModel(
-                type="Basic Profile Information",
-                data_type="basic_profile",
-                risk_level=self.MEDIUM_RISK_LEVEL,
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="phone",
                 matched_patterns=["telephone"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="call 123-456-7890")],
-                metadata=PersonalDataFindingMetadata(source="contact_form.html"),
+                metadata=PersonalDataIndicatorMetadata(source="contact_form.html"),
             ),
-            PersonalDataFindingModel(
-                type="Basic Profile Information",
-                data_type="basic_profile",
-                risk_level=self.MEDIUM_RISK_LEVEL,
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="email",
                 matched_patterns=["email"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[
                     BaseFindingEvidence(content="User email: john.doe@company.com")
                 ],
-                metadata=PersonalDataFindingMetadata(source="user_database"),
+                metadata=PersonalDataIndicatorMetadata(source="user_database"),
             ),
         ]
 
@@ -200,14 +169,14 @@ class TestPersonalDataAnalyser:
         assert requirements[0][0].schema_name == "standard_input"
         assert requirements[0][0].version == "1.0.0"
 
-    def test_get_supported_output_schemas_returns_personal_data_finding(self) -> None:
-        """Test that the analyser outputs personal_data_finding schema."""
+    def test_get_supported_output_schemas_returns_personal_data_indicator(self) -> None:
+        """Test that the analyser outputs personal_data_indicator schema."""
         # Act
         output_schemas = PersonalDataAnalyser.get_supported_output_schemas()
 
         # Assert
         assert len(output_schemas) == 1
-        assert output_schemas[0].name == "personal_data_finding"
+        assert output_schemas[0].name == "personal_data_indicator"
         assert output_schemas[0].version == "1.0.0"
 
     def test_process_returns_valid_output_message_with_findings(
@@ -215,7 +184,7 @@ class TestPersonalDataAnalyser:
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
         """Test that process returns valid output message with minimal required findings structure."""
         # Arrange
@@ -230,7 +199,7 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
-            output_schema = Schema("personal_data_finding", "1.0.0")
+            output_schema = Schema("personal_data_indicator", "1.0.0")
 
             # Act
             result_message = analyser.process([sample_input_message], output_schema)
@@ -249,18 +218,16 @@ class TestPersonalDataAnalyser:
             # Verify summary statistics structure
             summary = result_content["summary"]
             assert "total_findings" in summary
-            assert "high_risk_count" in summary
-            assert "special_category_count" in summary
             assert summary["total_findings"] == len(result_content["findings"])  # type: ignore[arg-type]
 
-    def test_process_findings_include_expected_metadata_and_categorical_info(
+    def test_process_findings_include_expected_metadata_and_category(
         self,
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
-        """Test that findings include source metadata and data_type categorical information."""
+        """Test that findings include source metadata and category information."""
         # Arrange
         analyser = PersonalDataAnalyser(
             valid_config,
@@ -271,12 +238,12 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
-            output_schema = Schema("personal_data_finding", "1.0.0")
+            output_schema = Schema("personal_data_indicator", "1.0.0")
 
             # Act
             result_message = analyser.process([sample_input_message], output_schema)
 
-            # Assert - Verify source field and data_type categorical information are included
+            # Assert - Verify source field and category are included
             result_content = result_message.content
             for finding in result_content["findings"]:
                 # Test source field directly
@@ -285,19 +252,19 @@ class TestPersonalDataAnalyser:
                     "user_database",
                 ]
 
-                # Test data_type categorical information
-                assert "data_type" in finding, (
-                    "PersonalDataFindingModel should include data_type field for categorical reference"
+                # Test category field (granular indicator category)
+                assert "category" in finding, (
+                    "PersonalDataIndicatorModel should include category field"
                 )
-                assert isinstance(finding["data_type"], str)
-                assert finding["data_type"] != "", "data_type should not be empty"
+                assert isinstance(finding["category"], str)
+                assert finding["category"] != "", "category should not be empty"
 
     def test_personal_data_analyser_provides_standardised_analysis_metadata(
         self,
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
         """Test that personal data analyser provides standardised analysis metadata.
 
@@ -315,7 +282,7 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(sample_findings, True),
         ):
-            output_schema = Schema("personal_data_finding", "1.0.0")
+            output_schema = Schema("personal_data_indicator", "1.0.0")
 
             # Act
             result_message = analyser.process([sample_input_message], output_schema)
@@ -341,14 +308,16 @@ class TestPersonalDataAnalyser:
         assert len(analysis_metadata["analyses_chain"]) >= 1, (
             "analyses_chain must have at least one entry as it's mandatory"
         )
-        assert analysis_metadata["ruleset_used"] == "local/personal_data/1.0.0"
+        assert (
+            analysis_metadata["ruleset_used"] == "local/personal_data_indicator/1.0.0"
+        )
 
     def test_process_includes_validation_summary_when_llm_validation_enabled(
         self,
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
-        sample_findings: list[PersonalDataFindingModel],
+        sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
         """Test that validation summary is included when LLM validation is enabled."""
         # Arrange
@@ -363,7 +332,7 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
             return_value=(filtered_findings, True),
         ):
-            output_schema = Schema("personal_data_finding", "1.0.0")
+            output_schema = Schema("personal_data_indicator", "1.0.0")
 
             # Act
             result_message = analyser.process([sample_input_message], output_schema)
@@ -409,7 +378,7 @@ class TestPersonalDataAnalyser:
             llm_service=None,
         )
 
-        output_schema = Schema("personal_data_finding", "1.0.0")
+        output_schema = Schema("personal_data_indicator", "1.0.0")
 
         # Act
         result_message = analyser.process([sample_input_message], output_schema)
@@ -450,7 +419,7 @@ class TestPersonalDataAnalyser:
             schema=Schema("standard_input", "1.0.0"),
         )
 
-        output_schema = Schema("personal_data_finding", "1.0.0")
+        output_schema = Schema("personal_data_indicator", "1.0.0")
 
         # Act
         result_message = analyser.process([empty_message], output_schema)
@@ -483,7 +452,7 @@ class TestPersonalDataAnalyser:
             schema=Schema("standard_input", "1.0.0"),
         )
 
-        output_schema = Schema("personal_data_finding", "1.0.0")
+        output_schema = Schema("personal_data_indicator", "1.0.0")
 
         # Act
         result_message = analyser.process([empty_message], output_schema)
@@ -493,29 +462,19 @@ class TestPersonalDataAnalyser:
         result_content = result_message.content
         assert result_content["findings"] == []
         assert result_content["summary"]["total_findings"] == 0
-        assert result_content["summary"]["high_risk_count"] == 0
-        assert result_content["summary"]["special_category_count"] == 0
 
-    def test_personal_data_finding_data_type_matches_rule_data_type(
+    def test_personal_data_indicator_category_matches_rule_category(
         self,
         valid_config: PersonalDataAnalyserConfig,
     ) -> None:
-        """Test that finding.data_type matches the rule.data_type it was processed against."""
+        """Test that finding.category matches the rule.category it was processed against."""
         # Arrange
-        # Create a mock rule with known data_type
-        mock_rule = PersonalDataRule(
-            name="Test Email Detection",
+        # Create a mock rule with known category
+        mock_rule = PersonalDataIndicatorRule(
+            name="Email Address",
             description="Test rule for email detection",
             patterns=("email",),
-            data_type="basic_profile",  # This should appear in finding.data_type
-            special_category=False,
-            risk_level="medium",
-            compliance=[
-                RuleComplianceData(
-                    regulation="GDPR",
-                    relevance="Article 6 personal data processing",
-                )
-            ],
+            category="email",  # This should appear in finding.category
         )
 
         # Create real pattern matcher and mock its ruleset manager
@@ -545,24 +504,24 @@ class TestPersonalDataAnalyser:
                 ],
             }
             test_message = Message(
-                id="test_data_type",
+                id="test_category",
                 content=input_content,
                 schema=Schema("standard_input", "1.0.0"),
             )
 
-            output_schema = Schema("personal_data_finding", "1.0.0")
+            output_schema = Schema("personal_data_indicator", "1.0.0")
 
             # Act
             result_message = analyser.process([test_message], output_schema)
 
-            # Assert - verify that finding.data_type matches rule.data_type
+            # Assert - verify that finding.category matches rule.category
             result_content = result_message.content
             findings = result_content["findings"]
             assert len(findings) > 0, "Should have at least one finding"
 
             for finding in findings:
-                assert finding["data_type"] == "basic_profile", (
-                    f"Finding data_type should match rule.data_type, got: {finding.get('data_type')}"
+                assert finding["category"] == "email", (
+                    f"Finding category should match rule.category, got: {finding.get('category')}"
                 )
 
     def test_process_creates_analysis_chain_entry(
@@ -584,7 +543,7 @@ class TestPersonalDataAnalyser:
         # Act
         result = analyser.process(
             [sample_input_message],
-            Schema("personal_data_finding", "1.0.0"),
+            Schema("personal_data_indicator", "1.0.0"),
         )
 
         # Assert
@@ -617,7 +576,7 @@ class TestPersonalDataAnalyser:
         with patch("importlib.import_module") as mock_import:
             mock_import.return_value = mock_reader_module
 
-            output_schema = Schema("personal_data_finding", "1.0.0")
+            output_schema = Schema("personal_data_indicator", "1.0.0")
 
             # Act
             analyser.process([sample_input_message], output_schema)
@@ -669,7 +628,7 @@ class TestPersonalDataAnalyser:
             },
             schema=Schema("standard_input", "1.0.0"),
         )
-        output_schema = Schema("personal_data_finding", "1.0.0")
+        output_schema = Schema("personal_data_indicator", "1.0.0")
 
         # Act
         result = analyser.process([message1, message2], output_schema)

@@ -21,9 +21,9 @@ from waivern_llm import BaseLLMService
 from .llm_validation_strategy import personal_data_validation_strategy
 from .pattern_matcher import PersonalDataPatternMatcher
 from .schemas.types import (
-    PersonalDataFindingModel,
-    PersonalDataFindingOutput,
-    PersonalDataSummary,
+    PersonalDataIndicatorModel,
+    PersonalDataIndicatorOutput,
+    PersonalDataIndicatorSummary,
     PersonalDataValidationSummary,
 )
 from .types import PersonalDataAnalyserConfig
@@ -77,7 +77,7 @@ class PersonalDataAnalyser(Analyser):
     @override
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Declare output schemas this analyser can produce."""
-        return [Schema("personal_data_finding", "1.0.0")]
+        return [Schema("personal_data_indicator", "1.0.0")]
 
     def _load_reader(self, schema: Schema) -> ModuleType:
         """Dynamically import reader module.
@@ -129,7 +129,7 @@ class PersonalDataAnalyser(Analyser):
             all_data_items.extend(typed_data.data)
 
         # Process each data item using the pattern matcher
-        findings: list[PersonalDataFindingModel] = []
+        findings: list[PersonalDataIndicatorModel] = []
         for data_item in all_data_items:
             content = data_item.content
             item_metadata = data_item.metadata
@@ -152,8 +152,8 @@ class PersonalDataAnalyser(Analyser):
 
     def _create_output_message(
         self,
-        original_findings: list[PersonalDataFindingModel],
-        validated_findings: list[PersonalDataFindingModel],
+        original_findings: list[PersonalDataIndicatorModel],
+        validated_findings: list[PersonalDataIndicatorModel],
         output_schema: Schema,
         analyses_chain: list[AnalysisChainEntry],
     ) -> Message:
@@ -191,7 +191,7 @@ class PersonalDataAnalyser(Analyser):
         )
 
         # Create output model (Pydantic validates at construction)
-        output_model = PersonalDataFindingOutput(
+        output_model = PersonalDataIndicatorOutput(
             findings=validated_findings,
             summary=summary,
             analysis_metadata=analysis_metadata,
@@ -220,8 +220,8 @@ class PersonalDataAnalyser(Analyser):
         return output_message
 
     def _validate_findings_with_llm(
-        self, findings: list[PersonalDataFindingModel]
-    ) -> list[PersonalDataFindingModel]:
+        self, findings: list[PersonalDataIndicatorModel]
+    ) -> list[PersonalDataIndicatorModel]:
         """Validate findings using LLM if enabled and available.
 
         Args:
@@ -265,29 +265,25 @@ class PersonalDataAnalyser(Analyser):
             return findings
 
     def _build_findings_summary(
-        self, findings: list[PersonalDataFindingModel]
-    ) -> PersonalDataSummary:
-        """Build summary statistics for findings.
+        self, findings: list[PersonalDataIndicatorModel]
+    ) -> PersonalDataIndicatorSummary:
+        """Build summary statistics for indicators.
 
         Args:
-            findings: List of validated findings
+            findings: List of validated indicators
 
         Returns:
             Summary statistics model
 
         """
-        return PersonalDataSummary(
+        return PersonalDataIndicatorSummary(
             total_findings=len(findings),
-            high_risk_count=len([f for f in findings if f.risk_level == "high"]),
-            special_category_count=len(
-                [f for f in findings if f.special_category is True]
-            ),
         )
 
     def _build_validation_summary(
         self,
-        original_findings: list[PersonalDataFindingModel],
-        validated_findings: list[PersonalDataFindingModel],
+        original_findings: list[PersonalDataIndicatorModel],
+        validated_findings: list[PersonalDataIndicatorModel],
     ) -> PersonalDataValidationSummary:
         """Build LLM validation summary statistics.
 

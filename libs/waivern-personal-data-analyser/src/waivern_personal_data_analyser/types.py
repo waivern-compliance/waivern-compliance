@@ -23,7 +23,7 @@ class PersonalDataAnalyserConfig(BaseComponentConfiguration):
 
     pattern_matching: PatternMatchingConfig = Field(
         default_factory=lambda: PatternMatchingConfig(
-            ruleset="local/personal_data/1.0.0"
+            ruleset="local/personal_data_indicator/1.0.0"
         ),
         description="Pattern matching configuration for personal data detection",
     )

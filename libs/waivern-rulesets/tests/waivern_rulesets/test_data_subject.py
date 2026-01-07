@@ -7,12 +7,45 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from waivern_rulesets.base import RulesetLoader, RulesetRegistry
+from waivern_rulesets.base import AbstractRuleset
 from waivern_rulesets.data_subjects import (
     DataSubjectRule,
     DataSubjectRulesetData,
     DataSubjectsRuleset,
 )
+from waivern_rulesets.testing import RulesetContractTests
+
+# =============================================================================
+# Contract Tests (inherited from RulesetContractTests)
+# =============================================================================
+
+
+class TestDataSubjectsRulesetContract(RulesetContractTests[DataSubjectRule]):
+    """Contract tests for DataSubjectsRuleset.
+
+    Inherits all standard ruleset contract tests automatically.
+
+    """
+
+    @pytest.fixture
+    def ruleset_class(self) -> type[AbstractRuleset[DataSubjectRule]]:
+        """Provide the ruleset class to test."""
+        return DataSubjectsRuleset
+
+    @pytest.fixture
+    def rule_class(self) -> type[DataSubjectRule]:
+        """Provide the rule class used by the ruleset."""
+        return DataSubjectRule
+
+    @pytest.fixture
+    def expected_name(self) -> str:
+        """Provide the expected canonical name of the ruleset."""
+        return "data_subjects"
+
+
+# =============================================================================
+# Rule-specific Tests (unique to DataSubjectRule)
+# =============================================================================
 
 
 class TestDataSubjectRule:
@@ -28,7 +61,6 @@ class TestDataSubjectRule:
             indicator_type="primary",
             confidence_weight=40,
             applicable_contexts=["database", "source_code"],
-            risk_level="medium",
         )
 
         assert rule.name == "employee_rule"
@@ -51,7 +83,6 @@ class TestDataSubjectRule:
                 indicator_type="primary",
                 confidence_weight=0,  # Invalid: below minimum
                 applicable_contexts=["database"],
-                risk_level="low",
             )
 
         # Test maximum bound
@@ -66,7 +97,6 @@ class TestDataSubjectRule:
                 indicator_type="primary",
                 confidence_weight=51,  # Invalid: above maximum
                 applicable_contexts=["database"],
-                risk_level="low",
             )
 
     def test_data_subject_rule_indicator_type_validation(self) -> None:
@@ -81,7 +111,6 @@ class TestDataSubjectRule:
                 indicator_type=indicator_type,  # type: ignore
                 confidence_weight=25,
                 applicable_contexts=["database"],
-                risk_level="low",
             )
             assert rule.indicator_type == indicator_type
 
@@ -98,8 +127,12 @@ class TestDataSubjectRule:
                 indicator_type="invalid_type",  # Invalid literal value # type: ignore
                 confidence_weight=25,
                 applicable_contexts=["database"],
-                risk_level="low",
             )
+
+
+# =============================================================================
+# RulesetData Validation Tests
+# =============================================================================
 
 
 class TestDataSubjectRulesetData:
@@ -115,7 +148,6 @@ class TestDataSubjectRulesetData:
             indicator_type="primary",
             confidence_weight=40,
             applicable_contexts=["database"],
-            risk_level="medium",
         )
 
         ruleset = DataSubjectRulesetData(
@@ -144,7 +176,6 @@ class TestDataSubjectRulesetData:
             indicator_type="primary",
             confidence_weight=40,
             applicable_contexts=["database"],
-            risk_level="medium",
         )
 
         with pytest.raises(ValidationError, match="invalid subject_category"):
@@ -170,7 +201,6 @@ class TestDataSubjectRulesetData:
             indicator_type="primary",
             confidence_weight=25,
             applicable_contexts=["database"],
-            risk_level="low",
         )
 
         # Valid modifiers should work
@@ -198,7 +228,6 @@ class TestDataSubjectRulesetData:
             indicator_type="primary",
             confidence_weight=40,
             applicable_contexts=["database"],
-            risk_level="medium",
         )
 
         rule2 = DataSubjectRule(
@@ -209,7 +238,6 @@ class TestDataSubjectRulesetData:
             indicator_type="secondary",
             confidence_weight=20,
             applicable_contexts=["database", "filesystem"],
-            risk_level="low",
         )
 
         with pytest.raises(ValidationError, match="Duplicate rule names found"):
@@ -234,7 +262,6 @@ class TestDataSubjectRulesetData:
             indicator_type="primary",
             confidence_weight=40,
             applicable_contexts=["invalid_context"],  # Not in master list
-            risk_level="medium",
         )
 
         with pytest.raises(ValidationError, match="invalid applicable_contexts"):
@@ -250,105 +277,9 @@ class TestDataSubjectRulesetData:
             )
 
 
-class TestDataSubjectsRuleset:
-    """Test cases for the DataSubjectsRuleset class."""
-
-    def setup_method(self) -> None:
-        """Set up test fixtures for each test method."""
-        self.ruleset = DataSubjectsRuleset()
-
-    def test_name_property_returns_canonical_name(self) -> None:
-        """Test DataSubjectsRuleset returns canonical name."""
-        ruleset = DataSubjectsRuleset()
-        assert ruleset.name == "data_subjects"
-
-    def test_version_property_returns_correct_string_format(self) -> None:
-        """Test that version property returns a non-empty string."""
-        version = self.ruleset.version
-        assert isinstance(version, str)
-        assert len(version) > 0
-        # Version should follow semantic versioning pattern (x.y.z)
-        parts = version.split(".")
-        assert len(parts) == 3
-        assert all(part.isdigit() for part in parts)
-
-    def test_get_rules_returns_tuple_of_rules(self) -> None:
-        """Test that get_rules returns an immutable tuple of Rule objects."""
-        rules = self.ruleset.get_rules()
-        assert isinstance(rules, tuple)
-        assert len(rules) > 0
-        assert all(isinstance(rule, DataSubjectRule) for rule in rules)
-
-    def test_get_rules_returns_consistent_count(self) -> None:
-        """Test that get_rules returns a consistent number of rules."""
-        rules1 = self.ruleset.get_rules()
-        rules2 = self.ruleset.get_rules()
-        assert len(rules1) == len(rules2)
-
-    def test_get_rules_returns_same_tuple_each_time(self) -> None:
-        """Test that get_rules returns the same immutable tuple instance each time."""
-        rules1 = self.ruleset.get_rules()
-        rules2 = self.ruleset.get_rules()
-        assert rules1 is rules2  # Same tuple instance for immutability
-        assert rules1 == rules2  # Same content
-
-    def test_rules_are_immutable(self) -> None:
-        """Test that returned rules tuple cannot be modified."""
-        rules = self.ruleset.get_rules()
-        assert isinstance(rules, tuple)
-        # Attempting to modify should raise AttributeError
-        with pytest.raises(AttributeError):
-            rules.append(None)  # type: ignore[attr-defined]
-        with pytest.raises(AttributeError):
-            rules.clear()  # type: ignore[attr-defined]
-        # Cannot assign to tuple elements
-        with pytest.raises(TypeError):
-            rules[0] = None  # type: ignore[index]
-
-    def test_rule_names_are_unique(self) -> None:
-        """Test that all rule names are unique."""
-        rules = self.ruleset.get_rules()
-        rule_names = [rule.name for rule in rules]
-        assert len(rule_names) == len(set(rule_names))
-
-
-class TestDataSubjectsRulesetIntegration:
-    """Integration tests for DataSubjectsRuleset with other components."""
-
-    def test_ruleset_can_be_used_with_registry(
-        self, isolated_registry: RulesetRegistry
-    ) -> None:
-        """Test that DataSubjectsRuleset works with the registry pattern."""
-        isolated_registry.register(
-            "test_data_subjects", DataSubjectsRuleset, DataSubjectRule
-        )
-
-        # Should be able to retrieve and instantiate
-        ruleset_class = isolated_registry.get_ruleset_class(
-            "test_data_subjects", DataSubjectRule
-        )
-        assert ruleset_class is DataSubjectsRuleset
-
-        instance = ruleset_class()
-        assert isinstance(instance, DataSubjectsRuleset)
-        assert instance.name == "data_subjects"
-
-    def test_ruleset_loader_integration(
-        self, isolated_registry: RulesetRegistry
-    ) -> None:
-        """Test that DataSubjectsRuleset works with RulesetLoader."""
-        isolated_registry.register("loader_test", DataSubjectsRuleset, DataSubjectRule)
-
-        # Load via RulesetLoader using URI format
-        rules = RulesetLoader.load_ruleset("local/loader_test/1.0.0", DataSubjectRule)
-
-        assert isinstance(rules, tuple)
-        assert len(rules) > 0
-        assert all(isinstance(rule, DataSubjectRule) for rule in rules)
-
-        # Should have the same rules as direct instantiation
-        direct_rules = DataSubjectsRuleset().get_rules()
-        assert len(rules) == len(direct_rules)
+# =============================================================================
+# Error Handling Tests
+# =============================================================================
 
 
 class TestDataSubjectsRulesetErrorHandling:

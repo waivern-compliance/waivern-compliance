@@ -1,1153 +1,1079 @@
-name: "data_subjects"
-version: "1.0.0"
-description: "Data subject classification ruleset for GDPR Article 30(1)(c) compliance"
-
+name: data_subjects
+version: 1.0.0
+description: Data subject classification ruleset for GDPR Article 30(1)(c) compliance
 subject_categories:
-  - "employee"
-  - "former_employee"
-  - "job_applicant"
-  - "contractor"
-  - "director"
-  - "customer"
-  - "prospect"
-  - "former_customer"
-  - "visitor"
-  - "subscriber"
-  - "supplier"
-  - "advisor"
-  - "partner"
-  - "patient"
-  - "provider"
-  - "student"
-  - "guardian"
-  - "account_holder"
-  - "beneficiary"
-
+- employee
+- former_employee
+- job_applicant
+- contractor
+- director
+- customer
+- prospect
+- former_customer
+- visitor
+- subscriber
+- supplier
+- advisor
+- partner
+- patient
+- provider
+- student
+- guardian
+- account_holder
+- beneficiary
 applicable_contexts:
-  - "database"
-  - "filesystem"
-  - "source_code"
-
+- database
+- filesystem
+- source_code
 risk_increasing_modifiers:
-  - "minor"
-  - "child"
-  - "under 13 years of age"
-  - "vulnerable group"
-
+- minor
+- child
+- under 13 years of age
+- vulnerable group
 risk_decreasing_modifiers:
-  - "non-EU-resident"
-
+- non-EU-resident
 rules:
-  # ===== EMPLOYEE CATEGORY =====
-  - name: "employee_direct_role_fields"
-    description: "Direct employee role field indicators"
-    patterns:
-      - "employee"
-      - "staff"
-      - "worker"
-      - "team_member"
-      - "employees"
-      - "personnel"
-      - "hr_records"
-      - "staff_member"
-      - "employee_id"
-      - "staff_id"
-      - "worker_id"
-      - "emp_id"
-      - "personnel_id"
-      - "internal_user"
-      - "company_employee"
-      - "full_time_employee"
-      - "part_time_employee"
-      - "employee_data"
-      - "staff_data"
-      - "employee_profile"
-      - "staff_profile"
-      - "employee_record"
-      - "employment_record"
-      - "workforce"
-    subject_category: "employee"
-    indicator_type: "primary"
-    confidence_weight: 45
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "medium"
-
-  - name: "employee_hr_system_indicators"
-    description: "HR system integration patterns for employees"
-    patterns:
-      - "hire_date"
-      - "termination_date"
-      - "department"
-      - "salary"
-      - "payroll"
-      - "benefits"
-      - "performance_review"
-      - "manager_id"
-      - "employee_status"
-      - "job_title"
-      - "position"
-      - "employment_type"
-      - "work_location"
-      - "reporting_manager"
-      - "employee_hierarchy"
-      - "organizational_chart"
-      - "direct_reports"
-      - "supervisor"
-      - "team_lead"
-      - "office_location"
-      - "start_date"
-      - "employment_status"
-      - "employee_level"
-      - "job_grade"
-      - "compensation"
-      - "bonus"
-      - "stock_options"
-      - "vacation_balance"
-      - "sick_leave"
-      - "time_off"
-      - "working_hours"
-    subject_category: "employee"
-    indicator_type: "secondary"
-    confidence_weight: 30
-    applicable_contexts:
-      - "database"
-      - "filesystem"
-    risk_level: "medium"
-
-  - name: "employee_company_domain_email"
-    description: "Company email domain patterns for employees"
-    patterns:
-      - "company_email"
-      - "internal_email"
-      - "corporate_email"
-      - "work_email"
-      - "business_email"
-      - "company_domain"
-      - "enterprise_email"
-      - "organizational_email"
-      - "staff_email"
-      - "employee_email"
-      - "internal_communication"
-      - "corporate_directory"
-      - "employee_directory"
-      - "staff_directory"
-      - "company_contact"
-    subject_category: "employee"
-    indicator_type: "contextual"
-    confidence_weight: 15
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "low"
-
-  # ===== FORMER EMPLOYEE CATEGORY =====
-  - name: "former_employee_status_indicators"
-    description: "Former employee status and termination patterns"
-    patterns:
-      - "terminated"
-      - "inactive"
-      - "former"
-      - "ex_employee"
-      - "termination_date"
-      - "end_date"
-      - "last_active_date"
-      - "archived_employee"
-      - "disabled_user"
-      - "former_staff"
-      - "terminated_employee"
-      - "employment_ended"
-      - "former_personnel"
-      - "ex_staff"
-      - "retired_employee"
-      - "laid_off"
-      - "resigned"
-      - "dismissed"
-      - "separated"
-      - "exit_interview"
-      - "offboarding"
-      - "final_paycheck"
-      - "cobra_benefits"
-      - "severance"
-      - "departure_date"
-      - "last_working_day"
-      - "employment_history"
-      - "former_worker"
-      - "inactive_employee"
-      - "deactivated_user"
-    subject_category: "former_employee"
-    indicator_type: "primary"
-    confidence_weight: 40
-    applicable_contexts:
-      - "database"
-      - "filesystem"
-    risk_level: "medium"
-
-  # ===== JOB APPLICANT CATEGORY =====
-  - name: "job_applicant_recruitment_indicators"
-    description: "Job application and recruitment system patterns"
-    patterns:
-      - "applicants"
-      - "candidates"
-      - "job_applications"
-      - "applicant"
-      - "candidate"
-      - "resume"
-      - "cv"
-      - "application_status"
-      - "interview_schedule"
-      - "recruitment"
-      - "hiring_process"
-      - "job_posting"
-      - "application_date"
-      - "candidate_status"
-      - "job_candidate"
-      - "job_seeker"
-      - "talent_pool"
-      - "candidate_pipeline"
-      - "recruitment_data"
-      - "hiring_data"
-      - "applicant_tracking"
-      - "ats"
-      - "candidate_profile"
-      - "application_form"
-      - "job_interview"
-      - "background_check"
-      - "reference_check"
-      - "offer_letter"
-      - "pre_employment"
-      - "screening"
-      - "assessment"
-      - "recruiter_notes"
-      - "hiring_manager"
-      - "candidate_feedback"
-    subject_category: "job_applicant"
-    indicator_type: "primary"
-    confidence_weight: 45
-    applicable_contexts:
-      - "database"
-      - "filesystem"
-    risk_level: "medium"
-
-  # ===== CONTRACTOR CATEGORY =====
-  - name: "contractor_role_indicators"
-    description: "External contractor and consultant patterns"
-    patterns:
-      - "contractor"
-      - "consultant"
-      - "freelancer"
-      - "vendor_contact"
-      - "external_contractor"
-      - "contract_worker"
-      - "temporary_staff"
-      - "project_contractor"
-      - "consulting_agreement"
-      - "contractor_id"
-      - "independent_contractor"
-      - "subcontractor"
-      - "external_consultant"
-      - "contract_employee"
-      - "temp_worker"
-      - "outsourced_staff"
-      - "third_party_worker"
-      - "contract_professional"
-      - "project_consultant"
-      - "specialist_contractor"
-      - "contract_duration"
-      - "contractor_agreement"
-      - "work_order"
-      - "statement_of_work"
-      - "sow"
-      - "contractor_rate"
-      - "hourly_contractor"
-      - "contract_start_date"
-      - "contract_end_date"
-      - "contractor_status"
-    subject_category: "contractor"
-    indicator_type: "primary"
-    confidence_weight: 40
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "medium"
-
-  # ===== DIRECTOR CATEGORY =====
-  - name: "director_executive_indicators"
-    description: "Board members and executive governance patterns"
-    patterns:
-      - "director"
-      - "board_member"
-      - "executive"
-      - "board_of_directors"
-      - "corporate_governance"
-      - "executive_team"
-      - "board_meeting"
-      - "director_id"
-      - "executive_officer"
-      - "chief_officer"
-      - "president"
-      - "vice_president"
-      - "ceo"
-      - "cto"
-      - "cfo"
-      - "coo"
-      - "chairman"
-      - "chairwoman"
-      - "board_chair"
-      - "independent_director"
-      - "executive_director"
-      - "non_executive_director"
-      - "managing_director"
-      - "board_governance"
-      - "director_compensation"
-      - "board_resolution"
-      - "shareholder_meeting"
-      - "annual_meeting"
-      - "board_committee"
-      - "audit_committee"
-      - "compensation_committee"
-    subject_category: "director"
-    indicator_type: "primary"
-    confidence_weight: 45
-    applicable_contexts:
-      - "database"
-      - "filesystem"
-    risk_level: "high"
-
-  # ===== CUSTOMER CATEGORY =====
-  - name: "customer_active_account_indicators"
-    description: "Active customer account and subscription patterns"
-    patterns:
-      - "customers"
-      - "customer"
-      - "client"
-      - "user_accounts"
-      - "active_subscription"
-      - "paying_customer"
-      - "service_user"
-      - "customer_id"
-      - "client_id"
-      - "customer_account"
-      - "subscription_status"
-      - "payment_method"
-      - "billing_info"
-      - "active_user"
-      - "subscriber"
-      - "account_owner"
-      - "primary_user"
-      - "registered_user"
-      - "premium_user"
-      - "enterprise_customer"
-      - "business_customer"
-      - "individual_customer"
-      - "consumer"
-      - "end_user"
-      - "client_data"
-      - "customer_data"
-      - "customer_profile"
-      - "client_profile"
-      - "customer_info"
-      - "client_info"
-      - "customer_record"
-    subject_category: "customer"
-    indicator_type: "primary"
-    confidence_weight: 40
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "medium"
-
-  - name: "customer_transaction_indicators"
-    description: "Customer transaction and purchase history patterns"
-    patterns:
-      - "transactions"
-      - "purchases"
-      - "orders"
-      - "payments"
-      - "invoices"
-      - "receipts"
-      - "purchase_history"
-      - "transaction_log"
-      - "order_history"
-      - "payment_history"
-      - "billing_history"
-      - "subscription_payments"
-      - "transaction_data"
-      - "purchase_data"
-      - "order_data"
-      - "payment_data"
-      - "billing_data"
-      - "invoice_data"
-      - "receipt_data"
-      - "financial_transactions"
-      - "customer_transactions"
-      - "payment_records"
-      - "billing_records"
-      - "purchase_records"
-      - "order_records"
-      - "transaction_records"
-      - "sales_data"
-      - "revenue_data"
-      - "subscription_data"
-      - "recurring_payments"
-    subject_category: "customer"
-    indicator_type: "secondary"
-    confidence_weight: 25
-    applicable_contexts:
-      - "database"
-      - "filesystem"
-    risk_level: "medium"
-
-  # ===== PROSPECT CATEGORY =====
-  - name: "prospect_lead_management_indicators"
-    description: "Lead management and prospective customer patterns"
-    patterns:
-      - "prospects"
-      - "leads"
-      - "prospect"
-      - "lead"
-      - "potential_customer"
-      - "lead_management"
-      - "sales_pipeline"
-      - "marketing_qualified_lead"
-      - "sales_qualified_lead"
-      - "mql"
-      - "sql"
-      - "lead_score"
-      - "prospect_id"
-      - "lead_id"
-      - "sales_lead"
-      - "qualified_lead"
-      - "unqualified_lead"
-      - "cold_lead"
-      - "warm_lead"
-      - "hot_lead"
-      - "lead_source"
-      - "lead_status"
-      - "prospect_status"
-      - "opportunity"
-      - "sales_opportunity"
-      - "pipeline_stage"
-      - "lead_qualification"
-      - "prospect_data"
-      - "lead_data"
-      - "crm_lead"
-      - "sales_prospect"
-      - "marketing_lead"
-      - "inbound_lead"
-      - "outbound_lead"
-    subject_category: "prospect"
-    indicator_type: "primary"
-    confidence_weight: 35
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "low"
-
-  - name: "prospect_trial_indicators"
-    description: "Trial account and demo request patterns"
-    patterns:
-      - "trial_account"
-      - "demo_request"
-      - "free_trial"
-      - "trial_user"
-      - "demo_user"
-      - "trial_subscription"
-      - "demo_booking"
-      - "consultation_request"
-      - "quote_request"
-      - "proposal_request"
-      - "trial_period"
-      - "trial_data"
-      - "demo_data"
-      - "trial_signup"
-      - "trial_registration"
-      - "demo_signup"
-      - "trial_expiration"
-      - "trial_conversion"
-      - "demo_conversion"
-      - "pilot_program"
-      - "proof_of_concept"
-      - "evaluation_period"
-      - "test_drive"
-      - "preview_access"
-      - "beta_user"
-      - "alpha_user"
-      - "early_access"
-      - "trial_license"
-      - "evaluation_license"
-      - "demo_license"
-      - "trial_feedback"
-      - "demo_feedback"
-    subject_category: "prospect"
-    indicator_type: "secondary"
-    confidence_weight: 20
-    applicable_contexts:
-      - "database"
-      - "filesystem"
-    risk_level: "low"
-
-  # ===== FORMER CUSTOMER CATEGORY =====
-  - name: "former_customer_cancellation_indicators"
-    description: "Former customer cancellation and churn patterns"
-    patterns:
-      - "cancelled_subscription"
-      - "expired_account"
-      - "churned_customer"
-      - "former_customer"
-      - "ex_customer"
-      - "closed_account"
-      - "cancelled_user"
-      - "inactive_customer"
-      - "churn_date"
-      - "cancellation_date"
-      - "account_closure"
-      - "subscription_cancelled"
-      - "account_terminated"
-      - "service_discontinued"
-      - "customer_churn"
-      - "account_deactivation"
-      - "subscription_ended"
-      - "service_ended"
-      - "customer_exit"
-      - "account_expiry"
-      - "lapsed_customer"
-      - "dormant_account"
-      - "suspended_account"
-      - "terminated_subscription"
-      - "cancelled_service"
-      - "ended_relationship"
-      - "former_client"
-      - "ex_client"
-      - "previous_customer"
-      - "past_customer"
-      - "historical_customer"
-    subject_category: "former_customer"
-    indicator_type: "primary"
-    confidence_weight: 40
-    applicable_contexts:
-      - "database"
-      - "filesystem"
-    risk_level: "low"
-
-  # ===== VISITOR CATEGORY =====
-  - name: "visitor_web_analytics_indicators"
-    description: "Website visitor and anonymous user patterns"
-    patterns:
-      - "visitors"
-      - "visitor"
-      - "anonymous_user"
-      - "session_data"
-      - "web_analytics"
-      - "page_views"
-      - "website_visitor"
-      - "guest_user"
-      - "anonymous_session"
-      - "visitor_id"
-      - "session_id"
-      - "tracking_id"
-      - "cookie_consent"
-      - "web_traffic"
-      - "site_visitor"
-      - "anonymous_visitor"
-      - "guest_session"
-      - "website_user"
-      - "web_user"
-      - "site_user"
-      - "public_user"
-      - "unauthenticated_user"
-      - "browse_session"
-      - "visitor_tracking"
-      - "anonymous_tracking"
-      - "web_session"
-      - "page_visitor"
-      - "site_analytics"
-      - "visitor_analytics"
-      - "anonymous_analytics"
-      - "guest_analytics"
-      - "public_access"
-      - "visitor_data"
-      - "anonymous_data"
-      - "guest_data"
-    subject_category: "visitor"
-    indicator_type: "primary"
-    confidence_weight: 35
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "low"
-
-  # ===== SUBSCRIBER CATEGORY =====
-  - name: "subscriber_email_marketing_indicators"
-    description: "Email marketing and newsletter subscription patterns"
-    patterns:
-      - "subscribers"
-      - "subscriber"
-      - "newsletter_subscription"
-      - "email_list"
-      - "mailing_list"
-      - "marketing_consent"
-      - "subscription_preferences"
-      - "email_subscriber"
-      - "newsletter_user"
-      - "marketing_subscriber"
-      - "email_preferences"
-      - "unsubscribed"
-      - "subscription_data"
-      - "newsletter_data"
-      - "email_marketing"
-      - "marketing_list"
-      - "email_campaign"
-      - "newsletter_signup"
-      - "email_signup"
-      - "subscription_signup"
-      - "marketing_signup"
-      - "opt_in"
-      - "opt_out"
-      - "double_opt_in"
-      - "email_consent"
-      - "marketing_permission"
-      - "communication_preferences"
-      - "subscription_status"
-      - "newsletter_status"
-      - "email_status"
-      - "marketing_status"
-      - "subscriber_data"
-      - "newsletter_subscriber"
-      - "email_list_member"
-    subject_category: "subscriber"
-    indicator_type: "primary"
-    confidence_weight: 40
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "low"
-
-  # ===== SUPPLIER CATEGORY =====
-  - name: "supplier_vendor_management_indicators"
-    description: "Supplier and vendor management system patterns"
-    patterns:
-      - "suppliers"
-      - "vendors"
-      - "supplier"
-      - "vendor"
-      - "vendor_management"
-      - "supplier_info"
-      - "purchase_orders"
-      - "vendor_contact"
-      - "supplier_contract"
-      - "procurement"
-      - "vendor_id"
-      - "supplier_id"
-      - "vendor_portal"
-      - "supplier_portal"
-      - "vendor_data"
-      - "supplier_data"
-      - "vendor_profile"
-      - "supplier_profile"
-      - "vendor_information"
-      - "supplier_information"
-      - "vendor_details"
-      - "supplier_details"
-      - "procurement_data"
-      - "purchasing_data"
-      - "vendor_relationship"
-      - "supplier_relationship"
-      - "vendor_performance"
-      - "supplier_performance"
-      - "vendor_evaluation"
-      - "supplier_evaluation"
-      - "vendor_qualification"
-      - "supplier_qualification"
-      - "purchase_order"
-      - "po_data"
-      - "vendor_invoice"
-      - "supplier_invoice"
-    subject_category: "supplier"
-    indicator_type: "primary"
-    confidence_weight: 40
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "low"
-
-  # ===== ADVISOR CATEGORY =====
-  - name: "advisor_professional_services_indicators"
-    description: "Professional advisors and consulting service patterns"
-    patterns:
-      - "advisors"
-      - "advisor"
-      - "consultant"
-      - "legal_counsel"
-      - "financial_advisor"
-      - "professional_services"
-      - "consulting_agreement"
-      - "advisory_services"
-      - "legal_services"
-      - "accounting_services"
-      - "advisor_id"
-      - "consultant_id"
-      - "professional_advisor"
-      - "legal_advisor"
-      - "tax_advisor"
-      - "business_advisor"
-      - "technical_advisor"
-      - "strategic_advisor"
-      - "external_advisor"
-      - "independent_advisor"
-      - "consulting_firm"
-      - "advisory_firm"
-      - "law_firm"
-      - "accounting_firm"
-      - "professional_firm"
-      - "advisor_data"
-      - "consultant_data"
-      - "advisory_data"
-      - "consulting_data"
-      - "professional_data"
-      - "legal_data"
-      - "accounting_data"
-      - "advisory_relationship"
-      - "consulting_relationship"
-      - "professional_relationship"
-    subject_category: "advisor"
-    indicator_type: "primary"
-    confidence_weight: 40
-    applicable_contexts:
-      - "database"
-      - "filesystem"
-    risk_level: "medium"
-
-  # ===== PARTNER CATEGORY =====
-  - name: "partner_business_alliance_indicators"
-    description: "Business partner and strategic alliance patterns"
-    patterns:
-      - "partners"
-      - "partner"
-      - "business_partner"
-      - "strategic_partner"
-      - "alliance_partner"
-      - "partnership_agreement"
-      - "joint_venture"
-      - "partner_integration"
-      - "api_partner"
-      - "channel_partner"
-      - "partner_id"
-      - "partnership_data"
-      - "technology_partner"
-      - "integration_partner"
-      - "reseller_partner"
-      - "distribution_partner"
-      - "marketing_partner"
-      - "sales_partner"
-      - "strategic_alliance"
-      - "business_alliance"
-      - "partner_portal"
-      - "partner_program"
-      - "partnership_program"
-      - "partner_agreement"
-      - "alliance_agreement"
-      - "partner_relationship"
-      - "alliance_relationship"
-      - "partner_data"
-      - "alliance_data"
-      - "partner_profile"
-      - "partner_information"
-      - "partnership_details"
-      - "joint_venture_data"
-      - "collaboration_data"
-      - "partner_performance"
-    subject_category: "partner"
-    indicator_type: "primary"
-    confidence_weight: 40
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "medium"
-
-  # ===== PATIENT CATEGORY (HEALTHCARE SECTOR) =====
-  - name: "patient_healthcare_indicators"
-    description: "Healthcare patient record and EMR system patterns"
-    patterns:
-      - "patients"
-      - "patient"
-      - "medical_records"
-      - "patient_data"
-      - "emr"
-      - "ehr"
-      - "patient_id"
-      - "medical_record_number"
-      - "mrn"
-      - "healthcare_data"
-      - "patient_info"
-      - "medical_history"
-      - "treatment_records"
-      - "appointment_data"
-      - "patient_portal"
-      - "electronic_health_record"
-      - "electronic_medical_record"
-      - "patient_chart"
-      - "medical_chart"
-      - "clinical_data"
-      - "patient_care"
-      - "medical_care"
-      - "healthcare_patient"
-      - "hospital_patient"
-      - "clinic_patient"
-      - "outpatient"
-      - "inpatient"
-      - "patient_registration"
-      - "patient_admission"
-      - "patient_discharge"
-      - "patient_visit"
-      - "medical_appointment"
-      - "patient_encounter"
-      - "clinical_encounter"
-      - "patient_demographics"
-      - "medical_demographics"
-    subject_category: "patient"
-    indicator_type: "primary"
-    confidence_weight: 45
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "high"
-
-  # ===== PROVIDER CATEGORY (HEALTHCARE SECTOR) =====
-  - name: "provider_healthcare_professional_indicators"
-    description: "Healthcare provider and medical professional patterns"
-    patterns:
-      - "providers"
-      - "provider"
-      - "healthcare_provider"
-      - "medical_provider"
-      - "physician"
-      - "doctor"
-      - "nurse"
-      - "medical_professional"
-      - "healthcare_professional"
-      - "provider_id"
-      - "physician_id"
-      - "medical_license"
-      - "provider_credentials"
-      - "healthcare_worker"
-      - "medical_staff"
-      - "clinical_staff"
-      - "attending_physician"
-      - "resident_physician"
-      - "specialist"
-      - "surgeon"
-      - "therapist"
-      - "pharmacist"
-      - "radiologist"
-      - "pathologist"
-      - "anesthesiologist"
-      - "cardiologist"
-      - "dermatologist"
-      - "neurologist"
-      - "psychiatrist"
-      - "pediatrician"
-      - "gynecologist"
-      - "urologist"
-      - "orthopedist"
-      - "provider_data"
-      - "physician_data"
-      - "medical_professional_data"
-    subject_category: "provider"
-    indicator_type: "primary"
-    confidence_weight: 45
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "medium"
-
-  # ===== STUDENT CATEGORY (EDUCATION SECTOR) =====
-  - name: "student_education_system_indicators"
-    description: "Student information system and academic record patterns"
-    patterns:
-      - "students"
-      - "student"
-      - "student_records"
-      - "academic_records"
-      - "enrollment"
-      - "student_id"
-      - "student_number"
-      - "academic_year"
-      - "course_enrollment"
-      - "student_portal"
-      - "academic_data"
-      - "grade_records"
-      - "transcript"
-      - "student_info"
-      - "student_information_system"
-      - "sis"
-      - "learning_management_system"
-      - "lms"
-      - "student_data"
-      - "academic_information"
-      - "student_profile"
-      - "academic_profile"
-      - "student_demographics"
-      - "academic_demographics"
-      - "enrolled_student"
-      - "registered_student"
-      - "active_student"
-      - "current_student"
-      - "undergraduate"
-      - "graduate"
-      - "postgraduate"
-      - "doctoral_student"
-      - "phd_student"
-      - "master_student"
-      - "bachelor_student"
-      - "student_registration"
-      - "course_registration"
-      - "class_enrollment"
-    subject_category: "student"
-    indicator_type: "primary"
-    confidence_weight: 45
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "medium"
-
-  # ===== GUARDIAN CATEGORY (EDUCATION SECTOR) =====
-  - name: "guardian_parental_consent_indicators"
-    description: "Parent and guardian consent and contact patterns"
-    patterns:
-      - "guardians"
-      - "parents"
-      - "guardian"
-      - "parent"
-      - "parental_consent"
-      - "guardian_contact"
-      - "emergency_contact"
-      - "parent_portal"
-      - "guardian_info"
-      - "parental_approval"
-      - "minor_consent"
-      - "guardian_signature"
-      - "parent_data"
-      - "guardian_data"
-      - "parental_data"
-      - "guardian_information"
-      - "parent_information"
-      - "parental_information"
-      - "parent_guardian"
-      - "legal_guardian"
-      - "custodial_parent"
-      - "non_custodial_parent"
-      - "primary_guardian"
-      - "secondary_guardian"
-      - "emergency_guardian"
-      - "guardian_relationship"
-      - "parent_relationship"
-      - "parental_relationship"
-      - "guardian_permission"
-      - "parent_permission"
-      - "parental_permission"
-      - "guardian_authorization"
-      - "parent_authorization"
-      - "parental_authorization"
-      - "minor_guardian"
-      - "child_guardian"
-    subject_category: "guardian"
-    indicator_type: "primary"
-    confidence_weight: 40
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "medium"
-
-  # ===== ACCOUNT HOLDER CATEGORY (FINANCIAL SECTOR) =====
-  - name: "account_holder_financial_indicators"
-    description: "Financial account holder and banking patterns"
-    patterns:
-      - "account_holders"
-      - "account_holder"
-      - "bank_account"
-      - "financial_account"
-      - "account_number"
-      - "banking_data"
-      - "account_info"
-      - "financial_records"
-      - "account_balance"
-      - "account_status"
-      - "account_owner"
-      - "primary_account_holder"
-      - "joint_account_holder"
-      - "secondary_account_holder"
-      - "account_data"
-      - "banking_information"
-      - "financial_information"
-      - "account_information"
-      - "banking_records"
-      - "account_records"
-      - "financial_data"
-      - "banking_profile"
-      - "account_profile"
-      - "financial_profile"
-      - "account_details"
-      - "banking_details"
-      - "financial_details"
-      - "account_management"
-      - "banking_services"
-      - "financial_services"
-      - "account_activity"
-      - "banking_activity"
-      - "financial_activity"
-      - "account_history"
-      - "banking_history"
-    subject_category: "account_holder"
-    indicator_type: "primary"
-    confidence_weight: 45
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "high"
-
-  # ===== BENEFICIARY CATEGORY (FINANCIAL SECTOR) =====
-  - name: "beneficiary_insurance_pension_indicators"
-    description: "Insurance and pension beneficiary patterns"
-    patterns:
-      - "beneficiaries"
-      - "beneficiary"
-      - "insurance_beneficiary"
-      - "pension_beneficiary"
-      - "policy_beneficiary"
-      - "benefit_recipient"
-      - "insurance_policy"
-      - "pension_plan"
-      - "beneficiary_info"
-      - "benefit_payout"
-      - "beneficiary_id"
-      - "primary_beneficiary"
-      - "secondary_beneficiary"
-      - "contingent_beneficiary"
-      - "insurance_beneficiaries"
-      - "pension_beneficiaries"
-      - "beneficiary_data"
-      - "beneficiary_information"
-      - "beneficiary_details"
-      - "benefit_data"
-      - "insurance_data"
-      - "pension_data"
-      - "policy_data"
-      - "benefit_information"
-      - "insurance_information"
-      - "pension_information"
-      - "policy_information"
-      - "beneficiary_designation"
-      - "benefit_designation"
-      - "insurance_designation"
-      - "pension_designation"
-      - "policy_designation"
-      - "beneficiary_claim"
-      - "benefit_claim"
-      - "insurance_claim"
-      - "pension_claim"
-    subject_category: "beneficiary"
-    indicator_type: "primary"
-    confidence_weight: 40
-    applicable_contexts:
-      - "database"
-      - "filesystem"
-    risk_level: "medium"
-
-  # ===== CROSS-CATEGORY CONTEXTUAL INDICATORS =====
-  - name: "user_authentication_contextual"
-    description: "General user authentication and login patterns"
-    patterns:
-      - "users"
-      - "user"
-      - "login"
-      - "authentication"
-      - "user_id"
-      - "username"
-      - "user_profile"
-      - "user_data"
-      - "user_info"
-      - "profile_data"
-      - "account_data"
-      - "user_session"
-      - "logged_in_user"
-      - "authenticated_user"
-      - "user_account"
-      - "user_registration"
-      - "user_signup"
-      - "user_login"
-      - "user_logout"
-      - "user_access"
-      - "user_permissions"
-      - "user_roles"
-      - "user_rights"
-      - "user_privileges"
-      - "user_authorization"
-      - "user_credentials"
-      - "user_identity"
-      - "user_verification"
-      - "user_validation"
-      - "user_management"
-      - "user_administration"
-      - "user_control"
-      - "user_security"
-      - "user_privacy"
-      - "user_preferences"
-    subject_category: "visitor"
-    indicator_type: "contextual"
-    confidence_weight: 10
-    applicable_contexts:
-      - "database"
-      - "source_code"
-    risk_level: "low"
-
-  - name: "personal_information_contextual"
-    description: "General personal information field patterns"
-    patterns:
-      - "personal_info"
-      - "personal_data"
-      - "contact_info"
-      - "contact_details"
-      - "first_name"
-      - "last_name"
-      - "email_address"
-      - "phone_number"
-      - "address"
-      - "full_name"
-      - "name"
-      - "email"
-      - "phone"
-      - "personal_information"
-      - "contact_information"
-      - "individual_data"
-      - "person_data"
-      - "individual_info"
-      - "person_info"
-      - "personal_details"
-      - "contact_data"
-      - "identity_data"
-      - "identification_data"
-      - "demographic_data"
-      - "profile_information"
-      - "individual_profile"
-      - "person_profile"
-      - "contact_profile"
-      - "personal_profile"
-      - "individual_details"
-      - "person_details"
-      - "contact_details"
-      - "identity_details"
-      - "demographic_details"
-      - "personal_record"
-      - "individual_record"
-      - "person_record"
-      - "contact_record"
-    subject_category: "visitor"
-    indicator_type: "contextual"
-    confidence_weight: 5
-    applicable_contexts:
-      - "database"
-      - "filesystem"
-      - "source_code"
-    risk_level: "low"
+- name: employee_direct_role_fields
+  description: Direct employee role field indicators
+  patterns:
+  - employee
+  - staff
+  - worker
+  - team_member
+  - employees
+  - personnel
+  - hr_records
+  - staff_member
+  - employee_id
+  - staff_id
+  - worker_id
+  - emp_id
+  - personnel_id
+  - internal_user
+  - company_employee
+  - full_time_employee
+  - part_time_employee
+  - employee_data
+  - staff_data
+  - employee_profile
+  - staff_profile
+  - employee_record
+  - employment_record
+  - workforce
+  subject_category: employee
+  indicator_type: primary
+  confidence_weight: 45
+  applicable_contexts:
+  - database
+  - source_code
+- name: employee_hr_system_indicators
+  description: HR system integration patterns for employees
+  patterns:
+  - hire_date
+  - termination_date
+  - department
+  - salary
+  - payroll
+  - benefits
+  - performance_review
+  - manager_id
+  - employee_status
+  - job_title
+  - position
+  - employment_type
+  - work_location
+  - reporting_manager
+  - employee_hierarchy
+  - organizational_chart
+  - direct_reports
+  - supervisor
+  - team_lead
+  - office_location
+  - start_date
+  - employment_status
+  - employee_level
+  - job_grade
+  - compensation
+  - bonus
+  - stock_options
+  - vacation_balance
+  - sick_leave
+  - time_off
+  - working_hours
+  subject_category: employee
+  indicator_type: secondary
+  confidence_weight: 30
+  applicable_contexts:
+  - database
+  - filesystem
+- name: employee_company_domain_email
+  description: Company email domain patterns for employees
+  patterns:
+  - company_email
+  - internal_email
+  - corporate_email
+  - work_email
+  - business_email
+  - company_domain
+  - enterprise_email
+  - organizational_email
+  - staff_email
+  - employee_email
+  - internal_communication
+  - corporate_directory
+  - employee_directory
+  - staff_directory
+  - company_contact
+  subject_category: employee
+  indicator_type: contextual
+  confidence_weight: 15
+  applicable_contexts:
+  - database
+  - source_code
+- name: former_employee_status_indicators
+  description: Former employee status and termination patterns
+  patterns:
+  - terminated
+  - inactive
+  - former
+  - ex_employee
+  - termination_date
+  - end_date
+  - last_active_date
+  - archived_employee
+  - disabled_user
+  - former_staff
+  - terminated_employee
+  - employment_ended
+  - former_personnel
+  - ex_staff
+  - retired_employee
+  - laid_off
+  - resigned
+  - dismissed
+  - separated
+  - exit_interview
+  - offboarding
+  - final_paycheck
+  - cobra_benefits
+  - severance
+  - departure_date
+  - last_working_day
+  - employment_history
+  - former_worker
+  - inactive_employee
+  - deactivated_user
+  subject_category: former_employee
+  indicator_type: primary
+  confidence_weight: 40
+  applicable_contexts:
+  - database
+  - filesystem
+- name: job_applicant_recruitment_indicators
+  description: Job application and recruitment system patterns
+  patterns:
+  - applicants
+  - candidates
+  - job_applications
+  - applicant
+  - candidate
+  - resume
+  - cv
+  - application_status
+  - interview_schedule
+  - recruitment
+  - hiring_process
+  - job_posting
+  - application_date
+  - candidate_status
+  - job_candidate
+  - job_seeker
+  - talent_pool
+  - candidate_pipeline
+  - recruitment_data
+  - hiring_data
+  - applicant_tracking
+  - ats
+  - candidate_profile
+  - application_form
+  - job_interview
+  - background_check
+  - reference_check
+  - offer_letter
+  - pre_employment
+  - screening
+  - assessment
+  - recruiter_notes
+  - hiring_manager
+  - candidate_feedback
+  subject_category: job_applicant
+  indicator_type: primary
+  confidence_weight: 45
+  applicable_contexts:
+  - database
+  - filesystem
+- name: contractor_role_indicators
+  description: External contractor and consultant patterns
+  patterns:
+  - contractor
+  - consultant
+  - freelancer
+  - vendor_contact
+  - external_contractor
+  - contract_worker
+  - temporary_staff
+  - project_contractor
+  - consulting_agreement
+  - contractor_id
+  - independent_contractor
+  - subcontractor
+  - external_consultant
+  - contract_employee
+  - temp_worker
+  - outsourced_staff
+  - third_party_worker
+  - contract_professional
+  - project_consultant
+  - specialist_contractor
+  - contract_duration
+  - contractor_agreement
+  - work_order
+  - statement_of_work
+  - sow
+  - contractor_rate
+  - hourly_contractor
+  - contract_start_date
+  - contract_end_date
+  - contractor_status
+  subject_category: contractor
+  indicator_type: primary
+  confidence_weight: 40
+  applicable_contexts:
+  - database
+  - source_code
+- name: director_executive_indicators
+  description: Board members and executive governance patterns
+  patterns:
+  - director
+  - board_member
+  - executive
+  - board_of_directors
+  - corporate_governance
+  - executive_team
+  - board_meeting
+  - director_id
+  - executive_officer
+  - chief_officer
+  - president
+  - vice_president
+  - ceo
+  - cto
+  - cfo
+  - coo
+  - chairman
+  - chairwoman
+  - board_chair
+  - independent_director
+  - executive_director
+  - non_executive_director
+  - managing_director
+  - board_governance
+  - director_compensation
+  - board_resolution
+  - shareholder_meeting
+  - annual_meeting
+  - board_committee
+  - audit_committee
+  - compensation_committee
+  subject_category: director
+  indicator_type: primary
+  confidence_weight: 45
+  applicable_contexts:
+  - database
+  - filesystem
+- name: customer_active_account_indicators
+  description: Active customer account and subscription patterns
+  patterns:
+  - customers
+  - customer
+  - client
+  - user_accounts
+  - active_subscription
+  - paying_customer
+  - service_user
+  - customer_id
+  - client_id
+  - customer_account
+  - subscription_status
+  - payment_method
+  - billing_info
+  - active_user
+  - subscriber
+  - account_owner
+  - primary_user
+  - registered_user
+  - premium_user
+  - enterprise_customer
+  - business_customer
+  - individual_customer
+  - consumer
+  - end_user
+  - client_data
+  - customer_data
+  - customer_profile
+  - client_profile
+  - customer_info
+  - client_info
+  - customer_record
+  subject_category: customer
+  indicator_type: primary
+  confidence_weight: 40
+  applicable_contexts:
+  - database
+  - source_code
+- name: customer_transaction_indicators
+  description: Customer transaction and purchase history patterns
+  patterns:
+  - transactions
+  - purchases
+  - orders
+  - payments
+  - invoices
+  - receipts
+  - purchase_history
+  - transaction_log
+  - order_history
+  - payment_history
+  - billing_history
+  - subscription_payments
+  - transaction_data
+  - purchase_data
+  - order_data
+  - payment_data
+  - billing_data
+  - invoice_data
+  - receipt_data
+  - financial_transactions
+  - customer_transactions
+  - payment_records
+  - billing_records
+  - purchase_records
+  - order_records
+  - transaction_records
+  - sales_data
+  - revenue_data
+  - subscription_data
+  - recurring_payments
+  subject_category: customer
+  indicator_type: secondary
+  confidence_weight: 25
+  applicable_contexts:
+  - database
+  - filesystem
+- name: prospect_lead_management_indicators
+  description: Lead management and prospective customer patterns
+  patterns:
+  - prospects
+  - leads
+  - prospect
+  - lead
+  - potential_customer
+  - lead_management
+  - sales_pipeline
+  - marketing_qualified_lead
+  - sales_qualified_lead
+  - mql
+  - sql
+  - lead_score
+  - prospect_id
+  - lead_id
+  - sales_lead
+  - qualified_lead
+  - unqualified_lead
+  - cold_lead
+  - warm_lead
+  - hot_lead
+  - lead_source
+  - lead_status
+  - prospect_status
+  - opportunity
+  - sales_opportunity
+  - pipeline_stage
+  - lead_qualification
+  - prospect_data
+  - lead_data
+  - crm_lead
+  - sales_prospect
+  - marketing_lead
+  - inbound_lead
+  - outbound_lead
+  subject_category: prospect
+  indicator_type: primary
+  confidence_weight: 35
+  applicable_contexts:
+  - database
+  - source_code
+- name: prospect_trial_indicators
+  description: Trial account and demo request patterns
+  patterns:
+  - trial_account
+  - demo_request
+  - free_trial
+  - trial_user
+  - demo_user
+  - trial_subscription
+  - demo_booking
+  - consultation_request
+  - quote_request
+  - proposal_request
+  - trial_period
+  - trial_data
+  - demo_data
+  - trial_signup
+  - trial_registration
+  - demo_signup
+  - trial_expiration
+  - trial_conversion
+  - demo_conversion
+  - pilot_program
+  - proof_of_concept
+  - evaluation_period
+  - test_drive
+  - preview_access
+  - beta_user
+  - alpha_user
+  - early_access
+  - trial_license
+  - evaluation_license
+  - demo_license
+  - trial_feedback
+  - demo_feedback
+  subject_category: prospect
+  indicator_type: secondary
+  confidence_weight: 20
+  applicable_contexts:
+  - database
+  - filesystem
+- name: former_customer_cancellation_indicators
+  description: Former customer cancellation and churn patterns
+  patterns:
+  - cancelled_subscription
+  - expired_account
+  - churned_customer
+  - former_customer
+  - ex_customer
+  - closed_account
+  - cancelled_user
+  - inactive_customer
+  - churn_date
+  - cancellation_date
+  - account_closure
+  - subscription_cancelled
+  - account_terminated
+  - service_discontinued
+  - customer_churn
+  - account_deactivation
+  - subscription_ended
+  - service_ended
+  - customer_exit
+  - account_expiry
+  - lapsed_customer
+  - dormant_account
+  - suspended_account
+  - terminated_subscription
+  - cancelled_service
+  - ended_relationship
+  - former_client
+  - ex_client
+  - previous_customer
+  - past_customer
+  - historical_customer
+  subject_category: former_customer
+  indicator_type: primary
+  confidence_weight: 40
+  applicable_contexts:
+  - database
+  - filesystem
+- name: visitor_web_analytics_indicators
+  description: Website visitor and anonymous user patterns
+  patterns:
+  - visitors
+  - visitor
+  - anonymous_user
+  - session_data
+  - web_analytics
+  - page_views
+  - website_visitor
+  - guest_user
+  - anonymous_session
+  - visitor_id
+  - session_id
+  - tracking_id
+  - cookie_consent
+  - web_traffic
+  - site_visitor
+  - anonymous_visitor
+  - guest_session
+  - website_user
+  - web_user
+  - site_user
+  - public_user
+  - unauthenticated_user
+  - browse_session
+  - visitor_tracking
+  - anonymous_tracking
+  - web_session
+  - page_visitor
+  - site_analytics
+  - visitor_analytics
+  - anonymous_analytics
+  - guest_analytics
+  - public_access
+  - visitor_data
+  - anonymous_data
+  - guest_data
+  subject_category: visitor
+  indicator_type: primary
+  confidence_weight: 35
+  applicable_contexts:
+  - database
+  - source_code
+- name: subscriber_email_marketing_indicators
+  description: Email marketing and newsletter subscription patterns
+  patterns:
+  - subscribers
+  - subscriber
+  - newsletter_subscription
+  - email_list
+  - mailing_list
+  - marketing_consent
+  - subscription_preferences
+  - email_subscriber
+  - newsletter_user
+  - marketing_subscriber
+  - email_preferences
+  - unsubscribed
+  - subscription_data
+  - newsletter_data
+  - email_marketing
+  - marketing_list
+  - email_campaign
+  - newsletter_signup
+  - email_signup
+  - subscription_signup
+  - marketing_signup
+  - opt_in
+  - opt_out
+  - double_opt_in
+  - email_consent
+  - marketing_permission
+  - communication_preferences
+  - subscription_status
+  - newsletter_status
+  - email_status
+  - marketing_status
+  - subscriber_data
+  - newsletter_subscriber
+  - email_list_member
+  subject_category: subscriber
+  indicator_type: primary
+  confidence_weight: 40
+  applicable_contexts:
+  - database
+  - source_code
+- name: supplier_vendor_management_indicators
+  description: Supplier and vendor management system patterns
+  patterns:
+  - suppliers
+  - vendors
+  - supplier
+  - vendor
+  - vendor_management
+  - supplier_info
+  - purchase_orders
+  - vendor_contact
+  - supplier_contract
+  - procurement
+  - vendor_id
+  - supplier_id
+  - vendor_portal
+  - supplier_portal
+  - vendor_data
+  - supplier_data
+  - vendor_profile
+  - supplier_profile
+  - vendor_information
+  - supplier_information
+  - vendor_details
+  - supplier_details
+  - procurement_data
+  - purchasing_data
+  - vendor_relationship
+  - supplier_relationship
+  - vendor_performance
+  - supplier_performance
+  - vendor_evaluation
+  - supplier_evaluation
+  - vendor_qualification
+  - supplier_qualification
+  - purchase_order
+  - po_data
+  - vendor_invoice
+  - supplier_invoice
+  subject_category: supplier
+  indicator_type: primary
+  confidence_weight: 40
+  applicable_contexts:
+  - database
+  - source_code
+- name: advisor_professional_services_indicators
+  description: Professional advisors and consulting service patterns
+  patterns:
+  - advisors
+  - advisor
+  - consultant
+  - legal_counsel
+  - financial_advisor
+  - professional_services
+  - consulting_agreement
+  - advisory_services
+  - legal_services
+  - accounting_services
+  - advisor_id
+  - consultant_id
+  - professional_advisor
+  - legal_advisor
+  - tax_advisor
+  - business_advisor
+  - technical_advisor
+  - strategic_advisor
+  - external_advisor
+  - independent_advisor
+  - consulting_firm
+  - advisory_firm
+  - law_firm
+  - accounting_firm
+  - professional_firm
+  - advisor_data
+  - consultant_data
+  - advisory_data
+  - consulting_data
+  - professional_data
+  - legal_data
+  - accounting_data
+  - advisory_relationship
+  - consulting_relationship
+  - professional_relationship
+  subject_category: advisor
+  indicator_type: primary
+  confidence_weight: 40
+  applicable_contexts:
+  - database
+  - filesystem
+- name: partner_business_alliance_indicators
+  description: Business partner and strategic alliance patterns
+  patterns:
+  - partners
+  - partner
+  - business_partner
+  - strategic_partner
+  - alliance_partner
+  - partnership_agreement
+  - joint_venture
+  - partner_integration
+  - api_partner
+  - channel_partner
+  - partner_id
+  - partnership_data
+  - technology_partner
+  - integration_partner
+  - reseller_partner
+  - distribution_partner
+  - marketing_partner
+  - sales_partner
+  - strategic_alliance
+  - business_alliance
+  - partner_portal
+  - partner_program
+  - partnership_program
+  - partner_agreement
+  - alliance_agreement
+  - partner_relationship
+  - alliance_relationship
+  - partner_data
+  - alliance_data
+  - partner_profile
+  - partner_information
+  - partnership_details
+  - joint_venture_data
+  - collaboration_data
+  - partner_performance
+  subject_category: partner
+  indicator_type: primary
+  confidence_weight: 40
+  applicable_contexts:
+  - database
+  - source_code
+- name: patient_healthcare_indicators
+  description: Healthcare patient record and EMR system patterns
+  patterns:
+  - patients
+  - patient
+  - medical_records
+  - patient_data
+  - emr
+  - ehr
+  - patient_id
+  - medical_record_number
+  - mrn
+  - healthcare_data
+  - patient_info
+  - medical_history
+  - treatment_records
+  - appointment_data
+  - patient_portal
+  - electronic_health_record
+  - electronic_medical_record
+  - patient_chart
+  - medical_chart
+  - clinical_data
+  - patient_care
+  - medical_care
+  - healthcare_patient
+  - hospital_patient
+  - clinic_patient
+  - outpatient
+  - inpatient
+  - patient_registration
+  - patient_admission
+  - patient_discharge
+  - patient_visit
+  - medical_appointment
+  - patient_encounter
+  - clinical_encounter
+  - patient_demographics
+  - medical_demographics
+  subject_category: patient
+  indicator_type: primary
+  confidence_weight: 45
+  applicable_contexts:
+  - database
+  - source_code
+- name: provider_healthcare_professional_indicators
+  description: Healthcare provider and medical professional patterns
+  patterns:
+  - providers
+  - provider
+  - healthcare_provider
+  - medical_provider
+  - physician
+  - doctor
+  - nurse
+  - medical_professional
+  - healthcare_professional
+  - provider_id
+  - physician_id
+  - medical_license
+  - provider_credentials
+  - healthcare_worker
+  - medical_staff
+  - clinical_staff
+  - attending_physician
+  - resident_physician
+  - specialist
+  - surgeon
+  - therapist
+  - pharmacist
+  - radiologist
+  - pathologist
+  - anesthesiologist
+  - cardiologist
+  - dermatologist
+  - neurologist
+  - psychiatrist
+  - pediatrician
+  - gynecologist
+  - urologist
+  - orthopedist
+  - provider_data
+  - physician_data
+  - medical_professional_data
+  subject_category: provider
+  indicator_type: primary
+  confidence_weight: 45
+  applicable_contexts:
+  - database
+  - source_code
+- name: student_education_system_indicators
+  description: Student information system and academic record patterns
+  patterns:
+  - students
+  - student
+  - student_records
+  - academic_records
+  - enrollment
+  - student_id
+  - student_number
+  - academic_year
+  - course_enrollment
+  - student_portal
+  - academic_data
+  - grade_records
+  - transcript
+  - student_info
+  - student_information_system
+  - sis
+  - learning_management_system
+  - lms
+  - student_data
+  - academic_information
+  - student_profile
+  - academic_profile
+  - student_demographics
+  - academic_demographics
+  - enrolled_student
+  - registered_student
+  - active_student
+  - current_student
+  - undergraduate
+  - graduate
+  - postgraduate
+  - doctoral_student
+  - phd_student
+  - master_student
+  - bachelor_student
+  - student_registration
+  - course_registration
+  - class_enrollment
+  subject_category: student
+  indicator_type: primary
+  confidence_weight: 45
+  applicable_contexts:
+  - database
+  - source_code
+- name: guardian_parental_consent_indicators
+  description: Parent and guardian consent and contact patterns
+  patterns:
+  - guardians
+  - parents
+  - guardian
+  - parent
+  - parental_consent
+  - guardian_contact
+  - emergency_contact
+  - parent_portal
+  - guardian_info
+  - parental_approval
+  - minor_consent
+  - guardian_signature
+  - parent_data
+  - guardian_data
+  - parental_data
+  - guardian_information
+  - parent_information
+  - parental_information
+  - parent_guardian
+  - legal_guardian
+  - custodial_parent
+  - non_custodial_parent
+  - primary_guardian
+  - secondary_guardian
+  - emergency_guardian
+  - guardian_relationship
+  - parent_relationship
+  - parental_relationship
+  - guardian_permission
+  - parent_permission
+  - parental_permission
+  - guardian_authorization
+  - parent_authorization
+  - parental_authorization
+  - minor_guardian
+  - child_guardian
+  subject_category: guardian
+  indicator_type: primary
+  confidence_weight: 40
+  applicable_contexts:
+  - database
+  - source_code
+- name: account_holder_financial_indicators
+  description: Financial account holder and banking patterns
+  patterns:
+  - account_holders
+  - account_holder
+  - bank_account
+  - financial_account
+  - account_number
+  - banking_data
+  - account_info
+  - financial_records
+  - account_balance
+  - account_status
+  - account_owner
+  - primary_account_holder
+  - joint_account_holder
+  - secondary_account_holder
+  - account_data
+  - banking_information
+  - financial_information
+  - account_information
+  - banking_records
+  - account_records
+  - financial_data
+  - banking_profile
+  - account_profile
+  - financial_profile
+  - account_details
+  - banking_details
+  - financial_details
+  - account_management
+  - banking_services
+  - financial_services
+  - account_activity
+  - banking_activity
+  - financial_activity
+  - account_history
+  - banking_history
+  subject_category: account_holder
+  indicator_type: primary
+  confidence_weight: 45
+  applicable_contexts:
+  - database
+  - source_code
+- name: beneficiary_insurance_pension_indicators
+  description: Insurance and pension beneficiary patterns
+  patterns:
+  - beneficiaries
+  - beneficiary
+  - insurance_beneficiary
+  - pension_beneficiary
+  - policy_beneficiary
+  - benefit_recipient
+  - insurance_policy
+  - pension_plan
+  - beneficiary_info
+  - benefit_payout
+  - beneficiary_id
+  - primary_beneficiary
+  - secondary_beneficiary
+  - contingent_beneficiary
+  - insurance_beneficiaries
+  - pension_beneficiaries
+  - beneficiary_data
+  - beneficiary_information
+  - beneficiary_details
+  - benefit_data
+  - insurance_data
+  - pension_data
+  - policy_data
+  - benefit_information
+  - insurance_information
+  - pension_information
+  - policy_information
+  - beneficiary_designation
+  - benefit_designation
+  - insurance_designation
+  - pension_designation
+  - policy_designation
+  - beneficiary_claim
+  - benefit_claim
+  - insurance_claim
+  - pension_claim
+  subject_category: beneficiary
+  indicator_type: primary
+  confidence_weight: 40
+  applicable_contexts:
+  - database
+  - filesystem
+- name: user_authentication_contextual
+  description: General user authentication and login patterns
+  patterns:
+  - users
+  - user
+  - login
+  - authentication
+  - user_id
+  - username
+  - user_profile
+  - user_data
+  - user_info
+  - profile_data
+  - account_data
+  - user_session
+  - logged_in_user
+  - authenticated_user
+  - user_account
+  - user_registration
+  - user_signup
+  - user_login
+  - user_logout
+  - user_access
+  - user_permissions
+  - user_roles
+  - user_rights
+  - user_privileges
+  - user_authorization
+  - user_credentials
+  - user_identity
+  - user_verification
+  - user_validation
+  - user_management
+  - user_administration
+  - user_control
+  - user_security
+  - user_privacy
+  - user_preferences
+  subject_category: visitor
+  indicator_type: contextual
+  confidence_weight: 10
+  applicable_contexts:
+  - database
+  - source_code
+- name: personal_information_contextual
+  description: General personal information field patterns
+  patterns:
+  - personal_info
+  - personal_data
+  - contact_info
+  - contact_details
+  - first_name
+  - last_name
+  - email_address
+  - phone_number
+  - address
+  - full_name
+  - name
+  - email
+  - phone
+  - personal_information
+  - contact_information
+  - individual_data
+  - person_data
+  - individual_info
+  - person_info
+  - personal_details
+  - contact_data
+  - identity_data
+  - identification_data
+  - demographic_data
+  - profile_information
+  - individual_profile
+  - person_profile
+  - contact_profile
+  - personal_profile
+  - individual_details
+  - person_details
+  - contact_details
+  - identity_details
+  - demographic_details
+  - personal_record
+  - individual_record
+  - person_record
+  - contact_record
+  subject_category: visitor
+  indicator_type: contextual
+  confidence_weight: 5
+  applicable_contexts:
+  - database
+  - filesystem
+  - source_code

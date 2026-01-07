@@ -1,0 +1,74 @@
+[project]
+name = "waivern-gdpr-personal-data-classifier"
+version = "0.1.0"
+description = "GDPR personal data classifier for Waivern Compliance Framework"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "waivern-core",
+    "waivern-rulesets",
+    "pydantic>=2.11.5",
+]
+
+[project.entry-points."waivern.processors"]
+gdpr_personal_data_classifier = "waivern_gdpr_personal_data_classifier:GDPRPersonalDataClassifierFactory"
+
+[project.entry-points."waivern.schemas"]
+gdpr_personal_data_classifier = "waivern_gdpr_personal_data_classifier:register_schemas"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.29.2",
+    "ruff>=0.11.12",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+dev-mode-dirs = ["src"]
+
+# Include JSON schemas and py.typed marker
+include = [
+    "src/waivern_gdpr_personal_data_classifier/**/*.py",
+    "src/waivern_gdpr_personal_data_classifier/**/schemas/json_schemas/**/*.json",
+    "src/waivern_gdpr_personal_data_classifier/py.typed",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/waivern_gdpr_personal_data_classifier"]
+
+[tool.basedpyright]
+typeCheckingMode = "strict"
+reportImplicitOverride = "error"
+
+[tool.ruff]
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "ANN",    # flake8-annotations - enforce type annotations
+    "B",      # flake8-bugbear - find likely bugs and design problems
+    "D",      # pydocstyle - docstring style checking
+    "F",      # pyflakes - detect various errors
+    "I",      # isort - import sorting
+    "PL",     # pylint - comprehensive code analysis
+    "RUF100", # ruff-specific - detect unused noqa directives
+    "S",      # flake8-bandit - security issue detection
+    "UP",     # pyupgrade - upgrade syntax for newer Python versions
+]
+ignore = [
+    "D203",    # one-blank-line-before-class - conflicts with D211 (no-blank-line-before-class)
+    "D213",    # multi-line-summary-second-line - conflicts with D212 (multi-line-summary-first-line)
+]
+
+[tool.ruff.lint.pydocstyle]
+ignore-decorators = ["typing.overload"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # assert-used - assert statements are standard in pytest
+    "PLR2004", # magic-value-comparison - magic values are acceptable in tests
+]

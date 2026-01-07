@@ -2,46 +2,17 @@
 
 import pytest
 from pydantic import ValidationError
-from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence
 from waivern_personal_data_analyser.schemas import (
-    PersonalDataFindingModel,
+    PersonalDataIndicatorModel,
 )
 from waivern_personal_data_analyser.schemas.types import (
-    PersonalDataFindingMetadata,
+    PersonalDataIndicatorMetadata,
 )
 
 
 class TestBaseFindingModelValidation:
     """Test that finding models enforce business requirements for valid findings."""
-
-    def test_finding_rejects_empty_compliance_array(self) -> None:
-        """Test that findings require compliance context for business justification.
-
-        Business Logic: Findings represent compliance violations or data discoveries
-        and must have regulatory context to be meaningful for compliance reporting.
-        """
-        with pytest.raises(ValidationError) as exc_info:
-            PersonalDataFindingModel(
-                type="email",
-                data_type="basic_profile",
-                risk_level="medium",
-                special_category=False,
-                matched_patterns=["test@example.com"],
-                compliance=[],  # Empty compliance - should fail business requirement
-                evidence=[BaseFindingEvidence(content="test evidence")],
-                metadata=PersonalDataFindingMetadata(source="test_source"),
-            )
-
-        # Verify the validation error is about compliance requirement
-        errors = exc_info.value.errors()
-        compliance_error = next(
-            (err for err in errors if "compliance" in str(err.get("loc", []))), None
-        )
-        assert compliance_error is not None
-        assert (
-            "at least 1" in compliance_error["msg"]
-            or "min_length" in compliance_error["type"]
-        )
 
     def test_finding_rejects_empty_matched_patterns_array(self) -> None:
         """Test that findings require detection evidence for business justification.
@@ -50,20 +21,11 @@ class TestBaseFindingModelValidation:
         to provide evidence for compliance and audit purposes.
         """
         with pytest.raises(ValidationError) as exc_info:
-            PersonalDataFindingModel(
-                type="email",
-                data_type="basic_profile",
-                risk_level="medium",
-                special_category=False,
+            PersonalDataIndicatorModel(
+                category="email",
                 matched_patterns=[],  # Empty patterns - should fail business requirement
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="test evidence")],
-                metadata=PersonalDataFindingMetadata(source="test_source"),
+                metadata=PersonalDataIndicatorMetadata(source="test_source"),
             )
 
         # Verify the validation error is about matched_patterns requirement
@@ -76,4 +38,30 @@ class TestBaseFindingModelValidation:
         assert (
             "at least 1" in patterns_error["msg"]
             or "min_length" in patterns_error["type"]
+        )
+
+    def test_finding_rejects_empty_evidence_array(self) -> None:
+        """Test that findings require evidence for business justification.
+
+        Business Logic: Findings must include evidence snippets showing
+        why the pattern was matched for audit and review purposes.
+        """
+        with pytest.raises(ValidationError) as exc_info:
+            PersonalDataIndicatorModel(
+                category="email",
+                matched_patterns=["email"],
+                evidence=[],  # Empty evidence - should fail business requirement
+                metadata=PersonalDataIndicatorMetadata(source="test_source"),
+            )
+
+        # Verify the validation error is about evidence requirement
+        errors = exc_info.value.errors()
+        evidence_error = next(
+            (err for err in errors if "evidence" in str(err.get("loc", []))),
+            None,
+        )
+        assert evidence_error is not None
+        assert (
+            "at least 1" in evidence_error["msg"]
+            or "min_length" in evidence_error["type"]
         )

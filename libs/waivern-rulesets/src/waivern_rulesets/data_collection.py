@@ -11,7 +11,7 @@ from typing import Final, override
 
 import yaml
 from pydantic import Field, model_validator
-from waivern_core import BaseRule, RulesetData
+from waivern_core import DetectionRule, RulesetData
 
 from waivern_rulesets.base import AbstractRuleset
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 
 
-class DataCollectionRule(BaseRule):
+class DataCollectionRule(DetectionRule):
     """Data collection rule with collection type and source."""
 
     collection_type: str = Field(description="Type of data collection")

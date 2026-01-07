@@ -16,14 +16,14 @@ This directory contains 25 PHP files designed to test the WCT processing purpose
 
 ## Processing Purpose Categories Detected
 
-| Purpose Category | Examples Found | Risk Level | Integration Types |
-|------------------|----------------|------------|-------------------|
-| Payment, Billing, and Invoicing | stripe, paypal, charge, billing | High | Payment processors |
-| User Identity and Login Management | auth0, oauth, authenticate, login | Medium | Authentication services |
-| Behavioral Data Analysis | analytics, tracking, google-analytics | High | Analytics platforms |
-| Customer Service and Support | sendgrid, mailchimp, email, support | Medium | Communication services |
-| Targeted Marketing via Third-Party Platforms | facebook, twitter, social, advertising | High | Social media integrations |
-| General Product and Service Delivery | aws, storage, service, delivery | Low | Cloud infrastructure |
+| Purpose Category | Examples Found | Integration Types |
+|------------------|----------------|-------------------|
+| Payment, Billing, and Invoicing | stripe, paypal, charge, billing | Payment processors |
+| User Identity and Login Management | auth0, oauth, authenticate, login | Authentication services |
+| Behavioral Data Analysis | analytics, tracking, google-analytics | Analytics platforms |
+| Customer Service and Support | sendgrid, mailchimp, email, support | Communication services |
+| Targeted Marketing via Third-Party Platforms | facebook, twitter, social, advertising | Social media integrations |
+| General Product and Service Delivery | aws, storage, service, delivery | Cloud infrastructure |
 
 ## Pattern Detection Types
 

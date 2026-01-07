@@ -1,22 +1,22 @@
 """Schema types for personal data analyser output.
 
-To use the personal_data_finding schema:
+To use the personal_data_indicator schema:
     from waivern_core.schemas import Schema
-    schema = Schema("personal_data_finding", "1.0.0")
+    schema = Schema("personal_data_indicator", "1.0.0")
 """
 
 from .types import (
-    PersonalDataFindingMetadata,
-    PersonalDataFindingModel,
-    PersonalDataFindingOutput,
-    PersonalDataSummary,
+    PersonalDataIndicatorMetadata,
+    PersonalDataIndicatorModel,
+    PersonalDataIndicatorOutput,
+    PersonalDataIndicatorSummary,
     PersonalDataValidationSummary,
 )
 
 __all__ = [
-    "PersonalDataFindingMetadata",
-    "PersonalDataFindingModel",
-    "PersonalDataFindingOutput",
-    "PersonalDataSummary",
+    "PersonalDataIndicatorMetadata",
+    "PersonalDataIndicatorModel",
+    "PersonalDataIndicatorOutput",
+    "PersonalDataIndicatorSummary",
     "PersonalDataValidationSummary",
 ]

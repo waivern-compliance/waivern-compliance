@@ -189,12 +189,6 @@ class TestProcessingPurposePatternMatcher:
         assert isinstance(finding.purpose, str)
         assert len(finding.purpose) > 0
         assert isinstance(finding.purpose_category, str)
-        assert isinstance(finding.risk_level, str)
-        assert finding.risk_level in ["low", "medium", "high"]
-        assert isinstance(finding.compliance, list)
-        assert len(finding.compliance) > 0
-        assert hasattr(finding.compliance[0], "regulation")
-        assert hasattr(finding.compliance[0], "relevance")
         assert isinstance(finding.matched_patterns, list)
         assert len(finding.matched_patterns) > 0
         assert isinstance(finding.evidence, list)
