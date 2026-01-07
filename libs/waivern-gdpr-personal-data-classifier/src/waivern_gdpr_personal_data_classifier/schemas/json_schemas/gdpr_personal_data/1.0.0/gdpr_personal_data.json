@@ -1,0 +1,270 @@
+{
+  "$defs": {
+    "AnalysisChainEntry": {
+      "description": "Single entry in an analysis chain tracking sequence of analysers.",
+      "properties": {
+        "order": {
+          "description": "Sequence number in the analysis chain",
+          "minimum": 1,
+          "title": "Order",
+          "type": "integer"
+        },
+        "analyser": {
+          "description": "Name of the analyser that performed this step",
+          "title": "Analyser",
+          "type": "string"
+        },
+        "execution_timestamp": {
+          "description": "When this analysis was performed",
+          "title": "Execution Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "order",
+        "analyser"
+      ],
+      "title": "AnalysisChainEntry",
+      "type": "object"
+    },
+    "BaseAnalysisOutputMetadata": {
+      "additionalProperties": true,
+      "description": "Base metadata for analysis outputs with chain tracking.",
+      "properties": {
+        "ruleset_used": {
+          "description": "Name of the ruleset used for analysis",
+          "title": "Ruleset Used",
+          "type": "string"
+        },
+        "llm_validation_enabled": {
+          "description": "Whether LLM validation was enabled for this analysis",
+          "title": "Llm Validation Enabled",
+          "type": "boolean"
+        },
+        "analysis_timestamp": {
+          "description": "ISO 8601 timestamp when the analysis was performed",
+          "title": "Analysis Timestamp",
+          "type": "string"
+        },
+        "evidence_context_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Size of context used for evidence extraction",
+          "title": "Evidence Context Size"
+        },
+        "analyses_chain": {
+          "description": "Track the full analysis chain",
+          "items": {
+            "$ref": "#/$defs/AnalysisChainEntry"
+          },
+          "minItems": 1,
+          "title": "Analyses Chain",
+          "type": "array"
+        }
+      },
+      "required": [
+        "ruleset_used",
+        "llm_validation_enabled",
+        "analyses_chain"
+      ],
+      "title": "BaseAnalysisOutputMetadata",
+      "type": "object"
+    },
+    "BaseFindingEvidence": {
+      "description": "Evidence item with content and collection timestamp.",
+      "properties": {
+        "content": {
+          "description": "The evidence content snippet",
+          "title": "Content",
+          "type": "string"
+        },
+        "collection_timestamp": {
+          "description": "When the evidence was collected",
+          "title": "Collection Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "BaseFindingEvidence",
+      "type": "object"
+    },
+    "GDPRPersonalDataFindingMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata for GDPR personal data classification findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "properties": {
+        "source": {
+          "description": "Source file or location where the data was found",
+          "title": "Source",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": true,
+          "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
+          "title": "Context",
+          "type": "object"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "GDPRPersonalDataFindingMetadata",
+      "type": "object"
+    },
+    "GDPRPersonalDataFindingModel": {
+      "description": "GDPR personal data classification finding structure.\n\nRepresents a personal data indicator that has been enriched with\nGDPR-specific classification information.",
+      "properties": {
+        "risk_level": {
+          "description": "Risk assessment level (low, medium, high)",
+          "title": "Risk Level",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "Evidence items with content and timestamps for this finding",
+          "items": {
+            "$ref": "#/$defs/BaseFindingEvidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "matched_patterns": {
+          "description": "Patterns that were matched during analysis",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Matched Patterns",
+          "type": "array"
+        },
+        "indicator_type": {
+          "description": "Original personal data indicator type (e.g., 'email', 'phone_number')",
+          "title": "Indicator Type",
+          "type": "string"
+        },
+        "gdpr_data_type": {
+          "description": "GDPR data type classification (e.g., 'contact_data', 'health_data')",
+          "title": "Gdpr Data Type",
+          "type": "string"
+        },
+        "special_category": {
+          "default": false,
+          "description": "Whether this is GDPR Article 9 special category data",
+          "title": "Special Category",
+          "type": "boolean"
+        },
+        "article_references": {
+          "description": "Relevant GDPR article references (e.g., 'Article 9(1)', 'Article 4(1)')",
+          "items": {
+            "type": "string"
+          },
+          "title": "Article References",
+          "type": "array"
+        },
+        "lawful_bases": {
+          "description": "Applicable GDPR Article 6 lawful bases for processing",
+          "items": {
+            "enum": [
+              "consent",
+              "contract",
+              "legal_obligation",
+              "vital_interests",
+              "public_task",
+              "legitimate_interests"
+            ],
+            "type": "string"
+          },
+          "title": "Lawful Bases",
+          "type": "array"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GDPRPersonalDataFindingMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Additional metadata from the original data source"
+        }
+      },
+      "required": [
+        "risk_level",
+        "evidence",
+        "matched_patterns",
+        "indicator_type",
+        "gdpr_data_type"
+      ],
+      "title": "GDPRPersonalDataFindingModel",
+      "type": "object"
+    },
+    "GDPRPersonalDataSummary": {
+      "description": "Summary statistics for GDPR personal data classification findings.",
+      "properties": {
+        "total_findings": {
+          "description": "Total number of classified personal data findings",
+          "minimum": 0,
+          "title": "Total Findings",
+          "type": "integer"
+        },
+        "high_risk_count": {
+          "description": "Number of high-risk personal data findings",
+          "minimum": 0,
+          "title": "High Risk Count",
+          "type": "integer"
+        },
+        "special_category_count": {
+          "description": "Number of GDPR Article 9 special category personal data findings",
+          "minimum": 0,
+          "title": "Special Category Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total_findings",
+        "high_risk_count",
+        "special_category_count"
+      ],
+      "title": "GDPRPersonalDataSummary",
+      "type": "object"
+    }
+  },
+  "description": "Complete output structure for gdpr_personal_data schema.\n\nThis model represents the full wire format for GDPR personal data\nclassification results, including findings enriched with GDPR-specific\ninformation, summary statistics, and analysis metadata.",
+  "properties": {
+    "findings": {
+      "description": "List of personal data findings with GDPR classification",
+      "items": {
+        "$ref": "#/$defs/GDPRPersonalDataFindingModel"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/GDPRPersonalDataSummary",
+      "description": "Summary statistics of the GDPR classification analysis"
+    },
+    "analysis_metadata": {
+      "$ref": "#/$defs/BaseAnalysisOutputMetadata",
+      "description": "Metadata about the classification process"
+    }
+  },
+  "required": [
+    "findings",
+    "summary",
+    "analysis_metadata"
+  ],
+  "title": "GDPRPersonalDataFindingOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}
