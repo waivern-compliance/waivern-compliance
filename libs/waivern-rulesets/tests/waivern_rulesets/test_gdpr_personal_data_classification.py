@@ -65,27 +65,27 @@ class TestGDPRPersonalDataClassificationRule:
         rule = GDPRPersonalDataClassificationRule(
             name="Health Data Classification",
             description="Classifies health-related personal data indicators",
-            gdpr_data_type="health_data",
+            privacy_category="health_data",
             special_category=True,
             article_references=("Article 9(1)", "Article 9(2)(h)"),
             lawful_bases=("consent", "vital_interests"),
-            indicator_categories=("health_data", "medical_records"),
+            indicator_categories=("health", "medical"),
         )
 
         assert rule.name == "Health Data Classification"
-        assert rule.gdpr_data_type == "health_data"
+        assert rule.privacy_category == "health_data"
         assert rule.special_category is True
         assert rule.article_references == ("Article 9(1)", "Article 9(2)(h)")
         assert rule.lawful_bases == ("consent", "vital_interests")
-        assert rule.indicator_categories == ("health_data", "medical_records")
+        assert rule.indicator_categories == ("health", "medical")
 
     def test_special_category_defaults_to_false(self) -> None:
         """Test GDPRPersonalDataClassificationRule special_category defaults to False."""
         rule = GDPRPersonalDataClassificationRule(
-            name="Basic Profile Classification",
-            description="Classifies basic profile data",
-            gdpr_data_type="identification_data",
-            indicator_categories=("basic_profile",),
+            name="Identification Data Classification",
+            description="Classifies identification data",
+            privacy_category="identification_data",
+            indicator_categories=("email",),
         )
 
         assert rule.special_category is False
@@ -95,7 +95,7 @@ class TestGDPRPersonalDataClassificationRule:
         rule = GDPRPersonalDataClassificationRule(
             name="Test Classification",
             description="Test rule",
-            gdpr_data_type="contact_data",
+            privacy_category="identification_data",
             indicator_categories=("email",),
         )
 
@@ -106,7 +106,7 @@ class TestGDPRPersonalDataClassificationRule:
         rule = GDPRPersonalDataClassificationRule(
             name="Test Classification",
             description="Test rule",
-            gdpr_data_type="contact_data",
+            privacy_category="identification_data",
             indicator_categories=("email",),
         )
 
@@ -115,16 +115,16 @@ class TestGDPRPersonalDataClassificationRule:
     def test_indicator_categories_converted_from_list_to_tuple(self) -> None:
         """Test that indicator_categories list is converted to tuple for immutability."""
         # Intentionally pass a list to test runtime conversion (validator converts to tuple)
-        indicator_cats: list[str] = ["payment_data", "bank_account"]
+        indicator_cats: list[str] = ["payment", "financial"]
         rule = GDPRPersonalDataClassificationRule(
             name="Test Classification",
             description="Test rule",
-            gdpr_data_type="financial_data",
+            privacy_category="financial_data",
             indicator_categories=indicator_cats,  # type: ignore[arg-type]
         )
 
         assert isinstance(rule.indicator_categories, tuple)
-        assert rule.indicator_categories == ("payment_data", "bank_account")
+        assert rule.indicator_categories == ("payment", "financial")
 
 
 # =============================================================================
@@ -135,38 +135,23 @@ class TestGDPRPersonalDataClassificationRule:
 class TestGDPRPersonalDataClassificationRulesetData:
     """Test cases for the GDPRPersonalDataClassificationRulesetData class."""
 
-    def test_validates_gdpr_data_types_against_master_list(self) -> None:
-        """Test that rules with invalid gdpr_data_type are rejected."""
+    def test_validates_privacy_categories_against_master_list(self) -> None:
+        """Test that rules with invalid privacy_category are rejected."""
         rule = GDPRPersonalDataClassificationRule(
-            name="Invalid Type Rule",
-            description="Rule with invalid gdpr_data_type",
-            gdpr_data_type="invalid_type",  # Not in master list
-            indicator_categories=("basic_profile",),
+            name="Invalid Category Rule",
+            description="Rule with invalid privacy_category",
+            privacy_category="invalid_type",  # Not in master list
+            indicator_categories=("email",),
         )
 
-        with pytest.raises(ValidationError, match="invalid gdpr_data_type"):
+        with pytest.raises(ValidationError, match="invalid privacy_category"):
             GDPRPersonalDataClassificationRulesetData(
                 name="test_ruleset",
                 version="1.0.0",
                 description="Test ruleset",
-                gdpr_data_type_categories=["health_data", "contact_data"],
-                indicator_categories=["basic_profile"],
+                privacy_categories=["health_data", "identification_data"],
+                indicator_categories=["email"],
                 rules=[rule],
-            )
-
-    def test_validates_special_category_types_subset(self) -> None:
-        """Test special_category_types must be subset of gdpr_data_type_categories."""
-        with pytest.raises(
-            ValidationError, match="special_category_types must be subset"
-        ):
-            GDPRPersonalDataClassificationRulesetData(
-                name="test_ruleset",
-                version="1.0.0",
-                description="Test ruleset",
-                gdpr_data_type_categories=["health_data", "contact_data"],
-                special_category_types=["invalid_special"],  # Not in master list
-                indicator_categories=["basic_profile"],
-                rules=[],
             )
 
     def test_validates_indicator_categories_against_master_list(self) -> None:
@@ -174,7 +159,7 @@ class TestGDPRPersonalDataClassificationRulesetData:
         rule = GDPRPersonalDataClassificationRule(
             name="Invalid Categories Rule",
             description="Rule with invalid indicator categories",
-            gdpr_data_type="health_data",
+            privacy_category="health_data",
             indicator_categories=("invalid_category",),  # Not in master list
         )
 
@@ -183,8 +168,8 @@ class TestGDPRPersonalDataClassificationRulesetData:
                 name="test_ruleset",
                 version="1.0.0",
                 description="Test ruleset",
-                gdpr_data_type_categories=["health_data"],
-                indicator_categories=["basic_profile", "health_data"],
+                privacy_categories=["health_data"],
+                indicator_categories=["email", "health"],
                 rules=[rule],
             )
 
@@ -193,18 +178,17 @@ class TestGDPRPersonalDataClassificationRulesetData:
         rule = GDPRPersonalDataClassificationRule(
             name="Health Classification",
             description="Classifies health data",
-            gdpr_data_type="health_data",
+            privacy_category="health_data",
             special_category=True,
-            indicator_categories=("health_indicator",),
+            indicator_categories=("health",),
         )
 
         ruleset_data = GDPRPersonalDataClassificationRulesetData(
             name="test_ruleset",
             version="1.0.0",
             description="Test ruleset",
-            gdpr_data_type_categories=["health_data", "contact_data"],
-            special_category_types=["health_data"],
-            indicator_categories=["health_indicator", "basic_profile"],
+            privacy_categories=["health_data", "identification_data"],
+            indicator_categories=["health", "email"],
             rules=[rule],
         )
 
@@ -224,13 +208,13 @@ class TestGDPRPersonalDataClassificationRuleset:
         """Set up test fixtures for each test method."""
         self.ruleset = GDPRPersonalDataClassificationRuleset()
 
-    def test_rules_have_valid_gdpr_data_types(self) -> None:
-        """Test that all rules have non-empty gdpr_data_type."""
+    def test_rules_have_valid_privacy_categories(self) -> None:
+        """Test that all rules have non-empty privacy_category."""
         rules = self.ruleset.get_rules()
 
         for rule in rules:
-            assert isinstance(rule.gdpr_data_type, str)
-            assert len(rule.gdpr_data_type) > 0
+            assert isinstance(rule.privacy_category, str)
+            assert len(rule.privacy_category) > 0
 
     def test_rules_have_indicator_categories(self) -> None:
         """Test that all rules have at least one indicator category."""

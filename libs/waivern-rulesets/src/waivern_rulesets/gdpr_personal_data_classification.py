@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Final, override
 
 import yaml
-from pydantic import Field, ValidationInfo, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from waivern_core import RulesetData
 
 from waivern_rulesets.base import AbstractRuleset
@@ -50,16 +50,11 @@ class GDPRPersonalDataClassificationRulesetData(
 ):
     """GDPR personal data classification ruleset data with validation."""
 
-    # Master list of valid GDPR data type categories
-    gdpr_data_type_categories: list[str] = Field(
+    # Master list of valid privacy categories (for reporting/governance)
+    # Note: These are NOT GDPR-defined terms - they're from legal team
+    privacy_categories: list[str] = Field(
         min_length=1,
-        description="Master list of valid GDPR data type categories",
-    )
-
-    # Subset that are GDPR Article 9 special categories
-    special_category_types: list[str] = Field(
-        default_factory=list,
-        description="Subset of gdpr_data_type_categories that are Article 9 special categories",
+        description="Master list of valid privacy categories for reporting",
     )
 
     # Valid indicator categories that can be mapped
@@ -68,34 +63,18 @@ class GDPRPersonalDataClassificationRulesetData(
         description="Master list of valid personal data indicator categories",
     )
 
-    @field_validator("special_category_types")
-    @classmethod
-    def validate_special_categories_subset(
-        cls, v: list[str], info: ValidationInfo
-    ) -> list[str]:
-        """Ensure special_category_types is subset of gdpr_data_type_categories."""
-        gdpr_data_type_categories = info.data.get("gdpr_data_type_categories", [])
-        invalid = [cat for cat in v if cat not in gdpr_data_type_categories]
-        if invalid:
-            msg = (
-                "special_category_types must be subset of gdpr_data_type_categories. "
-                f"Invalid: {invalid}"
-            )
-            raise ValueError(msg)
-        return v
-
     @model_validator(mode="after")
     def validate_rules(self) -> "GDPRPersonalDataClassificationRulesetData":
         """Validate all rules against master lists."""
-        valid_gdpr_types = set(self.gdpr_data_type_categories)
+        valid_privacy_cats = set(self.privacy_categories)
         valid_indicator_cats = set(self.indicator_categories)
 
         for rule in self.rules:
-            # Validate gdpr_data_type
-            if rule.gdpr_data_type not in valid_gdpr_types:
+            # Validate privacy_category
+            if rule.privacy_category not in valid_privacy_cats:
                 msg = (
-                    f"Rule '{rule.name}' has invalid gdpr_data_type "
-                    f"'{rule.gdpr_data_type}'. Valid: {valid_gdpr_types}"
+                    f"Rule '{rule.name}' has invalid privacy_category "
+                    f"'{rule.privacy_category}'. Valid: {valid_privacy_cats}"
                 )
                 raise ValueError(msg)
 

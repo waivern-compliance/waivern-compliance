@@ -1,0 +1,505 @@
+# Personal Data Indicator Detection Ruleset
+# Framework-agnostic patterns for detecting personal data elements
+# Regulatory classification is performed by downstream classifiers
+
+name: personal_data_indicator
+version: 1.0.0
+description: Ruleset for detecting granular personal data indicator patterns
+
+# Master list of valid personal data indicator categories
+# These are technical/semantic categories, NOT regulatory classifications
+categories:
+  # Identity
+  - name
+  - email
+  - phone
+  - address
+  - date_of_birth
+  - government_id
+  - user_identifier
+  # Account & Financial
+  - account
+  - subscription
+  - payment
+  - financial
+  # Behavioural
+  - user_activity
+  - analytics
+  # Technical
+  - device
+  - network
+  - browser
+  - cookie
+  # Derived
+  - inferred
+  - preference
+  # Location
+  - location
+  - precise_location
+  # Content
+  - user_content
+  # Sensitive (Article 9 candidates)
+  - health
+  - political
+  - racial_ethnic
+  - religious
+  - genetic
+  - biometric
+  - sexual_orientation
+
+rules:
+  # =============================================================================
+  # Identity Indicators
+  # =============================================================================
+
+  - name: Name
+    description: Personal name information
+    category: name
+    patterns:
+      - first_name
+      - last_name
+      - middle_name
+      - full_name
+      - display_name
+      - firstname
+      - lastname
+      - fullname
+      - salutation
+      - prefix
+      - suffix
+      - title
+
+  - name: Email Address
+    description: Email address information
+    category: email
+    patterns:
+      - email
+      - e_mail
+      - email_address
+      - mail
+
+  - name: Phone Number
+    description: Telephone and mobile numbers
+    category: phone
+    patterns:
+      - phone
+      - mobile
+      - telephone
+      - cell
+      - phone_number
+      - contact_phone
+      - landline
+      - fax
+
+  - name: Physical Address
+    description: Physical address information
+    category: address
+    patterns:
+      - street_address
+      - home_address
+      - mailing_address
+      - city
+      - state
+      - country
+      - zip
+      - postal_code
+      - postcode
+      - addresses
+      - town
+      - suburb
+      - district
+      - neighborhood
+      - locality
+
+  - name: Date of Birth
+    description: Birth date and age information
+    category: date_of_birth
+    patterns:
+      - date_of_birth
+      - birth_date
+      - birthday
+      - dob
+      - birth_day
+      - birth_year
+      - birth_month
+      - age_group
+      - age_range
+      - age_category
+      - date_born
+      - born_on
+      - birth_data
+      - age_data
+      - demographic_data
+      - personal_demographics
+
+  - name: Government Identifiers
+    description: Government-issued identification numbers
+    category: government_id
+    patterns:
+      - ssn
+      - social_security_number
+      - national_id
+      - id_number
+      - tax_id
+      - passport_number
+      - drivers_license
+      - government_id
+      - identity_document
+
+  - name: User Identifiers
+    description: System-generated user identifiers
+    category: user_identifier
+    patterns:
+      - username
+      - user_id
+      - account_id
+      - customer_id
+      - users
+      - customers
+      - contacts
+      - user_profiles
+      - customer_profiles
+      - personal_info
+      - identities
+      - login
+      - client
+      - member
+      - createuser
+      - getuser
+      - updateuser
+      - deleteuser
+      - registeruser
+      - authenticate
+      - authorise
+      - getprofile
+      - updateprofile
+      - saveprofile
+
+  # =============================================================================
+  # Account & Financial Indicators
+  # =============================================================================
+
+  - name: Account Data
+    description: Account and subscription information
+    category: account
+    patterns:
+      - user_accounts
+      - account_details
+      - registrations
+      - enrollments
+
+  - name: Subscription Data
+    description: Subscription and membership information
+    category: subscription
+    patterns:
+      - subscriptions
+      - memberships
+      - subscription_data
+      - membership_info
+      - cancellation
+
+  - name: Payment Information
+    description: Payment method and transaction data
+    category: payment
+    patterns:
+      - payments
+      - invoices
+      - receipts
+      - payment_methods
+      - credit
+      - card
+      - billing_info
+      - payment_history
+      - invoice_details
+      - billing_addresses
+      - invoice_number
+      - receipt_id
+      - billing_email
+      - transactions
+      - purchases
+      - orders
+      - order_history
+      - transaction_log
+
+  - name: Financial Data
+    description: Financial identifiers and sensitive financial information
+    category: financial
+    patterns:
+      - financial_data
+      - bank_accounts
+      - credit_cards
+      - payment_cards
+      - wallets
+      - financial_profiles
+      - credit_info
+      - banking_details
+      - card_details
+      - credit_rating
+      - account_number
+      - routing_number
+      - iban
+      - swift_code
+      - credit_card_number
+      - debit_card
+      - cvv
+      - security_code
+      - credit_score
+      - financial_rating
+      - credit_history
+
+  # =============================================================================
+  # Behavioural Indicators
+  # =============================================================================
+
+  - name: User Activity
+    description: User actions and interaction data
+    category: user_activity
+    patterns:
+      - user_events
+      - activity_logs
+      - user_sessions
+      - interactions
+      - user_actions
+      - behavior_data
+      - form_completion
+      - app_usage
+      - event_type
+      - action_type
+
+  - name: Analytics Data
+    description: Analytics and tracking data
+    category: analytics
+    patterns:
+      - analytics
+      - page_views
+      - click_events
+      - tracking_data
+      - click_data
+      - session_id
+      - duration
+      - referrer
+      - utm_source
+      - utm_campaign
+      - scroll_depth
+      - conversion_event
+      - timestamp
+
+  # =============================================================================
+  # Technical Indicators
+  # =============================================================================
+
+  - name: Device Information
+    description: Device identifiers and information
+    category: device
+    patterns:
+      - user_devices
+      - device_info
+      - device_fingerprints
+      - device_id
+      - device_uuid
+      - hardware_id
+      - device_type
+      - device_model
+
+  - name: Network Information
+    description: Network identifiers
+    category: network
+    patterns:
+      - network_data
+      - ip_address
+      - remote_addr
+      - client_ip
+      - network_id
+
+  - name: Browser Information
+    description: Browser and platform data
+    category: browser
+    patterns:
+      - browser_data
+      - platform_data
+      - system_info
+      - user_agent
+      - browser_version
+      - operating_system
+      - os_version
+      - screen_resolution
+      - language
+      - locale
+      - timezone
+      - screen_size
+      - viewport_size
+      - technical_profiles
+
+  - name: Cookie Data
+    description: Cookie and tracking identifiers
+    category: cookie
+    patterns:
+      - cookie_id
+      - session_cookie
+      - tracking_cookie
+      - advertisement_id
+
+  # =============================================================================
+  # Derived Indicators
+  # =============================================================================
+
+  - name: Inferred Data
+    description: Algorithmically inferred or predicted characteristics
+    category: inferred
+    patterns:
+      - predicted
+      - inferred
+      - calculated
+      - profiling
+      - machine_learning
+
+  - name: User Preferences
+    description: User-declared preferences and interests
+    category: preference
+    patterns:
+      - interests
+      - preferences
+      - declared
+      - user_provided
+
+  # =============================================================================
+  # Location Indicators
+  # =============================================================================
+
+  - name: General Location
+    description: General location information
+    category: location
+    patterns:
+      - locations
+      - geographic_data
+      - location_history
+      - places
+      - regions
+      - countries
+      - cities
+      - postal_codes
+      - geographic_info
+      - country_code
+      - province
+      - territory
+      - area_code
+      - general_location
+      - approximate_location
+      - region_code
+
+  - name: Precise Location
+    description: Precise geolocation data
+    category: precise_location
+    patterns:
+      - gps_data
+      - precise_locations
+      - geolocation
+      - location_tracking
+      - gps_tracking
+      - position_data
+      - waypoints
+      - routes
+      - latitude
+      - longitude
+      - lng
+      - gps_coordinates
+      - exact_location
+      - location_accuracy
+      - altitude
+      - elevation
+      - bearing
+      - heading
+      - speed
+      - velocity
+      - tracking_point
+      - geofence
+
+  # =============================================================================
+  # Content Indicators
+  # =============================================================================
+
+  - name: User-Generated Content
+    description: Content created by users
+    category: user_content
+    patterns:
+      - comment
+      - review
+      - feedback
+      - message
+
+  # =============================================================================
+  # Sensitive Indicators (Article 9 candidates)
+  # =============================================================================
+
+  - name: Health Data
+    description: Health and medical information
+    category: health
+    patterns:
+      - health
+      - medical
+      - illness
+      - condition
+      - diagnosis
+      - treatment
+      - patient
+
+  - name: Political Data
+    description: Political opinions and trade union membership
+    category: political
+    patterns:
+      - political
+      - trade_union
+      - affiliation
+      - conservative
+      - liberal
+      - labour
+      - socialist
+      - activist
+
+  - name: Racial or Ethnic Data
+    description: Racial or ethnic origin data
+    category: racial_ethnic
+    patterns:
+      - race
+      - ethnic
+      - origin
+      - nationality
+
+  - name: Religious Data
+    description: Religious or philosophical beliefs
+    category: religious
+    patterns:
+      - religion
+      - belief
+      - philosophy
+      - faith
+      - creed
+
+  - name: Genetic Data
+    description: Genetic information
+    category: genetic
+    patterns:
+      - genetic
+      - dna
+      - genome
+      - sequence
+
+  - name: Biometric Data
+    description: Biometric identifiers
+    category: biometric
+    patterns:
+      - biometric
+      - fingerprint
+      - iris
+      - facial_recognition
+      - face
+      - voice
+
+  - name: Sexual Orientation Data
+    description: Sexual orientation and sex life data
+    category: sexual_orientation
+    patterns:
+      - sexual
+      - orientation
+      - sex_life
+      - gender_identity

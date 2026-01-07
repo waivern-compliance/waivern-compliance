@@ -30,16 +30,20 @@ class GDPRPersonalDataFindingModel(BaseFindingModel):
     GDPR-specific classification information. Risk is indicated by
     special_category - Article 9 special category data requires
     additional protections under GDPR.
+
+    Note: privacy_category values are NOT GDPR-defined terms - they're from
+    legal team for reporting/governance purposes. GDPR only mandates the
+    distinction between personal data (Article 4) and special category (Article 9).
     """
 
     # Original indicator information
     indicator_type: str = Field(
-        description="Original personal data indicator type (e.g., 'email', 'phone_number')"
+        description="Original personal data indicator type (e.g., 'email', 'health')"
     )
 
     # GDPR classification fields
-    gdpr_data_type: str = Field(
-        description="GDPR data type classification (e.g., 'contact_data', 'health_data')"
+    privacy_category: str = Field(
+        description="Privacy category for reporting (e.g., 'identification_data', 'health_data')"
     )
     special_category: bool = Field(
         default=False,

@@ -28,6 +28,10 @@ from waivern_rulesets.personal_data import (
     PersonalDataRule,
     PersonalDataRuleset,
 )
+from waivern_rulesets.personal_data_indicator import (
+    PersonalDataIndicatorRule,
+    PersonalDataIndicatorRuleset,
+)
 from waivern_rulesets.processing_purposes import (
     ProcessingPurposeRule,
     ProcessingPurposesRuleset,
@@ -40,6 +44,11 @@ from waivern_rulesets.service_integrations import (
 # Built-in rulesets with their corresponding rule types
 _BUILTIN_RULESETS = [
     ("personal_data", PersonalDataRuleset, PersonalDataRule),
+    (
+        "personal_data_indicator",
+        PersonalDataIndicatorRuleset,
+        PersonalDataIndicatorRule,
+    ),
     ("processing_purposes", ProcessingPurposesRuleset, ProcessingPurposeRule),
     ("data_collection", DataCollectionRuleset, DataCollectionRule),
     ("service_integrations", ServiceIntegrationsRuleset, ServiceIntegrationRule),
@@ -68,6 +77,7 @@ __all__ = [
     "RulesetRegistry",
     # Rulesets
     "PersonalDataRuleset",
+    "PersonalDataIndicatorRuleset",
     "ProcessingPurposesRuleset",
     "DataCollectionRuleset",
     "ServiceIntegrationsRuleset",
@@ -75,6 +85,7 @@ __all__ = [
     "GDPRPersonalDataClassificationRuleset",
     # Rule types
     "PersonalDataRule",
+    "PersonalDataIndicatorRule",
     "ProcessingPurposeRule",
     "DataCollectionRule",
     "ServiceIntegrationRule",

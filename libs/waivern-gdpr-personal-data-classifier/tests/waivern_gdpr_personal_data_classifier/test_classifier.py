@@ -72,13 +72,13 @@ class TestGDPRPersonalDataClassifier:
         assert schemas[0].name == "gdpr_personal_data"
         assert schemas[0].version == "1.0.0"
 
-    def test_process_classifies_basic_profile_as_identification_data(self) -> None:
-        """Test that basic_profile indicator is classified as identification_data."""
+    def test_process_classifies_email_as_identification_data(self) -> None:
+        """Test that email indicator is classified as identification_data."""
         input_data = {
             "findings": [
                 {
-                    "type": "email",
-                    "data_type": "basic_profile",
+                    "type": "Email Address",
+                    "category": "email",
                     "evidence": [{"content": "user@example.com"}],
                     "matched_patterns": ["email"],
                 }
@@ -87,7 +87,7 @@ class TestGDPRPersonalDataClassifier:
                 "total_findings": 1,
             },
             "analysis_metadata": {
-                "ruleset_used": "local/personal_data/1.0.0",
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
                 "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
@@ -103,16 +103,18 @@ class TestGDPRPersonalDataClassifier:
         # Act
         result = classifier.process([input_message], output_schema)
 
-        assert result.content["findings"][0]["gdpr_data_type"] == "identification_data"
+        assert (
+            result.content["findings"][0]["privacy_category"] == "identification_data"
+        )
         assert result.content["findings"][0]["special_category"] is False
 
-    def test_process_classifies_health_data_as_special_category(self) -> None:
-        """Test that health_data indicator is classified as special category."""
+    def test_process_classifies_health_as_special_category(self) -> None:
+        """Test that health indicator is classified as special category."""
         input_data = {
             "findings": [
                 {
-                    "type": "medical_record",
-                    "data_type": "health_data",
+                    "type": "Health Data",
+                    "category": "health",
                     "evidence": [{"content": "patient diagnosis"}],
                     "matched_patterns": ["medical"],
                 }
@@ -121,7 +123,7 @@ class TestGDPRPersonalDataClassifier:
                 "total_findings": 1,
             },
             "analysis_metadata": {
-                "ruleset_used": "local/personal_data/1.0.0",
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
                 "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
@@ -137,7 +139,7 @@ class TestGDPRPersonalDataClassifier:
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
-        assert result.content["findings"][0]["gdpr_data_type"] == "health_data"
+        assert result.content["findings"][0]["privacy_category"] == "health_data"
         assert result.content["findings"][0]["special_category"] is True
 
     def test_process_includes_article_references(self) -> None:
@@ -145,8 +147,8 @@ class TestGDPRPersonalDataClassifier:
         input_data = {
             "findings": [
                 {
-                    "type": "email",
-                    "data_type": "basic_profile",
+                    "type": "Email Address",
+                    "category": "email",
                     "evidence": [{"content": "test@example.com"}],
                     "matched_patterns": ["email"],
                 }
@@ -155,7 +157,7 @@ class TestGDPRPersonalDataClassifier:
                 "total_findings": 1,
             },
             "analysis_metadata": {
-                "ruleset_used": "local/personal_data/1.0.0",
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
                 "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
@@ -185,8 +187,8 @@ class TestGDPRPersonalDataClassifier:
         input_data = {
             "findings": [
                 {
-                    "type": "email",
-                    "data_type": "basic_profile",
+                    "type": "Email Address",
+                    "category": "email",
                     "evidence": original_evidence,
                     "matched_patterns": ["email"],
                 }
@@ -195,7 +197,7 @@ class TestGDPRPersonalDataClassifier:
                 "total_findings": 1,
             },
             "analysis_metadata": {
-                "ruleset_used": "local/personal_data/1.0.0",
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
                 "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
@@ -252,14 +254,14 @@ class TestGDPRPersonalDataClassifier:
         input_data = {
             "findings": [
                 {
-                    "type": "email",
-                    "data_type": "basic_profile",
+                    "type": "Email Address",
+                    "category": "email",
                     "evidence": [{"content": "test@example.com"}],
                     "matched_patterns": ["email"],
                 },
                 {
-                    "type": "medical_record",
-                    "data_type": "health_data",
+                    "type": "Health Data",
+                    "category": "health",
                     "evidence": [{"content": "patient data"}],
                     "matched_patterns": ["medical"],
                 },
@@ -294,7 +296,7 @@ class TestGDPRPersonalDataClassifier:
             "findings": [
                 {
                     "type": "unknown_type",
-                    "data_type": "unknown_category",
+                    "category": "unknown_category",
                     "evidence": [{"content": "some data"}],
                     "matched_patterns": ["unknown"],
                 }
@@ -321,6 +323,6 @@ class TestGDPRPersonalDataClassifier:
 
         # Should still produce output with default/unclassified values
         finding = result.content["findings"][0]
-        assert finding["gdpr_data_type"] == "unclassified"
+        assert finding["privacy_category"] == "unclassified"
         assert finding["special_category"] is False
         assert finding["indicator_type"] == "unknown_type"

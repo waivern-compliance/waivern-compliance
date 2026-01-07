@@ -14,18 +14,22 @@ class GDPRClassificationRule(ClassificationRule):
     """Base class for GDPR-specific classification rules.
 
     Provides common fields used across GDPR classification rulesets:
-    - gdpr_data_type: GDPR data type classification
-    - special_category: Whether Article 9 special category data
+    - privacy_category: Privacy category for reporting/governance (from legal team)
+    - special_category: Whether Article 9 special category data (core GDPR concern)
     - article_references: Relevant GDPR articles
+
+    Note: privacy_category values like 'identification_data', 'financial_data' are
+    NOT GDPR-defined terms - they're from legal team for reporting purposes.
+    GDPR only mandates: personal data (Article 4) vs special category (Article 9).
 
     Used by:
     - GDPRPersonalDataClassificationRule (personal data classification)
     - Future GDPR-related classification rulesets
     """
 
-    gdpr_data_type: str = Field(
+    privacy_category: str = Field(
         min_length=1,
-        description="GDPR data type classification (e.g., 'health_data', 'genetic_data')",
+        description="Privacy category for reporting (e.g., 'identification_data', 'health_data')",
     )
     special_category: bool = Field(
         default=False,

@@ -19,8 +19,8 @@ class GDPRPersonalDataClassifier(Classifier):
     """Classifier that enriches personal data findings with GDPR classification.
 
     Takes personal data indicator findings and adds GDPR-specific information:
-    - GDPR data type classification
-    - Article 9 special category determination
+    - Privacy category (for reporting/governance)
+    - Article 9 special category determination (core GDPR concern)
     - Relevant GDPR article references
     - Applicable lawful bases
     """
@@ -38,7 +38,7 @@ class GDPRPersonalDataClassifier(Classifier):
         for rule in self._ruleset.get_rules():
             for indicator_category in rule.indicator_categories:
                 classification_map[indicator_category] = {
-                    "gdpr_data_type": rule.gdpr_data_type,
+                    "privacy_category": rule.privacy_category,
                     "special_category": rule.special_category,
                     "article_references": rule.article_references,
                     "lawful_bases": rule.lawful_bases,
@@ -114,13 +114,15 @@ class GDPRPersonalDataClassifier(Classifier):
         self, finding: dict[str, Any]
     ) -> GDPRPersonalDataFindingModel:
         """Classify a single finding according to GDPR rules."""
-        # Look up classification based on data_type (indicator category)
-        data_type = finding.get("data_type", "")
-        classification = self._classification_map.get(data_type, {})
+        # Look up classification based on category (indicator category)
+        # Note: The indicator finding uses 'category' field with granular values
+        # like 'email', 'phone', 'health' which map to privacy_category groupings
+        category = finding.get("category", "")
+        classification = self._classification_map.get(category, {})
 
         return GDPRPersonalDataFindingModel(
             indicator_type=finding.get("type", ""),
-            gdpr_data_type=classification.get("gdpr_data_type", "unclassified"),
+            privacy_category=classification.get("privacy_category", "unclassified"),
             special_category=classification.get("special_category", False),
             article_references=tuple(classification.get("article_references", ())),
             lawful_bases=tuple(classification.get("lawful_bases", ())),
