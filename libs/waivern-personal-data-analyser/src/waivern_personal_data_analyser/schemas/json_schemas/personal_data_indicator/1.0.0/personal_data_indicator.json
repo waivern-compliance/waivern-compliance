@@ -140,14 +140,9 @@
           "title": "Matched Patterns",
           "type": "array"
         },
-        "type": {
-          "description": "Type of personal data indicator (e.g., 'email', 'phone_number')",
-          "title": "Type",
-          "type": "string"
-        },
-        "data_type": {
-          "description": "Categorical data type identifier (e.g., 'basic_profile', 'health_data')",
-          "title": "Data Type",
+        "category": {
+          "description": "Category of personal data (e.g., 'email', 'phone', 'health')",
+          "title": "Category",
           "type": "string"
         },
         "metadata": {
@@ -166,8 +161,7 @@
       "required": [
         "evidence",
         "matched_patterns",
-        "type",
-        "data_type"
+        "category"
       ],
       "title": "PersonalDataIndicatorModel",
       "type": "object"

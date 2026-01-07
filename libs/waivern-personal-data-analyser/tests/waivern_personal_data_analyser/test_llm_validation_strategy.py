@@ -39,8 +39,7 @@ class TestPersonalDataValidationStrategy:
         """Create sample findings for testing."""
         return [
             PersonalDataIndicatorModel(
-                type="email",
-                data_type="basic_profile",
+                category="email",
                 matched_patterns=["test@example.com"],
                 evidence=[
                     BaseFindingEvidence(content="Contact us at test@example.com")
@@ -48,8 +47,7 @@ class TestPersonalDataValidationStrategy:
                 metadata=PersonalDataIndicatorMetadata(source="contact_form.php"),
             ),
             PersonalDataIndicatorModel(
-                type="phone",
-                data_type="basic_profile",
+                category="phone",
                 matched_patterns=["123-456-7890"],
                 evidence=[BaseFindingEvidence(content="Call us at 123-456-7890")],
                 metadata=PersonalDataIndicatorMetadata(source="customer_db"),
@@ -108,8 +106,8 @@ class TestPersonalDataValidationStrategy:
 
         # Assert
         assert len(result) == 2
-        assert result[0].type == "email"
-        assert result[1].type == "phone"
+        assert result[0].category == "email"
+        assert result[1].category == "phone"
         assert success is True
         mock_llm_service.analyse_data.assert_called_once()
 
@@ -148,7 +146,7 @@ class TestPersonalDataValidationStrategy:
 
         # Assert
         assert len(result) == 1
-        assert result[0].type == "phone"
+        assert result[0].category == "phone"
         assert success is True
 
     def test_handles_mixed_validation_results_correctly(
@@ -158,22 +156,19 @@ class TestPersonalDataValidationStrategy:
         # Arrange
         findings = [
             PersonalDataIndicatorModel(
-                type="email",
-                data_type="basic_profile",
+                category="email",
                 matched_patterns=["admin@domain.com"],
                 evidence=[BaseFindingEvidence(content="Email: admin@domain.com")],
                 metadata=PersonalDataIndicatorMetadata(source="config.txt"),
             ),
             PersonalDataIndicatorModel(
-                type="ssn",
-                data_type="identification",
+                category="government_id",
                 matched_patterns=["123-45-6789"],
                 evidence=[BaseFindingEvidence(content="SSN: 123-45-6789")],
                 metadata=PersonalDataIndicatorMetadata(source="employee_records"),
             ),
             PersonalDataIndicatorModel(
-                type="email",
-                data_type="basic_profile",
+                category="email",
                 matched_patterns=["user@test.com"],
                 evidence=[BaseFindingEvidence(content="Example: user@test.com")],
                 metadata=PersonalDataIndicatorMetadata(source="documentation.md"),
@@ -217,9 +212,9 @@ class TestPersonalDataValidationStrategy:
 
         # Assert
         assert len(result) == 2
-        assert result[0].type == "email"
+        assert result[0].category == "email"
         assert "admin@domain.com" in result[0].matched_patterns
-        assert result[1].type == "ssn"
+        assert result[1].category == "government_id"
         assert success is True
 
     def test_processes_findings_in_configured_batches(
@@ -229,8 +224,7 @@ class TestPersonalDataValidationStrategy:
         # Arrange
         findings = [
             PersonalDataIndicatorModel(
-                type="email",
-                data_type="basic_profile",
+                category="email",
                 matched_patterns=[f"user{i}@example.com"],
                 evidence=[BaseFindingEvidence(content=f"Email: user{i}@example.com")],
                 metadata=PersonalDataIndicatorMetadata(source="database"),
@@ -423,10 +417,10 @@ class TestPersonalDataValidationStrategy:
         assert result[1] is sample_findings[1]
         assert success is True
         # Verify all properties are unchanged
-        assert result[0].type == "email"
+        assert result[0].category == "email"
         assert len(result[0].evidence) == 1
         assert result[0].evidence[0].content == "Contact us at test@example.com"
-        assert result[1].type == "phone"
+        assert result[1].category == "phone"
         assert result[1].metadata is not None
         assert result[1].metadata.source == "customer_db"
 
@@ -460,7 +454,7 @@ class TestPersonalDataValidationStrategy:
         # Assert
         # Should only process the findings that have validation results
         assert len(result) == 1
-        assert result[0].type == "email"
+        assert result[0].category == "email"
         assert success is True
 
     def test_handles_various_batch_sizes(
@@ -470,8 +464,7 @@ class TestPersonalDataValidationStrategy:
         # Arrange
         findings = [
             PersonalDataIndicatorModel(
-                type="email",
-                data_type="basic_profile",
+                category="email",
                 matched_patterns=[f"test{i}@example.com"],
                 evidence=[BaseFindingEvidence(content=f"Email {i}")],
                 metadata=PersonalDataIndicatorMetadata(source="test"),
@@ -526,8 +519,7 @@ class TestPersonalDataValidationStrategy:
         # Arrange
         findings = [
             PersonalDataIndicatorModel(
-                type="credit_card",
-                data_type="financial",
+                category="payment",
                 matched_patterns=["4111-1111-1111-1111"],
                 evidence=[BaseFindingEvidence(content="Card: 4111-1111-1111-1111")],
                 metadata=PersonalDataIndicatorMetadata(source="payment_form"),
@@ -563,8 +555,7 @@ class TestPersonalDataValidationStrategy:
         # Arrange
         findings = [
             PersonalDataIndicatorModel(
-                type="phone",
-                data_type="basic_profile",
+                category="phone",
                 matched_patterns=["+44 20 7946 0958"],
                 evidence=[BaseFindingEvidence(content="Contact: +44 20 7946 0958")],
                 metadata=PersonalDataIndicatorMetadata(source="customer_database"),
@@ -616,8 +607,7 @@ class TestPersonalDataValidationStrategy:
         # Arrange
         findings = [
             PersonalDataIndicatorModel(
-                type="email",
-                data_type="basic_profile",
+                category="email",
                 matched_patterns=[f"user{i}@test.com"],
                 evidence=[BaseFindingEvidence(content=f"Email: user{i}@test.com")],
                 metadata=PersonalDataIndicatorMetadata(source="test"),

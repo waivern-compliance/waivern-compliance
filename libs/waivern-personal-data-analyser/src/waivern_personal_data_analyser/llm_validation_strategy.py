@@ -37,8 +37,7 @@ class PersonalDataValidationStrategy(LLMValidationStrategy[PersonalDataIndicator
         for finding in findings_batch:
             findings_for_prompt.append(
                 {
-                    "type": finding.type,
-                    "data_type": finding.data_type,
+                    "category": finding.category,
                     "matched_patterns": finding.matched_patterns,
                     "evidence": [item.content for item in finding.evidence],
                     "metadata": finding.metadata,
@@ -49,7 +48,7 @@ class PersonalDataValidationStrategy(LLMValidationStrategy[PersonalDataIndicator
     @override
     def get_finding_identifier(self, finding: PersonalDataIndicatorModel) -> str:
         """Get human-readable identifier for personal data indicator."""
-        return f"{finding.type} - {', '.join(finding.matched_patterns)}"
+        return f"{finding.category} - {', '.join(finding.matched_patterns)}"
 
 
 def personal_data_validation_strategy(

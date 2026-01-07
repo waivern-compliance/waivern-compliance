@@ -22,8 +22,7 @@ class TestBaseFindingModelValidation:
         """
         with pytest.raises(ValidationError) as exc_info:
             PersonalDataIndicatorModel(
-                type="email",
-                data_type="basic_profile",
+                category="email",
                 matched_patterns=[],  # Empty patterns - should fail business requirement
                 evidence=[BaseFindingEvidence(content="test evidence")],
                 metadata=PersonalDataIndicatorMetadata(source="test_source"),
@@ -49,8 +48,7 @@ class TestBaseFindingModelValidation:
         """
         with pytest.raises(ValidationError) as exc_info:
             PersonalDataIndicatorModel(
-                type="email",
-                data_type="basic_profile",
+                category="email",
                 matched_patterns=["email"],
                 evidence=[],  # Empty evidence - should fail business requirement
                 metadata=PersonalDataIndicatorMetadata(source="test_source"),

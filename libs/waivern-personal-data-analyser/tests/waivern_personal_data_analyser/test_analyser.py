@@ -19,7 +19,7 @@ from waivern_core.schemas import (
     Schema,
 )
 from waivern_llm import BaseLLMService
-from waivern_rulesets.personal_data import PersonalDataRule
+from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 
 from waivern_personal_data_analyser.analyser import (
     PersonalDataAnalyser,
@@ -53,7 +53,7 @@ class TestPersonalDataAnalyser:
         """Create a valid configuration for testing using direct instantiation."""
         return PersonalDataAnalyserConfig(
             pattern_matching=PatternMatchingConfig(
-                ruleset="local/personal_data/1.0.0",
+                ruleset="local/personal_data_indicator/1.0.0",
                 evidence_context_size="medium",
                 maximum_evidence_count=5,
             ),
@@ -72,14 +72,14 @@ class TestPersonalDataAnalyser:
             "name": "Test personal data analysis",
             "data": [
                 {
-                    "content": "Contact us at support@example.com or call 123-456-7890",
+                    "content": "Contact email: support@example.com or phone: 123-456-7890",
                     "metadata": {
                         "source": "contact_form.html",
                         "connector_type": "filesystem",
                     },
                 },
                 {
-                    "content": "User profile: john.doe@company.com, phone: +44-20-1234-5678",
+                    "content": "User email: john.doe@company.com, phone: +44-20-1234-5678",
                     "metadata": {
                         "source": "user_database",
                         "connector_type": "test",
@@ -127,8 +127,7 @@ class TestPersonalDataAnalyser:
         """
         return [
             PersonalDataIndicatorModel(
-                type="Basic Profile Information",
-                data_type="basic_profile",
+                category="email",
                 matched_patterns=["email"],
                 evidence=[
                     BaseFindingEvidence(content="Contact us at support@example.com")
@@ -136,15 +135,13 @@ class TestPersonalDataAnalyser:
                 metadata=PersonalDataIndicatorMetadata(source="contact_form.html"),
             ),
             PersonalDataIndicatorModel(
-                type="Basic Profile Information",
-                data_type="basic_profile",
+                category="phone",
                 matched_patterns=["telephone"],
                 evidence=[BaseFindingEvidence(content="call 123-456-7890")],
                 metadata=PersonalDataIndicatorMetadata(source="contact_form.html"),
             ),
             PersonalDataIndicatorModel(
-                type="Basic Profile Information",
-                data_type="basic_profile",
+                category="email",
                 matched_patterns=["email"],
                 evidence=[
                     BaseFindingEvidence(content="User email: john.doe@company.com")
@@ -223,14 +220,14 @@ class TestPersonalDataAnalyser:
             assert "total_findings" in summary
             assert summary["total_findings"] == len(result_content["findings"])  # type: ignore[arg-type]
 
-    def test_process_findings_include_expected_metadata_and_categorical_info(
+    def test_process_findings_include_expected_metadata_and_category(
         self,
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
         sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
-        """Test that findings include source metadata and data_type categorical information."""
+        """Test that findings include source metadata and category information."""
         # Arrange
         analyser = PersonalDataAnalyser(
             valid_config,
@@ -246,7 +243,7 @@ class TestPersonalDataAnalyser:
             # Act
             result_message = analyser.process([sample_input_message], output_schema)
 
-            # Assert - Verify source field and data_type categorical information are included
+            # Assert - Verify source field and category are included
             result_content = result_message.content
             for finding in result_content["findings"]:
                 # Test source field directly
@@ -255,12 +252,12 @@ class TestPersonalDataAnalyser:
                     "user_database",
                 ]
 
-                # Test data_type categorical information
-                assert "data_type" in finding, (
-                    "PersonalDataIndicatorModel should include data_type field for categorical reference"
+                # Test category field (granular indicator category)
+                assert "category" in finding, (
+                    "PersonalDataIndicatorModel should include category field"
                 )
-                assert isinstance(finding["data_type"], str)
-                assert finding["data_type"] != "", "data_type should not be empty"
+                assert isinstance(finding["category"], str)
+                assert finding["category"] != "", "category should not be empty"
 
     def test_personal_data_analyser_provides_standardised_analysis_metadata(
         self,
@@ -311,7 +308,9 @@ class TestPersonalDataAnalyser:
         assert len(analysis_metadata["analyses_chain"]) >= 1, (
             "analyses_chain must have at least one entry as it's mandatory"
         )
-        assert analysis_metadata["ruleset_used"] == "local/personal_data/1.0.0"
+        assert (
+            analysis_metadata["ruleset_used"] == "local/personal_data_indicator/1.0.0"
+        )
 
     def test_process_includes_validation_summary_when_llm_validation_enabled(
         self,
@@ -464,18 +463,18 @@ class TestPersonalDataAnalyser:
         assert result_content["findings"] == []
         assert result_content["summary"]["total_findings"] == 0
 
-    def test_personal_data_indicator_data_type_matches_rule_data_type(
+    def test_personal_data_indicator_category_matches_rule_category(
         self,
         valid_config: PersonalDataAnalyserConfig,
     ) -> None:
-        """Test that finding.data_type matches the rule.data_type it was processed against."""
+        """Test that finding.category matches the rule.category it was processed against."""
         # Arrange
-        # Create a mock rule with known data_type
-        mock_rule = PersonalDataRule(
-            name="Test Email Detection",
+        # Create a mock rule with known category
+        mock_rule = PersonalDataIndicatorRule(
+            name="Email Address",
             description="Test rule for email detection",
             patterns=("email",),
-            data_type="basic_profile",  # This should appear in finding.data_type
+            category="email",  # This should appear in finding.category
         )
 
         # Create real pattern matcher and mock its ruleset manager
@@ -505,7 +504,7 @@ class TestPersonalDataAnalyser:
                 ],
             }
             test_message = Message(
-                id="test_data_type",
+                id="test_category",
                 content=input_content,
                 schema=Schema("standard_input", "1.0.0"),
             )
@@ -515,14 +514,14 @@ class TestPersonalDataAnalyser:
             # Act
             result_message = analyser.process([test_message], output_schema)
 
-            # Assert - verify that finding.data_type matches rule.data_type
+            # Assert - verify that finding.category matches rule.category
             result_content = result_message.content
             findings = result_content["findings"]
             assert len(findings) > 0, "Should have at least one finding"
 
             for finding in findings:
-                assert finding["data_type"] == "basic_profile", (
-                    f"Finding data_type should match rule.data_type, got: {finding.get('data_type')}"
+                assert finding["category"] == "email", (
+                    f"Finding category should match rule.category, got: {finding.get('category')}"
                 )
 
     def test_process_creates_analysis_chain_entry(

@@ -4,7 +4,7 @@ from typing import Any
 
 
 def get_personal_data_validation_prompt(
-    finding_type: str,
+    category: str,
     special_category: bool,
     matched_patterns: list[str],
     evidence: list[str] | None,
@@ -16,7 +16,7 @@ def get_personal_data_validation_prompt(
     and false positives (documentation, examples, field names, etc.).
 
     Args:
-        finding_type: Type of personal data detected (e.g., 'email', 'phone')
+        category: Category of personal data detected (e.g., 'email', 'phone')
         special_category: Whether this is GDPR Article 9 special category data
         matched_patterns: Patterns that were matched during detection
         evidence: List of evidence snippets where pattern was found
@@ -34,7 +34,7 @@ def get_personal_data_validation_prompt(
     return f"""You are an expert GDPR compliance analyst. Validate whether this detected pattern represents actual personal data or a false positive.
 
 **FINDING TO VALIDATE:**
-Type: {finding_type}
+Category: {category}
 Special Category: {special_cat_text}
 Patterns: {", ".join(matched_patterns)}
 Source: {source}
@@ -92,8 +92,7 @@ def get_batch_validation_prompt(findings: list[dict[str, Any]]) -> str:
 
         findings_text.append(f"""
 Finding {i}:
-  Type: {finding.get("type", "Unknown")}
-  Data Type: {finding.get("data_type", "Unknown")}
+  Category: {finding.get("category", "Unknown")}
   Patterns: {", ".join(finding.get("matched_patterns", ["Unknown"]))}
   Source: {getattr(finding.get("metadata", {}), "source", "Unknown") if finding.get("metadata") else "Unknown"}
   Evidence:
@@ -139,7 +138,7 @@ Validate all {len(findings)} findings:"""
 
 
 def get_conservative_validation_prompt(
-    finding_type: str,
+    category: str,
     special_category: bool,
     matched_patterns: list[str],
     evidence: list[str] | None,
@@ -151,7 +150,7 @@ def get_conservative_validation_prompt(
     only marking as false positive when very confident.
 
     Args:
-        finding_type: Type of personal data detected
+        category: Category of personal data detected
         special_category: Whether this is GDPR Article 9 special category data
         matched_patterns: Patterns that were matched during detection
         evidence: List of evidence snippets where pattern was found
@@ -173,7 +172,7 @@ def get_conservative_validation_prompt(
     return f"""You are an expert GDPR compliance analyst performing CONSERVATIVE validation for sensitive personal data.
 
 **FINDING TO VALIDATE:**
-Type: {finding_type}
+Category: {category}
 Special Category: {special_cat_text}
 Patterns: {", ".join(matched_patterns)}
 Source: {source}

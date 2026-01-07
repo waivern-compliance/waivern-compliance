@@ -7,7 +7,7 @@ from waivern_analysers_shared.utilities import (
     RulesetManager,
 )
 from waivern_core.schemas import BaseMetadata
-from waivern_rulesets.personal_data import PersonalDataRule
+from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 
 from .schemas.types import PersonalDataIndicatorMetadata, PersonalDataIndicatorModel
 
@@ -50,7 +50,9 @@ class PersonalDataPatternMatcher:
         if not content.strip():
             return []
 
-        rules = self._ruleset_manager.get_rules(self.config.ruleset, PersonalDataRule)
+        rules = self._ruleset_manager.get_rules(
+            self.config.ruleset, PersonalDataIndicatorRule
+        )
         findings: list[PersonalDataIndicatorModel] = []
 
         # Process each rule
@@ -82,8 +84,7 @@ class PersonalDataPatternMatcher:
                         )
 
                     finding = PersonalDataIndicatorModel(
-                        type=rule.name,
-                        data_type=rule.data_type,
+                        category=rule.category,
                         matched_patterns=matched_patterns,
                         evidence=evidence_matches,
                         metadata=finding_metadata,

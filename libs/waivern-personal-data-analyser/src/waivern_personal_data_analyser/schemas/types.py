@@ -30,11 +30,8 @@ class PersonalDataIndicatorModel(BaseFindingModel):
     downstream classifiers.
     """
 
-    type: str = Field(
-        description="Type of personal data indicator (e.g., 'email', 'phone_number')"
-    )
-    data_type: str = Field(
-        description="Categorical data type identifier (e.g., 'basic_profile', 'health_data')"
+    category: str = Field(
+        description="Category of personal data (e.g., 'email', 'phone', 'health')"
     )
     metadata: PersonalDataIndicatorMetadata | None = Field(
         default=None, description="Additional metadata from the original data source"
