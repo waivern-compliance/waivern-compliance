@@ -1,5 +1,6 @@
 """GDPR personal data classifier implementation."""
 
+import logging
 from typing import Any, override
 
 from waivern_core import InputRequirement, Schema, update_analyses_chain
@@ -9,10 +10,13 @@ from waivern_core.schemas import AnalysisChainEntry, BaseAnalysisOutputMetadata
 from waivern_rulesets import GDPRPersonalDataClassificationRuleset
 
 from waivern_gdpr_personal_data_classifier.schemas import (
+    GDPRPersonalDataFindingMetadata,
     GDPRPersonalDataFindingModel,
     GDPRPersonalDataFindingOutput,
     GDPRPersonalDataSummary,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class GDPRPersonalDataClassifier(Classifier):
@@ -120,14 +124,30 @@ class GDPRPersonalDataClassifier(Classifier):
         category = finding.get("category", "")
         classification = self._classification_map.get(category, {})
 
+        if not classification:
+            logger.warning(
+                "Indicator category '%s' has no GDPR classification mapping. "
+                "Add mapping to gdpr_personal_data_classification.yaml",
+                category,
+            )
+
+        # Propagate metadata from indicator finding
+        metadata = None
+        if finding.get("metadata"):
+            metadata = GDPRPersonalDataFindingMetadata(
+                source=finding["metadata"].get("source", "unknown"),
+                context=finding["metadata"].get("context", {}),
+            )
+
         return GDPRPersonalDataFindingModel(
-            indicator_type=finding.get("type", ""),
+            indicator_type=category,
             privacy_category=classification.get("privacy_category", "unclassified"),
             special_category=classification.get("special_category", False),
             article_references=tuple(classification.get("article_references", ())),
             lawful_bases=tuple(classification.get("lawful_bases", ())),
             evidence=finding.get("evidence", []),
             matched_patterns=finding.get("matched_patterns", []),
+            metadata=metadata,
         )
 
     def _build_summary(

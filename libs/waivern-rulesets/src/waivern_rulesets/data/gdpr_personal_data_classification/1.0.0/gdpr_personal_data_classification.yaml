@@ -9,7 +9,6 @@ description: "Ruleset for classifying personal data indicators according to GDPR
 # Note: These are NOT GDPR-defined terms - they're from legal team for categorisation
 privacy_categories:
   - "identification_data"
-  - "contact_data"
   - "account_data"
   - "financial_data"
   - "behavioural_data"

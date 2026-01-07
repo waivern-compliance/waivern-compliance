@@ -120,7 +120,7 @@
       "type": "object"
     },
     "GDPRPersonalDataFindingModel": {
-      "description": "GDPR personal data classification finding structure.\n\nRepresents a personal data indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nspecial_category - Article 9 special category data requires\nadditional protections under GDPR.",
+      "description": "GDPR personal data classification finding structure.\n\nRepresents a personal data indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nspecial_category - Article 9 special category data requires\nadditional protections under GDPR.\n\nNote: privacy_category values are NOT GDPR-defined terms - they're from\nlegal team for reporting/governance purposes. GDPR only mandates the\ndistinction between personal data (Article 4) and special category (Article 9).",
       "properties": {
         "evidence": {
           "description": "Evidence items with content and timestamps for this finding",
@@ -141,13 +141,13 @@
           "type": "array"
         },
         "indicator_type": {
-          "description": "Original personal data indicator type (e.g., 'email', 'phone_number')",
+          "description": "Original personal data indicator category (e.g., 'email', 'health')",
           "title": "Indicator Type",
           "type": "string"
         },
-        "gdpr_data_type": {
-          "description": "GDPR data type classification (e.g., 'contact_data', 'health_data')",
-          "title": "Gdpr Data Type",
+        "privacy_category": {
+          "description": "Privacy category for reporting (e.g., 'identification_data', 'health_data')",
+          "title": "Privacy Category",
           "type": "string"
         },
         "special_category": {
@@ -197,7 +197,7 @@
         "evidence",
         "matched_patterns",
         "indicator_type",
-        "gdpr_data_type"
+        "privacy_category"
       ],
       "title": "GDPRPersonalDataFindingModel",
       "type": "object"

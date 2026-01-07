@@ -9,6 +9,10 @@ from typing import Any
 import pytest
 from waivern_core import ClassifierContractTests, Schema
 from waivern_core.message import Message
+from waivern_rulesets import (
+    GDPRPersonalDataClassificationRuleset,
+    PersonalDataIndicatorRuleset,
+)
 
 from waivern_gdpr_personal_data_classifier.classifier import GDPRPersonalDataClassifier
 
@@ -77,7 +81,6 @@ class TestGDPRPersonalDataClassifier:
         input_data = {
             "findings": [
                 {
-                    "type": "Email Address",
                     "category": "email",
                     "evidence": [{"content": "user@example.com"}],
                     "matched_patterns": ["email"],
@@ -113,7 +116,6 @@ class TestGDPRPersonalDataClassifier:
         input_data = {
             "findings": [
                 {
-                    "type": "Health Data",
                     "category": "health",
                     "evidence": [{"content": "patient diagnosis"}],
                     "matched_patterns": ["medical"],
@@ -147,7 +149,6 @@ class TestGDPRPersonalDataClassifier:
         input_data = {
             "findings": [
                 {
-                    "type": "Email Address",
                     "category": "email",
                     "evidence": [{"content": "test@example.com"}],
                     "matched_patterns": ["email"],
@@ -187,7 +188,6 @@ class TestGDPRPersonalDataClassifier:
         input_data = {
             "findings": [
                 {
-                    "type": "Email Address",
                     "category": "email",
                     "evidence": original_evidence,
                     "matched_patterns": ["email"],
@@ -254,13 +254,11 @@ class TestGDPRPersonalDataClassifier:
         input_data = {
             "findings": [
                 {
-                    "type": "Email Address",
                     "category": "email",
                     "evidence": [{"content": "test@example.com"}],
                     "matched_patterns": ["email"],
                 },
                 {
-                    "type": "Health Data",
                     "category": "health",
                     "evidence": [{"content": "patient data"}],
                     "matched_patterns": ["medical"],
@@ -295,7 +293,6 @@ class TestGDPRPersonalDataClassifier:
         input_data = {
             "findings": [
                 {
-                    "type": "unknown_type",
                     "category": "unknown_category",
                     "evidence": [{"content": "some data"}],
                     "matched_patterns": ["unknown"],
@@ -325,4 +322,136 @@ class TestGDPRPersonalDataClassifier:
         finding = result.content["findings"][0]
         assert finding["privacy_category"] == "unclassified"
         assert finding["special_category"] is False
-        assert finding["indicator_type"] == "unknown_type"
+        assert finding["indicator_type"] == "unknown_category"
+
+    def test_process_propagates_metadata_from_indicator_findings(self) -> None:
+        """Test that metadata (source, context) is propagated from input findings."""
+        input_data = {
+            "findings": [
+                {
+                    "category": "email",
+                    "evidence": [{"content": "user@example.com"}],
+                    "matched_patterns": ["email"],
+                    "metadata": {
+                        "source": "users_table",
+                        "context": {
+                            "connector_type": "mysql",
+                            "database": "customers_db",
+                        },
+                    },
+                }
+            ],
+            "summary": {"total_findings": 1},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
+            },
+        }
+        input_message = Message(
+            id="test",
+            content=input_data,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+        classifier = GDPRPersonalDataClassifier()
+
+        result = classifier.process(
+            [input_message], Schema("gdpr_personal_data", "1.0.0")
+        )
+
+        # Verify metadata is propagated
+        finding = result.content["findings"][0]
+        assert finding["metadata"] is not None
+        assert finding["metadata"]["source"] == "users_table"
+        assert finding["metadata"]["context"]["connector_type"] == "mysql"
+        assert finding["metadata"]["context"]["database"] == "customers_db"
+
+    def test_process_handles_findings_without_metadata(self) -> None:
+        """Test graceful handling of findings that lack metadata."""
+        input_data = {
+            "findings": [
+                {
+                    "category": "email",
+                    "evidence": [{"content": "user@example.com"}],
+                    "matched_patterns": ["email"],
+                    # No metadata field
+                }
+            ],
+            "summary": {"total_findings": 1},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
+            },
+        }
+        input_message = Message(
+            id="test",
+            content=input_data,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+        classifier = GDPRPersonalDataClassifier()
+
+        result = classifier.process(
+            [input_message], Schema("gdpr_personal_data", "1.0.0")
+        )
+
+        # Should still work, metadata should be None
+        finding = result.content["findings"][0]
+        assert finding.get("metadata") is None
+
+
+class TestRulesetContractValidation:
+    """Contract tests ensuring indicator categories map to GDPR classifications.
+
+    These tests catch when someone adds a new indicator category but forgets
+    to add the corresponding GDPR classification mapping.
+    """
+
+    def test_all_indicator_categories_have_gdpr_mapping(self) -> None:
+        """Verify every indicator category is mapped in GDPR classification ruleset.
+
+        This is a critical contract test. If this fails, it means:
+        - A new indicator category was added
+        - But no GDPR classification mapping was created
+        - Resulting in silent 'unclassified' output
+        """
+        # Get all unique categories from indicator ruleset
+        indicator_ruleset = PersonalDataIndicatorRuleset()
+        indicator_categories = {rule.category for rule in indicator_ruleset.get_rules()}
+
+        # Get all mapped categories from GDPR classification ruleset
+        gdpr_ruleset = GDPRPersonalDataClassificationRuleset()
+        mapped_categories: set[str] = set()
+        for rule in gdpr_ruleset.get_rules():
+            mapped_categories.update(rule.indicator_categories)
+
+        # Find unmapped categories
+        unmapped = indicator_categories - mapped_categories
+
+        assert unmapped == set(), (
+            f"Indicator categories missing GDPR mapping: {unmapped}\n"
+            f"Add mappings to gdpr_personal_data_classification.yaml"
+        )
+
+    def test_gdpr_mappings_reference_valid_indicator_categories(self) -> None:
+        """Verify GDPR mappings only reference existing indicator categories.
+
+        This catches typos or stale references when indicator categories are renamed.
+        """
+        # Get all unique categories from indicator ruleset
+        indicator_ruleset = PersonalDataIndicatorRuleset()
+        indicator_categories = {rule.category for rule in indicator_ruleset.get_rules()}
+
+        # Get all referenced categories from GDPR classification ruleset
+        gdpr_ruleset = GDPRPersonalDataClassificationRuleset()
+        referenced_categories: set[str] = set()
+        for rule in gdpr_ruleset.get_rules():
+            referenced_categories.update(rule.indicator_categories)
+
+        # Find invalid references
+        invalid = referenced_categories - indicator_categories
+
+        assert invalid == set(), (
+            f"GDPR mappings reference non-existent indicator categories: {invalid}\n"
+            f"These may be typos or stale references after renaming."
+        )

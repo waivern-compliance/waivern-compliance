@@ -38,7 +38,7 @@ class GDPRPersonalDataFindingModel(BaseFindingModel):
 
     # Original indicator information
     indicator_type: str = Field(
-        description="Original personal data indicator type (e.g., 'email', 'health')"
+        description="Original personal data indicator category (e.g., 'email', 'health')"
     )
 
     # GDPR classification fields
