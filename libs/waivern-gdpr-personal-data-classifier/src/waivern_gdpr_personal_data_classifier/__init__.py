@@ -5,6 +5,10 @@ from pathlib import Path
 
 from waivern_core.schemas import SchemaRegistry
 
+from .classifier import GDPRPersonalDataClassifier
+from .factory import GDPRPersonalDataClassifierFactory
+from .schemas import GDPRPersonalDataFindingModel, GDPRPersonalDataFindingOutput
+
 
 def register_schemas() -> None:
     """Register schemas with SchemaRegistry.
@@ -19,5 +23,9 @@ def register_schemas() -> None:
 
 
 __all__ = [
+    "GDPRPersonalDataClassifier",
+    "GDPRPersonalDataClassifierFactory",
+    "GDPRPersonalDataFindingModel",
+    "GDPRPersonalDataFindingOutput",
     "register_schemas",
 ]

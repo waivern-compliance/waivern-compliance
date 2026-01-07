@@ -10,12 +10,11 @@ dependencies = [
     "pydantic>=2.11.5",
 ]
 
-# Entry points will be enabled when factory and schemas are implemented (Task 2.3)
-# [project.entry-points."waivern.processors"]
-# gdpr_personal_data_classifier = "waivern_gdpr_personal_data_classifier:GDPRPersonalDataClassifierFactory"
+[project.entry-points."waivern.processors"]
+gdpr_personal_data_classifier = "waivern_gdpr_personal_data_classifier:GDPRPersonalDataClassifierFactory"
 
-# [project.entry-points."waivern.schemas"]
-# gdpr_personal_data_classifier = "waivern_gdpr_personal_data_classifier:register_schemas"
+[project.entry-points."waivern.schemas"]
+gdpr_personal_data_classifier = "waivern_gdpr_personal_data_classifier:register_schemas"
 
 [dependency-groups]
 dev = [
