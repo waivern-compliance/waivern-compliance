@@ -19,7 +19,6 @@ from waivern_core.schemas.finding_types import (
     AnalysesChain,
     AnalysisChainEntry,
     BaseAnalysisOutputMetadata,
-    BaseFindingCompliance,
     BaseFindingEvidence,
     BaseFindingMetadata,
     BaseFindingModel,
@@ -56,7 +55,6 @@ __all__ = [
     # Finding types (analyser output)
     "BaseFindingModel",
     "BaseFindingMetadata",
-    "BaseFindingCompliance",
     "BaseFindingEvidence",
     "AnalysisChainEntry",
     "AnalysesChain",

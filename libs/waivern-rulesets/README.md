@@ -56,7 +56,7 @@ rules = ruleset.get_rules()
 
 ## Dependencies
 
-- `waivern-core` - Core abstractions (BaseRule, RulesetData)
+- `waivern-core` - Core abstractions (Rule, DetectionRule, ClassificationRule, RulesetData)
 - `pydantic>=2.11.5` - Runtime validation
 - `pyyaml>=6.0.2` - YAML ruleset loading
 

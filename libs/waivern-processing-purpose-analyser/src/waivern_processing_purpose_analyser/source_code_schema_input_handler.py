@@ -27,7 +27,7 @@ TODO: Architecture improvements to consider:
 from typing import NotRequired, TypedDict
 
 from pydantic import BaseModel
-from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence
 from waivern_rulesets import RulesetLoader
 from waivern_rulesets.data_collection import DataCollectionRule
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
@@ -315,16 +315,10 @@ class SourceCodeSchemaInputHandler:
         file_metadata: SourceCodeFileMetadata,
     ) -> ProcessingPurposeFindingModel:
         """Create finding from ProcessingPurposeRule - fully type-safe."""
-        compliance_data = [
-            BaseFindingCompliance(regulation=comp.regulation, relevance=comp.relevance)
-            for comp in rule.compliance
-        ]
-
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
             purpose_category=rule.purpose_category,  # Type-safe!
             risk_level=rule.risk_level,
-            compliance=compliance_data,
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
@@ -340,16 +334,10 @@ class SourceCodeSchemaInputHandler:
         file_metadata: SourceCodeFileMetadata,
     ) -> ProcessingPurposeFindingModel:
         """Create finding from ServiceIntegrationRule - fully type-safe."""
-        compliance_data = [
-            BaseFindingCompliance(regulation=comp.regulation, relevance=comp.relevance)
-            for comp in rule.compliance
-        ]
-
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
             purpose_category=rule.purpose_category,  # Type-safe!
             risk_level=rule.risk_level,
-            compliance=compliance_data,
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
@@ -366,11 +354,6 @@ class SourceCodeSchemaInputHandler:
         file_metadata: SourceCodeFileMetadata,
     ) -> ProcessingPurposeFindingModel:
         """Create finding from DataCollectionRule - fully type-safe."""
-        compliance_data = [
-            BaseFindingCompliance(regulation=comp.regulation, relevance=comp.relevance)
-            for comp in rule.compliance
-        ]
-
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
             # TODO: DataCollectionRule doesn't have purpose_category - consider adding
@@ -378,7 +361,6 @@ class SourceCodeSchemaInputHandler:
             # from collection_type/data_source to avoid hardcoding "operational"
             purpose_category="operational",
             risk_level=rule.risk_level,
-            compliance=compliance_data,
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(

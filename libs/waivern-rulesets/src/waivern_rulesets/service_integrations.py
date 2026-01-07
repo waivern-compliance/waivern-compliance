@@ -12,7 +12,7 @@ from typing import Final, override
 
 import yaml
 from pydantic import Field, model_validator
-from waivern_core import BaseRule, RulesetData
+from waivern_core import DetectionRule, RulesetData
 
 from waivern_rulesets.base import AbstractRuleset
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 
 
-class ServiceIntegrationRule(BaseRule):
+class ServiceIntegrationRule(DetectionRule):
     """Service integration rule with service category and purpose."""
 
     service_category: str = Field(description="Category of service integration")

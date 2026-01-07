@@ -6,7 +6,7 @@ from waivern_analysers_shared.utilities import (
     PatternMatcher,
     RulesetManager,
 )
-from waivern_core.schemas import BaseFindingCompliance, BaseMetadata
+from waivern_core.schemas import BaseMetadata
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
 from .schemas.types import (
@@ -86,18 +86,10 @@ class ProcessingPurposePatternMatcher:
                             context=metadata.context,
                         )
 
-                    compliance_data = [
-                        BaseFindingCompliance(
-                            regulation=comp.regulation, relevance=comp.relevance
-                        )
-                        for comp in rule.compliance
-                    ]
-
                     finding = ProcessingPurposeFindingModel(
                         purpose=rule.name,
                         purpose_category=rule.purpose_category,
                         risk_level=rule.risk_level,
-                        compliance=compliance_data,
                         matched_patterns=matched_patterns,
                         evidence=evidence,
                         metadata=finding_metadata,

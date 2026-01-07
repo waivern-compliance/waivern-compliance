@@ -3,7 +3,7 @@
 import logging
 from typing import Any
 
-from waivern_core import BaseRule
+from waivern_core import Rule
 from waivern_rulesets import (
     RulesetLoader,
     RulesetURI,
@@ -38,9 +38,7 @@ class RulesetManager:
     _cache: dict[str, tuple[Any, ...]] = {}
 
     @classmethod
-    def get_rules[T: BaseRule](
-        cls, ruleset_uri: str, rule_type: type[T]
-    ) -> tuple[T, ...]:
+    def get_rules[T: Rule](cls, ruleset_uri: str, rule_type: type[T]) -> tuple[T, ...]:
         """Get rules from ruleset using URI with type safety and caching.
 
         Args:

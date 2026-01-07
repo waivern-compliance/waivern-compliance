@@ -338,7 +338,6 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             assert "purpose" in finding
             assert "purpose_category" in finding
             assert "risk_level" in finding
-            assert "compliance" in finding
             assert "matched_patterns" in finding
             assert "evidence" in finding
             assert "metadata" in finding

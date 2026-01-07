@@ -1,0 +1,259 @@
+# GDPR Personal Data Classification Ruleset
+# Maps personal data indicators to GDPR-specific data type classifications
+
+name: "gdpr_personal_data_classification"
+version: "1.0.0"
+description: "Ruleset for classifying personal data indicators into GDPR data types and Article 9 special categories"
+
+# Master list of valid GDPR data type categories
+gdpr_data_type_categories:
+  - "identification_data"
+  - "contact_data"
+  - "account_data"
+  - "financial_data"
+  - "behavioural_data"
+  - "technical_data"
+  - "derived_data"
+  - "preference_data"
+  - "location_data"
+  - "content_data"
+  - "health_data"
+  - "political_data"
+  - "racial_ethnic_data"
+  - "religious_philosophical_data"
+  - "genetic_data"
+  - "biometric_data"
+  - "sexual_orientation_data"
+
+# Subset of GDPR data types that are Article 9 special categories
+special_category_types:
+  - "health_data"
+  - "political_data"
+  - "racial_ethnic_data"
+  - "religious_philosophical_data"
+  - "genetic_data"
+  - "biometric_data"
+  - "sexual_orientation_data"
+
+# Valid indicator categories that can be mapped (from personal_data detection ruleset)
+indicator_categories:
+  - "basic_profile"
+  - "account_data"
+  - "payment_data"
+  - "financial_data"
+  - "behavioral_event_data"
+  - "technical_device_and_network_data"
+  - "inferred_profile_data"
+  - "user_enriched_profile_data"
+  - "location_data"
+  - "user_generated_content"
+  - "accurate_location"
+  - "health_data"
+  - "political_data"
+  - "racial_ethnic_data"
+  - "religious_philosophical_data"
+  - "genetic_data"
+  - "biometric_data"
+  - "sexual_orientation_data"
+  - "date_of_birth"
+
+rules:
+  # Standard personal data classifications (GDPR Article 4(1))
+
+  - name: "Basic Identification Data"
+    description: "Personal data enabling direct identification of individuals"
+    gdpr_data_type: "identification_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+    indicator_categories:
+      - "basic_profile"
+      - "date_of_birth"
+    risk_level: "medium"
+
+  - name: "Account and Subscription Data"
+    description: "Data relating to user accounts and service usage"
+    gdpr_data_type: "account_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+    indicator_categories:
+      - "account_data"
+    risk_level: "medium"
+
+  - name: "Financial Information"
+    description: "Payment and financial data requiring enhanced protection"
+    gdpr_data_type: "financial_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+      - "Article 32"
+    indicator_categories:
+      - "payment_data"
+      - "financial_data"
+    risk_level: "high"
+
+  - name: "Behavioural and Interaction Data"
+    description: "Data about user behaviour and interactions"
+    gdpr_data_type: "behavioural_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+      - "Article 22"
+    indicator_categories:
+      - "behavioral_event_data"
+    risk_level: "medium"
+
+  - name: "Technical Device Data"
+    description: "Technical identifiers and device information"
+    gdpr_data_type: "technical_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Recital 30"
+    indicator_categories:
+      - "technical_device_and_network_data"
+    risk_level: "medium"
+
+  - name: "Derived and Inferred Data"
+    description: "Data derived through profiling or algorithmic analysis"
+    gdpr_data_type: "derived_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 22"
+      - "Article 14"
+    indicator_categories:
+      - "inferred_profile_data"
+    risk_level: "high"
+
+  - name: "User Preferences and Interests"
+    description: "Declared preferences and interest data"
+    gdpr_data_type: "preference_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+    indicator_categories:
+      - "user_enriched_profile_data"
+    risk_level: "low"
+
+  - name: "General Location Data"
+    description: "Non-precise location information"
+    gdpr_data_type: "location_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+    indicator_categories:
+      - "location_data"
+    risk_level: "medium"
+
+  - name: "User-Generated Content"
+    description: "Content created and submitted by users"
+    gdpr_data_type: "content_data"
+    special_category: false
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+      - "Article 17"
+    indicator_categories:
+      - "user_generated_content"
+    risk_level: "medium"
+
+  # Article 9 Special Category Classifications
+
+  - name: "Precise Location Data (Article 9)"
+    description: "Precise geolocation revealing movements and habits"
+    gdpr_data_type: "location_data"
+    special_category: true
+    article_references:
+      - "Article 9"
+      - "Recital 51"
+    indicator_categories:
+      - "accurate_location"
+    risk_level: "high"
+
+  - name: "Health Data (Article 9)"
+    description: "Data concerning physical or mental health"
+    gdpr_data_type: "health_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+      - "Article 4(15)"
+    indicator_categories:
+      - "health_data"
+    risk_level: "high"
+
+  - name: "Political Opinions (Article 9)"
+    description: "Data revealing political opinions or trade union membership"
+    gdpr_data_type: "political_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+    indicator_categories:
+      - "political_data"
+    risk_level: "high"
+
+  - name: "Racial or Ethnic Origin (Article 9)"
+    description: "Data revealing racial or ethnic origin"
+    gdpr_data_type: "racial_ethnic_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+    indicator_categories:
+      - "racial_ethnic_data"
+    risk_level: "high"
+
+  - name: "Religious or Philosophical Beliefs (Article 9)"
+    description: "Data revealing religious or philosophical beliefs"
+    gdpr_data_type: "religious_philosophical_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+    indicator_categories:
+      - "religious_philosophical_data"
+    risk_level: "high"
+
+  - name: "Genetic Data (Article 9)"
+    description: "Genetic data relating to inherited characteristics"
+    gdpr_data_type: "genetic_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+      - "Article 4(13)"
+    indicator_categories:
+      - "genetic_data"
+    risk_level: "high"
+
+  - name: "Biometric Data (Article 9)"
+    description: "Biometric data for unique identification"
+    gdpr_data_type: "biometric_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+      - "Article 4(14)"
+    indicator_categories:
+      - "biometric_data"
+    risk_level: "high"
+
+  - name: "Sexual Orientation Data (Article 9)"
+    description: "Data concerning sex life or sexual orientation"
+    gdpr_data_type: "sexual_orientation_data"
+    special_category: true
+    article_references:
+      - "Article 9(1)"
+      - "Article 9(2)"
+    indicator_categories:
+      - "sexual_orientation_data"
+    risk_level: "high"

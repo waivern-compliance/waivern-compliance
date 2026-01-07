@@ -28,7 +28,12 @@ from waivern_core.errors import (
     WaivernError,
 )
 from waivern_core.message import ExecutionContext, Message, MessageExtensions
-from waivern_core.ruleset_types import BaseRule, RuleComplianceData, RulesetData
+from waivern_core.ruleset_types import (
+    ClassificationRule,
+    DetectionRule,
+    Rule,
+    RulesetData,
+)
 from waivern_core.schemas import (
     JsonSchemaLoader,
     Schema,
@@ -70,8 +75,9 @@ __all__ = [
     "SchemaLoader",
     "JsonSchemaLoader",
     # Ruleset types
-    "BaseRule",
-    "RuleComplianceData",
+    "ClassificationRule",
+    "DetectionRule",
+    "Rule",
     "RulesetData",
     # Testing
     "AnalyserContractTests",

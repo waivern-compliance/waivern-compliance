@@ -10,7 +10,7 @@ from typing import Final, override
 
 import yaml
 from pydantic import Field, ValidationInfo, field_validator, model_validator
-from waivern_core import BaseRule, RulesetData
+from waivern_core import DetectionRule, RulesetData
 
 from waivern_rulesets.base import AbstractRuleset
 
@@ -21,7 +21,7 @@ _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "processing_purposes"
 
 
-class ProcessingPurposeRule(BaseRule):
+class ProcessingPurposeRule(DetectionRule):
     """Processing purpose rule with category and risk information."""
 
     purpose_category: str = Field(description="Category of this processing purpose")

@@ -6,7 +6,7 @@ from waivern_analysers_shared.utilities import (
     PatternMatcher,
     RulesetManager,
 )
-from waivern_core.schemas import BaseFindingCompliance, BaseMetadata
+from waivern_core.schemas import BaseMetadata
 from waivern_rulesets.personal_data import PersonalDataRule
 
 from .schemas.types import PersonalDataFindingMetadata, PersonalDataFindingModel
@@ -81,20 +81,12 @@ class PersonalDataPatternMatcher:
                             context=metadata.context,
                         )
 
-                    compliance_data = [
-                        BaseFindingCompliance(
-                            regulation=comp.regulation, relevance=comp.relevance
-                        )
-                        for comp in rule.compliance
-                    ]
-
                     finding = PersonalDataFindingModel(
                         type=rule.name,
                         data_type=rule.data_type,
                         risk_level=rule.risk_level,
                         special_category=rule.special_category,
                         matched_patterns=matched_patterns,
-                        compliance=compliance_data,
                         evidence=evidence_matches,
                         metadata=finding_metadata,
                     )

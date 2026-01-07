@@ -12,10 +12,9 @@ from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )
-from waivern_core import AnalyserContractTests, RuleComplianceData
+from waivern_core import AnalyserContractTests
 from waivern_core.message import Message
 from waivern_core.schemas import (
-    BaseFindingCompliance,
     BaseFindingEvidence,
     Schema,
 )
@@ -136,12 +135,6 @@ class TestPersonalDataAnalyser:
                 risk_level=self.MEDIUM_RISK_LEVEL,
                 special_category=False,
                 matched_patterns=["email"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[
                     BaseFindingEvidence(content="Contact us at support@example.com")
                 ],
@@ -153,12 +146,6 @@ class TestPersonalDataAnalyser:
                 risk_level=self.MEDIUM_RISK_LEVEL,
                 special_category=False,
                 matched_patterns=["telephone"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="call 123-456-7890")],
                 metadata=PersonalDataFindingMetadata(source="contact_form.html"),
             ),
@@ -168,12 +155,6 @@ class TestPersonalDataAnalyser:
                 risk_level=self.MEDIUM_RISK_LEVEL,
                 special_category=False,
                 matched_patterns=["email"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[
                     BaseFindingEvidence(content="User email: john.doe@company.com")
                 ],
@@ -510,12 +491,6 @@ class TestPersonalDataAnalyser:
             data_type="basic_profile",  # This should appear in finding.data_type
             special_category=False,
             risk_level="medium",
-            compliance=[
-                RuleComplianceData(
-                    regulation="GDPR",
-                    relevance="Article 6 personal data processing",
-                )
-            ],
         )
 
         # Create real pattern matcher and mock its ruleset manager

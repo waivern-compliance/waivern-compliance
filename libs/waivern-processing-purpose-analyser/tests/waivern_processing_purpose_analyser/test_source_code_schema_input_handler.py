@@ -29,7 +29,6 @@ class TestSourceCodeSchemaInputHandler:
         "purpose",
         "purpose_category",
         "risk_level",
-        "compliance",
         "matched_patterns",
         "evidence",
         "metadata",
@@ -487,8 +486,7 @@ class EmptyClass {
                 and len(finding.matched_patterns) > 0
             )
 
-            # Verify list fields
-            assert isinstance(finding.compliance, list)
+            # Verify evidence list
             assert isinstance(finding.evidence, list) and len(finding.evidence) > 0
 
             # Verify each evidence item is an BaseFindingEvidence

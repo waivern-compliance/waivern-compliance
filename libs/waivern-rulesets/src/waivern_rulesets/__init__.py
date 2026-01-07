@@ -20,6 +20,10 @@ from waivern_rulesets.data_subjects import (
     DataSubjectRule,
     DataSubjectsRuleset,
 )
+from waivern_rulesets.gdpr_personal_data_classification import (
+    GDPRPersonalDataClassificationRule,
+    GDPRPersonalDataClassificationRuleset,
+)
 from waivern_rulesets.personal_data import (
     PersonalDataRule,
     PersonalDataRuleset,
@@ -40,6 +44,11 @@ _BUILTIN_RULESETS = [
     ("data_collection", DataCollectionRuleset, DataCollectionRule),
     ("service_integrations", ServiceIntegrationsRuleset, ServiceIntegrationRule),
     ("data_subjects", DataSubjectsRuleset, DataSubjectRule),
+    (
+        "gdpr_personal_data_classification",
+        GDPRPersonalDataClassificationRuleset,
+        GDPRPersonalDataClassificationRule,
+    ),
 ]
 
 # Register all built-in rulesets automatically on import with type information
@@ -63,10 +72,12 @@ __all__ = [
     "DataCollectionRuleset",
     "ServiceIntegrationsRuleset",
     "DataSubjectsRuleset",
+    "GDPRPersonalDataClassificationRuleset",
     # Rule types
     "PersonalDataRule",
     "ProcessingPurposeRule",
     "DataCollectionRule",
     "ServiceIntegrationRule",
     "DataSubjectRule",
+    "GDPRPersonalDataClassificationRule",
 ]

@@ -10,7 +10,7 @@ from typing import Final, Literal, override
 
 import yaml
 from pydantic import Field, model_validator
-from waivern_core import BaseRule, RulesetData
+from waivern_core import DetectionRule, RulesetData
 
 from waivern_rulesets.base import AbstractRuleset
 
@@ -21,7 +21,7 @@ _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "data_subjects"
 
 
-class DataSubjectRule(BaseRule):
+class DataSubjectRule(DetectionRule):
     """Data subject classification rule with confidence scoring.
 
     This rule type provides pattern-based data subject identification with

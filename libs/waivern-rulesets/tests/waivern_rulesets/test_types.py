@@ -2,17 +2,15 @@
 
 import pytest
 from pydantic import ValidationError
-from waivern_core import (
-    BaseRule,
-)
+from waivern_core import DetectionRule
 
 
-class TestBaseRule:
-    """Test cases for the BaseRule class."""
+class TestDetectionRule:
+    """Test cases for the DetectionRule class."""
 
-    def test_base_rule_initialisation_with_required_parameters(self) -> None:
-        """Test BaseRule initialisation with all required parameters."""
-        rule = BaseRule(
+    def test_detection_rule_initialisation_with_required_parameters(self) -> None:
+        """Test DetectionRule initialisation with all required parameters."""
+        rule = DetectionRule(
             name="test_rule",
             description="A test rule",
             patterns=("pattern1", "pattern2"),
@@ -23,33 +21,33 @@ class TestBaseRule:
         assert rule.description == "A test rule"
         assert rule.patterns == ("pattern1", "pattern2")
 
-    def test_base_rule_must_contain_at_least_one_pattern(self) -> None:
-        """Test BaseRule initialisation with empty patterns raises ValidationError."""
+    def test_detection_rule_must_contain_at_least_one_pattern(self) -> None:
+        """Test DetectionRule initialisation with empty patterns raises ValidationError."""
         with pytest.raises(
             ValidationError, match="Tuple should have at least 1 item after validation"
         ):
-            BaseRule(
+            DetectionRule(
                 name="empty_rule",
                 description="Rule with no patterns",
                 patterns=(),
                 risk_level="low",
             )
 
-    def test_base_rule_patterns_cannot_be_empty_strings(self) -> None:
-        """Test BaseRule patterns cannot contain empty strings."""
+    def test_detection_rule_patterns_cannot_be_empty_strings(self) -> None:
+        """Test DetectionRule patterns cannot contain empty strings."""
         with pytest.raises(
             ValidationError, match="All patterns must be non-empty strings"
         ):
-            BaseRule(
+            DetectionRule(
                 name="empty_pattern_rule",
                 description="Rule with empty pattern",
                 patterns=("valid_pattern", ""),
                 risk_level="low",
             )
 
-    def test_base_rule_attributes_are_immutable(self) -> None:
-        """Test that BaseRule attributes cannot be modified after initialisation."""
-        rule = BaseRule(
+    def test_detection_rule_attributes_are_immutable(self) -> None:
+        """Test that DetectionRule attributes cannot be modified after initialisation."""
+        rule = DetectionRule(
             name="immutable_rule",
             description="Original description",
             patterns=("original",),

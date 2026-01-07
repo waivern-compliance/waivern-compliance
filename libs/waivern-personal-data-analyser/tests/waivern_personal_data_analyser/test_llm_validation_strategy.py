@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence
 from waivern_llm import AnthropicLLMService
 
 from waivern_personal_data_analyser.llm_validation_strategy import (
@@ -44,12 +44,6 @@ class TestPersonalDataValidationStrategy:
                 risk_level="medium",
                 special_category=False,
                 matched_patterns=["test@example.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[
                     BaseFindingEvidence(content="Contact us at test@example.com")
                 ],
@@ -61,12 +55,6 @@ class TestPersonalDataValidationStrategy:
                 risk_level="high",
                 special_category=False,
                 matched_patterns=["123-456-7890"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="Call us at 123-456-7890")],
                 metadata=PersonalDataFindingMetadata(source="customer_db"),
             ),
@@ -179,12 +167,6 @@ class TestPersonalDataValidationStrategy:
                 risk_level="low",
                 special_category=False,
                 matched_patterns=["admin@domain.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="Email: admin@domain.com")],
                 metadata=PersonalDataFindingMetadata(source="config.txt"),
             ),
@@ -194,12 +176,6 @@ class TestPersonalDataValidationStrategy:
                 risk_level="high",
                 special_category=True,
                 matched_patterns=["123-45-6789"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="SSN: 123-45-6789")],
                 metadata=PersonalDataFindingMetadata(source="employee_records"),
             ),
@@ -209,12 +185,6 @@ class TestPersonalDataValidationStrategy:
                 risk_level="medium",
                 special_category=False,
                 matched_patterns=["user@test.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="Example: user@test.com")],
                 metadata=PersonalDataFindingMetadata(source="documentation.md"),
             ),
@@ -274,12 +244,6 @@ class TestPersonalDataValidationStrategy:
                 risk_level="medium",
                 special_category=False,
                 matched_patterns=[f"user{i}@example.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content=f"Email: user{i}@example.com")],
                 metadata=PersonalDataFindingMetadata(source="database"),
             )
@@ -523,12 +487,6 @@ class TestPersonalDataValidationStrategy:
                 risk_level="medium",
                 special_category=False,
                 matched_patterns=[f"test{i}@example.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content=f"Email {i}")],
                 metadata=PersonalDataFindingMetadata(source="test"),
             )
@@ -587,12 +545,6 @@ class TestPersonalDataValidationStrategy:
                 risk_level="high",
                 special_category=False,
                 matched_patterns=["4111-1111-1111-1111"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="Card: 4111-1111-1111-1111")],
                 metadata=PersonalDataFindingMetadata(source="payment_form"),
             )
@@ -632,12 +584,6 @@ class TestPersonalDataValidationStrategy:
                 risk_level="medium",
                 special_category=False,
                 matched_patterns=["+44 20 7946 0958"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content="Contact: +44 20 7946 0958")],
                 metadata=PersonalDataFindingMetadata(source="customer_database"),
             )
@@ -693,12 +639,6 @@ class TestPersonalDataValidationStrategy:
                 risk_level="medium",
                 special_category=False,
                 matched_patterns=[f"user{i}@test.com"],
-                compliance=[
-                    BaseFindingCompliance(
-                        regulation="GDPR",
-                        relevance="Article 6 personal data processing",
-                    )
-                ],
                 evidence=[BaseFindingEvidence(content=f"Email: user{i}@test.com")],
                 metadata=PersonalDataFindingMetadata(source="test"),
             )

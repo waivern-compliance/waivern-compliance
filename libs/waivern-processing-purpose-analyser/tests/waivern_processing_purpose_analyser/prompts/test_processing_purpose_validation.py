@@ -1,7 +1,7 @@
 """Tests for processing purpose validation prompts focusing on behaviour."""
 
 import pytest
-from waivern_core.schemas import BaseFindingCompliance, BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence
 
 from waivern_processing_purpose_analyser.prompts.processing_purpose_validation import (
     get_processing_purpose_validation_prompt,
@@ -15,34 +15,28 @@ from waivern_processing_purpose_analyser.schemas.types import (
 class TestProcessingPurposeValidationPrompt:
     """Test processing purpose validation prompt generation focusing on behaviour."""
 
-    def create_test_finding(
+    def create_test_finding(  # noqa: PLR0913
         self,
         purpose: str = "Test Purpose",
         purpose_category: str = "OPERATIONAL",
         risk_level: str = "low",
         matched_pattern: str = "test",
-        **kwargs,
+        evidence: list[str] | None = None,
+        source: str = "test_source",
     ) -> ProcessingPurposeFindingModel:
         """Helper to create test finding objects."""
-        evidence = kwargs.get("evidence", ["test evidence"])
-        source = kwargs.get("source", "test_source")
-
+        evidence_list = evidence if evidence is not None else ["test evidence"]
         evidence_items = [
             BaseFindingEvidence(content=content)  # collection_timestamp has default
-            for content in (evidence or ["test evidence"])
+            for content in evidence_list
         ]
-        metadata = ProcessingPurposeFindingMetadata(source=source) if source else None
+        metadata = ProcessingPurposeFindingMetadata(source=source)
 
         return ProcessingPurposeFindingModel(
             purpose=purpose,
             purpose_category=purpose_category,
             risk_level=risk_level,
             matched_patterns=[matched_pattern],
-            compliance=[
-                BaseFindingCompliance(
-                    regulation="GDPR", relevance="GDPR processing purposes"
-                )
-            ],
             evidence=evidence_items,
             metadata=metadata,
         )

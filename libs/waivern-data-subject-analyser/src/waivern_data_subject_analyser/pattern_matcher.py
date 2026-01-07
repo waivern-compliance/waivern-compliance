@@ -51,7 +51,7 @@ from waivern_analysers_shared.utilities import (
     PatternMatcher,
     RulesetManager,
 )
-from waivern_core.schemas import BaseFindingCompliance, BaseMetadata
+from waivern_core.schemas import BaseMetadata
 from waivern_rulesets.data_subjects import DataSubjectRule
 
 from .confidence_scorer import DataSubjectConfidenceScorer
@@ -155,21 +155,13 @@ class DataSubjectPatternMatcher:
                 # TODO: The following fields are hardcoded and need proper implementation:
                 # 1. risk_level: Should be derived from matched rules or calculated based on
                 #    subject category sensitivity (e.g., "minor" → high, "employee" → medium)
-                # 2. compliance: Should come from DataSubjectRule.compliance field once added
-                #    to waivern-rulesets, similar to how PersonalDataRule has compliance
-                # 3. modifiers: Should use ruleset.risk_increasing_modifiers and
+                # 2. modifiers: Should use ruleset.risk_increasing_modifiers and
                 #    ruleset.risk_decreasing_modifiers with LLM validation to detect
                 #    cross-category regulatory modifiers (e.g., "vulnerable", "minor")
                 finding = DataSubjectFindingModel(
                     primary_category=category,
                     confidence_score=confidence_score,
                     risk_level="medium",
-                    compliance=[
-                        BaseFindingCompliance(
-                            regulation="GDPR",
-                            relevance="Article 30(1)(c) data subject categories",
-                        )
-                    ],
                     evidence=evidence,
                     modifiers=[],
                     matched_patterns=matched_patterns,
