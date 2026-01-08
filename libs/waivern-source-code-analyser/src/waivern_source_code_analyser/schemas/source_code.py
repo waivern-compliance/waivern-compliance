@@ -64,15 +64,6 @@ class SourceCodeClassModel(BaseModel):
     methods: list[SourceCodeFunctionModel] = Field(default_factory=list)
 
 
-class SourceCodeImportModel(BaseModel):
-    """Pydantic model for source code imports."""
-
-    module: str
-    line: int
-    type: str  # require, require_once, include, include_once, use, import
-    alias: str | None = None
-
-
 # Analysis-related models removed - analysis now happens in analysers using rulesets
 # Database interactions, data collection, AI/ML, security, and third-party patterns
 # are now detected by analysers using pattern matching on raw_content
@@ -95,7 +86,6 @@ class SourceCodeFileDataModel(BaseModel):
     metadata: SourceCodeFileMetadataModel
     functions: list[SourceCodeFunctionModel] = Field(default_factory=list)
     classes: list[SourceCodeClassModel] = Field(default_factory=list)
-    imports: list[SourceCodeImportModel] = Field(default_factory=list)
 
 
 class SourceCodeAnalysisMetadataModel(BaseModel):

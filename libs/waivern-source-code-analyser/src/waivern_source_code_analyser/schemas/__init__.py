@@ -9,7 +9,6 @@ from waivern_source_code_analyser.schemas.source_code import (
     SourceCodeFileMetadataModel,
     SourceCodeFunctionModel,
     SourceCodeFunctionParameterModel,
-    SourceCodeImportModel,
     SourceCodeSchema,
 )
 
@@ -22,6 +21,5 @@ __all__ = [
     "SourceCodeFunctionParameterModel",
     "SourceCodeClassModel",
     "SourceCodeClassPropertyModel",
-    "SourceCodeImportModel",
     "SourceCodeAnalysisMetadataModel",
 ]

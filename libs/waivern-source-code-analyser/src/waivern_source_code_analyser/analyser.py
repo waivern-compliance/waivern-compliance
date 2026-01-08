@@ -257,13 +257,15 @@ class SourceCodeAnalyser(Analyser):
         classes = self._convert_type_definitions_to_classes(extraction_result)
 
         # Build strongly typed model
+        # Note: Import extraction intentionally omitted from schema. For third-party
+        # risk analysis, dependency manifests (package.json, composer.json) are a
+        # better source than parsing import statements from source code.
         return SourceCodeFileDataModel(
             file_path=str(file_path),
             language=language,
             raw_content=source_code,
             functions=functions,
             classes=classes,
-            imports=[],  # TODO: Implement import extractor
             metadata=SourceCodeFileMetadataModel(
                 file_size=len(source_code.encode("utf-8")),
                 line_count=line_count,

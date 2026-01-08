@@ -160,13 +160,6 @@
           },
           "title": "Classes",
           "type": "array"
-        },
-        "imports": {
-          "items": {
-            "$ref": "#/$defs/SourceCodeImportModel"
-          },
-          "title": "Imports",
-          "type": "array"
         }
       },
       "required": [
@@ -317,42 +310,6 @@
         "name"
       ],
       "title": "SourceCodeFunctionParameterModel",
-      "type": "object"
-    },
-    "SourceCodeImportModel": {
-      "description": "Pydantic model for source code imports.",
-      "properties": {
-        "module": {
-          "title": "Module",
-          "type": "string"
-        },
-        "line": {
-          "title": "Line",
-          "type": "integer"
-        },
-        "type": {
-          "title": "Type",
-          "type": "string"
-        },
-        "alias": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Alias"
-        }
-      },
-      "required": [
-        "module",
-        "line",
-        "type"
-      ],
-      "title": "SourceCodeImportModel",
       "type": "object"
     }
   },
