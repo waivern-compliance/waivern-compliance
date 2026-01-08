@@ -34,10 +34,7 @@ The source code analyser focuses on **language detection** and provides a founda
 2. Language Detection
    └── Auto-detect from file extension OR use config override
         ↓
-3. Tree-sitter Parsing
-   └── Validate syntax (ensures file is valid source code)
-        ↓
-4. Output Generation
+3. Output Generation
    └── source_code schema (raw content + language + metadata)
 ```
 
@@ -54,12 +51,9 @@ SourceCodeAnalyser.process(inputs, output_schema)
 │   │
 │   ├── 2b. Detect language
 │   │       ├── Config override (if specified)
-│   │       └── Auto-detect from file extension
+│   │       └── Auto-detect from file extension via registry
 │   │
-│   ├── 2c. Parse with tree-sitter (validates syntax)
-│   │       └── SourceCodeParser.parse() → AST root node
-│   │
-│   └── 2d. Build file data
+│   └── 2c. Build file data
 │           └── file_path, language, raw_content, metadata
 │
 └── 3. Build and return source_code Message
@@ -78,26 +72,25 @@ SourceCodeAnalyser.process(inputs, output_schema)
 ┌─────────────────────────────────────────────────────────────────┐
 │                      SourceCodeAnalyser                         │
 │  - Main entry point for processing                              │
-│  - Orchestrates parsing and language detection                  │
+│  - Orchestrates language detection                              │
 │  - Handles fan-in merging of multiple inputs                    │
 └─────────────────────────────────────────────────────────────────┘
                                 │
-                ┌───────────────┴───────────────┐
-                ▼                               ▼
-┌──────────────────────────┐          ┌──────────────────────────┐
-│    SourceCodeParser      │          │    LanguageRegistry      │
-│  - Wraps tree-sitter     │─────────▶│  - Singleton pattern     │
-│  - Language detection    │  uses    │  - Plugin discovery      │
-│  - Syntax validation     │          │  - Extension mapping     │
-└──────────────────────────┘          └──────────────────────────┘
-                                                  │
-                                                  ▼
-                                      ┌──────────────────────────┐
-                                      │    LanguageSupport       │
-                                      │  - Protocol interface    │
-                                      │  - Per-language impl     │
-                                      │  - Tree-sitter binding   │
-                                      └──────────────────────────┘
+                                ▼
+                    ┌──────────────────────────┐
+                    │    LanguageRegistry      │
+                    │  - Singleton pattern     │
+                    │  - Plugin discovery      │
+                    │  - Extension mapping     │
+                    └──────────────────────────┘
+                                │
+                                ▼
+                    ┌──────────────────────────┐
+                    │    LanguageSupport       │
+                    │  - Protocol interface    │
+                    │  - Per-language impl     │
+                    │  - Extension list        │
+                    └──────────────────────────┘
 ```
 
 ## Language Plugin System
@@ -118,7 +111,6 @@ Languages are discovered via Python entry points:
 │                    LanguageSupport Protocol                     │
 │  @property name: str                                            │
 │  @property file_extensions: list[str]                           │
-│  def get_tree_sitter_language() -> Language                     │
 └─────────────────────────────────────────────────────────────────┘
          │
          │ implemented by
@@ -128,7 +120,6 @@ Languages are discovered via Python entry points:
 │ Support         │  │ LanguageSupport │
 ├─────────────────┤  ├─────────────────┤
 │ .php, .phtml    │  │ .ts, .tsx, .mts │
-│ tree-sitter-php │  │ tree-sitter-ts  │
 └─────────────────┘  └─────────────────┘
 ```
 
@@ -196,8 +187,6 @@ The analyser implements graceful degradation:
 | ---------------------------- | ---------------------------------------- |
 | File exceeds `max_file_size` | Skipped with warning, analysis continues |
 | Unsupported file extension   | Skipped, no error                        |
-| Parse failure                | File skipped, analysis continues         |
-| Missing tree-sitter binding  | Language silently unavailable            |
 | Invalid configuration        | `AnalyserConfigError` raised at startup  |
 
 ## Configuration
@@ -218,7 +207,6 @@ waivern-source-code-analyser/
 │   ├── analyser.py              # Main SourceCodeAnalyser
 │   ├── analyser_config.py       # Configuration with validation
 │   ├── analyser_factory.py      # Factory for DI
-│   ├── parser.py                # Tree-sitter wrapper
 │   ├── validators.py            # Utility validators
 │   ├── schemas/
 │   │   ├── source_code.py       # Pydantic output models
@@ -239,10 +227,10 @@ waivern-source-code-analyser/
 
 The source code analyser is positioned for future compliance-relevant metadata:
 
-| Current           | Future Extensions                           |
-| ----------------- | ------------------------------------------- |
-| Language detection| Dependencies from package.json, composer.json |
-| File metadata     | Framework detection (Laravel, Express, React) |
-|                   | Security patterns (encryption, auth mechanisms) |
-|                   | Third-party service integrations            |
-|                   | Secrets/credentials detection               |
+| Current            | Future Extensions                             |
+| ------------------ | --------------------------------------------- |
+| Language detection | Dependencies from package.json, composer.json |
+| File metadata      | Framework detection (Laravel, Express, React) |
+|                    | Security patterns (encryption, auth)          |
+|                    | Third-party service integrations              |
+|                    | Secrets/credentials detection                 |

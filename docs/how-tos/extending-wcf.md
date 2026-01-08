@@ -508,7 +508,6 @@ Create a language support module:
 
 ```python
 # my_package/languages/rust/__init__.py
-from tree_sitter import Language
 
 
 class RustLanguageSupport:
@@ -521,16 +520,11 @@ class RustLanguageSupport:
     @property
     def file_extensions(self) -> list[str]:
         return [".rs"]
-
-    def get_tree_sitter_language(self) -> Language:
-        import tree_sitter_rust as tsrust
-        return Language(tsrust.language())
 ```
 
 The `LanguageSupport` protocol requires:
 - `name` - Canonical language name
 - `file_extensions` - List of supported file extensions
-- `get_tree_sitter_language()` - Returns the tree-sitter Language binding
 
 ### Registering Language Support
 
@@ -538,9 +532,6 @@ Register via entry points:
 
 ```toml
 # pyproject.toml
-[project.optional-dependencies]
-rust = ["tree-sitter-rust>=0.21.0"]
-
 [project.entry-points."waivern.source_code_languages"]
 rust = "my_package.languages.rust:RustLanguageSupport"
 ```

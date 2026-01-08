@@ -1,7 +1,5 @@
 """Tests for TypeScriptLanguageSupport protocol implementation."""
 
-from tree_sitter import Language
-
 from waivern_source_code_analyser.languages.protocols import LanguageSupport
 from waivern_source_code_analyser.languages.registry import LanguageRegistry
 from waivern_source_code_analyser.languages.typescript import TypeScriptLanguageSupport
@@ -27,18 +25,6 @@ class TestTypeScriptLanguageSupportProperties:
         assert ".tsx" in extensions
         assert ".mts" in extensions
         assert ".cts" in extensions
-
-
-class TestTypeScriptLanguageSupportTreeSitter:
-    """Tests for tree-sitter integration."""
-
-    def test_get_tree_sitter_language_returns_language_object(self) -> None:
-        """Test that get_tree_sitter_language returns a valid Language object."""
-        ts = TypeScriptLanguageSupport()
-
-        language = ts.get_tree_sitter_language()
-
-        assert isinstance(language, Language)
 
 
 class TestTypeScriptLanguageSupportProtocol:

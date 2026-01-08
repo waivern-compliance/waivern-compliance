@@ -11,7 +11,7 @@ from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
 from waivern_source_code_analyser.analyser_config import SourceCodeAnalyserConfig
-from waivern_source_code_analyser.parser import SourceCodeParser
+from waivern_source_code_analyser.languages.registry import LanguageRegistry
 from waivern_source_code_analyser.schemas import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeDataModel,
@@ -42,6 +42,8 @@ class SourceCodeAnalyser(Analyser):
 
         """
         self._config = config
+        self._registry = LanguageRegistry()
+        self._registry.discover()
 
     @classmethod
     @override
@@ -127,24 +129,15 @@ class SourceCodeAnalyser(Analyser):
                 language = self._config.language or self._detect_language(file_path)
 
                 if not language:
-                    logger.warning(f"Could not detect language for: {file_path_str}")
+                    logger.debug(f"Skipping unsupported file: {file_path_str}")
                     continue
 
-                try:
-                    # Validate source code parses correctly (optional syntax check)
-                    parser = SourceCodeParser(language)
-                    parser.parse(source_code)
+                # Build file data model
+                file_data = self._build_file_data(file_path, language, source_code)
+                parsed_files.append(file_data)
 
-                    # Build file data model
-                    file_data = self._build_file_data(file_path, language, source_code)
-                    parsed_files.append(file_data)
-
-                    total_files += 1
-                    total_lines += len(source_code.splitlines())
-
-                except Exception as e:
-                    logger.error(f"Failed to parse source: {file_path_str}: {e}")
-                    continue
+                total_files += 1
+                total_lines += len(source_code.splitlines())
 
             # Determine language for output
             detected_language = self._config.language or (
@@ -202,10 +195,15 @@ class SourceCodeAnalyser(Analyser):
             Detected language or None if unsupported
 
         """
+        extension = file_path.suffix.lower()
+        if not extension:
+            return None
+
         try:
-            return SourceCodeParser.detect_language_from_file(file_path)
+            language_support = self._registry.get_by_extension(extension)
+            return language_support.name
         except Exception:
-            # Unsupported language - return None to skip gracefully
+            # Unsupported extension - return None to skip gracefully
             return None
 
     def _build_file_data(

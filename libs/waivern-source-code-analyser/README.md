@@ -9,7 +9,7 @@ The Source Code Analyser detects programming languages and provides raw source c
 **Key characteristics:**
 
 - **Pure analyser** - No file I/O; receives input from connectors (typically FilesystemConnector)
-- **Tree-sitter based** - Uses tree-sitter for language detection and syntax validation
+- **Lightweight** - Simple file extension mapping for language detection
 - **Extensible** - Plugin architecture for adding new language support
 - **Pipeline-ready** - Designed to chain with downstream compliance analysers
 
@@ -23,17 +23,7 @@ The Source Code Analyser detects programming languages and provides raw source c
 ## Installation
 
 ```bash
-# Basic installation
 pip install waivern-source-code-analyser
-
-# With PHP support
-pip install waivern-source-code-analyser[php]
-
-# With TypeScript support
-pip install waivern-source-code-analyser[typescript]
-
-# All languages
-pip install waivern-source-code-analyser[tree-sitter]
 ```
 
 ## Quick Start

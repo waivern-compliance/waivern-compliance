@@ -1,7 +1,5 @@
 """Tests for PHPLanguageSupport protocol implementation."""
 
-from tree_sitter import Language
-
 from waivern_source_code_analyser.languages.php import PHPLanguageSupport
 from waivern_source_code_analyser.languages.protocols import LanguageSupport
 from waivern_source_code_analyser.languages.registry import LanguageRegistry
@@ -28,18 +26,6 @@ class TestPHPLanguageSupportProperties:
         assert ".php4" in extensions
         assert ".php5" in extensions
         assert ".phtml" in extensions
-
-
-class TestPHPLanguageSupportTreeSitter:
-    """Tests for tree-sitter integration."""
-
-    def test_get_tree_sitter_language_returns_language_object(self) -> None:
-        """Test that get_tree_sitter_language returns a valid Language object."""
-        php = PHPLanguageSupport()
-
-        language = php.get_tree_sitter_language()
-
-        assert isinstance(language, Language)
 
 
 class TestPHPLanguageSupportProtocol:
