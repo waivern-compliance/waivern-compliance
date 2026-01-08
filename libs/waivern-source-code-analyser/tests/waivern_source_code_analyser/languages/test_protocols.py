@@ -2,9 +2,8 @@
 
 from unittest.mock import MagicMock
 
-from tree_sitter import Language, Node
+from tree_sitter import Language
 
-from waivern_source_code_analyser.languages.models import LanguageExtractionResult
 from waivern_source_code_analyser.languages.protocols import LanguageSupport
 
 
@@ -32,11 +31,6 @@ class TestLanguageSupportProtocol:
             def get_tree_sitter_language(self) -> Language:
                 return MagicMock(spec=Language)
 
-            def extract(
-                self, root_node: Node, source_code: str
-            ) -> LanguageExtractionResult:
-                return LanguageExtractionResult()
-
         valid = ValidLanguage()
         assert isinstance(valid, LanguageSupport)
 
@@ -48,7 +42,7 @@ class TestLanguageSupportProtocol:
             def name(self) -> str:
                 return "incomplete"
 
-            # Missing: file_extensions, get_tree_sitter_language, extract
+            # Missing: file_extensions, get_tree_sitter_language
 
         incomplete = IncompleteLanguage()
         assert not isinstance(incomplete, LanguageSupport)

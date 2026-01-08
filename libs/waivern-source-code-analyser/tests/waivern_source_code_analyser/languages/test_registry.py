@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from waivern_source_code_analyser.languages.models import LanguageExtractionResult
 from waivern_source_code_analyser.languages.registry import (
     LanguageAlreadyRegisteredError,
     LanguageNotFoundError,
@@ -17,7 +16,6 @@ def _make_mock_language(name: str, extensions: list[str]) -> MagicMock:
     lang = MagicMock()
     lang.name = name
     lang.file_extensions = extensions
-    lang.extract.return_value = LanguageExtractionResult()
     return lang
 
 

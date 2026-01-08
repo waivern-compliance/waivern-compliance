@@ -1,34 +1,20 @@
 """TypeScript language support implementation.
 
-This module provides the main TypeScript language support class that
-implements the LanguageSupport protocol. It delegates extraction work
-to specialised extractor classes.
+This module provides the TypeScript language support class that implements
+the LanguageSupport protocol for language detection and tree-sitter parsing.
 """
 
-from tree_sitter import Language, Node
+from tree_sitter import Language
 
-from waivern_source_code_analyser.languages.models import LanguageExtractionResult
-from waivern_source_code_analyser.languages.typescript.callable_extractor import (
-    TypeScriptCallableExtractor,
-)
-from waivern_source_code_analyser.languages.typescript.helpers import TS_EXTENSIONS
-from waivern_source_code_analyser.languages.typescript.type_extractor import (
-    TypeScriptTypeExtractor,
-)
+# TypeScript file extensions
+TS_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"]
 
 
 class TypeScriptLanguageSupport:
     """TypeScript language support implementation.
 
-    Provides TypeScript and TSX parsing and extraction capabilities
-    using tree-sitter-typescript. Delegates extraction work to
-    specialised extractor classes for better maintainability.
+    Provides TypeScript and TSX language detection and tree-sitter binding.
     """
-
-    def __init__(self) -> None:
-        """Initialise TypeScript support with extractors."""
-        self._callable_extractor = TypeScriptCallableExtractor()
-        self._type_extractor = TypeScriptTypeExtractor(self._callable_extractor)
 
     @property
     def name(self) -> str:
@@ -56,22 +42,3 @@ class TypeScriptLanguageSupport:
         import tree_sitter_typescript as tsts  # noqa: PLC0415
 
         return Language(tsts.language_tsx())
-
-    def extract(self, root_node: Node, source_code: str) -> LanguageExtractionResult:
-        """Extract all constructs from parsed TypeScript source code.
-
-        Args:
-            root_node: The root node of the parsed AST
-            source_code: The original source code string
-
-        Returns:
-            LanguageExtractionResult containing callables and type definitions
-
-        """
-        callables = self._callable_extractor.extract_all(root_node, source_code)
-        type_definitions = self._type_extractor.extract_all(root_node, source_code)
-
-        return LanguageExtractionResult(
-            callables=callables,
-            type_definitions=type_definitions,
-        )

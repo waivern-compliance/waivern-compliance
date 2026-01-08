@@ -1,34 +1,20 @@
 """PHP language support implementation.
 
-This module provides the main PHP language support class that
-implements the LanguageSupport protocol. It delegates extraction work
-to specialised extractor classes.
+This module provides the PHP language support class that implements
+the LanguageSupport protocol for language detection and tree-sitter parsing.
 """
 
-from tree_sitter import Language, Node
+from tree_sitter import Language
 
-from waivern_source_code_analyser.languages.models import LanguageExtractionResult
-from waivern_source_code_analyser.languages.php.callable_extractor import (
-    PHPCallableExtractor,
-)
-from waivern_source_code_analyser.languages.php.helpers import PHP_EXTENSIONS
-from waivern_source_code_analyser.languages.php.type_extractor import (
-    PHPTypeExtractor,
-)
+# PHP file extensions
+PHP_EXTENSIONS = [".php", ".php3", ".php4", ".php5", ".phtml"]
 
 
 class PHPLanguageSupport:
     """PHP language support implementation.
 
-    Provides PHP parsing and extraction capabilities using tree-sitter-php.
-    Delegates extraction work to specialised extractor classes for better
-    maintainability.
+    Provides PHP language detection and tree-sitter binding.
     """
-
-    def __init__(self) -> None:
-        """Initialise PHP support with extractors."""
-        self._callable_extractor = PHPCallableExtractor()
-        self._type_extractor = PHPTypeExtractor(self._callable_extractor)
 
     @property
     def name(self) -> str:
@@ -54,22 +40,3 @@ class PHPLanguageSupport:
         import tree_sitter_php as tsphp  # noqa: PLC0415
 
         return Language(tsphp.language_php())
-
-    def extract(self, root_node: Node, source_code: str) -> LanguageExtractionResult:
-        """Extract all constructs from parsed PHP source code.
-
-        Args:
-            root_node: The root node of the parsed AST
-            source_code: The original source code string
-
-        Returns:
-            LanguageExtractionResult containing callables and type definitions
-
-        """
-        callables = self._callable_extractor.extract_all(root_node, source_code)
-        type_definitions = self._type_extractor.extract_all(root_node, source_code)
-
-        return LanguageExtractionResult(
-            callables=callables,
-            type_definitions=type_definitions,
-        )

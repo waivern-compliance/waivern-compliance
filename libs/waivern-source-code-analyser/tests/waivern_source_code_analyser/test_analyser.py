@@ -69,8 +69,8 @@ class TestSourceCodeAnalyserInitialisation:
 class TestSourceCodeAnalyserStandardInputProcessing:
     """Test standard_input schema processing path."""
 
-    def test_process_single_php_file_with_functions_and_classes(self):
-        """Test analysing a single PHP file with functions and classes."""
+    def test_process_single_php_file(self):
+        """Test analysing a single PHP file."""
         # Arrange
         php_content = """<?php
 /**
@@ -146,25 +146,11 @@ class UserManager {
         assert len(content["data"]) == 1
         file_data = content["data"][0]
 
-        assert "file_path" in file_data
-        assert "language" in file_data
-        assert "functions" in file_data
-        assert "classes" in file_data
+        assert file_data["file_path"] == "/test/TestFile.php"
+        assert file_data["language"] == "php"
         assert "raw_content" in file_data
-
-        # Verify functions extracted
-        assert len(file_data["functions"]) >= 1
-        func = file_data["functions"][0]
-        assert func["name"] == "processUserData"
-        assert "line_start" in func
-        assert "line_end" in func
-
-        # Verify classes extracted
-        assert len(file_data["classes"]) >= 1
-        cls = file_data["classes"][0]
-        assert cls["name"] == "UserManager"
-        assert "line_start" in cls
-        assert "line_end" in cls
+        assert php_content in file_data["raw_content"]
+        assert "metadata" in file_data
 
     def test_process_multiple_php_files_in_single_message(self):
         """Test analysing multiple PHP files in a single message."""
@@ -237,6 +223,8 @@ class UserManager {
             assert "file_path" in file_data
             assert "language" in file_data
             assert file_data["language"] == "php"
+            assert "raw_content" in file_data
+            assert "metadata" in file_data
 
     def test_process_with_language_override_from_config(self):
         """Test language override in config when file has no extension."""
@@ -464,12 +452,101 @@ class UserManager {
             assert "T" in file_metadata["last_modified"]
             assert file_metadata["last_modified"].endswith("+00:00")
 
+    def test_process_calculates_line_count_correctly(self):
+        """Test that line count is calculated correctly."""
+        # Arrange
+        php_content = "<?php\nline2\nline3\nline4\n?>"  # 5 lines
+
+        data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Line count test",
+            description="Test line count calculation",
+            source="/test",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content=php_content,
+                    metadata=FilesystemMetadata(
+                        source="/test/test.php",
+                        connector_type="filesystem_connector",
+                        file_path="/test/test.php",
+                    ),
+                ),
+            ],
+        )
+
+        message = Message(
+            id="test_line_count",
+            content=data.model_dump(exclude_none=True),
+            schema=Schema("standard_input", "1.0.0"),
+        )
+
+        config = SourceCodeAnalyserConfig.from_properties({})
+        analyser = SourceCodeAnalyser(config)
+
+        # Act
+        result = analyser.process(
+            [message],
+            Schema("source_code", "1.0.0"),
+        )
+
+        # Assert
+        content = result.content
+        file_data = content["data"][0]
+        assert file_data["metadata"]["line_count"] == 5
+        assert content["metadata"]["total_lines"] == 5
+
+    def test_process_handles_empty_file(self):
+        """Test that empty files are handled correctly."""
+        # Arrange
+        php_content = ""  # Empty file
+
+        data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Empty file test",
+            description="Test empty file handling",
+            source="/test",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content=php_content,
+                    metadata=FilesystemMetadata(
+                        source="/test/empty.php",
+                        connector_type="filesystem_connector",
+                        file_path="/test/empty.php",
+                    ),
+                ),
+            ],
+        )
+
+        message = Message(
+            id="test_empty_file",
+            content=data.model_dump(exclude_none=True),
+            schema=Schema("standard_input", "1.0.0"),
+        )
+
+        config = SourceCodeAnalyserConfig.from_properties({})
+        analyser = SourceCodeAnalyser(config)
+
+        # Act
+        result = analyser.process(
+            [message],
+            Schema("source_code", "1.0.0"),
+        )
+
+        # Assert - empty file should still be processed
+        content = result.content
+        assert len(content["data"]) == 1
+        file_data = content["data"][0]
+        assert file_data["metadata"]["line_count"] == 0
+        assert file_data["raw_content"] == ""
+
 
 class TestSourceCodeAnalyserTypeScriptProcessing:
     """Test TypeScript language processing through the full pipeline."""
 
-    def test_process_single_typescript_file_with_functions_and_classes(self):
-        """Test analysing a single TypeScript file with functions and classes."""
+    def test_process_single_typescript_file(self):
+        """Test analysing a single TypeScript file."""
         # Arrange
         ts_content = """
 /**
@@ -536,91 +613,11 @@ class UserManager {
 
         file_data = content["data"][0]
         assert file_data["language"] == "typescript"
+        assert "raw_content" in file_data
+        assert "processUserData" in file_data["raw_content"]
+        assert "UserManager" in file_data["raw_content"]
 
-        # Verify function extracted
-        assert len(file_data["functions"]) >= 1
-        func = file_data["functions"][0]
-        assert func["name"] == "processUserData"
-
-        # Verify class extracted
-        assert len(file_data["classes"]) >= 1
-        cls = file_data["classes"][0]
-        assert cls["name"] == "UserManager"
-
-    def test_process_typescript_file_with_interfaces_and_types(self):
-        """Test analysing TypeScript file with interfaces and type aliases."""
-        # Arrange
-        ts_content = """
-/**
- * User interface for type safety
- */
-interface User {
-    id: number;
-    name: string;
-    email?: string;
-}
-
-/**
- * API response type
- */
-type ApiResponse = Success | Error | Loading;
-
-/**
- * User status enumeration
- */
-enum UserStatus {
-    Active = "active",
-    Inactive = "inactive"
-}
-"""
-
-        data = StandardInputDataModel(
-            schemaVersion="1.0.0",
-            name="TypeScript types analysis",
-            description="TypeScript file with interfaces and types",
-            source="/test/types.ts",
-            metadata={},
-            data=[
-                StandardInputDataItemModel(
-                    content=ts_content,
-                    metadata=FilesystemMetadata(
-                        source="/test/types.ts",
-                        connector_type="filesystem_connector",
-                        file_path="/test/types.ts",
-                    ),
-                ),
-            ],
-        )
-
-        message = Message(
-            id="test_ts_types",
-            content=data.model_dump(exclude_none=True),
-            schema=Schema("standard_input", "1.0.0"),
-        )
-
-        config = SourceCodeAnalyserConfig.from_properties({})
-        analyser = SourceCodeAnalyser(config)
-
-        # Act
-        result = analyser.process(
-            [message],
-            Schema("source_code", "1.0.0"),
-        )
-
-        # Assert
-        content = result.content
-        assert len(content["data"]) == 1
-
-        file_data = content["data"][0]
-        assert file_data["language"] == "typescript"
-
-        # Verify type definitions extracted (interfaces, types, enums become classes)
-        class_names = [c["name"] for c in file_data["classes"]]
-        assert "User" in class_names  # interface
-        assert "ApiResponse" in class_names  # type alias
-        assert "UserStatus" in class_names  # enum
-
-    def test_process_tsx_file_with_react_components(self):
+    def test_process_tsx_file(self):
         """Test analysing TSX file with React components."""
         # Arrange
         tsx_content = """
@@ -680,11 +677,6 @@ export default Greeting;
 
         file_data = content["data"][0]
         assert file_data["language"] == "typescript"
-
-        # Verify interface extracted
-        class_names = [c["name"] for c in file_data["classes"]]
-        assert "GreetingProps" in class_names
-
-        # Verify arrow function component extracted
-        func_names = [f["name"] for f in file_data["functions"]]
-        assert "Greeting" in func_names
+        assert "raw_content" in file_data
+        assert "GreetingProps" in file_data["raw_content"]
+        assert "Greeting" in file_data["raw_content"]

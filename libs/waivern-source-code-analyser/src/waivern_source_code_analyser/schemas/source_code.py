@@ -21,54 +21,6 @@ from waivern_core.schemas import (
 # Pydantic models for runtime validation and type safety
 
 
-class SourceCodeFunctionParameterModel(BaseModel):
-    """Pydantic model for source code function parameters."""
-
-    name: str
-    type: str | None = None
-    default_value: str | None = None
-
-
-class SourceCodeFunctionModel(BaseModel):
-    """Pydantic model for source code functions."""
-
-    name: str
-    line_start: int
-    line_end: int
-    parameters: list[SourceCodeFunctionParameterModel] = Field(default_factory=list)
-    return_type: str | None = None
-    visibility: str | None = None
-    is_static: bool = False
-    docstring: str | None = None
-
-
-class SourceCodeClassPropertyModel(BaseModel):
-    """Pydantic model for source code class properties."""
-
-    name: str
-    type: str | None = None
-    visibility: str = "public"
-    is_static: bool = False
-    default_value: str | None = None
-
-
-class SourceCodeClassModel(BaseModel):
-    """Pydantic model for source code classes."""
-
-    name: str
-    line_start: int
-    line_end: int
-    extends: str | None = None
-    implements: list[str] = Field(default_factory=list)
-    properties: list[SourceCodeClassPropertyModel] = Field(default_factory=list)
-    methods: list[SourceCodeFunctionModel] = Field(default_factory=list)
-
-
-# Analysis-related models removed - analysis now happens in analysers using rulesets
-# Database interactions, data collection, AI/ML, security, and third-party patterns
-# are now detected by analysers using pattern matching on raw_content
-
-
 class SourceCodeFileMetadataModel(BaseModel):
     """Pydantic model for source code file metadata."""
 
@@ -78,14 +30,17 @@ class SourceCodeFileMetadataModel(BaseModel):
 
 
 class SourceCodeFileDataModel(BaseModel):
-    """Pydantic model for source code file data (structural extraction only)."""
+    """Pydantic model for source code file data.
+
+    Contains raw source code for pattern matching and LLM analysis.
+    Structural extraction (functions, classes) has been intentionally removed -
+    LLMs understand code structure natively from raw content.
+    """
 
     file_path: str
     language: str
-    raw_content: str  # Full source code for pattern analysis in analysers
+    raw_content: str  # Full source code for pattern analysis and LLM validation
     metadata: SourceCodeFileMetadataModel
-    functions: list[SourceCodeFunctionModel] = Field(default_factory=list)
-    classes: list[SourceCodeClassModel] = Field(default_factory=list)
 
 
 class SourceCodeAnalysisMetadataModel(BaseModel):

@@ -32,9 +32,6 @@ class TestSourceCodeReader:
                         "line_count": 2,
                         "last_modified": "2025-01-07T10:00:00Z",
                     },
-                    "functions": [],
-                    "classes": [],
-                    "imports": [],
                 }
             ],
         }
