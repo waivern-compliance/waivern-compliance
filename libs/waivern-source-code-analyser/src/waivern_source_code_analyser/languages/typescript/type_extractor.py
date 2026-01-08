@@ -4,9 +4,12 @@ This module handles extraction of classes, interfaces, enums, and type aliases
 from TypeScript source code.
 """
 
+import logging
 from typing import TYPE_CHECKING
 
 from tree_sitter import Node
+
+logger = logging.getLogger(__name__)
 
 from waivern_source_code_analyser.languages.base import (
     find_child_by_type,
@@ -121,6 +124,11 @@ class TypeScriptTypeExtractor:
                 docstring=docstring_text,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract TypeScript class at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def _extract_interface(
@@ -145,6 +153,11 @@ class TypeScriptTypeExtractor:
                 docstring=docstring_text,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract TypeScript interface at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def _extract_type_alias(
@@ -163,6 +176,11 @@ class TypeScriptTypeExtractor:
                 docstring=docstring_text,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract TypeScript type alias at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def _extract_enum(self, node: Node, source_code: str) -> TypeDefinitionModel | None:
@@ -181,6 +199,11 @@ class TypeScriptTypeExtractor:
                 docstring=docstring_text,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract TypeScript enum at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def _get_type_name(self, node: Node, source_code: str) -> str:
@@ -329,6 +352,11 @@ class TypeScriptTypeExtractor:
                 default_value=default_value,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract TypeScript class property at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def _extract_interface_property(
@@ -354,6 +382,11 @@ class TypeScriptTypeExtractor:
 
             return MemberModel(name=name, kind="property", type=prop_type)
         except Exception:
+            logger.debug(
+                "Failed to extract TypeScript interface property at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def _get_class_methods(self, node: Node, source_code: str) -> list[CallableModel]:
@@ -412,4 +445,9 @@ class TypeScriptTypeExtractor:
                 return_type=return_type,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract TypeScript method signature at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None

@@ -3,6 +3,7 @@
 This module handles extraction of classes from PHP source code.
 """
 
+import logging
 from typing import TYPE_CHECKING
 
 from tree_sitter import Node
@@ -23,6 +24,8 @@ from waivern_source_code_analyser.languages.php.helpers import (
     METHOD_TYPE,
     get_docstring,
 )
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from waivern_source_code_analyser.languages.php.callable_extractor import (
@@ -91,6 +94,11 @@ class PHPTypeExtractor:
                 docstring=docstring_text,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract PHP class at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def _get_class_name(self, node: Node, source_code: str) -> str:

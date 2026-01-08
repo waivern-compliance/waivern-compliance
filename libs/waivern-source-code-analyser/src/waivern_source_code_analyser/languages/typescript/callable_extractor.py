@@ -4,7 +4,11 @@ This module handles extraction of functions, arrow functions, and methods
 from TypeScript source code.
 """
 
+import logging
+
 from tree_sitter import Node
+
+logger = logging.getLogger(__name__)
 
 from waivern_source_code_analyser.languages.base import (
     find_child_by_type,
@@ -102,6 +106,11 @@ class TypeScriptCallableExtractor:
                 docstring=docstring_text,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract TypeScript callable at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def _extract_arrow_functions(
@@ -166,6 +175,11 @@ class TypeScriptCallableExtractor:
                 docstring=docstring_text,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract TypeScript arrow function at line %d",
+                var_node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def _get_callable_name(self, node: Node, source_code: str) -> str:
@@ -251,6 +265,11 @@ class TypeScriptCallableExtractor:
                 default_value=default_value,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract TypeScript parameter at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def get_return_type(self, node: Node, source_code: str) -> str | None:

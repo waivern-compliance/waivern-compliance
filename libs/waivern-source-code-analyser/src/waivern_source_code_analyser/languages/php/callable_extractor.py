@@ -3,6 +3,8 @@
 This module handles extraction of functions and methods from PHP source code.
 """
 
+import logging
+
 from tree_sitter import Node
 
 from waivern_source_code_analyser.languages.base import (
@@ -22,6 +24,8 @@ from waivern_source_code_analyser.languages.php.helpers import (
     get_visibility,
     is_static,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PHPCallableExtractor:
@@ -92,6 +96,11 @@ class PHPCallableExtractor:
                 docstring=docstring_text,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract PHP callable at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def _get_callable_name(self, node: Node, source_code: str) -> str:
@@ -161,6 +170,11 @@ class PHPCallableExtractor:
                 default_value=default_value,
             )
         except Exception:
+            logger.debug(
+                "Failed to extract PHP parameter at line %d",
+                node.start_point[0] + LINE_INDEX_OFFSET,
+                exc_info=True,
+            )
             return None
 
     def get_return_type(self, node: Node, source_code: str) -> str | None:
