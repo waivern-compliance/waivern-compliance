@@ -1,4 +1,9 @@
-"""LLM validation prompts for processing purpose findings validation."""
+"""LLM validation prompts for processing purpose findings validation.
+
+TODO: Refactor to use separate prompt strategies for different source types
+(database, source_code, filesystem) when adding more connector types.
+Currently this single prompt handles all source types with combined guidance.
+"""
 
 from waivern_processing_purpose_analyser.schemas import (
     ProcessingPurposeFindingModel,
@@ -64,53 +69,89 @@ For each finding, determine if it represents actual business processing (TRUE_PO
 {category_guidance}
 
 **SOURCE CONTEXT GUIDELINES:**
-- Database content: Likely actual processing activity
+- Database content: Likely actual processing activity (check for test/dev indicators)
 - Source code: Could be implementation or just comments/examples
 - Configuration files: Tool setup vs. documentation examples
 - Documentation files: Almost always false positive
 
-**FILE PATH INTERPRETATION:**
-Infer source type from file paths in evidence:
+**SOURCE CODE - FILE PATH INTERPRETATION:**
+For source code findings, infer context from file paths in evidence:
 - Test files (`test_*.py`, `*_test.js`, `__tests__/*`, `spec/*`): Usually FALSE_POSITIVE (test fixtures)
-- Documentation (`README.md`, `docs/*`, `*.md`): Usually FALSE_POSITIVE (documentation)
+- Documentation (`README.md`, `docs/*`, `*.md`): Usually FALSE_POSITIVE
 - Example/sample files (`*.example.*`, `sample/*`, `examples/*`): Usually FALSE_POSITIVE
 - Production code (`src/*`, `lib/*`, `app/*`): Requires deeper analysis
 - Config templates (`*.template.*`, `*.sample.*`): Usually FALSE_POSITIVE
 - Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE
 
+**DATABASE - SOURCE METADATA INTERPRETATION:**
+For database findings, parse the source field format:
+`{{db_type}}_database_({{name}})_collection/table_({{name}})_field/column_({{name}})`
+
+Database FALSE_POSITIVE indicators:
+- Database name contains `test`, `dev`, `staging`, `seed`, `mock`
+- Known test values: `4111111111111111` (test card), `test@example.com`
+- Field names containing `_example`, `_template`, `_sample`
+
+Database TRUE_POSITIVE indicators:
+- Production database names (`prod`, `main`, `live`, or no environment prefix)
+- Real-looking data patterns (actual emails, varied names, realistic values)
+- Business tables: `users`, `customers`, `orders`, `payments`, `subscriptions`
+
 **FEW-SHOT EXAMPLES:**
 
-Example 1 - TRUE_POSITIVE (production payment code):
+Example 1 - TRUE_POSITIVE (production source code):
 ```
 Finding:
   Purpose: Payment Processing
+  Source: source_code
   Evidence: src/services/checkout.js:142: await stripe.charges.create({{amount, customer}})
 ```
-→ TRUE_POSITIVE: Production code in src/services, actual Stripe API call processing real payments
+→ TRUE_POSITIVE: Production code in src/services, actual Stripe API call
 
-Example 2 - FALSE_POSITIVE (test file):
+Example 2 - FALSE_POSITIVE (test source code):
 ```
 Finding:
   Purpose: Payment Processing
+  Source: source_code
   Evidence: tests/checkout.test.js:25: mockStripe.charges.create({{amount: 100}})
 ```
-→ FALSE_POSITIVE: Test file with mock data, not real payment processing
+→ FALSE_POSITIVE: Test file with mock data, not real processing
 
 Example 3 - FALSE_POSITIVE (documentation):
 ```
 Finding:
   Purpose: Analytics
+  Source: source_code
   Evidence: docs/api-guide.md:89: "To track user events, call analytics.track()"
 ```
-→ FALSE_POSITIVE: Documentation explaining how to use analytics, not actual tracking
+→ FALSE_POSITIVE: Documentation explaining usage, not actual tracking
 
-Example 4 - TRUE_POSITIVE (database evidence):
+Example 4 - TRUE_POSITIVE (production database):
 ```
 Finding:
-  Purpose: Marketing
-  Evidence: email_campaigns table contains: subject, recipient_email, sent_date
+  Purpose: Email Marketing
+  Source: mongodb_database_(prod)_collection_(subscribers)_field_(email)
+  Evidence: john.smith@company.com
 ```
-→ TRUE_POSITIVE: Database table with actual marketing campaign data
+→ TRUE_POSITIVE: Production database, subscribers collection, real user email
+
+Example 5 - FALSE_POSITIVE (test database):
+```
+Finding:
+  Purpose: Payment Processing
+  Source: mysql_database_(test_db)_table_(payments)_column_(card_number)
+  Evidence: 4111111111111111
+```
+→ FALSE_POSITIVE: Test database (test_db), known Stripe test card number
+
+Example 6 - TRUE_POSITIVE (production database with real data):
+```
+Finding:
+  Purpose: Customer Support
+  Source: mongodb_database_(main)_collection_(tickets)_field_(customer_email)
+  Evidence: support-request@realcompany.org
+```
+→ TRUE_POSITIVE: Production database (main), support tickets with real customer data
 
 {response_format}"""
 

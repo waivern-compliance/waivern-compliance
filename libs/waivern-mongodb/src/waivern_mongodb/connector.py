@@ -203,7 +203,7 @@ class MongoDBConnector(Connector):
                 str_value = self._convert_to_string(value)
 
                 metadata = DocumentDatabaseMetadata(
-                    source=f"mongodb_{self._config.database}_{collection_name}_{full_field_name}",
+                    source=f"mongodb_database_({self._config.database})_collection_({collection_name})_field_({full_field_name})",
                     connector_type=_CONNECTOR_NAME,
                     collection_name=collection_name,
                     field_name=full_field_name,
