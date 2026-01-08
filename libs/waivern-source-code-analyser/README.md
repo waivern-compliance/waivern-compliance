@@ -1,67 +1,69 @@
 # waivern-source-code-analyser
 
-Source code analyser for WCF
+Source code analyser for the Waivern Compliance Framework (WCF).
 
 ## Overview
 
-The Source Code Analyser transforms file content from `standard_input` schema to `source_code` schema with parsed code structure. It accepts file content from any connector (typically FilesystemConnector) and parses it using tree-sitter to extract functions, classes, and code patterns.
+The Source Code Analyser parses source code files and extracts structured information about functions, classes, interfaces, and other code elements. It transforms file content from the `standard_input` schema into the `source_code` schema.
 
-This is a **pure analyser** - it does not perform file I/O. Use FilesystemConnector to read files, then pipe the output to SourceCodeAnalyser.
+**Key characteristics:**
 
-Key features:
-- Parses source code (currently PHP) using tree-sitter
-- Extracts functions, classes, and code structure
-- Transforms `standard_input` schema → `source_code` schema
-- Works in pipelines with any connector that produces file content
+- **Pure analyser** - No file I/O; receives input from connectors (typically FilesystemConnector)
+- **Tree-sitter based** - Uses tree-sitter for language-agnostic AST parsing
+- **Extensible** - Plugin architecture for adding new language support
+- **Pipeline-ready** - Designed to chain with downstream compliance analysers
+
+### Supported Languages
+
+| Language   | Extensions       | Extracted Elements                                                   |
+| ---------- | ---------------- | -------------------------------------------------------------------- |
+| PHP        | `.php`, `.phtml` | Functions, classes, methods, properties                              |
+| TypeScript | `.ts`, `.tsx`    | Functions, arrow functions, classes, interfaces, enums, type aliases |
 
 ## Installation
 
-Basic installation:
 ```bash
+# Basic installation
 pip install waivern-source-code-analyser
-```
 
-With tree-sitter support for PHP parsing:
-```bash
+# With PHP support
+pip install waivern-source-code-analyser[php]
+
+# With TypeScript support
+pip install waivern-source-code-analyser[typescript]
+
+# All languages
 pip install waivern-source-code-analyser[tree-sitter]
 ```
 
-## Usage
+## Quick Start
 
-### In WCF Pipelines (Recommended)
-
-The analyser is designed for use in multi-step pipelines:
+### In WCF Runbooks
 
 ```yaml
-# Example runbook
-connectors:
-  - name: filesystem_reader
-    type: filesystem_connector
-    properties:
-      path: ./src
+artifacts:
+  # Read files from filesystem
+  php_files:
+    source:
+      type: filesystem
+      properties:
+        path: ./src
+        include_patterns: ["**/*.php"]
 
-analysers:
-  - name: code_parser
-    type: source_code_analyser
-    properties:
-      language: php
+  # Parse into structured code
+  parsed_code:
+    inputs: php_files
+    process:
+      type: source_code_analyser
+      properties:
+        language: php # Optional: auto-detected from extensions
 
-  - name: purpose_detector
-    type: processing_purpose_analyser
-
-execution:
-  - id: read_files
-    connector: filesystem_reader
-    analyser: code_parser
-    input_schema: standard_input
-    output_schema: source_code
-    save_output: true
-
-  - id: analyse_purposes
-    input_from: read_files
-    analyser: purpose_detector
-    input_schema: source_code
-    output_schema: processing_purpose_finding
+  # Feed to downstream analysers
+  findings:
+    inputs: parsed_code
+    process:
+      type: processing_purpose_analyser
+    output: true
 ```
 
 ### Programmatic Usage
@@ -69,82 +71,79 @@ execution:
 ```python
 from waivern_source_code_analyser import SourceCodeAnalyser, SourceCodeAnalyserConfig
 from waivern_core import Message, Schema
-from waivern_core.schemas import StandardInputDataModel, StandardInputDataItemModel
 
 # Create analyser
 config = SourceCodeAnalyserConfig.from_properties({"language": "php"})
 analyser = SourceCodeAnalyser(config)
 
-# Prepare input (typically from FilesystemConnector)
-input_data = StandardInputDataModel(
-    schemaVersion="1.0.0",
-    name="PHP analysis",
-    source="/path/to/source",
-    data=[
-        StandardInputDataItemModel(
-            content="<?php function example() { return true; } ?>",
-            metadata={"file_path": "/path/to/file.php"}
-        )
-    ]
-)
-
-message = Message(
-    id="parse",
-    content=input_data.model_dump(exclude_none=True),
-    schema=Schema("standard_input", "1.0.0")
-)
-
-# Process
+# Process (input typically comes from FilesystemConnector)
 result = analyser.process(
-    Schema("standard_input", "1.0.0"),
-    Schema("source_code", "1.0.0"),
-    message
+    inputs=[input_message],
+    output_schema=Schema("source_code", "1.0.0")
 )
 
-# Result contains parsed functions, classes, etc.
-print(result.content["data"][0]["functions"])
+# Access parsed structure
+for file_data in result.content["data"]:
+    print(f"File: {file_data['file_path']}")
+    print(f"Functions: {len(file_data['functions'])}")
+    print(f"Classes: {len(file_data['classes'])}")
 ```
 
-## Schema Support
+## Schema Contracts
 
-**Input:** `standard_input` (v1.0.0) - File content from any connector
-**Output:** `source_code` (v1.0.0) - Parsed code structure
+| Direction | Schema                 | Description                |
+| --------- | ---------------------- | -------------------------- |
+| Input     | `standard_input/1.0.0` | File content with metadata |
+| Output    | `source_code/1.0.0`    | Parsed code structure      |
+
+### Output Structure
+
+```json
+{
+  "schemaVersion": "1.0.0",
+  "data": [
+    {
+      "file_path": "/src/User.php",
+      "language": "php",
+      "functions": [
+        {
+          "name": "validateEmail",
+          "parameters": [{"name": "email", "type": "string"}],
+          "return_type": "bool",
+          "line_start": 10,
+          "line_end": 15
+        }
+      ],
+      "classes": [
+        {
+          "name": "User",
+          "kind": "class",
+          "extends": ["BaseModel"],
+          "implements": ["Serializable"],
+          "methods": [...],
+          "properties": [...]
+        }
+      ],
+      "raw_content": "<?php ...",
+      "metadata": {
+        "file_size": 1024,
+        "line_count": 50
+      }
+    }
+  ]
+}
+```
 
 ## Configuration
 
-```python
-SourceCodeAnalyserConfig(
-    language="php",           # Programming language (currently only PHP supported)
-    max_file_size=10485760   # Max file size in bytes (default: 10MB)
-)
-```
+| Property        | Type     | Default     | Description                         |
+| --------------- | -------- | ----------- | ----------------------------------- |
+| `language`      | `string` | Auto-detect | Override language detection         |
+| `max_file_size` | `int`    | `10485760`  | Skip files larger than this (bytes) |
 
-## Architecture
+## Documentation
 
-This package follows WCF's analyser pattern:
-- **Pure transformation** - No file I/O, only data processing
-- **Schema-driven** - Input/output validated against JSON schemas
-- **Pipeline-ready** - Designed to chain with other analysers
-- **Independent** - No dependencies on connectors
+For detailed documentation, see the `docs/` directory:
 
-For file collection, use `waivern-filesystem` connector.
-
-## Migration from waivern-source-code
-
-The old `waivern-source-code` package included a connector. This has been refactored:
-
-**Old (deprecated):**
-```python
-from waivern_source_code import SourceCodeConnector  # ❌ No longer available
-```
-
-**New (pipeline):**
-```yaml
-# Use FilesystemConnector + SourceCodeAnalyser pipeline
-execution:
-  - id: read_files
-    connector: filesystem_reader  # Handles file I/O
-    analyser: code_parser         # Handles parsing
-```
-
-This separation follows the single-responsibility principle and enables better reusability.
+- **[Architecture](docs/architecture.md)** - How information flows through the analyser, the separation of types vs callables, and component relationships
+- **[Extending Languages](docs/extending-languages.md)** - Guide for adding support for new programming languages
