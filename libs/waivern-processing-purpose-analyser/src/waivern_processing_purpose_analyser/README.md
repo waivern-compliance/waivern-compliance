@@ -1,21 +1,21 @@
-# Processing Purpose Analyser: Multi-Ruleset Source Code Analysis
+# Processing Purpose Analyser: Source Code Analysis
 
 ## Overview
 
-The ProcessingPurposeAnalyser now implements comprehensive multi-ruleset analysis for source code data from SourceCodeConnector. This document describes the current implementation and analysis strategy.
+The ProcessingPurposeAnalyser implements pattern matching analysis against source code data from SourceCodeConnector. It detects business purposes and compliance-relevant patterns in raw source code content.
 
-## Implementation Status
+## Analysis Strategy
 
-✅ **FULLY IMPLEMENTED** - All phases complete and tested
-
-## Ruleset Analysis Strategy
-
-### 1. Processing Purposes Ruleset + Raw Content Analysis
+### Pattern Matching Against Raw Content
 
 **Target**: `raw_content` field from source code files
-**Purpose**: Detect business purposes in comments, documentation, and string literals
+**Purpose**: Detect processing purposes in code comments, documentation, string literals, and identifiers
 
-**Implementation**: `_analyse_raw_content_processing_purposes()`
+**Implementation**: Pattern matching against three rulesets:
+
+1. **Processing Purposes Ruleset** - Business intent detection
+2. **Service Integrations Ruleset** - Third-party service usage
+3. **Data Collection Ruleset** - Data collection mechanisms
 
 **Example Matches**:
 ```php
@@ -25,54 +25,6 @@ function trackUserBehavior($userId) {
     sendEvent('user_action', $data);
 }
 ```
-
-**Findings**: Business purposes from natural language in code
-
----
-
-### 2. Service Integrations Ruleset + Structured Analysis
-
-**Target**: `imports`, `functions`, `classes` fields
-**Purpose**: Detect third-party service usage and integration patterns
-
-**Implementation**: `_analyse_structured_service_integrations()`
-
-**Analysis Types**:
-- **Import Analysis**: `use Stripe\StripeClient` → `payment_processing`
-- **Function Analysis**: `sendViaMailchimp()` → `communication_services`
-- **Class Analysis**: `GoogleAnalyticsTracker` → `user_analytics`
-
-**Findings**: Service integrations with `service_category` metadata
-
----
-
-### 3. Data Collection Patterns Ruleset + Structured Analysis
-
-**Target**: `functions` fields + `raw_content` for SQL patterns
-**Purpose**: Detect data collection mechanisms and database operations
-
-**Implementation**: `_analyse_structured_data_collection()`
-
-**Analysis Types**:
-- **Function Analysis**: `collectUserData()` → `php_post_data`
-- **SQL Pattern Analysis**: `INSERT INTO users` → `sql_database_queries`
-
-**Findings**: Data collection patterns with empty `purpose_category` (defaults to "")
-
----
-
-### 4. Processing Purposes Ruleset + Structured Analysis (Secondary)
-
-**Target**: `functions`, `classes` fields
-**Purpose**: Detect business purposes from function/class naming
-
-**Implementation**: `_analyse_structured_processing_purposes()`
-
-**Analysis Types**:
-- **Function Analysis**: `processPayment()` → `Payment, Billing, and Invoicing`
-- **Class Analysis**: `CustomerSupportBot` → `Customer Service and Support`
-
-**Findings**: Business purposes from code structure
 
 ## Current Architecture
 
@@ -95,43 +47,21 @@ class SourceCodeSchemaInputHandler:
 
 ### Analysis Flow
 
+Pattern matching is performed line-by-line against raw content:
+
 ```python
-def _analyse_single_file(self, file_data: SourceCodeFileDataModel):
+def _analyse_file_data(self, file_data, file_metadata):
     findings = []
 
-    # Raw content analysis with processing_purposes
-    findings.extend(self._analyse_raw_content_processing_purposes(...))
-
-    # Structured analysis with service_integrations
-    findings.extend(self._analyse_structured_service_integrations(...))
-
-    # Structured analysis with data_collection
-    findings.extend(self._analyse_structured_data_collection(...))
-
-    # Structured analysis with processing_purposes (secondary)
-    findings.extend(self._analyse_structured_processing_purposes(...))
+    for rule in self._processing_purposes_rules:
+        for i, line in enumerate(file_data["raw_content"].splitlines()):
+            for pattern in rule.patterns:
+                if pattern.lower() in line.lower():
+                    # Create finding with line-based evidence
+                    ...
 
     return findings
 ```
-
-### Finding Types by Analysis Method
-
-| Analysis Type | Ruleset | Target Data | Purpose Category | Service Category |
-|---------------|---------|-------------|------------------|------------------|
-| `source_code_pattern_matching_analysis` | processing_purposes | raw_content | Set from ruleset | null |
-| `function_name_analysis` | service_integrations | functions | Set from ruleset | Set from ruleset |
-| `function_name_analysis` | processing_purposes | functions | Set from ruleset | null |
-| `class_name_analysis` | service_integrations | classes | Set from ruleset | Set from ruleset |
-| `class_name_analysis` | processing_purposes | classes | Set from ruleset | null |
-| `data_collection_function_analysis` | data_collection | functions | "" (empty) | null |
-| `import_analysis` | service_integrations | imports | Set from ruleset | Set from ruleset |
-
-## Analysis Results
-
-### Current Performance Metrics
-- **526 total findings** from LAMP stack sample
-- **19 unique purposes identified**
-- **Multiple analysis types** providing comprehensive coverage
 
 ### Example Finding Structure
 
@@ -139,57 +69,30 @@ def _analyse_single_file(self, file_data: SourceCodeFileDataModel):
 {
   "purpose": "payment_processing",
   "purpose_category": "OPERATIONAL",
-  "matched_patterns": ["charge", "payment"],
+  "matched_patterns": ["payment"],
   "evidence": [
-    {"content": "Function: chargeCustomer - Payment processing service integrations"}
+    {"content": "Line 15: function processPayment($amount)"}
   ],
   "metadata": {
-    "source": "source_code",
-    "context": {
-      "file_path": "models/Order.php",
-      "language": "php"
-    }
+    "source": "source_code"
   },
   "service_category": "payment_processing"
 }
 ```
 
-## Schema Flexibility
-
-### Purpose Category
-- **Type**: Free-text string (enum constraint removed)
-- **Default**: "" (empty string)
-- **Usage**: Each ruleset provides its own categories
-
-### Compliance
-- **Type**: Array of objects with regulation and relevance fields
-- **Structure**: `[{regulation: "GDPR", relevance: "Specific regulatory context..."}]`
-- **Purpose**: Provides detailed compliance information rather than just regulation names
-
 ## Benefits
 
 ### 1. Comprehensive Coverage
-- **Business Intent**: Processing purposes from comments and function names
-- **Technical Implementation**: Service integrations from imports and class names
-- **Data Operations**: Collection patterns from function names and SQL
+- **Business Intent**: Processing purposes from comments and identifiers
+- **Technical Implementation**: Service integrations from library usage
+- **Data Operations**: Collection patterns from code patterns
 
-### 2. Precise Analysis
-- Each ruleset applied to optimal data structures
-- Structured analysis for technical patterns
-- Raw content analysis for business descriptions
+### 2. LLM-Ready Architecture
+- Raw content passed directly to LLM for semantic validation
+- LLMs understand code structure natively
+- No pre-extracted structure needed
 
 ### 3. GDPR Compliance Support
-- **Article 30**: Complete processing activity documentation
-- **Article 28**: Service integration and processor identification
+- **Article 30**: Processing activity documentation
+- **Article 28**: Service integration identification
 - **Article 25**: Data collection mechanism analysis
-
-### 4. Extensible Architecture
-- Independent ruleset evolution
-- Flexible schema support
-- Multiple analysis types per file
-
-## Testing
-
-**Validation**: Successfully analyzed 25 PHP files with 526 findings across all analysis types
-**Quality**: All pre-commit checks passing (linting, type checking, formatting)
-**Integration**: Full end-to-end testing with LAMP stack runbook
