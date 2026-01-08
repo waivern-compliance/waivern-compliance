@@ -131,13 +131,24 @@ class SourceCodeAnalyser(Analyser):
                     )
                     continue
 
-                # Detect language or use config override
+                # Detect language from file extension
                 file_path = Path(file_path_str)
-                language = self._config.language or self._detect_language(file_path)
+                detected_language = self._detect_language(file_path)
 
-                if not language:
-                    logger.debug(f"Skipping unsupported file: {file_path_str}")
-                    continue
+                # If config specifies a language, only process files of that language
+                if self._config.language:
+                    if detected_language != self._config.language:
+                        logger.debug(
+                            f"Skipping file (not {self._config.language}): {file_path_str}"
+                        )
+                        continue
+                    language = self._config.language
+                else:
+                    # No config filter - process all supported languages
+                    if not detected_language:
+                        logger.debug(f"Skipping unsupported file: {file_path_str}")
+                        continue
+                    language = detected_language
 
                 # Build file data model
                 file_data = self._build_file_data(file_path, language, source_code)
@@ -145,11 +156,6 @@ class SourceCodeAnalyser(Analyser):
 
                 total_files += 1
                 total_lines += len(source_code.splitlines())
-
-            # Determine language for output
-            detected_language = self._config.language or (
-                parsed_files[0].language if parsed_files else "unknown"
-            )
 
             # Determine path name for output
             path_name = (
@@ -163,7 +169,6 @@ class SourceCodeAnalyser(Analyser):
                 schemaVersion=output_schema.version,
                 name=f"source_code_analysis_{path_name}",
                 description=f"Source code analysis of {source_str}",
-                language=detected_language,
                 source=source_str,
                 metadata=SourceCodeAnalysisMetadataModel(
                     total_files=total_files,

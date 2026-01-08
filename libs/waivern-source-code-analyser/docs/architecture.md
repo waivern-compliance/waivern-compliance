@@ -31,12 +31,44 @@ The source code analyser focuses on **language detection** and provides a founda
 1. Input Reception
    └── standard_input schema (file content + metadata)
         ↓
-2. Language Detection
+2. Language Detection (per-file)
    └── Auto-detect from file extension OR use config override
         ↓
 3. Output Generation
    └── source_code schema (raw content + language + metadata)
 ```
+
+### Multi-Language Support
+
+Language detection operates **per-file**, enabling mixed codebase analysis:
+
+```python
+for file_entry in all_files:
+    # Per-file: config override OR auto-detect from extension
+    language = config.language or detect_language(file_path)
+
+    if not language:
+        skip_file()  # Unsupported extension
+        continue
+
+    # Each file gets its own language in the output
+    output_file = {
+        "file_path": file_path,
+        "language": language,  # Per-file language
+        "raw_content": content,
+        ...
+    }
+```
+
+| Config `language` | Behaviour |
+|-------------------|-----------|
+| Not set (default) | All supported languages processed; unsupported extensions skipped |
+| Set (e.g., `"php"`) | Only that language processed; other file types skipped |
+
+This design supports:
+- **Mixed codebases**: JavaScript, TypeScript, PHP files processed together (default)
+- **Monorepos**: Different services in different languages
+- **Single-language filter**: Process only PHP files from a mixed codebase
 
 ### Processing Flow
 

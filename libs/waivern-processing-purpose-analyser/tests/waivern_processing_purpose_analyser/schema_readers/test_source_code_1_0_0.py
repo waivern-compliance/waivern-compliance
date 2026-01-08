@@ -15,7 +15,6 @@ class TestSourceCodeReader:
             "schemaVersion": "1.0.0",
             "name": "Test source code",
             "description": "Test source code analysis",
-            "language": "python",
             "source": "test_repo",
             "metadata": {
                 "total_files": 1,
@@ -44,7 +43,6 @@ class TestSourceCodeReader:
         # Type checker knows: result is SourceCodeSchemaDict
         assert result["schemaVersion"] == "1.0.0"
         assert result["name"] == "Test source code"
-        assert result["language"] == "python"
         assert len(result["data"]) == 1
         assert result["data"][0]["file_path"] == "test.py"
         # Verify dict structure is preserved

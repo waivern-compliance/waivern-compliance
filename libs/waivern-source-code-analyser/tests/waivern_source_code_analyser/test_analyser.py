@@ -138,7 +138,6 @@ class UserManager {
         # Verify required top-level fields
         assert "schemaVersion" in content
         assert "name" in content
-        assert "language" in content
         assert "data" in content
         assert "metadata" in content
 
@@ -226,36 +225,45 @@ class UserManager {
             assert "raw_content" in file_data
             assert "metadata" in file_data
 
-    def test_process_with_language_override_from_config(self):
-        """Test language override in config when file has no extension."""
-        # Arrange
+    def test_process_with_language_filter_from_config(self):
+        """Test that language config filters to only that language."""
+        # Arrange - mixed input with PHP and TypeScript files
         php_content = "<?php function test() { return true; } ?>"
+        ts_content = "const x: number = 42;"
 
         data = StandardInputDataModel(
             schemaVersion="1.0.0",
-            name="Language override test",
-            description="Test with no extension",
+            name="Language filter test",
+            description="Test filtering to PHP only",
             source="/test",
             metadata={},
             data=[
                 StandardInputDataItemModel(
                     content=php_content,
                     metadata=FilesystemMetadata(
-                        source="/test/noextension",
+                        source="/test/app.php",
                         connector_type="filesystem_connector",
-                        file_path="/test/noextension",
+                        file_path="/test/app.php",
+                    ),
+                ),
+                StandardInputDataItemModel(
+                    content=ts_content,
+                    metadata=FilesystemMetadata(
+                        source="/test/utils.ts",
+                        connector_type="filesystem_connector",
+                        file_path="/test/utils.ts",
                     ),
                 ),
             ],
         )
 
         message = Message(
-            id="test_lang_override",
+            id="test_lang_filter",
             content=data.model_dump(exclude_none=True),
             schema=Schema("standard_input", "1.0.0"),
         )
 
-        # Config specifies language explicitly
+        # Config filters to PHP only
         config = SourceCodeAnalyserConfig.from_properties({"language": "php"})
         analyser = SourceCodeAnalyser(config)
 
@@ -265,10 +273,11 @@ class UserManager {
             Schema("source_code", "1.0.0"),
         )
 
-        # Assert
+        # Assert - only PHP file should be processed
         content = result.content
         assert len(content["data"]) == 1
         assert content["data"][0]["language"] == "php"
+        assert content["data"][0]["file_path"] == "/test/app.php"
 
     def test_process_skips_files_exceeding_max_file_size(self):
         """Test that files exceeding max_file_size are skipped."""

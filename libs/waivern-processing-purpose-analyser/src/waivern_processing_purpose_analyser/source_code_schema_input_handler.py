@@ -65,7 +65,6 @@ class SourceCodeSchemaDict(TypedDict):
     schemaVersion: str
     name: str
     description: str
-    language: str
     source: str
     metadata: SourceCodeAnalysisMetadataDict
     data: list[SourceCodeFileDict]
