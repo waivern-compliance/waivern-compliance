@@ -141,3 +141,58 @@ class TestProcessingPurposeAnalyserConfig:
         assert "extra" in str(exc_info.value).lower() or "unknown_field" in str(
             exc_info.value
         )
+
+
+class TestSourceCodeContextWindowConfig:
+    """Tests for source_code_context_window configuration field."""
+
+    def test_config_accepts_small_context_window(self) -> None:
+        """Test that config accepts 'small' as valid context window value."""
+        # Arrange & Act
+        config = ProcessingPurposeAnalyserConfig.from_properties(
+            {"source_code_context_window": "small"}
+        )
+
+        # Assert
+        assert config.source_code_context_window == "small"
+
+    def test_config_accepts_medium_context_window(self) -> None:
+        """Test that config accepts 'medium' as valid context window value."""
+        # Arrange & Act
+        config = ProcessingPurposeAnalyserConfig.from_properties(
+            {"source_code_context_window": "medium"}
+        )
+
+        # Assert
+        assert config.source_code_context_window == "medium"
+
+    def test_config_accepts_full_context_window(self) -> None:
+        """Test that config accepts 'full' as valid context window value."""
+        # Arrange & Act
+        config = ProcessingPurposeAnalyserConfig.from_properties(
+            {"source_code_context_window": "full"}
+        )
+
+        # Assert
+        assert config.source_code_context_window == "full"
+
+    def test_config_rejects_invalid_context_window(self) -> None:
+        """Test that config rejects invalid context window values."""
+        # Arrange
+        invalid_properties = {"source_code_context_window": "invalid_size"}
+
+        # Act & Assert
+        with pytest.raises(ValidationError) as exc_info:
+            ProcessingPurposeAnalyserConfig.from_properties(invalid_properties)
+
+        # Verify error mentions the field
+        error_message = str(exc_info.value)
+        assert "source_code_context_window" in error_message
+
+    def test_config_default_context_window_is_small(self) -> None:
+        """Test that default context window is 'small' when not specified."""
+        # Arrange & Act
+        config = ProcessingPurposeAnalyserConfig.from_properties({})
+
+        # Assert
+        assert config.source_code_context_window == "small"

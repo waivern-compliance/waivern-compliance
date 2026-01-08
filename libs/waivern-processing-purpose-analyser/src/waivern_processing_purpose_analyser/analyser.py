@@ -59,7 +59,9 @@ class ProcessingPurposeAnalyser(Analyser):
         self._llm_service = llm_service
 
         # Initialise source code handler for SourceCodeSchema processing
-        self._source_code_handler = SourceCodeSchemaInputHandler()
+        self._source_code_handler = SourceCodeSchemaInputHandler(
+            context_window=config.source_code_context_window
+        )
 
     @classmethod
     @override

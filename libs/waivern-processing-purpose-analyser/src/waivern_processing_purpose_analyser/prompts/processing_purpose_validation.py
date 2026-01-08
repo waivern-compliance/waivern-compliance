@@ -69,6 +69,49 @@ For each finding, determine if it represents actual business processing (TRUE_PO
 - Configuration files: Tool setup vs. documentation examples
 - Documentation files: Almost always false positive
 
+**FILE PATH INTERPRETATION:**
+Infer source type from file paths in evidence:
+- Test files (`test_*.py`, `*_test.js`, `__tests__/*`, `spec/*`): Usually FALSE_POSITIVE (test fixtures)
+- Documentation (`README.md`, `docs/*`, `*.md`): Usually FALSE_POSITIVE (documentation)
+- Example/sample files (`*.example.*`, `sample/*`, `examples/*`): Usually FALSE_POSITIVE
+- Production code (`src/*`, `lib/*`, `app/*`): Requires deeper analysis
+- Config templates (`*.template.*`, `*.sample.*`): Usually FALSE_POSITIVE
+- Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE
+
+**FEW-SHOT EXAMPLES:**
+
+Example 1 - TRUE_POSITIVE (production payment code):
+```
+Finding:
+  Purpose: Payment Processing
+  Evidence: src/services/checkout.js:142: await stripe.charges.create({{amount, customer}})
+```
+→ TRUE_POSITIVE: Production code in src/services, actual Stripe API call processing real payments
+
+Example 2 - FALSE_POSITIVE (test file):
+```
+Finding:
+  Purpose: Payment Processing
+  Evidence: tests/checkout.test.js:25: mockStripe.charges.create({{amount: 100}})
+```
+→ FALSE_POSITIVE: Test file with mock data, not real payment processing
+
+Example 3 - FALSE_POSITIVE (documentation):
+```
+Finding:
+  Purpose: Analytics
+  Evidence: docs/api-guide.md:89: "To track user events, call analytics.track()"
+```
+→ FALSE_POSITIVE: Documentation explaining how to use analytics, not actual tracking
+
+Example 4 - TRUE_POSITIVE (database evidence):
+```
+Finding:
+  Purpose: Marketing
+  Evidence: email_campaigns table contains: subject, recipient_email, sent_date
+```
+→ TRUE_POSITIVE: Database table with actual marketing campaign data
+
 {response_format}"""
 
 

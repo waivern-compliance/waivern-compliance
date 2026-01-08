@@ -16,6 +16,7 @@ with the key difference being evidence extraction strategy:
 - source_code_handler: uses line-by-line evidence with line numbers
 """
 
+from collections.abc import Generator, Sequence
 from typing import NotRequired, TypedDict
 
 from pydantic import BaseModel
@@ -29,6 +30,14 @@ from .schemas.types import (
     ProcessingPurposeFindingMetadata,
     ProcessingPurposeFindingModel,
 )
+from .types import SourceCodeContextWindow
+
+# Context window sizes (lines before/after match)
+CONTEXT_WINDOW_SIZES: dict[SourceCodeContextWindow, int | None] = {
+    "small": 3,  # ±3 lines
+    "medium": 15,  # ±15 lines
+    "full": None,  # Entire file
+}
 
 # TypedDict definitions for source_code schema v1.0.0
 # These mirror the JSON schema structure without importing from SourceCodeAnalyser
@@ -85,11 +94,15 @@ class SourceCodeSchemaInputHandler:
     Uses .get() for optional fields (imports, functions, classes).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, context_window: SourceCodeContextWindow = "small") -> None:
         """Initialise the handler and load required rulesets.
 
-        The handler manages its own ruleset dependencies and is fully self-contained.
+        Args:
+            context_window: Size of context to include around matches.
+                'small' = ±3 lines, 'medium' = ±15 lines, 'full' = entire file.
+
         """
+        self.context_window: SourceCodeContextWindow = context_window
         # Load all three rulesets for comprehensive source code analysis with proper typing
         self._processing_purposes_rules = RulesetLoader.load_ruleset(
             "local/processing_purposes/1.0.0", ProcessingPurposeRule
@@ -134,68 +147,98 @@ class SourceCodeSchemaInputHandler:
     ) -> list[ProcessingPurposeFindingModel]:
         """Analyse a single source code file for processing purpose patterns."""
         findings: list[ProcessingPurposeFindingModel] = []
+        lines = file_data["raw_content"].splitlines()
+        file_path = file_data["file_path"]
 
-        # Analyse processing purpose rules against file content
+        # Analyse processing purpose rules
         for rule in self._processing_purposes_rules:
-            for i, line in enumerate(file_data["raw_content"].splitlines()):
-                line_lower = line.lower()
-                for pattern in rule.patterns:
-                    pattern_lower = pattern.lower()
-                    if pattern_lower in line_lower:
-                        evidence = [
-                            BaseFindingEvidence(
-                                content=f"Line {i + 1}: {line.strip()}",
-                            )
-                        ]
-                        finding = self._create_finding_from_processing_purpose_rule(
-                            rule=rule,
-                            matched_patterns=[pattern],
-                            evidence=evidence,
-                            file_metadata=file_metadata,
-                        )
-                        findings.append(finding)
+            for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
+                evidence = self._create_evidence(file_path, line_idx, lines)
+                findings.append(
+                    self._create_finding_from_processing_purpose_rule(
+                        rule, [pattern], evidence, file_metadata
+                    )
+                )
 
-        # Analyse service integration rules against file content
+        # Analyse service integration rules
         for rule in self._service_integrations_rules:
-            for i, line in enumerate(file_data["raw_content"].splitlines()):
-                line_lower = line.lower()
-                for pattern in rule.patterns:
-                    pattern_lower = pattern.lower()
-                    if pattern_lower in line_lower:
-                        evidence = [
-                            BaseFindingEvidence(
-                                content=f"Line {i + 1}: {line.strip()}",
-                            )
-                        ]
-                        finding = self._create_finding_from_service_integration_rule(
-                            rule=rule,
-                            matched_patterns=[pattern],
-                            evidence=evidence,
-                            file_metadata=file_metadata,
-                        )
-                        findings.append(finding)
+            for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
+                evidence = self._create_evidence(file_path, line_idx, lines)
+                findings.append(
+                    self._create_finding_from_service_integration_rule(
+                        rule, [pattern], evidence, file_metadata
+                    )
+                )
 
-        # Analyse data collection rules against file content
+        # Analyse data collection rules
         for rule in self._data_collection_rules:
-            for i, line in enumerate(file_data["raw_content"].splitlines()):
-                line_lower = line.lower()
-                for pattern in rule.patterns:
-                    pattern_lower = pattern.lower()
-                    if pattern_lower in line_lower:
-                        evidence = [
-                            BaseFindingEvidence(
-                                content=f"Line {i + 1}: {line.strip()}",
-                            )
-                        ]
-                        finding = self._create_finding_from_data_collection_rule(
-                            rule=rule,
-                            matched_patterns=[pattern],
-                            evidence=evidence,
-                            file_metadata=file_metadata,
-                        )
-                        findings.append(finding)
+            for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
+                evidence = self._create_evidence(file_path, line_idx, lines)
+                findings.append(
+                    self._create_finding_from_data_collection_rule(
+                        rule, [pattern], evidence, file_metadata
+                    )
+                )
 
         return findings
+
+    def _find_pattern_matches(
+        self, lines: list[str], patterns: Sequence[str]
+    ) -> Generator[tuple[int, str], None, None]:
+        """Find all pattern matches in source code lines.
+
+        Args:
+            lines: Source code lines to search
+            patterns: Patterns to match (case-insensitive)
+
+        Yields:
+            Tuples of (line_index, matched_pattern)
+
+        """
+        for i, line in enumerate(lines):
+            line_lower = line.lower()
+            for pattern in patterns:
+                if pattern.lower() in line_lower:
+                    yield (i, pattern)
+
+    def _create_evidence(
+        self,
+        file_path: str,
+        line_index: int,
+        lines: list[str],
+    ) -> list[BaseFindingEvidence]:
+        """Create evidence for a pattern match with context window.
+
+        Args:
+            file_path: Path to the source file
+            line_index: Zero-based index of the matched line
+            lines: All lines in the file (for context extraction)
+
+        Returns:
+            List containing a single BaseFindingEvidence item with context
+
+        """
+        window_size = CONTEXT_WINDOW_SIZES[self.context_window]
+
+        if window_size is None:
+            # Full file context
+            start_idx = 0
+            end_idx = len(lines)
+        else:
+            # ±N lines around the match
+            start_idx = max(0, line_index - window_size)
+            end_idx = min(len(lines), line_index + window_size + 1)
+
+        # Build context with line numbers and arrow indicator for matched line
+        context_lines: list[str] = []
+        for i in range(start_idx, end_idx):
+            line_num = i + 1  # 1-based line numbers
+            indicator = "→" if i == line_index else " "
+            context_lines.append(f"{line_num:4d}{indicator} {lines[i].rstrip()}")
+
+        content = f"{file_path}\n" + "\n".join(context_lines)
+
+        return [BaseFindingEvidence(content=content)]
 
     def _create_finding_from_processing_purpose_rule(
         self,

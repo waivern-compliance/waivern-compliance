@@ -519,3 +519,325 @@ class EmptyClass {
                 "data_source should be a string"
             )
             assert len(finding.data_source) > 0, "data_source should not be empty"
+
+
+class TestSourceCodeContextWindow:
+    """Tests for context window functionality in evidence extraction.
+
+    These tests verify that the SourceCodeSchemaInputHandler correctly:
+    - Includes file paths in evidence for LLM context
+    - Extracts surrounding lines based on context window configuration
+    - Handles edge cases (start/end of file)
+    - Marks matched lines with visual indicators
+    """
+
+    @pytest.fixture
+    def sample_file_metadata(self) -> SourceCodeFileMetadataDict:
+        """Create sample file metadata for testing."""
+        return {
+            "file_size": 1024,
+            "line_count": 50,
+            "last_modified": "2024-01-01T00:00:00Z",
+        }
+
+    @pytest.fixture
+    def sample_analysis_metadata(self) -> SourceCodeAnalysisMetadataDict:
+        """Create sample analysis metadata for testing."""
+        return {
+            "total_files": 1,
+            "total_lines": 50,
+            "analysis_timestamp": "2024-01-01T00:00:00Z",
+        }
+
+    @pytest.fixture
+    def multiline_file_data(
+        self, sample_file_metadata: SourceCodeFileMetadataDict
+    ) -> SourceCodeFileDict:
+        """Create file data with multiple lines for context window testing."""
+        return {
+            "file_path": "src/payments/checkout.js",
+            "language": "javascript",
+            "raw_content": """import { config } from './config';
+import { logger } from './logger';
+
+const API_KEY = process.env.STRIPE_KEY;
+
+class PaymentService {
+    constructor() {
+        this.stripe = require('stripe')(API_KEY);
+    }
+
+    async processPayment(amount) {
+        return this.stripe.charges.create({
+            amount: amount,
+            currency: 'usd'
+        });
+    }
+
+    async refund(chargeId) {
+        return this.stripe.refunds.create({
+            charge: chargeId
+        });
+    }
+}
+
+export default PaymentService;
+""",
+            "metadata": sample_file_metadata,
+        }
+
+    # A. File Path in Evidence
+    def test_evidence_includes_file_path(
+        self,
+        multiline_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
+    ) -> None:
+        """Test that evidence content includes the file path for LLM context."""
+        # Arrange
+        handler = SourceCodeSchemaInputHandler()
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "File path test",
+            "description": "Test file path in evidence",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [multiline_file_data],
+        }
+
+        # Act
+        findings = handler.analyse_source_code_data(source_data)
+
+        # Assert
+        assert len(findings) > 0, "Expected at least one finding"
+
+        # Check that evidence includes the file path
+        for finding in findings:
+            for evidence_item in finding.evidence:
+                assert multiline_file_data["file_path"] in evidence_item.content, (
+                    f"Expected file path '{multiline_file_data['file_path']}' in evidence content, "
+                    f"got: {evidence_item.content}"
+                )
+
+    # C. Context Window Behaviour
+    def test_context_window_small_includes_surrounding_lines(
+        self,
+        multiline_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
+    ) -> None:
+        """Test that 'small' context window includes ±3 lines around match."""
+        # Arrange
+        handler = SourceCodeSchemaInputHandler(context_window="small")
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Context window test",
+            "description": "Test small context window",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [multiline_file_data],
+        }
+
+        # Act
+        findings = handler.analyse_source_code_data(source_data)
+
+        # Assert - evidence should include surrounding lines (±3)
+        assert len(findings) > 0, "Expected at least one finding"
+
+        # Find a payment-related finding (matches on line 11: "async processPayment")
+        payment_findings = [f for f in findings if "payment" in f.purpose.lower()]
+        assert len(payment_findings) > 0, "Expected payment-related finding"
+
+        # Evidence should contain multiple lines (not just the matched line)
+        evidence_content = payment_findings[0].evidence[0].content
+        line_count = evidence_content.count("\n") + 1
+        # Small window = ±3 lines = up to 7 lines total (3 before + match + 3 after)
+        assert line_count >= 2, (
+            f"Expected multiple lines in evidence for 'small' context window, got {line_count}"
+        )
+
+    def test_context_window_medium_includes_more_surrounding_lines(
+        self,
+        multiline_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
+    ) -> None:
+        """Test that 'medium' context window includes ±15 lines around match."""
+        # Arrange
+        handler = SourceCodeSchemaInputHandler(context_window="medium")
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Medium context test",
+            "description": "Test medium context window",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [multiline_file_data],
+        }
+
+        # Act
+        findings = handler.analyse_source_code_data(source_data)
+
+        # Assert
+        assert len(findings) > 0, "Expected at least one finding"
+
+        # Medium window should include more lines than small
+        # For a 24-line file with match in middle, medium (±15) includes entire file
+        payment_findings = [f for f in findings if "payment" in f.purpose.lower()]
+        assert len(payment_findings) > 0
+
+        evidence_content = payment_findings[0].evidence[0].content
+        small_handler = SourceCodeSchemaInputHandler(context_window="small")
+        small_findings = small_handler.analyse_source_code_data(source_data)
+        small_payment = [f for f in small_findings if "payment" in f.purpose.lower()]
+
+        # Medium context should have more or equal lines than small
+        medium_lines = evidence_content.count("\n")
+        small_lines = small_payment[0].evidence[0].content.count("\n")
+        assert medium_lines >= small_lines
+
+    def test_context_window_full_includes_entire_file(
+        self,
+        multiline_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
+    ) -> None:
+        """Test that 'full' context window includes entire file content."""
+        # Arrange
+        handler = SourceCodeSchemaInputHandler(context_window="full")
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Full context test",
+            "description": "Test full context window",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [multiline_file_data],
+        }
+
+        # Act
+        findings = handler.analyse_source_code_data(source_data)
+
+        # Assert
+        assert len(findings) > 0, "Expected at least one finding"
+
+        # Full context should include all lines from the file
+        evidence_content = findings[0].evidence[0].content
+        file_line_count = multiline_file_data["raw_content"].count("\n")
+        evidence_line_count = evidence_content.count("\n")
+
+        # Evidence includes file path line + all file lines
+        assert evidence_line_count >= file_line_count, (
+            f"Full context should include all {file_line_count} lines, "
+            f"but evidence has {evidence_line_count} lines"
+        )
+
+    # D. Edge Cases
+    def test_context_window_at_start_of_file(
+        self,
+        sample_file_metadata: SourceCodeFileMetadataDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
+    ) -> None:
+        """Test that context window handles matches near start of file gracefully."""
+        # Arrange - match on line 1
+        file_data: SourceCodeFileDict = {
+            "file_path": "src/payment.js",
+            "language": "javascript",
+            "raw_content": """const payment = require('stripe');
+const config = {};
+function init() {}
+function setup() {}
+function run() {}""",
+            "metadata": sample_file_metadata,
+        }
+        handler = SourceCodeSchemaInputHandler(context_window="small")
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Start of file test",
+            "description": "Test match at start",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [file_data],
+        }
+
+        # Act
+        findings = handler.analyse_source_code_data(source_data)
+
+        # Assert - should not crash and should include available context
+        payment_findings = [f for f in findings if "payment" in f.purpose.lower()]
+        assert len(payment_findings) > 0
+        evidence = payment_findings[0].evidence[0].content
+        # Should start from line 1 (no negative line numbers)
+        assert "   1→" in evidence, "Evidence should start from line 1"
+
+    def test_context_window_at_end_of_file(
+        self,
+        sample_file_metadata: SourceCodeFileMetadataDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
+    ) -> None:
+        """Test that context window handles matches near end of file gracefully."""
+        # Arrange - match on last line
+        file_data: SourceCodeFileDict = {
+            "file_path": "src/main.js",
+            "language": "javascript",
+            "raw_content": """function init() {}
+function setup() {}
+function run() {}
+const config = {};
+const payment = require('stripe');""",
+            "metadata": sample_file_metadata,
+        }
+        handler = SourceCodeSchemaInputHandler(context_window="small")
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "End of file test",
+            "description": "Test match at end",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [file_data],
+        }
+
+        # Act
+        findings = handler.analyse_source_code_data(source_data)
+
+        # Assert - should not crash and should include available context
+        payment_findings = [f for f in findings if "payment" in f.purpose.lower()]
+        assert len(payment_findings) > 0
+        evidence = payment_findings[0].evidence[0].content
+        # Last actual line number should be 5 (the file has 5 lines)
+        assert "   5→" in evidence, "Evidence should include line 5 (last line)"
+
+    # E. Visual Indicator
+    def test_matched_line_marked_with_indicator(
+        self,
+        multiline_file_data: SourceCodeFileDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
+    ) -> None:
+        """Test that the matched line is marked with an arrow indicator."""
+        # Arrange
+        handler = SourceCodeSchemaInputHandler(context_window="small")
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Indicator test",
+            "description": "Test arrow indicator",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [multiline_file_data],
+        }
+
+        # Act
+        findings = handler.analyse_source_code_data(source_data)
+
+        # Assert
+        assert len(findings) > 0, "Expected at least one finding"
+
+        evidence = findings[0].evidence[0].content
+        # Should have exactly one arrow indicator (→) for the matched line
+        assert "→" in evidence, (
+            "Evidence should contain arrow indicator for matched line"
+        )
+
+        # Non-matched lines should have space instead of arrow
+        lines = evidence.split("\n")
+        arrow_count = sum(1 for line in lines if "→" in line)
+        space_count = sum(
+            1 for line in lines if line and line[4:5] == " " and "→" not in line
+        )
+
+        # Should have at least one arrow and some non-arrow lines in context
+        assert arrow_count >= 1, "Should have at least one line with arrow indicator"
+        assert space_count >= 1, "Should have context lines without arrow"
