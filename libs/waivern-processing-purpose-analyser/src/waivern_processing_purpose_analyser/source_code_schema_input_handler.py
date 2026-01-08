@@ -5,23 +5,15 @@ No dependency on source code analyser package - relies on Message validation.
 
 TODO: Architecture improvements to consider:
 
-1. TypedDict Modelling: The TypedDict definitions (SourceCodeFunctionDict,
-   SourceCodeClassDict, etc.) have fields "omitted for brevity". Consider
-   completing these definitions to match the full source_code JSON schema,
-   or importing from a shared location if source-code-analyser exposes them.
+Pattern Matching Consolidation: This handler duplicates pattern matching
+logic from ProcessingPurposePatternMatcher. Both do:
+- Case-insensitive pattern matching against rulesets
+- Creating ProcessingPurposeFindingModel with compliance/evidence
 
-2. Pattern Matching Consolidation: This handler duplicates pattern matching
-   logic from ProcessingPurposePatternMatcher. Both do:
-   - Case-insensitive pattern matching against rulesets
-   - Creating ProcessingPurposeFindingModel with compliance/evidence
-
-   Consider extracting a shared base class or utility that both can use,
-   with the key difference being evidence extraction strategy:
-   - pattern_matcher: uses EvidenceExtractor for context windows
-   - source_code_handler: uses line-by-line evidence with line numbers
-
-   The structured element analysis (imports, functions, classes) is unique
-   to source code and should remain here.
+Consider extracting a shared base class or utility that both can use,
+with the key difference being evidence extraction strategy:
+- pattern_matcher: uses EvidenceExtractor for context windows
+- source_code_handler: uses line-by-line evidence with line numbers
 """
 
 from typing import NotRequired, TypedDict
@@ -42,39 +34,12 @@ from .schemas.types import (
 # These mirror the JSON schema structure without importing from SourceCodeAnalyser
 
 
-class SourceCodeImportDict(TypedDict):
-    """Import statement in source code."""
-
-    module: str
-    alias: NotRequired[str | None]
-    line: int
-    type: str  # "require", "require_once", "include", "include_once", "use", "import"
-
-
-class SourceCodeFunctionDict(TypedDict):
-    """Function definition in source code."""
-
-    name: str
-    line_start: int
-    line_end: int
-    # Additional fields from schema (parameters, return_type, etc.) omitted for brevity
-
-
-class SourceCodeClassDict(TypedDict):
-    """Class definition in source code."""
-
-    name: str
-    line_start: int
-    line_end: int
-    # Additional fields from schema (extends, implements, properties, methods) omitted for brevity
-
-
 class SourceCodeFileMetadataDict(TypedDict):
     """Metadata for a source code file."""
 
     file_size: int
     line_count: int
-    last_modified: str
+    last_modified: NotRequired[str | None]
 
 
 class SourceCodeFileDict(TypedDict):
@@ -83,9 +48,6 @@ class SourceCodeFileDict(TypedDict):
     file_path: str
     language: str
     raw_content: str
-    imports: NotRequired[list[SourceCodeImportDict]]
-    functions: NotRequired[list[SourceCodeFunctionDict]]
-    classes: NotRequired[list[SourceCodeClassDict]]
     metadata: SourceCodeFileMetadataDict
 
 
@@ -227,77 +189,6 @@ class SourceCodeSchemaInputHandler:
                             )
                         ]
                         finding = self._create_finding_from_data_collection_rule(
-                            rule=rule,
-                            matched_patterns=[pattern],
-                            evidence=evidence,
-                            file_metadata=file_metadata,
-                        )
-                        findings.append(finding)
-
-        # Analyse structured code elements for service integrations
-        findings.extend(self._analyse_structured_elements(file_data, file_metadata))
-
-        return findings
-
-    def _analyse_structured_elements(
-        self, file_data: SourceCodeFileDict, file_metadata: SourceCodeFileMetadata
-    ) -> list[ProcessingPurposeFindingModel]:
-        """Analyse structured code elements for service integration patterns."""
-        findings: list[ProcessingPurposeFindingModel] = []
-
-        # Analyse imports for service integrations
-        for import_item in file_data.get("imports", []):
-            text_lower = import_item["module"].lower()
-            for rule in self._service_integrations_rules:
-                for pattern in rule.patterns:
-                    pattern_lower = pattern.lower()
-                    if pattern_lower in text_lower:
-                        evidence = [
-                            BaseFindingEvidence(
-                                content=f"Import: {import_item['module']}",
-                            )
-                        ]
-                        finding = self._create_finding_from_service_integration_rule(
-                            rule=rule,
-                            matched_patterns=[pattern],
-                            evidence=evidence,
-                            file_metadata=file_metadata,
-                        )
-                        findings.append(finding)
-
-        # Analyse function names
-        for function in file_data.get("functions", []):
-            text_lower = function["name"].lower()
-            for rule in self._service_integrations_rules:
-                for pattern in rule.patterns:
-                    pattern_lower = pattern.lower()
-                    if pattern_lower in text_lower:
-                        evidence = [
-                            BaseFindingEvidence(
-                                content=f"Function: {function['name']}",
-                            )
-                        ]
-                        finding = self._create_finding_from_service_integration_rule(
-                            rule=rule,
-                            matched_patterns=[pattern],
-                            evidence=evidence,
-                            file_metadata=file_metadata,
-                        )
-                        findings.append(finding)
-
-        # Analyse class names
-        for class_item in file_data.get("classes", []):
-            text_lower = class_item["name"].lower()
-            for rule in self._service_integrations_rules:
-                for pattern in rule.patterns:
-                    pattern_lower = pattern.lower()
-                    if pattern_lower in text_lower:
-                        evidence = [
-                            BaseFindingEvidence(
-                                content=f"Class: {class_item['name']}",
-                            )
-                        ]
-                        finding = self._create_finding_from_service_integration_rule(
                             rule=rule,
                             matched_patterns=[pattern],
                             evidence=evidence,

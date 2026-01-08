@@ -47,9 +47,6 @@ message = Message(
             "file_path": "/app/PaymentController.php",
             "raw_content": "<?php class PaymentController { function processPayment() {} }",
             "language": "php",
-            "imports": [],
-            "functions": [{"name": "processPayment", "line_start": 1, "line_end": 1}],
-            "classes": [{"name": "PaymentController", "line_start": 1, "line_end": 1}],
             "metadata": {"file_size": 100, "line_count": 1, "last_modified": "2024-01-01T00:00:00Z"}
         }],
         "metadata": {"total_files": 1, "total_lines": 1, "analysis_timestamp": "2024-01-01T00:00:00Z"}
@@ -75,9 +72,6 @@ test_data = {
         "file_path": "/test.php",
         "raw_content": "<?php class Test {}",
         "language": "php",
-        "imports": [],
-        "functions": [],
-        "classes": [],
         "metadata": {"file_size": 10, "line_count": 1, "last_modified": "2024-01-01T00:00:00Z"}
     }],
     "metadata": {"total_files": 1, "total_lines": 1, "analysis_timestamp": "2024-01-01T00:00:00Z"}

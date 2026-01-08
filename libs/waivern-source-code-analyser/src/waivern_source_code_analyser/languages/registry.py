@@ -3,10 +3,13 @@
 Provides singleton registry with entry point discovery for language plugins.
 """
 
+import logging
 from importlib.metadata import entry_points
 from typing import Any, TypedDict
 
 from waivern_source_code_analyser.languages.protocols import LanguageSupport
+
+logger = logging.getLogger(__name__)
 
 
 class LanguageNotFoundError(Exception):
@@ -55,9 +58,7 @@ class LanguageRegistry:
 
         Entry point group: waivern.source_code_languages
 
-        Languages are validated by calling get_tree_sitter_language() to ensure
-        the tree-sitter binding is actually installed. Languages with missing
-        bindings are silently skipped.
+        Language plugins provide file extension to language name mappings.
         """
         if self._discovered:
             return
@@ -67,13 +68,10 @@ class LanguageRegistry:
             try:
                 language_class = ep.load()
                 language = language_class()
-                # Validate the tree-sitter binding is available
-                # This triggers the deferred import in get_tree_sitter_language()
-                language.get_tree_sitter_language()
                 self.register(language)
-            except ImportError:
-                # Language's tree-sitter binding not installed - skip
-                pass
+            except Exception:
+                # Skip languages that fail to load
+                logger.debug("Failed to load language plugin: %s", ep.name)
 
         self._discovered = True
 

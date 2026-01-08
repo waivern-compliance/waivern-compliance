@@ -9,22 +9,6 @@ dependencies = [
     "pydantic>=2.11.5",
 ]
 
-[project.optional-dependencies]
-php = [
-    "tree-sitter>=0.21.0",
-    "tree-sitter-php>=0.22.0",
-]
-typescript = [
-    "tree-sitter>=0.21.0",
-    "tree-sitter-typescript>=0.23.0",
-]
-all-languages = [
-    "waivern-source-code-analyser[php,typescript]",
-]
-# Backwards compatibility
-tree-sitter = ["waivern-source-code-analyser[php]"]
-all = ["waivern-source-code-analyser[all-languages]"]
-
 [project.entry-points."waivern.processors"]
 source_code_analyser = "waivern_source_code_analyser.analyser_factory:SourceCodeAnalyserFactory"
 

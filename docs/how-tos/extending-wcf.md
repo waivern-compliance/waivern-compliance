@@ -508,13 +508,6 @@ Create a language support module:
 
 ```python
 # my_package/languages/rust/__init__.py
-from tree_sitter import Language, Node
-
-from waivern_source_code_analyser.languages.models import (
-    CallableModel,
-    LanguageExtractionResult,
-    TypeDefinitionModel,
-)
 
 
 class RustLanguageSupport:
@@ -527,20 +520,11 @@ class RustLanguageSupport:
     @property
     def file_extensions(self) -> list[str]:
         return [".rs"]
-
-    def get_tree_sitter_language(self) -> Language:
-        import tree_sitter_rust as tsrust
-        return Language(tsrust.language())
-
-    def extract(self, root_node: Node, source_code: str) -> LanguageExtractionResult:
-        # Extract functions, structs, traits, enums, etc.
-        callables = self._extract_functions(root_node, source_code)
-        type_definitions = self._extract_types(root_node, source_code)
-        return LanguageExtractionResult(
-            callables=callables,
-            type_definitions=type_definitions,
-        )
 ```
+
+The `LanguageSupport` protocol requires:
+- `name` - Canonical language name
+- `file_extensions` - List of supported file extensions
 
 ### Registering Language Support
 
@@ -548,9 +532,6 @@ Register via entry points:
 
 ```toml
 # pyproject.toml
-[project.optional-dependencies]
-rust = ["tree-sitter-rust>=0.21.0"]
-
 [project.entry-points."waivern.source_code_languages"]
 rust = "my_package.languages.rust:RustLanguageSupport"
 ```
@@ -558,8 +539,8 @@ rust = "my_package.languages.rust:RustLanguageSupport"
 ### Built-in Languages
 
 WCF includes support for:
-- **PHP** - Functions, classes, methods
-- **TypeScript** - Functions, arrow functions, classes, interfaces, enums, type aliases
+- **PHP** - `.php`, `.php3`, `.php4`, `.php5`, `.phtml`
+- **TypeScript** - `.ts`, `.tsx`, `.mts`, `.cts`
 
 ## Package Distribution
 

@@ -809,14 +809,6 @@ class CustomerService {
                         "line_count": 15,
                         "last_modified": "2025-01-01T00:00:00Z",
                     },
-                    "functions": [
-                        {"name": "processPayment", "line_start": 3, "line_end": 6},
-                        {"name": "sendSupportEmail", "line_start": 8, "line_end": 11},
-                    ],
-                    "classes": [
-                        {"name": "CustomerService", "line_start": 2, "line_end": 12}
-                    ],
-                    "imports": [],
                 }
             ],
         }

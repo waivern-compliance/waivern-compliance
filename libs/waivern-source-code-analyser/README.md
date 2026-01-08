@@ -4,36 +4,26 @@ Source code analyser for the Waivern Compliance Framework (WCF).
 
 ## Overview
 
-The Source Code Analyser parses source code files and extracts structured information about functions, classes, interfaces, and other code elements. It transforms file content from the `standard_input` schema into the `source_code` schema.
+The Source Code Analyser detects programming languages and provides raw source code content for downstream compliance analysis. It transforms file content from the `standard_input` schema into the `source_code` schema.
 
 **Key characteristics:**
 
 - **Pure analyser** - No file I/O; receives input from connectors (typically FilesystemConnector)
-- **Tree-sitter based** - Uses tree-sitter for language-agnostic AST parsing
+- **Lightweight** - Simple file extension mapping for language detection
 - **Extensible** - Plugin architecture for adding new language support
 - **Pipeline-ready** - Designed to chain with downstream compliance analysers
 
 ### Supported Languages
 
-| Language   | Extensions       | Extracted Elements                                                   |
-| ---------- | ---------------- | -------------------------------------------------------------------- |
-| PHP        | `.php`, `.phtml` | Functions, classes, methods, properties                              |
-| TypeScript | `.ts`, `.tsx`    | Functions, arrow functions, classes, interfaces, enums, type aliases |
+| Language   | Extensions                                  |
+| ---------- | ------------------------------------------- |
+| PHP        | `.php`, `.php3`, `.php4`, `.php5`, `.phtml` |
+| TypeScript | `.ts`, `.tsx`, `.mts`, `.cts`               |
 
 ## Installation
 
 ```bash
-# Basic installation
 pip install waivern-source-code-analyser
-
-# With PHP support
-pip install waivern-source-code-analyser[php]
-
-# With TypeScript support
-pip install waivern-source-code-analyser[typescript]
-
-# All languages
-pip install waivern-source-code-analyser[tree-sitter]
 ```
 
 ## Quick Start
@@ -50,7 +40,7 @@ artifacts:
         path: ./src
         include_patterns: ["**/*.php"]
 
-  # Parse into structured code
+  # Detect language and prepare for analysis
   parsed_code:
     inputs: php_files
     process:
@@ -82,19 +72,19 @@ result = analyser.process(
     output_schema=Schema("source_code", "1.0.0")
 )
 
-# Access parsed structure
+# Access parsed data
 for file_data in result.content["data"]:
     print(f"File: {file_data['file_path']}")
-    print(f"Functions: {len(file_data['functions'])}")
-    print(f"Classes: {len(file_data['classes'])}")
+    print(f"Language: {file_data['language']}")
+    print(f"Lines: {file_data['metadata']['line_count']}")
 ```
 
 ## Schema Contracts
 
-| Direction | Schema                 | Description                |
-| --------- | ---------------------- | -------------------------- |
-| Input     | `standard_input/1.0.0` | File content with metadata |
-| Output    | `source_code/1.0.0`    | Parsed code structure      |
+| Direction | Schema                 | Description                        |
+| --------- | ---------------------- | ---------------------------------- |
+| Input     | `standard_input/1.0.0` | File content with metadata         |
+| Output    | `source_code/1.0.0`    | Language-detected source code      |
 
 ### Output Structure
 
@@ -105,32 +95,19 @@ for file_data in result.content["data"]:
     {
       "file_path": "/src/User.php",
       "language": "php",
-      "functions": [
-        {
-          "name": "validateEmail",
-          "parameters": [{"name": "email", "type": "string"}],
-          "return_type": "bool",
-          "line_start": 10,
-          "line_end": 15
-        }
-      ],
-      "classes": [
-        {
-          "name": "User",
-          "kind": "class",
-          "extends": ["BaseModel"],
-          "implements": ["Serializable"],
-          "methods": [...],
-          "properties": [...]
-        }
-      ],
-      "raw_content": "<?php ...",
+      "raw_content": "<?php class User { ... }",
       "metadata": {
         "file_size": 1024,
-        "line_count": 50
+        "line_count": 50,
+        "last_modified": "2024-01-01T00:00:00Z"
       }
     }
-  ]
+  ],
+  "metadata": {
+    "total_files": 1,
+    "total_lines": 50,
+    "analysis_timestamp": "2024-01-01T00:00:00Z"
+  }
 }
 ```
 
@@ -145,5 +122,4 @@ for file_data in result.content["data"]:
 
 For detailed documentation, see the `docs/` directory:
 
-- **[Architecture](docs/architecture.md)** - How information flows through the analyser, the separation of types vs callables, and component relationships
-- **[Extending Languages](docs/extending-languages.md)** - Guide for adding support for new programming languages
+- **[Architecture](docs/architecture.md)** - Component relationships and information flow

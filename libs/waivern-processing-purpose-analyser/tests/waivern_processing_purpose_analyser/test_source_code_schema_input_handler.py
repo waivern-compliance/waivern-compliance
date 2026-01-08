@@ -93,26 +93,6 @@ class CustomerService {
 }
 """,
             "metadata": sample_file_metadata,
-            "functions": [
-                {
-                    "name": "processPayment",
-                    "line_start": 3,
-                    "line_end": 6,
-                },
-                {
-                    "name": "sendSupportEmail",
-                    "line_start": 8,
-                    "line_end": 11,
-                },
-            ],
-            "classes": [
-                {
-                    "name": "CustomerService",
-                    "line_start": 2,
-                    "line_end": 12,
-                },
-            ],
-            "imports": [],
         }
 
     @pytest.fixture
@@ -140,32 +120,6 @@ class CloudStorageService {
 }
 """,
             "metadata": sample_file_metadata,
-            "functions": [
-                {
-                    "name": "uploadToAWS",
-                    "line_start": 5,
-                    "line_end": 9,
-                },
-                {
-                    "name": "uploadToDropbox",
-                    "line_start": 11,
-                    "line_end": 14,
-                },
-            ],
-            "classes": [
-                {
-                    "name": "CloudStorageService",
-                    "line_start": 4,
-                    "line_end": 15,
-                },
-            ],
-            "imports": [
-                {
-                    "module": "vendor/aws/aws-sdk-php/src/functions.php",
-                    "line": 2,
-                    "type": "require_once",
-                },
-            ],
         }
 
     @pytest.fixture
@@ -192,21 +146,6 @@ class UserFormHandler {
 }
 """,
             "metadata": sample_file_metadata,
-            "functions": [
-                {
-                    "name": "processForm",
-                    "line_start": 3,
-                    "line_end": 12,
-                },
-            ],
-            "classes": [
-                {
-                    "name": "UserFormHandler",
-                    "line_start": 2,
-                    "line_end": 13,
-                },
-            ],
-            "imports": [],
         }
 
     def test_init_creates_handler_successfully(self) -> None:
@@ -414,21 +353,6 @@ class EmptyClass {
 }
 """,
             "metadata": sample_file_metadata,
-            "functions": [
-                {
-                    "name": "doNothing",
-                    "line_start": 4,
-                    "line_end": 6,
-                },
-            ],
-            "classes": [
-                {
-                    "name": "EmptyClass",
-                    "line_start": 2,
-                    "line_end": 7,
-                },
-            ],
-            "imports": [],
         }
 
         source_data: SourceCodeSchemaDict = {
