@@ -13,12 +13,7 @@ The Source Code Analyser detects programming languages and provides raw source c
 - **Extensible** - Plugin architecture for adding new language support
 - **Pipeline-ready** - Designed to chain with downstream compliance analysers
 
-### Supported Languages
-
-| Language   | Extensions                                  |
-| ---------- | ------------------------------------------- |
-| PHP        | `.php`, `.php3`, `.php4`, `.php5`, `.phtml` |
-| TypeScript | `.ts`, `.tsx`, `.mts`, `.cts`               |
+**Supported languages:** JavaScript, PHP, TypeScript (see [full list with extensions](docs/architecture.md#supported-languages))
 
 ## Installation
 

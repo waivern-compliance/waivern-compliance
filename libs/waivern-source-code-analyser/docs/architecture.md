@@ -115,18 +115,19 @@ Languages are discovered via Python entry points:
          │
          │ implemented by
          ▼
-┌─────────────────┐  ┌─────────────────┐
-│ PHPLanguage     │  │ TypeScript      │
-│ Support         │  │ LanguageSupport │
-├─────────────────┤  ├─────────────────┤
-│ .php, .phtml    │  │ .ts, .tsx, .mts │
-└─────────────────┘  └─────────────────┘
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ JavaScript      │  │ PHPLanguage     │  │ TypeScript      │
+│ LanguageSupport │  │ Support         │  │ LanguageSupport │
+├─────────────────┤  ├─────────────────┤  ├─────────────────┤
+│ .js, .jsx, .mjs │  │ .php, .phtml    │  │ .ts, .tsx, .mts │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
 ### Supported Languages
 
 | Language   | Extensions                                  |
 | ---------- | ------------------------------------------- |
+| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs`               |
 | PHP        | `.php`, `.php3`, `.php4`, `.php5`, `.phtml` |
 | TypeScript | `.ts`, `.tsx`, `.mts`, `.cts`               |
 

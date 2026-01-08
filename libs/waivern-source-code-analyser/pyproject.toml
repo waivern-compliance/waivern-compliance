@@ -16,6 +16,7 @@ source_code_analyser = "waivern_source_code_analyser.analyser_factory:SourceCode
 source_code = "waivern_source_code_analyser:register_schemas"
 
 [project.entry-points."waivern.source_code_languages"]
+javascript = "waivern_source_code_analyser.languages.javascript:JavaScriptLanguageSupport"
 php = "waivern_source_code_analyser.languages.php:PHPLanguageSupport"
 typescript = "waivern_source_code_analyser.languages.typescript:TypeScriptLanguageSupport"
 
