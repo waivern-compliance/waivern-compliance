@@ -13,12 +13,7 @@ The Source Code Analyser detects programming languages and provides raw source c
 - **Extensible** - Plugin architecture for adding new language support
 - **Pipeline-ready** - Designed to chain with downstream compliance analysers
 
-### Supported Languages
-
-| Language   | Extensions                                  |
-| ---------- | ------------------------------------------- |
-| PHP        | `.php`, `.php3`, `.php4`, `.php5`, `.phtml` |
-| TypeScript | `.ts`, `.tsx`, `.mts`, `.cts`               |
+**Supported languages:** JavaScript, PHP, TypeScript (see [full list with extensions](docs/architecture.md#supported-languages))
 
 ## Installation
 
@@ -117,6 +112,41 @@ for file_data in result.content["data"]:
 | --------------- | -------- | ----------- | ----------------------------------- |
 | `language`      | `string` | Auto-detect | Override language detection         |
 | `max_file_size` | `int`    | `10485760`  | Skip files larger than this (bytes) |
+
+### Multi-Language Support
+
+Language detection is **per-file** based on file extension. Mixed codebases are handled automatically:
+
+```yaml
+artifacts:
+  # Analyse a mixed codebase - no language config needed
+  all_code:
+    source:
+      type: filesystem
+      properties:
+        path: ./src
+        include_patterns: ["**/*.js", "**/*.ts", "**/*.php"]
+
+  parsed_code:
+    inputs: all_code
+    process:
+      type: source_code_analyser
+      # No language property - each file detected individually
+```
+
+Each file in the output has its own `language` field:
+
+```json
+{
+  "data": [
+    { "file_path": "/src/app.js", "language": "javascript", ... },
+    { "file_path": "/src/utils.ts", "language": "typescript", ... },
+    { "file_path": "/src/User.php", "language": "php", ... }
+  ]
+}
+```
+
+**Note:** Setting the `language` config property filters to **only** that language (other file types are skipped). Without it, all supported languages are processed.
 
 ## Documentation
 

@@ -63,7 +63,6 @@ class SourceCodeDataModel(BaseSchemaOutput):
     schemaVersion: str = Field(description="Schema version identifier")
     name: str = Field(description="Name of the source code analysis")
     description: str = Field(description="Description of the analysis")
-    language: str = Field(description="Primary programming language")
     source: str = Field(description="Source path or identifier")
     metadata: SourceCodeAnalysisMetadataModel = Field(
         description="Analysis metadata including file counts and timestamp"

@@ -101,11 +101,6 @@
       "title": "Description",
       "type": "string"
     },
-    "language": {
-      "description": "Primary programming language",
-      "title": "Language",
-      "type": "string"
-    },
     "source": {
       "description": "Source path or identifier",
       "title": "Source",
@@ -128,7 +123,6 @@
     "schemaVersion",
     "name",
     "description",
-    "language",
     "source",
     "metadata",
     "data"
