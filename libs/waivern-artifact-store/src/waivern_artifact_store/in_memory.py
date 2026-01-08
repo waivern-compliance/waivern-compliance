@@ -58,7 +58,7 @@ class InMemoryArtifactStore(ArtifactStore):
             if step_id not in self._storage:
                 raise ArtifactNotFoundError(
                     f"Artifact '{step_id}' not found. "
-                    f"Ensure previous step has 'save_output: true'."
+                    f"Ensure the artifact exists in the runbook and completed successfully."
                 )
             return self._storage[step_id]
 
