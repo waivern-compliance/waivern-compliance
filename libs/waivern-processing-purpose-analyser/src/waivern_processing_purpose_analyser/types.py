@@ -1,11 +1,16 @@
 """Configuration types for processing purpose analyser."""
 
+from typing import Literal
+
 from pydantic import Field
 from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )
 from waivern_core import BaseComponentConfiguration
+
+# Type alias for source code context window sizes
+SourceCodeContextWindow = Literal["small", "medium", "full"]
 
 
 class ProcessingPurposeAnalyserConfig(BaseComponentConfiguration):
@@ -30,6 +35,11 @@ class ProcessingPurposeAnalyserConfig(BaseComponentConfiguration):
     llm_validation: LLMValidationConfig = Field(
         default_factory=lambda: LLMValidationConfig(enable_llm_validation=True),
         description="LLM validation configuration for filtering false positives",
+    )
+
+    source_code_context_window: SourceCodeContextWindow = Field(
+        default="small",
+        description="Context window size for source code evidence: 'small' (±3 lines), 'medium' (±15 lines), 'full' (entire file)",
     )
 
     # from_properties() inherited from BaseComponentConfiguration
