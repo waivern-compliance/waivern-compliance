@@ -617,6 +617,54 @@ class UserManager {
         assert "processUserData" in file_data["raw_content"]
         assert "UserManager" in file_data["raw_content"]
 
+    def test_process_skips_files_with_encoding_errors(self):
+        """Test that files with encoding issues are skipped gracefully.
+
+        Uses a lone surrogate character (U+D800) which is valid in Python
+        strings but cannot be encoded to UTF-8, triggering UnicodeEncodeError.
+        """
+        # Arrange - content with lone surrogate that fails UTF-8 encoding
+        # Lone surrogates (U+D800-U+DFFF) are invalid in UTF-8
+        invalid_content = "<?php // \ud800 invalid surrogate ?>"
+
+        data = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Encoding error test",
+            description="Test file with encoding issues",
+            source="/test",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content=invalid_content,
+                    metadata=FilesystemMetadata(
+                        source="/test/invalid_encoding.php",
+                        connector_type="filesystem_connector",
+                        file_path="/test/invalid_encoding.php",
+                    ),
+                ),
+            ],
+        )
+
+        message = Message(
+            id="test_encoding_error",
+            content=data.model_dump(exclude_none=True),
+            schema=Schema("standard_input", "1.0.0"),
+        )
+
+        config = SourceCodeAnalyserConfig.from_properties({})
+        analyser = SourceCodeAnalyser(config)
+
+        # Act - should not raise exception
+        result = analyser.process(
+            [message],
+            Schema("source_code", "1.0.0"),
+        )
+
+        # Assert - file should be skipped gracefully
+        content = result.content
+        assert len(content["data"]) == 0
+        assert content["metadata"]["total_files"] == 0
+
     def test_process_tsx_file(self):
         """Test analysing TSX file with React components."""
         # Arrange

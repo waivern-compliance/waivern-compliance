@@ -116,8 +116,15 @@ class SourceCodeAnalyser(Analyser):
                     "file_path", file_metadata.get("source", "unknown")
                 )
 
-                # Check source code size
-                code_size = len(source_code.encode("utf-8"))
+                # Check source code size (with encoding error handling)
+                try:
+                    code_size = len(source_code.encode("utf-8"))
+                except (UnicodeEncodeError, UnicodeDecodeError):
+                    logger.warning(
+                        f"Skipping file with encoding issues: {file_path_str}"
+                    )
+                    continue
+
                 if code_size > self._config.max_file_size:
                     logger.warning(
                         f"Skipping large source: {file_path_str} ({code_size} bytes)"
