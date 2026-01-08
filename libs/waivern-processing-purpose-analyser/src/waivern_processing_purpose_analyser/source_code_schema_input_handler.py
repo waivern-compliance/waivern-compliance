@@ -36,6 +36,7 @@ from .types import SourceCodeContextWindow
 CONTEXT_WINDOW_SIZES: dict[SourceCodeContextWindow, int | None] = {
     "small": 3,  # ±3 lines
     "medium": 15,  # ±15 lines
+    "large": 50,  # ±50 lines
     "full": None,  # Entire file
 }
 
@@ -99,7 +100,7 @@ class SourceCodeSchemaInputHandler:
 
         Args:
             context_window: Size of context to include around matches.
-                'small' = ±3 lines, 'medium' = ±15 lines, 'full' = entire file.
+                'small' = ±3 lines, 'medium' = ±15 lines, 'large' = ±50 lines, 'full' = entire file.
 
         """
         self.context_window: SourceCodeContextWindow = context_window

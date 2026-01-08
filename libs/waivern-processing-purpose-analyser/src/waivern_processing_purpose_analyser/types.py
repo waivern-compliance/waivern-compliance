@@ -10,7 +10,7 @@ from waivern_analysers_shared.types import (
 from waivern_core import BaseComponentConfiguration
 
 # Type alias for source code context window sizes
-SourceCodeContextWindow = Literal["small", "medium", "full"]
+SourceCodeContextWindow = Literal["small", "medium", "large", "full"]
 
 
 class ProcessingPurposeAnalyserConfig(BaseComponentConfiguration):
@@ -39,7 +39,7 @@ class ProcessingPurposeAnalyserConfig(BaseComponentConfiguration):
 
     source_code_context_window: SourceCodeContextWindow = Field(
         default="small",
-        description="Context window size for source code evidence: 'small' (±3 lines), 'medium' (±15 lines), 'full' (entire file)",
+        description="Context window size for source code evidence: 'small' (±3 lines), 'medium' (±15 lines), 'large' (±50 lines), 'full' (entire file)",
     )
 
     # from_properties() inherited from BaseComponentConfiguration

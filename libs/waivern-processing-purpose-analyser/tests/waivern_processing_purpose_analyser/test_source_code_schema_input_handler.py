@@ -692,6 +692,58 @@ export default PaymentService;
         small_lines = small_payment[0].evidence[0].content.count("\n")
         assert medium_lines >= small_lines
 
+    def test_context_window_large_includes_more_lines_than_medium(
+        self,
+        sample_file_metadata: SourceCodeFileMetadataDict,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataDict,
+    ) -> None:
+        """Test that 'large' context window includes ±50 lines around match."""
+        # Arrange - create a file with many lines where match is in middle
+        lines = [f"function line{i}() {{}}" for i in range(100)]
+        lines[50] = (
+            "async processPayment(amount) { return amount; }"  # Match on line 51
+        )
+        file_data: SourceCodeFileDict = {
+            "file_path": "src/large_file.js",
+            "language": "javascript",
+            "raw_content": "\n".join(lines),
+            "metadata": sample_file_metadata,
+        }
+
+        handler_large = SourceCodeSchemaInputHandler(context_window="large")
+        handler_medium = SourceCodeSchemaInputHandler(context_window="medium")
+        source_data: SourceCodeSchemaDict = {
+            "schemaVersion": "1.0.0",
+            "name": "Large context test",
+            "description": "Test large context window",
+            "source": "source_code",
+            "metadata": sample_analysis_metadata,
+            "data": [file_data],
+        }
+
+        # Act
+        large_findings = handler_large.analyse_source_code_data(source_data)
+        medium_findings = handler_medium.analyse_source_code_data(source_data)
+
+        # Assert
+        assert len(large_findings) > 0, "Expected at least one finding"
+        assert len(medium_findings) > 0, "Expected at least one finding"
+
+        # Large context (±50 lines) should include more lines than medium (±15 lines)
+        large_payment = [f for f in large_findings if "payment" in f.purpose.lower()]
+        medium_payment = [f for f in medium_findings if "payment" in f.purpose.lower()]
+
+        assert len(large_payment) > 0
+        assert len(medium_payment) > 0
+
+        large_lines = large_payment[0].evidence[0].content.count("\n")
+        medium_lines = medium_payment[0].evidence[0].content.count("\n")
+
+        assert large_lines > medium_lines, (
+            f"Large context ({large_lines} lines) should have more lines than "
+            f"medium context ({medium_lines} lines)"
+        )
+
     def test_context_window_full_includes_entire_file(
         self,
         multiline_file_data: SourceCodeFileDict,

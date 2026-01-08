@@ -166,6 +166,16 @@ class TestSourceCodeContextWindowConfig:
         # Assert
         assert config.source_code_context_window == "medium"
 
+    def test_config_accepts_large_context_window(self) -> None:
+        """Test that config accepts 'large' as valid context window value."""
+        # Arrange & Act
+        config = ProcessingPurposeAnalyserConfig.from_properties(
+            {"source_code_context_window": "large"}
+        )
+
+        # Assert
+        assert config.source_code_context_window == "large"
+
     def test_config_accepts_full_context_window(self) -> None:
         """Test that config accepts 'full' as valid context window value."""
         # Arrange & Act

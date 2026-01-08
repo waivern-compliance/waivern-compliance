@@ -12,6 +12,7 @@ class EvidenceContextSize(str, Enum):
     SMALL = "small"
     MEDIUM = "medium"
     LARGE = "large"
+    FULL = "full"
 
 
 class PatternMatchingConfig(BaseModel):
@@ -29,7 +30,7 @@ class PatternMatchingConfig(BaseModel):
     @classmethod
     def validate_evidence_context_size(cls, v: str) -> str:
         """Validate evidence context size values."""
-        allowed = ["small", "medium", "large"]
+        allowed = ["small", "medium", "large", "full"]
         if v not in allowed:
             raise ValueError(
                 f"evidence_context_size must be one of {allowed}, got: {v}"
