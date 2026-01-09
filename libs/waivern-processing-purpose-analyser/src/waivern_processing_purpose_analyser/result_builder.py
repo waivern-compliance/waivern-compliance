@@ -64,7 +64,7 @@ class ProcessingPurposeResultBuilder:
         summary = self._build_findings_summary(validated_findings)
 
         validation_summary = None
-        if validation_applied and len(original_findings) > 0:
+        if validation_applied:
             validation_summary = self._build_validation_summary(
                 original_findings, validated_findings
             )
@@ -106,13 +106,6 @@ class ProcessingPurposeResultBuilder:
             Summary with purpose categories and totals.
 
         """
-        if not findings:
-            return ProcessingPurposeSummary(
-                total_findings=0,
-                purposes_identified=0,
-                purpose_categories={},
-            )
-
         unique_purposes = set(f.purpose for f in findings)
         purpose_categories: dict[str, int] = {}
 
@@ -144,11 +137,7 @@ class ProcessingPurposeResultBuilder:
         original_count = len(original_findings)
         validated_count = len(validated_findings)
         false_positives_removed = original_count - validated_count
-
-        if original_count > 0:
-            validation_effectiveness = (false_positives_removed / original_count) * 100
-        else:
-            validation_effectiveness = 0.0
+        validation_effectiveness = (false_positives_removed / original_count) * 100
 
         original_purposes = {f.purpose for f in original_findings}
         validated_purposes = {f.purpose for f in validated_findings}

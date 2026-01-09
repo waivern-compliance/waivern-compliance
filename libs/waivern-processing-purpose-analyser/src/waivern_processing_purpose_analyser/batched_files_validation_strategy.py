@@ -113,10 +113,7 @@ class ProcessingPurposeBatchedFilesStrategy(
         global_index = 0
 
         for file_path in files:
-            findings = findings_by_file.get(file_path, [])
-            if not findings:
-                continue
-
+            findings = findings_by_file[file_path]
             lines.append(f"\nFile: {file_path}")
             for finding in findings:
                 line_num = self._extract_line_number(finding)
