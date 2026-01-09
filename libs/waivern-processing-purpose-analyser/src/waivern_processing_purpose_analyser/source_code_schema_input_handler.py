@@ -1,7 +1,6 @@
 """Handler for processing purpose detection in source code.
 
-Uses dict-based schema handling with TypedDict for type safety.
-No dependency on source code analyser package - relies on Message validation.
+Uses authoritative Pydantic models from waivern-source-code-analyser.
 
 TODO: Architecture improvements to consider:
 
@@ -17,7 +16,6 @@ with the key difference being evidence extraction strategy:
 """
 
 from collections.abc import Generator, Sequence
-from typing import NotRequired, TypedDict
 
 from pydantic import BaseModel
 from waivern_core.schemas import BaseFindingEvidence
@@ -25,6 +23,10 @@ from waivern_rulesets import RulesetLoader
 from waivern_rulesets.data_collection import DataCollectionRule
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 from waivern_rulesets.service_integrations import ServiceIntegrationRule
+from waivern_source_code_analyser.schemas.source_code import (
+    SourceCodeDataModel,
+    SourceCodeFileDataModel,
+)
 
 from .schemas.types import (
     ProcessingPurposeFindingMetadata,
@@ -40,45 +42,6 @@ CONTEXT_WINDOW_SIZES: dict[SourceCodeContextWindow, int | None] = {
     "full": None,  # Entire file
 }
 
-# TypedDict definitions for source_code schema v1.0.0
-# These mirror the JSON schema structure without importing from SourceCodeAnalyser
-
-
-class SourceCodeFileMetadataDict(TypedDict):
-    """Metadata for a source code file."""
-
-    file_size: int
-    line_count: int
-    last_modified: NotRequired[str | None]
-
-
-class SourceCodeFileDict(TypedDict):
-    """Individual source code file data."""
-
-    file_path: str
-    language: str
-    raw_content: str
-    metadata: SourceCodeFileMetadataDict
-
-
-class SourceCodeAnalysisMetadataDict(TypedDict):
-    """Metadata for source code analysis."""
-
-    total_files: int
-    total_lines: int
-    analysis_timestamp: str
-
-
-class SourceCodeSchemaDict(TypedDict):
-    """Top-level source_code schema structure (v1.0.0)."""
-
-    schemaVersion: str
-    name: str
-    description: str
-    source: str
-    metadata: SourceCodeAnalysisMetadataDict
-    data: list[SourceCodeFileDict]
-
 
 class SourceCodeFileMetadata(BaseModel):
     """Metadata for a source code file being analyzed."""
@@ -90,9 +53,8 @@ class SourceCodeFileMetadata(BaseModel):
 class SourceCodeSchemaInputHandler:
     """Handler for processing purpose detection in source code.
 
-    Processes dict-based source_code schema data using TypedDict for type safety.
-    Trusts Message validation - no Pydantic models needed.
-    Uses .get() for optional fields (imports, functions, classes).
+    Processes source_code schema data using authoritative Pydantic models
+    from waivern-source-code-analyser.
     """
 
     def __init__(self, context_window: SourceCodeContextWindow = "small") -> None:
@@ -115,15 +77,35 @@ class SourceCodeSchemaInputHandler:
             "local/data_collection/1.0.0", DataCollectionRule
         )
 
-    def analyse_source_code_data(
-        self, data: SourceCodeSchemaDict
-    ) -> list[ProcessingPurposeFindingModel]:
-        """Analyse source code analysis data for processing purpose patterns.
+    def analyse(self, data: object) -> list[ProcessingPurposeFindingModel]:
+        """Analyse input data for processing purpose patterns.
+
+        This is the public boundary - accepts object to keep analyser schema-agnostic.
+        Type safety is maintained internally via SourceCodeDataModel.
 
         Args:
-            data: Dict conforming to source_code schema v1.0.0.
-                  Type-checked via TypedDict for compile-time safety.
-                  Data has already been validated by Message against JSON schema.
+            data: Source code data (expected to be SourceCodeDataModel from reader).
+
+        Returns:
+            List of processing purpose findings detected in the source code
+
+        Raises:
+            TypeError: If data is not a SourceCodeDataModel instance.
+
+        """
+        # Validate at boundary - handler owns source code schema knowledge
+        if not isinstance(data, SourceCodeDataModel):
+            raise TypeError(f"Expected SourceCodeDataModel, got {type(data).__name__}")
+
+        return self._analyse_validated_data(data)
+
+    def _analyse_validated_data(
+        self, data: SourceCodeDataModel
+    ) -> list[ProcessingPurposeFindingModel]:
+        """Analyse validated source code data (internal, type-safe).
+
+        Args:
+            data: Validated SourceCodeDataModel instance.
 
         Returns:
             List of processing purpose findings detected in the source code
@@ -131,9 +113,9 @@ class SourceCodeSchemaInputHandler:
         """
         findings: list[ProcessingPurposeFindingModel] = []
 
-        for file_data in data["data"]:
+        for file_data in data.data:
             file_metadata = SourceCodeFileMetadata(
-                source="source_code", file_path=file_data["file_path"]
+                source="source_code", file_path=file_data.file_path
             )
 
             # Analyse each file with all rulesets
@@ -143,13 +125,13 @@ class SourceCodeSchemaInputHandler:
 
     def _analyse_file_data(
         self,
-        file_data: SourceCodeFileDict,
+        file_data: SourceCodeFileDataModel,
         file_metadata: SourceCodeFileMetadata,
     ) -> list[ProcessingPurposeFindingModel]:
         """Analyse a single source code file for processing purpose patterns."""
         findings: list[ProcessingPurposeFindingModel] = []
-        lines = file_data["raw_content"].splitlines()
-        file_path = file_data["file_path"]
+        lines = file_data.raw_content.splitlines()
+        file_path = file_data.file_path
 
         # Analyse processing purpose rules
         for rule in self._processing_purposes_rules:

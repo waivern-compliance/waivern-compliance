@@ -9,6 +9,7 @@ dependencies = [
     "waivern-llm",
     "waivern-analysers-shared",
     "waivern-rulesets",
+    "waivern-source-code-analyser",
     "pydantic>=2.11.5",
 ]
 

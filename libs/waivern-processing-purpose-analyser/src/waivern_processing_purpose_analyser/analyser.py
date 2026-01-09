@@ -3,31 +3,25 @@
 import importlib
 import logging
 from types import ModuleType
-from typing import cast, override
+from typing import override
 
 from waivern_core import Analyser, InputRequirement, update_analyses_chain
 from waivern_core.message import Message
 from waivern_core.schemas import (
     AnalysisChainEntry,
     BaseAnalysisOutputMetadata,
-    BaseMetadata,
     ChainEntryValidationStats,
     Schema,
-    StandardInputDataModel,
 )
 from waivern_llm import BaseLLMService
 
 from .llm_validation_strategy import processing_purpose_validation_strategy
-from .pattern_matcher import ProcessingPurposePatternMatcher
+from .protocols import SchemaInputHandler
 from .schemas.types import (
     ProcessingPurposeFindingModel,
     ProcessingPurposeFindingOutput,
     ProcessingPurposeSummary,
     ProcessingPurposeValidationSummary,
-)
-from .source_code_schema_input_handler import (
-    SourceCodeSchemaDict,
-    SourceCodeSchemaInputHandler,
 )
 from .types import ProcessingPurposeAnalyserConfig
 
@@ -53,15 +47,8 @@ class ProcessingPurposeAnalyser(Analyser):
             llm_service: Optional LLM service for validation (injected by factory)
 
         """
-        # Store strongly-typed configuration
-        self._config: ProcessingPurposeAnalyserConfig = config
-        self._pattern_matcher = ProcessingPurposePatternMatcher(config.pattern_matching)
+        self._config = config
         self._llm_service = llm_service
-
-        # Initialise source code handler for SourceCodeSchema processing
-        self._source_code_handler = SourceCodeSchemaInputHandler(
-            context_window=config.source_code_context_window
-        )
 
     @classmethod
     @override
@@ -72,14 +59,14 @@ class ProcessingPurposeAnalyser(Analyser):
     def _load_reader(self, schema: Schema) -> ModuleType:
         """Dynamically import reader module.
 
-        Python's import system automatically caches modules in sys.modules,
-        so repeated imports are fast and don't require manual caching.
+        The reader module provides both read() and create_handler() functions,
+        co-locating schema reading and handler creation.
 
         Args:
             schema: Input schema to load reader for
 
         Returns:
-            Reader module with read() function
+            Reader module with read() and create_handler() functions
 
         Raises:
             ModuleNotFoundError: If reader module doesn't exist for this version
@@ -117,9 +104,9 @@ class ProcessingPurposeAnalyser(Analyser):
     ) -> Message:
         """Process data to identify processing purposes.
 
-        Supports two input schema types:
-        - standard_input: Text-based content analysis
-        - source_code: PHP source code analysis
+        Supports multiple input schema types. The reader module for each schema
+        provides both data reading and handler creation, keeping schema knowledge
+        co-located.
 
         Args:
             inputs: List of input messages (single message expected)
@@ -137,24 +124,13 @@ class ProcessingPurposeAnalyser(Analyser):
 
         logger.debug(f"Processing data with schema: {input_schema.name}")
 
-        # Load reader and transform to canonical Pydantic model
-        try:
-            reader = self._load_reader(input_schema)
-            typed_data = reader.read(message.content)
-        except (ModuleNotFoundError, AttributeError) as e:
-            raise ValueError(f"Unsupported input schema: {input_schema.name}") from e
+        # Load reader module and create handler (lazy instantiation)
+        reader = self._load_reader_module(input_schema)
+        input_data = reader.read(message.content)
+        handler = self._create_handler(reader)
 
-        # Process based on schema type
-        if input_schema.name == "standard_input":
-            findings = self._process_standard_input_data(
-                cast(StandardInputDataModel[BaseMetadata], typed_data)
-            )
-        elif input_schema.name == "source_code":
-            findings = self._process_source_code_data(
-                cast(SourceCodeSchemaDict, typed_data)
-            )
-        else:
-            raise ValueError(f"Unsupported input schema: {input_schema.name}")
+        # Process using schema-specific handler
+        findings = handler.analyse(input_data)
 
         # Apply LLM validation if enabled and findings exist
         validated_findings, validation_applied = self._validate_findings_with_llm(
@@ -187,46 +163,35 @@ class ProcessingPurposeAnalyser(Analyser):
             updated_chain,
         )
 
-    def _process_standard_input_data(
-        self, typed_data: StandardInputDataModel[BaseMetadata]
-    ) -> list[ProcessingPurposeFindingModel]:
-        """Process standard_input schema data using runners.
+    def _load_reader_module(self, schema: Schema) -> ModuleType:
+        """Load reader module for the given schema.
 
         Args:
-            typed_data: Validated standard input data
+            schema: Input schema to load reader for
 
         Returns:
-            List of findings from pattern matching
+            Reader module
+
+        Raises:
+            ValueError: If schema is not supported
 
         """
-        findings: list[ProcessingPurposeFindingModel] = []
+        try:
+            return self._load_reader(schema)
+        except (ModuleNotFoundError, AttributeError) as e:
+            raise ValueError(f"Unsupported input schema: {schema.name}") from e
 
-        # Process each data item in the array using the pattern runner
-        for data_item in typed_data.data:
-            # Get content and metadata
-            content = data_item.content
-            item_metadata = data_item.metadata
-
-            # Use pattern matcher for analysis
-            item_findings = self._pattern_matcher.find_patterns(content, item_metadata)
-            findings.extend(item_findings)
-
-        return findings
-
-    def _process_source_code_data(
-        self, typed_data: SourceCodeSchemaDict
-    ) -> list[ProcessingPurposeFindingModel]:
-        """Process source_code schema data.
+    def _create_handler(self, reader: ModuleType) -> SchemaInputHandler:
+        """Create handler from reader module.
 
         Args:
-            typed_data: TypedDict dict (validated by Message against source_code schema)
+            reader: Reader module with create_handler() function
 
         Returns:
-            Processing purpose findings
+            Handler implementing SchemaInputHandler protocol
 
         """
-        findings = self._source_code_handler.analyse_source_code_data(typed_data)
-        return findings
+        return reader.create_handler(self._config)
 
     def _validate_findings_with_llm(
         self, findings: list[ProcessingPurposeFindingModel]
