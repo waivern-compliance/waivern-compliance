@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, TypeAdapter
 
 # Type alias for validation results
 ValidationResultType = Literal["TRUE_POSITIVE", "FALSE_POSITIVE", "UNKNOWN"]
@@ -14,10 +14,14 @@ RecommendedActionType = Literal["keep", "discard", "flag_for_review"]
 class LLMValidationResultModel(BaseModel):
     """Strongly typed model for LLM validation results.
 
-    This model was extracted from both Personal Data and Processing Purpose
-    analysers to eliminate code duplication and ensure consistency.
+    This model represents a single validation result from the LLM, including
+    the finding index for explicit matching back to the original finding.
     """
 
+    finding_index: int = Field(
+        ge=0,
+        description="Index of the finding this result corresponds to",
+    )
     validation_result: ValidationResultType = Field(
         default="UNKNOWN", description="The validation result"
     )
@@ -33,3 +37,7 @@ class LLMValidationResultModel(BaseModel):
     recommended_action: RecommendedActionType = Field(
         default="keep", description="Recommended action from LLM"
     )
+
+
+# TypeAdapter for validating a list of validation results from LLM response
+LLMValidationResultListAdapter = TypeAdapter(list[LLMValidationResultModel])

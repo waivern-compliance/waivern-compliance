@@ -23,6 +23,7 @@ class TestValidationDecisionEngine:
     def test_should_keep_true_positive_with_keep_action(self) -> None:
         """Test that TRUE_POSITIVE with keep action is kept."""
         result = LLMValidationResultModel(
+            finding_index=0,
             validation_result="TRUE_POSITIVE",
             confidence=0.9,
             reasoning="Valid finding",
@@ -36,6 +37,7 @@ class TestValidationDecisionEngine:
     def test_should_keep_flag_for_review_action(self) -> None:
         """Test that FLAG_FOR_REVIEW action is always kept."""
         result = LLMValidationResultModel(
+            finding_index=0,
             validation_result="TRUE_POSITIVE",  # Even with TRUE_POSITIVE
             confidence=0.7,
             reasoning="Requires manual review",
@@ -49,6 +51,7 @@ class TestValidationDecisionEngine:
     def test_should_discard_false_positive(self) -> None:
         """Test that FALSE_POSITIVE findings are discarded."""
         result = LLMValidationResultModel(
+            finding_index=0,
             validation_result="FALSE_POSITIVE",
             confidence=0.95,
             reasoning="This is documentation example",
@@ -62,6 +65,7 @@ class TestValidationDecisionEngine:
     def test_should_keep_uncertain_findings_conservatively(self) -> None:
         """Test that uncertain findings are kept for safety."""
         result = LLMValidationResultModel(
+            finding_index=0,
             validation_result="UNKNOWN",
             confidence=0.5,
             reasoning="Unclear classification",
@@ -86,6 +90,7 @@ class TestValidationDecisionEngine:
 
         for action, expected in actions_and_expected:
             result = LLMValidationResultModel(
+                finding_index=0,
                 validation_result="TRUE_POSITIVE" if expected else "FALSE_POSITIVE",
                 recommended_action=action,
             )

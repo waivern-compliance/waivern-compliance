@@ -16,7 +16,7 @@ from waivern_llm import BaseLLMService
 from .decision_engine import ValidationDecisionEngine
 from .file_content import FileContentProvider, FileInfo
 from .json_utils import extract_json_from_llm_response
-from .models import LLMValidationResultModel
+from .models import LLMValidationResultListAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -385,37 +385,29 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
             List of findings that should be kept.
 
         """
+        # Validate response structure using strongly-typed model
+        try:
+            typed_results = LLMValidationResultListAdapter.validate_python(
+                validation_results
+            )
+        except Exception as e:
+            logger.error(f"Failed to validate LLM response structure: {e}")
+            logger.warning("Returning all findings due to malformed LLM response")
+            return list(findings)
+
         validated: list[T] = []
         processed_indices: set[int] = set()
 
-        for result_data in validation_results:
-            # Extract finding_index from raw data (not part of model)
-            raw_index = result_data.get("finding_index")
-            if raw_index is None:
-                logger.warning("Validation result missing finding_index")
-                continue
-
-            try:
-                finding_index = int(raw_index)  # type: ignore[arg-type]
-            except (TypeError, ValueError):
-                logger.warning(f"Invalid finding_index: {raw_index}")
-                continue
-
-            if finding_index < 0 or finding_index >= len(findings):
+        for result in typed_results:
+            if result.finding_index >= len(findings):
                 logger.warning(
-                    f"Finding index {finding_index} out of range [0, {len(findings)})"
+                    f"Finding index {result.finding_index} out of range "
+                    f"[0, {len(findings)})"
                 )
                 continue
 
-            processed_indices.add(finding_index)
-            finding = findings[finding_index]
-
-            try:
-                result = LLMValidationResultModel.model_validate(result_data)
-            except Exception as e:
-                logger.warning(f"Failed to parse validation result: {e}")
-                # Use defaults for malformed results (consistent with existing strategy)
-                result = LLMValidationResultModel()
+            processed_indices.add(result.finding_index)
+            finding = findings[result.finding_index]
 
             # Log validation decision
             ValidationDecisionEngine.log_validation_decision(result, finding)

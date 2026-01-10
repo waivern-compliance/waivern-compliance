@@ -12,9 +12,7 @@ from waivern_analysers_shared.types import LLMValidationConfig
 
 from .decision_engine import ValidationDecisionEngine
 from .json_utils import extract_json_from_llm_response
-from .models import (
-    LLMValidationResultModel,
-)
+from .models import LLMValidationResultListAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +185,8 @@ class LLMValidationStrategy[T: BaseFindingModel](ABC):
     ) -> list[T]:
         """Filter findings based on LLM validation results.
 
-        Shared logic extracted from both analysers.
+        Uses fail-safe approach: findings not mentioned by LLM are included
+        (with warning), consistent with existing validation error handling.
 
         Args:
             findings_batch: Original batch of findings
@@ -197,24 +196,29 @@ class LLMValidationStrategy[T: BaseFindingModel](ABC):
             List of validated findings that should be kept
 
         """
-        validated_findings: list[T] = []
+        # Validate response structure using strongly-typed model
+        try:
+            typed_results = LLMValidationResultListAdapter.validate_python(
+                validation_results
+            )
+        except Exception as e:
+            logger.error(f"Failed to validate LLM response structure: {e}")
+            logger.warning("Returning all findings due to malformed LLM response")
+            return list(findings_batch)
 
-        for i, result_data in enumerate(validation_results):
-            if i >= len(findings_batch):
+        validated_findings: list[T] = []
+        processed_indices: set[int] = set()
+
+        for result in typed_results:
+            if result.finding_index >= len(findings_batch):
                 logger.warning(
-                    f"Validation result index {i} exceeds batch size {len(findings_batch)}"
+                    f"Finding index {result.finding_index} out of range "
+                    f"[0, {len(findings_batch)})"
                 )
                 continue
 
-            # Use strongly typed model for validation results
-            try:
-                result = LLMValidationResultModel.model_validate(result_data)
-            except Exception as e:
-                logger.warning(f"Failed to parse validation result {i}: {e}")
-                # Use defaults for malformed results
-                result = LLMValidationResultModel()
-
-            finding = findings_batch[i]
+            processed_indices.add(result.finding_index)
+            finding = findings_batch[result.finding_index]
 
             # Log validation decision using optimized engine
             ValidationDecisionEngine.log_validation_decision(result, finding)
@@ -222,5 +226,15 @@ class LLMValidationStrategy[T: BaseFindingModel](ABC):
             # Determine if finding should be kept using optimised decision engine
             if ValidationDecisionEngine.should_keep_finding(result, finding):
                 validated_findings.append(finding)
+
+        # Fail-safe: include findings not mentioned by LLM
+        unprocessed_indices = set(range(len(findings_batch))) - processed_indices
+        if unprocessed_indices:
+            logger.warning(
+                f"LLM omitted {len(unprocessed_indices)} findings from response, "
+                "including them unvalidated"
+            )
+            for idx in sorted(unprocessed_indices):
+                validated_findings.append(findings_batch[idx])
 
         return validated_findings

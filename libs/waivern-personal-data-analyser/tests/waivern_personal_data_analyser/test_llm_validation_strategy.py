@@ -430,7 +430,11 @@ class TestPersonalDataValidationStrategy:
         llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
-        """Test handling when validation results count doesn't match findings count."""
+        """Test handling when validation results count doesn't match findings count.
+
+        Fail-safe behavior: Findings omitted from LLM response are included
+        (with warning) rather than silently dropped.
+        """
         # Arrange - Only one result for two findings
         mock_llm_response = json.dumps(
             [
@@ -441,7 +445,7 @@ class TestPersonalDataValidationStrategy:
                     "reasoning": "Valid email",
                     "recommended_action": "keep",
                 },
-                # Missing second result
+                # Missing second result - will be included unvalidated (fail-safe)
             ]
         )
         mock_llm_service.analyse_data.return_value = mock_llm_response
@@ -451,10 +455,10 @@ class TestPersonalDataValidationStrategy:
             sample_findings, llm_config, mock_llm_service
         )
 
-        # Assert
-        # Should only process the findings that have validation results
-        assert len(result) == 1
-        assert result[0].category == "email"
+        # Assert - Both findings included (one validated, one unvalidated fail-safe)
+        assert len(result) == 2
+        result_categories = {f.category for f in result}
+        assert result_categories == {"email", "phone"}
         assert success is True
 
     def test_handles_various_batch_sizes(

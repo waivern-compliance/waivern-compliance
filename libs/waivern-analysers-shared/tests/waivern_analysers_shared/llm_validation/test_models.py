@@ -15,13 +15,30 @@ class TestLLMValidationResultModel:
         Production impact: Invalid confidence scores break validation pipeline.
         """
         # Valid confidence range should work
-        valid_result = LLMValidationResultModel(confidence=0.85)
+        valid_result = LLMValidationResultModel(finding_index=0, confidence=0.85)
         assert valid_result.confidence == 0.85
 
         # Invalid confidence - too high (prevents data corruption)
         with pytest.raises(ValueError):
-            LLMValidationResultModel(confidence=1.5)
+            LLMValidationResultModel(finding_index=0, confidence=1.5)
 
         # Invalid confidence - negative (prevents data corruption)
         with pytest.raises(ValueError):
-            LLMValidationResultModel(confidence=-0.1)
+            LLMValidationResultModel(finding_index=0, confidence=-0.1)
+
+    def test_finding_index_must_be_non_negative(self) -> None:
+        """Test that finding_index must be a non-negative integer.
+
+        Business requirement: Finding indices must reference valid positions in finding lists.
+        Production impact: Negative indices would cause incorrect finding matching.
+        """
+        # Valid index should work
+        valid_result = LLMValidationResultModel(finding_index=0)
+        assert valid_result.finding_index == 0
+
+        valid_result = LLMValidationResultModel(finding_index=42)
+        assert valid_result.finding_index == 42
+
+        # Invalid index - negative (prevents incorrect finding matching)
+        with pytest.raises(ValueError):
+            LLMValidationResultModel(finding_index=-1)
