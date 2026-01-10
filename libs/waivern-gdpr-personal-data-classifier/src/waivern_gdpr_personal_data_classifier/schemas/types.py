@@ -1,6 +1,6 @@
 """Schema data models for GDPR personal data classification findings."""
 
-from typing import ClassVar, Literal
+from typing import ClassVar, Literal, override
 
 from pydantic import BaseModel, Field
 from waivern_core.schemas import (
@@ -71,6 +71,11 @@ class GDPRPersonalDataFindingModel(BaseFindingModel):
     metadata: GDPRPersonalDataFindingMetadata | None = Field(
         default=None, description="Additional metadata from the original data source"
     )
+
+    @override
+    def __str__(self) -> str:
+        """Human-readable representation for logging and debugging."""
+        return f"{self.indicator_type} ({self.privacy_category}) - {', '.join(self.matched_patterns)}"
 
 
 class GDPRPersonalDataSummary(BaseModel):

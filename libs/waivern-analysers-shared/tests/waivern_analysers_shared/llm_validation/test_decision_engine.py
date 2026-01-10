@@ -1,12 +1,20 @@
 """Tests for shared validation decision engine."""
 
-from unittest.mock import Mock
+from waivern_core.schemas import BaseFindingEvidence, BaseFindingModel
 
 from waivern_analysers_shared.llm_validation import (
     LLMValidationResultModel,
     RecommendedActionType,
     ValidationDecisionEngine,
 )
+
+
+def _create_test_finding(pattern: str = "test_pattern") -> BaseFindingModel:
+    """Create a test finding for validation tests."""
+    return BaseFindingModel(
+        evidence=[BaseFindingEvidence(content="test content")],
+        matched_patterns=[pattern],
+    )
 
 
 class TestValidationDecisionEngine:
@@ -21,15 +29,9 @@ class TestValidationDecisionEngine:
             recommended_action="keep",
         )
 
-        finding = Mock()
-        get_identifier = Mock(return_value="test_finding")
+        finding = _create_test_finding()
 
-        assert (
-            ValidationDecisionEngine.should_keep_finding(
-                result, finding, get_identifier
-            )
-            is True
-        )
+        assert ValidationDecisionEngine.should_keep_finding(result, finding) is True
 
     def test_should_keep_flag_for_review_action(self) -> None:
         """Test that FLAG_FOR_REVIEW action is always kept."""
@@ -40,15 +42,9 @@ class TestValidationDecisionEngine:
             recommended_action="flag_for_review",
         )
 
-        finding = Mock()
-        get_identifier = Mock(return_value="test_finding")
+        finding = _create_test_finding()
 
-        assert (
-            ValidationDecisionEngine.should_keep_finding(
-                result, finding, get_identifier
-            )
-            is True
-        )
+        assert ValidationDecisionEngine.should_keep_finding(result, finding) is True
 
     def test_should_discard_false_positive(self) -> None:
         """Test that FALSE_POSITIVE findings are discarded."""
@@ -59,17 +55,9 @@ class TestValidationDecisionEngine:
             recommended_action="discard",
         )
 
-        finding = Mock()
-        get_identifier = Mock(return_value="email_example")
+        finding = _create_test_finding("email_example")
 
-        # Should return False and log the removal
-        assert (
-            ValidationDecisionEngine.should_keep_finding(
-                result, finding, get_identifier
-            )
-            is False
-        )
-        get_identifier.assert_called_once_with(finding)
+        assert ValidationDecisionEngine.should_keep_finding(result, finding) is False
 
     def test_should_keep_uncertain_findings_conservatively(self) -> None:
         """Test that uncertain findings are kept for safety."""
@@ -80,21 +68,14 @@ class TestValidationDecisionEngine:
             recommended_action="keep",
         )
 
-        finding = Mock()
-        get_identifier = Mock(return_value="uncertain_finding")
+        finding = _create_test_finding("uncertain_pattern")
 
         # Should keep uncertain findings conservatively
-        assert (
-            ValidationDecisionEngine.should_keep_finding(
-                result, finding, get_identifier
-            )
-            is True
-        )
+        assert ValidationDecisionEngine.should_keep_finding(result, finding) is True
 
     def test_handles_various_action_types(self) -> None:
         """Test handling of different recommended action types."""
-        finding = Mock()
-        get_identifier = Mock(return_value="test_finding")
+        finding = _create_test_finding()
 
         # Test all valid action types
         actions_and_expected: list[tuple[RecommendedActionType, bool]] = [
@@ -109,7 +90,5 @@ class TestValidationDecisionEngine:
                 recommended_action=action,
             )
 
-            actual = ValidationDecisionEngine.should_keep_finding(
-                result, finding, get_identifier
-            )
+            actual = ValidationDecisionEngine.should_keep_finding(result, finding)
             assert actual == expected, f"Action '{action}' should result in {expected}"

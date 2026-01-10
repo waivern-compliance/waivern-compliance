@@ -1,6 +1,6 @@
 """Schema data models for data subject findings."""
 
-from typing import ClassVar
+from typing import ClassVar, override
 
 from pydantic import BaseModel, Field
 from waivern_core.schemas import (
@@ -36,6 +36,11 @@ class DataSubjectFindingModel(BaseFindingModel):
     metadata: DataSubjectFindingMetadata | None = Field(
         default=None, description="Additional metadata about the finding"
     )
+
+    @override
+    def __str__(self) -> str:
+        """Human-readable representation for logging and debugging."""
+        return f"{self.primary_category} - {', '.join(self.matched_patterns)}"
 
 
 class DataSubjectSummary(BaseModel):

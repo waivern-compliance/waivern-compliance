@@ -1,6 +1,6 @@
 """Schema data models for processing purpose findings."""
 
-from typing import ClassVar
+from typing import ClassVar, override
 
 from pydantic import BaseModel, Field
 from waivern_core.schemas import (
@@ -44,6 +44,11 @@ class ProcessingPurposeFindingModel(BaseFindingModel):
         default=None,
         description="Data source from DataCollectionRule (when applicable)",
     )
+
+    @override
+    def __str__(self) -> str:
+        """Human-readable representation for logging and debugging."""
+        return f"{self.purpose} - {', '.join(self.matched_patterns)}"
 
 
 class ProcessingPurposeSummary(BaseModel):

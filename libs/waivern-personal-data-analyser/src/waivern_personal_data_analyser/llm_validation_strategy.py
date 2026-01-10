@@ -45,11 +45,6 @@ class PersonalDataValidationStrategy(LLMValidationStrategy[PersonalDataIndicator
             )
         return findings_for_prompt
 
-    @override
-    def get_finding_identifier(self, finding: PersonalDataIndicatorModel) -> str:
-        """Get human-readable identifier for personal data indicator."""
-        return f"{finding.category} - {', '.join(finding.matched_patterns)}"
-
 
 def personal_data_validation_strategy(
     findings: list[PersonalDataIndicatorModel],

@@ -6,10 +6,11 @@ that fit within token limits, and handles oversized files gracefully.
 """
 
 import json
-from dataclasses import dataclass
 from typing import override
 from unittest.mock import Mock
 
+from pydantic import Field
+from waivern_core.schemas import BaseFindingEvidence, BaseFindingModel
 from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.llm_validation.batched_files_strategy import (
@@ -19,13 +20,26 @@ from waivern_analysers_shared.llm_validation.batched_files_strategy import (
 from waivern_analysers_shared.llm_validation.file_content import FileInfo
 
 
-@dataclass
-class MockFinding:
+class MockFinding(BaseFindingModel):
     """Mock finding for testing."""
 
-    id: str
-    file_path: str
-    purpose: str
+    file_path: str = Field(description="File path for testing")
+    purpose: str = Field(description="Purpose for testing")
+
+    @override
+    def __str__(self) -> str:
+        """Human-readable representation for logging."""
+        return f"{self.purpose} - {', '.join(self.matched_patterns)}"
+
+
+def _create_finding(purpose: str, file_path: str) -> MockFinding:
+    """Create a mock finding with required base fields."""
+    return MockFinding(
+        file_path=file_path,
+        purpose=purpose,
+        evidence=[BaseFindingEvidence(content=f"Evidence for {purpose}")],
+        matched_patterns=[purpose.lower()],
+    )
 
 
 class MockBatchedFilesStrategy(BatchedFilesStrategyBase[MockFinding]):
@@ -82,8 +96,8 @@ class TestValidateFindingsWithFileContent:
             {"src/app.py": "def process_payment(): pass"}
         )
         findings = [
-            MockFinding("1", "src/app.py", "Payment"),
-            MockFinding("2", "src/app.py", "Documentation"),
+            _create_finding("Payment", "src/app.py"),
+            _create_finding("Documentation", "src/app.py"),
         ]
         mock_llm = Mock(spec=BaseLLMService)
         mock_llm.analyse_data.return_value = json.dumps(
@@ -114,7 +128,7 @@ class TestValidateFindingsWithFileContent:
 
         assert success is True
         assert len(result) == 1
-        assert result[0].id == "1"
+        assert result[0].purpose == "Payment"
 
     def test_returns_all_findings_when_all_true_positives(self) -> None:
         """Should keep all findings when LLM marks all as TRUE_POSITIVE."""
@@ -123,8 +137,8 @@ class TestValidateFindingsWithFileContent:
             {"src/app.py": "def process_payment(): pass"}
         )
         findings = [
-            MockFinding("1", "src/app.py", "Payment"),
-            MockFinding("2", "src/app.py", "Analytics"),
+            _create_finding("Payment", "src/app.py"),
+            _create_finding("Analytics", "src/app.py"),
         ]
         mock_llm = Mock(spec=BaseLLMService)
         mock_llm.analyse_data.return_value = json.dumps(
@@ -162,7 +176,7 @@ class TestValidateFindingsWithFileContent:
         file_provider = MockFileContentProvider(
             {"src/app.py": "def process_payment(): pass"}
         )
-        findings = [MockFinding("1", "src/app.py", "Payment")]
+        findings = [_create_finding("Payment", "src/app.py")]
         mock_llm = Mock(spec=BaseLLMService)
         mock_llm.analyse_data.side_effect = Exception("LLM unavailable")
 
@@ -175,7 +189,7 @@ class TestValidateFindingsWithFileContent:
 
         assert success is False
         assert len(result) == 1
-        assert result[0].id == "1"
+        assert result[0].purpose == "Payment"
 
     def test_empty_findings_returns_empty_list(self) -> None:
         """Should return empty list for empty findings."""
@@ -201,9 +215,9 @@ class TestValidateFindingsWithFileContent:
             {"src/app.py": "def process_payment(): pass"}
         )
         findings = [
-            MockFinding("1", "src/app.py", "Payment"),
-            MockFinding("2", "src/app.py", "Analytics"),
-            MockFinding("3", "src/app.py", "Logging"),
+            _create_finding("Payment", "src/app.py"),
+            _create_finding("Analytics", "src/app.py"),
+            _create_finding("Logging", "src/app.py"),
         ]
         mock_llm = Mock(spec=BaseLLMService)
         # LLM only returns result for finding 0, omits 1 and 2
@@ -229,8 +243,8 @@ class TestValidateFindingsWithFileContent:
         # All 3 findings should be in result (1 validated + 2 unvalidated)
         assert success is True
         assert len(result) == 3
-        result_ids = {f.id for f in result}
-        assert result_ids == {"1", "2", "3"}
+        result_purposes = {f.purpose for f in result}
+        assert result_purposes == {"Payment", "Analytics", "Logging"}
 
     def test_rejects_invalid_finding_indices(self) -> None:
         """Should reject negative and out-of-range finding indices from LLM."""
@@ -239,8 +253,8 @@ class TestValidateFindingsWithFileContent:
             {"src/app.py": "def process_payment(): pass"}
         )
         findings = [
-            MockFinding("1", "src/app.py", "Payment"),
-            MockFinding("2", "src/app.py", "Analytics"),
+            _create_finding("Payment", "src/app.py"),
+            _create_finding("Analytics", "src/app.py"),
         ]
         mock_llm = Mock(spec=BaseLLMService)
         # LLM returns invalid indices: -1 (negative) and 99 (out of range)
@@ -273,8 +287,8 @@ class TestValidateFindingsWithFileContent:
         # Both findings should be included (invalid indices ignored, fail-safe applies)
         assert success is True
         assert len(result) == 2
-        result_ids = {f.id for f in result}
-        assert result_ids == {"1", "2"}
+        result_purposes = {f.purpose for f in result}
+        assert result_purposes == {"Payment", "Analytics"}
 
     def test_includes_findings_from_oversized_files(self) -> None:
         """Should include findings from files too large to batch."""
@@ -287,8 +301,8 @@ class TestValidateFindingsWithFileContent:
             }
         )
         findings = [
-            MockFinding("1", "src/huge.py", "FromHuge"),
-            MockFinding("2", "src/small.py", "FromSmall"),
+            _create_finding("FromHuge", "src/huge.py"),
+            _create_finding("FromSmall", "src/small.py"),
         ]
         mock_llm = Mock(spec=BaseLLMService)
         mock_llm.analyse_data.return_value = json.dumps(
@@ -313,8 +327,8 @@ class TestValidateFindingsWithFileContent:
         # Both findings should be included
         assert success is True
         assert len(result) == 2
-        result_ids = {f.id for f in result}
-        assert result_ids == {"1", "2"}
+        result_purposes = {f.purpose for f in result}
+        assert result_purposes == {"FromHuge", "FromSmall"}
 
     def test_includes_findings_from_missing_files(self) -> None:
         """Should include findings from files not found in provider (fail-safe)."""
@@ -326,8 +340,8 @@ class TestValidateFindingsWithFileContent:
             }
         )
         findings = [
-            MockFinding("1", "src/exists.py", "FromExisting"),
-            MockFinding("2", "src/missing.py", "FromMissing"),  # File not in provider
+            _create_finding("FromExisting", "src/exists.py"),
+            _create_finding("FromMissing", "src/missing.py"),  # File not in provider
         ]
         mock_llm = Mock(spec=BaseLLMService)
         mock_llm.analyse_data.return_value = json.dumps(
@@ -352,5 +366,5 @@ class TestValidateFindingsWithFileContent:
         # Both findings should be included (missing file findings included unvalidated)
         assert success is True
         assert len(result) == 2
-        result_ids = {f.id for f in result}
-        assert result_ids == {"1", "2"}
+        result_purposes = {f.purpose for f in result}
+        assert result_purposes == {"FromExisting", "FromMissing"}

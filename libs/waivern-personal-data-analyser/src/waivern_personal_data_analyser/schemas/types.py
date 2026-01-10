@@ -1,6 +1,6 @@
 """Schema data models for personal data indicator findings."""
 
-from typing import ClassVar
+from typing import ClassVar, override
 
 from pydantic import BaseModel, Field
 from waivern_core.schemas import (
@@ -36,6 +36,11 @@ class PersonalDataIndicatorModel(BaseFindingModel):
     metadata: PersonalDataIndicatorMetadata | None = Field(
         default=None, description="Additional metadata from the original data source"
     )
+
+    @override
+    def __str__(self) -> str:
+        """Human-readable representation for logging and debugging."""
+        return f"{self.category} - {', '.join(self.matched_patterns)}"
 
 
 class PersonalDataIndicatorSummary(BaseModel):

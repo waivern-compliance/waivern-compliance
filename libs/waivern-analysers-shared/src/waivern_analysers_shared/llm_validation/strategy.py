@@ -5,6 +5,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
+from waivern_core.schemas import BaseFindingModel
 from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.types import LLMValidationConfig
@@ -18,11 +19,13 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-class LLMValidationStrategy[T](ABC):
+class LLMValidationStrategy[T: BaseFindingModel](ABC):
     """Abstract base class for LLM validation strategies.
 
     This eliminates code duplication between Personal Data and Processing Purpose
     analysers by providing shared batch processing and validation logic.
+
+    Type parameter T is the finding type, must be a BaseFindingModel subclass.
     """
 
     @abstractmethod
@@ -214,27 +217,10 @@ class LLMValidationStrategy[T](ABC):
             finding = findings_batch[i]
 
             # Log validation decision using optimized engine
-            ValidationDecisionEngine.log_validation_decision(
-                result, finding, self.get_finding_identifier
-            )
+            ValidationDecisionEngine.log_validation_decision(result, finding)
 
             # Determine if finding should be kept using optimised decision engine
-            if ValidationDecisionEngine.should_keep_finding(
-                result, finding, self.get_finding_identifier
-            ):
+            if ValidationDecisionEngine.should_keep_finding(result, finding):
                 validated_findings.append(finding)
 
         return validated_findings
-
-    @abstractmethod
-    def get_finding_identifier(self, finding: T) -> str:
-        """Get a human-readable identifier for the finding for logging.
-
-        Args:
-            finding: The finding object
-
-        Returns:
-            Human-readable identifier string
-
-        """
-        pass

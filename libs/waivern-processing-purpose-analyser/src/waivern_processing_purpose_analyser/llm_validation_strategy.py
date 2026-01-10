@@ -50,11 +50,6 @@ class ProcessingPurposeValidationStrategy(
         """Convert ProcessingPurposeFindingModel objects to format expected by validation prompt."""
         return [finding.model_dump() for finding in findings_batch]
 
-    @override
-    def get_finding_identifier(self, finding: ProcessingPurposeFindingModel) -> str:
-        """Get human-readable identifier for processing purpose finding."""
-        return f"{finding.purpose} - {', '.join(finding.matched_patterns)}"
-
 
 def processing_purpose_validation_strategy(
     findings: list[ProcessingPurposeFindingModel],

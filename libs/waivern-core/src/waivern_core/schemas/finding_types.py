@@ -7,6 +7,7 @@ including finding metadata, evidence, and analysis chain tracking.
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, ClassVar
@@ -63,6 +64,10 @@ class BaseFindingModel(BaseModel):
     its own risk model in its output schema.
     """
 
+    id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
+        description="Unique identifier for this finding (UUID)",
+    )
     evidence: list[BaseFindingEvidence] = Field(
         min_length=1,
         description="Evidence items with content and timestamps for this finding",

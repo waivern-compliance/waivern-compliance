@@ -10,6 +10,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
+from waivern_core.schemas import BaseFindingModel
 from waivern_llm import BaseLLMService
 
 from .decision_engine import ValidationDecisionEngine
@@ -94,13 +95,13 @@ class _BatchBuilder[T]:
         return self._batches
 
 
-class BatchedFilesStrategyBase[T](ABC):
+class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
     """Abstract base class for batched-files validation strategies.
 
     Provides token-aware batching infrastructure. Concrete implementations
     define analyser-specific behaviour (file path extraction, prompt generation).
 
-    Type parameter T is the finding type (e.g., ProcessingPurposeFindingModel).
+    Type parameter T is the finding type, must be a BaseFindingModel subclass.
     """
 
     @abstractmethod
@@ -417,13 +418,9 @@ class BatchedFilesStrategyBase[T](ABC):
                 result = LLMValidationResultModel()
 
             # Log validation decision
-            ValidationDecisionEngine.log_validation_decision(
-                result, finding, self._get_finding_id
-            )
+            ValidationDecisionEngine.log_validation_decision(result, finding)
 
-            if ValidationDecisionEngine.should_keep_finding(
-                result, finding, self._get_finding_id
-            ):
+            if ValidationDecisionEngine.should_keep_finding(result, finding):
                 validated.append(finding)
 
         # Fail-safe: include findings not mentioned by LLM
@@ -437,7 +434,3 @@ class BatchedFilesStrategyBase[T](ABC):
                 validated.append(findings[idx])
 
         return validated
-
-    def _get_finding_id(self, finding: T) -> str:
-        """Get identifier for logging. Override for better logging."""
-        return str(finding)

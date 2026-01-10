@@ -150,8 +150,3 @@ class ProcessingPurposeBatchedFilesStrategy(
 
         # Source code handler always includes arrow indicator
         raise ValueError("Evidence missing line number indicator")
-
-    @override
-    def _get_finding_id(self, finding: ProcessingPurposeFindingModel) -> str:
-        """Get human-readable identifier for logging."""
-        return f"{finding.purpose} - {', '.join(finding.matched_patterns)}"
