@@ -410,10 +410,17 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
         # Call LLM
         logger.debug(f"Validating batch with {len(batch_findings)} findings")
         response = llm_service.analyse_data("", prompt)
+        logger.debug(f"LLM raw response (first 2000 chars):\n{response[:2000]}")
 
         # Parse response
-        clean_json = extract_json_from_llm_response(response)
-        validation_results = json.loads(clean_json)
+        try:
+            clean_json = extract_json_from_llm_response(response)
+            logger.debug(f"Extracted JSON (first 500 chars): {clean_json[:500]}")
+            validation_results = json.loads(clean_json)
+        except (ValueError, json.JSONDecodeError) as e:
+            logger.error(f"JSON extraction/parsing failed: {e}")
+            logger.error(f"Full LLM response was:\n{response}")
+            raise
 
         # Filter findings based on validation results
         return self._filter_findings_by_results(batch_findings, validation_results)

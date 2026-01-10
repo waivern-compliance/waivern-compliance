@@ -71,11 +71,13 @@ class ProcessingPurposeBatchedFilesStrategy(
         # Build findings section with global indices
         findings_section = self._build_findings_section(batch.files, findings_by_file)
 
+        # Use replace() instead of format() to avoid issues with curly braces
+        # in source code content (e.g., JavaScript objects, Python dicts)
         prompt_template = _PROMPT_PATH.read_text()
-        return prompt_template.format(
-            source_files_section=source_files_section,
-            findings_section=findings_section,
-            validation_mode=validation_mode,
+        return (
+            prompt_template.replace("{validation_mode}", validation_mode)
+            .replace("{source_files_section}", source_files_section)
+            .replace("{findings_section}", findings_section)
         )
 
     def _build_source_files_section(

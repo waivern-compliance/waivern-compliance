@@ -2,6 +2,21 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "WCT: Run Runbook",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "wct",
+            "args": [
+                "run",
+                "${input:runbookPath}",
+                "-v"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
             "name": "Tests: Run All",
             "type": "debugpy",
             "request": "launch",
@@ -17,6 +32,14 @@
                 "PYTHONPATH": "${workspaceFolder}/src"
             },
             "envFile": "${workspaceFolder}/.env"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "runbookPath",
+            "type": "promptString",
+            "description": "Path to runbook YAML file",
+            "default": "apps/wct/runbooks/samples/filesystem-processing-purpose.yaml"
         }
     ]
 }
