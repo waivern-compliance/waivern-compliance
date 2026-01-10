@@ -1,8 +1,17 @@
 """Tests for shared LLM validation models - focuses on business-critical constraints."""
 
 import pytest
+from waivern_core.schemas import BaseFindingEvidence, BaseFindingModel
 
 from waivern_analysers_shared.llm_validation import LLMValidationResultModel
+
+
+def _create_test_finding() -> BaseFindingModel:
+    """Create a test finding with auto-generated UUID."""
+    return BaseFindingModel(
+        evidence=[BaseFindingEvidence(content="test content")],
+        matched_patterns=["test_pattern"],
+    )
 
 
 class TestLLMValidationResultModel:
@@ -14,31 +23,32 @@ class TestLLMValidationResultModel:
         Business requirement: Confidence scores must be 0.0-1.0 for proper risk assessment.
         Production impact: Invalid confidence scores break validation pipeline.
         """
+        finding = _create_test_finding()
+
         # Valid confidence range should work
-        valid_result = LLMValidationResultModel(finding_index=0, confidence=0.85)
+        valid_result = LLMValidationResultModel(finding_id=finding.id, confidence=0.85)
         assert valid_result.confidence == 0.85
 
         # Invalid confidence - too high (prevents data corruption)
         with pytest.raises(ValueError):
-            LLMValidationResultModel(finding_index=0, confidence=1.5)
+            LLMValidationResultModel(finding_id=finding.id, confidence=1.5)
 
         # Invalid confidence - negative (prevents data corruption)
         with pytest.raises(ValueError):
-            LLMValidationResultModel(finding_index=0, confidence=-0.1)
+            LLMValidationResultModel(finding_id=finding.id, confidence=-0.1)
 
-    def test_finding_index_must_be_non_negative(self) -> None:
-        """Test that finding_index must be a non-negative integer.
+    def test_finding_id_must_be_non_empty(self) -> None:
+        """Test that finding_id must be a non-empty string.
 
-        Business requirement: Finding indices must reference valid positions in finding lists.
-        Production impact: Negative indices would cause incorrect finding matching.
+        Business requirement: Finding IDs must reference valid findings.
+        Production impact: Empty IDs would fail to match any finding.
         """
-        # Valid index should work
-        valid_result = LLMValidationResultModel(finding_index=0)
-        assert valid_result.finding_index == 0
+        finding = _create_test_finding()
 
-        valid_result = LLMValidationResultModel(finding_index=42)
-        assert valid_result.finding_index == 42
+        # Valid ID should work - use actual finding.id (UUID)
+        valid_result = LLMValidationResultModel(finding_id=finding.id)
+        assert valid_result.finding_id == finding.id
 
-        # Invalid index - negative (prevents incorrect finding matching)
+        # Invalid ID - empty string
         with pytest.raises(ValueError):
-            LLMValidationResultModel(finding_index=-1)
+            LLMValidationResultModel(finding_id="")

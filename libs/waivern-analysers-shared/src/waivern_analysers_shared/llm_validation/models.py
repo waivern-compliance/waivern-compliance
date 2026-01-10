@@ -15,12 +15,13 @@ class LLMValidationResultModel(BaseModel):
     """Strongly typed model for LLM validation results.
 
     This model represents a single validation result from the LLM, including
-    the finding index for explicit matching back to the original finding.
+    the finding ID for explicit matching back to the original finding.
+    Using UUIDs instead of indices makes matching robust against LLM reordering.
     """
 
-    finding_index: int = Field(
-        ge=0,
-        description="Index of the finding this result corresponds to",
+    finding_id: str = Field(
+        min_length=1,
+        description="UUID of the finding this result corresponds to (echo back exactly)",
     )
     validation_result: ValidationResultType = Field(
         default="UNKNOWN", description="The validation result"

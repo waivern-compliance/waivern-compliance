@@ -206,19 +206,18 @@ class LLMValidationStrategy[T: BaseFindingModel](ABC):
             logger.warning("Returning all findings due to malformed LLM response")
             return list(findings_batch)
 
+        # Build lookup from finding ID to finding
+        findings_by_id = {f.id: f for f in findings_batch}
         validated_findings: list[T] = []
-        processed_indices: set[int] = set()
+        processed_ids: set[str] = set()
 
         for result in typed_results:
-            if result.finding_index >= len(findings_batch):
-                logger.warning(
-                    f"Finding index {result.finding_index} out of range "
-                    f"[0, {len(findings_batch)})"
-                )
+            finding = findings_by_id.get(result.finding_id)
+            if finding is None:
+                logger.warning(f"Unknown finding_id from LLM: {result.finding_id}")
                 continue
 
-            processed_indices.add(result.finding_index)
-            finding = findings_batch[result.finding_index]
+            processed_ids.add(result.finding_id)
 
             # Log validation decision using optimized engine
             ValidationDecisionEngine.log_validation_decision(result, finding)
@@ -228,13 +227,13 @@ class LLMValidationStrategy[T: BaseFindingModel](ABC):
                 validated_findings.append(finding)
 
         # Fail-safe: include findings not mentioned by LLM
-        unprocessed_indices = set(range(len(findings_batch))) - processed_indices
-        if unprocessed_indices:
+        unprocessed_ids = set(findings_by_id.keys()) - processed_ids
+        if unprocessed_ids:
             logger.warning(
-                f"LLM omitted {len(unprocessed_indices)} findings from response, "
+                f"LLM omitted {len(unprocessed_ids)} findings from response, "
                 "including them unvalidated"
             )
-            for idx in sorted(unprocessed_indices):
-                validated_findings.append(findings_batch[idx])
+            for finding_id in unprocessed_ids:
+                validated_findings.append(findings_by_id[finding_id])
 
         return validated_findings

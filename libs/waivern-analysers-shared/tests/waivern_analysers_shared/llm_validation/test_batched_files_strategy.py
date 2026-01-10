@@ -103,14 +103,14 @@ class TestValidateFindingsWithFileContent:
         mock_llm.analyse_data.return_value = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Real payment processing",
                     "recommended_action": "keep",
                 },
                 {
-                    "finding_index": 1,
+                    "finding_id": findings[1].id,
                     "validation_result": "FALSE_POSITIVE",
                     "confidence": 0.85,
                     "reasoning": "Just documentation",
@@ -144,14 +144,14 @@ class TestValidateFindingsWithFileContent:
         mock_llm.analyse_data.return_value = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Real processing",
                     "recommended_action": "keep",
                 },
                 {
-                    "finding_index": 1,
+                    "finding_id": findings[1].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.85,
                     "reasoning": "Real analytics",
@@ -224,7 +224,7 @@ class TestValidateFindingsWithFileContent:
         mock_llm.analyse_data.return_value = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Real payment",
@@ -246,8 +246,8 @@ class TestValidateFindingsWithFileContent:
         result_purposes = {f.purpose for f in result}
         assert result_purposes == {"Payment", "Analytics", "Logging"}
 
-    def test_rejects_invalid_finding_indices(self) -> None:
-        """Should reject negative and out-of-range finding indices from LLM."""
+    def test_rejects_invalid_finding_ids(self) -> None:
+        """Should reject unknown finding IDs from LLM and include findings via fail-safe."""
         strategy = MockBatchedFilesStrategy()
         file_provider = MockFileContentProvider(
             {"src/app.py": "def process_payment(): pass"}
@@ -257,18 +257,18 @@ class TestValidateFindingsWithFileContent:
             _create_finding("Analytics", "src/app.py"),
         ]
         mock_llm = Mock(spec=BaseLLMService)
-        # LLM returns invalid indices: -1 (negative) and 99 (out of range)
+        # LLM returns invalid/unknown finding IDs
         mock_llm.analyse_data.return_value = json.dumps(
             [
                 {
-                    "finding_index": -1,  # Invalid: negative
+                    "finding_id": "unknown-id-1",
                     "validation_result": "FALSE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Bad",
                     "recommended_action": "discard",
                 },
                 {
-                    "finding_index": 99,  # Invalid: out of range
+                    "finding_id": "unknown-id-2",
                     "validation_result": "FALSE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Bad",
@@ -284,7 +284,7 @@ class TestValidateFindingsWithFileContent:
             llm_service=mock_llm,
         )
 
-        # Both findings should be included (invalid indices ignored, fail-safe applies)
+        # Both findings should be included (unknown IDs ignored, fail-safe applies)
         assert success is True
         assert len(result) == 2
         result_purposes = {f.purpose for f in result}
@@ -305,10 +305,11 @@ class TestValidateFindingsWithFileContent:
             _create_finding("FromSmall", "src/small.py"),
         ]
         mock_llm = Mock(spec=BaseLLMService)
+        # Only the small file is batched, so only that finding is validated
         mock_llm.analyse_data.return_value = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[1].id,  # FromSmall
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Valid",
@@ -344,10 +345,11 @@ class TestValidateFindingsWithFileContent:
             _create_finding("FromMissing", "src/missing.py"),  # File not in provider
         ]
         mock_llm = Mock(spec=BaseLLMService)
+        # Only the existing file is batched, so only that finding is validated
         mock_llm.analyse_data.return_value = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,  # FromExisting
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Valid",

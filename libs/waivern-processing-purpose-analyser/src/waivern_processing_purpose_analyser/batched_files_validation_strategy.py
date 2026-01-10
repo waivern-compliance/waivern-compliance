@@ -106,9 +106,8 @@ class ProcessingPurposeBatchedFilesStrategy(
         files: list[str],
         findings_by_file: dict[str, list[ProcessingPurposeFindingModel]],
     ) -> str:
-        """Build the findings section with global indices."""
+        """Build the findings section with finding IDs."""
         lines: list[str] = []
-        global_index = 0
 
         for file_path in files:
             findings = findings_by_file[file_path]
@@ -117,10 +116,9 @@ class ProcessingPurposeBatchedFilesStrategy(
                 line_num = self._extract_line_number(finding)
                 patterns = ", ".join(finding.matched_patterns)
                 lines.append(
-                    f"  [{global_index}] Purpose: {finding.purpose}, "
+                    f"  [{finding.id}] Purpose: {finding.purpose}, "
                     f"Patterns: {patterns}, Line: L{line_num}"
                 )
-                global_index += 1
 
         return "\n".join(lines)
 

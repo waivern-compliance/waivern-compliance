@@ -37,6 +37,7 @@ class PersonalDataValidationStrategy(LLMValidationStrategy[PersonalDataIndicator
         for finding in findings_batch:
             findings_for_prompt.append(
                 {
+                    "id": finding.id,
                     "category": finding.category,
                     "matched_patterns": finding.matched_patterns,
                     "evidence": [item.content for item in finding.evidence],

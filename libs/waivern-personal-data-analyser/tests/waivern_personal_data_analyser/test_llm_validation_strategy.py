@@ -82,14 +82,14 @@ class TestPersonalDataValidationStrategy:
         mock_llm_response = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": sample_findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.95,
                     "reasoning": "Valid email address in contact context",
                     "recommended_action": "keep",
                 },
                 {
-                    "finding_index": 1,
+                    "finding_id": sample_findings[1].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.88,
                     "reasoning": "Customer phone number in database",
@@ -122,14 +122,14 @@ class TestPersonalDataValidationStrategy:
         mock_llm_response = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": sample_findings[0].id,
                     "validation_result": "FALSE_POSITIVE",
                     "confidence": 0.92,
                     "reasoning": "Documentation example email",
                     "recommended_action": "discard",
                 },
                 {
-                    "finding_index": 1,
+                    "finding_id": sample_findings[1].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.85,
                     "reasoning": "Actual customer phone number",
@@ -181,21 +181,21 @@ class TestPersonalDataValidationStrategy:
         mock_llm_response = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.78,
                     "reasoning": "Administrative email address",
                     "recommended_action": "keep",
                 },
                 {
-                    "finding_index": 1,
+                    "finding_id": findings[1].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.98,
                     "reasoning": "Sensitive employee data",
                     "recommended_action": "keep",
                 },
                 {
-                    "finding_index": 2,
+                    "finding_id": findings[2].id,
                     "validation_result": "FALSE_POSITIVE",
                     "confidence": 0.94,
                     "reasoning": "Documentation example",
@@ -236,18 +236,21 @@ class TestPersonalDataValidationStrategy:
         llm_config.llm_batch_size = 2
 
         # Mock responses for 3 batches (2+2+1)
+        # Batch 1: findings[0], findings[1]
+        # Batch 2: findings[2], findings[3]
+        # Batch 3: findings[4]
         batch_responses = [
             json.dumps(
                 [
                     {
-                        "finding_index": 0,
+                        "finding_id": findings[0].id,
                         "validation_result": "TRUE_POSITIVE",
                         "confidence": 0.9,
                         "reasoning": "Valid",
                         "recommended_action": "keep",
                     },
                     {
-                        "finding_index": 1,
+                        "finding_id": findings[1].id,
                         "validation_result": "TRUE_POSITIVE",
                         "confidence": 0.9,
                         "reasoning": "Valid",
@@ -258,14 +261,14 @@ class TestPersonalDataValidationStrategy:
             json.dumps(
                 [
                     {
-                        "finding_index": 0,
+                        "finding_id": findings[2].id,
                         "validation_result": "FALSE_POSITIVE",
                         "confidence": 0.95,
                         "reasoning": "Example",
                         "recommended_action": "discard",
                     },
                     {
-                        "finding_index": 1,
+                        "finding_id": findings[3].id,
                         "validation_result": "TRUE_POSITIVE",
                         "confidence": 0.85,
                         "reasoning": "Valid",
@@ -276,7 +279,7 @@ class TestPersonalDataValidationStrategy:
             json.dumps(
                 [
                     {
-                        "finding_index": 0,
+                        "finding_id": findings[4].id,
                         "validation_result": "TRUE_POSITIVE",
                         "confidence": 0.88,
                         "reasoning": "Valid",
@@ -351,12 +354,12 @@ class TestPersonalDataValidationStrategy:
         mock_llm_response = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": sample_findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     # Missing confidence, reasoning, recommended_action
                 },
                 {
-                    "finding_index": 1,
+                    "finding_id": sample_findings[1].id,
                     "validation_result": "UNKNOWN_RESULT",  # Invalid result
                     "confidence": 0.5,
                     "reasoning": "Uncertain",
@@ -388,14 +391,14 @@ class TestPersonalDataValidationStrategy:
         mock_llm_response = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": sample_findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.95,
                     "reasoning": "Valid email",
                     "recommended_action": "keep",
                 },
                 {
-                    "finding_index": 1,
+                    "finding_id": sample_findings[1].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.88,
                     "reasoning": "Valid phone",
@@ -439,7 +442,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_response = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": sample_findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.95,
                     "reasoning": "Valid email",
@@ -482,21 +485,21 @@ class TestPersonalDataValidationStrategy:
         mock_llm_response = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Valid",
                     "recommended_action": "keep",
                 },
                 {
-                    "finding_index": 1,
+                    "finding_id": findings[1].id,
                     "validation_result": "FALSE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Example",
                     "recommended_action": "discard",
                 },
                 {
-                    "finding_index": 2,
+                    "finding_id": findings[2].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Valid",
@@ -533,7 +536,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_response = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,
                     "validation_result": "FALSE_POSITIVE",
                     "confidence": 0.99,
                     "reasoning": "Test credit card number",
@@ -569,7 +572,7 @@ class TestPersonalDataValidationStrategy:
         mock_llm_response = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.92,
                     "reasoning": "Valid UK phone number in customer database",
@@ -628,7 +631,7 @@ class TestPersonalDataValidationStrategy:
                 json.dumps(
                     [
                         {
-                            "finding_index": 0,
+                            "finding_id": findings[0].id,
                             "validation_result": "TRUE_POSITIVE",
                             "confidence": 0.9,
                             "reasoning": "Valid",
@@ -639,7 +642,7 @@ class TestPersonalDataValidationStrategy:
                 json.dumps(
                     [
                         {
-                            "finding_index": 0,
+                            "finding_id": findings[1].id,
                             "validation_result": "TRUE_POSITIVE",
                             "confidence": 0.9,
                             "reasoning": "Valid",
@@ -650,7 +653,7 @@ class TestPersonalDataValidationStrategy:
                 json.dumps(
                     [
                         {
-                            "finding_index": 0,
+                            "finding_id": findings[2].id,
                             "validation_result": "TRUE_POSITIVE",
                             "confidence": 0.9,
                             "reasoning": "Valid",
@@ -665,14 +668,14 @@ class TestPersonalDataValidationStrategy:
                 json.dumps(
                     [
                         {
-                            "finding_index": 0,
+                            "finding_id": findings[0].id,
                             "validation_result": "TRUE_POSITIVE",
                             "confidence": 0.9,
                             "reasoning": "Valid",
                             "recommended_action": "keep",
                         },
                         {
-                            "finding_index": 1,
+                            "finding_id": findings[1].id,
                             "validation_result": "TRUE_POSITIVE",
                             "confidence": 0.9,
                             "reasoning": "Valid",
@@ -683,7 +686,7 @@ class TestPersonalDataValidationStrategy:
                 json.dumps(
                     [
                         {
-                            "finding_index": 0,
+                            "finding_id": findings[2].id,
                             "validation_result": "TRUE_POSITIVE",
                             "confidence": 0.9,
                             "reasoning": "Valid",
@@ -698,21 +701,21 @@ class TestPersonalDataValidationStrategy:
                 json.dumps(
                     [
                         {
-                            "finding_index": 0,
+                            "finding_id": findings[0].id,
                             "validation_result": "TRUE_POSITIVE",
                             "confidence": 0.9,
                             "reasoning": "Valid",
                             "recommended_action": "keep",
                         },
                         {
-                            "finding_index": 1,
+                            "finding_id": findings[1].id,
                             "validation_result": "TRUE_POSITIVE",
                             "confidence": 0.9,
                             "reasoning": "Valid",
                             "recommended_action": "keep",
                         },
                         {
-                            "finding_index": 2,
+                            "finding_id": findings[2].id,
                             "validation_result": "TRUE_POSITIVE",
                             "confidence": 0.9,
                             "reasoning": "Valid",

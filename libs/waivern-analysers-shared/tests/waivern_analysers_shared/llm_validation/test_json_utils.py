@@ -24,10 +24,10 @@ class TestExtractJsonFromLlmResponse:
         # Test generic markdown block
         generic_block = """Analysis result:
         ```
-        [{"finding_index": 0, "result": "TRUE_POSITIVE"}]
+        [{"finding_id": "abc-123", "result": "TRUE_POSITIVE"}]
         ```"""
         result = extract_json_from_llm_response(generic_block)
-        assert result == '[{"finding_index": 0, "result": "TRUE_POSITIVE"}]'
+        assert result == '[{"finding_id": "abc-123", "result": "TRUE_POSITIVE"}]'
 
         # Test direct JSON object with text
         direct_object = """The validation result is:

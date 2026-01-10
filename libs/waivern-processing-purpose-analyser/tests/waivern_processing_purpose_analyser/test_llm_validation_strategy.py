@@ -62,14 +62,14 @@ class TestProcessingPurposeValidationStrategy:
         mock_llm_service.analyse_data.return_value = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,
                     "validation_result": "FALSE_POSITIVE",
                     "confidence": 0.9,
                     "reasoning": "Documentation example",
                     "recommended_action": "discard",
                 },
                 {
-                    "finding_index": 1,
+                    "finding_id": findings[1].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.85,
                     "reasoning": "Actual business processing",
@@ -100,14 +100,14 @@ class TestProcessingPurposeValidationStrategy:
         mock_llm_service.analyse_data.return_value = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.88,
                     "reasoning": "Real customer support activity",
                     "recommended_action": "keep",
                 },
                 {
-                    "finding_index": 1,
+                    "finding_id": findings[1].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.92,
                     "reasoning": "Actual order processing",
@@ -173,7 +173,7 @@ class TestProcessingPurposeValidationStrategy:
         mock_llm_service.analyse_data.return_value = json.dumps(
             [
                 {
-                    "finding_index": 0,
+                    "finding_id": findings[0].id,
                     "validation_result": "TRUE_POSITIVE",
                     "confidence": 0.7,
                     "reasoning": "Requires manual review",

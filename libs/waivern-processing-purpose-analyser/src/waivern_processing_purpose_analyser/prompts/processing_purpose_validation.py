@@ -167,7 +167,7 @@ def _build_findings_to_validate(findings: list[ProcessingPurposeFindingModel]) -
 
     """
     findings_text: list[str] = []
-    for i, finding in enumerate(findings):
+    for finding in findings:
         evidence_text = (
             "\n  ".join(f"- {evidence.content}" for evidence in finding.evidence)
             if finding.evidence
@@ -177,7 +177,7 @@ def _build_findings_to_validate(findings: list[ProcessingPurposeFindingModel]) -
         source = finding.metadata.source if finding.metadata else "Unknown"
 
         findings_text.append(f"""
-Finding {i}:
+Finding [{finding.id}]:
   Purpose: {finding.purpose}
   Category: {finding.purpose_category}
   Patterns: {", ".join(finding.matched_patterns)}
@@ -246,29 +246,18 @@ def _get_response_format(finding_count: int, is_conservative: bool) -> str:
     )
     reasoning_length = "max 150 words" if is_conservative else "max 120 words"
 
-    # Always use array format for consistency
-    example_second = ""
-    if finding_count > 1:
-        example_second = """,
-  {
-    "finding_index": 1,
-    "validation_result": "FALSE_POSITIVE",
-    "confidence": 0.95,
-    "reasoning": "Documentation example with no business impact",
-    "recommended_action": "discard"
-  }"""
-
     return f"""**RESPONSE FORMAT:**
-Respond with valid JSON array only (no markdown formatting):
+Respond with valid JSON array only (no markdown formatting).
+IMPORTANT: Echo back the exact finding_id from each Finding [...] header - do not modify it.
 
 [
   {{
-    "finding_index": 0,
+    "finding_id": "<exact UUID from Finding [UUID]>",
     "validation_result": "TRUE_POSITIVE" | "FALSE_POSITIVE",
     "confidence": 0.85,
     "reasoning": "Brief explanation with category/risk context ({reasoning_length})",
     "recommended_action": {action_options}
-  }}{example_second}
+  }}
 ]
 
 Validate all {finding_count} findings and return array with {finding_count} element(s):"""

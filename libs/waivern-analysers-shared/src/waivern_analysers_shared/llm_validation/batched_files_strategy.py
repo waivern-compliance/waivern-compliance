@@ -395,19 +395,18 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
             logger.warning("Returning all findings due to malformed LLM response")
             return list(findings)
 
+        # Build lookup from finding ID to finding
+        findings_by_id = {f.id: f for f in findings}
         validated: list[T] = []
-        processed_indices: set[int] = set()
+        processed_ids: set[str] = set()
 
         for result in typed_results:
-            if result.finding_index >= len(findings):
-                logger.warning(
-                    f"Finding index {result.finding_index} out of range "
-                    f"[0, {len(findings)})"
-                )
+            finding = findings_by_id.get(result.finding_id)
+            if finding is None:
+                logger.warning(f"Unknown finding_id from LLM: {result.finding_id}")
                 continue
 
-            processed_indices.add(result.finding_index)
-            finding = findings[result.finding_index]
+            processed_ids.add(result.finding_id)
 
             # Log validation decision
             ValidationDecisionEngine.log_validation_decision(result, finding)
@@ -416,13 +415,13 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
                 validated.append(finding)
 
         # Fail-safe: include findings not mentioned by LLM
-        unprocessed_indices = set(range(len(findings))) - processed_indices
-        if unprocessed_indices:
+        unprocessed_ids = set(findings_by_id.keys()) - processed_ids
+        if unprocessed_ids:
             logger.warning(
-                f"LLM omitted {len(unprocessed_indices)} findings from response, "
+                f"LLM omitted {len(unprocessed_ids)} findings from response, "
                 "including them unvalidated"
             )
-            for idx in sorted(unprocessed_indices):
-                validated.append(findings[idx])
+            for finding_id in unprocessed_ids:
+                validated.append(findings_by_id[finding_id])
 
         return validated
