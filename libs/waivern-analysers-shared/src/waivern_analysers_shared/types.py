@@ -6,6 +6,31 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 
+class LLMBatchingStrategy(str, Enum):
+    """Batching strategy for LLM validation.
+
+    BATCH_FINDINGS: Current approach - batch by finding count (default)
+    BATCH_FILES: New approach - batch by file, send full content
+    """
+
+    BATCH_FINDINGS = "batch_findings"
+    BATCH_FILES = "batch_files"
+
+
+class BatchingConfig(BaseModel):
+    """Configuration for token-aware batching.
+
+    Only exposes model_context_window as configurable.
+    Other parameters (output_ratio, safety_buffer, prompt_overhead) are
+    constants in token_estimation.py since they're implementation details.
+    """
+
+    model_context_window: int | None = Field(
+        default=None,
+        description="Override context window size in tokens. Auto-detected from model name if None.",
+    )
+
+
 class EvidenceContextSize(str, Enum):
     """Evidence context size options."""
 
@@ -59,4 +84,14 @@ class LLMValidationConfig(BaseModel):
 
     llm_validation_mode: Literal["standard", "conservative", "aggressive"] = Field(
         default="standard", description="LLM validation mode"
+    )
+
+    llm_batching_strategy: LLMBatchingStrategy = Field(
+        default=LLMBatchingStrategy.BATCH_FINDINGS,
+        description="Strategy for batching findings: 'batch_findings' (default) or 'batch_files'",
+    )
+
+    batching: BatchingConfig = Field(
+        default_factory=BatchingConfig,
+        description="Token-aware batching configuration (used when strategy is 'batch_files')",
     )

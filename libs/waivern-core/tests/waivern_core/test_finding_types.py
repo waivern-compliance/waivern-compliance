@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import pytest
-from pydantic import Field
+from pydantic import Field, ValidationError
 
 from waivern_core.schemas import (
     BaseFindingMetadata,
@@ -26,12 +26,12 @@ from waivern_core.schemas import (
 class TestBaseFindingMetadataCustomValidators:
     """Tests for custom validators in BaseFindingMetadata."""
 
-    def test_context_must_be_json_serialisable(self) -> None:
-        """Contract: context field must be JSON-serialisable for portable storage."""
-        with pytest.raises(ValueError, match="context must be JSON-serialisable"):
+    def test_context_rejects_non_json_types(self) -> None:
+        """Contract: context field only accepts JSON-serialisable types."""
+        with pytest.raises(ValidationError):
             BaseFindingMetadata(
                 source="test.txt",
-                context={"invalid": object()},
+                context={"invalid": object()},  # type: ignore[dict-item]
             )
 
     def test_context_accepts_valid_json_types(self) -> None:

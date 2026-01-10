@@ -144,9 +144,9 @@ class TestProcessingPurposeValidationPrompt:
             multiple_findings, "standard"
         )
 
-        # Both should use array format
-        assert '"finding_index": 0,' in prompt_single
-        assert '"finding_index": 0,' in prompt_multiple
+        # Both should use array format with finding_id (UUID)
+        assert '"finding_id":' in prompt_single
+        assert '"finding_id":' in prompt_multiple
         assert "return array with 1 element(s)" in prompt_single
         assert "return array with 2 element(s)" in prompt_multiple
 

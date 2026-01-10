@@ -5,6 +5,7 @@ and should initially fail until the functionality is implemented.
 """
 
 import json
+import re
 from unittest.mock import Mock
 
 import pytest
@@ -23,6 +24,13 @@ from waivern_processing_purpose_analyser.analyser import (
 from waivern_processing_purpose_analyser.types import (
     ProcessingPurposeAnalyserConfig,
 )
+
+
+def _extract_finding_ids_from_prompt(prompt: str) -> list[str]:
+    """Extract finding IDs from the validation prompt."""
+    # Pattern matches Finding [uuid]: format
+    pattern = r"Finding \[([a-f0-9-]+)\]:"
+    return re.findall(pattern, prompt)
 
 
 class TestProcessingPurposeAnalyserLLMValidationBehaviour:
@@ -75,25 +83,23 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
-        # Mock LLM response that keeps both findings
-        mock_llm_service.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_index": 0,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.8,
-                    "reasoning": "Actual customer service processing",
-                    "recommended_action": "keep",
-                },
-                {
-                    "finding_index": 1,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Payment processing is legitimate",
-                    "recommended_action": "keep",
-                },
-            ]
-        )
+        # Dynamic mock that extracts finding IDs from the prompt and returns valid response
+        def mock_llm_response(_content: str, prompt: str) -> str:
+            finding_ids = _extract_finding_ids_from_prompt(prompt)
+            return json.dumps(
+                [
+                    {
+                        "finding_id": finding_ids[i],
+                        "validation_result": "TRUE_POSITIVE",
+                        "confidence": 0.8 + i * 0.1,
+                        "reasoning": f"Valid finding {i}",
+                        "recommended_action": "keep",
+                    }
+                    for i in range(len(finding_ids))
+                ]
+            )
+
+        mock_llm_service.analyse_data.side_effect = mock_llm_response
 
         config = ProcessingPurposeAnalyserConfig.from_properties(properties)
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
@@ -121,25 +127,29 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
-        # Mock LLM response that marks first finding as false positive
-        mock_llm_service.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_index": 0,
-                    "validation_result": "FALSE_POSITIVE",
-                    "confidence": 0.95,
-                    "reasoning": "Documentation example, not actual processing",
-                    "recommended_action": "discard",
-                },
-                {
-                    "finding_index": 1,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Actual payment processing",
-                    "recommended_action": "keep",
-                },
-            ]
-        )
+        # Dynamic mock that marks first finding as false positive
+        def mock_llm_response(_content: str, prompt: str) -> str:
+            finding_ids = _extract_finding_ids_from_prompt(prompt)
+            return json.dumps(
+                [
+                    {
+                        "finding_id": finding_ids[0],
+                        "validation_result": "FALSE_POSITIVE",
+                        "confidence": 0.95,
+                        "reasoning": "Documentation example, not actual processing",
+                        "recommended_action": "discard",
+                    },
+                    {
+                        "finding_id": finding_ids[1],
+                        "validation_result": "TRUE_POSITIVE",
+                        "confidence": 0.9,
+                        "reasoning": "Actual payment processing",
+                        "recommended_action": "keep",
+                    },
+                ]
+            )
+
+        mock_llm_service.analyse_data.side_effect = mock_llm_response
 
         config = ProcessingPurposeAnalyserConfig.from_properties(properties)
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)

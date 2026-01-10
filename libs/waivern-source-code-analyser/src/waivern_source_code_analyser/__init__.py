@@ -19,6 +19,7 @@ from waivern_core.schemas import SchemaRegistry
 from .analyser import SourceCodeAnalyser
 from .analyser_config import SourceCodeAnalyserConfig
 from .analyser_factory import SourceCodeAnalyserFactory
+from .file_content_provider import SourceCodeFileContentProvider
 from .schemas import SourceCodeDataModel
 
 
@@ -39,5 +40,6 @@ __all__ = [
     "SourceCodeAnalyserConfig",
     "SourceCodeAnalyserFactory",
     "SourceCodeDataModel",
+    "SourceCodeFileContentProvider",
     "register_schemas",
 ]

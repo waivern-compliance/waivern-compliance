@@ -146,45 +146,14 @@ class TestProcessingPurposeAnalyserConfig:
 class TestSourceCodeContextWindowConfig:
     """Tests for source_code_context_window configuration field."""
 
-    def test_config_accepts_small_context_window(self) -> None:
-        """Test that config accepts 'small' as valid context window value."""
-        # Arrange & Act
+    @pytest.mark.parametrize("window_size", ["small", "medium", "large", "full"])
+    def test_config_accepts_valid_context_window_values(self, window_size: str) -> None:
+        """Test that config accepts valid context window values."""
         config = ProcessingPurposeAnalyserConfig.from_properties(
-            {"source_code_context_window": "small"}
+            {"source_code_context_window": window_size}
         )
 
-        # Assert
-        assert config.source_code_context_window == "small"
-
-    def test_config_accepts_medium_context_window(self) -> None:
-        """Test that config accepts 'medium' as valid context window value."""
-        # Arrange & Act
-        config = ProcessingPurposeAnalyserConfig.from_properties(
-            {"source_code_context_window": "medium"}
-        )
-
-        # Assert
-        assert config.source_code_context_window == "medium"
-
-    def test_config_accepts_large_context_window(self) -> None:
-        """Test that config accepts 'large' as valid context window value."""
-        # Arrange & Act
-        config = ProcessingPurposeAnalyserConfig.from_properties(
-            {"source_code_context_window": "large"}
-        )
-
-        # Assert
-        assert config.source_code_context_window == "large"
-
-    def test_config_accepts_full_context_window(self) -> None:
-        """Test that config accepts 'full' as valid context window value."""
-        # Arrange & Act
-        config = ProcessingPurposeAnalyserConfig.from_properties(
-            {"source_code_context_window": "full"}
-        )
-
-        # Assert
-        assert config.source_code_context_window == "full"
+        assert config.source_code_context_window == window_size
 
     def test_config_rejects_invalid_context_window(self) -> None:
         """Test that config rejects invalid context window values."""

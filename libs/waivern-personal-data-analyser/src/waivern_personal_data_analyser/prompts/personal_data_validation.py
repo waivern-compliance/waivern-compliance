@@ -75,14 +75,14 @@ def get_batch_validation_prompt(findings: list[dict[str, Any]]) -> str:
     ensuring consistent criteria across all validations.
 
     Args:
-        findings: List of personal data findings to validate
+        findings: List of personal data findings to validate (must include 'id' field)
 
     Returns:
         Formatted batch validation prompt
 
     """
     findings_text: list[str] = []
-    for i, finding in enumerate(findings):
+    for finding in findings:
         evidence_list = finding.get("evidence", [])
         evidence_text = (
             "\n  ".join(f"- {e}" for e in evidence_list)
@@ -91,7 +91,7 @@ def get_batch_validation_prompt(findings: list[dict[str, Any]]) -> str:
         )
 
         findings_text.append(f"""
-Finding {i}:
+Finding [{finding["id"]}]:
   Category: {finding.get("category", "Unknown")}
   Patterns: {", ".join(finding.get("matched_patterns", ["Unknown"]))}
   Source: {getattr(finding.get("metadata", {}), "source", "Unknown") if finding.get("metadata") else "Unknown"}
@@ -115,22 +115,16 @@ For each finding, determine if it represents actual personal data (TRUE_POSITIVE
 - Prioritize privacy protection when uncertain
 
 **RESPONSE FORMAT:**
-Respond with valid JSON array only (no markdown formatting):
+Respond with valid JSON array only (no markdown formatting).
+IMPORTANT: Echo back the exact finding_id from each Finding [...] header - do not modify it.
 
 [
   {{
-    "finding_index": 0,
+    "finding_id": "<exact UUID from Finding [UUID]>",
     "validation_result": "TRUE_POSITIVE" | "FALSE_POSITIVE",
     "confidence": 0.85,
     "reasoning": "Brief explanation",
     "recommended_action": "keep" | "discard"
-  }},
-  {{
-    "finding_index": 1,
-    "validation_result": "FALSE_POSITIVE",
-    "confidence": 0.95,
-    "reasoning": "Documentation example",
-    "recommended_action": "discard"
   }}
 ]
 

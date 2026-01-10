@@ -2,6 +2,11 @@
 
 from dataclasses import dataclass
 
+# JSON type for type-safe JSON value representation
+type JsonValue = (
+    str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]
+)
+
 
 @dataclass(frozen=True)
 class InputRequirement:

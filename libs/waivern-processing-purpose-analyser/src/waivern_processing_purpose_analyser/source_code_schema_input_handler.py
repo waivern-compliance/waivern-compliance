@@ -1,7 +1,6 @@
 """Handler for processing purpose detection in source code.
 
-Uses dict-based schema handling with TypedDict for type safety.
-No dependency on source code analyser package - relies on Message validation.
+Uses authoritative Pydantic models from waivern-source-code-analyser.
 
 TODO: Architecture improvements to consider:
 
@@ -17,14 +16,16 @@ with the key difference being evidence extraction strategy:
 """
 
 from collections.abc import Generator, Sequence
-from typing import NotRequired, TypedDict
 
-from pydantic import BaseModel
 from waivern_core.schemas import BaseFindingEvidence
 from waivern_rulesets import RulesetLoader
 from waivern_rulesets.data_collection import DataCollectionRule
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 from waivern_rulesets.service_integrations import ServiceIntegrationRule
+from waivern_source_code_analyser.schemas.source_code import (
+    SourceCodeDataModel,
+    SourceCodeFileDataModel,
+)
 
 from .schemas.types import (
     ProcessingPurposeFindingMetadata,
@@ -40,59 +41,12 @@ CONTEXT_WINDOW_SIZES: dict[SourceCodeContextWindow, int | None] = {
     "full": None,  # Entire file
 }
 
-# TypedDict definitions for source_code schema v1.0.0
-# These mirror the JSON schema structure without importing from SourceCodeAnalyser
-
-
-class SourceCodeFileMetadataDict(TypedDict):
-    """Metadata for a source code file."""
-
-    file_size: int
-    line_count: int
-    last_modified: NotRequired[str | None]
-
-
-class SourceCodeFileDict(TypedDict):
-    """Individual source code file data."""
-
-    file_path: str
-    language: str
-    raw_content: str
-    metadata: SourceCodeFileMetadataDict
-
-
-class SourceCodeAnalysisMetadataDict(TypedDict):
-    """Metadata for source code analysis."""
-
-    total_files: int
-    total_lines: int
-    analysis_timestamp: str
-
-
-class SourceCodeSchemaDict(TypedDict):
-    """Top-level source_code schema structure (v1.0.0)."""
-
-    schemaVersion: str
-    name: str
-    description: str
-    source: str
-    metadata: SourceCodeAnalysisMetadataDict
-    data: list[SourceCodeFileDict]
-
-
-class SourceCodeFileMetadata(BaseModel):
-    """Metadata for a source code file being analyzed."""
-
-    source: str
-    file_path: str
-
 
 class SourceCodeSchemaInputHandler:
     """Handler for processing purpose detection in source code.
 
-    Processes dict-based source_code schema data using TypedDict for type safety.
-    Trusts Message validation - no Pydantic models needed.
-    Uses .get() for optional fields (imports, functions, classes).
+    Processes source_code schema data using authoritative Pydantic models
+    from waivern-source-code-analyser.
     """
 
     def __init__(self, context_window: SourceCodeContextWindow = "small") -> None:
@@ -115,15 +69,35 @@ class SourceCodeSchemaInputHandler:
             "local/data_collection/1.0.0", DataCollectionRule
         )
 
-    def analyse_source_code_data(
-        self, data: SourceCodeSchemaDict
-    ) -> list[ProcessingPurposeFindingModel]:
-        """Analyse source code analysis data for processing purpose patterns.
+    def analyse(self, data: object) -> list[ProcessingPurposeFindingModel]:
+        """Analyse input data for processing purpose patterns.
+
+        This is the public boundary - accepts object to keep analyser schema-agnostic.
+        Type safety is maintained internally via SourceCodeDataModel.
 
         Args:
-            data: Dict conforming to source_code schema v1.0.0.
-                  Type-checked via TypedDict for compile-time safety.
-                  Data has already been validated by Message against JSON schema.
+            data: Source code data (expected to be SourceCodeDataModel from reader).
+
+        Returns:
+            List of processing purpose findings detected in the source code
+
+        Raises:
+            TypeError: If data is not a SourceCodeDataModel instance.
+
+        """
+        # Validate at boundary - handler owns source code schema knowledge
+        if not isinstance(data, SourceCodeDataModel):
+            raise TypeError(f"Expected SourceCodeDataModel, got {type(data).__name__}")
+
+        return self._analyse_validated_data(data)
+
+    def _analyse_validated_data(
+        self, data: SourceCodeDataModel
+    ) -> list[ProcessingPurposeFindingModel]:
+        """Analyse validated source code data (internal, type-safe).
+
+        Args:
+            data: Validated SourceCodeDataModel instance.
 
         Returns:
             List of processing purpose findings detected in the source code
@@ -131,53 +105,50 @@ class SourceCodeSchemaInputHandler:
         """
         findings: list[ProcessingPurposeFindingModel] = []
 
-        for file_data in data["data"]:
-            file_metadata = SourceCodeFileMetadata(
-                source="source_code", file_path=file_data["file_path"]
-            )
-
-            # Analyse each file with all rulesets
-            findings.extend(self._analyse_file_data(file_data, file_metadata))
+        for file_data in data.data:
+            findings.extend(self._analyse_file_data(file_data))
 
         return findings
 
     def _analyse_file_data(
         self,
-        file_data: SourceCodeFileDict,
-        file_metadata: SourceCodeFileMetadata,
+        file_data: SourceCodeFileDataModel,
     ) -> list[ProcessingPurposeFindingModel]:
         """Analyse a single source code file for processing purpose patterns."""
         findings: list[ProcessingPurposeFindingModel] = []
-        lines = file_data["raw_content"].splitlines()
-        file_path = file_data["file_path"]
+        lines = file_data.raw_content.splitlines()
+        file_path = file_data.file_path
 
         # Analyse processing purpose rules
         for rule in self._processing_purposes_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
-                evidence = self._create_evidence(file_path, line_idx, lines)
+                evidence = self._create_evidence(line_idx, lines)
+                line_number = line_idx + 1  # Convert to 1-based
                 findings.append(
                     self._create_finding_from_processing_purpose_rule(
-                        rule, [pattern], evidence, file_metadata
+                        rule, [pattern], evidence, file_path, line_number
                     )
                 )
 
         # Analyse service integration rules
         for rule in self._service_integrations_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
-                evidence = self._create_evidence(file_path, line_idx, lines)
+                evidence = self._create_evidence(line_idx, lines)
+                line_number = line_idx + 1  # Convert to 1-based
                 findings.append(
                     self._create_finding_from_service_integration_rule(
-                        rule, [pattern], evidence, file_metadata
+                        rule, [pattern], evidence, file_path, line_number
                     )
                 )
 
         # Analyse data collection rules
         for rule in self._data_collection_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
-                evidence = self._create_evidence(file_path, line_idx, lines)
+                evidence = self._create_evidence(line_idx, lines)
+                line_number = line_idx + 1  # Convert to 1-based
                 findings.append(
                     self._create_finding_from_data_collection_rule(
-                        rule, [pattern], evidence, file_metadata
+                        rule, [pattern], evidence, file_path, line_number
                     )
                 )
 
@@ -204,14 +175,12 @@ class SourceCodeSchemaInputHandler:
 
     def _create_evidence(
         self,
-        file_path: str,
         line_index: int,
         lines: list[str],
     ) -> list[BaseFindingEvidence]:
         """Create evidence for a pattern match with context window.
 
         Args:
-            file_path: Path to the source file
             line_index: Zero-based index of the matched line
             lines: All lines in the file (for context extraction)
 
@@ -237,7 +206,7 @@ class SourceCodeSchemaInputHandler:
             indicator = "→" if i == line_index else " "
             context_lines.append(f"{line_num:4d}{indicator} {lines[i].rstrip()}")
 
-        content = f"{file_path}\n" + "\n".join(context_lines)
+        content = "\n".join(context_lines)
 
         return [BaseFindingEvidence(content=content)]
 
@@ -246,16 +215,18 @@ class SourceCodeSchemaInputHandler:
         rule: ProcessingPurposeRule,
         matched_patterns: list[str],
         evidence: list[BaseFindingEvidence],
-        file_metadata: SourceCodeFileMetadata,
+        file_path: str,
+        line_number: int,
     ) -> ProcessingPurposeFindingModel:
-        """Create finding from ProcessingPurposeRule - fully type-safe."""
+        """Create finding from ProcessingPurposeRule."""
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
-            purpose_category=rule.purpose_category,  # Type-safe!
+            purpose_category=rule.purpose_category,
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
-                source=file_metadata.source,
+                source=file_path,
+                line_number=line_number,
             ),
         )
 
@@ -264,16 +235,18 @@ class SourceCodeSchemaInputHandler:
         rule: ServiceIntegrationRule,
         matched_patterns: list[str],
         evidence: list[BaseFindingEvidence],
-        file_metadata: SourceCodeFileMetadata,
+        file_path: str,
+        line_number: int,
     ) -> ProcessingPurposeFindingModel:
-        """Create finding from ServiceIntegrationRule - fully type-safe."""
+        """Create finding from ServiceIntegrationRule."""
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
-            purpose_category=rule.purpose_category,  # Type-safe!
+            purpose_category=rule.purpose_category,
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
-                source=file_metadata.source,
+                source=file_path,
+                line_number=line_number,
             ),
             service_category=rule.service_category,
         )
@@ -283,19 +256,18 @@ class SourceCodeSchemaInputHandler:
         rule: DataCollectionRule,
         matched_patterns: list[str],
         evidence: list[BaseFindingEvidence],
-        file_metadata: SourceCodeFileMetadata,
+        file_path: str,
+        line_number: int,
     ) -> ProcessingPurposeFindingModel:
-        """Create finding from DataCollectionRule - fully type-safe."""
+        """Create finding from DataCollectionRule."""
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
-            # TODO: DataCollectionRule doesn't have purpose_category - consider adding
-            # purpose_category to DataCollectionRule in waivern-rulesets, or derive it
-            # from collection_type/data_source to avoid hardcoding "operational"
             purpose_category="operational",
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
-                source=file_metadata.source,
+                source=file_path,
+                line_number=line_number,
             ),
             collection_type=rule.collection_type,
             data_source=rule.data_source,

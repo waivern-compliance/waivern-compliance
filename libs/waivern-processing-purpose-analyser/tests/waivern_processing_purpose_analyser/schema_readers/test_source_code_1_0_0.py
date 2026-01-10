@@ -1,16 +1,18 @@
 """Tests for source_code v1.0.0 reader."""
 
+from waivern_source_code_analyser import SourceCodeDataModel
+
 
 class TestSourceCodeReader:
     """Tests for source_code schema v1.0.0 reader module."""
 
-    def test_read_returns_typed_dict(self) -> None:
-        """Test reader returns TypedDict with validated schema data."""
+    def test_read_returns_pydantic_model(self) -> None:
+        """Test reader returns SourceCodeDataModel from dict input."""
         from waivern_processing_purpose_analyser.schema_readers import (
             source_code_1_0_0,
         )
 
-        # Arrange: Valid source_code data
+        # Arrange: Valid source_code data as dict (from JSON schema validation)
         input_data = {
             "schemaVersion": "1.0.0",
             "name": "Test source code",
@@ -38,12 +40,10 @@ class TestSourceCodeReader:
         # Act
         result = source_code_1_0_0.read(input_data)
 
-        # Assert - Runtime: it's a dict
-        assert isinstance(result, dict)
-        # Type checker knows: result is SourceCodeSchemaDict
-        assert result["schemaVersion"] == "1.0.0"
-        assert result["name"] == "Test source code"
-        assert len(result["data"]) == 1
-        assert result["data"][0]["file_path"] == "test.py"
-        # Verify dict structure is preserved
-        assert result is input_data  # Same object reference
+        # Assert - result is Pydantic model with correct data
+        assert isinstance(result, SourceCodeDataModel)
+        assert result.schemaVersion == "1.0.0"
+        assert result.name == "Test source code"
+        assert len(result.data) == 1
+        assert result.data[0].file_path == "test.py"
+        assert result.data[0].raw_content == "def test():\n    pass"

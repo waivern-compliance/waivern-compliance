@@ -1,6 +1,6 @@
 """Schema data models for processing purpose findings."""
 
-from typing import ClassVar
+from typing import ClassVar, override
 
 from pydantic import BaseModel, Field
 from waivern_core.schemas import (
@@ -19,7 +19,10 @@ class ProcessingPurposeFindingMetadata(BaseFindingMetadata):
     - context: dict[str, object] - Extensible context for pipeline metadata
     """
 
-    pass
+    line_number: int | None = Field(
+        default=None,
+        description="Line number where the finding was detected (for source code findings)",
+    )
 
 
 class ProcessingPurposeFindingModel(BaseFindingModel):
@@ -44,6 +47,11 @@ class ProcessingPurposeFindingModel(BaseFindingModel):
         default=None,
         description="Data source from DataCollectionRule (when applicable)",
     )
+
+    @override
+    def __str__(self) -> str:
+        """Human-readable representation for logging and debugging."""
+        return f"{self.purpose} - {', '.join(self.matched_patterns)}"
 
 
 class ProcessingPurposeSummary(BaseModel):

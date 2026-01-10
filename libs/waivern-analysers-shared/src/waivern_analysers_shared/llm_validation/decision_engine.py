@@ -1,7 +1,8 @@
 """Unified validation decision engine for LLM validation results."""
 
 import logging
-from collections.abc import Callable
+
+from waivern_core.schemas import BaseFindingModel
 
 from .models import LLMValidationResultModel
 
@@ -12,10 +13,9 @@ class ValidationDecisionEngine:
     """Validation decision engine."""
 
     @staticmethod
-    def should_keep_finding[T](
+    def should_keep_finding(
         result: LLMValidationResultModel,
-        finding: T,
-        get_identifier_func: Callable[[T], str],
+        finding: BaseFindingModel,
     ) -> bool:
         """Determine whether a finding should be kept based on validation results.
 
@@ -24,8 +24,7 @@ class ValidationDecisionEngine:
 
         Args:
             result: LLM validation result
-            finding: The finding being evaluated
-            get_identifier_func: Function to get human-readable identifier
+            finding: The finding being evaluated.
 
         Returns:
             True if finding should be kept, False otherwise
@@ -44,37 +43,31 @@ class ValidationDecisionEngine:
 
         # Fast path: Remove clear false positives
         if result.validation_result == "FALSE_POSITIVE":
-            finding_identifier = get_identifier_func(finding)
             logger.info(
-                f"Removed false positive: {finding_identifier} "
-                f"(confidence: {result.confidence:.2f}) - {result.reasoning} | "
-                f"Finding: {finding}"
+                f"Removed false positive: {finding} "
+                f"(confidence: {result.confidence:.2f}) - {result.reasoning}"
             )
             return False
 
         # Conservative fallback: Keep uncertain findings for safety
-        finding_identifier = get_identifier_func(finding)
         logger.warning(
-            f"Uncertain validation result for {finding_identifier}, keeping for safety: {result.reasoning}"
+            f"Uncertain validation result for {finding}, keeping for safety: {result.reasoning}"
         )
         return True
 
     @staticmethod
-    def log_validation_decision[T](
+    def log_validation_decision(
         result: LLMValidationResultModel,
-        finding: T,
-        get_identifier_func: Callable[[T], str],
+        finding: BaseFindingModel,
     ) -> None:
         """Log validation decision with consistent format.
 
         Args:
             result: LLM validation result
-            finding: The finding being evaluated
-            get_identifier_func: Function to get human-readable identifier
+            finding: The finding being evaluated.
 
         """
-        finding_identifier = get_identifier_func(finding)
         logger.debug(
-            f"Finding '{finding_identifier}': "
+            f"Finding '{finding}': "
             f"{result.validation_result} (confidence: {result.confidence:.2f}) - {result.reasoning}"
         )
