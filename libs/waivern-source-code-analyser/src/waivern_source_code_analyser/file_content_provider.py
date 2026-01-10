@@ -10,7 +10,8 @@ class SourceCodeFileContentProvider:
     """File content provider for source_code schema data.
 
     Extracts file content from SourceCodeDataModel structure,
-    building an index for efficient lookups.
+    building an index for efficient lookups. Content is loaded
+    lazily via get_file_content() to avoid memory overhead.
     """
 
     def __init__(self, source_data: SourceCodeDataModel) -> None:
@@ -20,7 +21,8 @@ class SourceCodeFileContentProvider:
             source_data: Pydantic model conforming to source_code schema v1.0.0.
 
         """
-        self._file_index: dict[str, FileInfo] = {}
+        self._file_metadata: dict[str, FileInfo] = {}
+        self._file_content: dict[str, str] = {}
         self._build_index(source_data)
 
     def _build_index(self, source_data: SourceCodeDataModel) -> None:
@@ -28,9 +30,9 @@ class SourceCodeFileContentProvider:
         for file_data in source_data.data:
             file_path = file_data.file_path
             content = file_data.raw_content
-            self._file_index[file_path] = FileInfo(
+            self._file_content[file_path] = content
+            self._file_metadata[file_path] = FileInfo(
                 file_path=file_path,
-                content=content,
                 estimated_tokens=estimate_tokens(content),
             )
 
@@ -44,14 +46,14 @@ class SourceCodeFileContentProvider:
             File content if found, None otherwise.
 
         """
-        file_info = self._file_index.get(file_path)
-        return file_info.content if file_info else None
+        return self._file_content.get(file_path)
 
     def get_all_files(self) -> dict[str, FileInfo]:
-        """Get all files with their content and token estimates.
+        """Get all files with their metadata (path and token estimates).
 
         Returns:
             Dict mapping file paths to FileInfo objects.
+            Use get_file_content() to load actual content.
 
         """
-        return self._file_index
+        return self._file_metadata

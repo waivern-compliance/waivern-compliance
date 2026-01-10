@@ -13,6 +13,7 @@ from waivern_core.schemas import (
     Schema,
 )
 from waivern_llm import BaseLLMService
+from waivern_source_code_analyser import SourceCodeDataModel
 
 from .llm_validation_strategy import processing_purpose_validation_strategy
 from .protocols import SchemaInputHandler
@@ -124,9 +125,10 @@ class ProcessingPurposeAnalyser(Analyser):
         handler = self._create_handler(reader)
         findings = handler.analyse(input_data)
 
-        # Apply LLM validation
+        # Apply LLM validation (pass source_data for file-based batching)
+        source_data = input_data if input_schema.name == "source_code" else None
         validated_findings, validation_applied = self._validate_findings_with_llm(
-            findings
+            findings, source_data
         )
 
         # Build analysis chain
@@ -183,12 +185,15 @@ class ProcessingPurposeAnalyser(Analyser):
         return reader.create_handler(self._config)
 
     def _validate_findings_with_llm(
-        self, findings: list[ProcessingPurposeFindingModel]
+        self,
+        findings: list[ProcessingPurposeFindingModel],
+        source_data: SourceCodeDataModel | None = None,
     ) -> tuple[list[ProcessingPurposeFindingModel], bool]:
         """Validate findings using LLM if enabled and available.
 
         Args:
             findings: List of findings to validate
+            source_data: Optional source code data for file-based batching
 
         Returns:
             Tuple of (validated findings, validation_was_applied)
@@ -207,7 +212,10 @@ class ProcessingPurposeAnalyser(Analyser):
         try:
             validated_findings, validation_succeeded = (
                 processing_purpose_validation_strategy(
-                    findings, self._config.llm_validation, self._llm_service
+                    findings,
+                    self._config.llm_validation,
+                    self._llm_service,
+                    source_data,
                 )
             )
             return validated_findings, validation_succeeded

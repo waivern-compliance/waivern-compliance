@@ -56,7 +56,7 @@ class ProcessingPurposeBatchedFilesStrategy(
         self,
         batch: FileBatch[ProcessingPurposeFindingModel],
         findings_by_file: dict[str, list[ProcessingPurposeFindingModel]],
-        file_contents: dict[str, str] | None = None,
+        file_contents: dict[str, str],
     ) -> str:
         """Generate validation prompt for a batch of files.
 
@@ -69,8 +69,6 @@ class ProcessingPurposeBatchedFilesStrategy(
             Formatted prompt string for LLM validation.
 
         """
-        file_contents = file_contents or {}
-
         # Build source files section
         source_files_section = self._build_source_files_section(
             batch.files, file_contents, findings_by_file
@@ -152,3 +150,8 @@ class ProcessingPurposeBatchedFilesStrategy(
 
         # Source code handler always includes arrow indicator
         raise ValueError("Evidence missing line number indicator")
+
+    @override
+    def _get_finding_id(self, finding: ProcessingPurposeFindingModel) -> str:
+        """Get human-readable identifier for logging."""
+        return f"{finding.purpose} - {', '.join(finding.matched_patterns)}"

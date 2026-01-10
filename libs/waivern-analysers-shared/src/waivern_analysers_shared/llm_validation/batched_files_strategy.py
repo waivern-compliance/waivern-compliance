@@ -5,10 +5,19 @@ Concrete implementations define how to extract file paths from findings and
 how to generate validation prompts.
 """
 
+import json
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
-from .file_content import FileContentProvider
+from waivern_llm import BaseLLMService
+
+from .decision_engine import ValidationDecisionEngine
+from .file_content import FileContentProvider, FileInfo
+from .json_utils import extract_json_from_llm_response
+from .models import LLMValidationResultModel
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -38,6 +47,52 @@ class BatchingResult[T]:
     oversized_files: list[str] = field(default_factory=list)
     """Files that exceed the token limit on their own."""
 
+    missing_files: list[str] = field(default_factory=list)
+    """Files not found in the file provider."""
+
+
+@dataclass
+class _BatchBuilder[T]:
+    """Accumulates files into batches respecting token limits.
+
+    Encapsulates the state management for greedy bin-packing algorithm.
+    Type parameter T is the finding type (for consistency with FileBatch).
+    """
+
+    max_tokens: int
+    """Maximum tokens allowed per batch."""
+
+    _batches: list[FileBatch[T]] = field(default_factory=list)
+    _current_files: list[str] = field(default_factory=list)
+    _current_tokens: int = 0
+
+    def add_file(self, file_path: str, file_tokens: int) -> None:
+        """Add a file to the current batch, starting a new batch if needed."""
+        if self._current_tokens + file_tokens <= self.max_tokens:
+            self._current_files.append(file_path)
+            self._current_tokens += file_tokens
+        else:
+            self._finalise_current_batch()
+            self._current_files = [file_path]
+            self._current_tokens = file_tokens
+
+    def _finalise_current_batch(self) -> None:
+        """Finalise the current batch if non-empty."""
+        if self._current_files:
+            self._batches.append(
+                FileBatch(
+                    files=list(self._current_files),
+                    estimated_tokens=self._current_tokens,
+                )
+            )
+            self._current_files.clear()
+            self._current_tokens = 0
+
+    def build(self) -> list[FileBatch[T]]:
+        """Finalise and return all batches."""
+        self._finalise_current_batch()
+        return self._batches
+
 
 class BatchedFilesStrategyBase[T](ABC):
     """Abstract base class for batched-files validation strategies.
@@ -66,12 +121,14 @@ class BatchedFilesStrategyBase[T](ABC):
         self,
         batch: FileBatch[T],
         findings_by_file: dict[str, list[T]],
+        file_contents: dict[str, str],
     ) -> str:
         """Generate the LLM validation prompt for a batch.
 
         Args:
             batch: The batch of files to validate.
             findings_by_file: Mapping of file paths to their findings.
+            file_contents: Mapping of file paths to their content.
 
         Returns:
             Formatted prompt string for LLM validation.
@@ -79,7 +136,7 @@ class BatchedFilesStrategyBase[T](ABC):
         """
         ...
 
-    def group_findings_by_file(self, findings: list[T]) -> dict[str, list[T]]:
+    def _group_findings_by_file(self, findings: list[T]) -> dict[str, list[T]]:
         """Group findings by their source file.
 
         Args:
@@ -101,7 +158,7 @@ class BatchedFilesStrategyBase[T](ABC):
 
         return grouped
 
-    def create_token_aware_batches(
+    def _create_token_aware_batches(
         self,
         findings_by_file: dict[str, list[T]],
         file_provider: FileContentProvider,
@@ -122,56 +179,265 @@ class BatchedFilesStrategyBase[T](ABC):
 
         """
         all_files = file_provider.get_all_files()
-        batches: list[FileBatch[T]] = []
+        sorted_paths = self._sort_files_by_token_estimate(
+            file_paths=list(findings_by_file.keys()),
+            all_files=all_files,
+        )
+
+        builder: _BatchBuilder[T] = _BatchBuilder(max_tokens=max_tokens_per_batch)
         oversized_files: list[str] = []
+        missing_files: list[str] = []
 
-        # Current batch being built
-        current_files: list[str] = []
-        current_tokens = 0
+        for file_path in sorted_paths:
+            if file_path not in all_files:
+                missing_files.append(file_path)
+                continue
 
-        # Sort files by token count (largest first) for better packing
-        file_paths = sorted(
-            findings_by_file.keys(),
+            file_tokens = all_files[file_path].estimated_tokens
+
+            if file_tokens > max_tokens_per_batch:
+                oversized_files.append(file_path)
+            else:
+                builder.add_file(file_path, file_tokens)
+
+        result = BatchingResult(
+            batches=builder.build(),
+            oversized_files=oversized_files,
+            missing_files=missing_files,
+        )
+
+        logger.info(
+            f"Created {len(result.batches)} batches, "
+            f"{len(result.oversized_files)} oversized files, "
+            f"{len(result.missing_files)} missing files"
+        )
+
+        return result
+
+    def _sort_files_by_token_estimate(
+        self,
+        file_paths: list[str],
+        all_files: dict[str, FileInfo],
+    ) -> list[str]:
+        """Sort file paths by token estimate (largest first) for better packing."""
+        return sorted(
+            file_paths,
             key=lambda p: all_files[p].estimated_tokens if p in all_files else 0,
             reverse=True,
         )
 
-        for file_path in file_paths:
-            if file_path not in all_files:
-                # File not found in provider - skip
-                continue
+    def validate_findings_with_file_content(
+        self,
+        findings: list[T],
+        file_provider: FileContentProvider,
+        max_tokens_per_batch: int,
+        llm_service: BaseLLMService,
+    ) -> tuple[list[T], bool]:
+        """Validate findings using file-based batching with full file content.
 
-            file_info = all_files[file_path]
-            file_tokens = file_info.estimated_tokens
+        Orchestrates the complete validation flow:
+        1. Group findings by source file
+        2. Create token-aware batches
+        3. For each batch, generate prompt with full file content and call LLM
+        4. Parse responses and filter findings
 
-            # Check if file exceeds limit on its own
-            if file_tokens > max_tokens_per_batch:
-                oversized_files.append(file_path)
-                continue
+        Args:
+            findings: List of findings to validate.
+            file_provider: Provider for file content.
+            max_tokens_per_batch: Maximum tokens per batch.
+            llm_service: LLM service for validation calls.
 
-            # Check if file fits in current batch
-            if current_tokens + file_tokens <= max_tokens_per_batch:
-                current_files.append(file_path)
-                current_tokens += file_tokens
-            else:
-                # Finalize current batch and start new one
-                if current_files:
-                    batches.append(
-                        FileBatch(
-                            files=current_files,
-                            estimated_tokens=current_tokens,
-                        )
-                    )
-                current_files = [file_path]
-                current_tokens = file_tokens
+        Returns:
+            Tuple of (validated_findings, all_batches_succeeded).
 
-        # Don't forget the last batch
-        if current_files:
-            batches.append(
-                FileBatch(
-                    files=current_files,
-                    estimated_tokens=current_tokens,
-                )
+        """
+        if not findings:
+            logger.debug("No findings to validate")
+            return [], True
+
+        try:
+            # Group findings by file
+            findings_by_file = self._group_findings_by_file(findings)
+
+            if not findings_by_file:
+                logger.warning("No findings could be grouped by file")
+                return findings, False
+
+            # Create token-aware batches
+            batching_result = self._create_token_aware_batches(
+                findings_by_file=findings_by_file,
+                file_provider=file_provider,
+                max_tokens_per_batch=max_tokens_per_batch,
             )
 
-        return BatchingResult(batches=batches, oversized_files=oversized_files)
+            # Validate each batch
+            validated_findings: list[T] = []
+            all_batches_succeeded = True
+
+            for batch_idx, batch in enumerate(batching_result.batches):
+                try:
+                    batch_findings = self._validate_batch(
+                        batch=batch,
+                        findings_by_file=findings_by_file,
+                        file_provider=file_provider,
+                        llm_service=llm_service,
+                    )
+                    validated_findings.extend(batch_findings)
+                except Exception as e:
+                    logger.error(f"Batch {batch_idx + 1} validation failed: {e}")
+
+                    # Include unvalidated findings from failed batch
+                    for file_path in batch.files:
+                        validated_findings.extend(findings_by_file[file_path])
+                    all_batches_succeeded = False
+
+            # Include findings from oversized files (unvalidated)
+            for file_path in batching_result.oversized_files:
+                logger.warning(
+                    f"Including {len(findings_by_file[file_path])} unvalidated "
+                    f"findings from oversized file: {file_path}"
+                )
+                validated_findings.extend(findings_by_file[file_path])
+
+            # Include findings from missing files (unvalidated)
+            for file_path in batching_result.missing_files:
+                logger.warning(
+                    f"Including {len(findings_by_file[file_path])} unvalidated "
+                    f"findings from missing file: {file_path}"
+                )
+                validated_findings.extend(findings_by_file[file_path])
+
+            logger.debug(
+                f"Validation complete: {len(findings)} → {len(validated_findings)}"
+            )
+
+            return validated_findings, all_batches_succeeded
+
+        except Exception as e:
+            logger.error(f"File-based validation failed: {e}")
+            return findings, False
+
+    def _validate_batch(
+        self,
+        batch: FileBatch[T],
+        findings_by_file: dict[str, list[T]],
+        file_provider: FileContentProvider,
+        llm_service: BaseLLMService,
+    ) -> list[T]:
+        """Validate a single batch of files.
+
+        Args:
+            batch: The batch to validate.
+            findings_by_file: Mapping of file paths to findings.
+            file_provider: Provider for loading file content.
+            llm_service: LLM service for validation.
+
+        Returns:
+            List of validated findings from this batch.
+
+        """
+        # Build flat list of findings in batch order for index mapping
+        batch_findings: list[T] = []
+        for file_path in batch.files:
+            batch_findings.extend(findings_by_file[file_path])
+
+        # Load content only for files in this batch
+        file_contents: dict[str, str] = {}
+        for file_path in batch.files:
+            content = file_provider.get_file_content(file_path)
+            if content is not None:
+                file_contents[file_path] = content
+
+        # Generate prompt
+        prompt = self.get_batch_validation_prompt(
+            batch=batch,
+            findings_by_file=findings_by_file,
+            file_contents=file_contents,
+        )
+
+        # Call LLM
+        logger.debug(f"Validating batch with {len(batch_findings)} findings")
+        response = llm_service.analyse_data("", prompt)
+
+        # Parse response
+        clean_json = extract_json_from_llm_response(response)
+        validation_results = json.loads(clean_json)
+
+        # Filter findings based on validation results
+        return self._filter_findings_by_results(batch_findings, validation_results)
+
+    def _filter_findings_by_results(
+        self,
+        findings: list[T],
+        validation_results: list[dict[str, object]],
+    ) -> list[T]:
+        """Filter findings based on LLM validation results.
+
+        Uses fail-safe approach: findings not mentioned by LLM are included
+        (with warning), consistent with existing validation error handling.
+
+        Args:
+            findings: Flat list of findings in batch order.
+            validation_results: Validation results from LLM.
+
+        Returns:
+            List of findings that should be kept.
+
+        """
+        validated: list[T] = []
+        processed_indices: set[int] = set()
+
+        for result_data in validation_results:
+            # Extract finding_index from raw data (not part of model)
+            raw_index = result_data.get("finding_index")
+            if raw_index is None:
+                logger.warning("Validation result missing finding_index")
+                continue
+
+            try:
+                finding_index = int(raw_index)  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                logger.warning(f"Invalid finding_index: {raw_index}")
+                continue
+
+            if finding_index < 0 or finding_index >= len(findings):
+                logger.warning(
+                    f"Finding index {finding_index} out of range [0, {len(findings)})"
+                )
+                continue
+
+            processed_indices.add(finding_index)
+            finding = findings[finding_index]
+
+            try:
+                result = LLMValidationResultModel.model_validate(result_data)
+            except Exception as e:
+                logger.warning(f"Failed to parse validation result: {e}")
+                # Use defaults for malformed results (consistent with existing strategy)
+                result = LLMValidationResultModel()
+
+            # Log validation decision
+            ValidationDecisionEngine.log_validation_decision(
+                result, finding, self._get_finding_id
+            )
+
+            if ValidationDecisionEngine.should_keep_finding(
+                result, finding, self._get_finding_id
+            ):
+                validated.append(finding)
+
+        # Fail-safe: include findings not mentioned by LLM
+        unprocessed_indices = set(range(len(findings))) - processed_indices
+        if unprocessed_indices:
+            logger.warning(
+                f"LLM omitted {len(unprocessed_indices)} findings from response, "
+                "including them unvalidated"
+            )
+            for idx in sorted(unprocessed_indices):
+                validated.append(findings[idx])
+
+        return validated
+
+    def _get_finding_id(self, finding: T) -> str:
+        """Get identifier for logging. Override for better logging."""
+        return str(finding)

@@ -10,10 +10,13 @@ from typing import Protocol
 
 @dataclass
 class FileInfo:
-    """File metadata for batching decisions."""
+    """File metadata for batching decisions.
+
+    Content is NOT stored here - use FileContentProvider.get_file_content()
+    to load content lazily when needed.
+    """
 
     file_path: str
-    content: str
     estimated_tokens: int
 
 
