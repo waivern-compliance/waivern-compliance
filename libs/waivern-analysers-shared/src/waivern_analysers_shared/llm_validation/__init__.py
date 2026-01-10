@@ -4,6 +4,7 @@ from waivern_analysers_shared.llm_validation.batched_files_strategy import (
     BatchedFilesStrategyBase,
     BatchingResult,
     FileBatch,
+    FileValidationResult,
 )
 from waivern_analysers_shared.llm_validation.decision_engine import (
     ValidationDecisionEngine,
@@ -25,6 +26,7 @@ __all__ = [
     "BatchedFilesStrategyBase",
     "BatchingResult",
     "FileBatch",
+    "FileValidationResult",
     "FileContentProvider",
     "FileInfo",
     # Validation decision

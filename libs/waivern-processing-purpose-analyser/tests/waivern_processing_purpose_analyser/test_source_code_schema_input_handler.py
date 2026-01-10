@@ -242,8 +242,8 @@ class UserFormHandler {
         # Validate evidence has timestamps
         for evidence_item in payment_finding.evidence:
             assert evidence_item.collection_timestamp is not None
-        # Metadata contains source information
-        assert payment_finding.metadata.source == "source_code"
+        # Metadata contains file path
+        assert payment_finding.metadata.source == simple_php_file_data.file_path
 
     def test_analyse_handles_multiple_files(
         self,
@@ -271,11 +271,11 @@ class UserFormHandler {
         assert len(findings) > 0
 
         # Verify findings from both files are present
-        # Verify findings are generated for multiple sources
         assert len(findings) >= 2
-        # All findings should have source_code as the source
+        # All findings should have file paths as metadata.source
         sources = {f.metadata.source for f in findings if f.metadata is not None}
-        assert "source_code" in sources
+        assert simple_php_file_data.file_path in sources
+        assert service_integration_file_data.file_path in sources
 
         # Validate at least one finding has evidence with timestamps
         if findings:
@@ -307,7 +307,7 @@ class UserFormHandler {
 
         # Verify metadata structure (simplified - essential business data only)
         assert finding.metadata is not None
-        assert finding.metadata.source == "source_code"
+        assert finding.metadata.source == simple_php_file_data.file_path
 
         # Comprehensive timestamp validation
         start_time = datetime.now(UTC)
@@ -567,17 +567,17 @@ export default PaymentService;
             metadata=sample_file_metadata,
         )
 
-    def test_evidence_includes_file_path(
+    def test_metadata_includes_file_path(
         self,
         multiline_file_data: SourceCodeFileDataModel,
         sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
     ) -> None:
-        """Test that evidence content includes the file path for LLM context."""
+        """Test that metadata.source contains the file path."""
         handler = SourceCodeSchemaInputHandler()
         source_data = SourceCodeDataModel(
             schemaVersion="1.0.0",
             name="File path test",
-            description="Test file path in evidence",
+            description="Test file path in metadata",
             source="source_code",
             metadata=sample_analysis_metadata,
             data=[multiline_file_data],
@@ -587,8 +587,8 @@ export default PaymentService;
 
         assert len(findings) > 0, "Expected at least one finding"
         for finding in findings:
-            for evidence_item in finding.evidence:
-                assert multiline_file_data.file_path in evidence_item.content
+            assert finding.metadata is not None
+            assert finding.metadata.source == multiline_file_data.file_path
 
     def test_context_window_small_includes_surrounding_lines(
         self,
@@ -710,10 +710,10 @@ export default PaymentService;
 
         assert len(findings) > 0
         evidence_content = findings[0].evidence[0].content
-        file_line_count = multiline_file_data.raw_content.count("\n")
-        evidence_line_count = evidence_content.count("\n")
-
-        assert evidence_line_count >= file_line_count
+        # Full context should include all lines from the file
+        file_lines = len(multiline_file_data.raw_content.splitlines())
+        evidence_lines = len(evidence_content.splitlines())
+        assert evidence_lines == file_lines
 
     def test_context_window_at_start_of_file(
         self,

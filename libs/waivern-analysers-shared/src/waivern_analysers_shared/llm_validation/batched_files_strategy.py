@@ -53,6 +53,27 @@ class BatchingResult[T]:
 
 
 @dataclass
+class FileValidationResult[T]:
+    """Result of file-based validation.
+
+    Separates validated findings from those that couldn't be processed,
+    allowing the caller to decide how to handle unvalidated findings
+    (e.g., fallback to finding-based validation).
+
+    Type parameter T is the finding type.
+    """
+
+    validated_findings: list[T]
+    """Findings that were successfully validated via file-based batching."""
+
+    unvalidated_findings: list[T]
+    """Findings that couldn't be validated (oversized/missing files)."""
+
+    all_batches_succeeded: bool
+    """Whether all batch validations succeeded without errors."""
+
+
+@dataclass
 class _BatchBuilder[T]:
     """Accumulates files into batches respecting token limits.
 
@@ -123,6 +144,7 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
         batch: FileBatch[T],
         findings_by_file: dict[str, list[T]],
         file_contents: dict[str, str],
+        validation_mode: str,
     ) -> str:
         """Generate the LLM validation prompt for a batch.
 
@@ -130,6 +152,7 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
             batch: The batch of files to validate.
             findings_by_file: Mapping of file paths to their findings.
             file_contents: Mapping of file paths to their content.
+            validation_mode: Validation mode ("standard", "conservative", "aggressive").
 
         Returns:
             Formatted prompt string for LLM validation.
@@ -233,7 +256,8 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
         file_provider: FileContentProvider,
         max_tokens_per_batch: int,
         llm_service: BaseLLMService,
-    ) -> tuple[list[T], bool]:
+        validation_mode: str = "standard",
+    ) -> FileValidationResult[T]:
         """Validate findings using file-based batching with full file content.
 
         Orchestrates the complete validation flow:
@@ -242,19 +266,28 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
         3. For each batch, generate prompt with full file content and call LLM
         4. Parse responses and filter findings
 
+        Findings from oversized/missing files are returned separately as
+        unvalidated, allowing the caller to decide how to handle them
+        (e.g., fallback to finding-based validation).
+
         Args:
             findings: List of findings to validate.
             file_provider: Provider for file content.
             max_tokens_per_batch: Maximum tokens per batch.
             llm_service: LLM service for validation calls.
+            validation_mode: Validation mode ("standard", "conservative", "aggressive").
 
         Returns:
-            Tuple of (validated_findings, all_batches_succeeded).
+            FileValidationResult with validated and unvalidated findings.
 
         """
         if not findings:
             logger.debug("No findings to validate")
-            return [], True
+            return FileValidationResult(
+                validated_findings=[],
+                unvalidated_findings=[],
+                all_batches_succeeded=True,
+            )
 
         try:
             # Group findings by file
@@ -262,7 +295,11 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
 
             if not findings_by_file:
                 logger.warning("No findings could be grouped by file")
-                return findings, False
+                return FileValidationResult(
+                    validated_findings=[],
+                    unvalidated_findings=list(findings),
+                    all_batches_succeeded=False,
+                )
 
             # Create token-aware batches
             batching_result = self._create_token_aware_batches(
@@ -273,6 +310,7 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
 
             # Validate each batch
             validated_findings: list[T] = []
+            unvalidated_findings: list[T] = []
             all_batches_succeeded = True
 
             for batch_idx, batch in enumerate(batching_result.batches):
@@ -282,41 +320,50 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
                         findings_by_file=findings_by_file,
                         file_provider=file_provider,
                         llm_service=llm_service,
+                        validation_mode=validation_mode,
                     )
                     validated_findings.extend(batch_findings)
                 except Exception as e:
                     logger.error(f"Batch {batch_idx + 1} validation failed: {e}")
-
-                    # Include unvalidated findings from failed batch
+                    # Failed batch findings go to unvalidated
                     for file_path in batch.files:
-                        validated_findings.extend(findings_by_file[file_path])
+                        unvalidated_findings.extend(findings_by_file[file_path])
                     all_batches_succeeded = False
 
-            # Include findings from oversized files (unvalidated)
+            # Collect findings from oversized files (unvalidated)
             for file_path in batching_result.oversized_files:
                 logger.warning(
-                    f"Including {len(findings_by_file[file_path])} unvalidated "
-                    f"findings from oversized file: {file_path}"
+                    f"{len(findings_by_file[file_path])} findings from oversized "
+                    f"file cannot be validated: {file_path}"
                 )
-                validated_findings.extend(findings_by_file[file_path])
+                unvalidated_findings.extend(findings_by_file[file_path])
 
-            # Include findings from missing files (unvalidated)
+            # Collect findings from missing files (unvalidated)
             for file_path in batching_result.missing_files:
                 logger.warning(
-                    f"Including {len(findings_by_file[file_path])} unvalidated "
-                    f"findings from missing file: {file_path}"
+                    f"{len(findings_by_file[file_path])} findings from missing "
+                    f"file cannot be validated: {file_path}"
                 )
-                validated_findings.extend(findings_by_file[file_path])
+                unvalidated_findings.extend(findings_by_file[file_path])
 
             logger.debug(
-                f"Validation complete: {len(findings)} → {len(validated_findings)}"
+                f"Validation complete: {len(validated_findings)} validated, "
+                f"{len(unvalidated_findings)} unvalidated"
             )
 
-            return validated_findings, all_batches_succeeded
+            return FileValidationResult(
+                validated_findings=validated_findings,
+                unvalidated_findings=unvalidated_findings,
+                all_batches_succeeded=all_batches_succeeded,
+            )
 
         except Exception as e:
             logger.error(f"File-based validation failed: {e}")
-            return findings, False
+            return FileValidationResult(
+                validated_findings=[],
+                unvalidated_findings=list(findings),
+                all_batches_succeeded=False,
+            )
 
     def _validate_batch(
         self,
@@ -324,6 +371,7 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
         findings_by_file: dict[str, list[T]],
         file_provider: FileContentProvider,
         llm_service: BaseLLMService,
+        validation_mode: str,
     ) -> list[T]:
         """Validate a single batch of files.
 
@@ -332,6 +380,7 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
             findings_by_file: Mapping of file paths to findings.
             file_provider: Provider for loading file content.
             llm_service: LLM service for validation.
+            validation_mode: Validation mode ("standard", "conservative", "aggressive").
 
         Returns:
             List of validated findings from this batch.
@@ -342,18 +391,20 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
         for file_path in batch.files:
             batch_findings.extend(findings_by_file[file_path])
 
-        # Load content only for files in this batch
+        # Load content for files in this batch
         file_contents: dict[str, str] = {}
         for file_path in batch.files:
             content = file_provider.get_file_content(file_path)
-            if content is not None:
-                file_contents[file_path] = content
+            if content is None:
+                raise RuntimeError(f"Content unavailable for batched file: {file_path}")
+            file_contents[file_path] = content
 
         # Generate prompt
         prompt = self.get_batch_validation_prompt(
             batch=batch,
             findings_by_file=findings_by_file,
             file_contents=file_contents,
+            validation_mode=validation_mode,
         )
 
         # Call LLM
@@ -387,7 +438,7 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
         """
         # Validate response structure using strongly-typed model
         try:
-            typed_results = LLMValidationResultListAdapter.validate_python(
+            llm_validation_results = LLMValidationResultListAdapter.validate_python(
                 validation_results
             )
         except Exception as e:
@@ -400,11 +451,15 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
         validated: list[T] = []
         processed_ids: set[str] = set()
 
-        for result in typed_results:
+        for result in llm_validation_results:
             finding = findings_by_id.get(result.finding_id)
+
             if finding is None:
-                logger.warning(f"Unknown finding_id from LLM: {result.finding_id}")
-                continue
+                logger.error(
+                    f"LLM returned unknown finding_id: {result.finding_id}. "
+                    "Aborting validation for this batch."
+                )
+                return list(findings)
 
             processed_ids.add(result.finding_id)
 

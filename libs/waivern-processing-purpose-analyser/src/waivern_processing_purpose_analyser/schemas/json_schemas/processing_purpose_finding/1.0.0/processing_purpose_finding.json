@@ -18,6 +18,31 @@
           "description": "When this analysis was performed",
           "title": "Execution Timestamp",
           "type": "string"
+        },
+        "llm_validation_enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether LLM validation was enabled (only when validation ran)",
+          "title": "Llm Validation Enabled"
+        },
+        "validation_statistics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChainEntryValidationStats"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "LLM validation statistics (only when validation ran)"
         }
       },
       "required": [
@@ -97,6 +122,43 @@
       "title": "BaseFindingEvidence",
       "type": "object"
     },
+    "ChainEntryValidationStats": {
+      "additionalProperties": false,
+      "description": "LLM validation statistics for an analysis chain entry.\n\nCaptures the impact of LLM validation on findings count.\nOnly included when validation actually ran and produced results.",
+      "properties": {
+        "original_findings_count": {
+          "description": "Number of findings before LLM validation",
+          "minimum": 0,
+          "title": "Original Findings Count",
+          "type": "integer"
+        },
+        "validated_findings_count": {
+          "description": "Number of findings after LLM validation",
+          "minimum": 0,
+          "title": "Validated Findings Count",
+          "type": "integer"
+        },
+        "false_positives_removed": {
+          "description": "Number of false positives removed by LLM validation",
+          "minimum": 0,
+          "title": "False Positives Removed",
+          "type": "integer"
+        },
+        "validation_mode": {
+          "description": "LLM validation mode used (e.g., 'standard', 'conservative')",
+          "title": "Validation Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "original_findings_count",
+        "validated_findings_count",
+        "false_positives_removed",
+        "validation_mode"
+      ],
+      "title": "ChainEntryValidationStats",
+      "type": "object"
+    },
     "ProcessingPurposeFindingMetadata": {
       "additionalProperties": false,
       "description": "Metadata for processing purpose findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
@@ -111,6 +173,19 @@
           "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
           "title": "Context",
           "type": "object"
+        },
+        "line_number": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Line number where the finding was detected (for source code findings)",
+          "title": "Line Number"
         }
       },
       "required": [
@@ -122,6 +197,11 @@
     "ProcessingPurposeFindingModel": {
       "description": "Processing purpose finding structure.",
       "properties": {
+        "id": {
+          "description": "Unique identifier for this finding (UUID)",
+          "title": "Id",
+          "type": "string"
+        },
         "evidence": {
           "description": "Evidence items with content and timestamps for this finding",
           "items": {

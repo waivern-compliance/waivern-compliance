@@ -17,7 +17,6 @@ with the key difference being evidence extraction strategy:
 
 from collections.abc import Generator, Sequence
 
-from pydantic import BaseModel
 from waivern_core.schemas import BaseFindingEvidence
 from waivern_rulesets import RulesetLoader
 from waivern_rulesets.data_collection import DataCollectionRule
@@ -41,13 +40,6 @@ CONTEXT_WINDOW_SIZES: dict[SourceCodeContextWindow, int | None] = {
     "large": 50,  # ±50 lines
     "full": None,  # Entire file
 }
-
-
-class SourceCodeFileMetadata(BaseModel):
-    """Metadata for a source code file being analyzed."""
-
-    source: str
-    file_path: str
 
 
 class SourceCodeSchemaInputHandler:
@@ -114,19 +106,13 @@ class SourceCodeSchemaInputHandler:
         findings: list[ProcessingPurposeFindingModel] = []
 
         for file_data in data.data:
-            file_metadata = SourceCodeFileMetadata(
-                source="source_code", file_path=file_data.file_path
-            )
-
-            # Analyse each file with all rulesets
-            findings.extend(self._analyse_file_data(file_data, file_metadata))
+            findings.extend(self._analyse_file_data(file_data))
 
         return findings
 
     def _analyse_file_data(
         self,
         file_data: SourceCodeFileDataModel,
-        file_metadata: SourceCodeFileMetadata,
     ) -> list[ProcessingPurposeFindingModel]:
         """Analyse a single source code file for processing purpose patterns."""
         findings: list[ProcessingPurposeFindingModel] = []
@@ -136,30 +122,33 @@ class SourceCodeSchemaInputHandler:
         # Analyse processing purpose rules
         for rule in self._processing_purposes_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
-                evidence = self._create_evidence(file_path, line_idx, lines)
+                evidence = self._create_evidence(line_idx, lines)
+                line_number = line_idx + 1  # Convert to 1-based
                 findings.append(
                     self._create_finding_from_processing_purpose_rule(
-                        rule, [pattern], evidence, file_metadata
+                        rule, [pattern], evidence, file_path, line_number
                     )
                 )
 
         # Analyse service integration rules
         for rule in self._service_integrations_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
-                evidence = self._create_evidence(file_path, line_idx, lines)
+                evidence = self._create_evidence(line_idx, lines)
+                line_number = line_idx + 1  # Convert to 1-based
                 findings.append(
                     self._create_finding_from_service_integration_rule(
-                        rule, [pattern], evidence, file_metadata
+                        rule, [pattern], evidence, file_path, line_number
                     )
                 )
 
         # Analyse data collection rules
         for rule in self._data_collection_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
-                evidence = self._create_evidence(file_path, line_idx, lines)
+                evidence = self._create_evidence(line_idx, lines)
+                line_number = line_idx + 1  # Convert to 1-based
                 findings.append(
                     self._create_finding_from_data_collection_rule(
-                        rule, [pattern], evidence, file_metadata
+                        rule, [pattern], evidence, file_path, line_number
                     )
                 )
 
@@ -186,14 +175,12 @@ class SourceCodeSchemaInputHandler:
 
     def _create_evidence(
         self,
-        file_path: str,
         line_index: int,
         lines: list[str],
     ) -> list[BaseFindingEvidence]:
         """Create evidence for a pattern match with context window.
 
         Args:
-            file_path: Path to the source file
             line_index: Zero-based index of the matched line
             lines: All lines in the file (for context extraction)
 
@@ -219,7 +206,7 @@ class SourceCodeSchemaInputHandler:
             indicator = "→" if i == line_index else " "
             context_lines.append(f"{line_num:4d}{indicator} {lines[i].rstrip()}")
 
-        content = f"{file_path}\n" + "\n".join(context_lines)
+        content = "\n".join(context_lines)
 
         return [BaseFindingEvidence(content=content)]
 
@@ -228,16 +215,18 @@ class SourceCodeSchemaInputHandler:
         rule: ProcessingPurposeRule,
         matched_patterns: list[str],
         evidence: list[BaseFindingEvidence],
-        file_metadata: SourceCodeFileMetadata,
+        file_path: str,
+        line_number: int,
     ) -> ProcessingPurposeFindingModel:
-        """Create finding from ProcessingPurposeRule - fully type-safe."""
+        """Create finding from ProcessingPurposeRule."""
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
-            purpose_category=rule.purpose_category,  # Type-safe!
+            purpose_category=rule.purpose_category,
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
-                source=file_metadata.source,
+                source=file_path,
+                line_number=line_number,
             ),
         )
 
@@ -246,16 +235,18 @@ class SourceCodeSchemaInputHandler:
         rule: ServiceIntegrationRule,
         matched_patterns: list[str],
         evidence: list[BaseFindingEvidence],
-        file_metadata: SourceCodeFileMetadata,
+        file_path: str,
+        line_number: int,
     ) -> ProcessingPurposeFindingModel:
-        """Create finding from ServiceIntegrationRule - fully type-safe."""
+        """Create finding from ServiceIntegrationRule."""
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
-            purpose_category=rule.purpose_category,  # Type-safe!
+            purpose_category=rule.purpose_category,
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
-                source=file_metadata.source,
+                source=file_path,
+                line_number=line_number,
             ),
             service_category=rule.service_category,
         )
@@ -265,19 +256,18 @@ class SourceCodeSchemaInputHandler:
         rule: DataCollectionRule,
         matched_patterns: list[str],
         evidence: list[BaseFindingEvidence],
-        file_metadata: SourceCodeFileMetadata,
+        file_path: str,
+        line_number: int,
     ) -> ProcessingPurposeFindingModel:
-        """Create finding from DataCollectionRule - fully type-safe."""
+        """Create finding from DataCollectionRule."""
         return ProcessingPurposeFindingModel(
             purpose=rule.name,
-            # TODO: DataCollectionRule doesn't have purpose_category - consider adding
-            # purpose_category to DataCollectionRule in waivern-rulesets, or derive it
-            # from collection_type/data_source to avoid hardcoding "operational"
             purpose_category="operational",
             matched_patterns=matched_patterns,
             evidence=evidence,
             metadata=ProcessingPurposeFindingMetadata(
-                source=file_metadata.source,
+                source=file_path,
+                line_number=line_number,
             ),
             collection_type=rule.collection_type,
             data_source=rule.data_source,

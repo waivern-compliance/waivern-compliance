@@ -1,5 +1,7 @@
 You are an expert GDPR compliance analyst. Validate processing purpose findings using the full source file context.
 
+**VALIDATION MODE:** {validation_mode}
+
 **SOURCE FILES:**
 {source_files_section}
 

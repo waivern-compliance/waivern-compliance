@@ -22,14 +22,14 @@ def _create_source_code_finding(
     matched_patterns: list[str] | None = None,
     line_number: int = 42,
 ) -> ProcessingPurposeFindingModel:
-    """Create a source code finding with evidence in the standard format."""
+    """Create a source code finding with metadata.source set to file path."""
     evidence_content = f"{file_path}\n  {line_number}→ {line_content}"
     return ProcessingPurposeFindingModel(
         purpose=purpose,
         purpose_category="operational",
         matched_patterns=matched_patterns or [purpose.lower()],
         evidence=[BaseFindingEvidence(content=evidence_content)],
-        metadata=ProcessingPurposeFindingMetadata(source="source_code"),
+        metadata=ProcessingPurposeFindingMetadata(source=file_path),
     )
 
 

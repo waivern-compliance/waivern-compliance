@@ -13,10 +13,8 @@ from waivern_core.schemas import (
     Schema,
 )
 from waivern_llm import BaseLLMService
-from waivern_source_code_analyser import SourceCodeDataModel
 
 from .llm_validation_strategy import processing_purpose_validation_strategy
-from .protocols import SchemaInputHandler
 from .result_builder import ProcessingPurposeResultBuilder
 from .schemas.types import ProcessingPurposeFindingModel
 from .types import ProcessingPurposeAnalyserConfig
@@ -122,14 +120,16 @@ class ProcessingPurposeAnalyser(Analyser):
         # Load reader and process findings
         reader = self._load_reader_module(input_schema)
         input_data = reader.read(message.content)
-        handler = self._create_handler(reader)
+        handler = reader.create_handler(self._config)
         findings = handler.analyse(input_data)
 
-        # Apply LLM validation (pass source_data for file-based batching)
-        source_data = input_data if input_schema.name == "source_code" else None
-        validated_findings, validation_applied = self._validate_findings_with_llm(
-            findings, source_data
-        )
+        # Apply LLM validation if enabled
+        if self._config.llm_validation.enable_llm_validation:
+            validated_findings, validation_applied = self._validate_findings_with_llm(
+                findings, message
+            )
+        else:
+            validated_findings, validation_applied = findings, False
 
         # Build analysis chain
         chain_validation_stats = ChainEntryValidationStats.from_counts(
@@ -172,36 +172,21 @@ class ProcessingPurposeAnalyser(Analyser):
         except (ModuleNotFoundError, AttributeError) as e:
             raise ValueError(f"Unsupported input schema: {schema.name}") from e
 
-    def _create_handler(self, reader: ModuleType) -> SchemaInputHandler:
-        """Create handler from reader module.
-
-        Args:
-            reader: Reader module with create_handler() function
-
-        Returns:
-            Handler implementing SchemaInputHandler protocol
-
-        """
-        return reader.create_handler(self._config)
-
     def _validate_findings_with_llm(
         self,
         findings: list[ProcessingPurposeFindingModel],
-        source_data: SourceCodeDataModel | None = None,
+        input_message: Message,
     ) -> tuple[list[ProcessingPurposeFindingModel], bool]:
-        """Validate findings using LLM if enabled and available.
+        """Validate findings using LLM.
 
         Args:
             findings: List of findings to validate
-            source_data: Optional source code data for file-based batching
+            input_message: Input message (validation strategy decides batching approach)
 
         Returns:
             Tuple of (validated findings, validation_was_applied)
 
         """
-        if not self._config.llm_validation.enable_llm_validation:
-            return findings, False
-
         if not findings:
             return findings, False
 
@@ -215,7 +200,7 @@ class ProcessingPurposeAnalyser(Analyser):
                     findings,
                     self._config.llm_validation,
                     self._llm_service,
-                    source_data,
+                    input_message,
                 )
             )
             return validated_findings, validation_succeeded

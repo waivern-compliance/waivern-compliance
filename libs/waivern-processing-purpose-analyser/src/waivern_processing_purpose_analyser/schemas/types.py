@@ -19,7 +19,10 @@ class ProcessingPurposeFindingMetadata(BaseFindingMetadata):
     - context: dict[str, object] - Extensible context for pipeline metadata
     """
 
-    pass
+    line_number: int | None = Field(
+        default=None,
+        description="Line number where the finding was detected (for source code findings)",
+    )
 
 
 class ProcessingPurposeFindingModel(BaseFindingModel):

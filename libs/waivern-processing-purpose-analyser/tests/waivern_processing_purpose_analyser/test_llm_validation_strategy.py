@@ -4,7 +4,8 @@ import json
 from unittest.mock import Mock
 
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_core.schemas import BaseFindingEvidence
+from waivern_core.message import Message
+from waivern_core.schemas import BaseFindingEvidence, Schema
 from waivern_llm import AnthropicLLMService
 
 from waivern_processing_purpose_analyser.llm_validation_strategy import (
@@ -18,6 +19,14 @@ from waivern_processing_purpose_analyser.schemas.types import (
 
 class TestProcessingPurposeValidationStrategy:
     """Test processing purpose validation strategy behavior."""
+
+    def create_test_message(self) -> Message:
+        """Helper to create a test message for validation strategy."""
+        return Message(
+            id="test-message-id",
+            schema=Schema("standard_input", "1.0.0"),
+            content={"data": [{"content": "test content"}]},
+        )
 
     def create_test_finding(
         self,
@@ -41,9 +50,10 @@ class TestProcessingPurposeValidationStrategy:
         """Test that empty findings list returns empty list."""
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
+        message = self.create_test_message()
 
         result, success = processing_purpose_validation_strategy(
-            [], config, mock_llm_service
+            [], config, mock_llm_service, message
         )
 
         assert result == []
@@ -57,6 +67,7 @@ class TestProcessingPurposeValidationStrategy:
         ]
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
+        message = self.create_test_message()
 
         # Mock LLM response indicating first is false positive, second is true positive
         mock_llm_service.analyse_data.return_value = json.dumps(
@@ -79,7 +90,7 @@ class TestProcessingPurposeValidationStrategy:
         )
 
         result, success = processing_purpose_validation_strategy(
-            findings, config, mock_llm_service
+            findings, config, mock_llm_service, message
         )
 
         # Should keep only the true positive
@@ -95,6 +106,7 @@ class TestProcessingPurposeValidationStrategy:
         ]
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
+        message = self.create_test_message()
 
         # Mock LLM response indicating both are true positives
         mock_llm_service.analyse_data.return_value = json.dumps(
@@ -117,7 +129,7 @@ class TestProcessingPurposeValidationStrategy:
         )
 
         result, success = processing_purpose_validation_strategy(
-            findings, config, mock_llm_service
+            findings, config, mock_llm_service, message
         )
 
         # Should keep both findings
@@ -132,12 +144,13 @@ class TestProcessingPurposeValidationStrategy:
         findings = [self.create_test_finding(purpose="Test Purpose")]
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
+        message = self.create_test_message()
 
         # Mock LLM service to raise an exception
         mock_llm_service.analyse_data.side_effect = Exception("LLM service error")
 
         result, success = processing_purpose_validation_strategy(
-            findings, config, mock_llm_service
+            findings, config, mock_llm_service, message
         )
 
         # Should return original findings on error
@@ -150,12 +163,13 @@ class TestProcessingPurposeValidationStrategy:
         findings = [self.create_test_finding(purpose="Test Purpose")]
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
+        message = self.create_test_message()
 
         # Mock invalid JSON response
         mock_llm_service.analyse_data.return_value = "invalid json response"
 
         result, success = processing_purpose_validation_strategy(
-            findings, config, mock_llm_service
+            findings, config, mock_llm_service, message
         )
 
         # Should return original findings on JSON parse error
@@ -168,6 +182,7 @@ class TestProcessingPurposeValidationStrategy:
         findings = [self.create_test_finding(purpose="High Risk Processing")]
         config = LLMValidationConfig(llm_validation_mode="conservative")
         mock_llm_service = Mock(spec=AnthropicLLMService)
+        message = self.create_test_message()
 
         # Mock response with flag_for_review action
         mock_llm_service.analyse_data.return_value = json.dumps(
@@ -183,10 +198,80 @@ class TestProcessingPurposeValidationStrategy:
         )
 
         result, success = processing_purpose_validation_strategy(
-            findings, config, mock_llm_service
+            findings, config, mock_llm_service, message
         )
 
         # Should keep findings marked for review
         assert len(result) == 1
         assert result[0].purpose == "High Risk Processing"
         assert success is True
+
+    def test_marks_validated_findings_with_validation_flag(self) -> None:
+        """Test that validated findings are marked with LLM validation flag."""
+        findings = [self.create_test_finding(purpose="Customer Service")]
+        config = LLMValidationConfig()
+        mock_llm_service = Mock(spec=AnthropicLLMService)
+        message = self.create_test_message()
+
+        mock_llm_service.analyse_data.return_value = json.dumps(
+            [
+                {
+                    "finding_id": findings[0].id,
+                    "validation_result": "TRUE_POSITIVE",
+                    "confidence": 0.9,
+                    "reasoning": "Valid finding",
+                    "recommended_action": "keep",
+                },
+            ]
+        )
+
+        result, success = processing_purpose_validation_strategy(
+            findings, config, mock_llm_service, message
+        )
+
+        assert success is True
+        assert len(result) == 1
+        # Verify the validation mark is set
+        assert result[0].metadata is not None
+        assert (
+            result[0].metadata.context.get("processing_purpose_llm_validated") is True
+        )
+
+    def test_creates_metadata_with_composition_source_when_missing(self) -> None:
+        """Test that findings without metadata get metadata with source='composition'."""
+        # Create finding without metadata
+        finding = ProcessingPurposeFindingModel(
+            purpose="No Metadata Purpose",
+            purpose_category="OPERATIONAL",
+            matched_patterns=["test"],
+            evidence=[BaseFindingEvidence(content="test evidence")],
+            metadata=None,
+        )
+        config = LLMValidationConfig()
+        mock_llm_service = Mock(spec=AnthropicLLMService)
+        message = self.create_test_message()
+
+        mock_llm_service.analyse_data.return_value = json.dumps(
+            [
+                {
+                    "finding_id": finding.id,
+                    "validation_result": "TRUE_POSITIVE",
+                    "confidence": 0.9,
+                    "reasoning": "Valid finding",
+                    "recommended_action": "keep",
+                },
+            ]
+        )
+
+        result, success = processing_purpose_validation_strategy(
+            [finding], config, mock_llm_service, message
+        )
+
+        assert success is True
+        assert len(result) == 1
+        # Verify metadata was created with composition source
+        assert result[0].metadata is not None
+        assert result[0].metadata.source == "composition"
+        assert (
+            result[0].metadata.context.get("processing_purpose_llm_validated") is True
+        )

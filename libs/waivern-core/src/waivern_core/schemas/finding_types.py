@@ -12,7 +12,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
+
+from waivern_core.types import JsonValue
 
 
 class BaseFindingEvidence(BaseModel):
@@ -40,20 +42,10 @@ class BaseFindingMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     source: str = Field(description="Source file or location where the data was found")
-    context: dict[str, object] = Field(
+    context: dict[str, JsonValue] = Field(
         default_factory=dict,
         description="Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
     )
-
-    @field_validator("context")
-    @classmethod
-    def validate_json_serialisable(cls, v: dict[str, object]) -> dict[str, object]:
-        """Ensure context is JSON-serialisable for portable storage."""
-        try:
-            json.dumps(v)
-        except (TypeError, ValueError) as e:
-            raise ValueError(f"context must be JSON-serialisable: {e}") from e
-        return v
 
 
 class BaseFindingModel(BaseModel):

@@ -55,7 +55,7 @@ from waivern_core.testing import (
     ComponentFactoryContractTests,
     ProcessorContractTests,
 )
-from waivern_core.types import InputRequirement
+from waivern_core.types import InputRequirement, JsonValue
 from waivern_core.utils import update_analyses_chain, validate_output_schema
 
 __all__ = [
@@ -96,6 +96,7 @@ __all__ = [
     "ServiceProvider",
     # Types
     "InputRequirement",
+    "JsonValue",
     # Utilities
     "update_analyses_chain",
     "validate_output_schema",

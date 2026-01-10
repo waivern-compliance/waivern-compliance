@@ -4,7 +4,6 @@ Implements token-aware file batching for efficient LLM validation of
 source code findings.
 """
 
-import re
 from pathlib import Path
 from typing import override
 
@@ -31,25 +30,18 @@ class ProcessingPurposeBatchedFilesStrategy(
     def extract_file_path_from_finding(
         self, finding: ProcessingPurposeFindingModel
     ) -> str | None:
-        """Extract the source file path from a finding's evidence.
-
-        The evidence content format from source code handler is:
-        ```
-        file/path.py
-           1  line content
-           2→ matched line
-           3  line content
-        ```
+        """Extract the source file path from a finding's metadata.
 
         Args:
             finding: The finding to extract file path from.
 
         Returns:
-            File path string (first line of evidence content).
+            File path string from metadata.source, or None if not available.
 
         """
-        # File path is the first line of evidence content
-        return finding.evidence[0].content.split("\n")[0]
+        if finding.metadata is None:
+            return None
+        return finding.metadata.source
 
     @override
     def get_batch_validation_prompt(
@@ -57,6 +49,7 @@ class ProcessingPurposeBatchedFilesStrategy(
         batch: FileBatch[ProcessingPurposeFindingModel],
         findings_by_file: dict[str, list[ProcessingPurposeFindingModel]],
         file_contents: dict[str, str],
+        validation_mode: str,
     ) -> str:
         """Generate validation prompt for a batch of files.
 
@@ -64,6 +57,7 @@ class ProcessingPurposeBatchedFilesStrategy(
             batch: The batch of files to validate.
             findings_by_file: Mapping of file paths to their findings.
             file_contents: Mapping of file paths to their full content.
+            validation_mode: Validation mode ("standard", "conservative", "aggressive").
 
         Returns:
             Formatted prompt string for LLM validation.
@@ -81,6 +75,7 @@ class ProcessingPurposeBatchedFilesStrategy(
         return prompt_template.format(
             source_files_section=source_files_section,
             findings_section=findings_section,
+            validation_mode=validation_mode,
         )
 
     def _build_source_files_section(
@@ -89,11 +84,27 @@ class ProcessingPurposeBatchedFilesStrategy(
         file_contents: dict[str, str],
         findings_by_file: dict[str, list[ProcessingPurposeFindingModel]],
     ) -> str:
-        """Build the source files section of the prompt."""
+        """Build the source files section of the prompt.
+
+        Output format:
+        ```
+        === File: src/payments/checkout.py (3 findings) ===
+        import stripe
+
+        def process_payment(amount):
+            return stripe.Charge.create(amount=amount)
+
+        === File: src/analytics/tracker.py (2 findings) ===
+        from mixpanel import Mixpanel
+
+        def track_event(user_id, event):
+            mp.track(user_id, event)
+        ```
+        """
         sections: list[str] = []
 
         for file_path in files:
-            content = file_contents.get(file_path, "[Content unavailable]")
+            content = file_contents[file_path]
             finding_count = len(findings_by_file.get(file_path, []))
             sections.append(
                 f"=== File: {file_path} ({finding_count} findings) ===\n{content}"
@@ -106,14 +117,28 @@ class ProcessingPurposeBatchedFilesStrategy(
         files: list[str],
         findings_by_file: dict[str, list[ProcessingPurposeFindingModel]],
     ) -> str:
-        """Build the findings section with finding IDs."""
+        """Build the findings section with finding IDs.
+
+        Output format:
+        ```
+        File: src/payments/checkout.py
+          [a1b2c3d4-...] Purpose: Payment Processing, Patterns: stripe, checkout, Line: L42
+          [e5f6g7h8-...] Purpose: Transaction Logging, Patterns: log_transaction, Line: L58
+
+        File: src/analytics/tracker.py
+          [i9j0k1l2-...] Purpose: User Analytics, Patterns: mixpanel, track, Line: L12
+        ```
+
+        The finding ID (UUID) is used by the LLM to reference specific findings
+        in its validation response.
+        """
         lines: list[str] = []
 
         for file_path in files:
             findings = findings_by_file[file_path]
             lines.append(f"\nFile: {file_path}")
             for finding in findings:
-                line_num = self._extract_line_number(finding)
+                line_num = finding.metadata.line_number if finding.metadata else None
                 patterns = ", ".join(finding.matched_patterns)
                 lines.append(
                     f"  [{finding.id}] Purpose: {finding.purpose}, "
@@ -121,30 +146,3 @@ class ProcessingPurposeBatchedFilesStrategy(
                 )
 
         return "\n".join(lines)
-
-    def _extract_line_number(self, finding: ProcessingPurposeFindingModel) -> int:
-        """Extract the matched line number from a finding's evidence.
-
-        The evidence contains lines formatted as:
-        ```
-           42→ matched line content
-        ```
-
-        Args:
-            finding: The finding to extract line number from.
-
-        Returns:
-            Line number as integer.
-
-        """
-        content = finding.evidence[0].content
-
-        # Find line with arrow indicator (e.g., "  42→ content")
-        for line in content.split("\n"):
-            if "→" in line:
-                match = re.match(r"\s*(\d+)→", line)
-                if match:
-                    return int(match.group(1))
-
-        # Source code handler always includes arrow indicator
-        raise ValueError("Evidence missing line number indicator")

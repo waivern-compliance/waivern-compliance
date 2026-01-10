@@ -56,11 +56,12 @@ class MockBatchedFilesStrategy(BatchedFilesStrategyBase[MockFinding]):
         batch: FileBatch[MockFinding],
         findings_by_file: dict[str, list[MockFinding]],
         file_contents: dict[str, str],
+        validation_mode: str,
     ) -> str:
         """Generate mock validation prompt."""
         file_count = len(batch.files)
         finding_count = sum(len(findings_by_file[f]) for f in batch.files)
-        return f"Validate {finding_count} findings across {file_count} files"
+        return f"Validate {finding_count} findings across {file_count} files (mode: {validation_mode})"
 
 
 class MockFileContentProvider:
@@ -119,16 +120,17 @@ class TestValidateFindingsWithFileContent:
             ]
         )
 
-        result, success = strategy.validate_findings_with_file_content(
+        result = strategy.validate_findings_with_file_content(
             findings=findings,
             file_provider=file_provider,
             max_tokens_per_batch=10000,
             llm_service=mock_llm,
         )
 
-        assert success is True
-        assert len(result) == 1
-        assert result[0].purpose == "Payment"
+        assert result.all_batches_succeeded is True
+        assert len(result.validated_findings) == 1
+        assert result.validated_findings[0].purpose == "Payment"
+        assert len(result.unvalidated_findings) == 0
 
     def test_returns_all_findings_when_all_true_positives(self) -> None:
         """Should keep all findings when LLM marks all as TRUE_POSITIVE."""
@@ -160,15 +162,16 @@ class TestValidateFindingsWithFileContent:
             ]
         )
 
-        result, success = strategy.validate_findings_with_file_content(
+        result = strategy.validate_findings_with_file_content(
             findings=findings,
             file_provider=file_provider,
             max_tokens_per_batch=10000,
             llm_service=mock_llm,
         )
 
-        assert success is True
-        assert len(result) == 2
+        assert result.all_batches_succeeded is True
+        assert len(result.validated_findings) == 2
+        assert len(result.unvalidated_findings) == 0
 
     def test_returns_original_findings_on_llm_error(self) -> None:
         """Should return original findings when LLM call fails."""
@@ -180,16 +183,18 @@ class TestValidateFindingsWithFileContent:
         mock_llm = Mock(spec=BaseLLMService)
         mock_llm.analyse_data.side_effect = Exception("LLM unavailable")
 
-        result, success = strategy.validate_findings_with_file_content(
+        result = strategy.validate_findings_with_file_content(
             findings=findings,
             file_provider=file_provider,
             max_tokens_per_batch=10000,
             llm_service=mock_llm,
         )
 
-        assert success is False
-        assert len(result) == 1
-        assert result[0].purpose == "Payment"
+        assert result.all_batches_succeeded is False
+        assert len(result.validated_findings) == 0
+        # Failed batch findings go to unvalidated
+        assert len(result.unvalidated_findings) == 1
+        assert result.unvalidated_findings[0].purpose == "Payment"
 
     def test_empty_findings_returns_empty_list(self) -> None:
         """Should return empty list for empty findings."""
@@ -197,15 +202,16 @@ class TestValidateFindingsWithFileContent:
         file_provider = MockFileContentProvider({})
         mock_llm = Mock(spec=BaseLLMService)
 
-        result, success = strategy.validate_findings_with_file_content(
+        result = strategy.validate_findings_with_file_content(
             findings=[],
             file_provider=file_provider,
             max_tokens_per_batch=10000,
             llm_service=mock_llm,
         )
 
-        assert success is True
-        assert result == []
+        assert result.all_batches_succeeded is True
+        assert result.validated_findings == []
+        assert result.unvalidated_findings == []
         mock_llm.analyse_data.assert_not_called()
 
     def test_includes_findings_omitted_by_llm(self) -> None:
@@ -233,18 +239,19 @@ class TestValidateFindingsWithFileContent:
             ]
         )
 
-        result, success = strategy.validate_findings_with_file_content(
+        result = strategy.validate_findings_with_file_content(
             findings=findings,
             file_provider=file_provider,
             max_tokens_per_batch=10000,
             llm_service=mock_llm,
         )
 
-        # All 3 findings should be in result (1 validated + 2 unvalidated)
-        assert success is True
-        assert len(result) == 3
-        result_purposes = {f.purpose for f in result}
+        # All 3 findings should be validated (1 explicitly + 2 via fail-safe)
+        assert result.all_batches_succeeded is True
+        assert len(result.validated_findings) == 3
+        result_purposes = {f.purpose for f in result.validated_findings}
         assert result_purposes == {"Payment", "Analytics", "Logging"}
+        assert len(result.unvalidated_findings) == 0
 
     def test_rejects_invalid_finding_ids(self) -> None:
         """Should reject unknown finding IDs from LLM and include findings via fail-safe."""
@@ -277,18 +284,19 @@ class TestValidateFindingsWithFileContent:
             ]
         )
 
-        result, success = strategy.validate_findings_with_file_content(
+        result = strategy.validate_findings_with_file_content(
             findings=findings,
             file_provider=file_provider,
             max_tokens_per_batch=10000,
             llm_service=mock_llm,
         )
 
-        # Both findings should be included (unknown IDs ignored, fail-safe applies)
-        assert success is True
-        assert len(result) == 2
-        result_purposes = {f.purpose for f in result}
+        # Both findings should be validated (unknown IDs ignored, fail-safe applies)
+        assert result.all_batches_succeeded is True
+        assert len(result.validated_findings) == 2
+        result_purposes = {f.purpose for f in result.validated_findings}
         assert result_purposes == {"Payment", "Analytics"}
+        assert len(result.unvalidated_findings) == 0
 
     def test_includes_findings_from_oversized_files(self) -> None:
         """Should include findings from files too large to batch."""
@@ -318,18 +326,19 @@ class TestValidateFindingsWithFileContent:
             ]
         )
 
-        result, success = strategy.validate_findings_with_file_content(
+        result = strategy.validate_findings_with_file_content(
             findings=findings,
             file_provider=file_provider,
             max_tokens_per_batch=500,  # Small limit to force huge file to be oversized
             llm_service=mock_llm,
         )
 
-        # Both findings should be included
-        assert success is True
-        assert len(result) == 2
-        result_purposes = {f.purpose for f in result}
-        assert result_purposes == {"FromHuge", "FromSmall"}
+        # FromSmall is validated, FromHuge goes to unvalidated (oversized file)
+        assert result.all_batches_succeeded is True
+        assert len(result.validated_findings) == 1
+        assert result.validated_findings[0].purpose == "FromSmall"
+        assert len(result.unvalidated_findings) == 1
+        assert result.unvalidated_findings[0].purpose == "FromHuge"
 
     def test_includes_findings_from_missing_files(self) -> None:
         """Should include findings from files not found in provider (fail-safe)."""
@@ -358,15 +367,16 @@ class TestValidateFindingsWithFileContent:
             ]
         )
 
-        result, success = strategy.validate_findings_with_file_content(
+        result = strategy.validate_findings_with_file_content(
             findings=findings,
             file_provider=file_provider,
             max_tokens_per_batch=5000,
             llm_service=mock_llm,
         )
 
-        # Both findings should be included (missing file findings included unvalidated)
-        assert success is True
-        assert len(result) == 2
-        result_purposes = {f.purpose for f in result}
-        assert result_purposes == {"FromExisting", "FromMissing"}
+        # FromExisting is validated, FromMissing goes to unvalidated (missing file)
+        assert result.all_batches_succeeded is True
+        assert len(result.validated_findings) == 1
+        assert result.validated_findings[0].purpose == "FromExisting"
+        assert len(result.unvalidated_findings) == 1
+        assert result.unvalidated_findings[0].purpose == "FromMissing"
