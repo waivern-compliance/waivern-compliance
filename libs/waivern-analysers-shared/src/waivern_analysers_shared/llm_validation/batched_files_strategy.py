@@ -289,6 +289,12 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
                 all_batches_succeeded=True,
             )
 
+        # Initialise result tracking outside try block to preserve progress
+        validated_findings: list[T] = []
+        unvalidated_findings: list[T] = []
+        all_batches_succeeded = True
+        processed_finding_ids: set[str] = set()
+
         try:
             # Group findings by file
             findings_by_file = self._group_findings_by_file(findings)
@@ -309,11 +315,14 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
             )
 
             # Validate each batch
-            validated_findings: list[T] = []
-            unvalidated_findings: list[T] = []
-            all_batches_succeeded = True
-
             for batch_idx, batch in enumerate(batching_result.batches):
+                # Track all findings in batch as processed (whether validated or filtered)
+                batch_all_findings = [
+                    f for file_path in batch.files for f in findings_by_file[file_path]
+                ]
+                for f in batch_all_findings:
+                    processed_finding_ids.add(f.id)
+
                 try:
                     batch_findings = self._validate_batch(
                         batch=batch,
@@ -326,44 +335,72 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
                 except Exception as e:
                     logger.error(f"Batch {batch_idx + 1} validation failed: {e}")
                     # Failed batch findings go to unvalidated
-                    for file_path in batch.files:
-                        unvalidated_findings.extend(findings_by_file[file_path])
+                    unvalidated_findings.extend(batch_all_findings)
                     all_batches_succeeded = False
 
-            # Collect findings from oversized files (unvalidated)
-            for file_path in batching_result.oversized_files:
-                logger.warning(
-                    f"{len(findings_by_file[file_path])} findings from oversized "
-                    f"file cannot be validated: {file_path}"
-                )
-                unvalidated_findings.extend(findings_by_file[file_path])
-
-            # Collect findings from missing files (unvalidated)
-            for file_path in batching_result.missing_files:
-                logger.warning(
-                    f"{len(findings_by_file[file_path])} findings from missing "
-                    f"file cannot be validated: {file_path}"
-                )
-                unvalidated_findings.extend(findings_by_file[file_path])
-
-            logger.debug(
-                f"Validation complete: {len(validated_findings)} validated, "
-                f"{len(unvalidated_findings)} unvalidated"
-            )
-
-            return FileValidationResult(
-                validated_findings=validated_findings,
+            # Collect findings from oversized and missing files (unvalidated)
+            self._collect_unbatchable_findings(
+                file_paths=batching_result.oversized_files,
+                reason="oversized",
+                findings_by_file=findings_by_file,
                 unvalidated_findings=unvalidated_findings,
-                all_batches_succeeded=all_batches_succeeded,
+                processed_finding_ids=processed_finding_ids,
+            )
+            self._collect_unbatchable_findings(
+                file_paths=batching_result.missing_files,
+                reason="missing",
+                findings_by_file=findings_by_file,
+                unvalidated_findings=unvalidated_findings,
+                processed_finding_ids=processed_finding_ids,
             )
 
         except Exception as e:
             logger.error(f"File-based validation failed: {e}")
-            return FileValidationResult(
-                validated_findings=[],
-                unvalidated_findings=list(findings),
-                all_batches_succeeded=False,
+            all_batches_succeeded = False
+
+        # Add any unprocessed findings to unvalidated (preserves progress on failure)
+        for finding in findings:
+            if finding.id not in processed_finding_ids:
+                unvalidated_findings.append(finding)
+
+        logger.debug(
+            f"Validation complete: {len(validated_findings)} validated, "
+            f"{len(unvalidated_findings)} unvalidated"
+        )
+
+        return FileValidationResult(
+            validated_findings=validated_findings,
+            unvalidated_findings=unvalidated_findings,
+            all_batches_succeeded=all_batches_succeeded,
+        )
+
+    def _collect_unbatchable_findings(
+        self,
+        file_paths: list[str],
+        reason: str,
+        findings_by_file: dict[str, list[T]],
+        unvalidated_findings: list[T],
+        processed_finding_ids: set[str],
+    ) -> None:
+        """Collect findings from files that cannot be batched.
+
+        Args:
+            file_paths: List of file paths that couldn't be batched.
+            reason: Reason for exclusion (e.g., "oversized", "missing").
+            findings_by_file: Mapping of file paths to their findings.
+            unvalidated_findings: List to append unvalidated findings to.
+            processed_finding_ids: Set to track processed finding IDs.
+
+        """
+        for file_path in file_paths:
+            file_findings = findings_by_file[file_path]
+            logger.warning(
+                f"{len(file_findings)} findings from {reason} "
+                f"file cannot be validated: {file_path}"
             )
+            for finding in file_findings:
+                unvalidated_findings.append(finding)
+                processed_finding_ids.add(finding.id)
 
     def _validate_batch(
         self,
