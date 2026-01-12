@@ -4,8 +4,8 @@ This module provides the JavaScript language support class that implements
 the LanguageSupport protocol for language detection.
 """
 
-# JavaScript file extensions
-JS_EXTENSIONS = [".js", ".jsx", ".mjs", ".cjs"]
+# JavaScript file extensions (includes .vue for Vue.js Single File Components)
+JS_EXTENSIONS = [".js", ".jsx", ".mjs", ".cjs", ".vue"]
 
 
 class JavaScriptLanguageSupport:
