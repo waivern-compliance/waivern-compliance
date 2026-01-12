@@ -9,10 +9,14 @@ service_categories:
 - payment_processing
 - user_analytics
 - social_media
+- ai_ml_services
+- media_processing
+- healthcare_integrations
 purpose_categories:
 - operational
 - analytics
 - marketing_and_advertising
+- data_processing
 rules:
 - name: Cloud Infrastructure Services
   description: Cloud storage and platform service integrations
@@ -102,3 +106,70 @@ rules:
   - social
   service_category: social_media
   purpose_category: marketing_and_advertising
+- name: AI and ML Services
+  description: Artificial intelligence and machine learning service integrations
+  patterns:
+  - openai
+  - gpt-4
+  - gpt-3
+  - chatgpt
+  - anthropic
+  - claude
+  - pinecone
+  - weaviate
+  - chromadb
+  - deepgram
+  - elevenlabs
+  - whisper
+  - embedding
+  - vector
+  - llm
+  - langchain
+  - huggingface
+  - cohere
+  - replicate
+  service_category: ai_ml_services
+  purpose_category: data_processing
+- name: Media Processing Services
+  description: Image, video and audio processing service integrations
+  patterns:
+  - cloudinary
+  - imgix
+  - uploadcare
+  - transloadit
+  - mux
+  - vimeo
+  - wistia
+  - ffmpeg
+  - imagemagick
+  service_category: media_processing
+  purpose_category: operational
+- name: Messaging Platforms
+  description: Messaging platform integrations beyond traditional communication
+  patterns:
+  - whatsapp
+  - whatsappbusiness
+  - telegram
+  - viber
+  - wechat
+  - signal
+  - messagebird
+  - vonage
+  - nexmo
+  service_category: communication
+  purpose_category: operational
+- name: Healthcare Practice Management
+  description: Healthcare and medical practice management system integrations
+  patterns:
+  - cliniko
+  - nookal
+  - practicehub
+  - coreplus
+  - mindbody
+  - jane
+  - healthie
+  - simplepractice
+  - practiceportal
+  - gympods
+  service_category: healthcare_integrations
+  purpose_category: operational
