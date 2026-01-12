@@ -4,11 +4,14 @@ These tests describe the expected behaviour of LLM validation integration
 and should initially fail until the functionality is implemented.
 """
 
-import json
 import re
 from unittest.mock import Mock
 
 import pytest
+from waivern_analysers_shared.llm_validation.models import (
+    LLMValidationResponseModel,
+    LLMValidationResultModel,
+)
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseMetadata,
@@ -84,22 +87,22 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
         # Dynamic mock that extracts finding IDs from the prompt and returns valid response
-        def mock_llm_response(_content: str, prompt: str) -> str:
+        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
             finding_ids = _extract_finding_ids_from_prompt(prompt)
-            return json.dumps(
-                [
-                    {
-                        "finding_id": finding_ids[i],
-                        "validation_result": "TRUE_POSITIVE",
-                        "confidence": 0.8 + i * 0.1,
-                        "reasoning": f"Valid finding {i}",
-                        "recommended_action": "keep",
-                    }
+            return LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=finding_ids[i],
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.8 + i * 0.1,
+                        reasoning=f"Valid finding {i}",
+                        recommended_action="keep",
+                    )
                     for i in range(len(finding_ids))
                 ]
             )
 
-        mock_llm_service.analyse_data.side_effect = mock_llm_response
+        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
 
         config = ProcessingPurposeAnalyserConfig.from_properties(properties)
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
@@ -111,12 +114,11 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         )
 
         # Assert - LLM service should be called for validation
-        mock_llm_service.analyse_data.assert_called_once()
+        mock_llm_service.invoke_with_structured_output.assert_called_once()
 
         # Verify the call was made with validation prompt
-        call_args = mock_llm_service.analyse_data.call_args
-        assert call_args[0][0] == ""  # empty prompt content
-        assert "VALIDATION TASK" in call_args[0][1]  # validation prompt
+        call_args = mock_llm_service.invoke_with_structured_output.call_args
+        assert "VALIDATION TASK" in call_args[0][0]  # validation prompt
 
     def test_llm_validation_filters_out_false_positives(
         self,
@@ -128,28 +130,28 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
         # Dynamic mock that marks first finding as false positive
-        def mock_llm_response(_content: str, prompt: str) -> str:
+        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
             finding_ids = _extract_finding_ids_from_prompt(prompt)
-            return json.dumps(
-                [
-                    {
-                        "finding_id": finding_ids[0],
-                        "validation_result": "FALSE_POSITIVE",
-                        "confidence": 0.95,
-                        "reasoning": "Documentation example, not actual processing",
-                        "recommended_action": "discard",
-                    },
-                    {
-                        "finding_id": finding_ids[1],
-                        "validation_result": "TRUE_POSITIVE",
-                        "confidence": 0.9,
-                        "reasoning": "Actual payment processing",
-                        "recommended_action": "keep",
-                    },
+            return LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=finding_ids[0],
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.95,
+                        reasoning="Documentation example, not actual processing",
+                        recommended_action="discard",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=finding_ids[1],
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Actual payment processing",
+                        recommended_action="keep",
+                    ),
                 ]
             )
 
-        mock_llm_service.analyse_data.side_effect = mock_llm_response
+        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
 
         config = ProcessingPurposeAnalyserConfig.from_properties(properties)
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
@@ -219,7 +221,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         )
 
         # Assert - LLM service should not be called
-        mock_llm_service.analyse_data.assert_not_called()
+        mock_llm_service.invoke_with_structured_output.assert_not_called()
 
         # Should not have validation summary
         assert "validation_summary" not in result.content
@@ -259,7 +261,9 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
         # Mock LLM service to raise an exception
-        mock_llm_service.analyse_data.side_effect = Exception("LLM service error")
+        mock_llm_service.invoke_with_structured_output.side_effect = Exception(
+            "LLM service error"
+        )
 
         config = ProcessingPurposeAnalyserConfig.from_properties(properties)
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
@@ -314,7 +318,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         )
 
         # Assert - LLM should not be called when no findings exist
-        mock_llm_service.analyse_data.assert_not_called()
+        mock_llm_service.invoke_with_structured_output.assert_not_called()
 
         # Should not have validation summary when no findings to validate
         assert "validation_summary" not in result.content

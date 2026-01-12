@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field
 
 # Type alias for validation results
 ValidationResultType = Literal["TRUE_POSITIVE", "FALSE_POSITIVE", "UNKNOWN"]
@@ -40,5 +40,13 @@ class LLMValidationResultModel(BaseModel):
     )
 
 
-# TypeAdapter for validating a list of validation results from LLM response
-LLMValidationResultListAdapter = TypeAdapter(list[LLMValidationResultModel])
+class LLMValidationResponseModel(BaseModel):
+    """Wrapper model for structured output from LLM validation.
+
+    This model wraps the list of validation results in a single field,
+    which is required for LangChain's with_structured_output() method.
+    """
+
+    results: list[LLMValidationResultModel] = Field(
+        description="List of validation results for each finding"
+    )

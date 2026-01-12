@@ -1,6 +1,5 @@
 """Abstract base strategy for LLM validation with shared logic."""
 
-import json
 import logging
 from abc import ABC, abstractmethod
 from typing import Any
@@ -11,8 +10,7 @@ from waivern_llm import BaseLLMService
 from waivern_analysers_shared.types import LLMValidationConfig
 
 from .decision_engine import ValidationDecisionEngine
-from .json_utils import extract_json_from_llm_response
-from .models import LLMValidationResultListAdapter
+from .models import LLMValidationResponseModel, LLMValidationResultModel
 
 logger = logging.getLogger(__name__)
 
@@ -160,28 +158,22 @@ class LLMValidationStrategy[T: BaseFindingModel](ABC):
         # Generate validation prompt using subclass implementation
         prompt = self.get_validation_prompt(findings_batch, config)
 
-        # Get LLM validation response
+        # Get LLM validation response with structured output - no JSON parsing needed!
         logger.debug(f"Validating batch of {len(findings_batch)} findings")
-        response = llm_service.analyse_data("", prompt)
+        response = llm_service.invoke_with_structured_output(
+            prompt, LLMValidationResponseModel
+        )
+        logger.debug(f"Received {len(response.results)} validation results")
 
-        try:
-            # Extract and parse JSON response using unified implementation
-            clean_json = extract_json_from_llm_response(response)
-            validation_results = json.loads(clean_json)
-
-            # Filter findings based on validation results
-            return self._filter_findings_by_validation_results(
-                findings_batch, validation_results
-            )
-        except (ValueError, json.JSONDecodeError) as e:
-            # JSON parsing errors should bubble up to indicate validation failure
-            logger.error(f"JSON parsing failed: {e}")
-            raise
+        # Filter findings based on validation results
+        return self._filter_findings_by_validation_results(
+            findings_batch, response.results
+        )
 
     def _filter_findings_by_validation_results(
         self,
         findings_batch: list[T],
-        validation_results: list[dict[str, Any]],
+        validation_results: list[LLMValidationResultModel],
     ) -> list[T]:
         """Filter findings based on LLM validation results.
 
@@ -190,28 +182,18 @@ class LLMValidationStrategy[T: BaseFindingModel](ABC):
 
         Args:
             findings_batch: Original batch of findings
-            validation_results: Validation results from LLM
+            validation_results: Strongly-typed validation results from LLM
 
         Returns:
             List of validated findings that should be kept
 
         """
-        # Validate response structure using strongly-typed model
-        try:
-            typed_results = LLMValidationResultListAdapter.validate_python(
-                validation_results
-            )
-        except Exception as e:
-            logger.error(f"Failed to validate LLM response structure: {e}")
-            logger.warning("Returning all findings due to malformed LLM response")
-            return list(findings_batch)
-
         # Build lookup from finding ID to finding
         findings_by_id = {f.id: f for f in findings_batch}
         validated_findings: list[T] = []
         processed_ids: set[str] = set()
 
-        for result in typed_results:
+        for result in validation_results:
             finding = findings_by_id.get(result.finding_id)
             if finding is None:
                 logger.warning(f"Unknown finding_id from LLM: {result.finding_id}")
