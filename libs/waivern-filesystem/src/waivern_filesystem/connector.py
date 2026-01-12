@@ -206,6 +206,10 @@ class FilesystemConnector(Connector):
         Uses pathspec library for Git-style wildmatch semantics where
         **/*.php matches both root-level and nested PHP files.
 
+        Supports layered filtering when both patterns are specified:
+        1. Include patterns applied first (file must match to be considered)
+        2. Exclude patterns applied second (file must NOT match to be included)
+
         Args:
             path: File path to check
             include_spec: Compiled include pattern spec (or None)
@@ -217,15 +221,17 @@ class FilesystemConnector(Connector):
         """
         relative_path = str(path.relative_to(self._config.path))
 
-        # Include patterns (positive filtering) - include only if matching
+        # Layer 1: Include patterns (positive filtering) - file must match
         if include_spec is not None:
-            return include_spec.match_file(relative_path)
+            if not include_spec.match_file(relative_path):
+                return False
 
-        # Exclude patterns (negative filtering) - include if NOT matching
+        # Layer 2: Exclude patterns (negative filtering) - file must NOT match
         if exclude_spec is not None:
-            return not exclude_spec.match_file(relative_path)
+            if exclude_spec.match_file(relative_path):
+                return False
 
-        return True  # No patterns, include everything
+        return True  # Passed all filters (or no patterns specified)
 
     def collect_files(self) -> list[Path]:
         """Collect all files to process, handling both single files and directories.
@@ -244,6 +250,7 @@ class FilesystemConnector(Connector):
         files: list[Path] = []
 
         # Create PathSpec once before loop for performance
+        # Both can be set for layered filtering (include first, then exclude)
         include_spec: pathspec.PathSpec | None = None
         exclude_spec: pathspec.PathSpec | None = None
 
@@ -251,7 +258,7 @@ class FilesystemConnector(Connector):
             include_spec = pathspec.PathSpec.from_lines(
                 "gitwildmatch", self._config.include_patterns
             )
-        elif self._config.exclude_patterns is not None:
+        if self._config.exclude_patterns is not None:
             exclude_spec = pathspec.PathSpec.from_lines(
                 "gitwildmatch", self._config.exclude_patterns
             )
