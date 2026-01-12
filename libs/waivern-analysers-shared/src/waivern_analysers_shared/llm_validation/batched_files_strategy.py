@@ -487,8 +487,9 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
             )
         except Exception as e:
             logger.error(f"Failed to validate LLM response structure: {e}")
-            logger.warning("Returning all findings due to malformed LLM response")
-            return list(findings)
+            # Re-raise so caller marks batch as failed and findings go to unvalidated
+            # This ensures metadata accurately reflects validation failures
+            raise
 
         # Build lookup from finding ID to finding
         findings_by_id = {f.id: f for f in findings}

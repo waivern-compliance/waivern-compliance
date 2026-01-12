@@ -380,3 +380,50 @@ class TestValidateFindingsWithFileContent:
         assert result.validated_findings[0].purpose == "FromExisting"
         assert len(result.unvalidated_findings) == 1
         assert result.unvalidated_findings[0].purpose == "FromMissing"
+
+    def test_malformed_llm_response_marks_batch_as_failed(self) -> None:
+        """Should mark batch as failed when LLM returns malformed response structure.
+
+        When the LLM returns valid JSON but wrong structure (e.g., invalid enum
+        values or missing required finding_id), findings should go to unvalidated
+        and all_batches_succeeded should be False. This ensures metadata accurately
+        reflects validation failures.
+        """
+        strategy = MockBatchedFilesStrategy()
+        file_provider = MockFileContentProvider(
+            {"src/app.py": "def process_payment(): pass"}
+        )
+        findings = [
+            _create_finding("Payment", "src/app.py"),
+            _create_finding("Analytics", "src/app.py"),
+        ]
+        mock_llm = Mock(spec=BaseLLMService)
+        # LLM returns valid JSON but invalid structure:
+        # - First item missing required finding_id
+        # - Second item has invalid validation_result enum value
+        mock_llm.analyse_data.return_value = json.dumps(
+            [
+                {
+                    # Missing required finding_id field
+                    "validation_result": "TRUE_POSITIVE",
+                    "confidence": 0.9,
+                    "reasoning": "Valid",
+                    "recommended_action": "keep",
+                },
+            ]
+        )
+
+        result = strategy.validate_findings_with_file_content(
+            findings=findings,
+            file_provider=file_provider,
+            max_tokens_per_batch=10000,
+            llm_service=mock_llm,
+        )
+
+        # Validation failed - batch should be marked as failed
+        assert result.all_batches_succeeded is False
+        # Findings should be preserved but as unvalidated (not validated!)
+        assert len(result.unvalidated_findings) == 2
+        assert len(result.validated_findings) == 0
+        result_purposes = {f.purpose for f in result.unvalidated_findings}
+        assert result_purposes == {"Payment", "Analytics"}

@@ -54,3 +54,45 @@ class TestExtractJsonFromLlmResponse:
         """Test that ValueError is raised on empty response."""
         with pytest.raises(ValueError, match="No valid JSON found"):
             extract_json_from_llm_response("")
+
+    def test_handles_brackets_inside_string_values(self) -> None:
+        """Test extraction when JSON string values contain bracket characters.
+
+        This is critical for LLM validation where reasoning text may reference
+        arrays, data structures, or use bracket notation like [email] or [data].
+        """
+        # Array with brackets inside string values
+        response_with_brackets = """```json
+[
+  {
+    "finding_id": "abc-123",
+    "validation_result": "FALSE_POSITIVE",
+    "reasoning": "Email data [structure] for rate limiting is security, not customer service."
+  },
+  {
+    "finding_id": "def-456",
+    "validation_result": "TRUE_POSITIVE",
+    "reasoning": "This handles user [profile] data for account management."
+  }
+]
+```"""
+        result = extract_json_from_llm_response(response_with_brackets)
+        # Should extract the FULL array, not truncate at first ]
+        assert result.startswith("[")
+        assert result.endswith("]")
+        assert "abc-123" in result
+        assert "def-456" in result  # Must include second object
+        assert "Email data [structure]" in result
+
+    def test_handles_nested_arrays_in_json(self) -> None:
+        """Test extraction of JSON with nested array structures."""
+        response_with_nested = """Here is the result:
+[
+  {"id": "1", "tags": ["a", "b", "c"]},
+  {"id": "2", "tags": ["x", "y"]}
+]
+Done."""
+        result = extract_json_from_llm_response(response_with_nested)
+        assert result.startswith("[")
+        assert result.endswith("]")
+        assert '"id": "2"' in result  # Must include second object
