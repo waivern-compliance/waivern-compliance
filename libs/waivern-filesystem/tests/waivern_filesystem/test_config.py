@@ -72,24 +72,26 @@ class TestFilesystemConnectorConfig:
             config.exclude_patterns is None
         )  # Should be None when include_patterns is set
 
-    def test_from_properties_include_and_exclude_patterns_are_mutually_exclusive(
+    def test_from_properties_include_and_exclude_patterns_can_be_combined(
         self, tmp_path
     ):
-        """Test that include_patterns and exclude_patterns cannot both be specified."""
+        """Test that include_patterns and exclude_patterns can both be specified.
+
+        This enables layered filtering: include first, then exclude from the result.
+        """
         test_file = tmp_path / "test.txt"
         test_file.write_text("test content")
 
-        with pytest.raises(
-            ConnectorConfigError,
-            match="include_patterns and exclude_patterns are mutually exclusive",
-        ):
-            FilesystemConnectorConfig.from_properties(
-                {
-                    "path": str(test_file),
-                    "include_patterns": ["**/*.php"],
-                    "exclude_patterns": ["*.log"],
-                }
-            )
+        config = FilesystemConnectorConfig.from_properties(
+            {
+                "path": str(test_file),
+                "include_patterns": ["**/*.php"],
+                "exclude_patterns": ["admin/**"],
+            }
+        )
+
+        assert config.include_patterns == ["**/*.php"]
+        assert config.exclude_patterns == ["admin/**"]
 
     def test_from_properties_no_patterns_defaults_to_none(self, tmp_path):
         """Test that not specifying patterns defaults to None (include everything)."""

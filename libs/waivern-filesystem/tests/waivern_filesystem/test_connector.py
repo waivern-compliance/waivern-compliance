@@ -422,6 +422,70 @@ class TestFilesystemConnector:
             if os.name != "nt" and restricted_file.exists():
                 restricted_file.chmod(0o644)
 
+    def test_extract_directory_with_include_and_exclude_patterns_layered(
+        self, sample_directory, standard_input_schema
+    ):
+        """Test layered filtering: include patterns applied first, then exclude patterns.
+
+        Scenario: Include all .js files, but exclude those in admin/ directory.
+        This is the expected behaviour for typical project configurations like:
+            include_patterns: ["**/*.js"]
+            exclude_patterns: ["admin/**", "node_modules/**"]
+        """
+        # Create directory structure mimicking a real project
+        admin_dir = sample_directory / "admin"
+        admin_dir.mkdir()
+        src_dir = sample_directory / "src"
+        src_dir.mkdir()
+
+        # Files that should be INCLUDED (match include, don't match exclude)
+        (src_dir / "app.js").write_text("Main app JS")
+        (src_dir / "utils.js").write_text("Utility JS")
+        (sample_directory / "index.js").write_text("Root JS")
+
+        # Files that should be EXCLUDED (match include BUT also match exclude)
+        (admin_dir / "dashboard.js").write_text("Admin JS - should be excluded")
+        (admin_dir / "settings.js").write_text("Admin settings JS - should be excluded")
+
+        # Files that should be EXCLUDED (don't match include patterns)
+        (src_dir / "styles.css").write_text("CSS content")
+        (sample_directory / "readme.md").write_text("Markdown content")
+
+        config = FilesystemConnectorConfig.from_properties(
+            {
+                "path": str(sample_directory),
+                "include_patterns": ["**/*.js"],
+                "exclude_patterns": ["admin/**"],
+            }
+        )
+        connector = FilesystemConnector(config)
+
+        result = connector.extract(standard_input_schema)
+        content = result.content
+        file_contents = [item["content"] for item in content["data"]]
+        file_paths = [item["metadata"]["file_path"] for item in content["data"]]
+
+        # Should include JS files NOT in admin/
+        assert "Main app JS" in file_contents
+        assert "Utility JS" in file_contents
+        assert "Root JS" in file_contents
+
+        # Should exclude JS files in admin/ (layered filtering)
+        assert "Admin JS - should be excluded" not in file_contents
+        assert "Admin settings JS - should be excluded" not in file_contents
+
+        # Should exclude non-JS files (include pattern filtering)
+        assert "CSS content" not in file_contents
+        assert "Markdown content" not in file_contents
+
+        # Verify file count
+        assert content["metadata"]["file_count"] == 3  # Only the 3 non-admin JS files
+
+        # Verify all paths are JS files and none are in admin/
+        for path in file_paths:
+            assert path.endswith(".js"), f"Non-JS file included: {path}"
+            assert "admin" not in path, f"Admin file included: {path}"
+
     def test_extract_creates_filesystem_metadata(
         self, sample_file, standard_input_schema
     ):
