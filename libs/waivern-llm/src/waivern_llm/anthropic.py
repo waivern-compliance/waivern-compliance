@@ -139,7 +139,7 @@ class AnthropicLLMService(BaseLLMService):
                 model_name=self.model_name,
                 api_key=SecretStr(self._api_key),
                 temperature=0,  # Consistent responses for compliance analysis
-                max_tokens_to_sample=8000,  # Adjust as needed for response length
+                max_tokens_to_sample=16000,  # Sufficient for ~100 findings validation
                 timeout=300,  # Increased timeout for LLM requests
                 stop=None,  # Stop sequences for clean output
             )

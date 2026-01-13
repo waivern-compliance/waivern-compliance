@@ -2,6 +2,8 @@
 
 import importlib
 import logging
+import random
+from collections import defaultdict
 from types import ModuleType
 from typing import override
 
@@ -15,8 +17,8 @@ from waivern_core.schemas import (
 from waivern_llm import BaseLLMService
 
 from .llm_validation_strategy import processing_purpose_validation_strategy
-from .result_builder import ProcessingPurposeResultBuilder
-from .schemas.types import ProcessingPurposeFindingModel
+from .result_builder import ProcessingPurposeResultBuilder, SamplingInfo
+from .schemas.types import ProcessingPurposeFindingModel, RemovedPurpose
 from .types import ProcessingPurposeAnalyserConfig
 
 logger = logging.getLogger(__name__)
@@ -124,20 +126,33 @@ class ProcessingPurposeAnalyser(Analyser):
         findings = handler.analyse(input_data)
 
         # Apply LLM validation if enabled
+        sampling_info: SamplingInfo | None = None
         if self._config.llm_validation.enable_llm_validation:
-            validated_findings, validation_applied = self._validate_findings_with_llm(
-                findings, message
-            )
+            sampling_size = self._config.llm_validation.sampling_size
+            if sampling_size is not None:
+                # Use sampling-based validation
+                validated_findings, validation_applied, sampling_info = (
+                    self._validate_with_sampling(findings, message, sampling_size)
+                )
+            else:
+                # Validate all findings
+                validated_findings, validation_applied = (
+                    self._validate_findings_with_llm(findings, message)
+                )
         else:
             validated_findings, validation_applied = findings, False
 
         # Build analysis chain
-        chain_validation_stats = ChainEntryValidationStats.from_counts(
-            validation_applied=validation_applied,
-            original_count=len(findings),
-            validated_count=len(validated_findings),
-            validation_mode=self._config.llm_validation.llm_validation_mode,
-        )
+        # When sampling, skip validation_statistics - the sampling info tells the story
+        chain_validation_stats: ChainEntryValidationStats | None = None
+        if validation_applied and sampling_info is None:
+            # Full validation (no sampling) - include detailed stats
+            chain_validation_stats = ChainEntryValidationStats.from_counts(
+                validation_applied=validation_applied,
+                original_count=len(findings),
+                validated_count=len(validated_findings),
+                validation_mode=self._config.llm_validation.llm_validation_mode,
+            )
         updated_chain_dicts = update_analyses_chain(
             message,
             "processing_purpose_analyser",
@@ -152,6 +167,7 @@ class ProcessingPurposeAnalyser(Analyser):
             validation_applied,
             output_schema,
             updated_chain,
+            sampling_info,
         )
 
     def _load_reader_module(self, schema: Schema) -> ModuleType:
@@ -208,3 +224,193 @@ class ProcessingPurposeAnalyser(Analyser):
             logger.error(f"LLM validation failed: {e}")
             logger.warning("Returning original findings due to validation error")
             return findings, False
+
+    def _validate_with_sampling(
+        self,
+        findings: list[ProcessingPurposeFindingModel],
+        input_message: Message,
+        sampling_size: int,
+    ) -> tuple[list[ProcessingPurposeFindingModel], bool, SamplingInfo]:
+        """Validate findings using purpose-based sampling.
+
+        Samples N findings per purpose group and validates only those samples.
+        Decision logic:
+        1. If ALL samples for a purpose are FALSE_POSITIVE → remove entire group
+        2. If ANY sample is TRUE_POSITIVE → keep the group (remove FP samples only)
+
+        Args:
+            findings: All findings from pattern matching
+            input_message: Input message for validation context
+            sampling_size: Number of samples per purpose group
+
+        Returns:
+            Tuple of (validated findings, validation applied, sampling info)
+
+        """
+        if not findings:
+            return (
+                findings,
+                False,
+                SamplingInfo(
+                    samples_per_purpose=sampling_size,
+                    samples_validated=0,
+                    removed_purposes=[],
+                ),
+            )
+
+        # 1. Group findings by purpose
+        purpose_groups: dict[str, list[ProcessingPurposeFindingModel]] = defaultdict(
+            list
+        )
+        for finding in findings:
+            purpose_groups[finding.purpose].append(finding)
+
+        logger.info(
+            f"Sampling validation: {len(findings)} findings in "
+            f"{len(purpose_groups)} purpose groups"
+        )
+
+        # 2. Sample N findings from each group
+        sampled_findings: list[ProcessingPurposeFindingModel] = []
+        sample_to_purpose: dict[int, str] = {}  # Map sample index to purpose
+
+        for purpose, group_findings in purpose_groups.items():
+            samples = random.sample(
+                group_findings, min(sampling_size, len(group_findings))
+            )
+            for sample in samples:
+                sample_to_purpose[len(sampled_findings)] = purpose
+                sampled_findings.append(sample)
+
+        logger.info(f"Selected {len(sampled_findings)} samples for LLM validation")
+
+        # 3. Validate only the samples
+        validated_samples, validation_applied = self._validate_findings_with_llm(
+            sampled_findings, input_message
+        )
+
+        if not validation_applied:
+            # Validation failed - return original findings
+            return (
+                findings,
+                False,
+                SamplingInfo(
+                    samples_per_purpose=sampling_size,
+                    samples_validated=0,
+                    removed_purposes=[],
+                ),
+            )
+
+        # 4. Identify which samples were kept (true positives)
+        # Use finding.id (string UUID) not id() since validation returns new model instances
+        validated_sample_ids = {f.id for f in validated_samples}
+
+        # Group validated samples by purpose
+        purpose_sample_results: dict[str, list[bool]] = defaultdict(list)
+        for i, sample in enumerate(sampled_findings):
+            purpose = sample_to_purpose[i]
+            is_true_positive = sample.id in validated_sample_ids
+            purpose_sample_results[purpose].append(is_true_positive)
+
+        # 5. Determine which purposes to remove
+        removed_purposes: list[RemovedPurpose] = []
+        purposes_to_remove: set[str] = set()
+
+        for purpose, results in purpose_sample_results.items():
+            if not any(results):
+                # ALL samples are false positives → remove entire purpose group
+                purposes_to_remove.add(purpose)
+                removed_purposes.append(
+                    RemovedPurpose(
+                        purpose=purpose,
+                        reason="All sampled findings are false positives",
+                        require_review=True,
+                    )
+                )
+                logger.info(
+                    f"Removing purpose '{purpose}': all {len(results)} samples "
+                    "are false positives"
+                )
+
+        # 6. Build final validated findings list
+        validated_findings = self._build_validated_findings_list(
+            findings, sampled_findings, validated_sample_ids, purposes_to_remove
+        )
+
+        logger.info(
+            f"Sampling validation complete: {len(findings)} → {len(validated_findings)} "
+            f"findings ({len(removed_purposes)} purposes removed)"
+        )
+
+        sampling_info = SamplingInfo(
+            samples_per_purpose=sampling_size,
+            samples_validated=len(sampled_findings),
+            removed_purposes=removed_purposes,
+        )
+
+        return validated_findings, True, sampling_info
+
+    def _mark_finding_validated(
+        self, finding: ProcessingPurposeFindingModel
+    ) -> ProcessingPurposeFindingModel:
+        """Mark a finding as LLM validated.
+
+        Args:
+            finding: Finding to mark
+
+        Returns:
+            New finding with validation marker in metadata context
+
+        """
+        # Create updated metadata with validation marker
+        if finding.metadata:
+            updated_context = dict(finding.metadata.context)
+            updated_context["processing_purpose_llm_validated"] = True
+
+            updated_metadata = finding.metadata.model_copy(
+                update={"context": updated_context}
+            )
+            return finding.model_copy(update={"metadata": updated_metadata})
+
+        return finding
+
+    def _build_validated_findings_list(
+        self,
+        findings: list[ProcessingPurposeFindingModel],
+        sampled_findings: list[ProcessingPurposeFindingModel],
+        validated_sample_ids: set[str],
+        purposes_to_remove: set[str],
+    ) -> list[ProcessingPurposeFindingModel]:
+        """Build the final list of validated findings after sampling.
+
+        Args:
+            findings: All original findings
+            sampled_findings: Findings that were sampled for validation
+            validated_sample_ids: Set of finding IDs (UUIDs) for samples that passed
+            purposes_to_remove: Purpose names whose groups should be removed entirely
+
+        Returns:
+            List of findings to keep, with sampled true positives marked as validated
+
+        """
+        # Use finding IDs for membership check (not object identity)
+        sampled_finding_ids = {f.id for f in sampled_findings}
+        validated_findings: list[ProcessingPurposeFindingModel] = []
+
+        for finding in findings:
+            if finding.purpose in purposes_to_remove:
+                # Skip - entire purpose group removed
+                continue
+
+            if finding.id in sampled_finding_ids:
+                # This was a sample - check if it was validated
+                if finding.id in validated_sample_ids:
+                    # Mark as LLM validated
+                    validated_finding = self._mark_finding_validated(finding)
+                    validated_findings.append(validated_finding)
+                # else: sample was false positive, skip it
+            else:
+                # Non-sampled finding - keep by inference (purpose group is valid)
+                validated_findings.append(finding)
+
+        return validated_findings
