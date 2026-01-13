@@ -5,7 +5,6 @@ for efficient LLM validation. Groups findings by file, creates batches
 that fit within token limits, and handles oversized files gracefully.
 """
 
-import json
 from typing import override
 from unittest.mock import Mock
 
@@ -18,6 +17,10 @@ from waivern_analysers_shared.llm_validation.batched_files_strategy import (
     FileBatch,
 )
 from waivern_analysers_shared.llm_validation.file_content import FileInfo
+from waivern_analysers_shared.llm_validation.models import (
+    LLMValidationResponseModel,
+    LLMValidationResultModel,
+)
 
 
 class MockFinding(BaseFindingModel):
@@ -101,23 +104,25 @@ class TestValidateFindingsWithFileContent:
             _create_finding("Documentation", "src/app.py"),
         ]
         mock_llm = Mock(spec=BaseLLMService)
-        mock_llm.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Real payment processing",
-                    "recommended_action": "keep",
-                },
-                {
-                    "finding_id": findings[1].id,
-                    "validation_result": "FALSE_POSITIVE",
-                    "confidence": 0.85,
-                    "reasoning": "Just documentation",
-                    "recommended_action": "discard",
-                },
-            ]
+        mock_llm.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Real payment processing",
+                        recommended_action="keep",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=findings[1].id,
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.85,
+                        reasoning="Just documentation",
+                        recommended_action="discard",
+                    ),
+                ]
+            )
         )
 
         result = strategy.validate_findings_with_file_content(
@@ -143,23 +148,25 @@ class TestValidateFindingsWithFileContent:
             _create_finding("Analytics", "src/app.py"),
         ]
         mock_llm = Mock(spec=BaseLLMService)
-        mock_llm.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Real processing",
-                    "recommended_action": "keep",
-                },
-                {
-                    "finding_id": findings[1].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.85,
-                    "reasoning": "Real analytics",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Real processing",
+                        recommended_action="keep",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=findings[1].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.85,
+                        reasoning="Real analytics",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
 
         result = strategy.validate_findings_with_file_content(
@@ -181,7 +188,9 @@ class TestValidateFindingsWithFileContent:
         )
         findings = [_create_finding("Payment", "src/app.py")]
         mock_llm = Mock(spec=BaseLLMService)
-        mock_llm.analyse_data.side_effect = Exception("LLM unavailable")
+        mock_llm.invoke_with_structured_output.side_effect = Exception(
+            "LLM unavailable"
+        )
 
         result = strategy.validate_findings_with_file_content(
             findings=findings,
@@ -212,7 +221,7 @@ class TestValidateFindingsWithFileContent:
         assert result.all_batches_succeeded is True
         assert result.validated_findings == []
         assert result.unvalidated_findings == []
-        mock_llm.analyse_data.assert_not_called()
+        mock_llm.invoke_with_structured_output.assert_not_called()
 
     def test_includes_findings_omitted_by_llm(self) -> None:
         """Should include findings not mentioned in LLM response (fail-safe)."""
@@ -227,16 +236,18 @@ class TestValidateFindingsWithFileContent:
         ]
         mock_llm = Mock(spec=BaseLLMService)
         # LLM only returns result for finding 0, omits 1 and 2
-        mock_llm.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Real payment",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Real payment",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
 
         result = strategy.validate_findings_with_file_content(
@@ -265,23 +276,25 @@ class TestValidateFindingsWithFileContent:
         ]
         mock_llm = Mock(spec=BaseLLMService)
         # LLM returns invalid/unknown finding IDs
-        mock_llm.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": "unknown-id-1",
-                    "validation_result": "FALSE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Bad",
-                    "recommended_action": "discard",
-                },
-                {
-                    "finding_id": "unknown-id-2",
-                    "validation_result": "FALSE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Bad",
-                    "recommended_action": "discard",
-                },
-            ]
+        mock_llm.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id="unknown-id-1",
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Bad",
+                        recommended_action="discard",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id="unknown-id-2",
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Bad",
+                        recommended_action="discard",
+                    ),
+                ]
+            )
         )
 
         result = strategy.validate_findings_with_file_content(
@@ -314,16 +327,18 @@ class TestValidateFindingsWithFileContent:
         ]
         mock_llm = Mock(spec=BaseLLMService)
         # Only the small file is batched, so only that finding is validated
-        mock_llm.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": findings[1].id,  # FromSmall
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Valid",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[1].id,  # FromSmall
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Valid",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
 
         result = strategy.validate_findings_with_file_content(
@@ -355,16 +370,18 @@ class TestValidateFindingsWithFileContent:
         ]
         mock_llm = Mock(spec=BaseLLMService)
         # Only the existing file is batched, so only that finding is validated
-        mock_llm.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,  # FromExisting
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Valid",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,  # FromExisting
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Valid",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
 
         result = strategy.validate_findings_with_file_content(
@@ -380,3 +397,41 @@ class TestValidateFindingsWithFileContent:
         assert result.validated_findings[0].purpose == "FromExisting"
         assert len(result.unvalidated_findings) == 1
         assert result.unvalidated_findings[0].purpose == "FromMissing"
+
+    def test_malformed_llm_response_marks_batch_as_failed(self) -> None:
+        """Should mark batch as failed when LLM returns malformed response structure.
+
+        With structured output, a malformed response causes an exception (from
+        Pydantic validation or LangChain), so findings should go to unvalidated
+        and all_batches_succeeded should be False. This ensures metadata accurately
+        reflects validation failures.
+        """
+        strategy = MockBatchedFilesStrategy()
+        file_provider = MockFileContentProvider(
+            {"src/app.py": "def process_payment(): pass"}
+        )
+        findings = [
+            _create_finding("Payment", "src/app.py"),
+            _create_finding("Analytics", "src/app.py"),
+        ]
+        mock_llm = Mock(spec=BaseLLMService)
+        # With structured output, LangChain/Pydantic raises an exception for
+        # malformed responses (e.g., missing required finding_id field)
+        mock_llm.invoke_with_structured_output.side_effect = Exception(
+            "Validation error: missing required field 'finding_id'"
+        )
+
+        result = strategy.validate_findings_with_file_content(
+            findings=findings,
+            file_provider=file_provider,
+            max_tokens_per_batch=10000,
+            llm_service=mock_llm,
+        )
+
+        # Validation failed - batch should be marked as failed
+        assert result.all_batches_succeeded is False
+        # Findings should be preserved but as unvalidated (not validated!)
+        assert len(result.unvalidated_findings) == 2
+        assert len(result.validated_findings) == 0
+        result_purposes = {f.purpose for f in result.unvalidated_findings}
+        assert result_purposes == {"Payment", "Analytics"}

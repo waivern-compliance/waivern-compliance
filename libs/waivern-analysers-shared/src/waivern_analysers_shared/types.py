@@ -95,3 +95,10 @@ class LLMValidationConfig(BaseModel):
         default_factory=BatchingConfig,
         description="Token-aware batching configuration (used when strategy is 'batch_files')",
     )
+
+    sampling_size: int | None = Field(
+        default=None,
+        ge=1,
+        le=100,
+        description="Number of samples per group for sampling-based validation. None = validate all.",
+    )

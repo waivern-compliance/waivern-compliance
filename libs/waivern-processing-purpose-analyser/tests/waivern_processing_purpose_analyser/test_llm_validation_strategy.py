@@ -1,8 +1,11 @@
 """Tests for processing purpose LLM validation strategy focusing on behavior."""
 
-import json
 from unittest.mock import Mock
 
+from waivern_analysers_shared.llm_validation.models import (
+    LLMValidationResponseModel,
+    LLMValidationResultModel,
+)
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core.message import Message
 from waivern_core.schemas import BaseFindingEvidence, Schema
@@ -70,23 +73,25 @@ class TestProcessingPurposeValidationStrategy:
         message = self.create_test_message()
 
         # Mock LLM response indicating first is false positive, second is true positive
-        mock_llm_service.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "FALSE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Documentation example",
-                    "recommended_action": "discard",
-                },
-                {
-                    "finding_id": findings[1].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.85,
-                    "reasoning": "Actual business processing",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Documentation example",
+                        recommended_action="discard",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=findings[1].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.85,
+                        reasoning="Actual business processing",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
 
         result, success = processing_purpose_validation_strategy(
@@ -109,23 +114,25 @@ class TestProcessingPurposeValidationStrategy:
         message = self.create_test_message()
 
         # Mock LLM response indicating both are true positives
-        mock_llm_service.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.88,
-                    "reasoning": "Real customer support activity",
-                    "recommended_action": "keep",
-                },
-                {
-                    "finding_id": findings[1].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.92,
-                    "reasoning": "Actual order processing",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.88,
+                        reasoning="Real customer support activity",
+                        recommended_action="keep",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=findings[1].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.92,
+                        reasoning="Actual order processing",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
 
         result, success = processing_purpose_validation_strategy(
@@ -147,7 +154,9 @@ class TestProcessingPurposeValidationStrategy:
         message = self.create_test_message()
 
         # Mock LLM service to raise an exception
-        mock_llm_service.analyse_data.side_effect = Exception("LLM service error")
+        mock_llm_service.invoke_with_structured_output.side_effect = Exception(
+            "LLM service error"
+        )
 
         result, success = processing_purpose_validation_strategy(
             findings, config, mock_llm_service, message
@@ -159,20 +168,26 @@ class TestProcessingPurposeValidationStrategy:
         assert success is False
 
     def test_handles_malformed_json_response(self) -> None:
-        """Test graceful handling of malformed JSON responses."""
+        """Test graceful handling of malformed JSON responses.
+
+        With structured output, malformed responses cause exceptions
+        from LangChain/Pydantic validation.
+        """
         findings = [self.create_test_finding(purpose="Test Purpose")]
         config = LLMValidationConfig()
         mock_llm_service = Mock(spec=AnthropicLLMService)
         message = self.create_test_message()
 
-        # Mock invalid JSON response
-        mock_llm_service.analyse_data.return_value = "invalid json response"
+        # Mock structured output raising exception for invalid response
+        mock_llm_service.invoke_with_structured_output.side_effect = Exception(
+            "Validation error: invalid response format"
+        )
 
         result, success = processing_purpose_validation_strategy(
             findings, config, mock_llm_service, message
         )
 
-        # Should return original findings on JSON parse error
+        # Should return original findings on validation error
         assert len(result) == 1
         assert result[0].purpose == "Test Purpose"
         assert success is False
@@ -185,16 +200,18 @@ class TestProcessingPurposeValidationStrategy:
         message = self.create_test_message()
 
         # Mock response with flag_for_review action
-        mock_llm_service.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.7,
-                    "reasoning": "Requires manual review",
-                    "recommended_action": "flag_for_review",
-                }
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.7,
+                        reasoning="Requires manual review",
+                        recommended_action="flag_for_review",
+                    )
+                ]
+            )
         )
 
         result, success = processing_purpose_validation_strategy(
@@ -213,16 +230,18 @@ class TestProcessingPurposeValidationStrategy:
         mock_llm_service = Mock(spec=AnthropicLLMService)
         message = self.create_test_message()
 
-        mock_llm_service.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Valid finding",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Valid finding",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
 
         result, success = processing_purpose_validation_strategy(
@@ -251,16 +270,18 @@ class TestProcessingPurposeValidationStrategy:
         mock_llm_service = Mock(spec=AnthropicLLMService)
         message = self.create_test_message()
 
-        mock_llm_service.analyse_data.return_value = json.dumps(
-            [
-                {
-                    "finding_id": finding.id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Valid finding",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=finding.id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Valid finding",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
 
         result, success = processing_purpose_validation_strategy(

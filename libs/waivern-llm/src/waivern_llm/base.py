@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from langchain_core.messages import BaseMessage
+from pydantic import BaseModel
 
 
 class BaseLLMService(ABC):
@@ -28,6 +29,29 @@ class BaseLLMService(ABC):
 
         Raises:
             LLMConnectionError: If LLM request fails
+
+        """
+        pass
+
+    @abstractmethod
+    def invoke_with_structured_output[T: BaseModel](
+        self, prompt: str, output_schema: type[T]
+    ) -> T:
+        """Invoke LLM with structured output using a Pydantic schema.
+
+        Uses LangChain's with_structured_output() to force the LLM to return
+        data conforming to the provided Pydantic model. This eliminates the
+        need for JSON parsing and extraction from free-form responses.
+
+        Args:
+            prompt: The prompt to send to the LLM
+            output_schema: Pydantic model class defining the expected output structure
+
+        Returns:
+            Instance of the output_schema model populated with LLM response
+
+        Raises:
+            LLMConnectionError: If LLM request fails or response doesn't match schema
 
         """
         pass

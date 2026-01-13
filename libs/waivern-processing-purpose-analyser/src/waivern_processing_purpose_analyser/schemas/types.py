@@ -54,6 +54,13 @@ class ProcessingPurposeFindingModel(BaseFindingModel):
         return f"{self.purpose} - {', '.join(self.matched_patterns)}"
 
 
+class PurposeBreakdown(BaseModel):
+    """Per-purpose breakdown of findings."""
+
+    purpose: str = Field(description="Purpose name")
+    findings_count: int = Field(ge=0, description="Number of findings for this purpose")
+
+
 class ProcessingPurposeSummary(BaseModel):
     """Summary statistics for processing purpose findings."""
 
@@ -66,6 +73,32 @@ class ProcessingPurposeSummary(BaseModel):
     purpose_categories: dict[str, int] = Field(
         description="Count of findings by purpose category"
     )
+    purposes: list[PurposeBreakdown] = Field(
+        default_factory=list,
+        description="Per-purpose breakdown of findings",
+    )
+
+
+class RemovedPurpose(BaseModel):
+    """A purpose that was removed during validation."""
+
+    purpose: str = Field(description="Purpose name that was removed")
+    reason: str = Field(description="Reason for removal")
+    require_review: bool = Field(
+        default=True, description="Whether human review is recommended"
+    )
+
+
+class SamplingValidationSummary(BaseModel):
+    """Sampling-based validation summary."""
+
+    strategy: str = Field(
+        default="purpose_sampling", description="Sampling strategy used"
+    )
+    samples_per_purpose: int = Field(
+        ge=1, description="Number of samples per purpose group"
+    )
+    samples_validated: int = Field(ge=0, description="Total samples validated")
 
 
 class ProcessingPurposeValidationSummary(BaseModel):

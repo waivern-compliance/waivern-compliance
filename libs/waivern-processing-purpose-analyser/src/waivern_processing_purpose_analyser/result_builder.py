@@ -5,6 +5,7 @@ Keeps the analyser focused on orchestration.
 """
 
 import logging
+from dataclasses import dataclass
 
 from waivern_core.message import Message
 from waivern_core.schemas import (
@@ -18,8 +19,20 @@ from .schemas.types import (
     ProcessingPurposeFindingOutput,
     ProcessingPurposeSummary,
     ProcessingPurposeValidationSummary,
+    PurposeBreakdown,
+    RemovedPurpose,
 )
 from .types import ProcessingPurposeAnalyserConfig
+
+
+@dataclass
+class SamplingInfo:
+    """Information about sampling-based validation."""
+
+    samples_per_purpose: int
+    samples_validated: int
+    removed_purposes: list[RemovedPurpose]
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +53,14 @@ class ProcessingPurposeResultBuilder:
         """
         self._config = config
 
-    def build_output_message(
+    def build_output_message(  # noqa: PLR0913
         self,
         original_findings: list[ProcessingPurposeFindingModel],
         validated_findings: list[ProcessingPurposeFindingModel],
         validation_applied: bool,
         output_schema: Schema,
         analyses_chain: list[AnalysisChainEntry],
+        sampling_info: SamplingInfo | None = None,
     ) -> Message:
         """Build the complete output message.
 
@@ -56,6 +70,7 @@ class ProcessingPurposeResultBuilder:
             validation_applied: Whether validation was applied.
             output_schema: Schema for output validation.
             analyses_chain: Analysis chain with ordering.
+            sampling_info: Optional sampling validation info.
 
         Returns:
             Complete output message.
@@ -63,14 +78,15 @@ class ProcessingPurposeResultBuilder:
         """
         summary = self._build_findings_summary(validated_findings)
 
+        # Skip old-style validation_summary when sampling - the sampling info tells the story
         validation_summary = None
-        if validation_applied:
+        if validation_applied and sampling_info is None:
             validation_summary = self._build_validation_summary(
                 original_findings, validated_findings
             )
 
         analysis_metadata = self._build_analysis_metadata(
-            validated_findings, analyses_chain
+            validated_findings, analyses_chain, sampling_info
         )
 
         output_model = ProcessingPurposeFindingOutput(
@@ -103,20 +119,28 @@ class ProcessingPurposeResultBuilder:
             findings: List of validated findings.
 
         Returns:
-            Summary with purpose categories and totals.
+            Summary with purpose categories, totals, and per-purpose breakdown.
 
         """
         unique_purposes = set(f.purpose for f in findings)
         purpose_categories: dict[str, int] = {}
+        purpose_counts: dict[str, int] = {}
 
         for finding in findings:
             category = finding.purpose_category or "uncategorised"
             purpose_categories[category] = purpose_categories.get(category, 0) + 1
+            purpose_counts[finding.purpose] = purpose_counts.get(finding.purpose, 0) + 1
+
+        purposes = [
+            PurposeBreakdown(purpose=purpose, findings_count=count)
+            for purpose, count in sorted(purpose_counts.items())
+        ]
 
         return ProcessingPurposeSummary(
             total_findings=len(findings),
             purposes_identified=len(unique_purposes),
             purpose_categories=purpose_categories,
+            purposes=purposes,
         )
 
     def _build_validation_summary(
@@ -163,18 +187,20 @@ class ProcessingPurposeResultBuilder:
         self,
         validated_findings: list[ProcessingPurposeFindingModel],
         analyses_chain: list[AnalysisChainEntry],
+        sampling_info: SamplingInfo | None = None,
     ) -> BaseAnalysisOutputMetadata:
         """Build analysis metadata for output.
 
         Args:
             validated_findings: Validated findings for category count.
             analyses_chain: Analysis chain with ordering.
+            sampling_info: Optional sampling validation info.
 
         Returns:
             Analysis metadata with all fields.
 
         """
-        extra_fields = {
+        extra_fields: dict[str, object] = {
             "llm_validation_mode": self._config.llm_validation.llm_validation_mode,
             "llm_batch_size": self._config.llm_validation.llm_batch_size,
             "analyser_version": "1.0.0",
@@ -184,6 +210,22 @@ class ProcessingPurposeResultBuilder:
                 )
             ),
         }
+
+        # Add sampling validation info if provided
+        if sampling_info:
+            extra_fields["validation_summary"] = {
+                "strategy": "purpose_sampling",
+                "samples_per_purpose": sampling_info.samples_per_purpose,
+                "samples_validated": sampling_info.samples_validated,
+            }
+            extra_fields["purposes_removed"] = [
+                {
+                    "purpose": rp.purpose,
+                    "reason": rp.reason,
+                    "require_review": rp.require_review,
+                }
+                for rp in sampling_info.removed_purposes
+            ]
 
         return BaseAnalysisOutputMetadata(
             ruleset_used=self._config.pattern_matching.ruleset,

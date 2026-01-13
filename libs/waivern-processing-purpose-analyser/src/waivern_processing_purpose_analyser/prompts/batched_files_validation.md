@@ -20,17 +20,19 @@ You are an expert GDPR compliance analyst. Validate processing purpose findings 
 - Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE
 
 **RESPONSE FORMAT:**
-Respond with valid JSON array only (no markdown).
+Return a JSON object with a "results" array containing one validation result per finding.
 IMPORTANT: Echo back the exact finding_id from each finding entry - do not modify it.
 
-[
-  {
-    "finding_id": "<exact UUID from finding entry>",
-    "validation_result": "TRUE_POSITIVE" | "FALSE_POSITIVE",
-    "confidence": 0.85,
-    "reasoning": "Brief explanation",
-    "recommended_action": "keep" | "discard"
-  }
-]
+{
+  "results": [
+    {
+      "finding_id": "<exact UUID from finding entry>",
+      "validation_result": "TRUE_POSITIVE" | "FALSE_POSITIVE",
+      "confidence": 0.85,
+      "reasoning": "Brief explanation",
+      "recommended_action": "keep" | "discard"
+    }
+  ]
+}
 
-Validate all findings and return array with one element per finding:
+Validate all findings and include one result per finding in the results array:

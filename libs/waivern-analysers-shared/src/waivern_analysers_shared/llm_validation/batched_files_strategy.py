@@ -5,7 +5,6 @@ Concrete implementations define how to extract file paths from findings and
 how to generate validation prompts.
 """
 
-import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -15,8 +14,7 @@ from waivern_llm import BaseLLMService
 
 from .decision_engine import ValidationDecisionEngine
 from .file_content import FileContentProvider, FileInfo
-from .json_utils import extract_json_from_llm_response
-from .models import LLMValidationResultListAdapter
+from .models import LLMValidationResponseModel, LLMValidationResultModel
 
 logger = logging.getLogger(__name__)
 
@@ -444,28 +442,20 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
             validation_mode=validation_mode,
         )
 
-        # Call LLM
+        # Call LLM with structured output - no JSON parsing needed!
         logger.debug(f"Validating batch with {len(batch_findings)} findings")
-        response = llm_service.analyse_data("", prompt)
-        logger.debug(f"LLM raw response (first 2000 chars):\n{response[:2000]}")
-
-        # Parse response
-        try:
-            clean_json = extract_json_from_llm_response(response)
-            logger.debug(f"Extracted JSON (first 500 chars): {clean_json[:500]}")
-            validation_results = json.loads(clean_json)
-        except (ValueError, json.JSONDecodeError) as e:
-            logger.error(f"JSON extraction/parsing failed: {e}")
-            logger.error(f"Full LLM response was:\n{response}")
-            raise
+        response = llm_service.invoke_with_structured_output(
+            prompt, LLMValidationResponseModel
+        )
+        logger.debug(f"Received {len(response.results)} validation results")
 
         # Filter findings based on validation results
-        return self._filter_findings_by_results(batch_findings, validation_results)
+        return self._filter_findings_by_results(batch_findings, response.results)
 
     def _filter_findings_by_results(
         self,
         findings: list[T],
-        validation_results: list[dict[str, object]],
+        validation_results: list[LLMValidationResultModel],
     ) -> list[T]:
         """Filter findings based on LLM validation results.
 
@@ -474,28 +464,18 @@ class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
 
         Args:
             findings: Flat list of findings in batch order.
-            validation_results: Validation results from LLM.
+            validation_results: Strongly-typed validation results from LLM.
 
         Returns:
             List of findings that should be kept.
 
         """
-        # Validate response structure using strongly-typed model
-        try:
-            llm_validation_results = LLMValidationResultListAdapter.validate_python(
-                validation_results
-            )
-        except Exception as e:
-            logger.error(f"Failed to validate LLM response structure: {e}")
-            logger.warning("Returning all findings due to malformed LLM response")
-            return list(findings)
-
         # Build lookup from finding ID to finding
         findings_by_id = {f.id: f for f in findings}
         validated: list[T] = []
         processed_ids: set[str] = set()
 
-        for result in llm_validation_results:
+        for result in validation_results:
             finding = findings_by_id.get(result.finding_id)
 
             if finding is None:

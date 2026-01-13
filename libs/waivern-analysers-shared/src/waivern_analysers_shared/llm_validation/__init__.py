@@ -14,7 +14,7 @@ from waivern_analysers_shared.llm_validation.file_content import (
     FileInfo,
 )
 from waivern_analysers_shared.llm_validation.models import (
-    LLMValidationResultListAdapter,
+    LLMValidationResponseModel,
     LLMValidationResultModel,
     RecommendedActionType,
     ValidationResultType,
@@ -32,7 +32,7 @@ __all__ = [
     # Validation decision
     "ValidationDecisionEngine",
     # Models
-    "LLMValidationResultListAdapter",
+    "LLMValidationResponseModel",
     "LLMValidationResultModel",
     "RecommendedActionType",
     "ValidationResultType",

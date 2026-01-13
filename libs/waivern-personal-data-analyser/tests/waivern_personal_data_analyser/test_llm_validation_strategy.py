@@ -1,9 +1,12 @@
 """Tests for personal data LLM validation strategy."""
 
-import json
 from unittest.mock import Mock
 
 import pytest
+from waivern_analysers_shared.llm_validation.models import (
+    LLMValidationResponseModel,
+    LLMValidationResultModel,
+)
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core.schemas import BaseFindingEvidence
 from waivern_llm import AnthropicLLMService
@@ -69,7 +72,7 @@ class TestPersonalDataValidationStrategy:
         # Assert
         assert result == []
         assert success is True
-        mock_llm_service.analyse_data.assert_not_called()
+        mock_llm_service.invoke_with_structured_output.assert_not_called()
 
     def test_validates_findings_and_keeps_true_positives(
         self,
@@ -79,25 +82,26 @@ class TestPersonalDataValidationStrategy:
     ) -> None:
         """Test that true positive findings are kept after validation."""
         # Arrange
-        mock_llm_response = json.dumps(
-            [
-                {
-                    "finding_id": sample_findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.95,
-                    "reasoning": "Valid email address in contact context",
-                    "recommended_action": "keep",
-                },
-                {
-                    "finding_id": sample_findings[1].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.88,
-                    "reasoning": "Customer phone number in database",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=sample_findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.95,
+                        reasoning="Valid email address in contact context",
+                        recommended_action="keep",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=sample_findings[1].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.88,
+                        reasoning="Customer phone number in database",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
-        mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -109,7 +113,7 @@ class TestPersonalDataValidationStrategy:
         assert result[0].category == "email"
         assert result[1].category == "phone"
         assert success is True
-        mock_llm_service.analyse_data.assert_called_once()
+        mock_llm_service.invoke_with_structured_output.assert_called_once()
 
     def test_filters_out_false_positive_findings(
         self,
@@ -119,25 +123,26 @@ class TestPersonalDataValidationStrategy:
     ) -> None:
         """Test that false positive findings are filtered out."""
         # Arrange
-        mock_llm_response = json.dumps(
-            [
-                {
-                    "finding_id": sample_findings[0].id,
-                    "validation_result": "FALSE_POSITIVE",
-                    "confidence": 0.92,
-                    "reasoning": "Documentation example email",
-                    "recommended_action": "discard",
-                },
-                {
-                    "finding_id": sample_findings[1].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.85,
-                    "reasoning": "Actual customer phone number",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=sample_findings[0].id,
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.92,
+                        reasoning="Documentation example email",
+                        recommended_action="discard",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=sample_findings[1].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.85,
+                        reasoning="Actual customer phone number",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
-        mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -178,32 +183,33 @@ class TestPersonalDataValidationStrategy:
         # Configure to process all in one batch to avoid batch complexity
         llm_config.llm_batch_size = 5
 
-        mock_llm_response = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.78,
-                    "reasoning": "Administrative email address",
-                    "recommended_action": "keep",
-                },
-                {
-                    "finding_id": findings[1].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.98,
-                    "reasoning": "Sensitive employee data",
-                    "recommended_action": "keep",
-                },
-                {
-                    "finding_id": findings[2].id,
-                    "validation_result": "FALSE_POSITIVE",
-                    "confidence": 0.94,
-                    "reasoning": "Documentation example",
-                    "recommended_action": "discard",
-                },
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.78,
+                        reasoning="Administrative email address",
+                        recommended_action="keep",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=findings[1].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.98,
+                        reasoning="Sensitive employee data",
+                        recommended_action="keep",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=findings[2].id,
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.94,
+                        reasoning="Documentation example",
+                        recommended_action="discard",
+                    ),
+                ]
+            )
         )
-        mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -236,60 +242,57 @@ class TestPersonalDataValidationStrategy:
         llm_config.llm_batch_size = 2
 
         # Mock responses for 3 batches (2+2+1)
-        # Batch 1: findings[0], findings[1]
-        # Batch 2: findings[2], findings[3]
-        # Batch 3: findings[4]
         batch_responses = [
-            json.dumps(
-                [
-                    {
-                        "finding_id": findings[0].id,
-                        "validation_result": "TRUE_POSITIVE",
-                        "confidence": 0.9,
-                        "reasoning": "Valid",
-                        "recommended_action": "keep",
-                    },
-                    {
-                        "finding_id": findings[1].id,
-                        "validation_result": "TRUE_POSITIVE",
-                        "confidence": 0.9,
-                        "reasoning": "Valid",
-                        "recommended_action": "keep",
-                    },
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Valid",
+                        recommended_action="keep",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=findings[1].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Valid",
+                        recommended_action="keep",
+                    ),
                 ]
             ),
-            json.dumps(
-                [
-                    {
-                        "finding_id": findings[2].id,
-                        "validation_result": "FALSE_POSITIVE",
-                        "confidence": 0.95,
-                        "reasoning": "Example",
-                        "recommended_action": "discard",
-                    },
-                    {
-                        "finding_id": findings[3].id,
-                        "validation_result": "TRUE_POSITIVE",
-                        "confidence": 0.85,
-                        "reasoning": "Valid",
-                        "recommended_action": "keep",
-                    },
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[2].id,
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.95,
+                        reasoning="Example",
+                        recommended_action="discard",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=findings[3].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.85,
+                        reasoning="Valid",
+                        recommended_action="keep",
+                    ),
                 ]
             ),
-            json.dumps(
-                [
-                    {
-                        "finding_id": findings[4].id,
-                        "validation_result": "TRUE_POSITIVE",
-                        "confidence": 0.88,
-                        "reasoning": "Valid",
-                        "recommended_action": "keep",
-                    },
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[4].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.88,
+                        reasoning="Valid",
+                        recommended_action="keep",
+                    ),
                 ]
             ),
         ]
 
-        mock_llm_service.analyse_data.side_effect = batch_responses
+        mock_llm_service.invoke_with_structured_output.side_effect = batch_responses
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -298,7 +301,7 @@ class TestPersonalDataValidationStrategy:
 
         # Assert
         assert len(result) == 4  # 2 + 1 + 1 = 4 kept findings
-        assert mock_llm_service.analyse_data.call_count == 3  # 3 batch calls
+        assert mock_llm_service.invoke_with_structured_output.call_count == 3
         assert success is True
 
     def test_handles_llm_service_errors_gracefully(
@@ -309,7 +312,9 @@ class TestPersonalDataValidationStrategy:
     ) -> None:
         """Test graceful handling of LLM service errors."""
         # Arrange
-        mock_llm_service.analyse_data.side_effect = Exception("LLM service unavailable")
+        mock_llm_service.invoke_with_structured_output.side_effect = Exception(
+            "LLM service unavailable"
+        )
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -328,9 +333,15 @@ class TestPersonalDataValidationStrategy:
         llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
-        """Test graceful handling of malformed LLM responses."""
+        """Test graceful handling of malformed LLM responses.
+
+        With structured output, malformed responses cause exceptions
+        from LangChain/Pydantic validation.
+        """
         # Arrange
-        mock_llm_service.analyse_data.return_value = "Invalid JSON response"
+        mock_llm_service.invoke_with_structured_output.side_effect = Exception(
+            "Validation error: invalid response format"
+        )
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -338,7 +349,7 @@ class TestPersonalDataValidationStrategy:
         )
 
         # Assert
-        # Should return original findings when JSON parsing fails
+        # Should return original findings when validation fails
         assert len(result) == 2
         assert result == sample_findings
         assert success is False
@@ -349,25 +360,31 @@ class TestPersonalDataValidationStrategy:
         llm_config: LLMValidationConfig,
         mock_llm_service: Mock,
     ) -> None:
-        """Test handling of incomplete validation results from LLM."""
-        # Arrange
-        mock_llm_response = json.dumps(
-            [
-                {
-                    "finding_id": sample_findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    # Missing confidence, reasoning, recommended_action
-                },
-                {
-                    "finding_id": sample_findings[1].id,
-                    "validation_result": "UNKNOWN_RESULT",  # Invalid result
-                    "confidence": 0.5,
-                    "reasoning": "Uncertain",
-                    "recommended_action": "unknown",
-                },
-            ]
+        """Test handling of incomplete validation results from LLM.
+
+        With structured output, missing fields get defaults from Pydantic model.
+        """
+        # Arrange - Model with defaults (UNKNOWN result, 0.0 confidence, etc.)
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=sample_findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        # confidence uses default 0.0
+                        # reasoning uses default
+                        # recommended_action uses default "keep"
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=sample_findings[1].id,
+                        validation_result="UNKNOWN",  # UNKNOWN result
+                        confidence=0.5,
+                        reasoning="Uncertain",
+                        recommended_action="flag_for_review",
+                    ),
+                ]
+            )
         )
-        mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -375,7 +392,7 @@ class TestPersonalDataValidationStrategy:
         )
 
         # Assert
-        # Should handle missing fields gracefully
+        # Should handle defaults gracefully
         assert len(result) == 2  # Both kept due to conservative approach
         assert result == sample_findings
         assert success is True
@@ -388,25 +405,26 @@ class TestPersonalDataValidationStrategy:
     ) -> None:
         """Test that original finding objects are preserved unchanged."""
         # Arrange
-        mock_llm_response = json.dumps(
-            [
-                {
-                    "finding_id": sample_findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.95,
-                    "reasoning": "Valid email",
-                    "recommended_action": "keep",
-                },
-                {
-                    "finding_id": sample_findings[1].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.88,
-                    "reasoning": "Valid phone",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=sample_findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.95,
+                        reasoning="Valid email",
+                        recommended_action="keep",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=sample_findings[1].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.88,
+                        reasoning="Valid phone",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
-        mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -439,19 +457,20 @@ class TestPersonalDataValidationStrategy:
         (with warning) rather than silently dropped.
         """
         # Arrange - Only one result for two findings
-        mock_llm_response = json.dumps(
-            [
-                {
-                    "finding_id": sample_findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.95,
-                    "reasoning": "Valid email",
-                    "recommended_action": "keep",
-                },
-                # Missing second result - will be included unvalidated (fail-safe)
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=sample_findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.95,
+                        reasoning="Valid email",
+                        recommended_action="keep",
+                    ),
+                    # Missing second result - will be included unvalidated (fail-safe)
+                ]
+            )
         )
-        mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -482,32 +501,33 @@ class TestPersonalDataValidationStrategy:
         # Test with batch size larger than findings count
         llm_config.llm_batch_size = 10
 
-        mock_llm_response = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Valid",
-                    "recommended_action": "keep",
-                },
-                {
-                    "finding_id": findings[1].id,
-                    "validation_result": "FALSE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Example",
-                    "recommended_action": "discard",
-                },
-                {
-                    "finding_id": findings[2].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.9,
-                    "reasoning": "Valid",
-                    "recommended_action": "keep",
-                },
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Valid",
+                        recommended_action="keep",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=findings[1].id,
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Example",
+                        recommended_action="discard",
+                    ),
+                    LLMValidationResultModel(
+                        finding_id=findings[2].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Valid",
+                        recommended_action="keep",
+                    ),
+                ]
+            )
         )
-        mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -516,7 +536,7 @@ class TestPersonalDataValidationStrategy:
 
         # Assert
         assert len(result) == 2  # Two kept, one discarded
-        assert mock_llm_service.analyse_data.call_count == 1  # Single batch
+        assert mock_llm_service.invoke_with_structured_output.call_count == 1
         assert success is True
 
     def test_handles_single_finding_validation(
@@ -533,18 +553,19 @@ class TestPersonalDataValidationStrategy:
             )
         ]
 
-        mock_llm_response = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "FALSE_POSITIVE",
-                    "confidence": 0.99,
-                    "reasoning": "Test credit card number",
-                    "recommended_action": "discard",
-                }
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.99,
+                        reasoning="Test credit card number",
+                        recommended_action="discard",
+                    )
+                ]
+            )
         )
-        mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -569,18 +590,19 @@ class TestPersonalDataValidationStrategy:
             )
         ]
 
-        mock_llm_response = json.dumps(
-            [
-                {
-                    "finding_id": findings[0].id,
-                    "validation_result": "TRUE_POSITIVE",
-                    "confidence": 0.92,
-                    "reasoning": "Valid UK phone number in customer database",
-                    "recommended_action": "keep",
-                }
-            ]
+        mock_llm_service.invoke_with_structured_output.return_value = (
+            LLMValidationResponseModel(
+                results=[
+                    LLMValidationResultModel(
+                        finding_id=findings[0].id,
+                        validation_result="TRUE_POSITIVE",
+                        confidence=0.92,
+                        reasoning="Valid UK phone number in customer database",
+                        recommended_action="keep",
+                    )
+                ]
+            )
         )
-        mock_llm_service.analyse_data.return_value = mock_llm_response
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -628,104 +650,104 @@ class TestPersonalDataValidationStrategy:
         if batch_size == 1:
             # 3 calls, each with 1 finding
             mock_responses = [
-                json.dumps(
-                    [
-                        {
-                            "finding_id": findings[0].id,
-                            "validation_result": "TRUE_POSITIVE",
-                            "confidence": 0.9,
-                            "reasoning": "Valid",
-                            "recommended_action": "keep",
-                        }
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=findings[0].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid",
+                            recommended_action="keep",
+                        )
                     ]
                 ),
-                json.dumps(
-                    [
-                        {
-                            "finding_id": findings[1].id,
-                            "validation_result": "TRUE_POSITIVE",
-                            "confidence": 0.9,
-                            "reasoning": "Valid",
-                            "recommended_action": "keep",
-                        }
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=findings[1].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid",
+                            recommended_action="keep",
+                        )
                     ]
                 ),
-                json.dumps(
-                    [
-                        {
-                            "finding_id": findings[2].id,
-                            "validation_result": "TRUE_POSITIVE",
-                            "confidence": 0.9,
-                            "reasoning": "Valid",
-                            "recommended_action": "keep",
-                        }
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=findings[2].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid",
+                            recommended_action="keep",
+                        )
                     ]
                 ),
             ]
         elif batch_size == 2:
             # 2 calls: first with 2 findings, second with 1 finding
             mock_responses = [
-                json.dumps(
-                    [
-                        {
-                            "finding_id": findings[0].id,
-                            "validation_result": "TRUE_POSITIVE",
-                            "confidence": 0.9,
-                            "reasoning": "Valid",
-                            "recommended_action": "keep",
-                        },
-                        {
-                            "finding_id": findings[1].id,
-                            "validation_result": "TRUE_POSITIVE",
-                            "confidence": 0.9,
-                            "reasoning": "Valid",
-                            "recommended_action": "keep",
-                        },
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=findings[0].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid",
+                            recommended_action="keep",
+                        ),
+                        LLMValidationResultModel(
+                            finding_id=findings[1].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid",
+                            recommended_action="keep",
+                        ),
                     ]
                 ),
-                json.dumps(
-                    [
-                        {
-                            "finding_id": findings[2].id,
-                            "validation_result": "TRUE_POSITIVE",
-                            "confidence": 0.9,
-                            "reasoning": "Valid",
-                            "recommended_action": "keep",
-                        },
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=findings[2].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid",
+                            recommended_action="keep",
+                        ),
                     ]
                 ),
             ]
         else:
             # 1 call with all 3 findings
             mock_responses = [
-                json.dumps(
-                    [
-                        {
-                            "finding_id": findings[0].id,
-                            "validation_result": "TRUE_POSITIVE",
-                            "confidence": 0.9,
-                            "reasoning": "Valid",
-                            "recommended_action": "keep",
-                        },
-                        {
-                            "finding_id": findings[1].id,
-                            "validation_result": "TRUE_POSITIVE",
-                            "confidence": 0.9,
-                            "reasoning": "Valid",
-                            "recommended_action": "keep",
-                        },
-                        {
-                            "finding_id": findings[2].id,
-                            "validation_result": "TRUE_POSITIVE",
-                            "confidence": 0.9,
-                            "reasoning": "Valid",
-                            "recommended_action": "keep",
-                        },
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=findings[0].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid",
+                            recommended_action="keep",
+                        ),
+                        LLMValidationResultModel(
+                            finding_id=findings[1].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid",
+                            recommended_action="keep",
+                        ),
+                        LLMValidationResultModel(
+                            finding_id=findings[2].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid",
+                            recommended_action="keep",
+                        ),
                     ]
                 )
             ]
 
-        mock_llm_service.analyse_data.side_effect = mock_responses
+        mock_llm_service.invoke_with_structured_output.side_effect = mock_responses
 
         # Act
         result, success = personal_data_validation_strategy(
@@ -734,5 +756,7 @@ class TestPersonalDataValidationStrategy:
 
         # Assert
         assert len(result) == 3  # All findings kept
-        assert mock_llm_service.analyse_data.call_count == expected_calls
+        assert (
+            mock_llm_service.invoke_with_structured_output.call_count == expected_calls
+        )
         assert success is True
