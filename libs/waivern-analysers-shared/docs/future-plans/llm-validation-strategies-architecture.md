@@ -49,10 +49,10 @@ complete file rather than isolated snippets, leading to better validation accura
 
 This is why the choice of grouping strategy influences which `LLMValidationStrategy` is optimal:
 
-| Grouping     | Typical LLM Strategy                 | Rationale                                    |
-| ------------ | ------------------------------------ | -------------------------------------------- |
-| `by_concern` | `BatchByCountLLMValidationStrategy`  | Findings span files; only snippets available |
-| `by_source`  | `BatchBySourceLLMValidationStrategy` | Can batch by source with full file content   |
+| Grouping     | Typical LLM Strategy                    | Rationale                                    |
+| ------------ | --------------------------------------- | -------------------------------------------- |
+| `by_concern` | `DefaultLLMValidationStrategy`          | Findings span files; only snippets available |
+| `by_source`  | `ExtendedContextLLMValidationStrategy`  | Can batch by source with extended context    |
 
 The strategies are orthogonal - `GroupingStrategy` decides how to organise findings for sampling,
 while `LLMValidationStrategy` decides how to batch and what context to include in prompts.
@@ -321,8 +321,8 @@ waivern-analysers-shared/
 └── llm_validation/
     ├── strategy.py                    # LLMValidationStrategy - abstract base class
     │   ├── LLMValidationStrategy[T]   # Base class with validate_findings() interface
-    │   ├── BatchByCountLLMValidationStrategy[T]   # Simple count-based batching
-    │   └── BatchBySourceLLMValidationStrategy[T]  # Source-aware batching with full content
+    │   ├── DefaultLLMValidationStrategy[T]          # Batches by count, evidence snippets
+    │   └── ExtendedContextLLMValidationStrategy[T]  # Batches by source, extended context
     ├── grouping.py                    # GroupingStrategy implementations
     │   ├── GroupingStrategy[T]        # Abstract protocol
     │   ├── SourceGroupingStrategy[T]  # grouping="by_source"
@@ -349,13 +349,14 @@ LLMValidationStrategy[T: BaseFindingModel] (abstract base)
     │   validate_findings(findings, config, llm_service) -> (kept_findings, success)
     │   get_validation_prompt(batch, config) -> str  [abstract]
     │
-    ├── BatchByCountLLMValidationStrategy[T]
+    ├── DefaultLLMValidationStrategy[T]
     │       Batches by fixed count (llm_batch_size)
-    │       Use for: by_concern grouping, evidence snippets only
+    │       Prompt contains evidence snippets only
+    │       Use for: general validation, by_concern grouping
     │
-    └── BatchBySourceLLMValidationStrategy[T]
-            Batches by source, includes full source content
-            Use for: by_source grouping with SourceProvider
+    └── ExtendedContextLLMValidationStrategy[T]
+            Batches by source, extends prompt with source content
+            Use for: by_source grouping when SourceProvider has content
 ```
 
 **Ownership**: The analyser instantiates the appropriate strategy based on `config.grouping`:
@@ -363,9 +364,9 @@ LLMValidationStrategy[T: BaseFindingModel] (abstract base)
 ```python
 # In analyser.process()
 if config.grouping == "by_source" and source_provider.has_content():
-    llm_strategy = BatchBySourceLLMValidationStrategy(source_provider, prompt_builder)
+    llm_strategy = ExtendedContextLLMValidationStrategy(source_provider, prompt_builder)
 else:
-    llm_strategy = BatchByCountLLMValidationStrategy(prompt_builder)
+    llm_strategy = DefaultLLMValidationStrategy(prompt_builder)
 ```
 
 The `ValidationOrchestrator` is strategy-agnostic - it accepts any `LLMValidationStrategy`
@@ -598,9 +599,9 @@ class ProcessingPurposeAnalyser:
 
         # LLM strategy based on config (orthogonal to grouping)
         if config.grouping == "by_source" and source_provider.has_content():
-            llm_strategy = BatchBySourceLLMValidationStrategy(source_provider)
+            llm_strategy = ExtendedContextLLMValidationStrategy(source_provider)
         else:
-            llm_strategy = BatchByCountLLMValidationStrategy()
+            llm_strategy = DefaultLLMValidationStrategy()
 
         # 3. Create orchestrator - strategy-agnostic
         orchestrator = ValidationOrchestrator(
