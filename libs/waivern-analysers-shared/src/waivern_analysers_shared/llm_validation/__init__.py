@@ -13,6 +13,11 @@ from waivern_analysers_shared.llm_validation.file_content import (
     FileContentProvider,
     FileInfo,
 )
+from waivern_analysers_shared.llm_validation.grouping import (
+    ConcernGroupingStrategy,
+    GroupingStrategy,
+    SourceGroupingStrategy,
+)
 from waivern_analysers_shared.llm_validation.models import (
     LLMValidationResponseModel,
     LLMValidationResultModel,
@@ -24,6 +29,11 @@ from waivern_analysers_shared.llm_validation.models import (
 from waivern_analysers_shared.llm_validation.protocols import (
     ConcernProvider,
     SourceProvider,
+)
+from waivern_analysers_shared.llm_validation.sampling import (
+    RandomSamplingStrategy,
+    SamplingResult,
+    SamplingStrategy,
 )
 from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrategy
 
@@ -37,6 +47,14 @@ __all__ = [
     "FileInfo",
     # Validation decision
     "ValidationDecisionEngine",
+    # Grouping strategies
+    "ConcernGroupingStrategy",
+    "GroupingStrategy",
+    "SourceGroupingStrategy",
+    # Sampling strategies
+    "RandomSamplingStrategy",
+    "SamplingResult",
+    "SamplingStrategy",
     # Models
     "LLMValidationResponseModel",
     "LLMValidationResultModel",

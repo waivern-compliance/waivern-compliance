@@ -51,10 +51,15 @@ Whether full source content is included in prompts is determined by the `SourceP
 
 ## Analyser Protocols
 
-Each analyser implements these protocols to define what "source" and "concern" mean:
+Each analyser implements these protocols to define what "source" and "concern" mean.
+
+All protocols and strategies use `BaseFindingModel` as a type bound, ensuring type safety
+and guaranteeing access to standard finding fields (`id`, `evidence`, `matched_patterns`).
 
 ```python
-class SourceProvider(Protocol[T]):
+from waivern_core.schemas.finding_types import BaseFindingModel
+
+class SourceProvider[T: BaseFindingModel](Protocol):
     """Provides source content for validation context."""
 
     def get_source_id(self, finding: T) -> str:
@@ -69,7 +74,7 @@ class SourceProvider(Protocol[T]):
         ...
 
 
-class ConcernProvider(Protocol[T]):
+class ConcernProvider[T: BaseFindingModel](Protocol):
     """Defines what the 'compliance concern' is for this analyser."""
 
     @property
@@ -352,8 +357,12 @@ waivern-processing-purpose-analyser/
 
 ## Class Design
 
+All classes use `BaseFindingModel` as a type bound for consistency and type safety.
+
 ```python
-class ValidationOrchestrator[T](Generic[T]):
+from waivern_core.schemas.finding_types import BaseFindingModel
+
+class ValidationOrchestrator[T: BaseFindingModel]:
     """Orchestrates the complete validation flow.
 
     1. Group findings using GroupingStrategy
@@ -377,7 +386,7 @@ class ValidationOrchestrator[T](Generic[T]):
     ) -> ValidationResult[T]: ...
 
 
-class GroupingStrategy[T](Protocol):
+class GroupingStrategy[T: BaseFindingModel](Protocol):
     """Groups findings for validation."""
 
     def group(self, findings: list[T]) -> dict[str, list[T]]:
@@ -385,7 +394,7 @@ class GroupingStrategy[T](Protocol):
         ...
 
 
-class ConcernGroupingStrategy[T]:
+class ConcernGroupingStrategy[T: BaseFindingModel]:
     """Groups findings by compliance concern using a provider."""
 
     def __init__(self, concern_provider: ConcernProvider[T]) -> None:
@@ -397,6 +406,22 @@ class ConcernGroupingStrategy[T]:
             concern = self._provider.get_concern(finding)
             groups[concern].append(finding)
         return groups
+
+
+class SamplingStrategy[T: BaseFindingModel](Protocol):
+    """Samples findings from groups for validation."""
+
+    def sample(self, groups: dict[str, list[T]]) -> SamplingResult[T]:
+        """Sample findings from each group."""
+        ...
+
+
+@dataclass
+class SamplingResult[T: BaseFindingModel]:
+    """Result of a sampling operation."""
+
+    sampled: dict[str, list[T]]      # Findings selected for LLM validation
+    non_sampled: dict[str, list[T]]  # Findings kept by inference
 
 
 @dataclass
@@ -412,7 +437,7 @@ class RemovedGroup:
 
 
 @dataclass
-class ValidationResult[T]:
+class ValidationResult[T: BaseFindingModel]:
     """Result of validation orchestration."""
 
     validated_findings: list[T]

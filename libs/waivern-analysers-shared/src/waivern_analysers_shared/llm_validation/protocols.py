@@ -11,8 +11,10 @@ Example implementations:
 
 from typing import Protocol
 
+from waivern_core.schemas.finding_types import BaseFindingModel
 
-class SourceProvider[T](Protocol):
+
+class SourceProvider[T: BaseFindingModel](Protocol):
     """Provides source identification and content for validation context.
 
     Implementations extract source information from findings and provide
@@ -64,7 +66,7 @@ class SourceProvider[T](Protocol):
         ...
 
 
-class ConcernProvider[T](Protocol):
+class ConcernProvider[T: BaseFindingModel](Protocol):
     """Defines what the 'compliance concern' is for an analyser.
 
     The concern is the attribute used for grouping findings during
