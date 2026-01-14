@@ -30,6 +30,33 @@ LLMValidationConfig(
 | `by_source`  | Group by origin (file, table cell, endpoint) | When source context matters       |
 | `by_concern` | Group by compliance attribute                | Cost-effective sampling           |
 
+#### Source vs Concern: Conceptual Relationship
+
+Conceptually, **"source" is a type of concern** - both are just ways to bucket findings for
+group-level decisions. The key difference is practical, not conceptual:
+
+| Aspect                    | `by_concern`                                           | `by_source`                                 |
+| ------------------------- | ------------------------------------------------------ | ------------------------------------------- |
+| **Grouping key**          | Domain-specific attribute (`purpose`, `data_category`) | Location identifier (file path, table name) |
+| **Findings per group**    | May span multiple source files                         | All from same source                        |
+| **LLM context available** | Evidence snippets only                                 | Full source content possible                |
+| **Decision semantics**    | "All _Payment Processing_ findings are FP"             | "All findings in _config.py_ are FP"        |
+| **Question answered**     | "Is this type of compliance issue real?"               | "Is this source relevant for analysis?"     |
+
+**Why source is special**: When findings share a source, the `SourceProvider` can return full
+file content via `get_source_content()`. This enables richer LLM context - the model sees the
+complete file rather than isolated snippets, leading to better validation accuracy.
+
+This is why the choice of grouping strategy influences which `LLMValidationStrategy` is optimal:
+
+| Grouping     | Typical LLM Strategy                 | Rationale                                    |
+| ------------ | ------------------------------------ | -------------------------------------------- |
+| `by_concern` | `BatchByCountLLMValidationStrategy`  | Findings span files; only snippets available |
+| `by_source`  | `BatchBySourceLLMValidationStrategy` | Can batch by source with full file content   |
+
+The strategies are orthogonal - `GroupingStrategy` decides how to organise findings for sampling,
+while `LLMValidationStrategy` decides how to batch and what context to include in prompts.
+
 ### Configuration Matrix
 
 | `grouping`   | `sampling_size` | Behaviour                                  |
