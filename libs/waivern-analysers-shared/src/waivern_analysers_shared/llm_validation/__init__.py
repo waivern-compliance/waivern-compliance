@@ -19,6 +19,10 @@ from waivern_analysers_shared.llm_validation.models import (
     RecommendedActionType,
     ValidationResultType,
 )
+from waivern_analysers_shared.llm_validation.protocols import (
+    ConcernProvider,
+    SourceProvider,
+)
 from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrategy
 
 __all__ = [
@@ -36,6 +40,9 @@ __all__ = [
     "LLMValidationResultModel",
     "RecommendedActionType",
     "ValidationResultType",
+    # Protocols
+    "ConcernProvider",
+    "SourceProvider",
     # Strategy
     "LLMValidationStrategy",
 ]
