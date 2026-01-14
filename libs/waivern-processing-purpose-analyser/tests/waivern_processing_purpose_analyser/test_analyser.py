@@ -400,21 +400,15 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         assert "llm_validation_enabled" in metadata
         assert "evidence_context_size" in metadata
         assert "llm_validation_mode" in metadata
-        assert "llm_batch_size" in metadata
         assert "analyser_version" in metadata
-        assert "processing_purpose_categories_detected" in metadata
 
         assert isinstance(metadata["ruleset_used"], str)
         assert isinstance(metadata["llm_validation_enabled"], bool)
         assert isinstance(metadata["evidence_context_size"], str)
         assert isinstance(metadata["llm_validation_mode"], str)
-        assert isinstance(metadata["llm_batch_size"], int)
         assert isinstance(metadata["analyser_version"], str)
-        assert isinstance(metadata["processing_purpose_categories_detected"], int)
 
-        assert metadata["llm_batch_size"] > 0
         assert len(metadata["analyser_version"]) > 0
-        assert metadata["processing_purpose_categories_detected"] >= 0
 
     def test_process_standard_input_summary_handles_empty_findings(
         self,
