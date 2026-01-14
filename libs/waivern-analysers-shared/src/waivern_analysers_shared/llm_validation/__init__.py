@@ -17,6 +17,8 @@ from waivern_analysers_shared.llm_validation.models import (
     LLMValidationResponseModel,
     LLMValidationResultModel,
     RecommendedActionType,
+    RemovedGroup,
+    ValidationResult,
     ValidationResultType,
 )
 from waivern_analysers_shared.llm_validation.protocols import (
@@ -39,6 +41,8 @@ __all__ = [
     "LLMValidationResponseModel",
     "LLMValidationResultModel",
     "RecommendedActionType",
+    "RemovedGroup",
+    "ValidationResult",
     "ValidationResultType",
     # Protocols
     "ConcernProvider",

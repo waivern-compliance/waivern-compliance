@@ -1,5 +1,6 @@
 """Shared models and constants for LLM validation."""
 
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -50,3 +51,59 @@ class LLMValidationResponseModel(BaseModel):
     results: list[LLMValidationResultModel] = Field(
         description="List of validation results for each finding"
     )
+
+
+# Orchestration result types
+
+
+@dataclass
+class RemovedGroup:
+    """A group removed because all samples were false positives.
+
+    Used in validation summaries to report which groups were removed
+    and flag them for human review.
+    """
+
+    concern_key: str
+    """The grouping attribute name (e.g., 'purpose', 'data_category')."""
+
+    concern_value: str
+    """The group value that was removed (e.g., 'Documentation Example')."""
+
+    findings_count: int
+    """Total findings in this group before removal."""
+
+    samples_validated: int
+    """How many samples were validated from this group."""
+
+    reason: str
+    """Why the group was removed."""
+
+    require_review: bool
+    """Flag indicating this removal should be reviewed by a human."""
+
+
+@dataclass
+class ValidationResult[T]:
+    """Result of validation orchestration.
+
+    Contains the validated findings, removed items, and metadata about
+    the validation process.
+
+    Type parameter T is the finding type.
+    """
+
+    validated_findings: list[T]
+    """Findings that passed validation."""
+
+    removed_findings: list[T]
+    """Individual findings removed (present in all modes)."""
+
+    removed_groups: list[RemovedGroup]
+    """Groups removed (only populated when grouping is enabled)."""
+
+    samples_validated: int
+    """Total number of samples sent to LLM for validation."""
+
+    all_succeeded: bool
+    """Whether all LLM calls completed without errors."""
