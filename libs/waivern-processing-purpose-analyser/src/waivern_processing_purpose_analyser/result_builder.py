@@ -85,9 +85,7 @@ class ProcessingPurposeResultBuilder:
                 original_findings, validated_findings
             )
 
-        analysis_metadata = self._build_analysis_metadata(
-            validated_findings, analyses_chain, sampling_info
-        )
+        analysis_metadata = self._build_analysis_metadata(analyses_chain, sampling_info)
 
         output_model = ProcessingPurposeFindingOutput(
             findings=validated_findings,
@@ -185,14 +183,12 @@ class ProcessingPurposeResultBuilder:
 
     def _build_analysis_metadata(
         self,
-        validated_findings: list[ProcessingPurposeFindingModel],
         analyses_chain: list[AnalysisChainEntry],
         sampling_info: SamplingInfo | None = None,
     ) -> BaseAnalysisOutputMetadata:
         """Build analysis metadata for output.
 
         Args:
-            validated_findings: Validated findings for category count.
             analyses_chain: Analysis chain with ordering.
             sampling_info: Optional sampling validation info.
 
@@ -202,13 +198,7 @@ class ProcessingPurposeResultBuilder:
         """
         extra_fields: dict[str, object] = {
             "llm_validation_mode": self._config.llm_validation.llm_validation_mode,
-            "llm_batch_size": self._config.llm_validation.llm_batch_size,
             "analyser_version": "1.0.0",
-            "processing_purpose_categories_detected": len(
-                set(
-                    f.purpose_category for f in validated_findings if f.purpose_category
-                )
-            ),
         }
 
         # Add sampling validation info if provided
