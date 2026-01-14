@@ -292,8 +292,10 @@ analysis_metadata:
 ```
 waivern-analysers-shared/
 └── llm_validation/
-    ├── strategy.py                    # LLMValidationStrategy - abstract base for prompt generation
-    ├── batching.py                    # Token-aware batching (internal, always used)
+    ├── strategy.py                    # LLMValidationStrategy - abstract base class
+    │   ├── LLMValidationStrategy[T]   # Base class with validate_findings() interface
+    │   ├── BatchByCountLLMValidationStrategy[T]   # Simple count-based batching
+    │   └── BatchBySourceLLMValidationStrategy[T]  # Source-aware batching with full content
     ├── grouping.py                    # GroupingStrategy implementations
     │   ├── GroupingStrategy[T]        # Abstract protocol
     │   ├── SourceGroupingStrategy[T]  # grouping="by_source"
@@ -301,12 +303,46 @@ waivern-analysers-shared/
     ├── sampling.py                    # SamplingStrategy
     │   └── RandomSamplingStrategy[T]  # Sample N per group
     ├── protocols.py                   # SourceProvider, ConcernProvider
-    └── validation_orchestrator.py     # Orchestrates grouping → sampling → batching → LLM → decisions
+    └── validation_orchestrator.py     # Orchestrates grouping → sampling → LLM → decisions
 
 waivern-processing-purpose-analyser/
 └── validation/
     └── providers.py                   # ProcessingPurposeSourceProvider, ProcessingPurposeConcernProvider
 ```
+
+### LLM Validation Strategy Hierarchy
+
+The analyser decides which LLM validation strategy to use based on configuration. The shared
+package provides a base class and common implementations; analysers can create bespoke strategies
+if domain-specific prompt generation or batching logic is required.
+
+```
+LLMValidationStrategy[T: BaseFindingModel] (abstract base)
+    │
+    │   validate_findings(findings, config, llm_service) -> (kept_findings, success)
+    │   get_validation_prompt(batch, config) -> str  [abstract]
+    │
+    ├── BatchByCountLLMValidationStrategy[T]
+    │       Batches by fixed count (llm_batch_size)
+    │       Use for: by_concern grouping, evidence snippets only
+    │
+    └── BatchBySourceLLMValidationStrategy[T]
+            Batches by source, includes full source content
+            Use for: by_source grouping with SourceProvider
+```
+
+**Ownership**: The analyser instantiates the appropriate strategy based on `config.grouping`:
+
+```python
+# In analyser.process()
+if config.grouping == "by_source" and source_provider.has_content():
+    llm_strategy = BatchBySourceLLMValidationStrategy(source_provider, prompt_builder)
+else:
+    llm_strategy = BatchByCountLLMValidationStrategy(prompt_builder)
+```
+
+The `ValidationOrchestrator` is strategy-agnostic - it accepts any `LLMValidationStrategy`
+and delegates batching/LLM calls entirely to the strategy.
 
 ### Architecture Flow
 
@@ -365,17 +401,31 @@ from waivern_core.schemas.finding_types import BaseFindingModel
 class ValidationOrchestrator[T: BaseFindingModel]:
     """Orchestrates the complete validation flow.
 
+    The orchestrator composes orthogonal strategies:
+    - GroupingStrategy: How to organize findings (owns concern_key)
+    - SamplingStrategy: How to sample from groups
+    - LLMValidationStrategy: How to batch and call the LLM
+
+    Validation flow:
     1. Group findings using GroupingStrategy
     2. Sample from groups using SamplingStrategy
-    3. Validate samples via LLM
-    4. Apply decisions to all findings
+    3. Flatten all sampled findings into a single list
+    4. Validate via llm_strategy.validate_findings() (one call, internally batched)
+    5. Match results back to groups by finding ID
+    6. Apply group-level decisions (Case A/B/C)
+    7. Get concern_key from grouping_strategy for RemovedGroup metadata
+
+    Why flatten instead of validate per-group?
+    HTTP round-trip latency and prompt template token overhead make per-group
+    calls expensive. Flattening allows optimal batching; matching back by ID
+    is trivial (set operations).
     """
 
     def __init__(
         self,
         grouping_strategy: GroupingStrategy[T],
         sampling_strategy: SamplingStrategy[T] | None,
-        llm_strategy: LLMValidationStrategy[T],  # Analyser-specific implementation
+        llm_strategy: LLMValidationStrategy[T],
     ) -> None: ...
 
     def validate(
@@ -387,10 +437,25 @@ class ValidationOrchestrator[T: BaseFindingModel]:
 
 
 class GroupingStrategy[T: BaseFindingModel](Protocol):
-    """Groups findings for validation."""
+    """Groups findings for validation.
+
+    Grouping strategies are orthogonal to LLM validation strategies:
+    - GroupingStrategy: How to organize findings for sampling decisions
+    - LLMValidationStrategy: How to batch and call the LLM
+
+    The orchestrator composes them - they don't know about each other.
+    """
 
     def group(self, findings: list[T]) -> dict[str, list[T]]:
         """Group findings by some attribute."""
+        ...
+
+    @property
+    def concern_key(self) -> str:
+        """The attribute name used for grouping (e.g., 'purpose', 'source').
+
+        Used by the orchestrator for RemovedGroup metadata.
+        """
         ...
 
 
@@ -400,11 +465,33 @@ class ConcernGroupingStrategy[T: BaseFindingModel]:
     def __init__(self, concern_provider: ConcernProvider[T]) -> None:
         self._provider = concern_provider
 
+    @property
+    def concern_key(self) -> str:
+        return self._provider.concern_key
+
     def group(self, findings: list[T]) -> dict[str, list[T]]:
         groups: dict[str, list[T]] = defaultdict(list)
         for finding in findings:
             concern = self._provider.get_concern(finding)
             groups[concern].append(finding)
+        return groups
+
+
+class SourceGroupingStrategy[T: BaseFindingModel]:
+    """Groups findings by source using a provider."""
+
+    def __init__(self, source_provider: SourceProvider[T]) -> None:
+        self._provider = source_provider
+
+    @property
+    def concern_key(self) -> str:
+        return "source"
+
+    def group(self, findings: list[T]) -> dict[str, list[T]]:
+        groups: dict[str, list[T]] = defaultdict(list)
+        for finding in findings:
+            source_id = self._provider.get_source_id(finding)
+            groups[source_id].append(finding)
         return groups
 
 
@@ -461,7 +548,8 @@ The `ValidationOrchestrator` is generic - analysers inject their specific implem
 
 ### Usage Pattern
 
-The analyser creates and calls `ValidationOrchestrator` within its `process()` method:
+The analyser creates and calls `ValidationOrchestrator` within its `process()` method.
+The analyser decides which strategies to use based on configuration:
 
 ```python
 # In ProcessingPurposeAnalyser.process()
@@ -471,19 +559,33 @@ class ProcessingPurposeAnalyser:
         # 1. Pattern matching
         findings = self._run_pattern_matching(inputs)
 
-        # 2. Create orchestrator with analyser-specific implementations
+        # 2. Analyser decides which strategies to use
+        concern_provider = ProcessingPurposeConcernProvider()
+        source_provider = ProcessingPurposeSourceProvider(source_data)
+
+        # Grouping strategy based on config
+        if config.grouping == "by_source":
+            grouping_strategy = SourceGroupingStrategy(source_provider)
+        else:  # "by_concern" or default
+            grouping_strategy = ConcernGroupingStrategy(concern_provider)
+
+        # LLM strategy based on config (orthogonal to grouping)
+        if config.grouping == "by_source" and source_provider.has_content():
+            llm_strategy = BatchBySourceLLMValidationStrategy(source_provider)
+        else:
+            llm_strategy = BatchByCountLLMValidationStrategy()
+
+        # 3. Create orchestrator - strategy-agnostic
         orchestrator = ValidationOrchestrator(
-            grouping_strategy=ConcernGroupingStrategy(
-                ProcessingPurposeConcernProvider()
-            ),
+            grouping_strategy=grouping_strategy,
             sampling_strategy=RandomSamplingStrategy(config.sampling_size),
-            llm_strategy=ProcessingPurposeValidationStrategy(),
+            llm_strategy=llm_strategy,
         )
 
-        # 3. Validate
+        # 4. Validate
         result = orchestrator.validate(findings, config, llm_service)
 
-        # 4. Build output
+        # 5. Build output
         return self._build_output(result.validated_findings, ...)
 ```
 

@@ -16,7 +16,26 @@ from waivern_analysers_shared.llm_validation.protocols import (
 
 
 class GroupingStrategy[T: BaseFindingModel](Protocol):
-    """Protocol for grouping findings."""
+    """Protocol for grouping findings.
+
+    Grouping strategies are orthogonal to LLM validation strategies:
+    - GroupingStrategy: How to organise findings for sampling decisions
+    - LLMValidationStrategy: How to batch and call the LLM
+
+    The ValidationOrchestrator composes them - they don't know about each other.
+    """
+
+    @property
+    def concern_key(self) -> str:
+        """The attribute name used for grouping (e.g., 'purpose', 'source').
+
+        Used by the orchestrator for RemovedGroup metadata.
+
+        Returns:
+            Attribute name string.
+
+        """
+        ...
 
     def group(self, findings: list[T]) -> dict[str, list[T]]:
         """Group findings by some attribute.
@@ -50,6 +69,16 @@ class ConcernGroupingStrategy[T: BaseFindingModel]:
 
         """
         self._provider = concern_provider
+
+    @property
+    def concern_key(self) -> str:
+        """Return the concern key from the provider.
+
+        Returns:
+            The attribute name (e.g., 'purpose', 'data_category').
+
+        """
+        return self._provider.concern_key
 
     def group(self, findings: list[T]) -> dict[str, list[T]]:
         """Group findings by concern value.
@@ -87,6 +116,16 @@ class SourceGroupingStrategy[T: BaseFindingModel]:
 
         """
         self._provider = source_provider
+
+    @property
+    def concern_key(self) -> str:
+        """Return 'source' as the concern key for source-based grouping.
+
+        Returns:
+            The literal string 'source'.
+
+        """
+        return "source"
 
     def group(self, findings: list[T]) -> dict[str, list[T]]:
         """Group findings by source ID.

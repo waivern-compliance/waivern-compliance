@@ -50,6 +50,15 @@ class MockSourceProvider:
 class TestConcernGroupingStrategy:
     """Tests for ConcernGroupingStrategy."""
 
+    def test_concern_key_returns_provider_concern_key(self) -> None:
+        """Should return the concern_key from the provider."""
+        # Arrange
+        provider = MockConcernProvider()
+        strategy = ConcernGroupingStrategy(provider)
+
+        # Act & Assert
+        assert strategy.concern_key == "purpose"
+
     def test_concern_grouping_groups_findings_by_concern_value(self) -> None:
         """Should group findings by the value returned from ConcernProvider.get_concern()."""
         # Arrange
@@ -95,6 +104,15 @@ class TestConcernGroupingStrategy:
 
 class TestSourceGroupingStrategy:
     """Tests for SourceGroupingStrategy."""
+
+    def test_concern_key_returns_source(self) -> None:
+        """Should return 'source' as the concern key."""
+        # Arrange
+        provider = MockSourceProvider()
+        strategy = SourceGroupingStrategy(provider)
+
+        # Act & Assert
+        assert strategy.concern_key == "source"
 
     def test_source_grouping_groups_findings_by_source_id(self) -> None:
         """Should group findings by the value returned from SourceProvider.get_source_id()."""
