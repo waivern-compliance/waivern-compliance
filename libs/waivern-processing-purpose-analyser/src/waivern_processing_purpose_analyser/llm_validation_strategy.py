@@ -1,10 +1,10 @@
 """LLM validation strategy for processing purpose analysis."""
 
 import logging
-from typing import Any, override
+from typing import override
 
 from waivern_analysers_shared.llm_validation import (
-    LLMValidationStrategy,
+    DefaultLLMValidationStrategy,
 )
 from waivern_analysers_shared.llm_validation.token_estimation import (
     calculate_max_payload_tokens,
@@ -35,7 +35,7 @@ _VALIDATION_MARK_KEY = "processing_purpose_llm_validated"
 
 
 class ProcessingPurposeValidationStrategy(
-    LLMValidationStrategy[ProcessingPurposeFindingModel]
+    DefaultLLMValidationStrategy[ProcessingPurposeFindingModel]
 ):
     """LLM validation strategy for processing purpose findings."""
 
@@ -49,13 +49,6 @@ class ProcessingPurposeValidationStrategy(
         return get_processing_purpose_validation_prompt(
             findings_batch, config.llm_validation_mode
         )
-
-    @override
-    def convert_findings_for_prompt(
-        self, findings_batch: list[ProcessingPurposeFindingModel]
-    ) -> list[dict[str, Any]]:
-        """Convert ProcessingPurposeFindingModel objects to format expected by validation prompt."""
-        return [finding.model_dump() for finding in findings_batch]
 
 
 def processing_purpose_validation_strategy(

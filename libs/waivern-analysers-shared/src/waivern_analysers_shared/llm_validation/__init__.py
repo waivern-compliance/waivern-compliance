@@ -9,6 +9,9 @@ from waivern_analysers_shared.llm_validation.batched_files_strategy import (
 from waivern_analysers_shared.llm_validation.decision_engine import (
     ValidationDecisionEngine,
 )
+from waivern_analysers_shared.llm_validation.default_strategy import (
+    DefaultLLMValidationStrategy,
+)
 from waivern_analysers_shared.llm_validation.file_content import (
     FileContentProvider,
     FileInfo,
@@ -65,6 +68,7 @@ __all__ = [
     # Protocols
     "ConcernProvider",
     "SourceProvider",
-    # Strategy
+    # Strategies
+    "DefaultLLMValidationStrategy",
     "LLMValidationStrategy",
 ]

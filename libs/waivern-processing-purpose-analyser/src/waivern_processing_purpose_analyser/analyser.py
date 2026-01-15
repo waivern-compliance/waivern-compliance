@@ -7,13 +7,9 @@ from collections import defaultdict
 from types import ModuleType
 from typing import override
 
-from waivern_core import Analyser, InputRequirement, update_analyses_chain
+from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    AnalysisChainEntry,
-    ChainEntryValidationStats,
-    Schema,
-)
+from waivern_core.schemas import Schema
 from waivern_llm import BaseLLMService
 
 from .llm_validation_strategy import processing_purpose_validation_strategy
@@ -142,31 +138,12 @@ class ProcessingPurposeAnalyser(Analyser):
         else:
             validated_findings, validation_applied = findings, False
 
-        # Build analysis chain
-        # When sampling, skip validation_statistics - the sampling info tells the story
-        chain_validation_stats: ChainEntryValidationStats | None = None
-        if validation_applied and sampling_info is None:
-            # Full validation (no sampling) - include detailed stats
-            chain_validation_stats = ChainEntryValidationStats.from_counts(
-                validation_applied=validation_applied,
-                original_count=len(findings),
-                validated_count=len(validated_findings),
-                validation_mode=self._config.llm_validation.llm_validation_mode,
-            )
-        updated_chain_dicts = update_analyses_chain(
-            message,
-            "processing_purpose_analyser",
-            validation_stats=chain_validation_stats,
-        )
-        updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
-
         # Build output message
         return self._result_builder.build_output_message(
             findings,
             validated_findings,
             validation_applied,
             output_schema,
-            updated_chain,
             sampling_info,
         )
 

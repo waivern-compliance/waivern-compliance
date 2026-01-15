@@ -1,60 +1,8 @@
 {
   "$defs": {
-    "AnalysisChainEntry": {
-      "description": "Single entry in an analysis chain tracking sequence of analysers.",
-      "properties": {
-        "order": {
-          "description": "Sequence number in the analysis chain",
-          "minimum": 1,
-          "title": "Order",
-          "type": "integer"
-        },
-        "analyser": {
-          "description": "Name of the analyser that performed this step",
-          "title": "Analyser",
-          "type": "string"
-        },
-        "execution_timestamp": {
-          "description": "When this analysis was performed",
-          "title": "Execution Timestamp",
-          "type": "string"
-        },
-        "llm_validation_enabled": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Whether LLM validation was enabled (only when validation ran)",
-          "title": "Llm Validation Enabled"
-        },
-        "validation_statistics": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ChainEntryValidationStats"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "LLM validation statistics (only when validation ran)"
-        }
-      },
-      "required": [
-        "order",
-        "analyser"
-      ],
-      "title": "AnalysisChainEntry",
-      "type": "object"
-    },
     "BaseAnalysisOutputMetadata": {
       "additionalProperties": true,
-      "description": "Base metadata for analysis outputs with chain tracking.",
+      "description": "Base metadata for analysis outputs.",
       "properties": {
         "ruleset_used": {
           "description": "Name of the ruleset used for analysis",
@@ -83,21 +31,11 @@
           "default": null,
           "description": "Size of context used for evidence extraction",
           "title": "Evidence Context Size"
-        },
-        "analyses_chain": {
-          "description": "Track the full analysis chain",
-          "items": {
-            "$ref": "#/$defs/AnalysisChainEntry"
-          },
-          "minItems": 1,
-          "title": "Analyses Chain",
-          "type": "array"
         }
       },
       "required": [
         "ruleset_used",
-        "llm_validation_enabled",
-        "analyses_chain"
+        "llm_validation_enabled"
       ],
       "title": "BaseAnalysisOutputMetadata",
       "type": "object"
@@ -122,42 +60,36 @@
       "title": "BaseFindingEvidence",
       "type": "object"
     },
-    "ChainEntryValidationStats": {
-      "additionalProperties": false,
-      "description": "LLM validation statistics for an analysis chain entry.\n\nCaptures the impact of LLM validation on findings count.\nOnly included when validation actually ran and produced results.",
-      "properties": {
-        "original_findings_count": {
-          "description": "Number of findings before LLM validation",
-          "minimum": 0,
-          "title": "Original Findings Count",
-          "type": "integer"
-        },
-        "validated_findings_count": {
-          "description": "Number of findings after LLM validation",
-          "minimum": 0,
-          "title": "Validated Findings Count",
-          "type": "integer"
-        },
-        "false_positives_removed": {
-          "description": "Number of false positives removed by LLM validation",
-          "minimum": 0,
-          "title": "False Positives Removed",
-          "type": "integer"
-        },
-        "validation_mode": {
-          "description": "LLM validation mode used (e.g., 'standard', 'conservative')",
-          "title": "Validation Mode",
+    "JsonValue": {
+      "anyOf": [
+        {
           "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
         }
-      },
-      "required": [
-        "original_findings_count",
-        "validated_findings_count",
-        "false_positives_removed",
-        "validation_mode"
-      ],
-      "title": "ChainEntryValidationStats",
-      "type": "object"
+      ]
     },
     "ProcessingPurposeFindingMetadata": {
       "additionalProperties": false,
@@ -169,7 +101,9 @@
           "type": "string"
         },
         "context": {
-          "additionalProperties": true,
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
           "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
           "title": "Context",
           "type": "object"
@@ -313,6 +247,14 @@
           "description": "Count of findings by purpose category",
           "title": "Purpose Categories",
           "type": "object"
+        },
+        "purposes": {
+          "description": "Per-purpose breakdown of findings",
+          "items": {
+            "$ref": "#/$defs/PurposeBreakdown"
+          },
+          "title": "Purposes",
+          "type": "array"
         }
       },
       "required": [
@@ -379,6 +321,28 @@
         "validation_mode"
       ],
       "title": "ProcessingPurposeValidationSummary",
+      "type": "object"
+    },
+    "PurposeBreakdown": {
+      "description": "Per-purpose breakdown of findings.",
+      "properties": {
+        "purpose": {
+          "description": "Purpose name",
+          "title": "Purpose",
+          "type": "string"
+        },
+        "findings_count": {
+          "description": "Number of findings for this purpose",
+          "minimum": 0,
+          "title": "Findings Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "purpose",
+        "findings_count"
+      ],
+      "title": "PurposeBreakdown",
       "type": "object"
     }
   },

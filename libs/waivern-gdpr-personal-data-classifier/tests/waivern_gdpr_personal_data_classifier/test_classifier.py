@@ -93,7 +93,6 @@ class TestGDPRPersonalDataClassifier:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(
@@ -128,7 +127,6 @@ class TestGDPRPersonalDataClassifier:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(
@@ -161,7 +159,6 @@ class TestGDPRPersonalDataClassifier:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(
@@ -200,7 +197,6 @@ class TestGDPRPersonalDataClassifier:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(
@@ -218,37 +214,6 @@ class TestGDPRPersonalDataClassifier:
         assert len(result_evidence) == 2
         assert result_evidence[0]["content"] == "user@example.com"
         assert result_evidence[1]["content"] == "john.doe@test.com"
-
-    def test_process_updates_analysis_chain(self) -> None:
-        """Test that process adds classifier to analysis chain."""
-        findings: list[dict[str, Any]] = []
-        input_data = {
-            "findings": findings,
-            "summary": {
-                "total_findings": 0,
-            },
-            "analysis_metadata": {
-                "ruleset_used": "local/personal_data_indicator/1.0.0",
-                "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
-            },
-        }
-        input_message = Message(
-            id="test",
-            content=input_data,
-            schema=Schema("personal_data_indicator", "1.0.0"),
-        )
-        classifier = GDPRPersonalDataClassifier()
-
-        result = classifier.process(
-            [input_message], Schema("gdpr_personal_data", "1.0.0")
-        )
-
-        chain = result.content["analysis_metadata"]["analyses_chain"]
-        assert len(chain) == 2
-        assert chain[0]["analyser"] == "personal_data_analyser"
-        assert chain[1]["analyser"] == "gdpr_personal_data_classifier"
-        assert chain[1]["order"] == 2
 
     def test_process_builds_summary_statistics(self) -> None:
         """Test that process builds correct summary with counts."""
@@ -271,7 +236,6 @@ class TestGDPRPersonalDataClassifier:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(
@@ -305,7 +269,6 @@ class TestGDPRPersonalDataClassifier:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(
@@ -346,7 +309,6 @@ class TestGDPRPersonalDataClassifier:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(
@@ -382,7 +344,6 @@ class TestGDPRPersonalDataClassifier:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(
@@ -432,7 +393,6 @@ class TestGDPRPersonalDataClassifierErrorHandling:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(
@@ -466,7 +426,6 @@ class TestGDPRPersonalDataClassifierErrorHandling:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(
@@ -494,7 +453,6 @@ class TestGDPRPersonalDataClassifierErrorHandling:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input1 = Message(
@@ -529,7 +487,6 @@ class TestGDPRPersonalDataClassifierErrorHandling:
             "analysis_metadata": {
                 "ruleset_used": "local/personal_data_indicator/1.0.0",
                 "llm_validation_enabled": False,
-                "analyses_chain": [{"order": 1, "analyser": "personal_data_analyser"}],
             },
         }
         input_message = Message(

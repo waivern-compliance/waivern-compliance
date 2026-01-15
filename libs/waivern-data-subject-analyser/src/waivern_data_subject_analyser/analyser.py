@@ -2,15 +2,12 @@
 
 import importlib
 import logging
-from datetime import UTC, datetime
 from types import ModuleType
 from typing import cast, override
 
-from waivern_core import Analyser, InputRequirement, update_analyses_chain
+from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import (
-    AnalysisChainEntry,
-    BaseAnalysisOutputMetadata,
     BaseMetadata,
     Schema,
     StandardInputDataItemModel,
@@ -19,11 +16,8 @@ from waivern_core.schemas import (
 from waivern_llm import BaseLLMService
 
 from .pattern_matcher import DataSubjectPatternMatcher
-from .schemas.types import (
-    DataSubjectFindingModel,
-    DataSubjectFindingOutput,
-    DataSubjectSummary,
-)
+from .result_builder import DataSubjectResultBuilder
+from .schemas.types import DataSubjectFindingModel
 from .types import DataSubjectAnalyserConfig
 
 logger = logging.getLogger(__name__)
@@ -50,6 +44,7 @@ class DataSubjectAnalyser(Analyser):
         """
         self._config = config
         self._pattern_matcher = DataSubjectPatternMatcher(config.pattern_matching)
+        self._result_builder = DataSubjectResultBuilder(config)
         # TODO: LLM validation is not yet implemented for DataSubjectAnalyser.
         # The llm_service is accepted for interface consistency with other analysers
         # and to prepare for future implementation. When implementing:
@@ -145,65 +140,5 @@ class DataSubjectAnalyser(Analyser):
             item_findings = self._pattern_matcher.find_patterns(content, metadata)
             findings.extend(item_findings)
 
-        # Update analysis chain using first input message
-        updated_chain_dicts = update_analyses_chain(inputs[0], "data_subject_analyser")
-        # Convert to strongly-typed models for WCT
-        updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
-
-        # Create and validate output message
-        return self._create_output_message(findings, output_schema, updated_chain)
-
-    def _create_output_message(
-        self,
-        findings: list[DataSubjectFindingModel],
-        output_schema: Schema,
-        analyses_chain: list[AnalysisChainEntry],
-    ) -> Message:
-        """Create output message with data subject findings using output model.
-
-        Args:
-            findings: List of data subject findings
-            output_schema: Output schema for validation
-            analyses_chain: Updated analysis chain with proper ordering
-
-        Returns:
-            Message containing data subject analysis results
-
-        """
-        # Create summary statistics
-        summary = DataSubjectSummary(
-            total_classifications=len(findings),
-            categories_identified=list(set(f.primary_category for f in findings)),
-        )
-
-        # Create analysis metadata for chaining support
-        analysis_metadata = BaseAnalysisOutputMetadata(
-            ruleset_used=self._config.pattern_matching.ruleset,
-            llm_validation_enabled=self._config.llm_validation.enable_llm_validation,
-            evidence_context_size=self._config.pattern_matching.evidence_context_size,
-            analyses_chain=analyses_chain,
-        )
-
-        # Create output model (Pydantic validates at construction)
-        output_model = DataSubjectFindingOutput(
-            findings=findings,
-            summary=summary,
-            analysis_metadata=analysis_metadata,
-        )
-
-        # Convert to wire format
-        result_data = output_model.model_dump(mode="json", exclude_none=True)
-
-        output_message = Message(
-            id=f"data_subject_analysis_{datetime.now(UTC).isoformat()}",
-            content=result_data,
-            schema=output_schema,
-        )
-
-        output_message.validate()
-
-        logger.info(
-            f"DataSubjectAnalyser processed with {len(result_data['findings'])} findings"
-        )
-
-        return output_message
+        # Build and return output message
+        return self._result_builder.build_output_message(findings, output_schema)

@@ -8,11 +8,7 @@ import logging
 from dataclasses import dataclass
 
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    AnalysisChainEntry,
-    BaseAnalysisOutputMetadata,
-    Schema,
-)
+from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
 
 from .schemas.types import (
     ProcessingPurposeFindingModel,
@@ -53,13 +49,12 @@ class ProcessingPurposeResultBuilder:
         """
         self._config = config
 
-    def build_output_message(  # noqa: PLR0913
+    def build_output_message(
         self,
         original_findings: list[ProcessingPurposeFindingModel],
         validated_findings: list[ProcessingPurposeFindingModel],
         validation_applied: bool,
         output_schema: Schema,
-        analyses_chain: list[AnalysisChainEntry],
         sampling_info: SamplingInfo | None = None,
     ) -> Message:
         """Build the complete output message.
@@ -69,7 +64,6 @@ class ProcessingPurposeResultBuilder:
             validated_findings: Findings after LLM validation.
             validation_applied: Whether validation was applied.
             output_schema: Schema for output validation.
-            analyses_chain: Analysis chain with ordering.
             sampling_info: Optional sampling validation info.
 
         Returns:
@@ -85,7 +79,7 @@ class ProcessingPurposeResultBuilder:
                 original_findings, validated_findings
             )
 
-        analysis_metadata = self._build_analysis_metadata(analyses_chain, sampling_info)
+        analysis_metadata = self._build_analysis_metadata(sampling_info)
 
         output_model = ProcessingPurposeFindingOutput(
             findings=validated_findings,
@@ -183,13 +177,11 @@ class ProcessingPurposeResultBuilder:
 
     def _build_analysis_metadata(
         self,
-        analyses_chain: list[AnalysisChainEntry],
         sampling_info: SamplingInfo | None = None,
     ) -> BaseAnalysisOutputMetadata:
         """Build analysis metadata for output.
 
         Args:
-            analyses_chain: Analysis chain with ordering.
             sampling_info: Optional sampling validation info.
 
         Returns:
@@ -221,6 +213,5 @@ class ProcessingPurposeResultBuilder:
             ruleset_used=self._config.pattern_matching.ruleset,
             llm_validation_enabled=self._config.llm_validation.enable_llm_validation,
             evidence_context_size=self._config.pattern_matching.evidence_context_size,
-            analyses_chain=analyses_chain,
             **extra_fields,
         )

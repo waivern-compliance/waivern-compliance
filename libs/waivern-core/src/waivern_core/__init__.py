@@ -56,7 +56,7 @@ from waivern_core.testing import (
     ProcessorContractTests,
 )
 from waivern_core.types import InputRequirement, JsonValue
-from waivern_core.utils import update_analyses_chain, validate_output_schema
+from waivern_core.utils import validate_output_schema
 
 __all__ = [
     # Version
@@ -98,7 +98,6 @@ __all__ = [
     "InputRequirement",
     "JsonValue",
     # Utilities
-    "update_analyses_chain",
     "validate_output_schema",
     # Errors
     "WaivernError",

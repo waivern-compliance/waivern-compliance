@@ -197,8 +197,6 @@ class TestDataSubjectAnalyserProcessing:
         analysis_metadata = result.content["analysis_metadata"]
         assert "ruleset_used" in analysis_metadata
         assert "llm_validation_enabled" in analysis_metadata
-        assert "analyses_chain" in analysis_metadata
-        assert isinstance(analysis_metadata["analyses_chain"], list)
 
         # Verify findings contain properly serialised evidence items
         findings = result.content["findings"]
@@ -288,48 +286,3 @@ class TestDataSubjectAnalyserProcessing:
         # Verify it doesn't contain patterns that aren't in the content
         assert "board_member" not in matched_patterns
         assert "chairman" not in matched_patterns
-
-    def test_process_creates_analysis_chain_entry(self) -> None:
-        """Test that analyser creates proper analysis chain entry.
-
-        Business Logic: Each analyser must create a chain entry to track
-        the analysis for audit purposes and downstream processing.
-        """
-        # Arrange
-        config = DataSubjectAnalyserConfig.from_properties({})
-        analyser = DataSubjectAnalyser(config, llm_service=None)
-        input_schema = Schema("standard_input", "1.0.0")
-        output_schema = Schema("data_subject_finding", "1.0.0")
-
-        message = Message(
-            id="test_chain",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test data",
-                "data": [
-                    {
-                        "content": "Employee John Smith",
-                        "metadata": {"source": "test", "connector_type": "test"},
-                    }
-                ],
-            },
-            schema=input_schema,
-        )
-
-        # Act
-        result = analyser.process([message], output_schema)
-
-        # Assert
-        analysis_metadata = result.content["analysis_metadata"]
-        analyses_chain = analysis_metadata["analyses_chain"]
-
-        assert len(analyses_chain) == 1, "Should create exactly one chain entry"
-
-        chain_entry = analyses_chain[0]
-        assert chain_entry["order"] == 1, "Should start with order 1 for new analysis"
-        assert chain_entry["analyser"] == "data_subject_analyser", (
-            "Should identify correct analyser"
-        )
-        assert "execution_timestamp" in chain_entry, (
-            "Should include execution timestamp"
-        )

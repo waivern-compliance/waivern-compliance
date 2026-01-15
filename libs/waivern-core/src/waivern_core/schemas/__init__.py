@@ -16,14 +16,11 @@ from waivern_core.schemas.connector_types import (
     RelationalDatabaseMetadata,
 )
 from waivern_core.schemas.finding_types import (
-    AnalysesChain,
-    AnalysisChainEntry,
     BaseAnalysisOutputMetadata,
     BaseFindingEvidence,
     BaseFindingMetadata,
     BaseFindingModel,
     BaseSchemaOutput,
-    ChainEntryValidationStats,
 )
 from waivern_core.schemas.loader import (
     JsonSchemaLoader,
@@ -57,11 +54,8 @@ __all__ = [
     "BaseFindingModel",
     "BaseFindingMetadata",
     "BaseFindingEvidence",
-    "AnalysisChainEntry",
-    "AnalysesChain",
     "BaseAnalysisOutputMetadata",
     "BaseSchemaOutput",
-    "ChainEntryValidationStats",
     # Validation utilities
     "parse_data_model",
     "DataParsingError",

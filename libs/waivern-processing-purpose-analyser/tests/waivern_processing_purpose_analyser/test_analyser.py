@@ -563,57 +563,6 @@ class TestProcessingPurposeAnalyserErrorHandling:
         with pytest.raises(ValueError, match="Unsupported input schema"):
             analyser.process([message], output_schema)
 
-    def test_process_creates_analysis_chain_entry(self) -> None:
-        """Test that analyser creates proper analysis chain entry.
-
-        Business Logic: Each analyser must create a chain entry to track
-        the analysis for audit purposes and downstream processing.
-        """
-        # Arrange
-        config = ProcessingPurposeAnalyserConfig.from_properties(
-            {
-                "llm_validation": {
-                    "enable_llm_validation": False
-                }  # Disable LLM for speed
-            }
-        )
-        analyser = ProcessingPurposeAnalyser(config, llm_service=None)
-        input_schema = Schema("standard_input", "1.0.0")
-        output_schema = Schema("processing_purpose_finding", "1.0.0")
-
-        message = Message(
-            id="test_chain",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test data",
-                "data": [
-                    {
-                        "content": "Contact our support team",
-                        "metadata": {"source": "test", "connector_type": "test"},
-                    }
-                ],
-            },
-            schema=input_schema,
-        )
-
-        # Act
-        result = analyser.process([message], output_schema)
-
-        # Assert
-        analysis_metadata = result.content["analysis_metadata"]
-        analyses_chain = analysis_metadata["analyses_chain"]
-
-        assert len(analyses_chain) == 1, "Should create exactly one chain entry"
-
-        chain_entry = analyses_chain[0]
-        assert chain_entry["order"] == 1, "Should start with order 1 for new analysis"
-        assert chain_entry["analyser"] == "processing_purpose_analyser", (
-            "Should identify correct analyser"
-        )
-        assert "execution_timestamp" in chain_entry, (
-            "Should include execution timestamp"
-        )
-
 
 class TestProcessingPurposeAnalyserOutputValidation:
     """Test class for output message validation and structure."""
@@ -859,7 +808,6 @@ class CustomerService {
         assert "llm_validation_enabled" in metadata
         assert metadata["llm_validation_enabled"] is False
         assert "analyser_version" in metadata
-        assert "analyses_chain" in metadata
 
         # Assert - Output validates against schema
         result.validate()  # Should not raise

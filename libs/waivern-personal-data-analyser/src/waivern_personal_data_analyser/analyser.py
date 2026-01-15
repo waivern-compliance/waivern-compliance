@@ -2,31 +2,23 @@
 
 import importlib
 import logging
-from pprint import pformat
-from types import ModuleType
-from typing import cast, override
+from typing import override
 
-from waivern_core import Analyser, InputRequirement, update_analyses_chain
+from waivern_analysers_shared import SchemaReader
+from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import (
-    AnalysisChainEntry,
-    BaseAnalysisOutputMetadata,
     BaseMetadata,
-    ChainEntryValidationStats,
     Schema,
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
 from waivern_llm import BaseLLMService
 
-from .llm_validation_strategy import personal_data_validation_strategy
+from .llm_validation_strategy import PersonalDataValidationStrategy
 from .pattern_matcher import PersonalDataPatternMatcher
-from .schemas.types import (
-    PersonalDataIndicatorModel,
-    PersonalDataIndicatorOutput,
-    PersonalDataIndicatorSummary,
-    PersonalDataValidationSummary,
-)
+from .result_builder import PersonalDataResultBuilder
+from .schemas.types import PersonalDataIndicatorModel
 from .types import PersonalDataAnalyserConfig
 
 logger = logging.getLogger(__name__)
@@ -55,6 +47,7 @@ class PersonalDataAnalyser(Analyser):
         self._config = config
         self._pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
         self._llm_service = llm_service
+        self._result_builder = PersonalDataResultBuilder(config)
 
     @classmethod
     @override
@@ -80,26 +73,68 @@ class PersonalDataAnalyser(Analyser):
         """Declare output schemas this analyser can produce."""
         return [Schema("personal_data_indicator", "1.0.0")]
 
-    def _load_reader(self, schema: Schema) -> ModuleType:
+    def _load_reader(
+        self, schema: Schema
+    ) -> SchemaReader[StandardInputDataModel[BaseMetadata]]:
         """Dynamically import reader module.
 
         Python's import system automatically caches modules in sys.modules,
         so repeated imports are fast and don't require manual caching.
 
         Args:
-            schema: Input schema to load reader for
+            schema: Input schema to load reader for.
 
         Returns:
-            Reader module with read() function
+            Reader module with typed read() function.
 
         Raises:
-            ModuleNotFoundError: If reader module doesn't exist for this version
+            ModuleNotFoundError: If reader module doesn't exist for this version.
 
         """
         module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
-        return importlib.import_module(
+        return importlib.import_module(  # type: ignore[return-value]
             f"waivern_personal_data_analyser.schema_readers.{module_name}"
         )
+
+    def _merge_input_data_items(
+        self, inputs: list[Message]
+    ) -> list[StandardInputDataItemModel[BaseMetadata]]:
+        """Merge data items from multiple input messages (fan-in).
+
+        Args:
+            inputs: List of input messages with same schema.
+
+        Returns:
+            Flattened list of all data items from all inputs.
+
+        """
+        # Python's importlib caches modules, so repeated calls are cheap
+        all_data_items: list[StandardInputDataItemModel[BaseMetadata]] = []
+        for message in inputs:
+            reader = self._load_reader(message.schema)
+            input_data = reader.read(message.content)
+            all_data_items.extend(input_data.data)
+        return all_data_items
+
+    def _find_patterns_in_data_items(
+        self, data_items: list[StandardInputDataItemModel[BaseMetadata]]
+    ) -> list[PersonalDataIndicatorModel]:
+        """Run pattern matching on all data items.
+
+        Args:
+            data_items: List of data items to scan for patterns.
+
+        Returns:
+            List of findings from all data items.
+
+        """
+        findings: list[PersonalDataIndicatorModel] = []
+        for item in data_items:
+            item_findings = self._pattern_matcher.find_patterns(
+                item.content, item.metadata
+            )
+            findings.extend(item_findings)
+        return findings
 
     @override
     def process(
@@ -120,118 +155,15 @@ class PersonalDataAnalyser(Analyser):
             Output message with findings from all inputs combined.
 
         """
-        # Merge all input data items (same-schema fan-in)
-        all_data_items: list[StandardInputDataItemModel[BaseMetadata]] = []
-        for message in inputs:
-            reader = self._load_reader(message.schema)
-            typed_data = cast(
-                StandardInputDataModel[BaseMetadata], reader.read(message.content)
-            )
-            all_data_items.extend(typed_data.data)
-
-        # Process each data item using the pattern matcher
-        findings: list[PersonalDataIndicatorModel] = []
-        for data_item in all_data_items:
-            content = data_item.content
-            item_metadata = data_item.metadata
-
-            item_findings = self._pattern_matcher.find_patterns(content, item_metadata)
-            findings.extend(item_findings)
-
-        # Run LLM validation if enabled
+        # Merge inputs, find patterns, validate
+        data_items = self._merge_input_data_items(inputs)
+        findings = self._find_patterns_in_data_items(data_items)
         validated_findings = self._validate_findings_with_llm(findings)
 
-        # Build chain entry validation stats if validation actually ran
-        validation_applied = (
-            self._config.llm_validation.enable_llm_validation and len(findings) > 0
+        # Build and return output message
+        return self._result_builder.build_output_message(
+            findings, validated_findings, output_schema
         )
-        chain_validation_stats = ChainEntryValidationStats.from_counts(
-            validation_applied=validation_applied,
-            original_count=len(findings),
-            validated_count=len(validated_findings),
-            validation_mode=self._config.llm_validation.llm_validation_mode,
-        )
-
-        # Update analysis chain using first input message
-        updated_chain_dicts = update_analyses_chain(
-            inputs[0], "personal_data_analyser", validation_stats=chain_validation_stats
-        )
-        # Convert to strongly-typed models for WCT
-        updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
-
-        # Create and validate output message
-        return self._create_output_message(
-            findings, validated_findings, output_schema, updated_chain
-        )
-
-    def _create_output_message(
-        self,
-        original_findings: list[PersonalDataIndicatorModel],
-        validated_findings: list[PersonalDataIndicatorModel],
-        output_schema: Schema,
-        analyses_chain: list[AnalysisChainEntry],
-    ) -> Message:
-        """Create and validate output message using output model.
-
-        Args:
-            original_findings: Original findings before LLM validation
-            validated_findings: Findings after LLM validation
-            output_schema: Schema for output validation
-            analyses_chain: Updated analysis chain with proper ordering
-
-        Returns:
-            Validated output message
-
-        """
-        # Build summary
-        summary = self._build_findings_summary(validated_findings)
-
-        # Build validation summary if applicable
-        validation_summary = None
-        if (
-            self._config.llm_validation.enable_llm_validation
-            and len(original_findings) > 0
-        ):
-            validation_summary = self._build_validation_summary(
-                original_findings, validated_findings
-            )
-
-        # Build analysis metadata for chaining support
-        analysis_metadata = BaseAnalysisOutputMetadata(
-            ruleset_used=self._config.pattern_matching.ruleset,
-            llm_validation_enabled=self._config.llm_validation.enable_llm_validation,
-            evidence_context_size=self._config.pattern_matching.evidence_context_size,
-            analyses_chain=analyses_chain,
-        )
-
-        # Create output model (Pydantic validates at construction)
-        output_model = PersonalDataIndicatorOutput(
-            findings=validated_findings,
-            summary=summary,
-            analysis_metadata=analysis_metadata,
-            validation_summary=validation_summary,
-        )
-
-        # Convert to wire format
-        result_data = output_model.model_dump(mode="json", exclude_none=True)
-
-        output_message = Message(
-            id="Personal_data_analysis",
-            content=result_data,
-            schema=output_schema,
-        )
-
-        output_message.validate()
-
-        logger.info(
-            f"PersonalDataAnalyser processed with {len(result_data['findings'])} findings"
-        )
-
-        logger.debug(
-            f"PersonalDataAnalyser processed with findings:\n{pformat(result_data)}"
-        )
-
-        return output_message
 
     def _validate_findings_with_llm(
         self, findings: list[PersonalDataIndicatorModel]
@@ -259,7 +191,7 @@ class PersonalDataAnalyser(Analyser):
             logger.info(f"Starting LLM validation of {len(findings)} findings")
 
             validated_findings, validation_succeeded = (
-                personal_data_validation_strategy(
+                PersonalDataValidationStrategy().validate_findings(
                     findings, self._config.llm_validation, self._llm_service
                 )
             )
@@ -277,51 +209,3 @@ class PersonalDataAnalyser(Analyser):
             logger.error(f"LLM validation failed: {e}")
             logger.warning("Returning unvalidated findings due to LLM validation error")
             return findings
-
-    def _build_findings_summary(
-        self, findings: list[PersonalDataIndicatorModel]
-    ) -> PersonalDataIndicatorSummary:
-        """Build summary statistics for indicators.
-
-        Args:
-            findings: List of validated indicators
-
-        Returns:
-            Summary statistics model
-
-        """
-        return PersonalDataIndicatorSummary(
-            total_findings=len(findings),
-        )
-
-    def _build_validation_summary(
-        self,
-        original_findings: list[PersonalDataIndicatorModel],
-        validated_findings: list[PersonalDataIndicatorModel],
-    ) -> PersonalDataValidationSummary:
-        """Build LLM validation summary statistics.
-
-        Args:
-            original_findings: Original findings before validation
-            validated_findings: Findings after validation
-
-        Returns:
-            Validation summary model
-
-        """
-        original_count = len(original_findings)
-        validated_count = len(validated_findings)
-        false_positives_removed = original_count - validated_count
-
-        logger.info(
-            f"LLM validation completed: {original_count} → {validated_count} findings "
-            f"({false_positives_removed} false positives removed)"
-        )
-
-        return PersonalDataValidationSummary(
-            llm_validation_enabled=True,
-            original_findings_count=original_count,
-            validated_findings_count=validated_count,
-            false_positives_removed=false_positives_removed,
-            validation_mode=self._config.llm_validation.llm_validation_mode,
-        )
