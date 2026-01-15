@@ -85,13 +85,11 @@ def processing_purpose_validation_strategy(
 
     # Default: use finding-based batching
     strategy = ProcessingPurposeValidationStrategy()
-    validated_findings, succeeded = strategy.validate_findings(
-        findings, config, llm_service
-    )
+    outcome = strategy.validate_findings(findings, config, llm_service)
 
-    # Mark all validated findings
-    marked_findings = [_mark_finding_as_validated(f) for f in validated_findings]
-    return marked_findings, succeeded
+    # Mark all kept findings
+    marked_findings = [_mark_finding_as_validated(f) for f in outcome.kept_findings]
+    return marked_findings, outcome.validation_succeeded
 
 
 def _validate_with_file_batching(
@@ -119,9 +117,7 @@ def _validate_with_file_batching(
     # Calculate max tokens per batch
     context_window = config.batching.model_context_window
     if context_window is None:
-        # Auto-detect from model name (all concrete LLM services have model_name attribute)
-        model_name = str(getattr(llm_service, "model_name", ""))
-        context_window = get_model_context_window(model_name)
+        context_window = get_model_context_window(llm_service.model_name)
         logger.debug(f"Auto-detected context window: {context_window} tokens")
 
     max_tokens = calculate_max_payload_tokens(context_window)
@@ -153,14 +149,14 @@ def _validate_with_file_batching(
             f"{len(result.unvalidated_findings)} findings"
         )
         fallback_strategy = ProcessingPurposeValidationStrategy()
-        fallback_validated, fallback_succeeded = fallback_strategy.validate_findings(
+        fallback_outcome = fallback_strategy.validate_findings(
             result.unvalidated_findings, config, llm_service
         )
         # Mark fallback-validated findings
         validated_findings.extend(
-            _mark_finding_as_validated(f) for f in fallback_validated
+            _mark_finding_as_validated(f) for f in fallback_outcome.kept_findings
         )
-        all_succeeded = all_succeeded and fallback_succeeded
+        all_succeeded = all_succeeded and fallback_outcome.validation_succeeded
 
     return validated_findings, all_succeeded
 

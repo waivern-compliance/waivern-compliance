@@ -103,17 +103,17 @@ class TestPersonalDataValidationStrategy:
     # Core Validation Behaviour
     # -------------------------------------------------------------------------
 
-    def test_returns_empty_list_when_no_findings_provided(
+    def test_returns_empty_outcome_when_no_findings_provided(
         self,
         strategy: PersonalDataValidationStrategy,
         config: LLMValidationConfig,
         llm_service: Mock,
     ) -> None:
-        """Empty input returns empty output without calling LLM."""
-        result, success = strategy.validate_findings([], config, llm_service)
+        """Empty input returns empty outcome without calling LLM."""
+        outcome = strategy.validate_findings([], config, llm_service)
 
-        assert result == []
-        assert success is True
+        assert outcome.kept_findings == []
+        assert outcome.validation_succeeded is True
         llm_service.invoke_with_structured_output.assert_not_called()
 
     def test_keeps_true_positive_findings(
@@ -131,14 +131,12 @@ class TestPersonalDataValidationStrategy:
             ]
         )
 
-        result, success = strategy.validate_findings(
-            sample_findings, config, llm_service
-        )
+        outcome = strategy.validate_findings(sample_findings, config, llm_service)
 
-        assert len(result) == 2
-        assert result[0].category == "email"
-        assert result[1].category == "phone"
-        assert success is True
+        assert len(outcome.kept_findings) == 2
+        assert outcome.kept_findings[0].category == "email"
+        assert outcome.kept_findings[1].category == "phone"
+        assert outcome.validation_succeeded is True
 
     def test_filters_out_false_positive_findings(
         self,
@@ -155,13 +153,13 @@ class TestPersonalDataValidationStrategy:
             ]
         )
 
-        result, success = strategy.validate_findings(
-            sample_findings, config, llm_service
-        )
+        outcome = strategy.validate_findings(sample_findings, config, llm_service)
 
-        assert len(result) == 1
-        assert result[0].category == "phone"
-        assert success is True
+        assert len(outcome.kept_findings) == 1
+        assert outcome.kept_findings[0].category == "phone"
+        assert outcome.validation_succeeded is True
+        # Check detailed breakdown
+        assert len(outcome.llm_validated_removed) == 1
 
     def test_preserves_original_finding_objects(
         self,
@@ -178,11 +176,11 @@ class TestPersonalDataValidationStrategy:
             ]
         )
 
-        result, _ = strategy.validate_findings(sample_findings, config, llm_service)
+        outcome = strategy.validate_findings(sample_findings, config, llm_service)
 
         # Same instances, not copies
-        assert result[0] is sample_findings[0]
-        assert result[1] is sample_findings[1]
+        assert outcome.kept_findings[0] is sample_findings[0]
+        assert outcome.kept_findings[1] is sample_findings[1]
 
     # -------------------------------------------------------------------------
     # Fail-Safe Behaviour
@@ -203,14 +201,14 @@ class TestPersonalDataValidationStrategy:
             ]
         )
 
-        result, success = strategy.validate_findings(
-            sample_findings, config, llm_service
-        )
+        outcome = strategy.validate_findings(sample_findings, config, llm_service)
 
         # Both kept - second one wasn't flagged as false positive
-        assert len(result) == 2
-        assert {f.category for f in result} == {"email", "phone"}
-        assert success is True
+        assert len(outcome.kept_findings) == 2
+        assert {f.category for f in outcome.kept_findings} == {"email", "phone"}
+        assert outcome.validation_succeeded is True
+        # Check detailed breakdown
+        assert len(outcome.llm_not_flagged) == 1
 
     def test_keeps_findings_with_unknown_validation_result(
         self,
@@ -233,12 +231,10 @@ class TestPersonalDataValidationStrategy:
             ]
         )
 
-        result, success = strategy.validate_findings(
-            sample_findings, config, llm_service
-        )
+        outcome = strategy.validate_findings(sample_findings, config, llm_service)
 
-        assert len(result) == 2
-        assert success is True
+        assert len(outcome.kept_findings) == 2
+        assert outcome.validation_succeeded is True
 
     # -------------------------------------------------------------------------
     # Error Handling
@@ -252,7 +248,7 @@ class TestPersonalDataValidationStrategy:
             "Network timeout",
         ],
     )
-    def test_returns_original_findings_on_llm_error(
+    def test_returns_original_findings_as_skipped_on_llm_error(
         self,
         strategy: PersonalDataValidationStrategy,
         config: LLMValidationConfig,
@@ -260,15 +256,15 @@ class TestPersonalDataValidationStrategy:
         sample_findings: list[PersonalDataIndicatorModel],
         error_message: str,
     ) -> None:
-        """On any LLM error, return original findings with success=False."""
+        """On any LLM error, return original findings as skipped."""
         llm_service.invoke_with_structured_output.side_effect = Exception(error_message)
 
-        result, success = strategy.validate_findings(
-            sample_findings, config, llm_service
-        )
+        outcome = strategy.validate_findings(sample_findings, config, llm_service)
 
-        assert result == sample_findings
-        assert success is False
+        # Findings are kept but marked as skipped
+        assert len(outcome.kept_findings) == len(sample_findings)
+        assert outcome.validation_succeeded is False
+        assert len(outcome.skipped) == len(sample_findings)
 
     # -------------------------------------------------------------------------
     # Batch Processing
@@ -303,11 +299,11 @@ class TestPersonalDataValidationStrategy:
 
         llm_service.invoke_with_structured_output.side_effect = mock_invoke
 
-        result, success = strategy.validate_findings(findings, config, llm_service)
+        outcome = strategy.validate_findings(findings, config, llm_service)
 
-        assert len(result) == 3
+        assert len(outcome.kept_findings) == 3
         assert llm_service.invoke_with_structured_output.call_count == expected_calls
-        assert success is True
+        assert outcome.validation_succeeded is True
 
     def test_continues_processing_after_batch_error(
         self,
@@ -330,8 +326,9 @@ class TestPersonalDataValidationStrategy:
             ),
         ]
 
-        result, success = strategy.validate_findings(findings, config, llm_service)
+        outcome = strategy.validate_findings(findings, config, llm_service)
 
-        # All 4 findings returned (2 from failed batch unvalidated, 2 validated)
-        assert len(result) == 4
-        assert success is False  # Not all batches succeeded
+        # All 4 findings kept (2 from failed batch as skipped, 2 validated)
+        assert len(outcome.kept_findings) == 4
+        assert outcome.validation_succeeded is False  # Not all batches succeeded
+        assert len(outcome.skipped) == 2  # First batch was skipped

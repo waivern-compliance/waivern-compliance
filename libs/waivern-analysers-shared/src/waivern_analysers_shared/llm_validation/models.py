@@ -107,3 +107,73 @@ class ValidationResult[T]:
 
     all_succeeded: bool
     """Whether all LLM calls completed without errors."""
+
+
+# Strategy-level result types
+
+
+@dataclass
+class SkippedFinding[T]:
+    """A finding that was skipped during LLM validation.
+
+    Type parameter T is the finding type.
+    """
+
+    finding: T
+    """The finding that was skipped."""
+
+    reason: str
+    """Why validation was skipped (e.g., 'oversized_source', 'missing_content')."""
+
+
+# Standard skip reasons
+SKIP_REASON_OVERSIZED = "oversized_source"
+SKIP_REASON_MISSING_CONTENT = "missing_content"
+SKIP_REASON_BATCH_ERROR = "batch_error"
+
+
+@dataclass
+class LLMValidationOutcome[T]:
+    """Result of LLM validation strategy with full transparency.
+
+    Provides detailed breakdown of what happened to each finding during
+    validation, enabling callers to make informed decisions about fallback
+    handling and reporting.
+
+    Type parameter T is the finding type.
+    """
+
+    llm_validated_kept: list[T]
+    """Findings LLM saw and marked as TRUE_POSITIVE."""
+
+    llm_validated_removed: list[T]
+    """Findings LLM saw and marked as FALSE_POSITIVE."""
+
+    llm_not_flagged: list[T]
+    """Findings LLM saw but didn't mention (kept via fail-safe)."""
+
+    skipped: list[SkippedFinding[T]]
+    """Findings that couldn't be validated (with reasons)."""
+
+    @property
+    def kept_findings(self) -> list[T]:
+        """All findings to include in output (validated + skipped)."""
+        return (
+            self.llm_validated_kept
+            + self.llm_not_flagged
+            + [s.finding for s in self.skipped]
+        )
+
+    @property
+    def all_findings_validated(self) -> bool:
+        """Whether all findings went through LLM validation."""
+        return len(self.skipped) == 0
+
+    @property
+    def validation_succeeded(self) -> bool:
+        """Whether validation completed without errors.
+
+        Note: This is True even if some findings were removed as FALSE_POSITIVE.
+        It only returns False if there were skipped findings or errors.
+        """
+        return self.all_findings_validated

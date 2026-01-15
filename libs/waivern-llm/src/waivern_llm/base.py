@@ -16,6 +16,19 @@ class BaseLLMService(ABC):
     a unified interface for compliance analysis.
     """
 
+    @property
+    @abstractmethod
+    def model_name(self) -> str:
+        """Return the model name being used.
+
+        Used for context window auto-detection in token-aware batching.
+
+        Returns:
+            The model identifier string (e.g., "claude-sonnet-4-5-20250929").
+
+        """
+        pass
+
     @abstractmethod
     def analyse_data(self, text: str, analysis_prompt: str) -> str:
         """Analyse text using the LLM with a custom prompt.

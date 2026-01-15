@@ -190,20 +190,21 @@ class PersonalDataAnalyser(Analyser):
         try:
             logger.info(f"Starting LLM validation of {len(findings)} findings")
 
-            validated_findings, validation_succeeded = (
-                PersonalDataValidationStrategy().validate_findings(
-                    findings, self._config.llm_validation, self._llm_service
-                )
+            outcome = PersonalDataValidationStrategy().validate_findings(
+                findings, self._config.llm_validation, self._llm_service
             )
 
-            if validation_succeeded:
+            if outcome.validation_succeeded:
                 logger.info(
-                    f"LLM validation completed: {len(findings)} → {len(validated_findings)} findings"
+                    f"LLM validation completed: {len(findings)} → "
+                    f"{len(outcome.kept_findings)} findings"
                 )
             else:
-                logger.warning("LLM validation failed, using original findings")
+                logger.warning(
+                    f"LLM validation incomplete: {len(outcome.skipped)} findings skipped"
+                )
 
-            return validated_findings
+            return outcome.kept_findings
 
         except Exception as e:
             logger.error(f"LLM validation failed: {e}")

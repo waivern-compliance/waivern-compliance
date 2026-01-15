@@ -8,6 +8,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from waivern_analysers_shared.llm_validation import LLMValidationOutcome
 from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
@@ -199,8 +200,12 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
         ) as mock_strategy_cls:
             mock_strategy_cls.return_value.validate_findings.return_value = (
-                sample_findings,
-                True,
+                LLMValidationOutcome(
+                    llm_validated_kept=sample_findings,
+                    llm_validated_removed=[],
+                    llm_not_flagged=[],
+                    skipped=[],
+                )
             )
             output_schema = Schema("personal_data_indicator", "1.0.0")
 
@@ -241,8 +246,12 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
         ) as mock_strategy_cls:
             mock_strategy_cls.return_value.validate_findings.return_value = (
-                sample_findings,
-                True,
+                LLMValidationOutcome(
+                    llm_validated_kept=sample_findings,
+                    llm_validated_removed=[],
+                    llm_not_flagged=[],
+                    skipped=[],
+                )
             )
             output_schema = Schema("personal_data_indicator", "1.0.0")
 
@@ -288,8 +297,12 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
         ) as mock_strategy_cls:
             mock_strategy_cls.return_value.validate_findings.return_value = (
-                sample_findings,
-                True,
+                LLMValidationOutcome(
+                    llm_validated_kept=sample_findings,
+                    llm_validated_removed=[],
+                    llm_not_flagged=[],
+                    skipped=[],
+                )
             )
             output_schema = Schema("personal_data_indicator", "1.0.0")
 
@@ -336,8 +349,12 @@ class TestPersonalDataAnalyser:
             "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
         ) as mock_strategy_cls:
             mock_strategy_cls.return_value.validate_findings.return_value = (
-                filtered_findings,
-                True,
+                LLMValidationOutcome(
+                    llm_validated_kept=filtered_findings,
+                    llm_validated_removed=[sample_findings[1]],  # One removed
+                    llm_not_flagged=[],
+                    skipped=[],
+                )
             )
             output_schema = Schema("personal_data_indicator", "1.0.0")
 

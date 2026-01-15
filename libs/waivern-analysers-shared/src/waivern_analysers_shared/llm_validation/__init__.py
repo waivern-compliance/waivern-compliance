@@ -12,6 +12,10 @@ from waivern_analysers_shared.llm_validation.decision_engine import (
 from waivern_analysers_shared.llm_validation.default_strategy import (
     DefaultLLMValidationStrategy,
 )
+from waivern_analysers_shared.llm_validation.extended_context_strategy import (
+    ExtendedContextLLMValidationStrategy,
+    SourceBatch,
+)
 from waivern_analysers_shared.llm_validation.file_content import (
     FileContentProvider,
     FileInfo,
@@ -22,10 +26,15 @@ from waivern_analysers_shared.llm_validation.grouping import (
     SourceGroupingStrategy,
 )
 from waivern_analysers_shared.llm_validation.models import (
+    SKIP_REASON_BATCH_ERROR,
+    SKIP_REASON_MISSING_CONTENT,
+    SKIP_REASON_OVERSIZED,
+    LLMValidationOutcome,
     LLMValidationResponseModel,
     LLMValidationResultModel,
     RecommendedActionType,
     RemovedGroup,
+    SkippedFinding,
     ValidationResult,
     ValidationResultType,
 )
@@ -59,10 +68,15 @@ __all__ = [
     "SamplingResult",
     "SamplingStrategy",
     # Models
+    "LLMValidationOutcome",
     "LLMValidationResponseModel",
     "LLMValidationResultModel",
     "RecommendedActionType",
     "RemovedGroup",
+    "SKIP_REASON_BATCH_ERROR",
+    "SKIP_REASON_MISSING_CONTENT",
+    "SKIP_REASON_OVERSIZED",
+    "SkippedFinding",
     "ValidationResult",
     "ValidationResultType",
     # Protocols
@@ -70,5 +84,7 @@ __all__ = [
     "SourceProvider",
     # Strategies
     "DefaultLLMValidationStrategy",
+    "ExtendedContextLLMValidationStrategy",
     "LLMValidationStrategy",
+    "SourceBatch",
 ]

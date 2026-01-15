@@ -7,6 +7,8 @@ from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.types import LLMValidationConfig
 
+from .models import LLMValidationOutcome
+
 
 class LLMValidationStrategy[T: BaseFindingModel](ABC):
     """Abstract base class for LLM validation strategies.
@@ -23,7 +25,7 @@ class LLMValidationStrategy[T: BaseFindingModel](ABC):
         findings: list[T],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
-    ) -> tuple[list[T], bool]:
+    ) -> LLMValidationOutcome[T]:
         """Validate findings using LLM.
 
         Args:
@@ -32,7 +34,7 @@ class LLMValidationStrategy[T: BaseFindingModel](ABC):
             llm_service: LLM service instance.
 
         Returns:
-            Tuple of (validated findings, all_succeeded flag).
+            LLMValidationOutcome with detailed breakdown of validation results.
 
         """
         ...
