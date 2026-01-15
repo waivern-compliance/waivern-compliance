@@ -35,7 +35,7 @@ class GoogleLLMService(BaseLLMService):
 
         """
         # Get model name from parameter, environment, or default
-        self.model_name = model_name or os.getenv("GOOGLE_MODEL") or "gemini-2.5-flash"
+        self._model_name = model_name or os.getenv("GOOGLE_MODEL") or "gemini-2.5-flash"
 
         # Get API key from parameter or environment
         self._api_key = api_key or os.getenv("GOOGLE_API_KEY")
@@ -46,7 +46,13 @@ class GoogleLLMService(BaseLLMService):
             )
 
         self._llm = None
-        logger.info(f"Initialised Google LLM service with model: {self.model_name}")
+        logger.info(f"Initialised Google LLM service with model: {self._model_name}")
+
+    @property
+    @override
+    def model_name(self) -> str:
+        """Return the model name being used."""
+        return self._model_name
 
     @override
     def analyse_data(self, text: str, analysis_prompt: str) -> str:

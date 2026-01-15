@@ -4,17 +4,17 @@ import logging
 from functools import cache
 from typing import Any, cast, override
 
-from waivern_core import InputRequirement, Schema, update_analyses_chain
+from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
-from waivern_core.schemas import AnalysisChainEntry, BaseAnalysisOutputMetadata
 from waivern_rulesets import GDPRPersonalDataClassificationRuleset
 
+from waivern_gdpr_personal_data_classifier.result_builder import (
+    GDPRClassifierResultBuilder,
+)
 from waivern_gdpr_personal_data_classifier.schemas import (
     GDPRPersonalDataFindingMetadata,
     GDPRPersonalDataFindingModel,
-    GDPRPersonalDataFindingOutput,
-    GDPRPersonalDataSummary,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,6 +63,7 @@ class GDPRPersonalDataClassifier(Classifier):
     def __init__(self) -> None:
         """Initialise the classifier."""
         self._classification_map = _get_classification_map()
+        self._result_builder = GDPRClassifierResultBuilder()
 
     @classmethod
     @override
@@ -113,34 +114,10 @@ class GDPRPersonalDataClassifier(Classifier):
             classified = self._classify_finding(finding)
             classified_findings.append(classified)
 
-        # Update analysis chain
-        updated_chain_dicts = update_analyses_chain(inputs[0], self.get_name())
-        updated_chain = [AnalysisChainEntry(**entry) for entry in updated_chain_dicts]
-
-        # Build summary
-        summary = self._build_summary(classified_findings)
-
-        # Build analysis metadata
+        # Build and return output message
         ruleset = _get_ruleset()
-        analysis_metadata = BaseAnalysisOutputMetadata(
-            ruleset_used=f"local/{ruleset.name}/{ruleset.version}",
-            llm_validation_enabled=False,
-            analyses_chain=updated_chain,
-        )
-
-        # Create output
-        output = GDPRPersonalDataFindingOutput(
-            findings=classified_findings,
-            summary=summary,
-            analysis_metadata=analysis_metadata,
-        )
-
-        result_data = output.model_dump(mode="json", exclude_none=True)
-
-        return Message(
-            id="gdpr_personal_data_classification",
-            content=result_data,
-            schema=output_schema,
+        return self._result_builder.build_output_message(
+            classified_findings, output_schema, ruleset.name, ruleset.version
         )
 
     def _classify_finding(
@@ -179,13 +156,4 @@ class GDPRPersonalDataClassifier(Classifier):
             evidence=finding.get("evidence", []),
             matched_patterns=finding.get("matched_patterns", []),
             metadata=metadata,
-        )
-
-    def _build_summary(
-        self, findings: list[GDPRPersonalDataFindingModel]
-    ) -> GDPRPersonalDataSummary:
-        """Build summary statistics from classified findings."""
-        return GDPRPersonalDataSummary(
-            total_findings=len(findings),
-            special_category_count=len([f for f in findings if f.special_category]),
         )

@@ -1,35 +1,8 @@
 {
   "$defs": {
-    "AnalysisChainEntry": {
-      "description": "Single entry in an analysis chain tracking sequence of analysers.",
-      "properties": {
-        "order": {
-          "description": "Sequence number in the analysis chain",
-          "minimum": 1,
-          "title": "Order",
-          "type": "integer"
-        },
-        "analyser": {
-          "description": "Name of the analyser that performed this step",
-          "title": "Analyser",
-          "type": "string"
-        },
-        "execution_timestamp": {
-          "description": "When this analysis was performed",
-          "title": "Execution Timestamp",
-          "type": "string"
-        }
-      },
-      "required": [
-        "order",
-        "analyser"
-      ],
-      "title": "AnalysisChainEntry",
-      "type": "object"
-    },
     "BaseAnalysisOutputMetadata": {
       "additionalProperties": true,
-      "description": "Base metadata for analysis outputs with chain tracking.",
+      "description": "Base metadata for analysis outputs.",
       "properties": {
         "ruleset_used": {
           "description": "Name of the ruleset used for analysis",
@@ -58,21 +31,11 @@
           "default": null,
           "description": "Size of context used for evidence extraction",
           "title": "Evidence Context Size"
-        },
-        "analyses_chain": {
-          "description": "Track the full analysis chain",
-          "items": {
-            "$ref": "#/$defs/AnalysisChainEntry"
-          },
-          "minItems": 1,
-          "title": "Analyses Chain",
-          "type": "array"
         }
       },
       "required": [
         "ruleset_used",
-        "llm_validation_enabled",
-        "analyses_chain"
+        "llm_validation_enabled"
       ],
       "title": "BaseAnalysisOutputMetadata",
       "type": "object"
@@ -107,7 +70,9 @@
           "type": "string"
         },
         "context": {
-          "additionalProperties": true,
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
           "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
           "title": "Context",
           "type": "object"
@@ -122,6 +87,11 @@
     "GDPRPersonalDataFindingModel": {
       "description": "GDPR personal data classification finding structure.\n\nRepresents a personal data indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nspecial_category - Article 9 special category data requires\nadditional protections under GDPR.\n\nNote: privacy_category values are NOT GDPR-defined terms - they're from\nlegal team for reporting/governance purposes. GDPR only mandates the\ndistinction between personal data (Article 4) and special category (Article 9).",
       "properties": {
+        "id": {
+          "description": "Unique identifier for this finding (UUID)",
+          "title": "Id",
+          "type": "string"
+        },
         "evidence": {
           "description": "Evidence items with content and timestamps for this finding",
           "items": {
@@ -224,6 +194,37 @@
       ],
       "title": "GDPRPersonalDataSummary",
       "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "description": "Complete output structure for gdpr_personal_data schema.\n\nThis model represents the full wire format for GDPR personal data\nclassification results, including findings enriched with GDPR-specific\ninformation, summary statistics, and analysis metadata.",

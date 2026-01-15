@@ -36,7 +36,7 @@ class AnthropicLLMService(BaseLLMService):
 
         """
         # Get model name from parameter, environment, or default
-        self.model_name = (
+        self._model_name = (
             model_name or os.getenv("ANTHROPIC_MODEL") or "claude-sonnet-4-5-20250929"
         )
 
@@ -49,7 +49,13 @@ class AnthropicLLMService(BaseLLMService):
             )
 
         self._llm = None
-        logger.info(f"Initialised Anthropic LLM service with model: {self.model_name}")
+        logger.info(f"Initialised Anthropic LLM service with model: {self._model_name}")
+
+    @property
+    @override
+    def model_name(self) -> str:
+        """Return the model name being used."""
+        return self._model_name
 
     @override
     def analyse_data(self, text: str, analysis_prompt: str) -> str:

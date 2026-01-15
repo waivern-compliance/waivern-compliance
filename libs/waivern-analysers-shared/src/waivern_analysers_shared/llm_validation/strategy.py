@@ -1,221 +1,40 @@
-"""Abstract base strategy for LLM validation with shared logic."""
+"""Abstract base class for LLM validation strategies."""
 
-import logging
 from abc import ABC, abstractmethod
-from typing import Any
 
 from waivern_core.schemas import BaseFindingModel
 from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.types import LLMValidationConfig
 
-from .decision_engine import ValidationDecisionEngine
-from .models import LLMValidationResponseModel, LLMValidationResultModel
-
-logger = logging.getLogger(__name__)
+from .models import LLMValidationOutcome
 
 
 class LLMValidationStrategy[T: BaseFindingModel](ABC):
     """Abstract base class for LLM validation strategies.
 
-    This eliminates code duplication between Personal Data and Processing Purpose
-    analysers by providing shared batch processing and validation logic.
+    Defines the interface that all validation strategies must implement.
+    Concrete implementations handle batching and LLM interaction differently.
 
     Type parameter T is the finding type, must be a BaseFindingModel subclass.
     """
 
     @abstractmethod
-    def get_validation_prompt(
-        self, findings_batch: list[T], config: LLMValidationConfig
-    ) -> str:
-        """Generate validation prompt for a batch of findings.
-
-        Args:
-            findings_batch: Batch of findings to validate
-            config: LLM validation configuration
-
-        Returns:
-            Validation prompt string for the LLM
-
-        """
-        pass
-
-    @abstractmethod
-    def convert_findings_for_prompt(
-        self, findings_batch: list[T]
-    ) -> list[dict[str, Any]]:
-        """Convert typed finding objects to format expected by validation prompt.
-
-        Args:
-            findings_batch: Batch of findings to convert
-
-        Returns:
-            List of finding dictionaries formatted for prompt
-
-        """
-        pass
-
     def validate_findings(
         self,
         findings: list[T],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
-    ) -> tuple[list[T], bool]:
-        """Validate findings using LLM with shared batch processing logic.
+    ) -> LLMValidationOutcome[T]:
+        """Validate findings using LLM.
 
         Args:
-            findings: List of typed finding objects to validate
-            config: Configuration including batch_size, validation_mode, etc.
-            llm_service: LLM service instance
+            findings: List of findings to validate.
+            config: LLM validation configuration.
+            llm_service: LLM service instance.
 
         Returns:
-            Tuple of (validated findings, validation_succeeded)
+            LLMValidationOutcome with detailed breakdown of validation results.
 
         """
-        if not findings:
-            logger.debug("No findings to validate")
-            return findings, True
-
-        try:
-            # Process findings in batches using shared logic
-            validated_findings, all_batches_succeeded = (
-                self._process_findings_in_batches(findings, config, llm_service)
-            )
-
-            logger.debug(
-                f"LLM validation completed: {len(findings)} → {len(validated_findings)} findings"
-            )
-
-            return validated_findings, all_batches_succeeded
-
-        except Exception as e:
-            logger.error(f"LLM validation strategy failed: {e}")
-            logger.warning(
-                "Returning original findings due to validation strategy error"
-            )
-            return findings, False
-
-    def _process_findings_in_batches(
-        self,
-        findings: list[T],
-        config: LLMValidationConfig,
-        llm_service: BaseLLMService,
-    ) -> tuple[list[T], bool]:
-        """Process findings in batches for LLM validation.
-
-        Shared logic extracted from both Personal Data and Processing Purpose analysers.
-
-        Args:
-            findings: List of finding objects to validate
-            config: LLM validation configuration
-            llm_service: LLM service instance
-
-        Returns:
-            Tuple of (validated findings, all_batches_succeeded)
-
-        """
-        batch_size = config.llm_batch_size
-        validated_findings: list[T] = []
-        all_batches_succeeded = True
-
-        for i in range(0, len(findings), batch_size):
-            batch = findings[i : i + batch_size]
-            try:
-                batch_results = self._validate_findings_batch(
-                    batch, config, llm_service
-                )
-                validated_findings.extend(batch_results)
-            except Exception as e:
-                logger.error(
-                    f"LLM validation failed for batch {i // batch_size + 1}: {e}"
-                )
-                logger.warning(
-                    "Adding unvalidated batch to results due to validation error"
-                )
-                # Use resilient error handling - continue with remaining batches
-                validated_findings.extend(batch)
-                all_batches_succeeded = False
-
-        return validated_findings, all_batches_succeeded
-
-    def _validate_findings_batch(
-        self,
-        findings_batch: list[T],
-        config: LLMValidationConfig,
-        llm_service: BaseLLMService,
-    ) -> list[T]:
-        """Validate a batch of findings using LLM.
-
-        Args:
-            findings_batch: Batch of findings to validate
-            config: LLM validation configuration
-            llm_service: LLM service instance
-
-        Returns:
-            List of validated findings from this batch
-
-        """
-        # Generate validation prompt using subclass implementation
-        prompt = self.get_validation_prompt(findings_batch, config)
-
-        # Get LLM validation response with structured output - no JSON parsing needed!
-        logger.debug(f"Validating batch of {len(findings_batch)} findings")
-        response = llm_service.invoke_with_structured_output(
-            prompt, LLMValidationResponseModel
-        )
-        logger.debug(f"Received {len(response.results)} validation results")
-
-        # Filter findings based on validation results
-        return self._filter_findings_by_validation_results(
-            findings_batch, response.results
-        )
-
-    def _filter_findings_by_validation_results(
-        self,
-        findings_batch: list[T],
-        validation_results: list[LLMValidationResultModel],
-    ) -> list[T]:
-        """Filter findings based on LLM validation results.
-
-        Uses fail-safe approach: findings not mentioned by LLM are included
-        (with warning), consistent with existing validation error handling.
-
-        Args:
-            findings_batch: Original batch of findings
-            validation_results: Strongly-typed validation results from LLM
-
-        Returns:
-            List of validated findings that should be kept
-
-        """
-        # Build lookup from finding ID to finding
-        findings_by_id = {f.id: f for f in findings_batch}
-        validated_findings: list[T] = []
-        processed_ids: set[str] = set()
-
-        for result in validation_results:
-            finding = findings_by_id.get(result.finding_id)
-            if finding is None:
-                logger.warning(f"Unknown finding_id from LLM: {result.finding_id}")
-                continue
-
-            processed_ids.add(result.finding_id)
-
-            # Log validation decision using optimized engine
-            ValidationDecisionEngine.log_validation_decision(result, finding)
-
-            # Determine if finding should be kept using optimised decision engine
-            if ValidationDecisionEngine.should_keep_finding(result, finding):
-                validated_findings.append(finding)
-
-        # Fail-safe: include findings not mentioned by LLM
-        unprocessed_ids = set(findings_by_id.keys()) - processed_ids
-        if unprocessed_ids:
-            logger.warning(
-                f"LLM omitted {len(unprocessed_ids)} findings from response, "
-                "including them unvalidated"
-            )
-            for finding_id in unprocessed_ids:
-                validated_findings.append(findings_by_id[finding_id])
-
-        return validated_findings
+        ...

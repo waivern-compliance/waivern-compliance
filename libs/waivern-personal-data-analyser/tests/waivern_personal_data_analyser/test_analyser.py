@@ -8,6 +8,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from waivern_analysers_shared.llm_validation import LLMValidationOutcome
 from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
@@ -196,9 +197,16 @@ class TestPersonalDataAnalyser:
         # Mock LLM validation strategy to return sample findings
         # (Real pattern matcher will run, then LLM validation returns our test findings)
         with patch(
-            "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
-            return_value=(sample_findings, True),
-        ):
+            "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
+        ) as mock_strategy_cls:
+            mock_strategy_cls.return_value.validate_findings.return_value = (
+                LLMValidationOutcome(
+                    llm_validated_kept=sample_findings,
+                    llm_validated_removed=[],
+                    llm_not_flagged=[],
+                    skipped=[],
+                )
+            )
             output_schema = Schema("personal_data_indicator", "1.0.0")
 
             # Act
@@ -235,9 +243,16 @@ class TestPersonalDataAnalyser:
         )
 
         with patch(
-            "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
-            return_value=(sample_findings, True),
-        ):
+            "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
+        ) as mock_strategy_cls:
+            mock_strategy_cls.return_value.validate_findings.return_value = (
+                LLMValidationOutcome(
+                    llm_validated_kept=sample_findings,
+                    llm_validated_removed=[],
+                    llm_not_flagged=[],
+                    skipped=[],
+                )
+            )
             output_schema = Schema("personal_data_indicator", "1.0.0")
 
             # Act
@@ -279,9 +294,16 @@ class TestPersonalDataAnalyser:
 
         # Mock LLM validation to return sample findings
         with patch(
-            "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
-            return_value=(sample_findings, True),
-        ):
+            "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
+        ) as mock_strategy_cls:
+            mock_strategy_cls.return_value.validate_findings.return_value = (
+                LLMValidationOutcome(
+                    llm_validated_kept=sample_findings,
+                    llm_validated_removed=[],
+                    llm_not_flagged=[],
+                    skipped=[],
+                )
+            )
             output_schema = Schema("personal_data_indicator", "1.0.0")
 
             # Act
@@ -295,19 +317,14 @@ class TestPersonalDataAnalyser:
 
         analysis_metadata = result_content["analysis_metadata"]
 
-        # Core standardised fields required for analysis chaining
+        # Core standardised fields required for analysis metadata
         assert "ruleset_used" in analysis_metadata
         assert "llm_validation_enabled" in analysis_metadata
         assert "evidence_context_size" in analysis_metadata
-        assert "analyses_chain" in analysis_metadata
 
         # Verify field types and values match business requirements
         assert isinstance(analysis_metadata["ruleset_used"], str)
         assert isinstance(analysis_metadata["llm_validation_enabled"], bool)
-        assert isinstance(analysis_metadata["analyses_chain"], list)
-        assert len(analysis_metadata["analyses_chain"]) >= 1, (
-            "analyses_chain must have at least one entry as it's mandatory"
-        )
         assert (
             analysis_metadata["ruleset_used"] == "local/personal_data_indicator/1.0.0"
         )
@@ -329,9 +346,16 @@ class TestPersonalDataAnalyser:
         # Mock LLM validation to return filtered findings (simulating false positive removal)
         filtered_findings = [sample_findings[0]]  # Return only one finding
         with patch(
-            "waivern_personal_data_analyser.analyser.personal_data_validation_strategy",
-            return_value=(filtered_findings, True),
-        ):
+            "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
+        ) as mock_strategy_cls:
+            mock_strategy_cls.return_value.validate_findings.return_value = (
+                LLMValidationOutcome(
+                    llm_validated_kept=filtered_findings,
+                    llm_validated_removed=[sample_findings[1]],  # One removed
+                    llm_not_flagged=[],
+                    skipped=[],
+                )
+            )
             output_schema = Schema("personal_data_indicator", "1.0.0")
 
             # Act
@@ -523,43 +547,6 @@ class TestPersonalDataAnalyser:
                 assert finding["category"] == "email", (
                     f"Finding category should match rule.category, got: {finding.get('category')}"
                 )
-
-    def test_process_creates_analysis_chain_entry(
-        self,
-        valid_config: PersonalDataAnalyserConfig,
-        sample_input_message: Message,
-    ) -> None:
-        """Test that analyser creates proper analysis chain entry.
-
-        Business Logic: Each analyser must create a chain entry to track
-        the analysis for audit purposes and downstream processing.
-        """
-        # Arrange
-        analyser = PersonalDataAnalyser(
-            valid_config,
-            llm_service=None,
-        )
-
-        # Act
-        result = analyser.process(
-            [sample_input_message],
-            Schema("personal_data_indicator", "1.0.0"),
-        )
-
-        # Assert
-        analysis_metadata = result.content["analysis_metadata"]
-        analyses_chain = analysis_metadata["analyses_chain"]
-
-        assert len(analyses_chain) == 1, "Should create exactly one chain entry"
-
-        chain_entry = analyses_chain[0]
-        assert chain_entry["order"] == 1, "Should start with order 1 for new analysis"
-        assert chain_entry["analyser"] == "personal_data_analyser", (
-            "Should identify correct analyser"
-        )
-        assert "execution_timestamp" in chain_entry, (
-            "Should include execution timestamp"
-        )
 
     def test_reader_module_is_loaded_dynamically(
         self,

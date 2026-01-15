@@ -1,9 +1,35 @@
 """Configuration types for analysers."""
 
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field, field_validator
+
+
+class SchemaReader[T](Protocol):
+    """Protocol for schema reader modules.
+
+    Schema readers are modules that transform raw message content into typed
+    Pydantic models. Each analyser has reader modules for each supported schema
+    version (e.g., schema_readers/standard_input_1_0_0.py).
+
+    This protocol enables type-safe dynamic module loading - analysers can use
+    importlib to load readers while maintaining proper type inference.
+
+    Type parameter T is the return type of read() (e.g., StandardInputDataModel).
+    """
+
+    def read(self, content: dict[str, Any]) -> T:
+        """Transform raw content to typed model.
+
+        Args:
+            content: Raw message content dictionary.
+
+        Returns:
+            Typed Pydantic model for the schema.
+
+        """
+        ...
 
 
 class LLMBatchingStrategy(str, Enum):
