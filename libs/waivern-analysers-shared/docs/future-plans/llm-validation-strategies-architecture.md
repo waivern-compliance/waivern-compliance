@@ -240,6 +240,19 @@ class ConcernProvider[T: BaseFindingModel](Protocol):
 │   │           Keep non-sampled findings (by inference, NOT validated)   │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │ SKIPPED SAMPLES HANDLING                                            │   │
+│   │                                                                     │   │
+│   │   Samples that couldn't be validated (oversized, missing content,   │   │
+│   │   batch error) are EXCLUDED from group-level decisions.             │   │
+│   │                                                                     │   │
+│   │   Only validated samples (kept + removed) count for Case A/B/C.     │   │
+│   │   Skipped samples are kept in the group (conservative approach).    │   │
+│   │   Caller can handle skipped_samples via ValidationResult.           │   │
+│   │                                                                     │   │
+│   │   If ALL samples are skipped → keep entire group (no decision).     │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -346,7 +359,7 @@ if domain-specific prompt generation or batching logic is required.
 ```
 LLMValidationStrategy[T: BaseFindingModel] (abstract base)
     │
-    │   validate_findings(findings, config, llm_service) -> (kept_findings, success)
+    │   validate_findings(findings, config, llm_service) -> LLMValidationOutcome[T]
     │   get_validation_prompt(batch, config) -> str  [abstract]
     │
     ├── DefaultLLMValidationStrategy[T]
@@ -357,6 +370,14 @@ LLMValidationStrategy[T: BaseFindingModel] (abstract base)
     └── ExtendedContextLLMValidationStrategy[T]
             Batches by source, extends prompt with source content
             Use for: by_source grouping when SourceProvider has content
+
+LLMValidationOutcome[T] provides detailed breakdown:
+    - llm_validated_kept: Findings LLM confirmed as TRUE_POSITIVE
+    - llm_validated_removed: Findings LLM marked as FALSE_POSITIVE
+    - llm_not_flagged: Findings LLM didn't return (fail-safe kept)
+    - skipped: Findings that couldn't be validated (oversized, missing content, batch error)
+    - kept_findings: Property returning all kept findings (validated + not_flagged + skipped)
+    - validation_succeeded: Property indicating all findings were validated (no skipped)
 ```
 
 **Ownership**: The analyser instantiates the appropriate strategy based on `config.grouping`:
@@ -430,18 +451,23 @@ class ValidationOrchestrator[T: BaseFindingModel]:
     """Orchestrates the complete validation flow.
 
     The orchestrator composes orthogonal strategies:
-    - GroupingStrategy: How to organize findings (owns concern_key)
-    - SamplingStrategy: How to sample from groups
+    - GroupingStrategy: How to organize findings (optional, owns concern_key)
+    - SamplingStrategy: How to sample from groups (optional, requires grouping)
     - LLMValidationStrategy: How to batch and call the LLM
 
     Validation flow:
-    1. Group findings using GroupingStrategy
-    2. Sample from groups using SamplingStrategy
+    1. Group findings using GroupingStrategy (if provided)
+    2. Sample from groups using SamplingStrategy (if provided)
     3. Flatten all sampled findings into a single list
     4. Validate via llm_strategy.validate_findings() (one call, internally batched)
     5. Match results back to groups by finding ID
     6. Apply group-level decisions (Case A/B/C)
     7. Get concern_key from grouping_strategy for RemovedGroup metadata
+
+    When grouping_strategy is None:
+    - Direct validation without grouping or group-level decisions
+    - sampling_strategy must also be None (raises ValueError otherwise)
+    - Results mapped directly from LLMValidationOutcome
 
     Why flatten instead of validate per-group?
     HTTP round-trip latency and prompt template token overhead make per-group
@@ -451,9 +477,9 @@ class ValidationOrchestrator[T: BaseFindingModel]:
 
     def __init__(
         self,
-        grouping_strategy: GroupingStrategy[T],
-        sampling_strategy: SamplingStrategy[T] | None,
         llm_strategy: LLMValidationStrategy[T],
+        grouping_strategy: GroupingStrategy[T] | None = None,
+        sampling_strategy: SamplingStrategy[T] | None = None,
     ) -> None: ...
 
     def validate(
@@ -555,11 +581,12 @@ class RemovedGroup:
 class ValidationResult[T: BaseFindingModel]:
     """Result of validation orchestration."""
 
-    validated_findings: list[T]
+    kept_findings: list[T]              # Findings kept (validated + non-sampled + skipped)
     removed_findings: list[T]           # Individual findings removed (all modes)
     removed_groups: list[RemovedGroup]  # Groups removed (only when grouping enabled)
     samples_validated: int
     all_succeeded: bool
+    skipped_samples: list[SkippedFinding[T]]  # Findings that couldn't be validated
 ```
 
 ### Analyser-Specific Components
@@ -591,30 +618,36 @@ class ProcessingPurposeAnalyser:
         concern_provider = ProcessingPurposeConcernProvider()
         source_provider = ProcessingPurposeSourceProvider(source_data)
 
-        # Grouping strategy based on config
-        if config.grouping == "by_source":
-            grouping_strategy = SourceGroupingStrategy(source_provider)
-        else:  # "by_concern" or default
-            grouping_strategy = ConcernGroupingStrategy(concern_provider)
-
-        # LLM strategy based on config (orthogonal to grouping)
+        # LLM strategy (always required)
         if config.grouping == "by_source" and source_provider.has_content():
             llm_strategy = ExtendedContextLLMValidationStrategy(source_provider)
         else:
             llm_strategy = DefaultLLMValidationStrategy()
 
+        # Grouping strategy (optional, based on config)
+        grouping_strategy: GroupingStrategy | None = None
+        if config.grouping == "by_source":
+            grouping_strategy = SourceGroupingStrategy(source_provider)
+        elif config.grouping == "by_concern":
+            grouping_strategy = ConcernGroupingStrategy(concern_provider)
+
+        # Sampling strategy (optional, requires grouping)
+        sampling_strategy: SamplingStrategy | None = None
+        if grouping_strategy and config.sampling_size:
+            sampling_strategy = RandomSamplingStrategy(config.sampling_size)
+
         # 3. Create orchestrator - strategy-agnostic
         orchestrator = ValidationOrchestrator(
-            grouping_strategy=grouping_strategy,
-            sampling_strategy=RandomSamplingStrategy(config.sampling_size),
             llm_strategy=llm_strategy,
+            grouping_strategy=grouping_strategy,
+            sampling_strategy=sampling_strategy,
         )
 
         # 4. Validate
         result = orchestrator.validate(findings, config, llm_service)
 
         # 5. Build output
-        return self._build_output(result.validated_findings, ...)
+        return self._build_output(result.kept_findings, ...)
 ```
 
 **Call hierarchy:**
@@ -649,14 +682,14 @@ Analyser.process()
 - Sampling hardcoded in `ProcessingPurposeAnalyser`
 - Works only for processing purpose findings
 
-### Phase 2: Build Shared Infrastructure
+### Phase 2: Build Shared Infrastructure (Implemented)
 
-- Create `ValidationOrchestrator` with grouping → sampling → batching → LLM → decisions flow
-- Implement `GroupingStrategy` protocol and `ConcernGroupingStrategy`, `SourceGroupingStrategy`
-- Implement `SamplingStrategy` protocol and `RandomSamplingStrategy`
-- Define `SourceProvider` and `ConcernProvider` protocols
-- Define `RemovedGroup` and `ValidationResult` dataclasses
-- Comprehensive unit tests for all shared components
+- ✅ Create `ValidationOrchestrator` with grouping → sampling → batching → LLM → decisions flow
+- ✅ Implement `GroupingStrategy` protocol and `ConcernGroupingStrategy`, `SourceGroupingStrategy`
+- ✅ Implement `SamplingStrategy` protocol and `RandomSamplingStrategy`
+- ✅ Define `SourceProvider` and `ConcernProvider` protocols
+- ✅ Define `RemovedGroup` and `ValidationResult` dataclasses
+- ✅ Comprehensive unit tests for all shared components
 
 ### Phase 3: Refactor ProcessingPurposeAnalyser
 
