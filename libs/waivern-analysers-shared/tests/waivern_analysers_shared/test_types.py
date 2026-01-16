@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 from waivern_analysers_shared.types import (
     BatchingConfig,
-    LLMBatchingStrategy,
     LLMValidationConfig,
 )
 
@@ -40,9 +39,6 @@ class TestLLMValidationConfig:
         # Batch size of 50 balances throughput and context usage
         assert config.llm_batch_size == 50
 
-        # Batch findings strategy maintains backwards compatibility
-        assert config.llm_batching_strategy == LLMBatchingStrategy.BATCH_FINDINGS
-
         # Batching config uses auto-detect
         assert config.batching.model_context_window is None
 
@@ -66,20 +62,3 @@ class TestLLMValidationConfig:
         # Invalid mode rejected
         with pytest.raises(ValidationError, match="llm_validation_mode"):
             LLMValidationConfig(llm_validation_mode="invalid")  # type: ignore[arg-type]
-
-    def test_batching_strategy_accepts_string_for_yaml_config(self) -> None:
-        """Strategy can be set via string (from YAML) or enum."""
-        # String value (as would come from YAML config)
-        config = LLMValidationConfig(llm_batching_strategy="batch_files")  # type: ignore[arg-type]
-        assert config.llm_batching_strategy == LLMBatchingStrategy.BATCH_FILES
-
-        # Enum value (from code)
-        config = LLMValidationConfig(
-            llm_batching_strategy=LLMBatchingStrategy.BATCH_FILES
-        )
-        assert config.llm_batching_strategy == LLMBatchingStrategy.BATCH_FILES
-
-    def test_invalid_batching_strategy_rejected(self) -> None:
-        """Unknown strategy names are rejected."""
-        with pytest.raises(ValidationError, match="llm_batching_strategy"):
-            LLMValidationConfig(llm_batching_strategy="unknown_strategy")  # type: ignore[arg-type]

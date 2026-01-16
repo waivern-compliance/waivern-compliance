@@ -238,26 +238,23 @@ def _get_category_guidance_summary() -> str:
 
 
 def _get_response_format(finding_count: int, is_conservative: bool) -> str:
-    """Get array response format for all cases (single finding returns array with one element)."""
-    action_options = (
-        '"keep" | "discard" | "flag_for_review"'
-        if is_conservative
-        else '"keep" | "discard"'
-    )
+    """Get array response format - only FALSE_POSITIVE findings should be returned."""
+    action_options = '"discard" | "flag_for_review"' if is_conservative else '"discard"'
     reasoning_length = "max 150 words" if is_conservative else "max 120 words"
 
     return f"""**RESPONSE FORMAT:**
 Respond with valid JSON array only (no markdown formatting).
-IMPORTANT: Echo back the exact finding_id from each Finding [...] header - do not modify it.
+IMPORTANT: Only return findings you identify as FALSE_POSITIVE. Do not include TRUE_POSITIVE findings.
+Echo back the exact finding_id from each Finding [...] header - do not modify it.
 
 [
   {{
     "finding_id": "<exact UUID from Finding [UUID]>",
-    "validation_result": "TRUE_POSITIVE" | "FALSE_POSITIVE",
+    "validation_result": "FALSE_POSITIVE",
     "confidence": 0.85,
-    "reasoning": "Brief explanation with category/risk context ({reasoning_length})",
+    "reasoning": "Brief explanation ({reasoning_length})",
     "recommended_action": {action_options}
   }}
 ]
 
-Validate all {finding_count} findings and return array with {finding_count} element(s):"""
+Review all {finding_count} findings. Return ONLY the FALSE_POSITIVE ones (empty array if none):"""

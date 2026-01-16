@@ -74,6 +74,7 @@ class SkippedFinding[T]:
 # Standard skip reasons
 SKIP_REASON_OVERSIZED = "oversized_source"
 SKIP_REASON_MISSING_CONTENT = "missing_content"
+SKIP_REASON_NO_SOURCE = "no_source"
 SKIP_REASON_BATCH_ERROR = "batch_error"
 
 

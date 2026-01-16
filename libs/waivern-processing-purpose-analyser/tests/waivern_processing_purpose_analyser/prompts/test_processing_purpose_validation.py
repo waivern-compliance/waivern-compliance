@@ -147,8 +147,10 @@ class TestProcessingPurposeValidationPrompt:
         # Both should use array format with finding_id (UUID)
         assert '"finding_id":' in prompt_single
         assert '"finding_id":' in prompt_multiple
-        assert "return array with 1 element(s)" in prompt_single
-        assert "return array with 2 element(s)" in prompt_multiple
+        # Prompt should ask for only FALSE_POSITIVE results
+        assert "Return ONLY the FALSE_POSITIVE" in prompt_single
+        assert "Review all 1 findings" in prompt_single
+        assert "Review all 2 findings" in prompt_multiple
 
     def test_conservative_mode_extends_reasoning_length(self) -> None:
         """Test that conservative mode allows longer reasoning explanations."""
