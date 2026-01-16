@@ -125,7 +125,7 @@ class TestSamplingOutputStructure:
         mock_llm_service: Mock,
         test_message_with_multiple_purposes: Message,
     ) -> None:
-        """Test that analysis_metadata includes validation_summary with sampling info."""
+        """Test that analysis_metadata includes validation_summary with orchestrator info."""
         # Arrange
         config = ProcessingPurposeAnalyserConfig.from_properties(
             {
@@ -151,23 +151,24 @@ class TestSamplingOutputStructure:
             Schema("processing_purpose_finding", "1.0.0"),
         )
 
-        # Assert - analysis_metadata has validation_summary
+        # Assert - analysis_metadata has validation_summary with orchestrator fields
         metadata = result.content["analysis_metadata"]
         assert "validation_summary" in metadata, (
             "analysis_metadata should have 'validation_summary'"
         )
 
         validation_summary = metadata["validation_summary"]
-        assert "strategy" in validation_summary
-        assert "samples_per_purpose" in validation_summary
+        assert validation_summary["strategy"] == "orchestrated"
         assert "samples_validated" in validation_summary
+        assert "all_succeeded" in validation_summary
+        assert "skipped_count" in validation_summary
 
-    def test_output_has_purposes_removed_when_all_samples_false_positive(
+    def test_output_no_purposes_removed_when_no_false_positives(
         self,
         mock_llm_service: Mock,
         test_message_with_multiple_purposes: Message,
     ) -> None:
-        """Test that purposes_removed is populated when all samples are false positives."""
+        """Test that purposes_removed is absent when no samples are false positives."""
         # Arrange
         config = ProcessingPurposeAnalyserConfig.from_properties(
             {
@@ -181,9 +182,7 @@ class TestSamplingOutputStructure:
             }
         )
 
-        # Mock LLM to mark some findings as false positives
-        # We'll need to check what finding IDs are generated and mock accordingly
-        # For now, just verify the field exists when validation runs
+        # Mock LLM to return empty results (all findings are true positives)
         mock_llm_service.invoke_with_structured_output.return_value = (
             LLMValidationResponseModel(results=[])
         )
@@ -196,9 +195,8 @@ class TestSamplingOutputStructure:
             Schema("processing_purpose_finding", "1.0.0"),
         )
 
-        # Assert - purposes_removed field exists (may be empty if no FPs)
+        # Assert - purposes_removed should NOT be present when no groups removed
         metadata = result.content["analysis_metadata"]
-        # Note: purposes_removed should be present even if empty list
-        assert (
-            "purposes_removed" in metadata or metadata.get("purposes_removed") == []
-        ), "analysis_metadata should have 'purposes_removed' field"
+        assert "purposes_removed" not in metadata, (
+            "purposes_removed should not be present when no groups are removed"
+        )

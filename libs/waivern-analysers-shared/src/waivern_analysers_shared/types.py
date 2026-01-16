@@ -32,17 +32,6 @@ class SchemaReader[T](Protocol):
         ...
 
 
-class LLMBatchingStrategy(str, Enum):
-    """Batching strategy for LLM validation.
-
-    BATCH_FINDINGS: Current approach - batch by finding count (default)
-    BATCH_FILES: New approach - batch by file, send full content
-    """
-
-    BATCH_FINDINGS = "batch_findings"
-    BATCH_FILES = "batch_files"
-
-
 class BatchingConfig(BaseModel):
     """Configuration for token-aware batching.
 
@@ -112,14 +101,9 @@ class LLMValidationConfig(BaseModel):
         default="standard", description="LLM validation mode"
     )
 
-    llm_batching_strategy: LLMBatchingStrategy = Field(
-        default=LLMBatchingStrategy.BATCH_FINDINGS,
-        description="Strategy for batching findings: 'batch_findings' (default) or 'batch_files'",
-    )
-
     batching: BatchingConfig = Field(
         default_factory=BatchingConfig,
-        description="Token-aware batching configuration (used when strategy is 'batch_files')",
+        description="Token-aware batching configuration for extended context validation",
     )
 
     sampling_size: int | None = Field(

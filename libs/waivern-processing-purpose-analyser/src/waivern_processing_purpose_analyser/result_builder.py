@@ -5,8 +5,8 @@ Keeps the analyser focused on orchestration.
 """
 
 import logging
-from dataclasses import dataclass
 
+from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
 
@@ -16,19 +16,8 @@ from .schemas.types import (
     ProcessingPurposeSummary,
     ProcessingPurposeValidationSummary,
     PurposeBreakdown,
-    RemovedPurpose,
 )
 from .types import ProcessingPurposeAnalyserConfig
-
-
-@dataclass
-class SamplingInfo:
-    """Information about sampling-based validation."""
-
-    samples_per_purpose: int
-    samples_validated: int
-    removed_purposes: list[RemovedPurpose]
-
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +44,8 @@ class ProcessingPurposeResultBuilder:
         validated_findings: list[ProcessingPurposeFindingModel],
         validation_applied: bool,
         output_schema: Schema,
-        sampling_info: SamplingInfo | None = None,
+        validation_result: ValidationResult[ProcessingPurposeFindingModel]
+        | None = None,
     ) -> Message:
         """Build the complete output message.
 
@@ -64,7 +54,7 @@ class ProcessingPurposeResultBuilder:
             validated_findings: Findings after LLM validation.
             validation_applied: Whether validation was applied.
             output_schema: Schema for output validation.
-            sampling_info: Optional sampling validation info.
+            validation_result: Optional validation result from orchestrator.
 
         Returns:
             Complete output message.
@@ -72,14 +62,14 @@ class ProcessingPurposeResultBuilder:
         """
         summary = self._build_findings_summary(validated_findings)
 
-        # Skip old-style validation_summary when sampling - the sampling info tells the story
+        # Skip old-style validation_summary when using orchestrator - metadata tells the story
         validation_summary = None
-        if validation_applied and sampling_info is None:
+        if validation_applied and validation_result is None:
             validation_summary = self._build_validation_summary(
                 original_findings, validated_findings
             )
 
-        analysis_metadata = self._build_analysis_metadata(sampling_info)
+        analysis_metadata = self._build_analysis_metadata(validation_result)
 
         output_model = ProcessingPurposeFindingOutput(
             findings=validated_findings,
@@ -177,12 +167,13 @@ class ProcessingPurposeResultBuilder:
 
     def _build_analysis_metadata(
         self,
-        sampling_info: SamplingInfo | None = None,
+        validation_result: ValidationResult[ProcessingPurposeFindingModel]
+        | None = None,
     ) -> BaseAnalysisOutputMetadata:
         """Build analysis metadata for output.
 
         Args:
-            sampling_info: Optional sampling validation info.
+            validation_result: Optional validation result from orchestrator.
 
         Returns:
             Analysis metadata with all fields.
@@ -193,21 +184,25 @@ class ProcessingPurposeResultBuilder:
             "analyser_version": "1.0.0",
         }
 
-        # Add sampling validation info if provided
-        if sampling_info:
+        # Add validation info if provided
+        if validation_result:
             extra_fields["validation_summary"] = {
-                "strategy": "purpose_sampling",
-                "samples_per_purpose": sampling_info.samples_per_purpose,
-                "samples_validated": sampling_info.samples_validated,
+                "strategy": "orchestrated",
+                "samples_validated": validation_result.samples_validated,
+                "all_succeeded": validation_result.all_succeeded,
+                "skipped_count": len(validation_result.skipped_samples),
             }
-            extra_fields["purposes_removed"] = [
-                {
-                    "purpose": rp.purpose,
-                    "reason": rp.reason,
-                    "require_review": rp.require_review,
-                }
-                for rp in sampling_info.removed_purposes
-            ]
+
+            # Map RemovedGroup to purposes_removed for backwards compatibility
+            if validation_result.removed_groups:
+                extra_fields["purposes_removed"] = [
+                    {
+                        "purpose": rg.concern_value,
+                        "reason": rg.reason,
+                        "require_review": rg.require_review,
+                    }
+                    for rg in validation_result.removed_groups
+                ]
 
         return BaseAnalysisOutputMetadata(
             ruleset_used=self._config.pattern_matching.ruleset,

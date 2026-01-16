@@ -18,6 +18,7 @@ from .decision_engine import ValidationDecisionEngine
 from .models import (
     SKIP_REASON_BATCH_ERROR,
     SKIP_REASON_MISSING_CONTENT,
+    SKIP_REASON_NO_SOURCE,
     SKIP_REASON_OVERSIZED,
     LLMValidationOutcome,
     LLMValidationResponseModel,
@@ -207,9 +208,13 @@ class ExtendedContextLLMValidationStrategy[T: BaseFindingModel](
             max_tokens = self._calculate_max_tokens(config, llm_service)
 
             # Create token-aware batches
-            batches, oversized_sources, missing_content_sources, source_contents = (
-                self._create_batches(findings_by_source, max_tokens)
-            )
+            (
+                batches,
+                oversized_sources,
+                missing_content_sources,
+                no_source_sources,
+                source_contents,
+            ) = self._create_batches(findings_by_source, max_tokens)
 
             # Validate each batch and collect detailed results
             outcome = self._validate_batches(
@@ -240,6 +245,14 @@ class ExtendedContextLLMValidationStrategy[T: BaseFindingModel](
                         SkippedFinding(
                             finding=finding, reason=SKIP_REASON_MISSING_CONTENT
                         )
+                    )
+
+            # Handle findings without source (skipped with reason)
+            for source_id in no_source_sources:
+                logger.warning("Findings without source metadata, marking as skipped")
+                for finding in findings_by_source[source_id]:
+                    outcome.skipped.append(
+                        SkippedFinding(finding=finding, reason=SKIP_REASON_NO_SOURCE)
                     )
 
             logger.debug(
@@ -314,7 +327,7 @@ class ExtendedContextLLMValidationStrategy[T: BaseFindingModel](
         self,
         findings_by_source: dict[str, list[T]],
         max_tokens: int,
-    ) -> tuple[list[SourceBatch], list[str], list[str], dict[str, str]]:
+    ) -> tuple[list[SourceBatch], list[str], list[str], list[str], dict[str, str]]:
         """Create token-aware batches of sources.
 
         Args:
@@ -322,17 +335,22 @@ class ExtendedContextLLMValidationStrategy[T: BaseFindingModel](
             max_tokens: Maximum tokens per batch.
 
         Returns:
-            Tuple of (batches, oversized_source_ids, missing_content_ids, source_contents).
-            Sources without content are returned separately since this strategy
-            requires source content - the caller should use fallback validation.
+            Tuple of (batches, oversized_ids, missing_content_ids, no_source_ids, source_contents).
+            Sources without content or source ID are returned separately.
 
         """
         # Collect source info with content and token estimates
         source_infos: list[_SourceInfo] = []
         source_contents: dict[str, str] = {}
         missing_content: list[str] = []
+        no_source: list[str] = []
 
         for source_id, source_findings in findings_by_source.items():
+            # Handle empty source IDs (findings without source metadata)
+            if not source_id:
+                no_source.append(source_id)
+                continue
+
             content = self._source_provider.get_source_content(source_id)
 
             if content is None:
@@ -371,10 +389,11 @@ class ExtendedContextLLMValidationStrategy[T: BaseFindingModel](
 
         logger.info(
             f"Created {len(batches)} batches from {len(source_infos)} sources, "
-            f"{len(oversized)} oversized, {len(missing_content)} missing content"
+            f"{len(oversized)} oversized, {len(missing_content)} missing content, "
+            f"{len(no_source)} no source"
         )
 
-        return batches, oversized, missing_content, source_contents
+        return batches, oversized, missing_content, no_source, source_contents
 
     def _estimate_findings_tokens(self, findings: list[T]) -> int:
         """Estimate tokens for findings summary in prompt.
