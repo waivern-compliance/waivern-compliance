@@ -49,10 +49,10 @@ complete file rather than isolated snippets, leading to better validation accura
 
 This is why the choice of grouping strategy influences which `LLMValidationStrategy` is optimal:
 
-| Grouping     | Typical LLM Strategy                    | Rationale                                    |
-| ------------ | --------------------------------------- | -------------------------------------------- |
-| `by_concern` | `DefaultLLMValidationStrategy`          | Findings span files; only snippets available |
-| `by_source`  | `ExtendedContextLLMValidationStrategy`  | Can batch by source with extended context    |
+| Grouping     | Typical LLM Strategy                   | Rationale                                    |
+| ------------ | -------------------------------------- | -------------------------------------------- |
+| `by_concern` | `DefaultLLMValidationStrategy`         | Findings span files; only snippets available |
+| `by_source`  | `ExtendedContextLLMValidationStrategy` | Can batch by source with extended context    |
 
 The strategies are orthogonal - `GroupingStrategy` decides how to organise findings for sampling,
 while `LLMValidationStrategy` decides how to batch and what context to include in prompts.
@@ -691,7 +691,7 @@ Analyser.process()
 - ✅ Define `RemovedGroup` and `ValidationResult` dataclasses
 - ✅ Comprehensive unit tests for all shared components
 
-### Phase 3: Refactor ProcessingPurposeAnalyser
+### Phase 3: Refactor ProcessingPurposeAnalyser (Implemented)
 
 - Implement `ProcessingPurposeConcernProvider`
 - Implement `ProcessingPurposeSourceProvider`
