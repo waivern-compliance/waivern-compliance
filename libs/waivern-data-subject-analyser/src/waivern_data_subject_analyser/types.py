@@ -18,7 +18,7 @@ class DataSubjectAnalyserConfig(BaseComponentConfiguration):
 
     pattern_matching: PatternMatchingConfig = Field(
         default_factory=lambda: PatternMatchingConfig(
-            ruleset="local/data_subjects/1.0.0"
+            ruleset="local/data_subject_indicator/1.0.0"
         ),
         description="Pattern matching configuration",
     )

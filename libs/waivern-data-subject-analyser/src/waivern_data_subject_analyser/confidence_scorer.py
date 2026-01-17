@@ -39,7 +39,7 @@ Note: The system provides only raw scores. Consumers can apply their own
 thresholds based on their risk tolerance and compliance requirements.
 """
 
-from waivern_rulesets.data_subjects import DataSubjectRule
+from waivern_rulesets.data_subject_indicator import DataSubjectRule
 
 
 class DataSubjectConfidenceScorer:

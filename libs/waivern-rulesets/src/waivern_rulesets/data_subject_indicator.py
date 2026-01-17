@@ -1,7 +1,7 @@
-"""Data subject classification ruleset for GDPR Article 30(1)(c) compliance.
+"""Data subject indicator detection ruleset.
 
-This module implements automated data subject categorisation with confidence scoring
-and metadata-aware pattern matching for comprehensive privacy compliance analysis.
+This module implements pattern-based data subject detection with confidence scoring
+and context-aware pattern matching for identifying categories of data subjects.
 """
 
 import logging
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Version constant for this ruleset and its data (private)
 _RULESET_DATA_VERSION: Final[str] = "1.0.0"
-_RULESET_NAME: Final[str] = "data_subjects"
+_RULESET_NAME: Final[str] = "data_subject_indicator"
 
 
 class DataSubjectRule(DetectionRule):
@@ -87,18 +87,18 @@ class DataSubjectRulesetData(RulesetData[DataSubjectRule]):
         return self
 
 
-class DataSubjectsRuleset(AbstractRuleset[DataSubjectRule]):
-    """Class-based data subject classification ruleset with confidence scoring.
+class DataSubjectIndicatorRuleset(AbstractRuleset[DataSubjectRule]):
+    """Data subject indicator detection ruleset with confidence scoring.
 
-    This class provides structured access to data subject classification patterns
+    This class provides structured access to data subject detection patterns
     with built-in logging capabilities for debugging and monitoring.
 
-    Data subject classification helps identify categories of individuals whose
-    personal data is processed, which is crucial for GDPR Article 30(1)(c) compliance.
+    Data subject detection identifies categories of individuals (e.g., employees,
+    customers, patients) whose personal data is being processed.
     """
 
     def __init__(self) -> None:
-        """Initialise the data subjects ruleset."""
+        """Initialise the data subject indicator ruleset."""
         self._rules: tuple[DataSubjectRule, ...] | None = None
         logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 

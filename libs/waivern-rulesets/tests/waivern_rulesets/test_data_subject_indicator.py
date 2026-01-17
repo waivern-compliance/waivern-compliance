@@ -1,4 +1,4 @@
-"""Unit tests for data subject rule types."""
+"""Unit tests for data subject indicator rule types."""
 
 import tempfile
 from unittest.mock import patch
@@ -8,10 +8,10 @@ import yaml
 from pydantic import ValidationError
 
 from waivern_rulesets.base import AbstractRuleset
-from waivern_rulesets.data_subjects import (
+from waivern_rulesets.data_subject_indicator import (
+    DataSubjectIndicatorRuleset,
     DataSubjectRule,
     DataSubjectRulesetData,
-    DataSubjectsRuleset,
 )
 from waivern_rulesets.testing import RulesetContractTests
 
@@ -20,8 +20,8 @@ from waivern_rulesets.testing import RulesetContractTests
 # =============================================================================
 
 
-class TestDataSubjectsRulesetContract(RulesetContractTests[DataSubjectRule]):
-    """Contract tests for DataSubjectsRuleset.
+class TestDataSubjectIndicatorRulesetContract(RulesetContractTests[DataSubjectRule]):
+    """Contract tests for DataSubjectIndicatorRuleset.
 
     Inherits all standard ruleset contract tests automatically.
 
@@ -30,7 +30,7 @@ class TestDataSubjectsRulesetContract(RulesetContractTests[DataSubjectRule]):
     @pytest.fixture
     def ruleset_class(self) -> type[AbstractRuleset[DataSubjectRule]]:
         """Provide the ruleset class to test."""
-        return DataSubjectsRuleset
+        return DataSubjectIndicatorRuleset
 
     @pytest.fixture
     def rule_class(self) -> type[DataSubjectRule]:
@@ -40,7 +40,7 @@ class TestDataSubjectsRulesetContract(RulesetContractTests[DataSubjectRule]):
     @pytest.fixture
     def expected_name(self) -> str:
         """Provide the expected canonical name of the ruleset."""
-        return "data_subjects"
+        return "data_subject_indicator"
 
 
 # =============================================================================
@@ -282,13 +282,13 @@ class TestDataSubjectRulesetData:
 # =============================================================================
 
 
-class TestDataSubjectsRulesetErrorHandling:
-    """Error handling tests for DataSubjectsRuleset file operations."""
+class TestDataSubjectIndicatorRulesetErrorHandling:
+    """Error handling tests for DataSubjectIndicatorRuleset file operations."""
 
     def test_get_rules_missing_yaml_file_error(self) -> None:
         """Test FileNotFoundError when YAML file doesn't exist."""
         with patch("pathlib.Path.open", side_effect=FileNotFoundError("No such file")):
-            ruleset = DataSubjectsRuleset()
+            ruleset = DataSubjectIndicatorRuleset()
             with pytest.raises(FileNotFoundError):
                 ruleset.get_rules()
 
@@ -298,13 +298,13 @@ class TestDataSubjectsRulesetErrorHandling:
             f.write("invalid: yaml: content[\nbroken syntax")
             f.seek(0)
             with patch("pathlib.Path.open", return_value=f):
-                ruleset = DataSubjectsRuleset()
+                ruleset = DataSubjectIndicatorRuleset()
                 with pytest.raises(yaml.YAMLError):
                     ruleset.get_rules()
 
     def test_get_rules_yaml_validation_error(self) -> None:
         """Test error handling for YAML that fails Pydantic validation."""
-        invalid_yaml_content = """name: "data_subjects"
+        invalid_yaml_content = """name: "data_subject_indicator"
 version: "1.0.0"
 description: "Test ruleset"
 subject_categories:
@@ -315,6 +315,6 @@ rules: []
             f.write(invalid_yaml_content)
             f.seek(0)
             with patch("pathlib.Path.open", return_value=f):
-                ruleset = DataSubjectsRuleset()
+                ruleset = DataSubjectIndicatorRuleset()
                 with pytest.raises(ValidationError):
                     ruleset.get_rules()

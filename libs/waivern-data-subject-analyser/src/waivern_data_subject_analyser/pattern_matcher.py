@@ -52,7 +52,7 @@ from waivern_analysers_shared.utilities import (
     RulesetManager,
 )
 from waivern_core.schemas import BaseMetadata
-from waivern_rulesets.data_subjects import DataSubjectRule
+from waivern_rulesets.data_subject_indicator import DataSubjectRule
 
 from .confidence_scorer import DataSubjectConfidenceScorer
 from .schemas.types import DataSubjectIndicatorMetadata, DataSubjectIndicatorModel

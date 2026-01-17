@@ -1,6 +1,6 @@
-name: data_subjects
+name: data_subject_indicator
 version: 1.0.0
-description: Data subject classification ruleset for GDPR Article 30(1)(c) compliance
+description: Data subject indicator detection ruleset for pattern-based identification
 subject_categories:
 - employee
 - former_employee
