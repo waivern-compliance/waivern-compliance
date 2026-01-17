@@ -3,6 +3,7 @@
 from waivern_core import RulesetError
 
 from waivern_rulesets.base import (
+    AbstractRuleset,
     RulesetLoader,
     RulesetNotFoundError,
     RulesetRegistry,
@@ -81,6 +82,8 @@ __all__ = [
     "RulesetURI",
     "RulesetLoader",
     "RulesetRegistry",
+    # Base classes
+    "AbstractRuleset",
     # Protocols
     "DataSubjectClassificationRulesetProtocol",
     # Rulesets

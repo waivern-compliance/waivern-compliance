@@ -4,12 +4,13 @@ import logging
 import re
 from typing import Any, cast, override
 
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
 from waivern_rulesets import (
     DataSubjectClassificationRulesetProtocol,
-    GDPRDataSubjectClassificationRuleset,
+    GDPRDataSubjectClassificationRule,
     RiskModifiers,
 )
 
@@ -22,6 +23,9 @@ from waivern_gdpr_data_subject_classifier.schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Ruleset URI for GDPR data subject classification
+_RULESET_URI = "local/gdpr_data_subject_classification/1.0.0"
 
 
 class RiskModifierDetector:
@@ -82,10 +86,13 @@ class GDPRDataSubjectClassifier(Classifier):
 
         Args:
             ruleset: Optional custom ruleset implementation. If not provided,
-                    uses the default GDPRDataSubjectClassificationRuleset.
+                    uses the cached ruleset from RulesetManager.
 
         """
-        self._ruleset = ruleset or GDPRDataSubjectClassificationRuleset()
+        self._ruleset: DataSubjectClassificationRulesetProtocol = ruleset or cast(
+            DataSubjectClassificationRulesetProtocol,
+            RulesetManager.get_ruleset(_RULESET_URI, GDPRDataSubjectClassificationRule),
+        )
         self._classification_map = self._build_classification_map()
         self._risk_modifier_detector = RiskModifierDetector(
             self._ruleset.get_risk_modifiers()
