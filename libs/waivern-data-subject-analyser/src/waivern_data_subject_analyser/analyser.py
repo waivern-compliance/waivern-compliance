@@ -17,7 +17,7 @@ from waivern_llm import BaseLLMService
 
 from .pattern_matcher import DataSubjectPatternMatcher
 from .result_builder import DataSubjectResultBuilder
-from .schemas.types import DataSubjectFindingModel
+from .schemas.types import DataSubjectIndicatorModel
 from .types import DataSubjectAnalyserConfig
 
 logger = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ class DataSubjectAnalyser(Analyser):
     @override
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this analyser."""
-        return [Schema("data_subject_finding", "1.0.0")]
+        return [Schema("data_subject_indicator", "1.0.0")]
 
     @override
     def process(
@@ -131,14 +131,14 @@ class DataSubjectAnalyser(Analyser):
             all_data_items.extend(typed_data.data)
 
         # Process each data item using the pattern matcher
-        findings: list[DataSubjectFindingModel] = []
+        indicators: list[DataSubjectIndicatorModel] = []
         for data_item in all_data_items:
             content = data_item.content
             metadata = data_item.metadata
 
             # Find patterns using pattern matcher
-            item_findings = self._pattern_matcher.find_patterns(content, metadata)
-            findings.extend(item_findings)
+            item_indicators = self._pattern_matcher.find_patterns(content, metadata)
+            indicators.extend(item_indicators)
 
         # Build and return output message
-        return self._result_builder.build_output_message(findings, output_schema)
+        return self._result_builder.build_output_message(indicators, output_schema)

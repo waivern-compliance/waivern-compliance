@@ -60,9 +60,9 @@
       "title": "BaseFindingEvidence",
       "type": "object"
     },
-    "DataSubjectFindingMetadata": {
+    "DataSubjectIndicatorMetadata": {
       "additionalProperties": false,
-      "description": "Metadata for data subject findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "description": "Metadata for data subject indicators.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
       "properties": {
         "source": {
           "description": "Source file or location where the data was found",
@@ -81,11 +81,11 @@
       "required": [
         "source"
       ],
-      "title": "DataSubjectFindingMetadata",
+      "title": "DataSubjectIndicatorMetadata",
       "type": "object"
     },
-    "DataSubjectFindingModel": {
-      "description": "Data subject finding structure.",
+    "DataSubjectIndicatorModel": {
+      "description": "Data subject indicator from pattern-based detection.",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -111,36 +111,28 @@
           "type": "array"
         },
         "primary_category": {
-          "description": "Primary data subject category",
+          "description": "Primary data subject category detected",
           "title": "Primary Category",
           "type": "string"
         },
         "confidence_score": {
-          "description": "Confidence score for the classification (0-100)",
+          "description": "Confidence score for the detection (0-100)",
           "maximum": 100,
           "minimum": 0,
           "title": "Confidence Score",
           "type": "integer"
         },
-        "modifiers": {
-          "description": "Cross-category regulatory modifiers from ruleset",
-          "items": {
-            "type": "string"
-          },
-          "title": "Modifiers",
-          "type": "array"
-        },
         "metadata": {
           "anyOf": [
             {
-              "$ref": "#/$defs/DataSubjectFindingMetadata"
+              "$ref": "#/$defs/DataSubjectIndicatorMetadata"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Additional metadata about the finding"
+          "description": "Additional metadata about the indicator"
         }
       },
       "required": [
@@ -149,16 +141,16 @@
         "primary_category",
         "confidence_score"
       ],
-      "title": "DataSubjectFindingModel",
+      "title": "DataSubjectIndicatorModel",
       "type": "object"
     },
-    "DataSubjectSummary": {
-      "description": "Summary statistics for data subject findings.",
+    "DataSubjectIndicatorSummary": {
+      "description": "Summary statistics for data subject indicators.",
       "properties": {
-        "total_classifications": {
-          "description": "Total number of data subject classifications",
+        "total_indicators": {
+          "description": "Total number of data subject indicators detected",
           "minimum": 0,
-          "title": "Total Classifications",
+          "title": "Total Indicators",
           "type": "integer"
         },
         "categories_identified": {
@@ -171,10 +163,10 @@
         }
       },
       "required": [
-        "total_classifications",
+        "total_indicators",
         "categories_identified"
       ],
-      "title": "DataSubjectSummary",
+      "title": "DataSubjectIndicatorSummary",
       "type": "object"
     },
     "JsonValue": {
@@ -209,19 +201,19 @@
       ]
     }
   },
-  "description": "Complete output structure for data_subject_finding schema.\n\nThis model represents the full wire format for data subject analysis results,\nincluding findings, summary statistics, and analysis metadata.",
+  "description": "Complete output structure for data_subject_indicator schema.\n\nThis model represents the full wire format for data subject detection results,\nincluding indicators, summary statistics, and analysis metadata.",
   "properties": {
     "findings": {
-      "description": "List of data subject findings from GDPR compliance analysis",
+      "description": "List of data subject indicators from pattern-based detection",
       "items": {
-        "$ref": "#/$defs/DataSubjectFindingModel"
+        "$ref": "#/$defs/DataSubjectIndicatorModel"
       },
       "title": "Findings",
       "type": "array"
     },
     "summary": {
-      "$ref": "#/$defs/DataSubjectSummary",
-      "description": "Summary statistics of the data subject analysis"
+      "$ref": "#/$defs/DataSubjectIndicatorSummary",
+      "description": "Summary statistics of the data subject detection"
     },
     "analysis_metadata": {
       "$ref": "#/$defs/BaseAnalysisOutputMetadata",
@@ -233,7 +225,7 @@
     "summary",
     "analysis_metadata"
   ],
-  "title": "DataSubjectFindingOutput",
+  "title": "DataSubjectIndicatorOutput",
   "type": "object",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "version": "1.0.0"

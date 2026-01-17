@@ -1,4 +1,4 @@
-"""Data subject analyser for GDPR Article 30(1)(c) compliance."""
+"""Data subject analyser for detecting data subject categories."""
 
 from importlib.resources import files
 from pathlib import Path
@@ -7,7 +7,7 @@ from waivern_core.schemas import SchemaRegistry
 
 from .analyser import DataSubjectAnalyser
 from .factory import DataSubjectAnalyserFactory
-from .schemas import DataSubjectFindingModel
+from .schemas import DataSubjectIndicatorModel
 from .types import DataSubjectAnalyserConfig
 
 
@@ -27,6 +27,6 @@ __all__ = [
     "DataSubjectAnalyser",
     "DataSubjectAnalyserConfig",
     "DataSubjectAnalyserFactory",
-    "DataSubjectFindingModel",
+    "DataSubjectIndicatorModel",
     "register_schemas",
 ]

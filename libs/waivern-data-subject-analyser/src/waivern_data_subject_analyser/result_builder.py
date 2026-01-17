@@ -11,9 +11,9 @@ from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
 
 from .schemas.types import (
-    DataSubjectFindingModel,
-    DataSubjectFindingOutput,
-    DataSubjectSummary,
+    DataSubjectIndicatorModel,
+    DataSubjectIndicatorOutput,
+    DataSubjectIndicatorSummary,
 )
 from .types import DataSubjectAnalyserConfig
 
@@ -38,24 +38,24 @@ class DataSubjectResultBuilder:
 
     def build_output_message(
         self,
-        findings: list[DataSubjectFindingModel],
+        indicators: list[DataSubjectIndicatorModel],
         output_schema: Schema,
     ) -> Message:
         """Build the complete output message.
 
         Args:
-            findings: Data subject findings.
+            indicators: Data subject indicators.
             output_schema: Schema for output validation.
 
         Returns:
             Complete validated output message.
 
         """
-        summary = self._build_summary(findings)
+        summary = self._build_summary(indicators)
         analysis_metadata = self._build_analysis_metadata()
 
-        output_model = DataSubjectFindingOutput(
-            findings=findings,
+        output_model = DataSubjectIndicatorOutput(
+            findings=indicators,
             summary=summary,
             analysis_metadata=analysis_metadata,
         )
@@ -71,26 +71,26 @@ class DataSubjectResultBuilder:
         output_message.validate()
 
         logger.info(
-            f"DataSubjectAnalyser processed with {len(result_data['findings'])} findings"
+            f"DataSubjectAnalyser processed with {len(result_data['findings'])} indicators"
         )
 
         return output_message
 
     def _build_summary(
-        self, findings: list[DataSubjectFindingModel]
-    ) -> DataSubjectSummary:
-        """Build summary statistics for data subject findings.
+        self, indicators: list[DataSubjectIndicatorModel]
+    ) -> DataSubjectIndicatorSummary:
+        """Build summary statistics for data subject indicators.
 
         Args:
-            findings: List of data subject findings.
+            indicators: List of data subject indicators.
 
         Returns:
             Summary statistics model.
 
         """
-        return DataSubjectSummary(
-            total_classifications=len(findings),
-            categories_identified=list(set(f.primary_category for f in findings)),
+        return DataSubjectIndicatorSummary(
+            total_indicators=len(indicators),
+            categories_identified=list(set(i.primary_category for i in indicators)),
         )
 
     def _build_analysis_metadata(self) -> BaseAnalysisOutputMetadata:
