@@ -1,0 +1,262 @@
+{
+  "$defs": {
+    "BaseAnalysisOutputMetadata": {
+      "additionalProperties": true,
+      "description": "Base metadata for analysis outputs.",
+      "properties": {
+        "ruleset_used": {
+          "description": "Name of the ruleset used for analysis",
+          "title": "Ruleset Used",
+          "type": "string"
+        },
+        "llm_validation_enabled": {
+          "description": "Whether LLM validation was enabled for this analysis",
+          "title": "Llm Validation Enabled",
+          "type": "boolean"
+        },
+        "analysis_timestamp": {
+          "description": "ISO 8601 timestamp when the analysis was performed",
+          "title": "Analysis Timestamp",
+          "type": "string"
+        },
+        "evidence_context_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Size of context used for evidence extraction",
+          "title": "Evidence Context Size"
+        }
+      },
+      "required": [
+        "ruleset_used",
+        "llm_validation_enabled"
+      ],
+      "title": "BaseAnalysisOutputMetadata",
+      "type": "object"
+    },
+    "BaseFindingEvidence": {
+      "description": "Evidence item with content and collection timestamp.",
+      "properties": {
+        "content": {
+          "description": "The evidence content snippet",
+          "title": "Content",
+          "type": "string"
+        },
+        "collection_timestamp": {
+          "description": "When the evidence was collected",
+          "title": "Collection Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "BaseFindingEvidence",
+      "type": "object"
+    },
+    "GDPRDataSubjectFindingMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata for GDPR data subject classification findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "properties": {
+        "source": {
+          "description": "Source file or location where the data was found",
+          "title": "Source",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
+          "title": "Context",
+          "type": "object"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "GDPRDataSubjectFindingMetadata",
+      "type": "object"
+    },
+    "GDPRDataSubjectFindingModel": {
+      "description": "GDPR data subject classification finding structure.\n\nRepresents a data subject indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nrisk_modifiers - e.g., minors (Article 8) or vulnerable individuals\n(Recital 75) require additional protections under GDPR.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this finding (UUID)",
+          "title": "Id",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "Evidence items with content and timestamps for this finding",
+          "items": {
+            "$ref": "#/$defs/BaseFindingEvidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "matched_patterns": {
+          "description": "Patterns that were matched during analysis",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Matched Patterns",
+          "type": "array"
+        },
+        "data_subject_category": {
+          "description": "Normalised GDPR data subject category (e.g., 'employee', 'customer')",
+          "title": "Data Subject Category",
+          "type": "string"
+        },
+        "article_references": {
+          "description": "Relevant GDPR article references (e.g., 'Article 4(1)', 'Article 30(1)(c)')",
+          "items": {
+            "type": "string"
+          },
+          "title": "Article References",
+          "type": "array"
+        },
+        "typical_lawful_bases": {
+          "description": "Typical GDPR Article 6 lawful bases for processing this data subject type",
+          "items": {
+            "type": "string"
+          },
+          "title": "Typical Lawful Bases",
+          "type": "array"
+        },
+        "risk_modifiers": {
+          "description": "Risk modifiers detected from context (e.g., 'minor', 'vulnerable_individual')",
+          "items": {
+            "type": "string"
+          },
+          "title": "Risk Modifiers",
+          "type": "array"
+        },
+        "confidence_score": {
+          "description": "Confidence score from indicator detection (0-100)",
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Confidence Score",
+          "type": "integer"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GDPRDataSubjectFindingMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Additional metadata from the original data source"
+        }
+      },
+      "required": [
+        "evidence",
+        "matched_patterns",
+        "data_subject_category",
+        "confidence_score"
+      ],
+      "title": "GDPRDataSubjectFindingModel",
+      "type": "object"
+    },
+    "GDPRDataSubjectSummary": {
+      "description": "Summary statistics for GDPR data subject classification findings.",
+      "properties": {
+        "total_findings": {
+          "description": "Total number of classified data subject findings",
+          "minimum": 0,
+          "title": "Total Findings",
+          "type": "integer"
+        },
+        "categories_identified": {
+          "description": "Unique data subject categories identified",
+          "items": {
+            "type": "string"
+          },
+          "title": "Categories Identified",
+          "type": "array"
+        },
+        "high_risk_count": {
+          "description": "Number of findings with risk modifiers (e.g., minors, vulnerable individuals)",
+          "minimum": 0,
+          "title": "High Risk Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total_findings",
+        "high_risk_count"
+      ],
+      "title": "GDPRDataSubjectSummary",
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "description": "Complete output structure for gdpr_data_subject schema.\n\nThis model represents the full wire format for GDPR data subject\nclassification results, including findings enriched with GDPR-specific\ninformation, summary statistics, and analysis metadata.",
+  "properties": {
+    "findings": {
+      "description": "List of data subject findings with GDPR classification",
+      "items": {
+        "$ref": "#/$defs/GDPRDataSubjectFindingModel"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/GDPRDataSubjectSummary",
+      "description": "Summary statistics of the GDPR classification analysis"
+    },
+    "analysis_metadata": {
+      "$ref": "#/$defs/BaseAnalysisOutputMetadata",
+      "description": "Metadata about the classification process"
+    }
+  },
+  "required": [
+    "findings",
+    "summary",
+    "analysis_metadata"
+  ],
+  "title": "GDPRDataSubjectFindingOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}

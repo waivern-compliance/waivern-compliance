@@ -155,7 +155,8 @@ class GDPRDataSubjectClassificationRuleset(
 
     def __init__(self) -> None:
         """Initialise the GDPR data subject classification ruleset."""
-        self._rules: tuple[GDPRDataSubjectClassificationRule, ...] | None = None
+        self._ruleset_data: GDPRDataSubjectClassificationRulesetData | None = None
+        self._rules_cache: tuple[GDPRDataSubjectClassificationRule, ...] | None = None
         logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
     @property
@@ -170,16 +171,9 @@ class GDPRDataSubjectClassificationRuleset(
         """Get the version of this ruleset."""
         return _RULESET_DATA_VERSION
 
-    @override
-    def get_rules(self) -> tuple[GDPRDataSubjectClassificationRule, ...]:
-        """Get the GDPR classification rules.
-
-        Returns:
-            Immutable tuple of classification rules for GDPR data subjects
-
-        """
-        if self._rules is None:
-            # Load from YAML file with Pydantic validation
+    def _ensure_loaded(self) -> GDPRDataSubjectClassificationRulesetData:
+        """Ensure ruleset data is loaded and return it."""
+        if self._ruleset_data is None:
             yaml_file = (
                 Path(__file__).parent
                 / "data"
@@ -190,8 +184,33 @@ class GDPRDataSubjectClassificationRuleset(
             with yaml_file.open("r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
-            ruleset_data = GDPRDataSubjectClassificationRulesetData.model_validate(data)
-            self._rules = tuple(ruleset_data.rules)
-            logger.debug(f"Loaded {len(self._rules)} GDPR data subject rules")
+            self._ruleset_data = (
+                GDPRDataSubjectClassificationRulesetData.model_validate(data)
+            )
+            logger.debug(
+                f"Loaded {len(self._ruleset_data.rules)} GDPR data subject rules"
+            )
 
-        return self._rules
+        return self._ruleset_data
+
+    @override
+    def get_rules(self) -> tuple[GDPRDataSubjectClassificationRule, ...]:
+        """Get the GDPR classification rules.
+
+        Returns:
+            Immutable tuple of classification rules for GDPR data subjects
+
+        """
+        if self._rules_cache is None:
+            self._rules_cache = tuple(self._ensure_loaded().rules)
+        return self._rules_cache
+
+    def get_risk_modifiers(self) -> RiskModifiers:
+        """Get the risk modifiers for data subject classification.
+
+        Returns:
+            Risk modifiers containing patterns for detecting minors,
+            vulnerable individuals, and other risk-relevant contexts.
+
+        """
+        return self._ensure_loaded().risk_modifiers
