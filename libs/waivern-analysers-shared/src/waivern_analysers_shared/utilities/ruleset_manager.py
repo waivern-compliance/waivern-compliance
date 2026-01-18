@@ -1,7 +1,7 @@
 """Ruleset management utility for analysers."""
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any, overload
 
 from waivern_core import Rule
 from waivern_rulesets import (
@@ -11,6 +11,12 @@ from waivern_rulesets import (
     RulesetURIParseError,
     UnsupportedProviderError,
 )
+
+if TYPE_CHECKING:
+    from waivern_rulesets import (
+        DataSubjectClassificationRulesetProtocol,
+        GDPRDataSubjectClassificationRule,
+    )
 
 # Re-export for backward compatibility
 __all__ = [
@@ -39,8 +45,22 @@ class RulesetManager:
 
     _cache: dict[str, AbstractRuleset[Any]] = {}
 
+    # Overload for GDPRDataSubjectClassificationRule returns the Protocol
+    # which includes get_risk_modifiers() for type-safe access
+    @overload
+    @classmethod
+    def get_ruleset(  # pyright: ignore[reportOverlappingOverload]
+        cls, ruleset_uri: str, rule_type: "type[GDPRDataSubjectClassificationRule]"
+    ) -> "DataSubjectClassificationRulesetProtocol": ...
+
+    @overload
     @classmethod
     def get_ruleset[T: Rule](
+        cls, ruleset_uri: str, rule_type: type[T]
+    ) -> AbstractRuleset[T]: ...
+
+    @classmethod
+    def get_ruleset[T: Rule](  # pyright: ignore[reportInconsistentOverload]
         cls, ruleset_uri: str, rule_type: type[T]
     ) -> AbstractRuleset[T]:
         """Get a cached ruleset instance using URI with type safety.
@@ -48,13 +68,19 @@ class RulesetManager:
         Returns the full ruleset instance, allowing access to all methods
         (e.g., get_rules(), get_risk_modifiers(), name, version).
 
+        When called with GDPRDataSubjectClassificationRule, returns a
+        DataSubjectClassificationRulesetProtocol which includes the
+        get_risk_modifiers() method.
+
         Args:
             ruleset_uri: URI in format provider/name/version
                          (e.g., 'local/personal_data/1.0.0')
             rule_type: The expected rule type for validation
 
         Returns:
-            Cached ruleset instance with full access to all methods
+            Cached ruleset instance with full access to all methods.
+            For GDPRDataSubjectClassificationRule, returns
+            DataSubjectClassificationRulesetProtocol.
 
         Raises:
             RulesetURIParseError: If URI format is invalid

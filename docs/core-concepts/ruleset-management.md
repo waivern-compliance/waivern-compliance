@@ -116,24 +116,24 @@ for rule in rules:
 
 ### Pattern 3: Full Ruleset Access
 
-When you need more than just rules (e.g., risk modifiers):
+When you need more than just rules (e.g., risk modifiers), use the appropriate rule type
+and the return type is automatically narrowed to the Protocol:
 
 ```python
-from typing import cast
-from waivern_rulesets import (
-    GDPRDataSubjectClassificationRule,
-    DataSubjectClassificationRulesetProtocol,
-)
+from waivern_rulesets import GDPRDataSubjectClassificationRule
 
 ruleset = RulesetManager.get_ruleset(
     "local/gdpr_data_subject_classification/1.0.0",
     GDPRDataSubjectClassificationRule,
 )
 
-# Cast to protocol for extended interface
-ruleset = cast(DataSubjectClassificationRulesetProtocol, ruleset)
-risk_modifiers = ruleset.get_risk_modifiers()
+# Type-safe: returns DataSubjectClassificationRulesetProtocol
+# which includes get_risk_modifiers()
+risk_modifiers = ruleset.get_risk_modifiers()  # No cast needed!
 ```
+
+The return type is automatically narrowed via `@overload` declarations when you use
+`GDPRDataSubjectClassificationRule` as the rule type.
 
 ## Protocols vs Concrete Classes
 

@@ -9,7 +9,6 @@ from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
 from waivern_rulesets import (
-    DataSubjectClassificationRulesetProtocol,
     GDPRDataSubjectClassificationRule,
     RiskModifiers,
 )
@@ -85,11 +84,8 @@ class GDPRDataSubjectClassifier(Classifier):
 
         """
         config = config or GDPRDataSubjectClassifierConfig()
-        self._ruleset = cast(
-            DataSubjectClassificationRulesetProtocol,
-            RulesetManager.get_ruleset(
-                config.ruleset, GDPRDataSubjectClassificationRule
-            ),
+        self._ruleset = RulesetManager.get_ruleset(
+            config.ruleset, GDPRDataSubjectClassificationRule
         )
         self._classification_map = self._build_classification_map()
         self._risk_modifier_detector = RiskModifierDetector(

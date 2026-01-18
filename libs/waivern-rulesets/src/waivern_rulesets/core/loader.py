@@ -1,6 +1,7 @@
 """Ruleset loader for loading rulesets by URI."""
 
 import logging
+from typing import TYPE_CHECKING, overload
 
 from waivern_core import Rule
 
@@ -8,6 +9,12 @@ from waivern_rulesets.core.base import AbstractRuleset
 from waivern_rulesets.core.exceptions import UnsupportedProviderError
 from waivern_rulesets.core.registry import RulesetRegistry
 from waivern_rulesets.core.uri import RulesetURI
+
+if TYPE_CHECKING:
+    from waivern_rulesets.gdpr_data_subject_classification import (
+        GDPRDataSubjectClassificationRule,
+    )
+    from waivern_rulesets.protocols import DataSubjectClassificationRulesetProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +73,22 @@ class RulesetLoader:
         ruleset_instance = cls.load_ruleset_instance(ruleset_uri, rule_type)
         return ruleset_instance.get_rules()
 
+    # Overload for GDPRDataSubjectClassificationRule returns the Protocol
+    # which includes get_risk_modifiers() for type-safe access
+    @overload
+    @classmethod
+    def load_ruleset_instance(  # pyright: ignore[reportOverlappingOverload]
+        cls, ruleset_uri: str, rule_type: "type[GDPRDataSubjectClassificationRule]"
+    ) -> "DataSubjectClassificationRulesetProtocol": ...
+
+    @overload
     @classmethod
     def load_ruleset_instance[T: Rule](
+        cls, ruleset_uri: str, rule_type: type[T]
+    ) -> AbstractRuleset[T]: ...
+
+    @classmethod
+    def load_ruleset_instance[T: Rule](  # pyright: ignore[reportInconsistentOverload]
         cls, ruleset_uri: str, rule_type: type[T]
     ) -> AbstractRuleset[T]:
         """Load a ruleset instance using URI format with provider validation.
@@ -76,13 +97,19 @@ class RulesetLoader:
         the full ruleset instance, allowing access to all ruleset methods
         (e.g., get_rules(), get_risk_modifiers(), name, version).
 
+        When called with GDPRDataSubjectClassificationRule, returns a
+        DataSubjectClassificationRulesetProtocol which includes the
+        get_risk_modifiers() method.
+
         Args:
             ruleset_uri: URI in format provider/name/version
                          (e.g., 'local/personal_data/1.0.0')
             rule_type: The expected rule type for validation and typing
 
         Returns:
-            The ruleset instance with full access to all methods
+            The ruleset instance with full access to all methods.
+            For GDPRDataSubjectClassificationRule, returns
+            DataSubjectClassificationRulesetProtocol.
 
         Raises:
             RulesetURIParseError: If URI format is invalid
@@ -95,7 +122,7 @@ class RulesetLoader:
                 GDPRDataSubjectClassificationRule
             )
             rules = ruleset.get_rules()
-            risk_modifiers = ruleset.get_risk_modifiers()
+            risk_modifiers = ruleset.get_risk_modifiers()  # Type-safe!
 
         """
         # Parse the URI
