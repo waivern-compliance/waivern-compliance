@@ -5,22 +5,13 @@ according to GDPR requirements. It maps generic personal data detection
 categories to GDPR-specific data types and Article 9 special categories.
 """
 
-import logging
-from pathlib import Path
-from typing import ClassVar, Final, override
+from typing import ClassVar
 
-import yaml
 from pydantic import Field, field_validator, model_validator
 from waivern_core import RulesetData
 
-from waivern_rulesets.core.base import AbstractRuleset
+from waivern_rulesets.core.base import YAMLRuleset
 from waivern_rulesets.types import GDPRClassificationRule
-
-logger = logging.getLogger(__name__)
-
-# Version constant for this ruleset and its data (private)
-_RULESET_DATA_VERSION: Final[str] = "1.0.0"
-_RULESET_NAME: Final[str] = "gdpr_personal_data_classification"
 
 
 class GDPRPersonalDataClassificationRule(GDPRClassificationRule):
@@ -95,58 +86,16 @@ class GDPRPersonalDataClassificationRulesetData(
 
 
 class GDPRPersonalDataClassificationRuleset(
-    AbstractRuleset[GDPRPersonalDataClassificationRule]
+    YAMLRuleset[GDPRPersonalDataClassificationRule]
 ):
     """GDPR personal data classification ruleset.
 
-    Provides structured access to GDPR classification mappings for
-    personal data indicators. Used by the GDPRPersonalDataClassifier
-    to enrich generic findings with GDPR-specific information.
+    Provides classification mappings for personal data indicators,
+    enriching generic findings with GDPR-specific information.
     """
 
-    ruleset_name: ClassVar[str] = _RULESET_NAME
-    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
-
-    def __init__(self) -> None:
-        """Initialise the GDPR personal data classification ruleset."""
-        self._rules: tuple[GDPRPersonalDataClassificationRule, ...] | None = None
-        logger.debug(f"Initialised {self.name} ruleset version {self.version}")
-
-    @property
-    @override
-    def name(self) -> str:
-        """Get the canonical name of this ruleset."""
-        return _RULESET_NAME
-
-    @property
-    @override
-    def version(self) -> str:
-        """Get the version of this ruleset."""
-        return _RULESET_DATA_VERSION
-
-    @override
-    def get_rules(self) -> tuple[GDPRPersonalDataClassificationRule, ...]:
-        """Get the GDPR classification rules.
-
-        Returns:
-            Immutable tuple of classification rules for GDPR personal data
-
-        """
-        if self._rules is None:
-            # Load from YAML file with Pydantic validation
-            yaml_file = (
-                Path(__file__).parent
-                / "data"
-                / _RULESET_DATA_VERSION
-                / f"{_RULESET_NAME}.yaml"
-            )
-            with yaml_file.open("r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-
-            ruleset_data = GDPRPersonalDataClassificationRulesetData.model_validate(
-                data
-            )
-            self._rules = tuple(ruleset_data.rules)
-            logger.debug(f"Loaded {len(self._rules)} GDPR classification rules")
-
-        return self._rules
+    ruleset_name: ClassVar[str] = "gdpr_personal_data_classification"
+    ruleset_version: ClassVar[str] = "1.0.0"
+    _data_class: ClassVar[  # pyright: ignore[reportIncompatibleVariableOverride]
+        type[GDPRPersonalDataClassificationRulesetData]
+    ] = GDPRPersonalDataClassificationRulesetData

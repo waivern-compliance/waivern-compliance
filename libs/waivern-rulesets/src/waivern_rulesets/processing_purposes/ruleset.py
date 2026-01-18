@@ -4,21 +4,12 @@ This ruleset contains processing purpose patterns for GDPR compliance analysis.
 Version 1.0.0 has separated service integration patterns into dedicated service_integrations ruleset.
 """
 
-import logging
-from pathlib import Path
-from typing import ClassVar, Final, override
+from typing import ClassVar
 
-import yaml
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 from waivern_core import DetectionRule, RulesetData
 
-from waivern_rulesets.core.base import AbstractRuleset
-
-logger = logging.getLogger(__name__)
-
-# Version constant for this ruleset and its data (private)
-_RULESET_DATA_VERSION: Final[str] = "1.0.0"
-_RULESET_NAME: Final[str] = "processing_purposes"
+from waivern_rulesets.core.base import YAMLRuleset
 
 
 class ProcessingPurposeRule(DetectionRule):
@@ -66,61 +57,15 @@ class ProcessingPurposesRulesetData(RulesetData[ProcessingPurposeRule]):
         return self
 
 
-class ProcessingPurposesRuleset(AbstractRuleset[ProcessingPurposeRule]):
-    """Class-based processing purposes detection ruleset with logging support.
+class ProcessingPurposesRuleset(YAMLRuleset[ProcessingPurposeRule]):
+    """Processing purposes detection ruleset.
 
-    This class provides structured access to processing purposes patterns
-    with built-in logging capabilities for debugging and monitoring.
-
-    Processing purposes help identify what business activities or data uses
-    are mentioned in content, which is crucial for privacy compliance,
+    Identifies business activities and data use intentions for privacy compliance,
     consent management, and understanding data processing activities.
-
-    Processing purposes are business activities or intentions for data use,
-    complementary to technical data collection patterns and service integrations.
     """
 
-    ruleset_name: ClassVar[str] = _RULESET_NAME
-    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
-
-    def __init__(self) -> None:
-        """Initialise the processing purposes ruleset."""
-        self._rules: tuple[ProcessingPurposeRule, ...] | None = None
-        logger.debug(f"Initialised {self.name} ruleset version {self.version}")
-
-    @property
-    @override
-    def name(self) -> str:
-        """Get the canonical name of this ruleset."""
-        return _RULESET_NAME
-
-    @property
-    @override
-    def version(self) -> str:
-        """Get the version of this ruleset."""
-        return _RULESET_DATA_VERSION
-
-    @override
-    def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
-        """Get the processing purposes rules.
-
-        Returns:
-            Immutable tuple of ProcessingPurposeRule objects with strongly typed properties
-
-        """
-        if self._rules is None:
-            # Load from external configuration file with validation
-            ruleset_file = (
-                Path(__file__).parent
-                / "data"
-                / _RULESET_DATA_VERSION
-                / f"{_RULESET_NAME}.yaml"
-            )
-            with ruleset_file.open("r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-
-            ruleset_data = ProcessingPurposesRulesetData.model_validate(data)
-            self._rules = tuple(ruleset_data.rules)
-            logger.debug(f"Loaded {len(self._rules)} processing purpose patterns")
-
-        return self._rules
+    ruleset_name: ClassVar[str] = "processing_purposes"
+    ruleset_version: ClassVar[str] = "1.0.0"
+    _data_class: ClassVar[  # pyright: ignore[reportIncompatibleVariableOverride]
+        type[ProcessingPurposesRulesetData]
+    ] = ProcessingPurposesRulesetData

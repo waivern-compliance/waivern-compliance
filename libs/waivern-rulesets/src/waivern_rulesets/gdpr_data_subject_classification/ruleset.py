@@ -5,21 +5,12 @@ according to GDPR requirements. It maps data subject detection categories
 to GDPR-specific data subject types and article references.
 """
 
-import logging
-from pathlib import Path
-from typing import ClassVar, Final, override
+from typing import ClassVar, cast
 
-import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 from waivern_core import ClassificationRule, RulesetData
 
-from waivern_rulesets.core.base import AbstractRuleset
-
-logger = logging.getLogger(__name__)
-
-# Version constant for this ruleset and its data (private)
-_RULESET_DATA_VERSION: Final[str] = "1.0.0"
-_RULESET_NAME: Final[str] = "gdpr_data_subject_classification"
+from waivern_rulesets.core.base import YAMLRuleset
 
 
 class RiskModifier(BaseModel):
@@ -144,68 +135,19 @@ class GDPRDataSubjectClassificationRulesetData(
 
 
 class GDPRDataSubjectClassificationRuleset(
-    AbstractRuleset[GDPRDataSubjectClassificationRule]
+    YAMLRuleset[GDPRDataSubjectClassificationRule]
 ):
     """GDPR data subject classification ruleset.
 
-    Provides structured access to GDPR classification mappings for
-    data subject indicators. Used by the GDPRDataSubjectClassifier
-    to enrich generic findings with GDPR-specific information.
+    Provides classification mappings for data subject indicators,
+    enriching generic findings with GDPR-specific information.
     """
 
-    ruleset_name: ClassVar[str] = _RULESET_NAME
-    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
-
-    def __init__(self) -> None:
-        """Initialise the GDPR data subject classification ruleset."""
-        self._ruleset_data: GDPRDataSubjectClassificationRulesetData | None = None
-        self._rules_cache: tuple[GDPRDataSubjectClassificationRule, ...] | None = None
-        logger.debug(f"Initialised {self.name} ruleset version {self.version}")
-
-    @property
-    @override
-    def name(self) -> str:
-        """Get the canonical name of this ruleset."""
-        return _RULESET_NAME
-
-    @property
-    @override
-    def version(self) -> str:
-        """Get the version of this ruleset."""
-        return _RULESET_DATA_VERSION
-
-    def _ensure_loaded(self) -> GDPRDataSubjectClassificationRulesetData:
-        """Ensure ruleset data is loaded and return it."""
-        if self._ruleset_data is None:
-            yaml_file = (
-                Path(__file__).parent
-                / "data"
-                / _RULESET_DATA_VERSION
-                / f"{_RULESET_NAME}.yaml"
-            )
-            with yaml_file.open("r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-
-            self._ruleset_data = (
-                GDPRDataSubjectClassificationRulesetData.model_validate(data)
-            )
-            logger.debug(
-                f"Loaded {len(self._ruleset_data.rules)} GDPR data subject rules"
-            )
-
-        return self._ruleset_data
-
-    @override
-    def get_rules(self) -> tuple[GDPRDataSubjectClassificationRule, ...]:
-        """Get the GDPR classification rules.
-
-        Returns:
-            Immutable tuple of classification rules for GDPR data subjects
-
-        """
-        if self._rules_cache is None:
-            self._rules_cache = tuple(self._ensure_loaded().rules)
-        return self._rules_cache
+    ruleset_name: ClassVar[str] = "gdpr_data_subject_classification"
+    ruleset_version: ClassVar[str] = "1.0.0"
+    _data_class: ClassVar[  # pyright: ignore[reportIncompatibleVariableOverride]
+        type[GDPRDataSubjectClassificationRulesetData]
+    ] = GDPRDataSubjectClassificationRulesetData
 
     def get_risk_modifiers(self) -> RiskModifiers:
         """Get the risk modifiers for data subject classification.
@@ -215,4 +157,5 @@ class GDPRDataSubjectClassificationRuleset(
             vulnerable individuals, and other risk-relevant contexts.
 
         """
-        return self._ensure_loaded().risk_modifiers
+        data = cast(GDPRDataSubjectClassificationRulesetData, self._load_data())
+        return data.risk_modifiers

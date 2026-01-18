@@ -1,6 +1,6 @@
 """Core infrastructure for waivern-rulesets package."""
 
-from waivern_rulesets.core.base import AbstractRuleset
+from waivern_rulesets.core.base import AbstractRuleset, YAMLRuleset
 from waivern_rulesets.core.exceptions import (
     RulesetNotFoundError,
     RulesetURIParseError,
@@ -19,4 +19,5 @@ __all__ = [
     "RulesetURI",
     "RulesetURIParseError",
     "UnsupportedProviderError",
+    "YAMLRuleset",
 ]

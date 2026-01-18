@@ -5,21 +5,12 @@ It provides framework-agnostic indicators that can be consumed by
 regulatory classifiers (e.g., GDPR, CCPA) for framework-specific enrichment.
 """
 
-import logging
-from pathlib import Path
-from typing import ClassVar, Final, override
+from typing import ClassVar
 
-import yaml
 from pydantic import Field, model_validator
 from waivern_core import DetectionRule, RulesetData
 
-from waivern_rulesets.core.base import AbstractRuleset
-
-logger = logging.getLogger(__name__)
-
-# Version constant for this ruleset and its data (private)
-_RULESET_DATA_VERSION: Final[str] = "1.0.0"
-_RULESET_NAME: Final[str] = "personal_data_indicator"
+from waivern_rulesets.core.base import YAMLRuleset
 
 
 class PersonalDataIndicatorRule(DetectionRule):
@@ -57,54 +48,14 @@ class PersonalDataIndicatorRulesetData(RulesetData[PersonalDataIndicatorRule]):
         return self
 
 
-class PersonalDataIndicatorRuleset(AbstractRuleset[PersonalDataIndicatorRule]):
-    """Class-based personal data indicator detection ruleset.
+class PersonalDataIndicatorRuleset(YAMLRuleset[PersonalDataIndicatorRule]):
+    """Personal data indicator detection ruleset.
 
-    This class provides structured access to personal data patterns
-    with built-in logging capabilities for debugging and monitoring.
+    Provides structured access to personal data patterns for compliance analysis.
     """
 
-    ruleset_name: ClassVar[str] = _RULESET_NAME
-    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
-
-    def __init__(self) -> None:
-        """Initialise the personal data indicator ruleset."""
-        self._rules: tuple[PersonalDataIndicatorRule, ...] | None = None
-        logger.debug(f"Initialised {self.name} ruleset version {self.version}")
-
-    @property
-    @override
-    def name(self) -> str:
-        """Get the canonical name of this ruleset."""
-        return _RULESET_NAME
-
-    @property
-    @override
-    def version(self) -> str:
-        """Get the version of this ruleset."""
-        return _RULESET_DATA_VERSION
-
-    @override
-    def get_rules(self) -> tuple[PersonalDataIndicatorRule, ...]:
-        """Get the personal data indicator rules.
-
-        Returns:
-            Immutable tuple of Rule objects containing all personal data patterns
-
-        """
-        if self._rules is None:
-            # Load from YAML file with Pydantic validation
-            yaml_file = (
-                Path(__file__).parent
-                / "data"
-                / _RULESET_DATA_VERSION
-                / f"{_RULESET_NAME}.yaml"
-            )
-            with yaml_file.open("r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-
-            ruleset_data = PersonalDataIndicatorRulesetData.model_validate(data)
-            self._rules = tuple(ruleset_data.rules)
-            logger.debug(f"Loaded {len(self._rules)} personal data indicator rules")
-
-        return self._rules
+    ruleset_name: ClassVar[str] = "personal_data_indicator"
+    ruleset_version: ClassVar[str] = "1.0.0"
+    _data_class: ClassVar[  # pyright: ignore[reportIncompatibleVariableOverride]
+        type[PersonalDataIndicatorRulesetData]
+    ] = PersonalDataIndicatorRulesetData

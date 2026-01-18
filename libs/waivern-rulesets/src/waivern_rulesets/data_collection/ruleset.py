@@ -5,20 +5,12 @@ in source code, such as HTTP form data, cookies, sessions, and API endpoints.
 All patterns use simple string matching for human readability and easy maintenance.
 """
 
-import logging
-from pathlib import Path
-from typing import ClassVar, Final, override
+from typing import ClassVar
 
-import yaml
 from pydantic import Field, model_validator
 from waivern_core import DetectionRule, RulesetData
 
-from waivern_rulesets.core.base import AbstractRuleset
-
-logger = logging.getLogger(__name__)
-
-# Version constant for this ruleset and its data (private)
-_RULESET_DATA_VERSION: Final[str] = "1.0.0"
+from waivern_rulesets.core.base import YAMLRuleset
 
 
 class DataCollectionRule(DetectionRule):
@@ -57,53 +49,11 @@ class DataCollectionRulesetData(RulesetData[DataCollectionRule]):
         return self
 
 
-_RULESET_NAME: Final[str] = "data_collection"
-
-
-class DataCollectionRuleset(AbstractRuleset[DataCollectionRule]):
+class DataCollectionRuleset(YAMLRuleset[DataCollectionRule]):
     """Ruleset for detecting data collection patterns in source code."""
 
-    ruleset_name: ClassVar[str] = _RULESET_NAME
-    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
-
-    def __init__(self) -> None:
-        """Initialise the data collection patterns ruleset."""
-        self._rules: tuple[DataCollectionRule, ...] | None = None
-        logger.debug(f"Initialised {self.name} ruleset version {self.version}")
-
-    @property
-    @override
-    def name(self) -> str:
-        """Get the canonical name of this ruleset."""
-        return _RULESET_NAME
-
-    @property
-    @override
-    def version(self) -> str:
-        """Get the version of this ruleset."""
-        return _RULESET_DATA_VERSION
-
-    @override
-    def get_rules(self) -> tuple[DataCollectionRule, ...]:
-        """Get the data collection patterns rules.
-
-        Returns:
-            Immutable tuple of Rule objects containing all data collection patterns
-
-        """
-        if self._rules is None:
-            # Load from YAML file with Pydantic validation
-            yaml_file = (
-                Path(__file__).parent
-                / "data"
-                / _RULESET_DATA_VERSION
-                / f"{_RULESET_NAME}.yaml"
-            )
-            with yaml_file.open("r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-
-            ruleset_data = DataCollectionRulesetData.model_validate(data)
-            self._rules = tuple(ruleset_data.rules)
-            logger.debug(f"Loaded {len(self._rules)} data collection ruleset data")
-
-        return self._rules
+    ruleset_name: ClassVar[str] = "data_collection"
+    ruleset_version: ClassVar[str] = "1.0.0"
+    _data_class: ClassVar[  # pyright: ignore[reportIncompatibleVariableOverride]
+        type[DataCollectionRulesetData]
+    ] = DataCollectionRulesetData
