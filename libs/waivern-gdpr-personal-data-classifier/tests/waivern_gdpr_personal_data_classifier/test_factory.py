@@ -85,3 +85,14 @@ class TestGDPRPersonalDataClassifierFactory:
         factory = GDPRPersonalDataClassifierFactory(container)
 
         assert factory.get_service_dependencies() == {}
+
+    def test_can_create_returns_false_for_nonexistent_ruleset(self) -> None:
+        """Test that can_create returns False when ruleset doesn't exist."""
+        container = ServiceContainer()
+        factory = GDPRPersonalDataClassifierFactory(container)
+
+        config_with_nonexistent_ruleset = {"ruleset": "local/nonexistent/1.0.0"}
+
+        result = factory.can_create(config_with_nonexistent_ruleset)
+
+        assert result is False

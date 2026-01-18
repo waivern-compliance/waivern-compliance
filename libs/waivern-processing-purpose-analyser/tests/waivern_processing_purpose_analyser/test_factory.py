@@ -106,3 +106,18 @@ class TestProcessingPurposeAnalyserFactory(
 
         assert "llm_service" in deps
         assert deps["llm_service"] is BaseLLMService
+
+    def test_can_create_returns_false_for_nonexistent_ruleset(self) -> None:
+        """Test that can_create returns False when ruleset doesn't exist."""
+        container = ServiceContainer()
+        factory = ProcessingPurposeAnalyserFactory(container)
+
+        # LLM validation disabled, so only ruleset matters
+        config_with_nonexistent_ruleset = {
+            "pattern_matching": {"ruleset": "local/nonexistent/1.0.0"},
+            "llm_validation": {"enable_llm_validation": False},
+        }
+
+        result = factory.can_create(config_with_nonexistent_ruleset)
+
+        assert result is False

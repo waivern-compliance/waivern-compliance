@@ -2,8 +2,10 @@
 
 from typing import override
 
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
+from waivern_rulesets import GDPRPersonalDataClassificationRule
 
 from .classifier import GDPRPersonalDataClassifier
 from .types import GDPRPersonalDataClassifierConfig
@@ -43,18 +45,31 @@ class GDPRPersonalDataClassifierFactory(ComponentFactory[GDPRPersonalDataClassif
     def can_create(self, config: ComponentConfig) -> bool:
         """Check if factory can create classifier with given configuration.
 
+        Validates:
+        1. Configuration structure and required fields
+        2. Ruleset exists and can be loaded
+
         Args:
             config: Configuration dict to validate
 
         Returns:
-            True if configuration is valid, False otherwise
+            True if configuration is valid and ruleset exists, False otherwise
 
         """
         try:
-            GDPRPersonalDataClassifierConfig.from_properties(config)
-            return True
+            classifier_config = GDPRPersonalDataClassifierConfig.from_properties(config)
         except Exception:
             return False
+
+        # Validate ruleset exists
+        try:
+            RulesetManager.get_ruleset(
+                classifier_config.ruleset, GDPRPersonalDataClassificationRule
+            )
+        except Exception:
+            return False
+
+        return True
 
     @property
     @override

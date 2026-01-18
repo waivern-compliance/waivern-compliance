@@ -21,7 +21,7 @@ _RULESET_DATA_VERSION: Final[str] = "1.0.0"
 _RULESET_NAME: Final[str] = "data_subject_indicator"
 
 
-class DataSubjectRule(DetectionRule):
+class DataSubjectIndicatorRule(DetectionRule):
     """Data subject classification rule with confidence scoring.
 
     This rule type provides pattern-based data subject identification with
@@ -43,7 +43,7 @@ class DataSubjectRule(DetectionRule):
     )
 
 
-class DataSubjectRulesetData(RulesetData[DataSubjectRule]):
+class DataSubjectIndicatorRulesetData(RulesetData[DataSubjectIndicatorRule]):
     """Data subject ruleset data model with category management."""
 
     # Ruleset-specific properties
@@ -62,7 +62,7 @@ class DataSubjectRulesetData(RulesetData[DataSubjectRule]):
     )
 
     @model_validator(mode="after")
-    def validate_rule_categories(self) -> "DataSubjectRulesetData":
+    def validate_rule_categories(self) -> "DataSubjectIndicatorRulesetData":
         """Validate all rule subject_category values against master list."""
         valid_categories = set(self.subject_categories)
 
@@ -74,7 +74,7 @@ class DataSubjectRulesetData(RulesetData[DataSubjectRule]):
         return self
 
     @model_validator(mode="after")
-    def validate_rule_contexts(self) -> "DataSubjectRulesetData":
+    def validate_rule_contexts(self) -> "DataSubjectIndicatorRulesetData":
         """Validate all rule applicable_contexts values against master list."""
         valid_contexts = set(self.applicable_contexts)
 
@@ -87,7 +87,7 @@ class DataSubjectRulesetData(RulesetData[DataSubjectRule]):
         return self
 
 
-class DataSubjectIndicatorRuleset(AbstractRuleset[DataSubjectRule]):
+class DataSubjectIndicatorRuleset(AbstractRuleset[DataSubjectIndicatorRule]):
     """Data subject indicator detection ruleset with confidence scoring.
 
     This class provides structured access to data subject detection patterns
@@ -99,7 +99,7 @@ class DataSubjectIndicatorRuleset(AbstractRuleset[DataSubjectRule]):
 
     def __init__(self) -> None:
         """Initialise the data subject indicator ruleset."""
-        self._rules: tuple[DataSubjectRule, ...] | None = None
+        self._rules: tuple[DataSubjectIndicatorRule, ...] | None = None
         logger.debug(f"Initialised {self.name} ruleset version {self.version}")
 
     @property
@@ -115,11 +115,11 @@ class DataSubjectIndicatorRuleset(AbstractRuleset[DataSubjectRule]):
         return _RULESET_DATA_VERSION
 
     @override
-    def get_rules(self) -> tuple[DataSubjectRule, ...]:
+    def get_rules(self) -> tuple[DataSubjectIndicatorRule, ...]:
         """Get the data subject classification rules.
 
         Returns:
-            Immutable tuple of DataSubjectRule objects with confidence scoring
+            Immutable tuple of DataSubjectIndicatorRule objects with confidence scoring
 
         """
         if self._rules is None:
@@ -134,7 +134,7 @@ class DataSubjectIndicatorRuleset(AbstractRuleset[DataSubjectRule]):
             with ruleset_file.open("r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
-            ruleset_data = DataSubjectRulesetData.model_validate(data)
+            ruleset_data = DataSubjectIndicatorRulesetData.model_validate(data)
             self._rules = tuple(ruleset_data.rules)
             logger.debug(
                 f"Loaded {len(self._rules)} data subject classification patterns"

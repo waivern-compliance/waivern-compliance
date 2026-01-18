@@ -52,7 +52,7 @@ from waivern_analysers_shared.utilities import (
     RulesetManager,
 )
 from waivern_core.schemas import BaseMetadata
-from waivern_rulesets.data_subject_indicator import DataSubjectRule
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 
 from .confidence_scorer import DataSubjectConfidenceScorer
 from .schemas.types import DataSubjectIndicatorMetadata, DataSubjectIndicatorModel
@@ -95,11 +95,15 @@ class DataSubjectPatternMatcher:
         if not content.strip():
             return []
 
-        rules = self._ruleset_manager.get_rules(self._config.ruleset, DataSubjectRule)
+        rules = self._ruleset_manager.get_rules(
+            self._config.ruleset, DataSubjectIndicatorRule
+        )
         indicators: list[DataSubjectIndicatorModel] = []
 
         # Group matched rules and patterns by subject category for confidence calculation
-        category_matched_data: dict[str, list[tuple[DataSubjectRule, list[str]]]] = {}
+        category_matched_data: dict[
+            str, list[tuple[DataSubjectIndicatorRule, list[str]]]
+        ] = {}
 
         # Find all matching rules and track which patterns matched
         for rule in rules:
@@ -166,7 +170,7 @@ class DataSubjectPatternMatcher:
         return indicators
 
     def _rule_applies_to_context(
-        self, rule: DataSubjectRule, metadata: BaseMetadata
+        self, rule: DataSubjectIndicatorRule, metadata: BaseMetadata
     ) -> bool:
         """Check if rule applies to the given context.
 

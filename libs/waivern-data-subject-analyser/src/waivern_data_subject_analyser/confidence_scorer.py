@@ -39,7 +39,7 @@ Note: The system provides only raw scores. Consumers can apply their own
 thresholds based on their risk tolerance and compliance requirements.
 """
 
-from waivern_rulesets.data_subject_indicator import DataSubjectRule
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 
 
 class DataSubjectConfidenceScorer:
@@ -49,7 +49,9 @@ class DataSubjectConfidenceScorer:
     using weighted rule matching.
     """
 
-    def calculate_confidence(self, matched_rules: list[DataSubjectRule]) -> int:
+    def calculate_confidence(
+        self, matched_rules: list[DataSubjectIndicatorRule]
+    ) -> int:
         """Calculate confidence score from matched rules.
 
         Implements algorithm: sum(rule.confidence_weight for rule in matched_rules),
