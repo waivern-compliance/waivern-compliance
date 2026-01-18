@@ -746,7 +746,7 @@ function run() {}""",
         payment_findings = [f for f in findings if "payment" in f.purpose.lower()]
         assert len(payment_findings) > 0
         evidence = payment_findings[0].evidence[0].content
-        assert "   1→" in evidence
+        assert "   1  " in evidence  # Line 1 should be in the context
 
     def test_context_window_at_end_of_file(
         self,
@@ -779,19 +779,19 @@ const payment = require('stripe');""",
         payment_findings = [f for f in findings if "payment" in f.purpose.lower()]
         assert len(payment_findings) > 0
         evidence = payment_findings[0].evidence[0].content
-        assert "   5→" in evidence
+        assert "   5  " in evidence  # Line 5 should be in the context
 
-    def test_matched_line_marked_with_indicator(
+    def test_evidence_includes_line_numbers(
         self,
         multiline_file_data: SourceCodeFileDataModel,
         sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
     ) -> None:
-        """Test that the matched line is marked with an arrow indicator."""
+        """Test that evidence includes line numbers in a consistent format."""
         handler = SourceCodeSchemaInputHandler(context_window="small")
         source_data = SourceCodeDataModel(
             schemaVersion="1.0.0",
-            name="Indicator test",
-            description="Test arrow indicator",
+            name="Line numbers test",
+            description="Test line number formatting",
             source="source_code",
             metadata=sample_analysis_metadata,
             data=[multiline_file_data],
@@ -801,13 +801,15 @@ const payment = require('stripe');""",
 
         assert len(findings) > 0
         evidence = findings[0].evidence[0].content
-        assert "→" in evidence
 
+        # Evidence should include line numbers in format "   N  content"
         lines = evidence.split("\n")
-        arrow_count = sum(1 for line in lines if "→" in line)
-        space_count = sum(
-            1 for line in lines if line and line[4:5] == " " and "→" not in line
-        )
+        assert len(lines) > 0
 
-        assert arrow_count >= 1
-        assert space_count >= 1
+        # Each line should have a 4-digit padded line number followed by two spaces
+        for line in lines:
+            if line:  # Skip empty lines
+                # Format is "   N  content" where N is right-aligned in 4 chars
+                assert line[4:6] == "  ", (
+                    f"Expected two spaces after line number: {line}"
+                )

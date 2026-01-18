@@ -199,12 +199,11 @@ class SourceCodeSchemaInputHandler:
             start_idx = max(0, line_index - window_size)
             end_idx = min(len(lines), line_index + window_size + 1)
 
-        # Build context with line numbers and arrow indicator for matched line
+        # Build context with line numbers
         context_lines: list[str] = []
         for i in range(start_idx, end_idx):
             line_num = i + 1  # 1-based line numbers
-            indicator = "→" if i == line_index else " "
-            context_lines.append(f"{line_num:4d}{indicator} {lines[i].rstrip()}")
+            context_lines.append(f"{line_num:4d}  {lines[i].rstrip()}")
 
         content = "\n".join(context_lines)
 
