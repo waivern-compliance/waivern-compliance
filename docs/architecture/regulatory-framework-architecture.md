@@ -1,7 +1,7 @@
 # Regulatory Framework Architecture
 
 - **Status:** Implemented (Foundation)
-- **Last Updated:** 2025-12-30
+- **Last Updated:** 2026-01-18
 - **Related:** [Export Architecture](../future-plans/export-architecture.md), [Business Logic Centric Analysers](../future-plans/business-logic-centric-analysers.md)
 
 ## Overview

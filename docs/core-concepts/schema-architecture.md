@@ -19,7 +19,7 @@ Schemas used by multiple components across the framework:
 Schemas that define a single component's output:
 - Source code analyser → `libs/waivern-source-code-analyser/src/waivern_source_code_analyser/schemas/json_schemas/source_code/`
 - Personal data analyser → `libs/waivern-personal-data-analyser/src/waivern_personal_data_analyser/schemas/json_schemas/personal_data_finding/`
-- Data subject analyser → `libs/waivern-data-subject-analyser/src/waivern_data_subject_analyser/schemas/json_schemas/data_subject_finding/`
+- Data subject analyser → `libs/waivern-data-subject-analyser/src/waivern_data_subject_analyser/schemas/json_schemas/data_subject_indicator/`
 - Processing purpose analyser → `libs/waivern-processing-purpose-analyser/src/waivern_processing_purpose_analyser/schemas/json_schemas/processing_purpose_finding/`
 
 ### 3. Domain-Shared Schemas → Domain Package

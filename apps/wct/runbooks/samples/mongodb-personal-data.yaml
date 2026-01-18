@@ -51,9 +51,9 @@ artifacts:
     output: true
 
   # Data subject classification on MongoDB content
-  mongodb_data_subject:
-    name: "Data Subject Classification in MongoDB"
-    description: "Identify data subject categories (employees, customers, etc.) from MongoDB content for GDPR Article 30(1)(c) compliance"
+  mongodb_data_subject_indicators:
+    name: "Data Subject Detection in MongoDB"
+    description: "Detect data subject categories (employees, customers, etc.) from MongoDB content using pattern matching"
     contact: "Data Protection Team <dpo@company.co.uk>"
     inputs: mongodb_data
     process:
@@ -67,4 +67,11 @@ artifacts:
           enable_llm_validation: false
           llm_batch_size: 50
           llm_validation_mode: "conservative"
+
+  mongodb_gdpr_data_subject:
+    name: "GDPR Data Subject Classification (MongoDB)"
+    description: "Classify detected data subject indicators according to GDPR categories for Article 30(1)(c) compliance"
+    inputs: mongodb_data_subject_indicators
+    process:
+      type: "gdpr_data_subject_classifier"
     output: true

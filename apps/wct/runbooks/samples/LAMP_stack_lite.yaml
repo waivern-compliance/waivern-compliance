@@ -53,9 +53,9 @@ artifacts:
       type: "gdpr_personal_data_classifier"
     output: true
 
-  sqlite_data_subject:
-    name: "Data Subject Classification in SQLite Database"
-    description: "Identify data subject categories from database content for GDPR Article 30(1)(c) compliance"
+  sqlite_data_subject_indicators:
+    name: "Data Subject Detection in SQLite Database"
+    description: "Detect data subject categories from database content using pattern matching"
     contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
     inputs: sqlite_data
     process:
@@ -69,6 +69,13 @@ artifacts:
           enable_llm_validation: false
           llm_batch_size: 50
           llm_validation_mode: "conservative"
+
+  sqlite_gdpr_data_subject:
+    name: "GDPR Data Subject Classification (SQLite)"
+    description: "Classify detected data subject indicators according to GDPR categories for Article 30(1)(c) compliance"
+    inputs: sqlite_data_subject_indicators
+    process:
+      type: "gdpr_data_subject_classifier"
     output: true
 
   sqlite_processing_purpose:
