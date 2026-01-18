@@ -112,3 +112,9 @@ class RulesetMissingVersion(AbstractRuleset[ProcessingPurposeRule]):
     def get_rules(self) -> tuple[ProcessingPurposeRule, ...]:
         """Return empty rules."""
         return ()
+
+
+class NonGenericClass:
+    """A class without generic parameter for testing rule type extraction failure."""
+
+    pass

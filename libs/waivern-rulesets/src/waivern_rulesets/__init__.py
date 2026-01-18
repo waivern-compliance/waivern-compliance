@@ -49,22 +49,11 @@ from waivern_rulesets.service_integrations import (
     ServiceIntegrationsRuleset,
 )
 
-# Built-in rulesets with their corresponding rule types
-# Each ruleset class must define ruleset_name and ruleset_version ClassVars
-_BUILTIN_RULESETS = [
-    (PersonalDataIndicatorRuleset, PersonalDataIndicatorRule),
-    (ProcessingPurposesRuleset, ProcessingPurposeRule),
-    (DataCollectionRuleset, DataCollectionRule),
-    (ServiceIntegrationsRuleset, ServiceIntegrationRule),
-    (DataSubjectIndicatorRuleset, DataSubjectIndicatorRule),
-    (GDPRPersonalDataClassificationRuleset, GDPRPersonalDataClassificationRule),
-    (GDPRDataSubjectClassificationRuleset, GDPRDataSubjectClassificationRule),
-]
-
-# Register all built-in rulesets automatically on import with type information
+# Auto-discover and register all rulesets from entry points
+# Each ruleset declares an entry point in pyproject.toml under [project.entry-points."waivern.rulesets"]
+# The rule type is extracted automatically from the generic parameter
 _registry = RulesetRegistry()
-for _ruleset_class, _rule_type in _BUILTIN_RULESETS:
-    _registry.register(_ruleset_class, _rule_type)
+_registry.discover_from_entry_points()
 
 __all__ = [
     # Errors

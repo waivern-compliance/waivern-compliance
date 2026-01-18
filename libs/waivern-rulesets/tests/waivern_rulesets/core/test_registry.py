@@ -1,17 +1,24 @@
 """Unit tests for RulesetRegistry."""
 
+import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from waivern_rulesets.core.exceptions import RulesetNotFoundError
-from waivern_rulesets.core.registry import RulesetRegistry
+from waivern_rulesets.core.registry import RulesetRegistry, extract_rule_type
+from waivern_rulesets.personal_data_indicator import (
+    PersonalDataIndicatorRule,
+    PersonalDataIndicatorRuleset,
+)
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
 from .conftest import (
     ConcreteRuleset,
     ConcreteRulesetV2,
+    NonGenericClass,
     RulesetMissingName,
     RulesetMissingVersion,
 )
@@ -209,3 +216,93 @@ class TestRulesetRegistry:
         first_instance = instances[0]
         for instance in instances[1:]:
             assert instance is first_instance, "Different instances were created!"
+
+
+class TestRulesetDiscovery:
+    """Test cases for entry point based ruleset discovery."""
+
+    def test_extract_rule_type_from_generic_parameter(self) -> None:
+        """Test that extract_rule_type() extracts correct type from generic parameter."""
+        result = extract_rule_type(PersonalDataIndicatorRuleset)
+
+        assert result is PersonalDataIndicatorRule
+
+    def test_extract_rule_type_raises_for_non_generic_class(self) -> None:
+        """Test that extract_rule_type() raises error for non-generic class."""
+        with pytest.raises(ValueError, match="Cannot extract rule type"):
+            extract_rule_type(NonGenericClass)  # type: ignore[arg-type]
+
+    def test_discover_from_entry_points_registers_rulesets(
+        self, isolated_registry: RulesetRegistry
+    ) -> None:
+        """Test that discover_from_entry_points() registers rulesets from entry points."""
+        # Clear registry to start fresh
+        isolated_registry.clear()
+
+        # Create a mock entry point
+        mock_ep = MagicMock()
+        mock_ep.name = "personal_data_indicator"
+        mock_ep.load.return_value = PersonalDataIndicatorRuleset
+
+        with patch(
+            "waivern_rulesets.core.registry.entry_points", return_value=[mock_ep]
+        ):
+            isolated_registry.discover_from_entry_points()
+
+        # Verify ruleset was registered
+        assert isolated_registry.is_registered("personal_data_indicator", "1.0.0")
+
+        # Verify it can be retrieved with correct type
+        result = isolated_registry.get_ruleset_class(
+            "personal_data_indicator", "1.0.0", PersonalDataIndicatorRule
+        )
+        assert result is PersonalDataIndicatorRuleset
+
+    def test_discover_from_entry_points_is_idempotent(
+        self, isolated_registry: RulesetRegistry
+    ) -> None:
+        """Test that calling discover_from_entry_points() twice is safe."""
+        isolated_registry.clear()
+
+        mock_ep = MagicMock()
+        mock_ep.name = "personal_data_indicator"
+        mock_ep.load.return_value = PersonalDataIndicatorRuleset
+
+        with patch(
+            "waivern_rulesets.core.registry.entry_points", return_value=[mock_ep]
+        ):
+            # First call
+            isolated_registry.discover_from_entry_points()
+            # Second call should not raise
+            isolated_registry.discover_from_entry_points()
+
+        # Should still be registered correctly
+        assert isolated_registry.is_registered("personal_data_indicator", "1.0.0")
+
+    def test_discover_from_entry_points_logs_warning_for_invalid_entry(
+        self, isolated_registry: RulesetRegistry, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test that invalid entry points log warning but don't break discovery."""
+        isolated_registry.clear()
+
+        # Create one valid and one invalid entry point
+        valid_ep = MagicMock()
+        valid_ep.name = "personal_data_indicator"
+        valid_ep.load.return_value = PersonalDataIndicatorRuleset
+
+        invalid_ep = MagicMock()
+        invalid_ep.name = "broken_ruleset"
+        invalid_ep.load.side_effect = ImportError("Module not found")
+
+        with patch(
+            "waivern_rulesets.core.registry.entry_points",
+            return_value=[invalid_ep, valid_ep],
+        ):
+            with caplog.at_level(logging.WARNING):
+                isolated_registry.discover_from_entry_points()
+
+        # Invalid entry should log warning
+        assert "Failed to load ruleset from entry point 'broken_ruleset'" in caplog.text
+
+        # Valid entry should still be registered
+        assert isolated_registry.is_registered("personal_data_indicator", "1.0.0")

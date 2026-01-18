@@ -1,12 +1,43 @@
 """Ruleset registry for managing registered ruleset classes."""
 
+import logging
 import threading
-from typing import Any, ClassVar, TypedDict
+from importlib.metadata import entry_points
+from typing import Any, ClassVar, TypedDict, get_args
 
 from waivern_core import Rule
 
 from waivern_rulesets.core.base import AbstractRuleset
 from waivern_rulesets.core.exceptions import RulesetNotFoundError
+
+logger = logging.getLogger(__name__)
+
+
+def extract_rule_type(ruleset_class: type[AbstractRuleset[Any]]) -> type[Rule]:
+    """Extract the Rule type from a ruleset class's generic parameter.
+
+    Uses Python's __orig_bases__ to find the generic parameter from the
+    class hierarchy (e.g., YAMLRuleset[PersonalDataIndicatorRule]).
+
+    Args:
+        ruleset_class: A ruleset class that inherits from AbstractRuleset[T]
+
+    Returns:
+        The Rule subclass used as the generic parameter
+
+    Raises:
+        ValueError: If the rule type cannot be extracted from the class
+
+    """
+    for base in getattr(ruleset_class, "__orig_bases__", ()):
+        args = get_args(base)
+        if args and isinstance(args[0], type) and issubclass(args[0], Rule):
+            return args[0]
+
+    raise ValueError(
+        f"Cannot extract rule type from {ruleset_class.__name__}. "
+        "Class must inherit from AbstractRuleset[T] where T is a Rule subclass."
+    )
 
 
 class RulesetRegistryState(TypedDict):
@@ -173,6 +204,32 @@ class RulesetRegistry:
 
         """
         return tuple(version for (n, version) in self._registry.keys() if n == name)
+
+    def discover_from_entry_points(self, group: str = "waivern.rulesets") -> None:
+        """Discover and register rulesets from entry points.
+
+        Loads all entry points in the specified group, extracts the rule type
+        from each ruleset class's generic parameter, and registers them.
+
+        Args:
+            group: The entry point group to discover from.
+                   Defaults to "waivern.rulesets".
+
+        """
+        for ep in entry_points(group=group):
+            try:
+                ruleset_class = ep.load()
+                rule_type = extract_rule_type(ruleset_class)
+                self.register(ruleset_class, rule_type)
+                logger.debug(
+                    "Discovered ruleset '%s' from entry point '%s'",
+                    getattr(ruleset_class, "ruleset_name", "unknown"),
+                    ep.name,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to load ruleset from entry point '%s': %s", ep.name, e
+                )
 
     @classmethod
     def snapshot_state(cls) -> RulesetRegistryState:
