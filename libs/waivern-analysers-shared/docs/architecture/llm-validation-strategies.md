@@ -4,7 +4,7 @@ Generic, reusable LLM validation strategies for all analysers.
 
 ## Overview
 
-This architecture enables any analyser to use shared LLM validation strategies with configurable by implementing simple protocols.
+This architecture enables any analyser to use shared LLM validation strategies by implementing simple protocols.
 
 ## Configuration
 
@@ -190,7 +190,7 @@ class ConcernProvider[T: BaseFindingModel](Protocol):
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   Sampled/non-sampled findings batched by token limits, sent to LLM.        │
-│   (`1By_source` will ensure findings per source are always batched together)│
+│   (`by_source` will ensure findings per source are always batched together) │
 │   LLM returns validation results (ONLY return FALSE_POSITIVE).              │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -675,37 +675,16 @@ Analyser.process()
 | Empty response from LLM              | All samples treated as TRUE_POSITIVE                             |
 | Provider not implemented             | Fall back to `grouping="none"`                                   |
 
-## Migration Path
+## Future Plans
 
-### Phase 1: Current State (Implemented)
+The following enhancements are planned for future iterations:
 
-- Sampling hardcoded in `ProcessingPurposeAnalyser`
-- Works only for processing purpose findings
+### Advanced Sampling Strategies
 
-### Phase 2: Build Shared Infrastructure (Implemented)
+- **Stratified sampling**: Sample by file AND concern simultaneously for more representative coverage
+- **Adaptive sampling**: Dynamically adjust sample size based on group uncertainty or validation confidence scores
 
-- ✅ Create `ValidationOrchestrator` with grouping → sampling → batching → LLM → decisions flow
-- ✅ Implement `GroupingStrategy` protocol and `ConcernGroupingStrategy`, `SourceGroupingStrategy`
-- ✅ Implement `SamplingStrategy` protocol and `RandomSamplingStrategy`
-- ✅ Define `SourceProvider` and `ConcernProvider` protocols
-- ✅ Define `RemovedGroup` and `ValidationResult` dataclasses
-- ✅ Comprehensive unit tests for all shared components
+### Performance Optimisations
 
-### Phase 3: Refactor ProcessingPurposeAnalyser (Implemented)
-
-- Implement `ProcessingPurposeConcernProvider`
-- Implement `ProcessingPurposeSourceProvider`
-- Replace hardcoded sampling logic with `ValidationOrchestrator`
-- Verify behaviour matches current implementation (same results)
-
-### Phase 4: Enable Other Analysers
-
-- Personal data analyser implements `ConcernProvider` (by data_category)
-- Data subject analyser implements `ConcernProvider` (by subject_type)
-- All analysers can use sampling with no code duplication
-
-### Phase 5: Advanced Strategies
-
-- Stratified sampling (by file AND concern)
-- Adaptive sampling (more samples for uncertain groups)
-- Parallel batch validation for large sample sets
+- **Parallel batch validation**: Process multiple LLM batches concurrently for large sample sets
+- **Caching**: Cache validation results for identical evidence patterns across runs
