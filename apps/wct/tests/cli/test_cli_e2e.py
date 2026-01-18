@@ -364,6 +364,58 @@ class TestWCTCLIE2E:
         assert "Available:" in result.stderr or "Available:" in result.stdout
         assert "json" in result.stderr or "json" in result.stdout
 
+    def test_wct_cli_lists_available_connectors(self) -> None:
+        """CLI lists available connectors with their names and descriptions."""
+        # Act - Execute ls-connectors command
+        result = subprocess.run(
+            ["uv", "run", "wct", "ls-connectors"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+        # Assert - Command should succeed
+        assert result.returncode == 0, (
+            f"wct ls-connectors failed with return code {result.returncode}.\n"
+            f"STDOUT: {result.stdout}\n"
+            f"STDERR: {result.stderr}"
+        )
+
+        # Assert - Output should contain built-in connectors
+        assert "filesystem" in result.stdout, (
+            "Expected to find 'filesystem' connector in output"
+        )
+        assert "sqlite" in result.stdout, (
+            "Expected to find 'sqlite' connector in output"
+        )
+
+    def test_wct_cli_lists_available_processors(self) -> None:
+        """CLI lists available processors with their names and descriptions."""
+        # Act - Execute ls-processors command
+        result = subprocess.run(
+            ["uv", "run", "wct", "ls-processors"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+        # Assert - Command should succeed
+        assert result.returncode == 0, (
+            f"wct ls-processors failed with return code {result.returncode}.\n"
+            f"STDOUT: {result.stdout}\n"
+            f"STDERR: {result.stderr}"
+        )
+
+        # Assert - Output should contain built-in processors
+        assert "personal_data" in result.stdout, (
+            "Expected to find 'personal_data' processor in output"
+        )
+        assert "processing_purpose" in result.stdout, (
+            "Expected to find 'processing_purpose' processor in output"
+        )
+
     def test_wct_cli_lists_available_exporters(self) -> None:
         """CLI lists available exporters with their supported frameworks."""
         # Act - Execute ls-exporters command
