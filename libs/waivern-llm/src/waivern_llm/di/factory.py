@@ -53,7 +53,7 @@ class LLMServiceFactory:
 
         llm_service = container.get_service(BaseLLMService)
         if llm_service:
-            result = llm_service.analyse_data("text", "prompt")
+            result = llm_service.invoke("your prompt here")
         ```
 
     """

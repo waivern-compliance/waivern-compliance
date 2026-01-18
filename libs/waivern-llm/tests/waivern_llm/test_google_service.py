@@ -88,24 +88,21 @@ class TestGoogleLLMServiceInitialisation:
         service = GoogleLLMService(model_name="gemini-1.5-pro", api_key="test-key")
 
         assert isinstance(service, BaseLLMService)
-        assert hasattr(service, "analyse_data")
-        assert callable(service.analyse_data)
+        assert hasattr(service, "invoke")
+        assert callable(service.invoke)
 
 
-class TestGoogleLLMServiceDataAnalysis:
-    """Test GoogleLLMService data analysis functionality."""
+class TestGoogleLLMServiceInvoke:
+    """Test GoogleLLMService invoke functionality."""
 
     @pytest.fixture
     def service_with_mock_api(self) -> GoogleLLMService:
         """Create service instance with mocked API for testing."""
         return GoogleLLMService(model_name="gemini-1.5-pro", api_key="test-api-key")
 
-    def test_successful_data_analysis(
-        self, service_with_mock_api: GoogleLLMService
-    ) -> None:
-        """Test successful data analysis returns expected result."""
-        text_to_analyse = "John Smith lives at 123 Main Street"
-        analysis_prompt = "Identify personal data in the following text:"
+    def test_successful_invoke(self, service_with_mock_api: GoogleLLMService) -> None:
+        """Test successful LLM invocation returns expected result."""
+        prompt = "Identify personal data in: John Smith lives at 123 Main Street"
         expected_response = (
             "Personal data found: Name (John Smith), Address (123 Main Street)"
         )
@@ -123,25 +120,19 @@ class TestGoogleLLMServiceDataAnalysis:
             "sys.modules",
             {"langchain_google_genai": Mock(ChatGoogleGenerativeAI=mock_chat_class)},
         ):
-            result = service_with_mock_api.analyse_data(
-                text_to_analyse, analysis_prompt
-            )
+            result = service_with_mock_api.invoke(prompt)
 
             assert result == expected_response
             assert isinstance(result, str)
 
-            # Verify the LLM was called with the combined prompt
-            mock_llm.invoke.assert_called_once()
-            call_args = mock_llm.invoke.call_args[0][0]
-            assert analysis_prompt in call_args
-            assert text_to_analyse in call_args
+            # Verify the LLM was called with the prompt
+            mock_llm.invoke.assert_called_once_with(prompt)
 
-    def test_data_analysis_with_complex_response_content(
+    def test_invoke_with_complex_response_content(
         self, service_with_mock_api: GoogleLLMService
     ) -> None:
-        """Test data analysis handles complex response content structures."""
-        text_to_analyse = "Sample text for analysis"
-        analysis_prompt = "Analyse this text:"
+        """Test invoke handles complex response content structures."""
+        prompt = "Analyse this text: Sample text for analysis"
 
         # Test with list content structure
         mock_response = AIMessage(
@@ -162,9 +153,7 @@ class TestGoogleLLMServiceDataAnalysis:
             "sys.modules",
             {"langchain_google_genai": Mock(ChatGoogleGenerativeAI=mock_chat_class)},
         ):
-            result = service_with_mock_api.analyse_data(
-                text_to_analyse, analysis_prompt
-            )
+            result = service_with_mock_api.invoke(prompt)
 
             assert "Analysis result:" in result
             assert "Complex content structure" in result

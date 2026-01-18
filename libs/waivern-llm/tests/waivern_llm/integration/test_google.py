@@ -17,14 +17,16 @@ class TestGoogleLLMServiceIntegration:
     """Integration tests with real Google Gemini API."""
 
     @pytest.mark.integration
-    def test_simple_analysis(self, require_google: str) -> None:
-        """Test real Google API with simple text analysis."""
+    def test_simple_invoke(self, require_google: str) -> None:
+        """Test real Google API with simple invocation."""
         service = GoogleLLMService(api_key=require_google)
 
-        text = "John Smith, email: john@example.com, phone: 555-1234"
-        prompt = "List any personal data found in this text in a single line."
+        prompt = (
+            "List any personal data found in this text in a single line: "
+            "John Smith, email: john@example.com, phone: 555-1234"
+        )
 
-        result = service.analyse_data(text, prompt)
+        result = service.invoke(prompt)
 
         # Verify response structure (don't assert exact content - LLM responses vary)
         assert isinstance(result, str)
@@ -44,10 +46,9 @@ class TestGoogleLLMServiceIntegration:
         assert service.model_name == expected_model
 
         # Make a real API call to verify it works
-        text = "Test data"
         prompt = "Reply with 'OK' if you can read this."
 
-        result = service.analyse_data(text, prompt)
+        result = service.invoke(prompt)
 
         assert isinstance(result, str)
         assert len(result) > 0
@@ -61,25 +62,23 @@ class TestGoogleLLMServiceIntegration:
         assert service.model_name == custom_model
 
         # Make a real API call to verify it works with this model
-        text = "Hello"
         prompt = "Reply with just the word 'Hi'"
 
-        result = service.analyse_data(text, prompt)
+        result = service.invoke(prompt)
 
         assert isinstance(result, str)
         assert len(result) > 0
 
     @pytest.mark.integration
-    def test_handles_empty_input(self, require_google: str) -> None:
+    def test_handles_empty_prompt(self, require_google: str) -> None:
         """Test real Google API handles edge cases gracefully."""
         service = GoogleLLMService(api_key=require_google)
 
-        text = ""
-        prompt = "If the text is empty, respond with just 'EMPTY'"
+        prompt = "The following text is empty: ''. Respond with just 'EMPTY'"
 
-        result = service.analyse_data(text, prompt)
+        result = service.invoke(prompt)
 
-        # Even with empty input, we should get a valid response
+        # Even with empty text, we should get a valid response
         assert isinstance(result, str)
         assert len(result) > 0
         # LLM should recognise empty input

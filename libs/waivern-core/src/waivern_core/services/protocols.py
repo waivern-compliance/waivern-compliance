@@ -152,7 +152,7 @@ class ServiceProvider(Protocol):
             ```python
             llm_service = provider.get_service(BaseLLMService)
             if llm_service:
-                result = llm_service.analyse_data(text, prompt)
+                result = llm_service.invoke(prompt)
             else:
                 # Fall back to non-LLM analysis
                 result = pattern_match_only(text)
@@ -178,7 +178,7 @@ class ServiceProvider(Protocol):
             ```python
             if provider.is_available(BaseLLMService):
                 llm_service = provider.get_service(BaseLLMService)
-                result = llm_service.analyse_data(text, prompt)
+                result = llm_service.invoke(prompt)
             ```
 
         """
