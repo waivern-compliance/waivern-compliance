@@ -7,7 +7,7 @@ regulatory classifiers (e.g., GDPR, CCPA) for framework-specific enrichment.
 
 import logging
 from pathlib import Path
-from typing import Final, override
+from typing import ClassVar, Final, override
 
 import yaml
 from pydantic import Field, model_validator
@@ -63,6 +63,9 @@ class PersonalDataIndicatorRuleset(AbstractRuleset[PersonalDataIndicatorRule]):
     This class provides structured access to personal data patterns
     with built-in logging capabilities for debugging and monitoring.
     """
+
+    ruleset_name: ClassVar[str] = _RULESET_NAME
+    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
 
     def __init__(self) -> None:
         """Initialise the personal data indicator ruleset."""

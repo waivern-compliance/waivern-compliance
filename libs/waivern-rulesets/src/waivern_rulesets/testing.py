@@ -322,19 +322,23 @@ class RulesetContractTests[RuleType: Rule]:
 
         Contract Requirement:
             Ruleset must be registerable and retrievable via RulesetRegistry.
+            Ruleset must define ruleset_name and ruleset_version ClassVars.
 
         Why This Matters:
             All rulesets are discovered and loaded via the registry.
             Registry incompatibility would prevent ruleset usage.
 
         """
-        test_registration_name = f"test_{expected_name}"
-        isolated_registry.register(test_registration_name, ruleset_class, rule_class)
+        # Get name and version from ClassVars (declared in AbstractRuleset)
+        name = ruleset_class.ruleset_name
+        version = ruleset_class.ruleset_version
+
+        # Register only if not already registered (rulesets auto-register on import)
+        if not isolated_registry.is_registered(name, version):
+            isolated_registry.register(ruleset_class, rule_class)
 
         # Should be able to retrieve and instantiate
-        retrieved_class = isolated_registry.get_ruleset_class(
-            test_registration_name, rule_class
-        )
+        retrieved_class = isolated_registry.get_ruleset_class(name, version, rule_class)
         assert retrieved_class is ruleset_class
 
         instance = retrieved_class()
@@ -362,13 +366,16 @@ class RulesetContractTests[RuleType: Rule]:
             RulesetLoader is the primary loading mechanism.
 
         """
-        test_registration_name = f"loader_test_{expected_name}"
-        isolated_registry.register(test_registration_name, ruleset_class, rule_class)
+        # Get name and version from ClassVars for URI construction
+        name = ruleset_class.ruleset_name
+        version = ruleset_class.ruleset_version
+
+        # Register only if not already registered (rulesets auto-register on import)
+        if not isolated_registry.is_registered(name, version):
+            isolated_registry.register(ruleset_class, rule_class)
 
         # Load via RulesetLoader using URI format
-        rules = RulesetLoader.load_ruleset(
-            f"local/{test_registration_name}/1.0.0", rule_class
-        )
+        rules = RulesetLoader.load_ruleset(f"local/{name}/{version}", rule_class)
 
         assert isinstance(rules, tuple)
         assert len(rules) > 0

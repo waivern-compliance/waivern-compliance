@@ -7,7 +7,7 @@ categories to GDPR-specific data types and Article 9 special categories.
 
 import logging
 from pathlib import Path
-from typing import Final, override
+from typing import ClassVar, Final, override
 
 import yaml
 from pydantic import Field, field_validator, model_validator
@@ -103,6 +103,9 @@ class GDPRPersonalDataClassificationRuleset(
     personal data indicators. Used by the GDPRPersonalDataClassifier
     to enrich generic findings with GDPR-specific information.
     """
+
+    ruleset_name: ClassVar[str] = _RULESET_NAME
+    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
 
     def __init__(self) -> None:
         """Initialise the GDPR personal data classification ruleset."""

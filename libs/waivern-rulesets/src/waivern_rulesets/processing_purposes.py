@@ -6,7 +6,7 @@ Version 1.0.0 has separated service integration patterns into dedicated service_
 
 import logging
 from pathlib import Path
-from typing import Final, override
+from typing import ClassVar, Final, override
 
 import yaml
 from pydantic import Field, ValidationInfo, field_validator, model_validator
@@ -79,6 +79,9 @@ class ProcessingPurposesRuleset(AbstractRuleset[ProcessingPurposeRule]):
     Processing purposes are business activities or intentions for data use,
     complementary to technical data collection patterns and service integrations.
     """
+
+    ruleset_name: ClassVar[str] = _RULESET_NAME
+    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
 
     def __init__(self) -> None:
         """Initialise the processing purposes ruleset."""

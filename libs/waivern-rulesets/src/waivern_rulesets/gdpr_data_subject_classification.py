@@ -7,7 +7,7 @@ to GDPR-specific data subject types and article references.
 
 import logging
 from pathlib import Path
-from typing import Final, override
+from typing import ClassVar, Final, override
 
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -152,6 +152,9 @@ class GDPRDataSubjectClassificationRuleset(
     data subject indicators. Used by the GDPRDataSubjectClassifier
     to enrich generic findings with GDPR-specific information.
     """
+
+    ruleset_name: ClassVar[str] = _RULESET_NAME
+    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
 
     def __init__(self) -> None:
         """Initialise the GDPR data subject classification ruleset."""

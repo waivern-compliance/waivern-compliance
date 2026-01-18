@@ -45,32 +45,21 @@ from waivern_rulesets.service_integrations import (
 )
 
 # Built-in rulesets with their corresponding rule types
+# Each ruleset class must define ruleset_name and ruleset_version ClassVars
 _BUILTIN_RULESETS = [
-    (
-        "personal_data_indicator",
-        PersonalDataIndicatorRuleset,
-        PersonalDataIndicatorRule,
-    ),
-    ("processing_purposes", ProcessingPurposesRuleset, ProcessingPurposeRule),
-    ("data_collection", DataCollectionRuleset, DataCollectionRule),
-    ("service_integrations", ServiceIntegrationsRuleset, ServiceIntegrationRule),
-    ("data_subject_indicator", DataSubjectIndicatorRuleset, DataSubjectIndicatorRule),
-    (
-        "gdpr_personal_data_classification",
-        GDPRPersonalDataClassificationRuleset,
-        GDPRPersonalDataClassificationRule,
-    ),
-    (
-        "gdpr_data_subject_classification",
-        GDPRDataSubjectClassificationRuleset,
-        GDPRDataSubjectClassificationRule,
-    ),
+    (PersonalDataIndicatorRuleset, PersonalDataIndicatorRule),
+    (ProcessingPurposesRuleset, ProcessingPurposeRule),
+    (DataCollectionRuleset, DataCollectionRule),
+    (ServiceIntegrationsRuleset, ServiceIntegrationRule),
+    (DataSubjectIndicatorRuleset, DataSubjectIndicatorRule),
+    (GDPRPersonalDataClassificationRuleset, GDPRPersonalDataClassificationRule),
+    (GDPRDataSubjectClassificationRuleset, GDPRDataSubjectClassificationRule),
 ]
 
 # Register all built-in rulesets automatically on import with type information
 _registry = RulesetRegistry()
-for _ruleset_name, _ruleset_class, _rule_type in _BUILTIN_RULESETS:
-    _registry.register(_ruleset_name, _ruleset_class, _rule_type)
+for _ruleset_class, _rule_type in _BUILTIN_RULESETS:
+    _registry.register(_ruleset_class, _rule_type)
 
 __all__ = [
     # Errors

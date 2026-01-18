@@ -8,7 +8,7 @@ of imports, class names, and function names.
 
 import logging
 from pathlib import Path
-from typing import Final, override
+from typing import ClassVar, Final, override
 
 import yaml
 from pydantic import Field, model_validator
@@ -74,6 +74,9 @@ class ServiceIntegrationsRuleset(AbstractRuleset[ServiceIntegrationRule]):
     Service integrations are critical for GDPR compliance as they represent
     data processor relationships that require data processing agreements.
     """
+
+    ruleset_name: ClassVar[str] = _RULESET_NAME
+    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
 
     def __init__(self) -> None:
         """Initialise the service integrations ruleset."""

@@ -7,7 +7,7 @@ All patterns use simple string matching for human readability and easy maintenan
 
 import logging
 from pathlib import Path
-from typing import Final, override
+from typing import ClassVar, Final, override
 
 import yaml
 from pydantic import Field, model_validator
@@ -62,6 +62,9 @@ _RULESET_NAME: Final[str] = "data_collection"
 
 class DataCollectionRuleset(AbstractRuleset[DataCollectionRule]):
     """Ruleset for detecting data collection patterns in source code."""
+
+    ruleset_name: ClassVar[str] = _RULESET_NAME
+    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
 
     def __init__(self) -> None:
         """Initialise the data collection patterns ruleset."""

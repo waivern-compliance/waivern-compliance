@@ -3,7 +3,7 @@
 import abc
 import logging
 from dataclasses import dataclass
-from typing import Any, TypedDict, override
+from typing import Any, ClassVar, TypedDict, override
 
 from waivern_core import BaseRuleset, Rule, RulesetError
 
@@ -97,8 +97,16 @@ class AbstractRuleset[RuleType: Rule](BaseRuleset):
     - Type-safe generic parameter for specific rule types
     - Logging support following WCT conventions
 
-    Each ruleset must define its canonical name via the name property.
+    Each ruleset must define:
+    - ruleset_name: ClassVar[str] - canonical name for registry
+    - ruleset_version: ClassVar[str] - semantic version string
+    - name property - returns ruleset_name (for instance access)
+    - version property - returns ruleset_version (for instance access)
     """
+
+    # ClassVars for registry registration (accessible at class level)
+    ruleset_name: ClassVar[str]
+    ruleset_version: ClassVar[str]
 
     @property
     @abc.abstractmethod
@@ -139,12 +147,6 @@ class RulesetNotFoundError(RulesetError):
     pass
 
 
-class RulesetAlreadyRegisteredError(RulesetError):
-    """Raised when attempting to register a ruleset that already exists."""
-
-    pass
-
-
 class RulesetRegistryState(TypedDict):
     """State snapshot for RulesetRegistry.
 
@@ -152,16 +154,16 @@ class RulesetRegistryState(TypedDict):
     to prevent test pollution.
     """
 
-    registry: dict[str, type[AbstractRuleset[Any]]]
-    type_mapping: dict[str, type[Rule]]
+    registry: dict[tuple[str, str], type[AbstractRuleset[Any]]]
+    type_mapping: dict[tuple[str, str], type[Rule]]
 
 
 class RulesetRegistry:
     """Type-aware singleton registry for ruleset classes with explicit registration."""
 
     _instance: "RulesetRegistry | None" = None
-    _registry: dict[str, type[AbstractRuleset[Any]]]
-    _type_mapping: dict[str, type[Rule]]
+    _registry: dict[tuple[str, str], type[AbstractRuleset[Any]]]
+    _type_mapping: dict[tuple[str, str], type[Rule]]
 
     def __new__(cls, *args: Any, **kwargs: Any) -> "RulesetRegistry":  # noqa: ANN401  # Singleton pattern requires flexible constructor arguments
         """Create or return the singleton instance of RulesetRegistry.
@@ -180,48 +182,81 @@ class RulesetRegistry:
         return cls._instance
 
     def register[T: Rule](
-        self, name: str, ruleset_class: type[AbstractRuleset[T]], rule_type: type[T]
+        self, ruleset_class: type[AbstractRuleset[T]], rule_type: type[T]
     ) -> None:
         """Register a ruleset class with its rule type.
 
+        Extracts name and version from the ruleset class's ClassVars:
+        - ruleset_name: ClassVar[str]
+        - ruleset_version: ClassVar[str]
+
+        Registration is idempotent - duplicate registrations are silently ignored.
+        This is safer for module imports that may run multiple times.
+
         Args:
-            name: The name to register the ruleset under
-            ruleset_class: The ruleset class to register
+            ruleset_class: The ruleset class to register (must have ruleset_name
+                and ruleset_version ClassVars)
             rule_type: The specific rule type this ruleset returns
 
         Raises:
-            RulesetAlreadyRegisteredError: If a ruleset with this name already exists
+            ValueError: If ruleset_class is missing required ClassVars
 
         """
-        if name in self._registry:
-            raise RulesetAlreadyRegisteredError(
-                f"Ruleset '{name}' is already registered"
+        # Extract name and version from ClassVars
+        name = getattr(ruleset_class, "ruleset_name", None)
+        version = getattr(ruleset_class, "ruleset_version", None)
+
+        if name is None:
+            raise ValueError(
+                f"Ruleset class {ruleset_class.__name__} must define "
+                "'ruleset_name' ClassVar"
             )
-        self._registry[name] = ruleset_class
-        self._type_mapping[name] = rule_type
+        if version is None:
+            raise ValueError(
+                f"Ruleset class {ruleset_class.__name__} must define "
+                "'ruleset_version' ClassVar"
+            )
+
+        key = (name, version)
+        if key in self._registry:
+            # Idempotent: silently ignore duplicate registration
+            # This is safer for module imports that may run multiple times
+            return
+        self._registry[key] = ruleset_class
+        self._type_mapping[key] = rule_type
 
     def get_ruleset_class[T: Rule](
-        self, name: str, expected_rule_type: type[T]
+        self, name: str, version: str, expected_rule_type: type[T]
     ) -> type[AbstractRuleset[T]]:
         """Get a registered ruleset class with type validation.
 
         Args:
             name: The name of the ruleset to retrieve
+            version: The version of the ruleset to retrieve
             expected_rule_type: The expected rule type for validation
 
         Returns:
             The ruleset class with proper typing
 
         Raises:
-            RulesetNotFoundError: If the ruleset is not registered
+            RulesetNotFoundError: If the ruleset name+version is not registered
             TypeError: If the expected type doesn't match the registered type
 
         """
-        if name not in self._registry:
-            raise RulesetNotFoundError(f"Ruleset {name} not registered")
+        key = (name, version)
+        if key not in self._registry:
+            available = self.get_available_versions(name)
+            if available:
+                raise RulesetNotFoundError(
+                    f"Ruleset '{name}' version '{version}' not registered. "
+                    f"Available versions: {', '.join(available)}"
+                )
+            raise RulesetNotFoundError(
+                f"Ruleset '{name}' not registered (no versions available)"
+            )
 
         # Runtime type validation
-        actual_rule_type = self._type_mapping[name]
+        actual_rule_type = self._type_mapping[key]
         if actual_rule_type != expected_rule_type:
             raise TypeError(
                 f"Ruleset '{name}' returns {actual_rule_type.__name__}, "
@@ -230,7 +265,7 @@ class RulesetRegistry:
 
         # Type checker now knows this returns Ruleset[T]
         # The registry stores the exact type we validated above
-        ruleset_class = self._registry[name]
+        ruleset_class = self._registry[key]
         return ruleset_class
 
     def clear(self) -> None:
@@ -247,17 +282,30 @@ class RulesetRegistry:
         """
         return len(self._registry) == 0
 
-    def is_registered(self, name: str) -> bool:
-        """Check if a ruleset is registered under the given name.
+    def is_registered(self, name: str, version: str) -> bool:
+        """Check if a ruleset is registered under the given name and version.
 
         Args:
             name: The name to check.
+            version: The version to check.
 
         Returns:
-            True if a ruleset is registered under this name, False otherwise.
+            True if a ruleset is registered for this name+version, False otherwise.
 
         """
-        return name in self._registry
+        return (name, version) in self._registry
+
+    def get_available_versions(self, name: str) -> tuple[str, ...]:
+        """Get all registered versions for a ruleset name.
+
+        Args:
+            name: The ruleset name to query.
+
+        Returns:
+            Tuple of version strings registered for this name (may be empty).
+
+        """
+        return tuple(version for (n, version) in self._registry.keys() if n == name)
 
     @classmethod
     def snapshot_state(cls) -> RulesetRegistryState:
@@ -388,7 +436,7 @@ class RulesetLoader:
                 f"Supported providers: {', '.join(sorted(cls._SUPPORTED_PROVIDERS))}"
             )
 
-        # For 'local' provider, use the registry with the ruleset name
+        # For 'local' provider, use the registry with the ruleset name and version
         registry = RulesetRegistry()
-        ruleset_class = registry.get_ruleset_class(uri.name, rule_type)
+        ruleset_class = registry.get_ruleset_class(uri.name, uri.version, rule_type)
         return ruleset_class()

@@ -6,7 +6,7 @@ and context-aware pattern matching for identifying categories of data subjects.
 
 import logging
 from pathlib import Path
-from typing import Final, Literal, override
+from typing import ClassVar, Final, Literal, override
 
 import yaml
 from pydantic import Field, model_validator
@@ -96,6 +96,9 @@ class DataSubjectIndicatorRuleset(AbstractRuleset[DataSubjectIndicatorRule]):
     Data subject detection identifies categories of individuals (e.g., employees,
     customers, patients) whose personal data is being processed.
     """
+
+    ruleset_name: ClassVar[str] = _RULESET_NAME
+    ruleset_version: ClassVar[str] = _RULESET_DATA_VERSION
 
     def __init__(self) -> None:
         """Initialise the data subject indicator ruleset."""
