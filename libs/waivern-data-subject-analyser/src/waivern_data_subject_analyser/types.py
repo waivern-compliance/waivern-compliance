@@ -1,11 +1,16 @@
 """Configuration types for data subject analyser."""
 
+from typing import Literal
+
 from pydantic import Field
 from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )
 from waivern_core import BaseComponentConfiguration
+
+# Type alias for source code context window sizes
+SourceCodeContextWindow = Literal["small", "medium", "large", "full"]
 
 
 class DataSubjectAnalyserConfig(BaseComponentConfiguration):
@@ -25,4 +30,12 @@ class DataSubjectAnalyserConfig(BaseComponentConfiguration):
     llm_validation: LLMValidationConfig = Field(
         default_factory=lambda: LLMValidationConfig(enable_llm_validation=False),
         description="LLM validation configuration for improving classification accuracy",
+    )
+    source_code_context_window: SourceCodeContextWindow = Field(
+        default="small",
+        description=(
+            "Context window size for source code evidence: "
+            "'small' (±3 lines), 'medium' (±15 lines), "
+            "'large' (±50 lines), 'full' (entire file)"
+        ),
     )

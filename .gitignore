@@ -21,7 +21,7 @@ outputs/
 .env
 
 # Local development setup
-.d
+.local
 
 # Private runbooks
 apps/wct/runbooks/Private/

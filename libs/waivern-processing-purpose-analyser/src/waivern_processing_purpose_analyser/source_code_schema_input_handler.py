@@ -58,7 +58,19 @@ class SourceCodeSchemaInputHandler:
 
         """
         self.context_window: SourceCodeContextWindow = context_window
-        # Load all three rulesets for comprehensive source code analysis with proper typing
+
+        # NOTE: Rulesets are hardcoded here rather than config-driven (unlike
+        # DataSubjectAnalyser which uses config.ruleset). This is intentional:
+        #
+        # Processing purpose detection requires THREE different ruleset types,
+        # each with a different Pydantic model (ProcessingPurposeRule,
+        # ServiceIntegrationRule, DataCollectionRule). These can't be combined
+        # into a single configurable ruleset because they have different schemas.
+        #
+        # Trade-off: We sacrifice per-ruleset configurability for comprehensive
+        # analysis - the handler always analyses all three aspects together.
+        # If configurability is needed later, consider accepting a list of
+        # (ruleset_path, rule_type) tuples in the config.
         self._processing_purposes_rules = RulesetLoader.load_ruleset(
             "local/processing_purposes/1.0.0", ProcessingPurposeRule
         )
@@ -199,12 +211,11 @@ class SourceCodeSchemaInputHandler:
             start_idx = max(0, line_index - window_size)
             end_idx = min(len(lines), line_index + window_size + 1)
 
-        # Build context with line numbers and arrow indicator for matched line
+        # Build context with line numbers
         context_lines: list[str] = []
         for i in range(start_idx, end_idx):
             line_num = i + 1  # 1-based line numbers
-            indicator = "→" if i == line_index else " "
-            context_lines.append(f"{line_num:4d}{indicator} {lines[i].rstrip()}")
+            context_lines.append(f"{line_num:4d}  {lines[i].rstrip()}")
 
         content = "\n".join(context_lines)
 

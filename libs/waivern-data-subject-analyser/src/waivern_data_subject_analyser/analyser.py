@@ -3,19 +3,13 @@
 import importlib
 import logging
 from types import ModuleType
-from typing import cast, override
+from typing import override
 
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    BaseMetadata,
-    Schema,
-    StandardInputDataItemModel,
-    StandardInputDataModel,
-)
+from waivern_core.schemas import Schema
 from waivern_llm import BaseLLMService
 
-from .pattern_matcher import DataSubjectPatternMatcher
 from .result_builder import DataSubjectResultBuilder
 from .schemas.types import DataSubjectIndicatorModel
 from .types import DataSubjectAnalyserConfig
@@ -43,7 +37,6 @@ class DataSubjectAnalyser(Analyser):
 
         """
         self._config = config
-        self._pattern_matcher = DataSubjectPatternMatcher(config.pattern_matching)
         self._result_builder = DataSubjectResultBuilder(config)
         # TODO: LLM validation is not yet implemented for DataSubjectAnalyser.
         # The llm_service is accepted for interface consistency with other analysers
@@ -64,14 +57,14 @@ class DataSubjectAnalyser(Analyser):
     def _load_reader(self, schema: Schema) -> ModuleType:
         """Dynamically import reader module.
 
-        Python's import system automatically caches modules in sys.modules,
-        so repeated imports are fast and don't require manual caching.
+        The reader module provides both read() and create_handler() functions,
+        co-locating schema reading and handler creation.
 
         Args:
             schema: Input schema to load reader for
 
         Returns:
-            Reader module with read() function
+            Reader module with read() and create_handler() functions
 
         Raises:
             ModuleNotFoundError: If reader module doesn't exist for this version
@@ -87,11 +80,13 @@ class DataSubjectAnalyser(Analyser):
     def get_input_requirements(cls) -> list[list[InputRequirement]]:
         """Declare supported input schema combinations.
 
-        DataSubjectAnalyser accepts standard_input schema.
-        Multiple messages of the same schema are supported (fan-in).
+        DataSubjectAnalyser accepts either standard_input OR source_code schema.
+        Each is a valid alternative input. Multiple messages of the same schema are
+        supported (fan-in).
         """
         return [
             [InputRequirement("standard_input", "1.0.0")],
+            [InputRequirement("source_code", "1.0.0")],
         ]
 
     @classmethod
@@ -106,10 +101,11 @@ class DataSubjectAnalyser(Analyser):
         inputs: list[Message],
         output_schema: Schema,
     ) -> Message:
-        """Process data to identify data subjects using dynamic reader/producer.
+        """Process data to identify data subjects using dynamic reader/handler dispatch.
 
-        Supports same-schema fan-in: multiple standard_input messages are merged
-        before processing. Each data item retains its original metadata for tracing.
+        Supports same-schema fan-in: multiple messages of the same schema type are
+        processed and their findings aggregated. Each finding retains its original
+        metadata for tracing.
 
         Args:
             inputs: List of input messages (same schema, fan-in supported).
@@ -121,24 +117,39 @@ class DataSubjectAnalyser(Analyser):
         """
         logger.info("Starting data subject analysis")
 
-        # Merge all input data items (same-schema fan-in)
-        all_data_items: list[StandardInputDataItemModel[BaseMetadata]] = []
-        for message in inputs:
-            reader = self._load_reader(message.schema)
-            typed_data = cast(
-                StandardInputDataModel[BaseMetadata], reader.read(message.content)
-            )
-            all_data_items.extend(typed_data.data)
+        input_schema = inputs[0].schema
+        logger.debug(
+            f"Processing {len(inputs)} message(s) with schema: {input_schema.name}"
+        )
 
-        # Process each data item using the pattern matcher
+        # Load reader and handler once (same schema for all messages)
+        reader = self._load_reader_module(input_schema)
+        handler = reader.create_handler(self._config)
+
+        # Process all input messages and aggregate findings (fan-in)
         indicators: list[DataSubjectIndicatorModel] = []
-        for data_item in all_data_items:
-            content = data_item.content
-            metadata = data_item.metadata
-
-            # Find patterns using pattern matcher
-            item_indicators = self._pattern_matcher.find_patterns(content, metadata)
-            indicators.extend(item_indicators)
+        for message in inputs:
+            input_data = reader.read(message.content)
+            message_indicators = handler.analyse(input_data)
+            indicators.extend(message_indicators)
 
         # Build and return output message
         return self._result_builder.build_output_message(indicators, output_schema)
+
+    def _load_reader_module(self, schema: Schema) -> ModuleType:
+        """Load reader module for the given schema.
+
+        Args:
+            schema: Input schema to load reader for
+
+        Returns:
+            Reader module
+
+        Raises:
+            ValueError: If schema is not supported
+
+        """
+        try:
+            return self._load_reader(schema)
+        except (ModuleNotFoundError, AttributeError) as e:
+            raise ValueError(f"Unsupported input schema: {schema.name}") from e

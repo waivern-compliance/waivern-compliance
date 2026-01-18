@@ -139,3 +139,67 @@ artifacts:
           llm_validation_mode: "conservative"
           confidence_threshold: 0.5
     output: true
+
+  # PHP source code pipeline: Filesystem → SourceCode → DataSubject
+  php_files:
+    name: "PHP Source Files"
+    description: "Read PHP application files from filesystem"
+    source:
+      type: "filesystem"
+      properties:
+        path: "./libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock_lite/source_code"
+        include_patterns: ["*.php"]
+        max_files: 50
+        encoding: "utf-8"
+
+  php_source_code:
+    name: "Parsed PHP Source Code"
+    description: "Parse PHP source files to extract code structure for analysis"
+    inputs: php_files
+    process:
+      type: "source_code_analyser"
+      properties:
+        language: "php"
+        max_file_size: 10485760  # 10MB
+
+  php_data_subject_indicators:
+    name: "Data Subject Detection in PHP Source Code"
+    description: "Detect data subject categories from PHP application code using source code-aware pattern matching"
+    contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
+    inputs: php_source_code
+    process:
+      type: "data_subject"
+      properties:
+        pattern_matching:
+          ruleset: "local/data_subject_indicator/1.0.0"
+          evidence_context_size: "medium"
+          maximum_evidence_count: 3
+        source_code_context_window: "small"
+        llm_validation:
+          enable_llm_validation: false
+          llm_batch_size: 50
+          llm_validation_mode: "conservative"
+
+  php_gdpr_data_subject:
+    name: "GDPR Data Subject Classification (PHP Source Code)"
+    description: "Classify detected data subject indicators from PHP code according to GDPR categories for Article 30(1)(c) compliance"
+    inputs: php_data_subject_indicators
+    process:
+      type: "gdpr_data_subject_classifier"
+    output: true
+
+  php_processing_purpose:
+    name: "PHP Source Code Processing Purpose Detection"
+    description: "Analyse PHP application code for business logic and data processing activities"
+    inputs: php_source_code
+    process:
+      type: "processing_purpose"
+      properties:
+        pattern_matching:
+          ruleset: "local/processing_purposes/1.0.0"
+          evidence_context_size: "medium"
+          maximum_evidence_count: 3
+        llm_validation:
+          enable_llm_validation: false
+          llm_batch_size: 50
+    output: true

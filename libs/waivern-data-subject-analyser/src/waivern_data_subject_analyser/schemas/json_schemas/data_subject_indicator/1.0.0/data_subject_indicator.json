@@ -76,6 +76,19 @@
           "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
           "title": "Context",
           "type": "object"
+        },
+        "line_number": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Line number where the indicator was detected (for source code findings)",
+          "title": "Line Number"
         }
       },
       "required": [

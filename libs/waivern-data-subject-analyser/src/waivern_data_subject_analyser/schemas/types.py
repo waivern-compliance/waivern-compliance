@@ -19,7 +19,10 @@ class DataSubjectIndicatorMetadata(BaseFindingMetadata):
     - context: dict[str, object] - Extensible context for pipeline metadata
     """
 
-    pass
+    line_number: int | None = Field(
+        default=None,
+        description="Line number where the indicator was detected (for source code findings)",
+    )
 
 
 class DataSubjectIndicatorModel(BaseFindingModel):

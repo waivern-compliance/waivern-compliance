@@ -6,6 +6,23 @@ from waivern_core.schemas import StandardInputDataModel
 class TestStandardInputReader:
     """Tests for standard_input schema v1.0.0 reader module."""
 
+    def test_create_handler_returns_schema_input_handler(self) -> None:
+        """Test that create_handler returns a valid SchemaInputHandler."""
+        from waivern_data_subject_analyser.schema_readers import standard_input_1_0_0
+        from waivern_data_subject_analyser.standard_input_schema_input_handler import (
+            StandardInputSchemaInputHandler,
+        )
+        from waivern_data_subject_analyser.types import DataSubjectAnalyserConfig
+
+        # Arrange
+        config = DataSubjectAnalyserConfig.from_properties({})
+
+        # Act
+        handler = standard_input_1_0_0.create_handler(config)
+
+        # Assert
+        assert isinstance(handler, StandardInputSchemaInputHandler)
+
     def test_read_validates_and_returns_typed_model(self) -> None:
         """Test reader validates input and returns StandardInputDataModel."""
         from waivern_data_subject_analyser.schema_readers import (
