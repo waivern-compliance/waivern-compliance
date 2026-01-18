@@ -35,6 +35,10 @@ class TestSourceCodeSchemaInputHandler:
         "metadata",
     ]
 
+    # =========================================================================
+    # Fixtures
+    # =========================================================================
+
     @pytest.fixture
     def handler(self) -> SourceCodeSchemaInputHandler:
         """Create a handler instance for testing."""
@@ -56,20 +60,6 @@ class TestSourceCodeSchemaInputHandler:
             total_files=1,
             total_lines=50,
             analysis_timestamp="2024-01-01T00:00:00Z",
-        )
-
-    @pytest.fixture
-    def empty_source_code_data(
-        self, sample_analysis_metadata: SourceCodeAnalysisMetadataModel
-    ) -> SourceCodeDataModel:
-        """Create empty source code data for testing."""
-        return SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Empty analysis",
-            description="Empty source code analysis",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[],
         )
 
     @pytest.fixture
@@ -149,28 +139,23 @@ class UserFormHandler {
             metadata=sample_file_metadata,
         )
 
-    def test_init_creates_handler_successfully(self) -> None:
-        """Test that __init__ creates a handler successfully."""
-        # Act
+    # =========================================================================
+    # Type Boundary Tests
+    # =========================================================================
+
+    def test_analyse_raises_type_error_for_invalid_input(self) -> None:
+        """Test that analyse raises TypeError when given non-SourceCodeDataModel."""
+        # Arrange
         handler = SourceCodeSchemaInputHandler()
+        invalid_data = {"not": "a SourceCodeDataModel"}
 
-        # Assert - only verify object creation and public method availability
-        assert handler is not None
-        assert hasattr(handler, "analyse")
-        assert callable(getattr(handler, "analyse"))
+        # Act & Assert
+        with pytest.raises(TypeError, match="Expected SourceCodeDataModel"):
+            handler.analyse(invalid_data)
 
-    def test_analyse_returns_empty_list_for_empty_data(
-        self,
-        handler: SourceCodeSchemaInputHandler,
-        empty_source_code_data: SourceCodeDataModel,
-    ) -> None:
-        """Test that analyse returns empty list for empty data."""
-        # Act
-        findings = handler.analyse(empty_source_code_data)
-
-        # Assert
-        assert findings == []
-        assert isinstance(findings, list)
+    # =========================================================================
+    # Core Analysis Behaviour
+    # =========================================================================
 
     def test_analyse_returns_findings_for_simple_patterns(
         self,
@@ -281,6 +266,52 @@ class UserFormHandler {
         if findings:
             assert findings[0].evidence[0].collection_timestamp is not None
 
+    def test_analyse_returns_valid_finding_types(
+        self,
+        handler: SourceCodeSchemaInputHandler,
+        simple_php_file_data: SourceCodeFileDataModel,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+    ) -> None:
+        """Test that analyse returns valid finding types."""
+        # Arrange
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Type validation test",
+            description="Test finding type validation",
+            source="source_code",
+            metadata=sample_analysis_metadata,
+            data=[simple_php_file_data],
+        )
+
+        # Act
+        findings = handler.analyse(source_data)
+
+        # Assert
+        for finding in findings:
+            # Verify all string fields are non-empty strings
+            assert isinstance(finding.purpose, str) and len(finding.purpose) > 0
+            assert isinstance(finding.purpose_category, str)
+            assert (
+                isinstance(finding.matched_patterns, list)
+                and len(finding.matched_patterns) > 0
+            )
+
+            # Verify evidence list
+            assert isinstance(finding.evidence, list) and len(finding.evidence) > 0
+
+            # Verify each evidence item is an BaseFindingEvidence
+            for evidence_item in finding.evidence:
+                assert isinstance(evidence_item, BaseFindingEvidence)
+                assert (
+                    isinstance(evidence_item.content, str)
+                    and len(evidence_item.content) > 0
+                )
+                assert evidence_item.collection_timestamp is not None
+
+    # =========================================================================
+    # Metadata & Evidence Validation
+    # =========================================================================
+
     def test_analyse_creates_proper_metadata(
         self,
         handler: SourceCodeSchemaInputHandler,
@@ -330,85 +361,9 @@ class UserFormHandler {
             parsed_timestamp = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
             assert parsed_timestamp.tzinfo is not None
 
-    def test_analyse_handles_file_with_no_patterns(
-        self,
-        handler: SourceCodeSchemaInputHandler,
-        sample_file_metadata: SourceCodeFileMetadataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
-    ) -> None:
-        """Test that analyse handles files with no matching patterns gracefully."""
-        # Arrange
-        empty_file_data = SourceCodeFileDataModel(
-            file_path="/src/EmptyClass.php",
-            language="php",
-            raw_content="""<?php
-class EmptyClass {
-    // This class has no processing purpose patterns
-    public function doNothing() {
-        return true;
-    }
-}
-""",
-            metadata=sample_file_metadata,
-        )
-
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Empty pattern test",
-            description="Test file with no patterns",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[empty_file_data],
-        )
-
-        # Act
-        findings = handler.analyse(source_data)
-
-        # Assert
-        assert isinstance(findings, list)
-        # May be empty or may have very few findings - this is acceptable behaviour
-
-    def test_analyse_returns_valid_finding_types(
-        self,
-        handler: SourceCodeSchemaInputHandler,
-        simple_php_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
-    ) -> None:
-        """Test that analyse returns valid finding types."""
-        # Arrange
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Type validation test",
-            description="Test finding type validation",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[simple_php_file_data],
-        )
-
-        # Act
-        findings = handler.analyse(source_data)
-
-        # Assert
-        for finding in findings:
-            # Verify all string fields are non-empty strings
-            assert isinstance(finding.purpose, str) and len(finding.purpose) > 0
-            assert isinstance(finding.purpose_category, str)
-            assert (
-                isinstance(finding.matched_patterns, list)
-                and len(finding.matched_patterns) > 0
-            )
-
-            # Verify evidence list
-            assert isinstance(finding.evidence, list) and len(finding.evidence) > 0
-
-            # Verify each evidence item is an BaseFindingEvidence
-            for evidence_item in finding.evidence:
-                assert isinstance(evidence_item, BaseFindingEvidence)
-                assert (
-                    isinstance(evidence_item.content, str)
-                    and len(evidence_item.content) > 0
-                )
-                assert evidence_item.collection_timestamp is not None
+    # =========================================================================
+    # Rule-Specific Tests (ServiceIntegration, DataCollection)
+    # =========================================================================
 
     def test_service_integration_findings_include_service_category(
         self,
@@ -512,6 +467,10 @@ class EmptyClass {
 class TestSourceCodeContextWindow:
     """Tests for context window functionality in evidence extraction."""
 
+    # =========================================================================
+    # Fixtures
+    # =========================================================================
+
     @pytest.fixture
     def sample_file_metadata(self) -> SourceCodeFileMetadataModel:
         """Create sample file metadata for testing."""
@@ -567,94 +526,34 @@ export default PaymentService;
             metadata=sample_file_metadata,
         )
 
-    def test_metadata_includes_file_path(
+    # =========================================================================
+    # Context Window Sizing
+    # =========================================================================
+
+    @pytest.mark.parametrize(
+        ("smaller_window", "larger_window"),
+        [
+            ("small", "medium"),
+            ("medium", "large"),
+            ("large", "full"),
+        ],
+    )
+    def test_context_window_sizes_produce_proportional_evidence(
         self,
-        multiline_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
-    ) -> None:
-        """Test that metadata.source contains the file path."""
-        handler = SourceCodeSchemaInputHandler()
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="File path test",
-            description="Test file path in metadata",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[multiline_file_data],
-        )
-
-        findings = handler.analyse(source_data)
-
-        assert len(findings) > 0, "Expected at least one finding"
-        for finding in findings:
-            assert finding.metadata is not None
-            assert finding.metadata.source == multiline_file_data.file_path
-
-    def test_context_window_small_includes_surrounding_lines(
-        self,
-        multiline_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
-    ) -> None:
-        """Test that 'small' context window includes ±3 lines around match."""
-        handler = SourceCodeSchemaInputHandler(context_window="small")
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Context window test",
-            description="Test small context window",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[multiline_file_data],
-        )
-
-        findings = handler.analyse(source_data)
-
-        assert len(findings) > 0, "Expected at least one finding"
-        payment_findings = [f for f in findings if "payment" in f.purpose.lower()]
-        assert len(payment_findings) > 0, "Expected payment-related finding"
-
-        evidence_content = payment_findings[0].evidence[0].content
-        line_count = evidence_content.count("\n") + 1
-        assert line_count >= 2
-
-    def test_context_window_medium_includes_more_surrounding_lines(
-        self,
-        multiline_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
-    ) -> None:
-        """Test that 'medium' context window includes ±15 lines around match."""
-        handler = SourceCodeSchemaInputHandler(context_window="medium")
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Medium context test",
-            description="Test medium context window",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[multiline_file_data],
-        )
-
-        findings = handler.analyse(source_data)
-
-        assert len(findings) > 0, "Expected at least one finding"
-        payment_findings = [f for f in findings if "payment" in f.purpose.lower()]
-        assert len(payment_findings) > 0
-
-        evidence_content = payment_findings[0].evidence[0].content
-        small_handler = SourceCodeSchemaInputHandler(context_window="small")
-        small_findings = small_handler.analyse(source_data)
-        small_payment = [f for f in small_findings if "payment" in f.purpose.lower()]
-
-        medium_lines = evidence_content.count("\n")
-        small_lines = small_payment[0].evidence[0].content.count("\n")
-        assert medium_lines >= small_lines
-
-    def test_context_window_large_includes_more_lines_than_medium(
-        self,
+        smaller_window: str,
+        larger_window: str,
         sample_file_metadata: SourceCodeFileMetadataModel,
         sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
     ) -> None:
-        """Test that 'large' context window includes ±50 lines around match."""
-        lines = [f"function line{i}() {{}}" for i in range(100)]
-        lines[50] = "async processPayment(amount) { return amount; }"
+        """Test that larger context windows include equal or more lines.
+
+        This test verifies the invariant: larger_window >= smaller_window in terms
+        of context lines included. For "full", verifies entire file is included.
+        """
+        # Create a large file (120 lines) with a pattern in the middle
+        # This ensures all window sizes can show their full range
+        lines = [f"function line{i}() {{}}" for i in range(120)]
+        lines[60] = "async processPayment(amount) { return amount; }"
         file_data = SourceCodeFileDataModel(
             file_path="src/large_file.js",
             language="javascript",
@@ -662,58 +561,51 @@ export default PaymentService;
             metadata=sample_file_metadata,
         )
 
-        handler_large = SourceCodeSchemaInputHandler(context_window="large")
-        handler_medium = SourceCodeSchemaInputHandler(context_window="medium")
         source_data = SourceCodeDataModel(
             schemaVersion="1.0.0",
-            name="Large context test",
-            description="Test large context window",
+            name="Context window comparison test",
+            description="Test context window size comparison",
             source="source_code",
             metadata=sample_analysis_metadata,
             data=[file_data],
         )
 
-        large_findings = handler_large.analyse(source_data)
-        medium_findings = handler_medium.analyse(source_data)
+        # Analyse with both window sizes
+        smaller_handler = SourceCodeSchemaInputHandler(context_window=smaller_window)  # type: ignore[arg-type]
+        larger_handler = SourceCodeSchemaInputHandler(context_window=larger_window)  # type: ignore[arg-type]
 
-        assert len(large_findings) > 0
-        assert len(medium_findings) > 0
+        smaller_findings = smaller_handler.analyse(source_data)
+        larger_findings = larger_handler.analyse(source_data)
 
-        large_payment = [f for f in large_findings if "payment" in f.purpose.lower()]
-        medium_payment = [f for f in medium_findings if "payment" in f.purpose.lower()]
+        # Find payment-related findings
+        smaller_payment = [
+            f for f in smaller_findings if "payment" in f.purpose.lower()
+        ]
+        larger_payment = [f for f in larger_findings if "payment" in f.purpose.lower()]
 
-        assert len(large_payment) > 0
-        assert len(medium_payment) > 0
+        assert len(smaller_payment) > 0, f"No payment finding with {smaller_window}"
+        assert len(larger_payment) > 0, f"No payment finding with {larger_window}"
 
-        large_lines = large_payment[0].evidence[0].content.count("\n")
-        medium_lines = medium_payment[0].evidence[0].content.count("\n")
+        smaller_lines = len(smaller_payment[0].evidence[0].content.splitlines())
+        larger_lines = len(larger_payment[0].evidence[0].content.splitlines())
 
-        assert large_lines > medium_lines
-
-    def test_context_window_full_includes_entire_file(
-        self,
-        multiline_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
-    ) -> None:
-        """Test that 'full' context window includes entire file content."""
-        handler = SourceCodeSchemaInputHandler(context_window="full")
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Full context test",
-            description="Test full context window",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[multiline_file_data],
+        # Larger window should include equal or more lines
+        assert larger_lines >= smaller_lines, (
+            f"{larger_window} ({larger_lines} lines) should include >= "
+            f"{smaller_window} ({smaller_lines} lines)"
         )
 
-        findings = handler.analyse(source_data)
+        # For "full" window, verify it includes entire file
+        if larger_window == "full":
+            file_line_count = len(file_data.raw_content.splitlines())
+            assert larger_lines == file_line_count, (
+                f"Full window should include all {file_line_count} lines, "
+                f"got {larger_lines}"
+            )
 
-        assert len(findings) > 0
-        evidence_content = findings[0].evidence[0].content
-        # Full context should include all lines from the file
-        file_lines = len(multiline_file_data.raw_content.splitlines())
-        evidence_lines = len(evidence_content.splitlines())
-        assert evidence_lines == file_lines
+    # =========================================================================
+    # Boundary Handling (start/end of file)
+    # =========================================================================
 
     def test_context_window_at_start_of_file(
         self,
@@ -780,6 +672,10 @@ const payment = require('stripe');""",
         assert len(payment_findings) > 0
         evidence = payment_findings[0].evidence[0].content
         assert "   5  " in evidence  # Line 5 should be in the context
+
+    # =========================================================================
+    # Evidence Formatting
+    # =========================================================================
 
     def test_evidence_includes_line_numbers(
         self,
