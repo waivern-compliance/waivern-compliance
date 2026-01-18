@@ -47,6 +47,25 @@ This guide explains how rulesets are loaded, cached, and used in WCF. Understand
 
 **Why two packages?** `RulesetManager` lives in `waivern-analysers-shared` (not `waivern-rulesets`) to avoid circular dependencies—analysers depend on rulesets, and the caching layer is an analyser concern.
 
+## Ruleset Categories
+
+Rulesets fall into two categories based on their rule type:
+
+| Category           | Base Type            | Purpose                                                | Examples                                                        |
+| ------------------ | -------------------- | ------------------------------------------------------ | --------------------------------------------------------------- |
+| **Detection**      | `DetectionRule`      | Pattern-based content matching (framework-agnostic)    | PersonalDataIndicator, ProcessingPurposes, DataSubjectIndicator |
+| **Classification** | `ClassificationRule` | Maps detection categories → regulatory interpretations | GDPRPersonalDataClassification, GDPRDataSubjectClassification   |
+
+**Typical pipeline flow:**
+
+```
+Content → Detection Ruleset → "found email pattern"
+                ↓
+       Classification Ruleset → "Article 9 special category data"
+```
+
+Detection rulesets identify _what_ is in the data. Classification rulesets interpret _what it means_ under a specific regulatory framework.
+
 ## URI Format
 
 Rulesets are identified by URIs in the format:
@@ -56,11 +75,13 @@ Rulesets are identified by URIs in the format:
 ```
 
 **Examples:**
+
 - `local/personal_data/1.0.0`
 - `local/processing_purposes/1.0.0`
 - `local/gdpr_data_subject_classification/1.0.0`
 
 **Currently supported providers:**
+
 - `local` — Loads from bundled `waivern-rulesets` package
 
 ## Usage Patterns
@@ -118,8 +139,8 @@ risk_modifiers = ruleset.get_risk_modifiers()
 
 Some rulesets provide extended interfaces beyond `AbstractRuleset`. These are defined as **protocols** (structural subtyping):
 
-| Protocol | Adds | Used By |
-|----------|------|---------|
+| Protocol                                   | Adds                   | Used By                 |
+| ------------------------------------------ | ---------------------- | ----------------------- |
 | `DataSubjectClassificationRulesetProtocol` | `get_risk_modifiers()` | Data subject classifier |
 
 **Why protocols?** They allow custom implementations without inheritance. Your custom ruleset just needs to implement the required methods—no base class needed.
@@ -156,6 +177,36 @@ RulesetManager.clear_cache()
 
 ## Testing with Rulesets
 
+### Contract Tests
+
+All rulesets must pass `RulesetContractTests`, which validates structural requirements:
+
+- **Tuple contract** — `get_rules()` returns an immutable tuple, not a list
+- **Caching contract** — Same tuple instance returned on repeated calls
+- **Uniqueness contract** — All rule names within a ruleset are unique
+- **Integration contract** — Works with `RulesetRegistry` and `RulesetLoader`
+
+To test a new ruleset, inherit from `RulesetContractTests`:
+
+```python
+from waivern_rulesets.testing import RulesetContractTests
+
+class TestMyRulesetContract(RulesetContractTests[MyRule]):
+    @pytest.fixture
+    def ruleset_class(self) -> type[AbstractRuleset[MyRule]]:
+        return MyRuleset
+
+    @pytest.fixture
+    def rule_class(self) -> type[MyRule]:
+        return MyRule
+
+    @pytest.fixture
+    def expected_name(self) -> str:
+        return "my_ruleset"
+```
+
+**Why one contract class for both categories?** The contracts test _behaviour_ (caching, immutability) not _fields_. Field validation is handled by Pydantic models in each rule type.
+
 ### Registry Isolation
 
 `RulesetRegistry` is a singleton with global state. Tests must isolate this state:
@@ -185,12 +236,12 @@ RulesetRegistry.register(MyTestRuleset, MyTestRule)
 
 ## Common Errors
 
-| Exception | Cause | Fix |
-|-----------|-------|-----|
-| `RulesetURIParseError` | Invalid URI format | Use `provider/name/version` format |
-| `UnsupportedProviderError` | Unknown provider | Use `local` (only supported provider) |
-| `RulesetNotFoundError` | Ruleset not registered | Check ruleset name spelling |
-| `TypeError` | Rule type mismatch | Pass correct rule type for the ruleset |
+| Exception                  | Cause                  | Fix                                    |
+| -------------------------- | ---------------------- | -------------------------------------- |
+| `RulesetURIParseError`     | Invalid URI format     | Use `provider/name/version` format     |
+| `UnsupportedProviderError` | Unknown provider       | Use `local` (only supported provider)  |
+| `RulesetNotFoundError`     | Ruleset not registered | Check ruleset name spelling            |
+| `TypeError`                | Rule type mismatch     | Pass correct rule type for the ruleset |
 
 **Debugging tip:** If `can_create()` returns `False` silently, call `RulesetManager.get_ruleset()` directly to see the actual exception.
 
