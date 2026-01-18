@@ -116,19 +116,20 @@ For each finding, determine if it represents actual personal data (TRUE_POSITIVE
 
 **RESPONSE FORMAT:**
 Respond with valid JSON array only (no markdown formatting).
-IMPORTANT: Echo back the exact finding_id from each Finding [...] header - do not modify it.
+IMPORTANT: Only return findings you identify as FALSE_POSITIVE. Do not include TRUE_POSITIVE findings.
+Echo back the exact finding_id from each Finding [...] header - do not modify it.
 
 [
   {{
     "finding_id": "<exact UUID from Finding [UUID]>",
-    "validation_result": "TRUE_POSITIVE" | "FALSE_POSITIVE",
+    "validation_result": "FALSE_POSITIVE",
     "confidence": 0.85,
     "reasoning": "Brief explanation",
-    "recommended_action": "keep" | "discard"
+    "recommended_action": "discard"
   }}
 ]
 
-Validate all {len(findings)} findings:"""
+Review all {len(findings)} findings. Return ONLY the FALSE_POSITIVE ones (empty array if none):"""
 
 
 def get_conservative_validation_prompt(

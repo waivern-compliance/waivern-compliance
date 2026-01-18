@@ -38,7 +38,7 @@ class TestDataSubjectAnalyserFactory(
     def valid_config(self) -> ComponentConfig:
         """Create valid configuration for testing."""
         return {
-            "pattern_matching": {"ruleset": "local/data_subjects/1.0.0"},
+            "pattern_matching": {"ruleset": "local/data_subject_indicator/1.0.0"},
             "llm_validation": {"enable_llm_validation": False},
         }
 
@@ -49,7 +49,7 @@ class TestDataSubjectAnalyserFactory(
         factory = DataSubjectAnalyserFactory(container)
 
         config_requiring_llm = {
-            "pattern_matching": {"ruleset": "local/data_subjects/1.0.0"},
+            "pattern_matching": {"ruleset": "local/data_subject_indicator/1.0.0"},
             "llm_validation": {"enable_llm_validation": True},
         }
 
@@ -66,3 +66,18 @@ class TestDataSubjectAnalyserFactory(
 
         assert "llm_service" in deps
         assert deps["llm_service"] is BaseLLMService
+
+    def test_can_create_returns_false_for_nonexistent_ruleset(self) -> None:
+        """Test that can_create returns False when ruleset doesn't exist."""
+        container = ServiceContainer()
+        factory = DataSubjectAnalyserFactory(container)
+
+        # LLM validation disabled, so only ruleset matters
+        config_with_nonexistent_ruleset = {
+            "pattern_matching": {"ruleset": "local/nonexistent/1.0.0"},
+            "llm_validation": {"enable_llm_validation": False},
+        }
+
+        result = factory.can_create(config_with_nonexistent_ruleset)
+
+        assert result is False

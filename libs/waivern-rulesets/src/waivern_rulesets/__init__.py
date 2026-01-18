@@ -3,6 +3,7 @@
 from waivern_core import RulesetError
 
 from waivern_rulesets.base import (
+    AbstractRuleset,
     RulesetLoader,
     RulesetNotFoundError,
     RulesetRegistry,
@@ -16,9 +17,14 @@ from waivern_rulesets.data_collection import (
     DataCollectionRule,
     DataCollectionRuleset,
 )
-from waivern_rulesets.data_subjects import (
-    DataSubjectRule,
-    DataSubjectsRuleset,
+from waivern_rulesets.data_subject_indicator import (
+    DataSubjectIndicatorRule,
+    DataSubjectIndicatorRuleset,
+)
+from waivern_rulesets.gdpr_data_subject_classification import (
+    GDPRDataSubjectClassificationRule,
+    GDPRDataSubjectClassificationRuleset,
+    RiskModifiers,
 )
 from waivern_rulesets.gdpr_personal_data_classification import (
     GDPRPersonalDataClassificationRule,
@@ -32,6 +38,7 @@ from waivern_rulesets.processing_purposes import (
     ProcessingPurposeRule,
     ProcessingPurposesRuleset,
 )
+from waivern_rulesets.protocols import DataSubjectClassificationRulesetProtocol
 from waivern_rulesets.service_integrations import (
     ServiceIntegrationRule,
     ServiceIntegrationsRuleset,
@@ -47,11 +54,16 @@ _BUILTIN_RULESETS = [
     ("processing_purposes", ProcessingPurposesRuleset, ProcessingPurposeRule),
     ("data_collection", DataCollectionRuleset, DataCollectionRule),
     ("service_integrations", ServiceIntegrationsRuleset, ServiceIntegrationRule),
-    ("data_subjects", DataSubjectsRuleset, DataSubjectRule),
+    ("data_subject_indicator", DataSubjectIndicatorRuleset, DataSubjectIndicatorRule),
     (
         "gdpr_personal_data_classification",
         GDPRPersonalDataClassificationRuleset,
         GDPRPersonalDataClassificationRule,
+    ),
+    (
+        "gdpr_data_subject_classification",
+        GDPRDataSubjectClassificationRuleset,
+        GDPRDataSubjectClassificationRule,
     ),
 ]
 
@@ -70,18 +82,26 @@ __all__ = [
     "RulesetURI",
     "RulesetLoader",
     "RulesetRegistry",
+    # Base classes
+    "AbstractRuleset",
+    # Protocols
+    "DataSubjectClassificationRulesetProtocol",
     # Rulesets
     "PersonalDataIndicatorRuleset",
     "ProcessingPurposesRuleset",
     "DataCollectionRuleset",
     "ServiceIntegrationsRuleset",
-    "DataSubjectsRuleset",
+    "DataSubjectIndicatorRuleset",
     "GDPRPersonalDataClassificationRuleset",
+    "GDPRDataSubjectClassificationRuleset",
     # Rule types
     "PersonalDataIndicatorRule",
     "ProcessingPurposeRule",
     "DataCollectionRule",
     "ServiceIntegrationRule",
-    "DataSubjectRule",
+    "DataSubjectIndicatorRule",
     "GDPRPersonalDataClassificationRule",
+    "GDPRDataSubjectClassificationRule",
+    # Supporting types
+    "RiskModifiers",
 ]

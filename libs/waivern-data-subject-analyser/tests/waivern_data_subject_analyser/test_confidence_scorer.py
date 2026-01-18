@@ -4,7 +4,7 @@ This test module focuses on testing the confidence scoring algorithm
 for data subject classification.
 """
 
-from waivern_rulesets.data_subjects import DataSubjectRule
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 
 from waivern_data_subject_analyser.confidence_scorer import (
     DataSubjectConfidenceScorer,
@@ -21,7 +21,7 @@ class TestDataSubjectConfidenceScorer:
 
         # Create test rules with known weights
         test_rules = [
-            DataSubjectRule(
+            DataSubjectIndicatorRule(
                 name="primary_rule",
                 description="Primary indicator",
                 patterns=("employee",),
@@ -30,7 +30,7 @@ class TestDataSubjectConfidenceScorer:
                 confidence_weight=45,
                 applicable_contexts=["database"],
             ),
-            DataSubjectRule(
+            DataSubjectIndicatorRule(
                 name="secondary_rule",
                 description="Secondary indicator",
                 patterns=("staff",),
@@ -39,7 +39,7 @@ class TestDataSubjectConfidenceScorer:
                 confidence_weight=25,
                 applicable_contexts=["database"],
             ),
-            DataSubjectRule(
+            DataSubjectIndicatorRule(
                 name="contextual_rule",
                 description="Contextual indicator",
                 patterns=("personnel",),

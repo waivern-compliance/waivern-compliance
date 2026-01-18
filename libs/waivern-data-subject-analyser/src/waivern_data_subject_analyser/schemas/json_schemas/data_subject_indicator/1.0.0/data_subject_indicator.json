@@ -1,0 +1,232 @@
+{
+  "$defs": {
+    "BaseAnalysisOutputMetadata": {
+      "additionalProperties": true,
+      "description": "Base metadata for analysis outputs.",
+      "properties": {
+        "ruleset_used": {
+          "description": "Name of the ruleset used for analysis",
+          "title": "Ruleset Used",
+          "type": "string"
+        },
+        "llm_validation_enabled": {
+          "description": "Whether LLM validation was enabled for this analysis",
+          "title": "Llm Validation Enabled",
+          "type": "boolean"
+        },
+        "analysis_timestamp": {
+          "description": "ISO 8601 timestamp when the analysis was performed",
+          "title": "Analysis Timestamp",
+          "type": "string"
+        },
+        "evidence_context_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Size of context used for evidence extraction",
+          "title": "Evidence Context Size"
+        }
+      },
+      "required": [
+        "ruleset_used",
+        "llm_validation_enabled"
+      ],
+      "title": "BaseAnalysisOutputMetadata",
+      "type": "object"
+    },
+    "BaseFindingEvidence": {
+      "description": "Evidence item with content and collection timestamp.",
+      "properties": {
+        "content": {
+          "description": "The evidence content snippet",
+          "title": "Content",
+          "type": "string"
+        },
+        "collection_timestamp": {
+          "description": "When the evidence was collected",
+          "title": "Collection Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "BaseFindingEvidence",
+      "type": "object"
+    },
+    "DataSubjectIndicatorMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata for data subject indicators.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "properties": {
+        "source": {
+          "description": "Source file or location where the data was found",
+          "title": "Source",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
+          "title": "Context",
+          "type": "object"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "DataSubjectIndicatorMetadata",
+      "type": "object"
+    },
+    "DataSubjectIndicatorModel": {
+      "description": "Data subject indicator from pattern-based detection.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this finding (UUID)",
+          "title": "Id",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "Evidence items with content and timestamps for this finding",
+          "items": {
+            "$ref": "#/$defs/BaseFindingEvidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "matched_patterns": {
+          "description": "Patterns that were matched during analysis",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Matched Patterns",
+          "type": "array"
+        },
+        "primary_category": {
+          "description": "Primary data subject category detected",
+          "title": "Primary Category",
+          "type": "string"
+        },
+        "confidence_score": {
+          "description": "Confidence score for the detection (0-100)",
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Confidence Score",
+          "type": "integer"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DataSubjectIndicatorMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Additional metadata about the indicator"
+        }
+      },
+      "required": [
+        "evidence",
+        "matched_patterns",
+        "primary_category",
+        "confidence_score"
+      ],
+      "title": "DataSubjectIndicatorModel",
+      "type": "object"
+    },
+    "DataSubjectIndicatorSummary": {
+      "description": "Summary statistics for data subject indicators.",
+      "properties": {
+        "total_indicators": {
+          "description": "Total number of data subject indicators detected",
+          "minimum": 0,
+          "title": "Total Indicators",
+          "type": "integer"
+        },
+        "categories_identified": {
+          "description": "List of unique categories identified",
+          "items": {
+            "type": "string"
+          },
+          "title": "Categories Identified",
+          "type": "array"
+        }
+      },
+      "required": [
+        "total_indicators",
+        "categories_identified"
+      ],
+      "title": "DataSubjectIndicatorSummary",
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "description": "Complete output structure for data_subject_indicator schema.\n\nThis model represents the full wire format for data subject detection results,\nincluding indicators, summary statistics, and analysis metadata.",
+  "properties": {
+    "findings": {
+      "description": "List of data subject indicators from pattern-based detection",
+      "items": {
+        "$ref": "#/$defs/DataSubjectIndicatorModel"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/DataSubjectIndicatorSummary",
+      "description": "Summary statistics of the data subject detection"
+    },
+    "analysis_metadata": {
+      "$ref": "#/$defs/BaseAnalysisOutputMetadata",
+      "description": "Metadata about the analysis process"
+    }
+  },
+  "required": [
+    "findings",
+    "summary",
+    "analysis_metadata"
+  ],
+  "title": "DataSubjectIndicatorOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}

@@ -7,6 +7,7 @@ Keeps the analyser focused on orchestration.
 import logging
 from pprint import pformat
 
+from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
 
@@ -41,14 +42,18 @@ class PersonalDataResultBuilder:
         self,
         original_findings: list[PersonalDataIndicatorModel],
         validated_findings: list[PersonalDataIndicatorModel],
+        validation_applied: bool,
         output_schema: Schema,
+        validation_result: ValidationResult[PersonalDataIndicatorModel] | None = None,
     ) -> Message:
         """Build the complete output message.
 
         Args:
             original_findings: Findings before LLM validation.
             validated_findings: Findings after LLM validation.
+            validation_applied: Whether validation was applied.
             output_schema: Schema for output validation.
+            validation_result: Optional validation result from orchestrator.
 
         Returns:
             Complete validated output message.
@@ -56,16 +61,14 @@ class PersonalDataResultBuilder:
         """
         summary = self._build_findings_summary(validated_findings)
 
+        # Skip old-style validation_summary when using orchestrator - metadata tells the story
         validation_summary = None
-        if (
-            self._config.llm_validation.enable_llm_validation
-            and len(original_findings) > 0
-        ):
+        if validation_applied and validation_result is None:
             validation_summary = self._build_validation_summary(
                 original_findings, validated_findings
             )
 
-        analysis_metadata = self._build_analysis_metadata()
+        analysis_metadata = self._build_analysis_metadata(validation_result)
 
         output_model = PersonalDataIndicatorOutput(
             findings=validated_findings,
@@ -142,15 +145,47 @@ class PersonalDataResultBuilder:
             validation_mode=self._config.llm_validation.llm_validation_mode,
         )
 
-    def _build_analysis_metadata(self) -> BaseAnalysisOutputMetadata:
+    def _build_analysis_metadata(
+        self,
+        validation_result: ValidationResult[PersonalDataIndicatorModel] | None = None,
+    ) -> BaseAnalysisOutputMetadata:
         """Build analysis metadata for output.
+
+        Args:
+            validation_result: Optional validation result from orchestrator.
 
         Returns:
             Analysis metadata with all fields.
 
         """
+        extra_fields: dict[str, object] = {
+            "llm_validation_mode": self._config.llm_validation.llm_validation_mode,
+            "analyser_version": "1.0.0",
+        }
+
+        # Add validation info if provided
+        if validation_result:
+            extra_fields["validation_summary"] = {
+                "strategy": "orchestrated",
+                "samples_validated": validation_result.samples_validated,
+                "all_succeeded": validation_result.all_succeeded,
+                "skipped_count": len(validation_result.skipped_samples),
+            }
+
+            # Map RemovedGroup to categories_removed for output
+            if validation_result.removed_groups:
+                extra_fields["categories_removed"] = [
+                    {
+                        "category": rg.concern_value,
+                        "reason": rg.reason,
+                        "require_review": rg.require_review,
+                    }
+                    for rg in validation_result.removed_groups
+                ]
+
         return BaseAnalysisOutputMetadata(
             ruleset_used=self._config.pattern_matching.ruleset,
             llm_validation_enabled=self._config.llm_validation.enable_llm_validation,
             evidence_context_size=self._config.pattern_matching.evidence_context_size,
+            **extra_fields,
         )

@@ -42,22 +42,29 @@ artifacts:
         max_rows_per_table: 10
 
   # Log file analysis artifacts
-  logs_data_subject:
-    name: "Data Subject Classification in Log Files"
-    description: "Identify data subject categories (employees, customers, etc.) from log file content for GDPR Article 30(1)(c) compliance"
+  logs_data_subject_indicators:
+    name: "Data Subject Detection in Log Files"
+    description: "Detect data subject categories (employees, customers, etc.) from log file content using pattern matching"
     contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
     inputs: log_files
     process:
       type: "data_subject"
       properties:
         pattern_matching:
-          ruleset: "local/data_subjects/1.0.0"
+          ruleset: "local/data_subject_indicator/1.0.0"
           evidence_context_size: "medium"
           maximum_evidence_count: 3
         llm_validation:
           enable_llm_validation: false
           llm_batch_size: 50
           llm_validation_mode: "conservative"
+
+  logs_gdpr_data_subject:
+    name: "GDPR Data Subject Classification (Logs)"
+    description: "Classify detected data subject indicators according to GDPR categories for Article 30(1)(c) compliance"
+    inputs: logs_data_subject_indicators
+    process:
+      type: "gdpr_data_subject_classifier"
     output: true
 
   logs_personal_data_indicators:
@@ -147,22 +154,29 @@ artifacts:
       type: "gdpr_personal_data_classifier"
     output: true
 
-  mysql_data_subject:
-    name: "Data Subject Classification in MySQL Database"
-    description: "Identify data subject categories (employees, customers, etc.) from database content for GDPR Article 30(1)(c) compliance"
+  mysql_data_subject_indicators:
+    name: "Data Subject Detection in MySQL Database"
+    description: "Detect data subject categories (employees, customers, etc.) from database content using pattern matching"
     contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
     inputs: mysql_data
     process:
       type: "data_subject"
       properties:
         pattern_matching:
-          ruleset: "local/data_subjects/1.0.0"
+          ruleset: "local/data_subject_indicator/1.0.0"
           evidence_context_size: "medium"
           maximum_evidence_count: 3
         llm_validation:
           enable_llm_validation: false
           llm_batch_size: 50
           llm_validation_mode: "conservative"
+
+  mysql_gdpr_data_subject:
+    name: "GDPR Data Subject Classification (MySQL)"
+    description: "Classify detected data subject indicators according to GDPR categories for Article 30(1)(c) compliance"
+    inputs: mysql_data_subject_indicators
+    process:
+      type: "gdpr_data_subject_classifier"
     output: true
 
   # PHP source code pipeline: Filesystem → SourceCode → ProcessingPurpose

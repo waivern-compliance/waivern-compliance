@@ -76,7 +76,8 @@ class ProcessingPurposeAnalyser(Analyser):
         """Declare supported input schema combinations.
 
         ProcessingPurposeAnalyser accepts either standard_input OR source_code schema.
-        Each is a valid alternative input.
+        Each is a valid alternative input. Multiple messages of the same schema are
+        supported (fan-in).
         """
         return [
             [InputRequirement("standard_input", "1.0.0")],
@@ -97,35 +98,41 @@ class ProcessingPurposeAnalyser(Analyser):
     ) -> Message:
         """Process data to identify processing purposes.
 
-        Supports multiple input schema types. The reader module for each schema
-        provides both data reading and handler creation, keeping schema knowledge
-        co-located.
+        Supports same-schema fan-in: multiple messages of the same schema type are
+        processed and their findings aggregated. Each finding retains its original
+        metadata for tracing.
 
         Args:
-            inputs: List of input messages (single message expected)
+            inputs: List of input messages (same schema, fan-in supported)
             output_schema: Expected output schema
 
         Returns:
-            Output message with processing purpose findings
+            Output message with processing purpose findings from all inputs
 
         """
         logger.info("Starting processing purpose analysis")
 
-        message = inputs[0]
-        input_schema = message.schema
-        logger.debug(f"Processing data with schema: {input_schema.name}")
+        input_schema = inputs[0].schema
+        logger.debug(
+            f"Processing {len(inputs)} message(s) with schema: {input_schema.name}"
+        )
 
-        # Load reader and process findings
+        # Load reader and handler once (same schema for all messages)
         reader = self._load_reader_module(input_schema)
-        input_data = reader.read(message.content)
         handler = reader.create_handler(self._config)
-        findings = handler.analyse(input_data)
+
+        # Process all input messages and aggregate findings (fan-in)
+        findings: list[ProcessingPurposeFindingModel] = []
+        for message in inputs:
+            input_data = reader.read(message.content)
+            message_findings = handler.analyse(input_data)
+            findings.extend(message_findings)
 
         # Apply LLM validation if enabled
         validation_result: ValidationResult[ProcessingPurposeFindingModel] | None = None
         if self._config.llm_validation.enable_llm_validation:
             validated_findings, validation_applied, validation_result = (
-                self._validate_findings(findings, message)
+                self._validate_findings(findings, inputs)
             )
         else:
             validated_findings, validation_applied = findings, False
@@ -160,7 +167,7 @@ class ProcessingPurposeAnalyser(Analyser):
     def _validate_findings(
         self,
         findings: list[ProcessingPurposeFindingModel],
-        input_message: Message,
+        input_messages: list[Message],
     ) -> tuple[
         list[ProcessingPurposeFindingModel],
         bool,
@@ -175,7 +182,7 @@ class ProcessingPurposeAnalyser(Analyser):
 
         Args:
             findings: List of findings to validate.
-            input_message: Input message for context.
+            input_messages: Input messages for context (fan-in supported).
 
         Returns:
             Tuple of (validated findings, validation applied, validation result).
@@ -189,16 +196,20 @@ class ProcessingPurposeAnalyser(Analyser):
             return findings, False, None
 
         try:
-            # Extract source contents if source_code schema
-            source_contents = None
-            if input_message.schema.name == "source_code":
-                source_data = SourceCodeDataModel.model_validate(input_message.content)
-                source_contents = {f.file_path: f.raw_content for f in source_data.data}
+            # Extract source contents from all messages if source_code schema (fan-in)
+            source_contents: dict[str, str] | None = None
+            input_schema = input_messages[0].schema
+            if input_schema.name == "source_code":
+                source_contents = {}
+                for message in input_messages:
+                    source_data = SourceCodeDataModel.model_validate(message.content)
+                    for f in source_data.data:
+                        source_contents[f.file_path] = f.raw_content
 
             # Create orchestrator and validate
             orchestrator = create_validation_orchestrator(
                 self._config.llm_validation,
-                input_message.schema.name,
+                input_schema.name,
                 source_contents,
             )
             result = orchestrator.validate(

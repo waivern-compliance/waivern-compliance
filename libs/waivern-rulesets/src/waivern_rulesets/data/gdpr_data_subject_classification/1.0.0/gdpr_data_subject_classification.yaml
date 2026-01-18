@@ -1,0 +1,272 @@
+# GDPR Data Subject Classification Ruleset
+# Maps data subject indicators to GDPR classifications
+
+name: "gdpr_data_subject_classification"
+version: "1.0.0"
+description: "Maps data subject indicators to GDPR classification"
+
+# Default article references applicable to all data subjects
+default_article_references:
+  - "Article 4(1)"
+  - "Article 30(1)(c)"
+
+# Master list of valid data subject categories (for reporting/governance)
+data_subject_categories:
+  - "employee"
+  - "job_applicant"
+  - "customer"
+  - "visitor"
+  - "healthcare"
+  - "education"
+  - "financial"
+  - "business_partner"
+
+# Valid indicator categories (from data_subject_indicator ruleset)
+indicator_categories:
+  - employee
+  - former_employee
+  - job_applicant
+  - contractor
+  - director
+  - customer
+  - prospect
+  - former_customer
+  - visitor
+  - subscriber
+  - supplier
+  - advisor
+  - partner
+  - patient
+  - provider
+  - student
+  - guardian
+  - account_holder
+  - beneficiary
+
+rules:
+  # =============================================================================
+  # Employment-Related Data Subjects
+  # =============================================================================
+
+  - name: "Employees"
+    description: "Current and former employees, contractors, and directors"
+    data_subject_category: "employee"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+      - "Article 30(1)(c)"
+    typical_lawful_bases:
+      - "contract"
+      - "legal_obligation"
+    indicator_categories:
+      - employee
+      - former_employee
+      - contractor
+      - director
+
+  - name: "Job Applicants"
+    description: "Candidates and job seekers in recruitment process"
+    data_subject_category: "job_applicant"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+    typical_lawful_bases:
+      - "consent"
+      - "contract"
+    indicator_categories:
+      - job_applicant
+
+  # =============================================================================
+  # Customer-Related Data Subjects
+  # =============================================================================
+
+  - name: "Customers"
+    description: "Current, former, and prospective customers"
+    data_subject_category: "customer"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6"
+    typical_lawful_bases:
+      - "contract"
+      - "legitimate_interests"
+    indicator_categories:
+      - customer
+      - former_customer
+      - prospect
+
+  - name: "Subscribers"
+    description: "Newsletter and marketing subscribers"
+    data_subject_category: "customer"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(a)"
+      - "Article 7"
+    typical_lawful_bases:
+      - "consent"
+    indicator_categories:
+      - subscriber
+
+  # =============================================================================
+  # Visitor and Anonymous Data Subjects
+  # =============================================================================
+
+  - name: "Visitors"
+    description: "Website visitors and anonymous users"
+    data_subject_category: "visitor"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(f)"
+      - "Recital 47"
+    typical_lawful_bases:
+      - "legitimate_interests"
+      - "consent"
+    indicator_categories:
+      - visitor
+
+  # =============================================================================
+  # Healthcare Data Subjects
+  # =============================================================================
+
+  - name: "Patients"
+    description: "Healthcare patients and service recipients"
+    data_subject_category: "healthcare"
+    article_references:
+      - "Article 4(1)"
+      - "Article 9(2)(h)"
+      - "Article 30(1)(c)"
+    typical_lawful_bases:
+      - "vital_interests"
+      - "public_task"
+      - "consent"
+    indicator_categories:
+      - patient
+
+  - name: "Healthcare Providers"
+    description: "Medical professionals and healthcare workers"
+    data_subject_category: "healthcare"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+    typical_lawful_bases:
+      - "contract"
+      - "legal_obligation"
+    indicator_categories:
+      - provider
+
+  # =============================================================================
+  # Education Data Subjects
+  # =============================================================================
+
+  - name: "Students"
+    description: "Students and educational service recipients"
+    data_subject_category: "education"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+      - "Article 8"
+    typical_lawful_bases:
+      - "contract"
+      - "public_task"
+    indicator_categories:
+      - student
+
+  - name: "Guardians"
+    description: "Parents and legal guardians"
+    data_subject_category: "education"
+    article_references:
+      - "Article 4(1)"
+      - "Article 8"
+    typical_lawful_bases:
+      - "consent"
+      - "contract"
+    indicator_categories:
+      - guardian
+
+  # =============================================================================
+  # Financial Data Subjects
+  # =============================================================================
+
+  - name: "Account Holders"
+    description: "Financial account holders and banking customers"
+    data_subject_category: "financial"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+      - "Article 32"
+    typical_lawful_bases:
+      - "contract"
+      - "legal_obligation"
+    indicator_categories:
+      - account_holder
+
+  - name: "Beneficiaries"
+    description: "Insurance and pension beneficiaries"
+    data_subject_category: "financial"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+    typical_lawful_bases:
+      - "contract"
+      - "legal_obligation"
+    indicator_categories:
+      - beneficiary
+
+  # =============================================================================
+  # Business Partner Data Subjects
+  # =============================================================================
+
+  - name: "Suppliers"
+    description: "Vendors and supplier contacts"
+    data_subject_category: "business_partner"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+    typical_lawful_bases:
+      - "contract"
+      - "legitimate_interests"
+    indicator_categories:
+      - supplier
+
+  - name: "Advisors"
+    description: "Professional advisors and consultants"
+    data_subject_category: "business_partner"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+    typical_lawful_bases:
+      - "contract"
+    indicator_categories:
+      - advisor
+
+  - name: "Partners"
+    description: "Business and strategic partners"
+    data_subject_category: "business_partner"
+    article_references:
+      - "Article 4(1)"
+      - "Article 6(1)(b)"
+      - "Article 6(1)(f)"
+    typical_lawful_bases:
+      - "contract"
+      - "legitimate_interests"
+    indicator_categories:
+      - partner
+
+# =============================================================================
+# Risk Modifiers
+# =============================================================================
+
+risk_modifiers:
+  risk_increasing:
+    - pattern: "minor|child|under.*years"
+      modifier: "minor"
+      article_references:
+        - "Article 8"
+    - pattern: "vulnerable"
+      modifier: "vulnerable_individual"
+      article_references:
+        - "Recital 75"
+  risk_decreasing:
+    - pattern: "non-EU|third.country"
+      modifier: "non_eu_resident"
+      article_references:
+        - "Article 3"

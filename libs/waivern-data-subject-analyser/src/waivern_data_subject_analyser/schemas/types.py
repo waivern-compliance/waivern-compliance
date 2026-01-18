@@ -1,4 +1,4 @@
-"""Schema data models for data subject findings."""
+"""Schema data models for data subject indicators."""
 
 from typing import ClassVar, override
 
@@ -11,8 +11,8 @@ from waivern_core.schemas import (
 )
 
 
-class DataSubjectFindingMetadata(BaseFindingMetadata):
-    """Metadata for data subject findings.
+class DataSubjectIndicatorMetadata(BaseFindingMetadata):
+    """Metadata for data subject indicators.
 
     Extends BaseFindingMetadata which provides:
     - source: str - Source file or location where the data was found
@@ -22,19 +22,15 @@ class DataSubjectFindingMetadata(BaseFindingMetadata):
     pass
 
 
-class DataSubjectFindingModel(BaseFindingModel):
-    """Data subject finding structure."""
+class DataSubjectIndicatorModel(BaseFindingModel):
+    """Data subject indicator from pattern-based detection."""
 
-    primary_category: str = Field(description="Primary data subject category")
+    primary_category: str = Field(description="Primary data subject category detected")
     confidence_score: int = Field(
-        ge=0, le=100, description="Confidence score for the classification (0-100)"
+        ge=0, le=100, description="Confidence score for the detection (0-100)"
     )
-    modifiers: list[str] = Field(
-        default_factory=list,
-        description="Cross-category regulatory modifiers from ruleset",
-    )
-    metadata: DataSubjectFindingMetadata | None = Field(
-        default=None, description="Additional metadata about the finding"
+    metadata: DataSubjectIndicatorMetadata | None = Field(
+        default=None, description="Additional metadata about the indicator"
     )
 
     @override
@@ -43,31 +39,31 @@ class DataSubjectFindingModel(BaseFindingModel):
         return f"{self.primary_category} - {', '.join(self.matched_patterns)}"
 
 
-class DataSubjectSummary(BaseModel):
-    """Summary statistics for data subject findings."""
+class DataSubjectIndicatorSummary(BaseModel):
+    """Summary statistics for data subject indicators."""
 
-    total_classifications: int = Field(
-        ge=0, description="Total number of data subject classifications"
+    total_indicators: int = Field(
+        ge=0, description="Total number of data subject indicators detected"
     )
     categories_identified: list[str] = Field(
         description="List of unique categories identified"
     )
 
 
-class DataSubjectFindingOutput(BaseSchemaOutput):
-    """Complete output structure for data_subject_finding schema.
+class DataSubjectIndicatorOutput(BaseSchemaOutput):
+    """Complete output structure for data_subject_indicator schema.
 
-    This model represents the full wire format for data subject analysis results,
-    including findings, summary statistics, and analysis metadata.
+    This model represents the full wire format for data subject detection results,
+    including indicators, summary statistics, and analysis metadata.
     """
 
     __schema_version__: ClassVar[str] = "1.0.0"
 
-    findings: list[DataSubjectFindingModel] = Field(
-        description="List of data subject findings from GDPR compliance analysis"
+    findings: list[DataSubjectIndicatorModel] = Field(
+        description="List of data subject indicators from pattern-based detection"
     )
-    summary: DataSubjectSummary = Field(
-        description="Summary statistics of the data subject analysis"
+    summary: DataSubjectIndicatorSummary = Field(
+        description="Summary statistics of the data subject detection"
     )
     analysis_metadata: BaseAnalysisOutputMetadata = Field(
         description="Metadata about the analysis process"

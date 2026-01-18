@@ -60,9 +60,9 @@
       "title": "BaseFindingEvidence",
       "type": "object"
     },
-    "DataSubjectFindingMetadata": {
+    "GDPRDataSubjectFindingMetadata": {
       "additionalProperties": false,
-      "description": "Metadata for data subject findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "description": "Metadata for GDPR data subject classification findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
       "properties": {
         "source": {
           "description": "Source file or location where the data was found",
@@ -81,11 +81,11 @@
       "required": [
         "source"
       ],
-      "title": "DataSubjectFindingMetadata",
+      "title": "GDPRDataSubjectFindingMetadata",
       "type": "object"
     },
-    "DataSubjectFindingModel": {
-      "description": "Data subject finding structure.",
+    "GDPRDataSubjectFindingModel": {
+      "description": "GDPR data subject classification finding structure.\n\nRepresents a data subject indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nrisk_modifiers - e.g., minors (Article 8) or vulnerable individuals\n(Recital 75) require additional protections under GDPR.",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -110,71 +110,93 @@
           "title": "Matched Patterns",
           "type": "array"
         },
-        "primary_category": {
-          "description": "Primary data subject category",
-          "title": "Primary Category",
+        "data_subject_category": {
+          "description": "Normalised GDPR data subject category (e.g., 'employee', 'customer')",
+          "title": "Data Subject Category",
           "type": "string"
         },
+        "article_references": {
+          "description": "Relevant GDPR article references (e.g., 'Article 4(1)', 'Article 30(1)(c)')",
+          "items": {
+            "type": "string"
+          },
+          "title": "Article References",
+          "type": "array"
+        },
+        "typical_lawful_bases": {
+          "description": "Typical GDPR Article 6 lawful bases for processing this data subject type",
+          "items": {
+            "type": "string"
+          },
+          "title": "Typical Lawful Bases",
+          "type": "array"
+        },
+        "risk_modifiers": {
+          "description": "Risk modifiers detected from context (e.g., 'minor', 'vulnerable_individual')",
+          "items": {
+            "type": "string"
+          },
+          "title": "Risk Modifiers",
+          "type": "array"
+        },
         "confidence_score": {
-          "description": "Confidence score for the classification (0-100)",
+          "description": "Confidence score from indicator detection (0-100)",
           "maximum": 100,
           "minimum": 0,
           "title": "Confidence Score",
           "type": "integer"
         },
-        "modifiers": {
-          "description": "Cross-category regulatory modifiers from ruleset",
-          "items": {
-            "type": "string"
-          },
-          "title": "Modifiers",
-          "type": "array"
-        },
         "metadata": {
           "anyOf": [
             {
-              "$ref": "#/$defs/DataSubjectFindingMetadata"
+              "$ref": "#/$defs/GDPRDataSubjectFindingMetadata"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Additional metadata about the finding"
+          "description": "Additional metadata from the original data source"
         }
       },
       "required": [
         "evidence",
         "matched_patterns",
-        "primary_category",
+        "data_subject_category",
         "confidence_score"
       ],
-      "title": "DataSubjectFindingModel",
+      "title": "GDPRDataSubjectFindingModel",
       "type": "object"
     },
-    "DataSubjectSummary": {
-      "description": "Summary statistics for data subject findings.",
+    "GDPRDataSubjectSummary": {
+      "description": "Summary statistics for GDPR data subject classification findings.",
       "properties": {
-        "total_classifications": {
-          "description": "Total number of data subject classifications",
+        "total_findings": {
+          "description": "Total number of classified data subject findings",
           "minimum": 0,
-          "title": "Total Classifications",
+          "title": "Total Findings",
           "type": "integer"
         },
         "categories_identified": {
-          "description": "List of unique categories identified",
+          "description": "Unique data subject categories identified",
           "items": {
             "type": "string"
           },
           "title": "Categories Identified",
           "type": "array"
+        },
+        "high_risk_count": {
+          "description": "Number of findings with risk modifiers (e.g., minors, vulnerable individuals)",
+          "minimum": 0,
+          "title": "High Risk Count",
+          "type": "integer"
         }
       },
       "required": [
-        "total_classifications",
-        "categories_identified"
+        "total_findings",
+        "high_risk_count"
       ],
-      "title": "DataSubjectSummary",
+      "title": "GDPRDataSubjectSummary",
       "type": "object"
     },
     "JsonValue": {
@@ -209,23 +231,23 @@
       ]
     }
   },
-  "description": "Complete output structure for data_subject_finding schema.\n\nThis model represents the full wire format for data subject analysis results,\nincluding findings, summary statistics, and analysis metadata.",
+  "description": "Complete output structure for gdpr_data_subject schema.\n\nThis model represents the full wire format for GDPR data subject\nclassification results, including findings enriched with GDPR-specific\ninformation, summary statistics, and analysis metadata.",
   "properties": {
     "findings": {
-      "description": "List of data subject findings from GDPR compliance analysis",
+      "description": "List of data subject findings with GDPR classification",
       "items": {
-        "$ref": "#/$defs/DataSubjectFindingModel"
+        "$ref": "#/$defs/GDPRDataSubjectFindingModel"
       },
       "title": "Findings",
       "type": "array"
     },
     "summary": {
-      "$ref": "#/$defs/DataSubjectSummary",
-      "description": "Summary statistics of the data subject analysis"
+      "$ref": "#/$defs/GDPRDataSubjectSummary",
+      "description": "Summary statistics of the GDPR classification analysis"
     },
     "analysis_metadata": {
       "$ref": "#/$defs/BaseAnalysisOutputMetadata",
-      "description": "Metadata about the analysis process"
+      "description": "Metadata about the classification process"
     }
   },
   "required": [
@@ -233,7 +255,7 @@
     "summary",
     "analysis_metadata"
   ],
-  "title": "DataSubjectFindingOutput",
+  "title": "GDPRDataSubjectFindingOutput",
   "type": "object",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "version": "1.0.0"

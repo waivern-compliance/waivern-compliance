@@ -1,13 +1,13 @@
 """GDPR personal data classifier implementation."""
 
 import logging
-from functools import cache
 from typing import Any, cast, override
 
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
-from waivern_rulesets import GDPRPersonalDataClassificationRuleset
+from waivern_rulesets import GDPRPersonalDataClassificationRule
 
 from waivern_gdpr_personal_data_classifier.result_builder import (
     GDPRClassifierResultBuilder,
@@ -16,38 +16,11 @@ from waivern_gdpr_personal_data_classifier.schemas import (
     GDPRPersonalDataFindingMetadata,
     GDPRPersonalDataFindingModel,
 )
+from waivern_gdpr_personal_data_classifier.types import (
+    GDPRPersonalDataClassifierConfig,
+)
 
 logger = logging.getLogger(__name__)
-
-
-@cache
-def _get_ruleset() -> GDPRPersonalDataClassificationRuleset:
-    """Get the cached GDPR classification ruleset.
-
-    The ruleset is loaded once and cached for all classifier instances.
-    """
-    return GDPRPersonalDataClassificationRuleset()
-
-
-@cache
-def _get_classification_map() -> dict[str, dict[str, Any]]:
-    """Build a cached lookup map from indicator category to GDPR classification.
-
-    This function is cached at module level to avoid rebuilding the map
-    for each classifier instance. The ruleset is static (loaded from YAML),
-    so caching is safe and improves performance in high-throughput pipelines.
-    """
-    ruleset = _get_ruleset()
-    classification_map: dict[str, dict[str, Any]] = {}
-    for rule in ruleset.get_rules():
-        for indicator_category in rule.indicator_categories:
-            classification_map[indicator_category] = {
-                "privacy_category": rule.privacy_category,
-                "special_category": rule.special_category,
-                "article_references": rule.article_references,
-                "lawful_bases": rule.lawful_bases,
-            }
-    return classification_map
 
 
 class GDPRPersonalDataClassifier(Classifier):
@@ -60,10 +33,38 @@ class GDPRPersonalDataClassifier(Classifier):
     - Applicable lawful bases
     """
 
-    def __init__(self) -> None:
-        """Initialise the classifier."""
-        self._classification_map = _get_classification_map()
+    def __init__(self, config: GDPRPersonalDataClassifierConfig | None = None) -> None:
+        """Initialise the classifier.
+
+        Args:
+            config: Configuration for the classifier. If not provided,
+                   uses default configuration.
+
+        """
+        config = config or GDPRPersonalDataClassifierConfig()
+        self._ruleset = RulesetManager.get_ruleset(
+            config.ruleset, GDPRPersonalDataClassificationRule
+        )
+        self._classification_map = self._build_classification_map()
         self._result_builder = GDPRClassifierResultBuilder()
+
+    def _build_classification_map(self) -> dict[str, dict[str, Any]]:
+        """Build a lookup map from indicator category to GDPR classification.
+
+        Returns:
+            Dictionary mapping indicator categories to their GDPR classification data.
+
+        """
+        classification_map: dict[str, dict[str, Any]] = {}
+        for rule in self._ruleset.get_rules():
+            for indicator_category in rule.indicator_categories:
+                classification_map[indicator_category] = {
+                    "privacy_category": rule.privacy_category,
+                    "special_category": rule.special_category,
+                    "article_references": rule.article_references,
+                    "lawful_bases": rule.lawful_bases,
+                }
+        return classification_map
 
     @classmethod
     @override
@@ -98,15 +99,10 @@ class GDPRPersonalDataClassifier(Classifier):
                 "Received empty inputs list."
             )
 
-        if len(inputs) > 1:
-            logger.warning(
-                "GDPRPersonalDataClassifier received %d inputs but only processes the first. "
-                "Extra inputs will be ignored. Consider merging inputs upstream.",
-                len(inputs),
-            )
-
-        # Extract findings from input
-        input_findings = inputs[0].content.get("findings", [])
+        # Aggregate findings from all input messages (fan-in support)
+        input_findings: list[dict[str, object]] = []
+        for input_message in inputs:
+            input_findings.extend(input_message.content.get("findings", []))
 
         # Classify each finding
         classified_findings: list[GDPRPersonalDataFindingModel] = []
@@ -115,9 +111,11 @@ class GDPRPersonalDataClassifier(Classifier):
             classified_findings.append(classified)
 
         # Build and return output message
-        ruleset = _get_ruleset()
         return self._result_builder.build_output_message(
-            classified_findings, output_schema, ruleset.name, ruleset.version
+            classified_findings,
+            output_schema,
+            self._ruleset.name,
+            self._ruleset.version,
         )
 
     def _classify_finding(

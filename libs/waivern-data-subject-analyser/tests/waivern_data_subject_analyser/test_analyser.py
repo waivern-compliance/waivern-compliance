@@ -62,13 +62,13 @@ class TestDataSubjectAnalyserSchemaSupport:
         assert first_req.schema_name == "standard_input"
         assert first_req.version == "1.0.0"
 
-    def test_get_supported_output_schemas_returns_data_subject_finding(self) -> None:
-        """Test that analyser outputs data_subject_finding schema."""
+    def test_get_supported_output_schemas_returns_data_subject_indicator(self) -> None:
+        """Test that analyser outputs data_subject_indicator schema."""
         output_schemas = DataSubjectAnalyser.get_supported_output_schemas()
 
         assert isinstance(output_schemas, list)
         assert len(output_schemas) == 1
-        assert output_schemas[0].name == "data_subject_finding"
+        assert output_schemas[0].name == "data_subject_indicator"
 
 
 class TestDataSubjectAnalyserProcessing:
@@ -80,7 +80,7 @@ class TestDataSubjectAnalyserProcessing:
         config = DataSubjectAnalyserConfig.from_properties({})
         analyser = DataSubjectAnalyser(config, llm_service=None)
         input_schema = Schema("standard_input", "1.0.0")
-        output_schema = Schema("data_subject_finding", "1.0.0")
+        output_schema = Schema("data_subject_indicator", "1.0.0")
 
         empty_data = StandardInputDataModel(
             schemaVersion="1.0.0",
@@ -117,7 +117,7 @@ class TestDataSubjectAnalyserProcessing:
         config = DataSubjectAnalyserConfig.from_properties({})
         analyser = DataSubjectAnalyser(config, llm_service=None)
         input_schema = Schema("standard_input", "1.0.0")
-        output_schema = Schema("data_subject_finding", "1.0.0")
+        output_schema = Schema("data_subject_indicator", "1.0.0")
 
         # Create test data with employee patterns
         test_metadata = BaseMetadata(source="test_hr_table", connector_type="mysql")
@@ -148,12 +148,11 @@ class TestDataSubjectAnalyserProcessing:
         assert isinstance(findings, list)
 
         if len(findings) > 0:
-            # Verify finding structure for pattern matches
+            # Verify indicator structure for pattern matches
             finding = findings[0]
             assert "primary_category" in finding
             assert "confidence_score" in finding
             assert "evidence" in finding
-            assert "modifiers" in finding
             assert "matched_patterns" in finding
             assert "metadata" in finding
 
@@ -163,7 +162,7 @@ class TestDataSubjectAnalyserProcessing:
         config = DataSubjectAnalyserConfig.from_properties({})
         analyser = DataSubjectAnalyser(config, llm_service=None)
         input_schema = Schema("standard_input", "1.0.0")
-        output_schema = Schema("data_subject_finding", "1.0.0")
+        output_schema = Schema("data_subject_indicator", "1.0.0")
 
         # Create test data with employee patterns
         test_metadata = BaseMetadata(source="test_hr_table", connector_type="mysql")
@@ -237,7 +236,7 @@ class TestDataSubjectAnalyserProcessing:
         config = DataSubjectAnalyserConfig.from_properties({})
         analyser = DataSubjectAnalyser(config, llm_service=None)
         input_schema = Schema("standard_input", "1.0.0")
-        output_schema = Schema("data_subject_finding", "1.0.0")
+        output_schema = Schema("data_subject_indicator", "1.0.0")
 
         # Create test data with multiple director patterns that should all match
         # Test content contains director, ceo, and executive patterns

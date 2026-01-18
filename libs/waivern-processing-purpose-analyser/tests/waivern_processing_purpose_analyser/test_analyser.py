@@ -811,3 +811,444 @@ class CustomerService {
 
         # Assert - Output validates against schema
         result.validate()  # Should not raise
+
+
+# =============================================================================
+# Fan-in Tests (multiple input aggregation)
+# =============================================================================
+
+
+class TestFanInSupport:
+    """Test suite for fan-in support (aggregating data from multiple input messages).
+
+    Fan-in allows multiple upstream artifacts (e.g., multiple database connectors)
+    to feed into a single ProcessingPurposeAnalyser, with all data items merged
+    before processing.
+    """
+
+    @pytest.fixture
+    def analyser_no_llm(self) -> ProcessingPurposeAnalyser:
+        """Create analyser without LLM validation for faster tests."""
+        config = ProcessingPurposeAnalyserConfig.from_properties(
+            {"llm_validation": {"enable_llm_validation": False}}
+        )
+        return ProcessingPurposeAnalyser(config, llm_service=None)
+
+    @pytest.fixture
+    def standard_input_schema(self) -> Schema:
+        """Create standard input schema."""
+        return Schema("standard_input", "1.0.0")
+
+    @pytest.fixture
+    def source_code_schema(self) -> Schema:
+        """Create source code schema."""
+        return Schema("source_code", "1.0.0")
+
+    @pytest.fixture
+    def output_schema(self) -> Schema:
+        """Create output schema."""
+        return Schema("processing_purpose_finding", "1.0.0")
+
+    # -------------------------------------------------------------------------
+    # Standard Input Fan-in Tests
+    # -------------------------------------------------------------------------
+
+    def test_process_aggregates_findings_from_multiple_standard_input_messages(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        standard_input_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that findings from multiple standard_input messages are combined."""
+        # Arrange - Message 1: payment-related content (distinct from message 2)
+        data_1 = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Database 1",
+            description="First database source",
+            source="mysql://db1",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content="Process payment transactions for billing",
+                    metadata=BaseMetadata(
+                        source="db1_payments", connector_type="mysql"
+                    ),
+                ),
+            ],
+        )
+        message_1 = Message(
+            id="input_1",
+            content=data_1.model_dump(exclude_none=True),
+            schema=standard_input_schema,
+        )
+
+        # Arrange - Message 2: marketing content (distinct from message 1)
+        data_2 = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Database 2",
+            description="Second database source",
+            source="mysql://db2",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content="Marketing campaign analytics and tracking",
+                    metadata=BaseMetadata(
+                        source="db2_marketing", connector_type="mysql"
+                    ),
+                ),
+            ],
+        )
+        message_2 = Message(
+            id="input_2",
+            content=data_2.model_dump(exclude_none=True),
+            schema=standard_input_schema,
+        )
+
+        # Act - process both messages together
+        result = analyser_no_llm.process([message_1, message_2], output_schema)
+
+        # Assert - findings should include results from BOTH messages
+        findings = result.content["findings"]
+
+        # Extract unique sources from finding metadata
+        sources = {f["metadata"]["source"] for f in findings}
+
+        # CRITICAL: Must have findings from BOTH sources
+        assert "db1_payments" in sources, (
+            "Should have findings from message 1 (db1_payments)"
+        )
+        assert "db2_marketing" in sources, (
+            "Should have findings from message 2 (db2_marketing)"
+        )
+
+    def test_process_recalculates_summary_for_aggregated_standard_input_findings(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        standard_input_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that summary statistics reflect ALL findings from all standard_input messages."""
+        # Arrange - Message 1: payment content
+        data_1 = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Database 1",
+            description="First database",
+            source="db1",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content="Process payment transactions",
+                    metadata=BaseMetadata(source="db1_table", connector_type="mysql"),
+                ),
+            ],
+        )
+        message_1 = Message(
+            id="input_1",
+            content=data_1.model_dump(exclude_none=True),
+            schema=standard_input_schema,
+        )
+
+        # Arrange - Message 2: marketing content
+        data_2 = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Database 2",
+            description="Second database",
+            source="db2",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content="Marketing analytics tracking",
+                    metadata=BaseMetadata(source="db2_table", connector_type="mysql"),
+                ),
+            ],
+        )
+        message_2 = Message(
+            id="input_2",
+            content=data_2.model_dump(exclude_none=True),
+            schema=standard_input_schema,
+        )
+
+        # Act
+        result = analyser_no_llm.process([message_1, message_2], output_schema)
+
+        # Assert - summary should reflect ALL findings from both messages
+        findings = result.content["findings"]
+        summary = result.content["summary"]
+
+        assert summary["total_findings"] == len(findings)
+        assert summary["total_findings"] >= 2, "Should have findings from both messages"
+
+    def test_process_preserves_metadata_from_each_standard_input_message(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        standard_input_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that each finding retains metadata tracing to its original source."""
+        # Arrange - Two messages with distinct, traceable metadata
+        data_1 = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Database 1",
+            description="First database",
+            source="db1",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content="Process payment transactions",
+                    metadata=RelationalDatabaseMetadata(
+                        source="orders_db",
+                        connector_type="mysql",
+                        table_name="payments",
+                        column_name="description",
+                        schema_name="ecommerce",
+                    ),
+                ),
+            ],
+        )
+        message_1 = Message(
+            id="input_1",
+            content=data_1.model_dump(exclude_none=True),
+            schema=standard_input_schema,
+        )
+
+        data_2 = StandardInputDataModel(
+            schemaVersion="1.0.0",
+            name="Database 2",
+            description="Second database",
+            source="db2",
+            metadata={},
+            data=[
+                StandardInputDataItemModel(
+                    content="Marketing campaign analytics",
+                    metadata=RelationalDatabaseMetadata(
+                        source="analytics_db",
+                        connector_type="postgresql",
+                        table_name="campaigns",
+                        column_name="purpose",
+                        schema_name="marketing",
+                    ),
+                ),
+            ],
+        )
+        message_2 = Message(
+            id="input_2",
+            content=data_2.model_dump(exclude_none=True),
+            schema=standard_input_schema,
+        )
+
+        # Act
+        result = analyser_no_llm.process([message_1, message_2], output_schema)
+
+        # Assert - findings should preserve their original metadata
+        findings = result.content["findings"]
+        sources = {f["metadata"]["source"] for f in findings}
+
+        # Verify metadata from both original sources is preserved
+        assert "orders_db" in sources, "Should preserve metadata from message 1"
+        assert "analytics_db" in sources, "Should preserve metadata from message 2"
+
+    # -------------------------------------------------------------------------
+    # Source Code Fan-in Tests
+    # -------------------------------------------------------------------------
+
+    def test_process_aggregates_findings_from_multiple_source_code_messages(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        source_code_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that findings from multiple source_code messages are combined."""
+        # Arrange - Message 1: payment service file
+        content_1 = {
+            "schemaVersion": "1.0.0",
+            "name": "Repo 1",
+            "description": "First repository",
+            "source": "repo1",
+            "metadata": {
+                "total_files": 1,
+                "total_lines": 10,
+                "analysis_timestamp": "2025-01-01T00:00:00Z",
+            },
+            "data": [
+                {
+                    "file_path": "/repo1/PaymentService.php",
+                    "language": "php",
+                    "raw_content": "<?php\nclass PaymentService {\n    public function processPayment() {}\n}\n",
+                    "metadata": {"file_size": 100, "line_count": 4},
+                }
+            ],
+        }
+        message_1 = Message(
+            id="source_1",
+            content=content_1,
+            schema=source_code_schema,
+        )
+
+        # Arrange - Message 2: analytics service file
+        content_2 = {
+            "schemaVersion": "1.0.0",
+            "name": "Repo 2",
+            "description": "Second repository",
+            "source": "repo2",
+            "metadata": {
+                "total_files": 1,
+                "total_lines": 10,
+                "analysis_timestamp": "2025-01-01T00:00:00Z",
+            },
+            "data": [
+                {
+                    "file_path": "/repo2/AnalyticsService.php",
+                    "language": "php",
+                    "raw_content": "<?php\nclass AnalyticsService {\n    public function trackAnalytics() {}\n}\n",
+                    "metadata": {"file_size": 100, "line_count": 4},
+                }
+            ],
+        }
+        message_2 = Message(
+            id="source_2",
+            content=content_2,
+            schema=source_code_schema,
+        )
+
+        # Act - process both messages together
+        result = analyser_no_llm.process([message_1, message_2], output_schema)
+
+        # Assert - findings should include results from BOTH files
+        findings = result.content["findings"]
+
+        # Extract unique file paths from finding metadata
+        file_paths = {f["metadata"]["source"] for f in findings}
+
+        # CRITICAL: Must have findings from BOTH source files
+        assert "/repo1/PaymentService.php" in file_paths, (
+            "Should have findings from message 1 (PaymentService.php)"
+        )
+        assert "/repo2/AnalyticsService.php" in file_paths, (
+            "Should have findings from message 2 (AnalyticsService.php)"
+        )
+
+    def test_process_recalculates_summary_for_aggregated_source_code_findings(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        source_code_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that summary statistics reflect ALL findings from all source_code messages."""
+        # Arrange - Message 1: payment service
+        content_1 = {
+            "schemaVersion": "1.0.0",
+            "name": "Repo 1",
+            "description": "First repository",
+            "source": "repo1",
+            "metadata": {
+                "total_files": 1,
+                "total_lines": 10,
+                "analysis_timestamp": "2025-01-01T00:00:00Z",
+            },
+            "data": [
+                {
+                    "file_path": "/repo1/PaymentService.php",
+                    "language": "php",
+                    "raw_content": "<?php\nclass PaymentService {\n    public function processPayment() {}\n}\n",
+                    "metadata": {"file_size": 100, "line_count": 4},
+                }
+            ],
+        }
+        message_1 = Message(id="source_1", content=content_1, schema=source_code_schema)
+
+        # Arrange - Message 2: analytics service
+        content_2 = {
+            "schemaVersion": "1.0.0",
+            "name": "Repo 2",
+            "description": "Second repository",
+            "source": "repo2",
+            "metadata": {
+                "total_files": 1,
+                "total_lines": 10,
+                "analysis_timestamp": "2025-01-01T00:00:00Z",
+            },
+            "data": [
+                {
+                    "file_path": "/repo2/AnalyticsService.php",
+                    "language": "php",
+                    "raw_content": "<?php\nclass AnalyticsService {\n    public function trackAnalytics() {}\n}\n",
+                    "metadata": {"file_size": 100, "line_count": 4},
+                }
+            ],
+        }
+        message_2 = Message(id="source_2", content=content_2, schema=source_code_schema)
+
+        # Act
+        result = analyser_no_llm.process([message_1, message_2], output_schema)
+
+        # Assert - summary should reflect ALL findings
+        findings = result.content["findings"]
+        summary = result.content["summary"]
+
+        assert summary["total_findings"] == len(findings)
+        assert summary["total_findings"] >= 2, "Should have findings from both messages"
+
+    def test_process_preserves_file_paths_from_each_source_code_message(
+        self,
+        analyser_no_llm: ProcessingPurposeAnalyser,
+        source_code_schema: Schema,
+        output_schema: Schema,
+    ) -> None:
+        """Test that each finding references the correct file path from its original message."""
+        # Arrange - Two messages with files from different repositories
+        content_1 = {
+            "schemaVersion": "1.0.0",
+            "name": "Frontend Repo",
+            "description": "Frontend repository",
+            "source": "frontend",
+            "metadata": {
+                "total_files": 1,
+                "total_lines": 10,
+                "analysis_timestamp": "2025-01-01T00:00:00Z",
+            },
+            "data": [
+                {
+                    "file_path": "/frontend/src/PaymentForm.tsx",
+                    "language": "typescript",
+                    "raw_content": "// Payment form component\nfunction processPayment() {}",
+                    "metadata": {"file_size": 100, "line_count": 2},
+                }
+            ],
+        }
+        message_1 = Message(id="source_1", content=content_1, schema=source_code_schema)
+
+        content_2 = {
+            "schemaVersion": "1.0.0",
+            "name": "Backend Repo",
+            "description": "Backend repository",
+            "source": "backend",
+            "metadata": {
+                "total_files": 1,
+                "total_lines": 10,
+                "analysis_timestamp": "2025-01-01T00:00:00Z",
+            },
+            "data": [
+                {
+                    "file_path": "/backend/api/analytics.py",
+                    "language": "python",
+                    "raw_content": "# Analytics module\ndef track_analytics(): pass",
+                    "metadata": {"file_size": 100, "line_count": 2},
+                }
+            ],
+        }
+        message_2 = Message(id="source_2", content=content_2, schema=source_code_schema)
+
+        # Act
+        result = analyser_no_llm.process([message_1, message_2], output_schema)
+
+        # Assert - findings should reference their original file paths
+        findings = result.content["findings"]
+        file_paths = {f["metadata"]["source"] for f in findings}
+
+        # Verify file paths from both repositories are preserved
+        assert "/frontend/src/PaymentForm.tsx" in file_paths, (
+            "Should preserve file path from frontend repo"
+        )
+        assert "/backend/api/analytics.py" in file_paths, (
+            "Should preserve file path from backend repo"
+        )

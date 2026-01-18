@@ -52,10 +52,10 @@ from waivern_analysers_shared.utilities import (
     RulesetManager,
 )
 from waivern_core.schemas import BaseMetadata
-from waivern_rulesets.data_subjects import DataSubjectRule
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 
 from .confidence_scorer import DataSubjectConfidenceScorer
-from .schemas.types import DataSubjectFindingMetadata, DataSubjectFindingModel
+from .schemas.types import DataSubjectIndicatorMetadata, DataSubjectIndicatorModel
 
 
 class DataSubjectPatternMatcher:
@@ -80,7 +80,7 @@ class DataSubjectPatternMatcher:
 
     def find_patterns(
         self, content: str, metadata: BaseMetadata
-    ) -> list[DataSubjectFindingModel]:
+    ) -> list[DataSubjectIndicatorModel]:
         """Find data subject patterns in content with confidence scoring.
 
         Args:
@@ -88,18 +88,22 @@ class DataSubjectPatternMatcher:
             metadata: Content metadata for context filtering
 
         Returns:
-            List of data subject findings with confidence scores
+            List of data subject indicators with confidence scores
 
         """
         # Check if content is empty
         if not content.strip():
             return []
 
-        rules = self._ruleset_manager.get_rules(self._config.ruleset, DataSubjectRule)
-        findings: list[DataSubjectFindingModel] = []
+        rules = self._ruleset_manager.get_rules(
+            self._config.ruleset, DataSubjectIndicatorRule
+        )
+        indicators: list[DataSubjectIndicatorModel] = []
 
         # Group matched rules and patterns by subject category for confidence calculation
-        category_matched_data: dict[str, list[tuple[DataSubjectRule, list[str]]]] = {}
+        category_matched_data: dict[
+            str, list[tuple[DataSubjectIndicatorRule, list[str]]]
+        ] = {}
 
         # Find all matching rules and track which patterns matched
         for rule in rules:
@@ -123,7 +127,7 @@ class DataSubjectPatternMatcher:
                     (rule, matched_patterns_for_rule)
                 )
 
-        # Create findings for each category with matched data
+        # Create indicators for each category with matched data
         for category, matched_data in category_matched_data.items():
             # Extract rules and patterns from matched data
             matched_rules = [rule for rule, _ in matched_data]
@@ -144,31 +148,29 @@ class DataSubjectPatternMatcher:
                 self._config.evidence_context_size,
             )
 
-            if evidence:  # Only create finding if we have evidence
-                # Create metadata for the finding
-                finding_metadata = DataSubjectFindingMetadata(
+            if evidence:  # Only create indicator if we have evidence
+                # Create metadata for the indicator
+                indicator_metadata = DataSubjectIndicatorMetadata(
                     source=metadata.source,
                     context=metadata.context,
                 )
 
-                # Create the finding
-                # TODO: modifiers should use ruleset.risk_increasing_modifiers and
-                #    ruleset.risk_decreasing_modifiers with LLM validation to detect
-                #    cross-category regulatory modifiers (e.g., "vulnerable", "minor")
-                finding = DataSubjectFindingModel(
+                # Create the indicator
+                # Note: Risk modifiers (vulnerable, minor, etc.) are GDPR-specific
+                # and will be detected by the GDPRDataSubjectClassifier
+                indicator = DataSubjectIndicatorModel(
                     primary_category=category,
                     confidence_score=confidence_score,
                     evidence=evidence,
-                    modifiers=[],
                     matched_patterns=matched_patterns,
-                    metadata=finding_metadata,
+                    metadata=indicator_metadata,
                 )
-                findings.append(finding)
+                indicators.append(indicator)
 
-        return findings
+        return indicators
 
     def _rule_applies_to_context(
-        self, rule: DataSubjectRule, metadata: BaseMetadata
+        self, rule: DataSubjectIndicatorRule, metadata: BaseMetadata
     ) -> bool:
         """Check if rule applies to the given context.
 

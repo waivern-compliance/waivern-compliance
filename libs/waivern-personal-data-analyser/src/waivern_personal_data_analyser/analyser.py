@@ -5,6 +5,7 @@ import logging
 from typing import override
 
 from waivern_analysers_shared import SchemaReader
+from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import (
@@ -15,11 +16,11 @@ from waivern_core.schemas import (
 )
 from waivern_llm import BaseLLMService
 
-from .llm_validation_strategy import PersonalDataValidationStrategy
 from .pattern_matcher import PersonalDataPatternMatcher
 from .result_builder import PersonalDataResultBuilder
 from .schemas.types import PersonalDataIndicatorModel
 from .types import PersonalDataAnalyserConfig
+from .validation import create_validation_orchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -155,58 +156,99 @@ class PersonalDataAnalyser(Analyser):
             Output message with findings from all inputs combined.
 
         """
-        # Merge inputs, find patterns, validate
+        # Merge inputs, find patterns
         data_items = self._merge_input_data_items(inputs)
         findings = self._find_patterns_in_data_items(data_items)
-        validated_findings = self._validate_findings_with_llm(findings)
+
+        # Apply LLM validation if enabled
+        validation_result: ValidationResult[PersonalDataIndicatorModel] | None = None
+        if self._config.llm_validation.enable_llm_validation:
+            validated_findings, validation_applied, validation_result = (
+                self._validate_findings(findings)
+            )
+        else:
+            validated_findings, validation_applied = findings, False
 
         # Build and return output message
         return self._result_builder.build_output_message(
-            findings, validated_findings, output_schema
+            findings,
+            validated_findings,
+            validation_applied,
+            output_schema,
+            validation_result,
         )
 
-    def _validate_findings_with_llm(
-        self, findings: list[PersonalDataIndicatorModel]
-    ) -> list[PersonalDataIndicatorModel]:
-        """Validate findings using LLM if enabled and available.
+    def _validate_findings(
+        self,
+        findings: list[PersonalDataIndicatorModel],
+    ) -> tuple[
+        list[PersonalDataIndicatorModel],
+        bool,
+        ValidationResult[PersonalDataIndicatorModel] | None,
+    ]:
+        """Validate findings using ValidationOrchestrator.
+
+        The orchestrator handles:
+        - Grouping by category (when sampling is enabled)
+        - Sampling and group-level decisions
 
         Args:
-            findings: List of findings to validate
+            findings: List of findings to validate.
 
         Returns:
-            List of validated findings (filtered/modified by LLM validation)
+            Tuple of (validated findings, validation applied, validation result).
 
         """
-        if not self._config.llm_validation.enable_llm_validation:
-            return findings
-
         if not findings:
-            return findings
+            return findings, False, None
 
-        if self._llm_service is None:
-            logger.warning("LLM service not available, skipping validation")
-            return findings
+        if not self._llm_service:
+            logger.warning("LLM service unavailable, returning original findings")
+            return findings, False, None
 
         try:
-            logger.info(f"Starting LLM validation of {len(findings)} findings")
-
-            outcome = PersonalDataValidationStrategy().validate_findings(
+            # Create orchestrator and validate
+            orchestrator = create_validation_orchestrator(self._config.llm_validation)
+            result = orchestrator.validate(
                 findings, self._config.llm_validation, self._llm_service
             )
 
-            if outcome.validation_succeeded:
-                logger.info(
-                    f"LLM validation completed: {len(findings)} → "
-                    f"{len(outcome.kept_findings)} findings"
-                )
-            else:
-                logger.warning(
-                    f"LLM validation incomplete: {len(outcome.skipped)} findings skipped"
-                )
+            # Mark validated findings
+            marked_findings = [
+                self._mark_finding_validated(f) for f in result.kept_findings
+            ]
 
-            return outcome.kept_findings
+            logger.info(
+                f"Validation complete: {len(findings)} → {len(marked_findings)} findings "
+                f"({len(result.removed_groups)} groups removed)"
+            )
+
+            return marked_findings, result.all_succeeded, result
 
         except Exception as e:
             logger.error(f"LLM validation failed: {e}")
-            logger.warning("Returning unvalidated findings due to LLM validation error")
-            return findings
+            logger.warning("Returning original findings due to validation error")
+            return findings, False, None
+
+    def _mark_finding_validated(
+        self, finding: PersonalDataIndicatorModel
+    ) -> PersonalDataIndicatorModel:
+        """Mark a finding as LLM validated.
+
+        Args:
+            finding: Finding to mark.
+
+        Returns:
+            New finding with validation marker in metadata context.
+
+        """
+        if finding.metadata:
+            updated_context = dict(finding.metadata.context)
+            updated_context["personal_data_llm_validated"] = True
+
+            updated_metadata = finding.metadata.model_copy(
+                update={"context": updated_context}
+            )
+            return finding.model_copy(update={"metadata": updated_metadata})
+
+        return finding

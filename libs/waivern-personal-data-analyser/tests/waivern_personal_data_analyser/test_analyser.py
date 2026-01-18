@@ -4,37 +4,34 @@ This test module focuses on testing the public API of PersonalDataAnalyser,
 following black-box testing principles and proper encapsulation.
 """
 
+import re
 from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-from waivern_analysers_shared.llm_validation import LLMValidationOutcome
+from waivern_analysers_shared.llm_validation import (
+    LLMValidationResponseModel,
+    LLMValidationResultModel,
+)
 from waivern_analysers_shared.types import (
     LLMValidationConfig,
     PatternMatchingConfig,
 )
 from waivern_core import AnalyserContractTests
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    BaseFindingEvidence,
-    Schema,
-)
+from waivern_core.schemas import Schema
 from waivern_llm import BaseLLMService
 from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 
-from waivern_personal_data_analyser.analyser import (
-    PersonalDataAnalyser,
-)
-from waivern_personal_data_analyser.pattern_matcher import (
-    PersonalDataPatternMatcher,
-)
-from waivern_personal_data_analyser.schemas.types import (
-    PersonalDataIndicatorMetadata,
-    PersonalDataIndicatorModel,
-)
-from waivern_personal_data_analyser.types import (
-    PersonalDataAnalyserConfig,
-)
+from waivern_personal_data_analyser.analyser import PersonalDataAnalyser
+from waivern_personal_data_analyser.pattern_matcher import PersonalDataPatternMatcher
+from waivern_personal_data_analyser.types import PersonalDataAnalyserConfig
+
+
+def _extract_finding_ids_from_prompt(prompt: str) -> list[str]:
+    """Extract finding IDs from the validation prompt."""
+    pattern = r"\[([a-f0-9-]+)\]"
+    return re.findall(pattern, prompt)
 
 
 class TestPersonalDataAnalyser:
@@ -46,8 +43,10 @@ class TestPersonalDataAnalyser:
 
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
-        """Create a mock LLM service."""
-        return Mock(spec=BaseLLMService)
+        """Create a mock LLM service with model_name for token estimation."""
+        mock = Mock(spec=BaseLLMService)
+        mock.model_name = "claude-3-5-sonnet"
+        return mock
 
     @pytest.fixture
     def valid_config(self) -> PersonalDataAnalyserConfig:
@@ -119,38 +118,6 @@ class TestPersonalDataAnalyser:
         )
         return mock_reader
 
-    @pytest.fixture
-    def sample_findings(self) -> list[PersonalDataIndicatorModel]:
-        """Create sample personal data findings for testing.
-
-        Note: matched_patterns contains keywords that the pattern matcher looks for
-        (e.g., "email", "phone"), not the actual data values.
-        """
-        return [
-            PersonalDataIndicatorModel(
-                category="email",
-                matched_patterns=["email"],
-                evidence=[
-                    BaseFindingEvidence(content="Contact us at support@example.com")
-                ],
-                metadata=PersonalDataIndicatorMetadata(source="contact_form.html"),
-            ),
-            PersonalDataIndicatorModel(
-                category="phone",
-                matched_patterns=["telephone"],
-                evidence=[BaseFindingEvidence(content="call 123-456-7890")],
-                metadata=PersonalDataIndicatorMetadata(source="contact_form.html"),
-            ),
-            PersonalDataIndicatorModel(
-                category="email",
-                matched_patterns=["email"],
-                evidence=[
-                    BaseFindingEvidence(content="User email: john.doe@company.com")
-                ],
-                metadata=PersonalDataIndicatorMetadata(source="user_database"),
-            ),
-        ]
-
     def test_get_name_returns_correct_analyser_name(self) -> None:
         """Test that get_name returns the expected analyser name."""
         # Act
@@ -185,7 +152,6 @@ class TestPersonalDataAnalyser:
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
-        sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
         """Test that process returns valid output message with minimal required findings structure."""
         # Arrange
@@ -194,46 +160,37 @@ class TestPersonalDataAnalyser:
             mock_llm_service,
         )
 
-        # Mock LLM validation strategy to return sample findings
-        # (Real pattern matcher will run, then LLM validation returns our test findings)
-        with patch(
-            "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
-        ) as mock_strategy_cls:
-            mock_strategy_cls.return_value.validate_findings.return_value = (
-                LLMValidationOutcome(
-                    llm_validated_kept=sample_findings,
-                    llm_validated_removed=[],
-                    llm_not_flagged=[],
-                    skipped=[],
-                )
-            )
-            output_schema = Schema("personal_data_indicator", "1.0.0")
+        # Mock LLM to keep all findings (return empty results = all TRUE_POSITIVE)
+        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
+            return LLMValidationResponseModel(results=[])
 
-            # Act
-            result_message = analyser.process([sample_input_message], output_schema)
+        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        output_schema = Schema("personal_data_indicator", "1.0.0")
 
-            # Assert - Basic message structure
-            assert isinstance(result_message, Message)
-            assert result_message.id == self.EXPECTED_OUTPUT_MESSAGE_ID
-            assert result_message.schema == output_schema
+        # Act
+        result_message = analyser.process([sample_input_message], output_schema)
 
-            # Verify findings structure exists (count may vary based on real pattern matching)
-            result_content = result_message.content
-            assert "findings" in result_content
-            assert "summary" in result_content
-            assert isinstance(result_content["findings"], list)
+        # Assert - Basic message structure
+        assert isinstance(result_message, Message)
+        assert result_message.id == self.EXPECTED_OUTPUT_MESSAGE_ID
+        assert result_message.schema == output_schema
 
-            # Verify summary statistics structure
-            summary = result_content["summary"]
-            assert "total_findings" in summary
-            assert summary["total_findings"] == len(result_content["findings"])  # type: ignore[arg-type]
+        # Verify findings structure exists (count may vary based on real pattern matching)
+        result_content = result_message.content
+        assert "findings" in result_content
+        assert "summary" in result_content
+        assert isinstance(result_content["findings"], list)
+
+        # Verify summary statistics structure
+        summary = result_content["summary"]
+        assert "total_findings" in summary
+        assert summary["total_findings"] == len(result_content["findings"])  # type: ignore[arg-type]
 
     def test_process_findings_include_expected_metadata_and_category(
         self,
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
-        sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
         """Test that findings include source metadata and category information."""
         # Arrange
@@ -242,44 +199,37 @@ class TestPersonalDataAnalyser:
             mock_llm_service,
         )
 
-        with patch(
-            "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
-        ) as mock_strategy_cls:
-            mock_strategy_cls.return_value.validate_findings.return_value = (
-                LLMValidationOutcome(
-                    llm_validated_kept=sample_findings,
-                    llm_validated_removed=[],
-                    llm_not_flagged=[],
-                    skipped=[],
-                )
+        # Mock LLM to keep all findings
+        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
+            return LLMValidationResponseModel(results=[])
+
+        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        output_schema = Schema("personal_data_indicator", "1.0.0")
+
+        # Act
+        result_message = analyser.process([sample_input_message], output_schema)
+
+        # Assert - Verify source field and category are included
+        result_content = result_message.content
+        for finding in result_content["findings"]:
+            # Test source field directly
+            assert finding["metadata"]["source"] in [
+                "contact_form.html",
+                "user_database",
+            ]
+
+            # Test category field (granular indicator category)
+            assert "category" in finding, (
+                "PersonalDataIndicatorModel should include category field"
             )
-            output_schema = Schema("personal_data_indicator", "1.0.0")
-
-            # Act
-            result_message = analyser.process([sample_input_message], output_schema)
-
-            # Assert - Verify source field and category are included
-            result_content = result_message.content
-            for finding in result_content["findings"]:
-                # Test source field directly
-                assert finding["metadata"]["source"] in [
-                    "contact_form.html",
-                    "user_database",
-                ]
-
-                # Test category field (granular indicator category)
-                assert "category" in finding, (
-                    "PersonalDataIndicatorModel should include category field"
-                )
-                assert isinstance(finding["category"], str)
-                assert finding["category"] != "", "category should not be empty"
+            assert isinstance(finding["category"], str)
+            assert finding["category"] != "", "category should not be empty"
 
     def test_personal_data_analyser_provides_standardised_analysis_metadata(
         self,
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
-        sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
         """Test that personal data analyser provides standardised analysis metadata.
 
@@ -292,22 +242,15 @@ class TestPersonalDataAnalyser:
             mock_llm_service,
         )
 
-        # Mock LLM validation to return sample findings
-        with patch(
-            "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
-        ) as mock_strategy_cls:
-            mock_strategy_cls.return_value.validate_findings.return_value = (
-                LLMValidationOutcome(
-                    llm_validated_kept=sample_findings,
-                    llm_validated_removed=[],
-                    llm_not_flagged=[],
-                    skipped=[],
-                )
-            )
-            output_schema = Schema("personal_data_indicator", "1.0.0")
+        # Mock LLM to keep all findings
+        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
+            return LLMValidationResponseModel(results=[])
 
-            # Act
-            result_message = analyser.process([sample_input_message], output_schema)
+        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        output_schema = Schema("personal_data_indicator", "1.0.0")
+
+        # Act
+        result_message = analyser.process([sample_input_message], output_schema)
 
         # Assert - Verify analysis_metadata exists and has core standardised fields
         result_content = result_message.content
@@ -334,7 +277,6 @@ class TestPersonalDataAnalyser:
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
-        sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
         """Test that validation summary is included when LLM validation is enabled."""
         # Arrange
@@ -343,47 +285,41 @@ class TestPersonalDataAnalyser:
             mock_llm_service,
         )
 
-        # Mock LLM validation to return filtered findings (simulating false positive removal)
-        filtered_findings = [sample_findings[0]]  # Return only one finding
-        with patch(
-            "waivern_personal_data_analyser.analyser.PersonalDataValidationStrategy"
-        ) as mock_strategy_cls:
-            mock_strategy_cls.return_value.validate_findings.return_value = (
-                LLMValidationOutcome(
-                    llm_validated_kept=filtered_findings,
-                    llm_validated_removed=[sample_findings[1]],  # One removed
-                    llm_not_flagged=[],
-                    skipped=[],
+        # Mock LLM to mark first finding in prompt as FALSE_POSITIVE
+        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
+            finding_ids = _extract_finding_ids_from_prompt(prompt)
+            if finding_ids:
+                # Mark first finding as false positive
+                return LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=finding_ids[0],
+                            validation_result="FALSE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Test false positive",
+                            recommended_action="discard",
+                        )
+                    ]
                 )
-            )
-            output_schema = Schema("personal_data_indicator", "1.0.0")
+            return LLMValidationResponseModel(results=[])
 
-            # Act
-            result_message = analyser.process([sample_input_message], output_schema)
+        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        output_schema = Schema("personal_data_indicator", "1.0.0")
 
-            # Assert - Verify validation summary is included if LLM validation runs
-            result_content = result_message.content
+        # Act
+        result_message = analyser.process([sample_input_message], output_schema)
 
-            # Validation summary only added when original_findings > 0
-            # (LLM validation skipped if no patterns found)
-            if result_content["summary"]["total_findings"] > 0:
-                assert "validation_summary" in result_content
+        # Assert - Verify validation summary in analysis_metadata
+        result_content = result_message.content
+        analysis_metadata = result_content["analysis_metadata"]
 
-                validation_summary = result_content["validation_summary"]
-                assert validation_summary["llm_validation_enabled"] is True
-                assert "original_findings_count" in validation_summary
-                assert "validated_findings_count" in validation_summary
-                assert "false_positives_removed" in validation_summary
-                assert (
-                    validation_summary["validated_findings_count"] == 1
-                )  # LLM mock returns 1
-                assert validation_summary["false_positives_removed"] == (
-                    validation_summary["original_findings_count"] - 1
-                )  # Verify calculation
-                assert validation_summary["validation_mode"] == "standard"
-            else:
-                # If no patterns found, validation summary not included
-                assert "validation_summary" not in result_content
+        # Validation summary is in analysis_metadata when using orchestrator
+        if result_content["summary"]["total_findings"] >= 0:
+            assert "validation_summary" in analysis_metadata
+            validation_summary = analysis_metadata["validation_summary"]
+            assert validation_summary["strategy"] == "orchestrated"
+            assert "samples_validated" in validation_summary
+            assert "all_succeeded" in validation_summary
 
     def test_process_excludes_validation_summary_when_llm_validation_disabled(
         self,

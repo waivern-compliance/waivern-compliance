@@ -1,38 +1,46 @@
 # waivern-data-subject-analyser
 
-Data subject analyser for WCF
+Data subject analyser for the Waivern Compliance Framework.
 
 ## Overview
 
-The Data Subject analyser identifies data subjects (individuals or groups whose personal data is being processed) in content using pattern matching and optional LLM validation.
+This package provides the `DataSubjectAnalyser` which identifies data subjects (individuals or groups whose personal data is being processed) in content using pattern matching. It outputs generic `data_subject_indicator` findings that can be enriched by framework-specific classifiers.
 
-Key features:
+## Input/Output
+
+| Aspect            | Value                              |
+| ----------------- | ---------------------------------- |
+| **Input Schema**  | `standard_input/1.0.0`             |
+| **Output Schema** | `data_subject_indicator/1.0.0`     |
+| **Ruleset**       | `data_subject_indicator/1.0.0`     |
+
+## Features
+
 - Pattern-based data subject identification using rulesets
-- LLM validation for improved accuracy
-- Confidence scoring
-- Evidence extraction with context
-
-## Installation
-
-```bash
-pip install waivern-data-subject-analyser
-```
+- Confidence scoring based on pattern matches
+- Evidence extraction with surrounding context
 
 ## Usage
 
-```python
-from waivern_data_subject_analyser import (
-    DataSubjectAnalyser,
-    DataSubjectAnalyserConfig,
-)
+The analyser is typically used in a pipeline, often followed by a GDPR classifier:
 
-# Create analyser with LLM validation
-config = DataSubjectAnalyserConfig(
-    pattern_matching={"ruleset": "local/data_subjects/1.0.0"},
-    llm_validation={"enable_llm_validation": True}
-)
-analyser = DataSubjectAnalyser(config)
+```yaml
+artifacts:
+  data_content:
+    source:
+      type: filesystem
+      properties:
+        path: "./data"
 
-# Process data
-messages = analyser.process_data(input_message)
+  indicators:
+    inputs: data_content
+    process:
+      type: data_subject
+
+  # Optional: enrich with GDPR context
+  gdpr_findings:
+    inputs: indicators
+    process:
+      type: gdpr_data_subject_classifier
+    output: true
 ```

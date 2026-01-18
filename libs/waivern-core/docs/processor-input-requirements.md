@@ -86,7 +86,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class InputRequirement:
     """Declares a required input schema for a processor."""
-    schema_name: str   # e.g., "personal_data_finding"
+    schema_name: str   # e.g., "personal_data_indicator"
     version: str       # e.g., "1.0.0"
 ```
 
@@ -157,13 +157,13 @@ class GdprArticle30Analyser(Analyser):
         return [
             # Full combination: all three schemas
             [
-                InputRequirement("personal_data_finding", "1.0.0"),
+                InputRequirement("gdpr_personal_data", "1.0.0"),
                 InputRequirement("processing_purpose_finding", "1.0.0"),
-                InputRequirement("data_subject_finding", "1.0.0"),
+                InputRequirement("gdpr_data_subject", "1.0.0"),
             ],
             # Partial combination: without data subjects
             [
-                InputRequirement("personal_data_finding", "1.0.0"),
+                InputRequirement("gdpr_personal_data", "1.0.0"),
                 InputRequirement("processing_purpose_finding", "1.0.0"),
             ],
         ]
@@ -244,14 +244,14 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message:
     schemas = frozenset((msg.schema.name, msg.schema.version) for msg in inputs)
 
     if schemas == {
-        ("personal_data_finding", "1.0.0"),
+        ("gdpr_personal_data", "1.0.0"),
         ("processing_purpose_finding", "1.0.0"),
-        ("data_subject_finding", "1.0.0"),
+        ("gdpr_data_subject", "1.0.0"),
     }:
         return self._process_full(inputs, output_schema)
 
     elif schemas == {
-        ("personal_data_finding", "1.0.0"),
+        ("gdpr_personal_data", "1.0.0"),
         ("processing_purpose_finding", "1.0.0"),
     }:
         return self._process_without_subjects(inputs, output_schema)
@@ -334,10 +334,10 @@ The Planner validates input compatibility before execution:
 
 ```
 Artifact 'gdpr_report': no matching input requirement.
-Provided: {(personal_data_finding, 1.0.0)}
+Provided: {(gdpr_personal_data, 1.0.0)}
 Available: [
-  {(personal_data_finding, 1.0.0), (processing_purpose_finding, 1.0.0), (data_subject_finding, 1.0.0)},
-  {(personal_data_finding, 1.0.0), (processing_purpose_finding, 1.0.0)}
+  {(gdpr_personal_data, 1.0.0), (processing_purpose_finding, 1.0.0), (gdpr_data_subject, 1.0.0)},
+  {(gdpr_personal_data, 1.0.0), (processing_purpose_finding, 1.0.0)}
 ]
 ```
 
@@ -348,10 +348,10 @@ Available: [
 3. **Order irrelevant**—Only the set of unique schemas matters
 
 ```python
-# Requirement: [InputRequirement("personal_data_finding", "1.0.0")]
-# Provided: 1 personal_data_finding → ✓ matches
-# Provided: 3 personal_data_findings → ✓ matches (same schema set)
-# Provided: 1 personal_data + 1 processing_purpose → ✗ unexpected schema
+# Requirement: [InputRequirement("personal_data_indicator", "1.0.0")]
+# Provided: 1 personal_data_indicator → ✓ matches
+# Provided: 3 personal_data_indicators → ✓ matches (same schema set)
+# Provided: 1 personal_data_indicator + 1 processing_purpose → ✗ unexpected schema
 ```
 
 ---
@@ -431,7 +431,7 @@ class PersonalDataAnalyser(Analyser):
     @classmethod
     @override
     def get_supported_output_schemas(cls) -> list[Schema]:
-        return [Schema("personal_data_finding", "1.0.0")]
+        return [Schema("personal_data_indicator", "1.0.0")]
 
     @override
     def process(self, inputs: list[Message], output_schema: Schema) -> Message:
@@ -464,13 +464,13 @@ class GdprArticle30Analyser(Analyser):
         return [
             # Full: personal data + purposes + subjects
             [
-                InputRequirement("personal_data_finding", "1.0.0"),
+                InputRequirement("gdpr_personal_data", "1.0.0"),
                 InputRequirement("processing_purpose_finding", "1.0.0"),
-                InputRequirement("data_subject_finding", "1.0.0"),
+                InputRequirement("gdpr_data_subject", "1.0.0"),
             ],
             # Partial: personal data + purposes only
             [
-                InputRequirement("personal_data_finding", "1.0.0"),
+                InputRequirement("gdpr_personal_data", "1.0.0"),
                 InputRequirement("processing_purpose_finding", "1.0.0"),
             ],
         ]
@@ -490,9 +490,9 @@ class GdprArticle30Analyser(Analyser):
             return self._process_partial(inputs, output_schema)
 
     def _process_full(self, inputs: list[Message], output_schema: Schema) -> Message:
-        personal_data = self._extract_by_schema(inputs, "personal_data_finding")
+        personal_data = self._extract_by_schema(inputs, "gdpr_personal_data")
         purposes = self._extract_by_schema(inputs, "processing_purpose_finding")
-        subjects = self._extract_by_schema(inputs, "data_subject_finding")
+        subjects = self._extract_by_schema(inputs, "gdpr_data_subject")
 
         activities = self._build_processing_activities(personal_data, purposes, subjects)
         return self._create_output(activities, output_schema)
@@ -520,26 +520,39 @@ artifacts:
       properties:
         database: production
 
-  personal_data:
+  # Stage 1: Technical detection (analysers)
+  personal_data_indicators:
     inputs: db_schema
     process:
       type: personal_data
+
+  data_subject_indicators:
+    inputs: db_schema
+    process:
+      type: data_subject
 
   processing_purposes:
     inputs: db_schema
     process:
       type: processing_purpose
 
-  data_subjects:
-    inputs: db_schema
+  # Stage 2: GDPR classification (classifiers)
+  gdpr_personal_data:
+    inputs: personal_data_indicators
     process:
-      type: data_subject
+      type: gdpr_personal_data_classifier
 
+  gdpr_data_subjects:
+    inputs: data_subject_indicators
+    process:
+      type: gdpr_data_subject_classifier
+
+  # Stage 3: Synthesis (multi-schema fan-in)
   gdpr_ropa:
     inputs:
-      - personal_data
+      - gdpr_personal_data
       - processing_purposes
-      - data_subjects
+      - gdpr_data_subjects
     process:
       type: gdpr_article_30
     output: true

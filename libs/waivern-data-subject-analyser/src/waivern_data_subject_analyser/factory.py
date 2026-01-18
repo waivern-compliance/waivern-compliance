@@ -2,9 +2,11 @@
 
 from typing import override
 
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
 from waivern_llm import BaseLLMService
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 
 from .analyser import DataSubjectAnalyser
 from .types import DataSubjectAnalyserConfig
@@ -59,6 +61,11 @@ class DataSubjectAnalyserFactory(ComponentFactory[DataSubjectAnalyser]):
     def can_create(self, config: ComponentConfig) -> bool:
         """Check if factory can create analyser with given configuration.
 
+        Validates:
+        1. Configuration structure and required fields
+        2. Ruleset exists and can be loaded
+        3. LLM service available (if LLM validation enabled)
+
         Args:
             config: Configuration dict to validate
 
@@ -70,7 +77,14 @@ class DataSubjectAnalyserFactory(ComponentFactory[DataSubjectAnalyser]):
         try:
             analyser_config = DataSubjectAnalyserConfig.from_properties(config)
         except Exception:
-            # Config validation failed
+            return False
+
+        # Validate ruleset exists
+        try:
+            RulesetManager.get_ruleset(
+                analyser_config.pattern_matching.ruleset, DataSubjectIndicatorRule
+            )
+        except Exception:
             return False
 
         # If LLM validation enabled, must have LLM service available in container
