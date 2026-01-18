@@ -7,7 +7,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from waivern_rulesets.base import AbstractRuleset
+from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.data_subject_indicator import (
     DataSubjectIndicatorRule,
     DataSubjectIndicatorRuleset,

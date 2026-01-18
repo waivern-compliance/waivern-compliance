@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from waivern_rulesets.base import AbstractRuleset
+from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.processing_purposes import (
     ProcessingPurposeRule,
     ProcessingPurposesRuleset,
@@ -133,13 +133,16 @@ class TestProcessingPurposesRulesetData:
 class TestProcessingPurposesRuleset:
     """Test cases for ProcessingPurposesRuleset-specific behaviour."""
 
-    def setup_method(self) -> None:
-        """Set up test fixtures for each test method."""
-        self.ruleset = ProcessingPurposesRuleset()
+    @pytest.fixture
+    def ruleset(self) -> ProcessingPurposesRuleset:
+        """Provide a ProcessingPurposesRuleset instance for testing."""
+        return ProcessingPurposesRuleset()
 
-    def test_rules_have_purpose_category_field(self) -> None:
+    def test_rules_have_purpose_category_field(
+        self, ruleset: ProcessingPurposesRuleset
+    ) -> None:
         """Test that all rules have purpose_category field."""
-        rules = self.ruleset.get_rules()
+        rules = ruleset.get_rules()
 
         for rule in rules:
             assert isinstance(rule.purpose_category, str)

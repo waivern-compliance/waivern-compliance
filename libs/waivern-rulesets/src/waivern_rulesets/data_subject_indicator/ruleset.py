@@ -4,21 +4,12 @@ This module implements pattern-based data subject detection with confidence scor
 and context-aware pattern matching for identifying categories of data subjects.
 """
 
-import logging
-from pathlib import Path
-from typing import Final, Literal, override
+from typing import ClassVar, Literal
 
-import yaml
 from pydantic import Field, model_validator
 from waivern_core import DetectionRule, RulesetData
 
-from waivern_rulesets.base import AbstractRuleset
-
-logger = logging.getLogger(__name__)
-
-# Version constant for this ruleset and its data (private)
-_RULESET_DATA_VERSION: Final[str] = "1.0.0"
-_RULESET_NAME: Final[str] = "data_subject_indicator"
+from waivern_rulesets.core.base import YAMLRuleset
 
 
 class DataSubjectIndicatorRule(DetectionRule):
@@ -87,57 +78,15 @@ class DataSubjectIndicatorRulesetData(RulesetData[DataSubjectIndicatorRule]):
         return self
 
 
-class DataSubjectIndicatorRuleset(AbstractRuleset[DataSubjectIndicatorRule]):
+class DataSubjectIndicatorRuleset(YAMLRuleset[DataSubjectIndicatorRule]):
     """Data subject indicator detection ruleset with confidence scoring.
 
-    This class provides structured access to data subject detection patterns
-    with built-in logging capabilities for debugging and monitoring.
-
-    Data subject detection identifies categories of individuals (e.g., employees,
-    customers, patients) whose personal data is being processed.
+    Identifies categories of individuals (e.g., employees, customers, patients)
+    whose personal data is being processed.
     """
 
-    def __init__(self) -> None:
-        """Initialise the data subject indicator ruleset."""
-        self._rules: tuple[DataSubjectIndicatorRule, ...] | None = None
-        logger.debug(f"Initialised {self.name} ruleset version {self.version}")
-
-    @property
-    @override
-    def name(self) -> str:
-        """Get the canonical name of this ruleset."""
-        return _RULESET_NAME
-
-    @property
-    @override
-    def version(self) -> str:
-        """Get the version of this ruleset."""
-        return _RULESET_DATA_VERSION
-
-    @override
-    def get_rules(self) -> tuple[DataSubjectIndicatorRule, ...]:
-        """Get the data subject classification rules.
-
-        Returns:
-            Immutable tuple of DataSubjectIndicatorRule objects with confidence scoring
-
-        """
-        if self._rules is None:
-            # Load from external configuration file with validation
-            ruleset_file = (
-                Path(__file__).parent
-                / "data"
-                / _RULESET_NAME
-                / _RULESET_DATA_VERSION
-                / f"{_RULESET_NAME}.yaml"
-            )
-            with ruleset_file.open("r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-
-            ruleset_data = DataSubjectIndicatorRulesetData.model_validate(data)
-            self._rules = tuple(ruleset_data.rules)
-            logger.debug(
-                f"Loaded {len(self._rules)} data subject classification patterns"
-            )
-
-        return self._rules
+    ruleset_name: ClassVar[str] = "data_subject_indicator"
+    ruleset_version: ClassVar[str] = "1.0.0"
+    _data_class: ClassVar[  # pyright: ignore[reportIncompatibleVariableOverride]
+        type[DataSubjectIndicatorRulesetData]
+    ] = DataSubjectIndicatorRulesetData

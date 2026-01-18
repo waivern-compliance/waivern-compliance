@@ -16,6 +16,16 @@ dev = [
     "ruff>=0.11.12",
 ]
 
+# Ruleset auto-discovery via entry points
+[project.entry-points."waivern.rulesets"]
+personal_data_indicator = "waivern_rulesets.personal_data_indicator:PersonalDataIndicatorRuleset"
+processing_purposes = "waivern_rulesets.processing_purposes:ProcessingPurposesRuleset"
+data_collection = "waivern_rulesets.data_collection:DataCollectionRuleset"
+service_integrations = "waivern_rulesets.service_integrations:ServiceIntegrationsRuleset"
+data_subject_indicator = "waivern_rulesets.data_subject_indicator:DataSubjectIndicatorRuleset"
+gdpr_personal_data_classification = "waivern_rulesets.gdpr_personal_data_classification:GDPRPersonalDataClassificationRuleset"
+gdpr_data_subject_classification = "waivern_rulesets.gdpr_data_subject_classification:GDPRDataSubjectClassificationRuleset"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

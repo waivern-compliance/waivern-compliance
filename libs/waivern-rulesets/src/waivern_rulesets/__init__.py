@@ -2,7 +2,8 @@
 
 from waivern_core import RulesetError
 
-from waivern_rulesets.base import (
+# Core infrastructure
+from waivern_rulesets.core import (
     AbstractRuleset,
     RulesetLoader,
     RulesetNotFoundError,
@@ -12,7 +13,7 @@ from waivern_rulesets.base import (
     UnsupportedProviderError,
 )
 
-# Import rule types for registration
+# Detection rulesets
 from waivern_rulesets.data_collection import (
     DataCollectionRule,
     DataCollectionRuleset,
@@ -21,6 +22,8 @@ from waivern_rulesets.data_subject_indicator import (
     DataSubjectIndicatorRule,
     DataSubjectIndicatorRuleset,
 )
+
+# Classification rulesets
 from waivern_rulesets.gdpr_data_subject_classification import (
     GDPRDataSubjectClassificationRule,
     GDPRDataSubjectClassificationRuleset,
@@ -38,39 +41,19 @@ from waivern_rulesets.processing_purposes import (
     ProcessingPurposeRule,
     ProcessingPurposesRuleset,
 )
+
+# Protocols
 from waivern_rulesets.protocols import DataSubjectClassificationRulesetProtocol
 from waivern_rulesets.service_integrations import (
     ServiceIntegrationRule,
     ServiceIntegrationsRuleset,
 )
 
-# Built-in rulesets with their corresponding rule types
-_BUILTIN_RULESETS = [
-    (
-        "personal_data_indicator",
-        PersonalDataIndicatorRuleset,
-        PersonalDataIndicatorRule,
-    ),
-    ("processing_purposes", ProcessingPurposesRuleset, ProcessingPurposeRule),
-    ("data_collection", DataCollectionRuleset, DataCollectionRule),
-    ("service_integrations", ServiceIntegrationsRuleset, ServiceIntegrationRule),
-    ("data_subject_indicator", DataSubjectIndicatorRuleset, DataSubjectIndicatorRule),
-    (
-        "gdpr_personal_data_classification",
-        GDPRPersonalDataClassificationRuleset,
-        GDPRPersonalDataClassificationRule,
-    ),
-    (
-        "gdpr_data_subject_classification",
-        GDPRDataSubjectClassificationRuleset,
-        GDPRDataSubjectClassificationRule,
-    ),
-]
-
-# Register all built-in rulesets automatically on import with type information
+# Auto-discover and register all rulesets from entry points
+# Each ruleset declares an entry point in pyproject.toml under [project.entry-points."waivern.rulesets"]
+# The rule type is extracted automatically from the generic parameter
 _registry = RulesetRegistry()
-for _ruleset_name, _ruleset_class, _rule_type in _BUILTIN_RULESETS:
-    _registry.register(_ruleset_name, _ruleset_class, _rule_type)
+_registry.discover_from_entry_points()
 
 __all__ = [
     # Errors
@@ -81,7 +64,6 @@ __all__ = [
     # URI and Loader
     "RulesetURI",
     "RulesetLoader",
-    "RulesetRegistry",
     # Base classes
     "AbstractRuleset",
     # Protocols

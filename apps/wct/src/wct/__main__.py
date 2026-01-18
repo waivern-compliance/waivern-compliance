@@ -3,7 +3,7 @@
 This module provides the command-line interface for the Waivern Compliance Tool,
 including commands for:
 - Running compliance runbooks
-- Listing available connectors, processors, and exporters
+- Listing available connectors, processors, exporters, and rulesets
 - Validating runbooks
 - Testing LLM connectivity
 """
@@ -23,6 +23,7 @@ from wct.cli import (
     list_connectors_command,
     list_exporters_command,
     list_processors_command,
+    list_rulesets_command,
     validate_runbook_command,
 )
 
@@ -160,6 +161,21 @@ def list_available_exporters(
 ) -> None:
     """List available exporters."""
     list_exporters_command(log_level)
+
+
+@app.command(name="ls-rulesets")
+def list_available_rulesets(
+    log_level: Annotated[
+        str,
+        typer.Option(
+            "--log-level",
+            help="Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+            case_sensitive=False,
+        ),
+    ] = "INFO",
+) -> None:
+    """List available (built-in & registered) rulesets."""
+    list_rulesets_command(log_level)
 
 
 @app.command(name="validate-runbook")
