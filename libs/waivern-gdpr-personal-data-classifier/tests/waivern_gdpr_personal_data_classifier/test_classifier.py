@@ -4,7 +4,6 @@ This test module focuses on testing the public API of GDPRPersonalDataClassifier
 following black-box testing principles and TDD methodology.
 """
 
-import logging
 from typing import Any
 
 import pytest
@@ -442,42 +441,6 @@ class TestGDPRPersonalDataClassifierErrorHandling:
         finding = result.content["findings"][0]
         assert finding.get("metadata") is None
 
-    def test_process_logs_warning_for_multiple_inputs(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Test that multiple inputs logs a warning but processes first input."""
-        findings: list[dict[str, Any]] = []
-        input_data = {
-            "findings": findings,
-            "summary": {"total_findings": 0},
-            "analysis_metadata": {
-                "ruleset_used": "local/personal_data_indicator/1.0.0",
-                "llm_validation_enabled": False,
-            },
-        }
-        input1 = Message(
-            id="first",
-            content=input_data,
-            schema=Schema("personal_data_indicator", "1.0.0"),
-        )
-        input2 = Message(
-            id="second",
-            content=input_data,
-            schema=Schema("personal_data_indicator", "1.0.0"),
-        )
-        classifier = GDPRPersonalDataClassifier()
-
-        with caplog.at_level(logging.WARNING):
-            result = classifier.process(
-                [input1, input2], Schema("gdpr_personal_data", "1.0.0")
-            )
-
-        # Should still produce valid output
-        assert result.schema.name == "gdpr_personal_data"
-
-        # Should have logged a warning
-        assert "received 2 inputs but only processes the first" in caplog.text
-
     def test_process_handles_empty_findings_list(self) -> None:
         """Test that empty findings list produces valid output with zero counts."""
         findings: list[dict[str, Any]] = []
@@ -503,6 +466,202 @@ class TestGDPRPersonalDataClassifierErrorHandling:
         assert result.content["findings"] == []
         assert result.content["summary"]["total_findings"] == 0
         assert result.content["summary"]["special_category_count"] == 0
+
+
+# =============================================================================
+# Fan-in Tests (multiple input aggregation)
+# =============================================================================
+
+
+class TestFanInSupport:
+    """Test suite for fan-in support (aggregating findings from multiple inputs)."""
+
+    def test_process_aggregates_findings_from_multiple_inputs(self) -> None:
+        """Test that findings from multiple input messages are concatenated."""
+        # Input 1: email finding
+        input_data_1 = {
+            "findings": [
+                {
+                    "category": "email",
+                    "evidence": [{"content": "user@example.com"}],
+                    "matched_patterns": ["email"],
+                }
+            ],
+            "summary": {"total_findings": 1},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_1 = Message(
+            id="input_1",
+            content=input_data_1,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+
+        # Input 2: phone finding
+        input_data_2 = {
+            "findings": [
+                {
+                    "category": "phone",
+                    "evidence": [{"content": "+44 123 456 7890"}],
+                    "matched_patterns": ["phone"],
+                }
+            ],
+            "summary": {"total_findings": 1},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_2 = Message(
+            id="input_2",
+            content=input_data_2,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+
+        classifier = GDPRPersonalDataClassifier()
+
+        result = classifier.process(
+            [input_1, input_2], Schema("gdpr_personal_data", "1.0.0")
+        )
+
+        # Should have 2 findings (aggregated from both inputs)
+        assert len(result.content["findings"]) == 2
+        # Verify both categories are present
+        categories = [f["indicator_type"] for f in result.content["findings"]]
+        assert "email" in categories
+        assert "phone" in categories
+
+    def test_process_recalculates_summary_for_aggregated_findings(self) -> None:
+        """Test that summary statistics reflect ALL aggregated findings."""
+        # Input 1: email finding (not special category)
+        input_data_1 = {
+            "findings": [
+                {
+                    "category": "email",
+                    "evidence": [{"content": "user@example.com"}],
+                    "matched_patterns": ["email"],
+                }
+            ],
+            "summary": {"total_findings": 1},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_1 = Message(
+            id="input_1",
+            content=input_data_1,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+
+        # Input 2: health finding (special category)
+        input_data_2 = {
+            "findings": [
+                {
+                    "category": "health",
+                    "evidence": [{"content": "patient diagnosis"}],
+                    "matched_patterns": ["medical"],
+                }
+            ],
+            "summary": {"total_findings": 1},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_2 = Message(
+            id="input_2",
+            content=input_data_2,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+
+        classifier = GDPRPersonalDataClassifier()
+
+        result = classifier.process(
+            [input_1, input_2], Schema("gdpr_personal_data", "1.0.0")
+        )
+
+        # Summary should reflect BOTH inputs
+        summary = result.content["summary"]
+        assert summary["total_findings"] == 2
+        assert summary["special_category_count"] == 1  # Only health is special
+
+    def test_process_preserves_metadata_per_finding_when_aggregating(self) -> None:
+        """Test that each finding retains its original metadata after aggregation."""
+        # Input 1: finding from MySQL source
+        input_data_1 = {
+            "findings": [
+                {
+                    "category": "email",
+                    "evidence": [{"content": "user@example.com"}],
+                    "matched_patterns": ["email"],
+                    "metadata": {
+                        "source": "mysql_users_table",
+                        "context": {"connector_type": "mysql"},
+                    },
+                }
+            ],
+            "summary": {"total_findings": 1},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_1 = Message(
+            id="input_1",
+            content=input_data_1,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+
+        # Input 2: finding from filesystem source
+        input_data_2 = {
+            "findings": [
+                {
+                    "category": "phone",
+                    "evidence": [{"content": "+44 123 456 7890"}],
+                    "matched_patterns": ["phone"],
+                    "metadata": {
+                        "source": "config_file.txt",
+                        "context": {"connector_type": "filesystem"},
+                    },
+                }
+            ],
+            "summary": {"total_findings": 1},
+            "analysis_metadata": {
+                "ruleset_used": "local/personal_data_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_2 = Message(
+            id="input_2",
+            content=input_data_2,
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+
+        classifier = GDPRPersonalDataClassifier()
+
+        result = classifier.process(
+            [input_1, input_2], Schema("gdpr_personal_data", "1.0.0")
+        )
+
+        # Find findings by their indicator_type to check metadata
+        findings_by_type = {f["indicator_type"]: f for f in result.content["findings"]}
+
+        # Email finding should have MySQL metadata
+        assert findings_by_type["email"]["metadata"]["source"] == "mysql_users_table"
+        assert (
+            findings_by_type["email"]["metadata"]["context"]["connector_type"]
+            == "mysql"
+        )
+
+        # Phone finding should have filesystem metadata
+        assert findings_by_type["phone"]["metadata"]["source"] == "config_file.txt"
+        assert (
+            findings_by_type["phone"]["metadata"]["context"]["connector_type"]
+            == "filesystem"
+        )
 
 
 class TestRulesetContractValidation:

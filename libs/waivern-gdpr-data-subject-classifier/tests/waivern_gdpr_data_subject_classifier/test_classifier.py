@@ -4,7 +4,6 @@ This test module focuses on testing the public API of GDPRDataSubjectClassifier,
 following black-box testing principles and TDD methodology.
 """
 
-import logging
 from typing import Any
 
 import pytest
@@ -625,43 +624,6 @@ class TestGDPRDataSubjectClassifierErrorHandling:
         assert finding.get("metadata") is None
         assert finding["data_subject_category"] == "employee"
 
-    def test_process_logs_warning_for_multiple_inputs(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Test that multiple inputs logs a warning but processes first input."""
-        findings: list[dict[str, Any]] = []
-        categories: list[str] = []
-        input_data: dict[str, Any] = {
-            "findings": findings,
-            "summary": {"total_indicators": 0, "categories_identified": categories},
-            "analysis_metadata": {
-                "ruleset_used": "local/data_subject_indicator/1.0.0",
-                "llm_validation_enabled": False,
-            },
-        }
-        input1 = Message(
-            id="first",
-            content=input_data,
-            schema=Schema("data_subject_indicator", "1.0.0"),
-        )
-        input2 = Message(
-            id="second",
-            content=input_data,
-            schema=Schema("data_subject_indicator", "1.0.0"),
-        )
-        classifier = GDPRDataSubjectClassifier()
-
-        with caplog.at_level(logging.WARNING):
-            result = classifier.process(
-                [input1, input2], Schema("gdpr_data_subject", "1.0.0")
-            )
-
-        # Should still produce valid output
-        assert result.schema.name == "gdpr_data_subject"
-
-        # Should have logged a warning
-        assert "received 2 inputs but only processes the first" in caplog.text
-
     def test_process_handles_empty_findings_list(self) -> None:
         """Test that empty findings list produces valid output with zero counts."""
         findings: list[dict[str, Any]] = []
@@ -688,6 +650,215 @@ class TestGDPRDataSubjectClassifierErrorHandling:
         assert result.content["findings"] == []
         assert result.content["summary"]["total_findings"] == 0
         assert result.content["summary"]["high_risk_count"] == 0
+
+
+# =============================================================================
+# Fan-in Tests (multiple input aggregation)
+# =============================================================================
+
+
+class TestFanInSupport:
+    """Test suite for fan-in support (aggregating findings from multiple inputs)."""
+
+    def test_process_aggregates_findings_from_multiple_inputs(self) -> None:
+        """Test that findings from multiple input messages are concatenated."""
+        # Input 1: employee finding
+        input_data_1 = {
+            "findings": [
+                {
+                    "primary_category": "employee",
+                    "confidence_score": 85,
+                    "evidence": [{"content": "Employee John Smith"}],
+                    "matched_patterns": ["employee"],
+                }
+            ],
+            "summary": {"total_indicators": 1, "categories_identified": ["employee"]},
+            "analysis_metadata": {
+                "ruleset_used": "local/data_subject_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_1 = Message(
+            id="input_1",
+            content=input_data_1,
+            schema=Schema("data_subject_indicator", "1.0.0"),
+        )
+
+        # Input 2: customer finding
+        input_data_2 = {
+            "findings": [
+                {
+                    "primary_category": "customer",
+                    "confidence_score": 90,
+                    "evidence": [{"content": "Customer order placed"}],
+                    "matched_patterns": ["customer"],
+                }
+            ],
+            "summary": {"total_indicators": 1, "categories_identified": ["customer"]},
+            "analysis_metadata": {
+                "ruleset_used": "local/data_subject_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_2 = Message(
+            id="input_2",
+            content=input_data_2,
+            schema=Schema("data_subject_indicator", "1.0.0"),
+        )
+
+        classifier = GDPRDataSubjectClassifier()
+
+        result = classifier.process(
+            [input_1, input_2], Schema("gdpr_data_subject", "1.0.0")
+        )
+
+        # Should have 2 findings (aggregated from both inputs)
+        assert len(result.content["findings"]) == 2
+        # Verify both categories are present
+        categories = [f["data_subject_category"] for f in result.content["findings"]]
+        assert "employee" in categories
+        assert "customer" in categories
+
+    def test_process_recalculates_summary_for_aggregated_findings(self) -> None:
+        """Test that summary statistics reflect ALL aggregated findings."""
+        # Input 1: employee finding (no risk modifiers)
+        input_data_1 = {
+            "findings": [
+                {
+                    "primary_category": "employee",
+                    "confidence_score": 85,
+                    "evidence": [{"content": "Adult employee record"}],
+                    "matched_patterns": ["employee"],
+                }
+            ],
+            "summary": {"total_indicators": 1, "categories_identified": ["employee"]},
+            "analysis_metadata": {
+                "ruleset_used": "local/data_subject_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_1 = Message(
+            id="input_1",
+            content=input_data_1,
+            schema=Schema("data_subject_indicator", "1.0.0"),
+        )
+
+        # Input 2: student finding with minor (has risk modifier)
+        input_data_2 = {
+            "findings": [
+                {
+                    "primary_category": "student",
+                    "confidence_score": 90,
+                    "evidence": [{"content": "Minor student, age 14"}],
+                    "matched_patterns": ["student"],
+                }
+            ],
+            "summary": {"total_indicators": 1, "categories_identified": ["student"]},
+            "analysis_metadata": {
+                "ruleset_used": "local/data_subject_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_2 = Message(
+            id="input_2",
+            content=input_data_2,
+            schema=Schema("data_subject_indicator", "1.0.0"),
+        )
+
+        classifier = GDPRDataSubjectClassifier()
+
+        result = classifier.process(
+            [input_1, input_2], Schema("gdpr_data_subject", "1.0.0")
+        )
+
+        # Summary should reflect BOTH inputs
+        summary = result.content["summary"]
+        assert summary["total_findings"] == 2
+        assert summary["high_risk_count"] == 1  # Only the minor student
+        assert "employee" in summary["categories_identified"]
+        # Note: "student" indicator maps to "education" GDPR category
+        assert "education" in summary["categories_identified"]
+
+    def test_process_preserves_metadata_per_finding_when_aggregating(self) -> None:
+        """Test that each finding retains its original metadata after aggregation."""
+        # Input 1: finding from MySQL source
+        input_data_1 = {
+            "findings": [
+                {
+                    "primary_category": "employee",
+                    "confidence_score": 85,
+                    "evidence": [{"content": "Employee data"}],
+                    "matched_patterns": ["employee"],
+                    "metadata": {
+                        "source": "mysql_hr_table",
+                        "context": {"connector_type": "mysql"},
+                    },
+                }
+            ],
+            "summary": {"total_indicators": 1, "categories_identified": ["employee"]},
+            "analysis_metadata": {
+                "ruleset_used": "local/data_subject_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_1 = Message(
+            id="input_1",
+            content=input_data_1,
+            schema=Schema("data_subject_indicator", "1.0.0"),
+        )
+
+        # Input 2: finding from filesystem source
+        input_data_2 = {
+            "findings": [
+                {
+                    "primary_category": "customer",
+                    "confidence_score": 90,
+                    "evidence": [{"content": "Customer record"}],
+                    "matched_patterns": ["customer"],
+                    "metadata": {
+                        "source": "customers.csv",
+                        "context": {"connector_type": "filesystem"},
+                    },
+                }
+            ],
+            "summary": {"total_indicators": 1, "categories_identified": ["customer"]},
+            "analysis_metadata": {
+                "ruleset_used": "local/data_subject_indicator/1.0.0",
+                "llm_validation_enabled": False,
+            },
+        }
+        input_2 = Message(
+            id="input_2",
+            content=input_data_2,
+            schema=Schema("data_subject_indicator", "1.0.0"),
+        )
+
+        classifier = GDPRDataSubjectClassifier()
+
+        result = classifier.process(
+            [input_1, input_2], Schema("gdpr_data_subject", "1.0.0")
+        )
+
+        # Find findings by their category to check metadata
+        findings_by_category = {
+            f["data_subject_category"]: f for f in result.content["findings"]
+        }
+
+        # Employee finding should have MySQL metadata
+        assert (
+            findings_by_category["employee"]["metadata"]["source"] == "mysql_hr_table"
+        )
+        assert (
+            findings_by_category["employee"]["metadata"]["context"]["connector_type"]
+            == "mysql"
+        )
+
+        # Customer finding should have filesystem metadata
+        assert findings_by_category["customer"]["metadata"]["source"] == "customers.csv"
+        assert (
+            findings_by_category["customer"]["metadata"]["context"]["connector_type"]
+            == "filesystem"
+        )
 
 
 class TestRulesetContractValidation:

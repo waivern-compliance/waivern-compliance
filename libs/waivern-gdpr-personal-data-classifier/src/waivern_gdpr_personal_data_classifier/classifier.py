@@ -92,15 +92,10 @@ class GDPRPersonalDataClassifier(Classifier):
                 "Received empty inputs list."
             )
 
-        if len(inputs) > 1:
-            logger.warning(
-                "GDPRPersonalDataClassifier received %d inputs but only processes the first. "
-                "Extra inputs will be ignored. Consider merging inputs upstream.",
-                len(inputs),
-            )
-
-        # Extract findings from input
-        input_findings = inputs[0].content.get("findings", [])
+        # Aggregate findings from all input messages (fan-in support)
+        input_findings: list[dict[str, object]] = []
+        for input_message in inputs:
+            input_findings.extend(input_message.content.get("findings", []))
 
         # Classify each finding
         classified_findings: list[GDPRPersonalDataFindingModel] = []
