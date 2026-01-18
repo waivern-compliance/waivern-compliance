@@ -392,6 +392,38 @@ class TestWCTCLIE2E:
             "Expected JSON exporter to show 'Any (generic)' framework support"
         )
 
+    def test_wct_cli_lists_available_rulesets(self) -> None:
+        """CLI lists available rulesets with their names, versions, and rule types."""
+        # Act - Execute ls-rulesets command
+        result = subprocess.run(
+            ["uv", "run", "wct", "ls-rulesets"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+        # Assert - Command should succeed
+        assert result.returncode == 0, (
+            f"wct ls-rulesets failed with return code {result.returncode}.\n"
+            f"STDOUT: {result.stdout}\n"
+            f"STDERR: {result.stderr}"
+        )
+
+        # Assert - Output should contain built-in rulesets
+        assert "personal_data_indicator" in result.stdout, (
+            "Expected to find 'personal_data_indicator' ruleset in output"
+        )
+        assert "processing_purposes" in result.stdout, (
+            "Expected to find 'processing_purposes' ruleset in output"
+        )
+
+        # Assert - Output should show version
+        assert "1.0.0" in result.stdout, "Expected to find version '1.0.0' in output"
+
+        # Assert - Output should show rule types
+        assert "Rule" in result.stdout, "Expected to find rule type names in output"
+
     @pytest.mark.skip(
         reason="TODO: Requires framework-specific exporter (e.g., GDPR exporter) "
         "to test override meaningfully"

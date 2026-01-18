@@ -205,6 +205,20 @@ class RulesetRegistry:
         """
         return tuple(version for (n, version) in self._registry.keys() if n == name)
 
+    def list_registered(self) -> list[tuple[str, str, type[Rule]]]:
+        """List all registered rulesets with their metadata.
+
+        Returns:
+            List of (name, version, rule_type) tuples for all registered rulesets,
+            sorted alphabetically by name then version.
+
+        """
+        result = [
+            (name, version, self._type_mapping[(name, version)])
+            for name, version in self._registry.keys()
+        ]
+        return sorted(result, key=lambda x: (x[0], x[1]))
+
     def discover_from_entry_points(self, group: str = "waivern.rulesets") -> None:
         """Discover and register rulesets from entry points.
 

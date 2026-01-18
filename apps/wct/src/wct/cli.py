@@ -26,6 +26,7 @@ from waivern_orchestration import (
     Planner,
     RunbookSchemaGenerator,
 )
+from waivern_rulesets.core.registry import RulesetRegistry
 
 from wct.exporters.json_exporter import JsonExporter
 from wct.exporters.registry import ExporterRegistry
@@ -708,6 +709,63 @@ def list_processors_command(log_level: str = "INFO") -> None:
         error_panel = Panel(
             f"[red]{cli_error}[/red]",
             title="❌ Failed to list processors",
+            border_style="red",
+        )
+        console.print(error_panel)
+        raise typer.Exit(1) from cli_error
+
+
+def list_rulesets_command(log_level: str = "INFO") -> None:
+    """CLI command implementation for listing rulesets.
+
+    Args:
+        log_level: Logging level
+
+    """
+    setup_logging(level=log_level)
+
+    try:
+        registry = RulesetRegistry()
+        rulesets = registry.list_registered()
+
+        logger.debug("Getting available rulesets from registry")
+        logger.info("Found %d available rulesets", len(rulesets))
+
+        if rulesets:
+            table = Table(
+                title="🔧 Available Rulesets",
+                show_header=True,
+                header_style="bold magenta",
+            )
+            table.add_column("Name", style="cyan", no_wrap=True)
+            table.add_column("Version", style="white")
+            table.add_column("Rule Type", style="dim")
+
+            for name, version, rule_type in rulesets:
+                table.add_row(name, version, rule_type.__name__)
+                logger.debug("Ruleset %s/%s: %s", name, version, rule_type.__name__)
+
+            console.print(table)
+        else:
+            warning_panel = Panel(
+                "[yellow]No rulesets available. "
+                "Register rulesets to see them here.[/yellow]",
+                title="⚠️  Warning",
+                border_style="yellow",
+            )
+            console.print(warning_panel)
+            logger.warning("No rulesets registered in registry")
+
+    except Exception as e:
+        logger.error("Failed to list rulesets: %s", e)
+        cli_error = CLIError(
+            f"Unable to retrieve available rulesets: {e}",
+            command="ls-rulesets",
+            original_error=e,
+        )
+        error_panel = Panel(
+            f"[red]{cli_error}[/red]",
+            title="❌ Failed to list rulesets",
             border_style="red",
         )
         console.print(error_panel)
