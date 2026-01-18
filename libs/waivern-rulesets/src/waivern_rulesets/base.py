@@ -2,6 +2,7 @@
 
 import abc
 import logging
+import threading
 from dataclasses import dataclass
 from typing import Any, ClassVar, TypedDict, override
 
@@ -161,6 +162,7 @@ class RulesetRegistryState(TypedDict):
 class RulesetRegistry:
     """Type-aware singleton registry for ruleset classes with explicit registration."""
 
+    _lock: ClassVar[threading.Lock] = threading.Lock()
     _instance: "RulesetRegistry | None" = None
     _registry: dict[tuple[str, str], type[AbstractRuleset[Any]]]
     _type_mapping: dict[tuple[str, str], type[Rule]]
@@ -168,17 +170,21 @@ class RulesetRegistry:
     def __new__(cls, *args: Any, **kwargs: Any) -> "RulesetRegistry":  # noqa: ANN401  # Singleton pattern requires flexible constructor arguments
         """Create or return the singleton instance of RulesetRegistry.
 
+        Uses double-checked locking pattern for thread-safe lazy initialization.
         This ensures only one instance of the registry exists throughout
-        the application lifecycle.
+        the application lifecycle, even under concurrent access.
 
         Returns:
             The singleton RulesetRegistry instance
 
         """
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._registry = {}
-            cls._instance._type_mapping = {}
+            with cls._lock:
+                # Double-check after acquiring lock
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._registry = {}
+                    cls._instance._type_mapping = {}
         return cls._instance
 
     def register[T: Rule](
