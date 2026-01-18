@@ -142,10 +142,12 @@ class SourceCodeSchemaInputHandler:
             # Collect all rules for confidence scoring
             matched_rules = [match[0] for match in matches]
 
-            # Collect all matched patterns
-            all_patterns: list[str] = []
+            # Collect unique matched patterns (preserve order using dict)
+            seen_patterns: dict[str, None] = {}
             for _, patterns, _ in matches:
-                all_patterns.extend(patterns)
+                for pattern in patterns:
+                    seen_patterns[pattern] = None
+            all_patterns = list(seen_patterns.keys())
 
             # Use first match for evidence and line number
             first_line_number = matches[0][2]

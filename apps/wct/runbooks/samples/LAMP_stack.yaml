@@ -208,3 +208,29 @@ artifacts:
           enable_llm_validation: false
           llm_batch_size: 50
     output: true
+
+  php_data_subject_indicators:
+    name: "Data Subject Detection in PHP Source Code"
+    description: "Detect data subject categories (employees, customers, etc.) from PHP application code using source code-aware pattern matching"
+    contact: "Sarah Johnson (DPO) <sarah.johnson@company.co.uk>"
+    inputs: php_source_code
+    process:
+      type: "data_subject"
+      properties:
+        pattern_matching:
+          ruleset: "local/data_subject_indicator/1.0.0"
+          evidence_context_size: "medium"
+          maximum_evidence_count: 3
+        source_code_context_window: "small"
+        llm_validation:
+          enable_llm_validation: false
+          llm_batch_size: 50
+          llm_validation_mode: "conservative"
+
+  php_gdpr_data_subject:
+    name: "GDPR Data Subject Classification (PHP Source Code)"
+    description: "Classify detected data subject indicators from PHP code according to GDPR categories for Article 30(1)(c) compliance"
+    inputs: php_data_subject_indicators
+    process:
+      type: "gdpr_data_subject_classifier"
+    output: true

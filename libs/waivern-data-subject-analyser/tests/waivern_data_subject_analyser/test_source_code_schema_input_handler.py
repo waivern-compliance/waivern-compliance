@@ -185,6 +185,73 @@ class CustomerService {
             assert isinstance(finding.confidence_score, int)
             assert 0 <= finding.confidence_score <= 100
 
+    def test_analyse_deduplicates_matched_patterns(self) -> None:
+        """Test that matched_patterns contains unique patterns only.
+
+        When the same pattern (e.g., 'employee') matches multiple times
+        across different lines, it should appear only once in matched_patterns.
+        """
+        from waivern_source_code_analyser import SourceCodeDataModel
+        from waivern_source_code_analyser.schemas.source_code import (
+            SourceCodeAnalysisMetadataModel,
+            SourceCodeFileDataModel,
+            SourceCodeFileMetadataModel,
+        )
+
+        # Arrange
+        config = PatternMatchingConfig(ruleset="local/data_subject_indicator/1.0.0")
+        handler = SourceCodeSchemaInputHandler(config)
+        # This file has 'employee' appearing 4 times - should appear once in patterns
+        file_data = SourceCodeFileDataModel(
+            file_path="/src/EmployeeService.php",
+            language="php",
+            raw_content="""<?php
+class EmployeeService {
+    private $employee;
+
+    public function getEmployee() {
+        return $this->employee;
+    }
+
+    public function setEmployee($employee) {
+        $this->employee = $employee;
+    }
+}
+""",
+            metadata=SourceCodeFileMetadataModel(
+                file_size=250, line_count=12, last_modified="2024-01-01T00:00:00Z"
+            ),
+        )
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Deduplication test",
+            description="Test pattern deduplication",
+            source="source_code",
+            metadata=SourceCodeAnalysisMetadataModel(
+                total_files=1, total_lines=12, analysis_timestamp="2024-01-01T00:00:00Z"
+            ),
+            data=[file_data],
+        )
+
+        # Act
+        findings = handler.analyse(source_data)
+
+        # Assert
+        employee_findings = [f for f in findings if f.primary_category == "employee"]
+        assert len(employee_findings) == 1, "Expected exactly one employee indicator"
+
+        # Check that patterns are deduplicated
+        patterns = employee_findings[0].matched_patterns
+        assert len(patterns) == len(set(patterns)), (
+            f"matched_patterns contains duplicates: {patterns}"
+        )
+
+        # Verify 'employee' appears exactly once despite multiple occurrences in code
+        employee_count = sum(1 for p in patterns if p.lower() == "employee")
+        assert employee_count == 1, (
+            f"'employee' should appear once, found {employee_count} times in {patterns}"
+        )
+
     def test_metadata_includes_file_path_and_line_number(self) -> None:
         """Test that metadata contains file path and line number."""
         from waivern_source_code_analyser import SourceCodeDataModel

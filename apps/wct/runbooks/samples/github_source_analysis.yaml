@@ -59,3 +59,39 @@ artifacts:
         llm_validation:
           enable_llm_validation: false
     output: true
+
+  # Source code pipeline: GitHub → SourceCodeAnalyser → DataSubject
+  # This demonstrates the source_code schema path for data subject detection
+  parsed_source_code:
+    name: "Parsed PHP Source Code"
+    description: "Parse PHP source files to extract code structure for analysis"
+    inputs: github_source_code
+    process:
+      type: "source_code_analyser"
+      properties:
+        language: "php"
+        max_file_size: 10485760  # 10MB
+
+  source_data_subject_indicators:
+    name: "Data Subject Detection in Source Code"
+    description: "Detect data subject categories from PHP source code using source code-aware pattern matching"
+    contact: "Security Team <security@company.co.uk>"
+    inputs: parsed_source_code
+    process:
+      type: "data_subject"
+      properties:
+        pattern_matching:
+          ruleset: "local/data_subject_indicator/1.0.0"
+          evidence_context_size: "medium"
+          maximum_evidence_count: 5
+        source_code_context_window: "small"
+        llm_validation:
+          enable_llm_validation: false
+
+  source_gdpr_data_subject:
+    name: "GDPR Data Subject Classification (Source Code)"
+    description: "Classify detected data subject indicators according to GDPR categories for Article 30(1)(c) compliance"
+    inputs: source_data_subject_indicators
+    process:
+      type: "gdpr_data_subject_classifier"
+    output: true
