@@ -16,11 +16,11 @@ from waivern_gdpr_personal_data_classifier.schemas import (
     GDPRPersonalDataFindingMetadata,
     GDPRPersonalDataFindingModel,
 )
+from waivern_gdpr_personal_data_classifier.types import (
+    GDPRPersonalDataClassifierConfig,
+)
 
 logger = logging.getLogger(__name__)
-
-# Ruleset URI for GDPR personal data classification
-_RULESET_URI = "local/gdpr_personal_data_classification/1.0.0"
 
 
 class GDPRPersonalDataClassifier(Classifier):
@@ -33,10 +33,17 @@ class GDPRPersonalDataClassifier(Classifier):
     - Applicable lawful bases
     """
 
-    def __init__(self) -> None:
-        """Initialise the classifier."""
+    def __init__(self, config: GDPRPersonalDataClassifierConfig | None = None) -> None:
+        """Initialise the classifier.
+
+        Args:
+            config: Configuration for the classifier. If not provided,
+                   uses default configuration.
+
+        """
+        config = config or GDPRPersonalDataClassifierConfig()
         self._ruleset = RulesetManager.get_ruleset(
-            _RULESET_URI, GDPRPersonalDataClassificationRule
+            config.ruleset, GDPRPersonalDataClassificationRule
         )
         self._classification_map = self._build_classification_map()
         self._result_builder = GDPRClassifierResultBuilder()

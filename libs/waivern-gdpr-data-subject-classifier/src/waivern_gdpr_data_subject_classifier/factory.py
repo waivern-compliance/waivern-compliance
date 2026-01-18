@@ -6,13 +6,14 @@ from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
 
 from .classifier import GDPRDataSubjectClassifier
+from .types import GDPRDataSubjectClassifierConfig
 
 
 class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifier]):
     """Factory for creating GDPRDataSubjectClassifier instances.
 
-    This classifier has no external dependencies and requires no configuration,
-    making the factory straightforward.
+    This factory parses configuration from runbook properties and creates
+    classifiers with the specified ruleset URI.
     """
 
     def __init__(self, container: ServiceContainer) -> None:
@@ -29,13 +30,14 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
         """Create GDPRDataSubjectClassifier instance.
 
         Args:
-            config: Configuration dict (not used by this classifier)
+            config: Configuration dict from runbook properties
 
         Returns:
             Configured GDPRDataSubjectClassifier instance
 
         """
-        return GDPRDataSubjectClassifier()
+        classifier_config = GDPRDataSubjectClassifierConfig.from_properties(config)
+        return GDPRDataSubjectClassifier(config=classifier_config)
 
     @override
     def can_create(self, config: ComponentConfig) -> bool:
@@ -45,10 +47,14 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
             config: Configuration dict to validate
 
         Returns:
-            Always True as this classifier requires no configuration
+            True if configuration is valid, False otherwise
 
         """
-        return True
+        try:
+            GDPRDataSubjectClassifierConfig.from_properties(config)
+            return True
+        except Exception:
+            return False
 
     @property
     @override

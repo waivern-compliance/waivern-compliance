@@ -21,11 +21,9 @@ from waivern_gdpr_data_subject_classifier.schemas import (
     GDPRDataSubjectFindingMetadata,
     GDPRDataSubjectFindingModel,
 )
+from waivern_gdpr_data_subject_classifier.types import GDPRDataSubjectClassifierConfig
 
 logger = logging.getLogger(__name__)
-
-# Ruleset URI for GDPR data subject classification
-_RULESET_URI = "local/gdpr_data_subject_classification/1.0.0"
 
 
 class RiskModifierDetector:
@@ -78,11 +76,20 @@ class GDPRDataSubjectClassifier(Classifier):
     - Risk modifiers detected from evidence context
     """
 
-    def __init__(self) -> None:
-        """Initialise the classifier."""
+    def __init__(self, config: GDPRDataSubjectClassifierConfig | None = None) -> None:
+        """Initialise the classifier.
+
+        Args:
+            config: Configuration for the classifier. If not provided,
+                   uses default configuration.
+
+        """
+        config = config or GDPRDataSubjectClassifierConfig()
         self._ruleset = cast(
             DataSubjectClassificationRulesetProtocol,
-            RulesetManager.get_ruleset(_RULESET_URI, GDPRDataSubjectClassificationRule),
+            RulesetManager.get_ruleset(
+                config.ruleset, GDPRDataSubjectClassificationRule
+            ),
         )
         self._classification_map = self._build_classification_map()
         self._risk_modifier_detector = RiskModifierDetector(
