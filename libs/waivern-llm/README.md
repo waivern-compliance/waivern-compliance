@@ -37,8 +37,8 @@ llm = LLMServiceFactory.create_service()
 from waivern_llm import AnthropicLLMService
 llm = AnthropicLLMService(model_name="claude-sonnet-4-5-20250929")
 
-# Analyse data
-result = llm.analyse_data(text="...", analysis_prompt="...")
+# Invoke the LLM
+result = llm.invoke(prompt="...")
 ```
 
 ## Environment Variables

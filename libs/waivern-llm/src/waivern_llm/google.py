@@ -55,15 +55,14 @@ class GoogleLLMService(BaseLLMService):
         return self._model_name
 
     @override
-    def analyse_data(self, text: str, analysis_prompt: str) -> str:
-        """Analyse text using the LLM with a custom prompt.
+    def invoke(self, prompt: str) -> str:
+        """Invoke the LLM with a prompt and return the response as a string.
 
         Args:
-            text: The text content to analyse
-            analysis_prompt: The prompt/instructions for analysis
+            prompt: The prompt to send to the LLM
 
         Returns:
-            LLM analysis response as string
+            LLM response as string
 
         Raises:
             LLMConnectionError: If LLM request fails
@@ -71,25 +70,21 @@ class GoogleLLMService(BaseLLMService):
 
         """
         try:
-            logger.debug(f"Analysing text (length: {len(text)} chars)")
+            logger.debug(f"Invoking LLM (prompt length: {len(prompt)} chars)")
 
             llm = self._get_llm()  # type: ignore[reportUnknownMemberType]
-
-            # Combine the analysis prompt with the text
-            full_prompt = f"{analysis_prompt}\n\nText to analyse:\n{text}"
-
-            response = llm.invoke(full_prompt)  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            response = llm.invoke(prompt)  # type: ignore[reportUnknownMemberType,reportUnknownVariableType]
             result = self._extract_content(response).strip()  # type: ignore[reportUnknownArgumentType]
 
             logger.debug(
-                f"LLM analysis completed (response length: {len(result)} chars)"
+                f"LLM invocation completed (response length: {len(result)} chars)"
             )
 
             return result
 
         except Exception as e:
-            logger.error(f"Text analysis failed: {e}")
-            raise LLMConnectionError(f"LLM text analysis failed: {e}") from e
+            logger.error(f"LLM invocation failed: {e}")
+            raise LLMConnectionError(f"LLM invocation failed: {e}") from e
 
     @override
     def invoke_with_structured_output[T: BaseModel](

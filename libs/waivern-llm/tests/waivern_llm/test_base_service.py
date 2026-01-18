@@ -15,5 +15,5 @@ class TestBaseLLMServiceAbstraction:
         )
 
         assert isinstance(service, BaseLLMService)
-        assert hasattr(service, "analyse_data")
-        assert callable(service.analyse_data)
+        assert hasattr(service, "invoke")
+        assert callable(service.invoke)

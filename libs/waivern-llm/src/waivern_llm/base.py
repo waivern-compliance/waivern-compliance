@@ -30,15 +30,14 @@ class BaseLLMService(ABC):
         pass
 
     @abstractmethod
-    def analyse_data(self, text: str, analysis_prompt: str) -> str:
-        """Analyse text using the LLM with a custom prompt.
+    def invoke(self, prompt: str) -> str:
+        """Invoke the LLM with a prompt and return the response as a string.
 
         Args:
-            text: The text content to analyse
-            analysis_prompt: The prompt/instructions for analysis
+            prompt: The prompt to send to the LLM
 
         Returns:
-            LLM analysis response as string
+            LLM response as string
 
         Raises:
             LLMConnectionError: If LLM request fails

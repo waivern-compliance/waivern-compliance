@@ -17,14 +17,16 @@ class TestAnthropicLLMServiceIntegration:
     """Integration tests with real Anthropic API."""
 
     @pytest.mark.integration
-    def test_simple_analysis(self, require_anthropic_api_key: str) -> None:
-        """Test real Anthropic API with simple text analysis."""
+    def test_simple_invoke(self, require_anthropic_api_key: str) -> None:
+        """Test real Anthropic API with simple invocation."""
         service = AnthropicLLMService(api_key=require_anthropic_api_key)
 
-        text = "John Smith, email: john@example.com, phone: 555-1234"
-        prompt = "List any personal data found in this text in a single line."
+        prompt = (
+            "List any personal data found in this text in a single line: "
+            "John Smith, email: john@example.com, phone: 555-1234"
+        )
 
-        result = service.analyse_data(text, prompt)
+        result = service.invoke(prompt)
 
         # Verify response structure (don't assert exact content - LLM responses vary)
         assert isinstance(result, str)
@@ -46,10 +48,9 @@ class TestAnthropicLLMServiceIntegration:
         assert service.model_name == expected_model
 
         # Make a real API call to verify it works
-        text = "Test data"
         prompt = "Reply with 'OK' if you can read this."
 
-        result = service.analyse_data(text, prompt)
+        result = service.invoke(prompt)
 
         assert isinstance(result, str)
         assert len(result) > 0
@@ -65,25 +66,23 @@ class TestAnthropicLLMServiceIntegration:
         assert service.model_name == custom_model
 
         # Make a real API call to verify it works with this model
-        text = "Hello"
         prompt = "Reply with just the word 'Hi'"
 
-        result = service.analyse_data(text, prompt)
+        result = service.invoke(prompt)
 
         assert isinstance(result, str)
         assert len(result) > 0
 
     @pytest.mark.integration
-    def test_handles_empty_input(self, require_anthropic_api_key: str) -> None:
+    def test_handles_empty_prompt(self, require_anthropic_api_key: str) -> None:
         """Test real Anthropic API handles edge cases gracefully."""
         service = AnthropicLLMService(api_key=require_anthropic_api_key)
 
-        text = ""
-        prompt = "If the text is empty, respond with just 'EMPTY'"
+        prompt = "The following text is empty: ''. Respond with just 'EMPTY'"
 
-        result = service.analyse_data(text, prompt)
+        result = service.invoke(prompt)
 
-        # Even with empty input, we should get a valid response
+        # Even with empty text, we should get a valid response
         assert isinstance(result, str)
         assert len(result) > 0
         # LLM should recognise empty input
