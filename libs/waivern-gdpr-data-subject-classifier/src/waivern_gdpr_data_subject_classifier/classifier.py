@@ -78,18 +78,9 @@ class GDPRDataSubjectClassifier(Classifier):
     - Risk modifiers detected from evidence context
     """
 
-    def __init__(
-        self,
-        ruleset: DataSubjectClassificationRulesetProtocol | None = None,
-    ) -> None:
-        """Initialise the classifier.
-
-        Args:
-            ruleset: Optional custom ruleset implementation. If not provided,
-                    uses the cached ruleset from RulesetManager.
-
-        """
-        self._ruleset: DataSubjectClassificationRulesetProtocol = ruleset or cast(
+    def __init__(self) -> None:
+        """Initialise the classifier."""
+        self._ruleset = cast(
             DataSubjectClassificationRulesetProtocol,
             RulesetManager.get_ruleset(_RULESET_URI, GDPRDataSubjectClassificationRule),
         )
