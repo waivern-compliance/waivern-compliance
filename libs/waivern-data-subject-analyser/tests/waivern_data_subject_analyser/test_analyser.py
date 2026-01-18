@@ -62,6 +62,25 @@ class TestDataSubjectAnalyserSchemaSupport:
         assert first_req.schema_name == "standard_input"
         assert first_req.version == "1.0.0"
 
+    def test_get_input_requirements_includes_source_code(self) -> None:
+        """Test that analyser supports source_code schema as an alternative input."""
+        input_requirements = DataSubjectAnalyser.get_input_requirements()
+
+        # Check that source_code is in one of the requirement sets
+        all_schema_names = {
+            req.schema_name for req_set in input_requirements for req in req_set
+        }
+        assert "source_code" in all_schema_names
+
+        # Verify it's a separate alternative (not combined with standard_input)
+        source_code_req_set = next(
+            req_set
+            for req_set in input_requirements
+            if any(req.schema_name == "source_code" for req in req_set)
+        )
+        assert len(source_code_req_set) == 1
+        assert source_code_req_set[0].version == "1.0.0"
+
     def test_get_supported_output_schemas_returns_data_subject_indicator(self) -> None:
         """Test that analyser outputs data_subject_indicator schema."""
         output_schemas = DataSubjectAnalyser.get_supported_output_schemas()
@@ -285,3 +304,75 @@ class TestDataSubjectAnalyserProcessing:
         # Verify it doesn't contain patterns that aren't in the content
         assert "board_member" not in matched_patterns
         assert "chairman" not in matched_patterns
+
+    def test_process_source_code_with_pattern_matches(self) -> None:
+        """Test that process handles source_code schema correctly."""
+        from waivern_source_code_analyser import SourceCodeDataModel
+        from waivern_source_code_analyser.schemas.source_code import (
+            SourceCodeAnalysisMetadataModel,
+            SourceCodeFileDataModel,
+            SourceCodeFileMetadataModel,
+        )
+
+        # Arrange
+        config = DataSubjectAnalyserConfig.from_properties({})
+        analyser = DataSubjectAnalyser(config, llm_service=None)
+        input_schema = Schema("source_code", "1.0.0")
+        output_schema = Schema("data_subject_indicator", "1.0.0")
+
+        # Create test data with employee patterns in source code
+        file_data = SourceCodeFileDataModel(
+            file_path="/src/EmployeeService.php",
+            language="php",
+            raw_content="""<?php
+class EmployeeService {
+    private $employee;
+    private $staff;
+
+    public function getEmployee() {
+        return $this->employee;
+    }
+}
+""",
+            metadata=SourceCodeFileMetadataModel(
+                file_size=200, line_count=10, last_modified="2024-01-01T00:00:00Z"
+            ),
+        )
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Employee source code",
+            description="Test data with employee patterns",
+            source="source_code",
+            metadata=SourceCodeAnalysisMetadataModel(
+                total_files=1, total_lines=10, analysis_timestamp="2024-01-01T00:00:00Z"
+            ),
+            data=[file_data],
+        )
+        message = Message(
+            id="test_source_code",
+            content=source_data.model_dump(exclude_none=True),
+            schema=input_schema,
+        )
+
+        # Act
+        result = analyser.process([message], output_schema)
+
+        # Assert
+        assert isinstance(result, Message)
+        assert result.schema == output_schema
+
+        findings = result.content["findings"]
+        assert isinstance(findings, list)
+        assert len(findings) > 0, "Expected at least one finding for employee patterns"
+
+        # Find employee finding
+        employee_finding = next(
+            (f for f in findings if f["primary_category"] == "employee"), None
+        )
+        assert employee_finding is not None
+
+        # Verify metadata includes source file path
+        assert employee_finding["metadata"]["source"] == "/src/EmployeeService.php"
+        # Verify line number is present for source code findings
+        assert employee_finding["metadata"]["line_number"] is not None
+        assert employee_finding["metadata"]["line_number"] > 0
