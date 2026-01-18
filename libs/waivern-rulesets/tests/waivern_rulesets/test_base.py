@@ -4,16 +4,16 @@ from typing import ClassVar, override
 
 import pytest
 
-from waivern_rulesets.base import (
-    AbstractRuleset,
-    RulesetLoader,
+from waivern_rulesets.base import AbstractRuleset
+from waivern_rulesets.exceptions import (
     RulesetNotFoundError,
-    RulesetRegistry,
-    RulesetURI,
     RulesetURIParseError,
     UnsupportedProviderError,
 )
+from waivern_rulesets.loader import RulesetLoader
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
+from waivern_rulesets.registry import RulesetRegistry
+from waivern_rulesets.uri import RulesetURI
 
 
 class ConcreteRuleset(AbstractRuleset[ProcessingPurposeRule]):
