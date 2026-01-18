@@ -7,9 +7,9 @@ following the same pattern as waivern_core.testing.
 import pytest
 from waivern_core import Rule
 
-from waivern_rulesets.base import AbstractRuleset
-from waivern_rulesets.loader import RulesetLoader
-from waivern_rulesets.registry import RulesetRegistry
+from waivern_rulesets.core.base import AbstractRuleset
+from waivern_rulesets.core.loader import RulesetLoader
+from waivern_rulesets.core.registry import RulesetRegistry
 
 
 class RulesetContractTests[RuleType: Rule]:

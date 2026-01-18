@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import override
 
-from waivern_rulesets.exceptions import RulesetURIParseError
+from waivern_rulesets.core.exceptions import RulesetURIParseError
 
 
 @dataclass(frozen=True)

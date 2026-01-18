@@ -13,7 +13,7 @@ import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 from waivern_core import ClassificationRule, RulesetData
 
-from waivern_rulesets.base import AbstractRuleset
+from waivern_rulesets.core.base import AbstractRuleset
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +180,6 @@ class GDPRDataSubjectClassificationRuleset(
             yaml_file = (
                 Path(__file__).parent
                 / "data"
-                / _RULESET_NAME
                 / _RULESET_DATA_VERSION
                 / f"{_RULESET_NAME}.yaml"
             )

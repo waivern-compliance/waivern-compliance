@@ -2,7 +2,7 @@
 
 import pytest
 
-from waivern_rulesets.base import AbstractRuleset
+from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.data_collection import (
     DataCollectionRule,
     DataCollectionRuleset,

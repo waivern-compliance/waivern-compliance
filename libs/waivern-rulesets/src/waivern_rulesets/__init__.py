@@ -2,9 +2,18 @@
 
 from waivern_core import RulesetError
 
-from waivern_rulesets.base import AbstractRuleset
+# Core infrastructure
+from waivern_rulesets.core import (
+    AbstractRuleset,
+    RulesetLoader,
+    RulesetNotFoundError,
+    RulesetRegistry,
+    RulesetURI,
+    RulesetURIParseError,
+    UnsupportedProviderError,
+)
 
-# Import rule types for registration
+# Detection rulesets
 from waivern_rulesets.data_collection import (
     DataCollectionRule,
     DataCollectionRuleset,
@@ -13,11 +22,8 @@ from waivern_rulesets.data_subject_indicator import (
     DataSubjectIndicatorRule,
     DataSubjectIndicatorRuleset,
 )
-from waivern_rulesets.exceptions import (
-    RulesetNotFoundError,
-    RulesetURIParseError,
-    UnsupportedProviderError,
-)
+
+# Classification rulesets
 from waivern_rulesets.gdpr_data_subject_classification import (
     GDPRDataSubjectClassificationRule,
     GDPRDataSubjectClassificationRuleset,
@@ -27,7 +33,6 @@ from waivern_rulesets.gdpr_personal_data_classification import (
     GDPRPersonalDataClassificationRule,
     GDPRPersonalDataClassificationRuleset,
 )
-from waivern_rulesets.loader import RulesetLoader
 from waivern_rulesets.personal_data_indicator import (
     PersonalDataIndicatorRule,
     PersonalDataIndicatorRuleset,
@@ -36,13 +41,13 @@ from waivern_rulesets.processing_purposes import (
     ProcessingPurposeRule,
     ProcessingPurposesRuleset,
 )
+
+# Protocols
 from waivern_rulesets.protocols import DataSubjectClassificationRulesetProtocol
-from waivern_rulesets.registry import RulesetRegistry
 from waivern_rulesets.service_integrations import (
     ServiceIntegrationRule,
     ServiceIntegrationsRuleset,
 )
-from waivern_rulesets.uri import RulesetURI
 
 # Built-in rulesets with their corresponding rule types
 # Each ruleset class must define ruleset_name and ruleset_version ClassVars

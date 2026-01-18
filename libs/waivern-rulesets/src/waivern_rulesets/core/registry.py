@@ -5,8 +5,8 @@ from typing import Any, ClassVar, TypedDict
 
 from waivern_core import Rule
 
-from waivern_rulesets.base import AbstractRuleset
-from waivern_rulesets.exceptions import RulesetNotFoundError
+from waivern_rulesets.core.base import AbstractRuleset
+from waivern_rulesets.core.exceptions import RulesetNotFoundError
 
 
 class RulesetRegistryState(TypedDict):

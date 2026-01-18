@@ -2,7 +2,7 @@
 
 import pytest
 
-from waivern_rulesets.base import AbstractRuleset
+from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.personal_data_indicator import (
     PersonalDataIndicatorRule,
     PersonalDataIndicatorRuleset,

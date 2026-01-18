@@ -4,10 +4,10 @@ import logging
 
 from waivern_core import Rule
 
-from waivern_rulesets.base import AbstractRuleset
-from waivern_rulesets.exceptions import UnsupportedProviderError
-from waivern_rulesets.registry import RulesetRegistry
-from waivern_rulesets.uri import RulesetURI
+from waivern_rulesets.core.base import AbstractRuleset
+from waivern_rulesets.core.exceptions import UnsupportedProviderError
+from waivern_rulesets.core.registry import RulesetRegistry
+from waivern_rulesets.core.uri import RulesetURI
 
 logger = logging.getLogger(__name__)
 

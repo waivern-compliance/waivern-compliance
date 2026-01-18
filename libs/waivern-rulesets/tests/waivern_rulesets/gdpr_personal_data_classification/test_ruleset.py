@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from waivern_rulesets.base import AbstractRuleset
+from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.gdpr_personal_data_classification import (
     GDPRPersonalDataClassificationRule,
     GDPRPersonalDataClassificationRuleset,
