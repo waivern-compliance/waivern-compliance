@@ -1,6 +1,6 @@
 # Testing Patterns
 
-**Last Updated:** 2025-12-31
+**Last Updated:** 2026-01-18
 
 This document describes testing patterns and best practices used in the Waivern Compliance Framework.
 
@@ -116,8 +116,8 @@ The following singletons in the codebase use this pattern:
    - Manages schema definitions
    - Fixture: `isolate_schema_registry` in workspace conftest.py
 
-2. **`RulesetRegistry`** (`libs/waivern-rulesets/src/waivern_rulesets/base.py`)
-   - Manages ruleset definitions
+2. **`RulesetRegistry`** (`libs/waivern-rulesets/src/waivern_rulesets/core/registry.py`)
+   - Manages ruleset definitions (thread-safe singleton)
    - Fixture: `isolate_ruleset_registry` in workspace conftest.py
 
 3. **`ExporterRegistry`** (`apps/wct/src/wct/exporters/registry.py`)

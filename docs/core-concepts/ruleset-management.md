@@ -27,11 +27,11 @@ This guide explains how rulesets are loaded, cached, and used in WCF. Understand
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  RulesetRegistry (waivern-rulesets)                             │
-│  ─────────────────────────────────                              │
-│  • Singleton registry of ruleset classes                        │
-│  • Maps names → classes and rule types                          │
-│  • Runtime type validation                                      │
+│  RulesetRegistry (waivern-rulesets) [internal]                  │
+│  ─────────────────────────────────────────────                  │
+│  • Thread-safe singleton registry of ruleset classes            │
+│  • Maps (name, version) → class for multi-version support       │
+│  • Auto-discovers rulesets via entry points                     │
 └─────────────────────────────────────────────────────────────────┘
                                │
                                ▼

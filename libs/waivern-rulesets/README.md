@@ -70,19 +70,31 @@ Each package owns its complete quality tool configuration:
 
 This enables independent development and ensures consistent standards across all packages.
 
-## Ruleset Structure
+## Package Structure
 
-Rulesets are stored as versioned YAML files:
+Each ruleset is a self-contained directory with its implementation and data:
 
 ```
-src/waivern_rulesets/data/
-├── personal_data/
-│   └── 1.0.0/
-│       └── personal_data.yaml
+src/waivern_rulesets/
+├── core/                              # Infrastructure (internal)
+│   ├── base.py                        # AbstractRuleset, YAMLRuleset
+│   ├── registry.py                    # RulesetRegistry
+│   ├── loader.py                      # RulesetLoader
+│   ├── uri.py                         # RulesetURI
+│   └── exceptions.py                  # All errors
+├── personal_data_indicator/           # Each ruleset is self-contained
+│   ├── __init__.py
+│   ├── ruleset.py
+│   └── data/1.0.0/personal_data_indicator.yaml
 ├── processing_purposes/
-│   └── 1.0.0/
-│       └── processing_purposes.yaml
-...
+│   ├── __init__.py
+│   ├── ruleset.py
+│   └── data/1.0.0/processing_purposes.yaml
+├── ...                                # Other rulesets follow same pattern
+├── protocols.py                       # Protocol definitions
+├── types.py                           # Type definitions
+├── testing.py                         # Contract test utilities
+└── __init__.py                        # Re-exports public API
 ```
 
 Each YAML file defines:
