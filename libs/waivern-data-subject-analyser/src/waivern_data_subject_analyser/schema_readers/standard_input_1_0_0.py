@@ -4,6 +4,10 @@ from typing import Any
 
 from waivern_core.schemas import BaseMetadata, StandardInputDataModel
 
+from ..protocols import SchemaInputHandler
+from ..standard_input_schema_input_handler import StandardInputSchemaInputHandler
+from ..types import DataSubjectAnalyserConfig
+
 
 def read(content: dict[str, Any]) -> StandardInputDataModel[BaseMetadata]:
     """Transform standard_input v1.0.0 to canonical format.
@@ -22,3 +26,16 @@ def read(content: dict[str, Any]) -> StandardInputDataModel[BaseMetadata]:
 
     """
     return StandardInputDataModel[BaseMetadata].model_validate(content)
+
+
+def create_handler(config: DataSubjectAnalyserConfig) -> SchemaInputHandler:
+    """Create handler for standard_input schema.
+
+    Args:
+        config: Analyser configuration.
+
+    Returns:
+        Handler implementing SchemaInputHandler protocol.
+
+    """
+    return StandardInputSchemaInputHandler(config.pattern_matching)
