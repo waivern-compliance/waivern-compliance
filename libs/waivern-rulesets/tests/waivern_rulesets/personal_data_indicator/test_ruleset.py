@@ -1,11 +1,13 @@
 """Unit tests for PersonalDataIndicatorRuleset class."""
 
 import pytest
+from pydantic import ValidationError
 
 from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.personal_data_indicator import (
     PersonalDataIndicatorRule,
     PersonalDataIndicatorRuleset,
+    PersonalDataIndicatorRulesetData,
 )
 from waivern_rulesets.testing import RulesetContractTests
 
@@ -77,6 +79,53 @@ class TestPersonalDataIndicatorRule:
 
 
 # =============================================================================
+# RulesetData Validation Tests
+# =============================================================================
+
+
+class TestPersonalDataIndicatorRulesetData:
+    """Test cases for the PersonalDataIndicatorRulesetData class."""
+
+    def test_ruleset_data_with_valid_category(self) -> None:
+        """Test PersonalDataIndicatorRulesetData with valid rule categories."""
+        rule = PersonalDataIndicatorRule(
+            name="email_rule",
+            description="Email detection",
+            patterns=("email",),
+            category="email",
+        )
+
+        ruleset_data = PersonalDataIndicatorRulesetData(
+            name="personal_data_indicator",
+            version="1.0.0",
+            description="Test ruleset",
+            categories=["email", "phone", "name"],
+            rules=[rule],
+        )
+
+        assert len(ruleset_data.rules) == 1
+        assert ruleset_data.rules[0].category == "email"
+
+    def test_ruleset_data_rejects_invalid_category(self) -> None:
+        """Test PersonalDataIndicatorRulesetData rejects invalid rule categories."""
+        rule = PersonalDataIndicatorRule(
+            name="invalid_rule",
+            description="Rule with invalid category",
+            patterns=("test",),
+            category="invalid_category",  # Not in master list
+        )
+
+        with pytest.raises(ValidationError, match="invalid category"):
+            PersonalDataIndicatorRulesetData(
+                name="personal_data_indicator",
+                version="1.0.0",
+                description="Test ruleset",
+                categories=["email", "phone"],  # Does not include 'invalid_category'
+                rules=[rule],
+            )
+
+
+# =============================================================================
 # Ruleset-specific Tests (unique to PersonalDataIndicatorRuleset)
 # =============================================================================
 
@@ -84,29 +133,34 @@ class TestPersonalDataIndicatorRule:
 class TestPersonalDataIndicatorRuleset:
     """Test cases for PersonalDataIndicatorRuleset-specific behaviour."""
 
-    def setup_method(self) -> None:
-        """Set up test fixtures for each test method."""
-        self.ruleset = PersonalDataIndicatorRuleset()
+    @pytest.fixture
+    def ruleset(self) -> PersonalDataIndicatorRuleset:
+        """Provide a PersonalDataIndicatorRuleset instance for testing."""
+        return PersonalDataIndicatorRuleset()
 
-    def test_rules_have_patterns(self) -> None:
+    def test_rules_have_patterns(self, ruleset: PersonalDataIndicatorRuleset) -> None:
         """Test that all rules have patterns defined."""
-        rules = self.ruleset.get_rules()
+        rules = ruleset.get_rules()
 
         for rule in rules:
             assert len(rule.patterns) > 0
 
-    def test_all_rules_have_valid_categories(self) -> None:
+    def test_all_rules_have_valid_categories(
+        self, ruleset: PersonalDataIndicatorRuleset
+    ) -> None:
         """Test that all rules have category field populated."""
-        rules = self.ruleset.get_rules()
+        rules = ruleset.get_rules()
 
         for rule in rules:
             assert rule.category, f"Rule '{rule.name}' has empty category"
 
-    def test_ruleset_is_framework_agnostic(self) -> None:
+    def test_ruleset_is_framework_agnostic(
+        self, ruleset: PersonalDataIndicatorRuleset
+    ) -> None:
         """Test that ruleset does not contain GDPR-specific metadata."""
         # The ruleset data should not have special_category_types
         # This is verified by the Pydantic model not having that field
-        rules = self.ruleset.get_rules()
+        rules = ruleset.get_rules()
 
         for rule in rules:
             # No rule should have special_category attribute

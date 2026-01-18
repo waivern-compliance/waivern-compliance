@@ -204,29 +204,36 @@ class TestGDPRPersonalDataClassificationRulesetData:
 class TestGDPRPersonalDataClassificationRuleset:
     """Test cases for GDPRPersonalDataClassificationRuleset-specific behaviour."""
 
-    def setup_method(self) -> None:
-        """Set up test fixtures for each test method."""
-        self.ruleset = GDPRPersonalDataClassificationRuleset()
+    @pytest.fixture
+    def ruleset(self) -> GDPRPersonalDataClassificationRuleset:
+        """Provide a GDPRPersonalDataClassificationRuleset instance for testing."""
+        return GDPRPersonalDataClassificationRuleset()
 
-    def test_rules_have_valid_privacy_categories(self) -> None:
+    def test_rules_have_valid_privacy_categories(
+        self, ruleset: GDPRPersonalDataClassificationRuleset
+    ) -> None:
         """Test that all rules have non-empty privacy_category."""
-        rules = self.ruleset.get_rules()
+        rules = ruleset.get_rules()
 
         for rule in rules:
             assert isinstance(rule.privacy_category, str)
             assert len(rule.privacy_category) > 0
 
-    def test_rules_have_indicator_categories(self) -> None:
+    def test_rules_have_indicator_categories(
+        self, ruleset: GDPRPersonalDataClassificationRuleset
+    ) -> None:
         """Test that all rules have at least one indicator category."""
-        rules = self.ruleset.get_rules()
+        rules = ruleset.get_rules()
 
         for rule in rules:
             assert isinstance(rule.indicator_categories, tuple)
             assert len(rule.indicator_categories) > 0
 
-    def test_special_category_rules_have_article_9_references(self) -> None:
+    def test_special_category_rules_have_article_9_references(
+        self, ruleset: GDPRPersonalDataClassificationRuleset
+    ) -> None:
         """Test that special category rules reference Article 9."""
-        rules = self.ruleset.get_rules()
+        rules = ruleset.get_rules()
 
         for rule in rules:
             if rule.special_category:

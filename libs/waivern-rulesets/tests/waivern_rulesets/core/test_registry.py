@@ -1,5 +1,8 @@
 """Unit tests for RulesetRegistry."""
 
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 import pytest
 
 from waivern_rulesets.core.exceptions import RulesetNotFoundError
@@ -172,3 +175,37 @@ class TestRulesetRegistry:
         versions = isolated_registry.get_available_versions("nonexistent")
 
         assert versions == ()
+
+    def test_registry_is_singleton_under_concurrent_access(self) -> None:
+        """Test that RulesetRegistry maintains singleton under concurrent access.
+
+        Verifies the double-checked locking pattern works correctly by spawning
+        multiple threads that simultaneously attempt to get the registry instance.
+        All threads should receive the exact same instance.
+        """
+        instances: list[RulesetRegistry] = []
+        errors: list[Exception] = []
+        num_threads = 50
+        barrier = threading.Barrier(num_threads)
+
+        def get_registry() -> None:
+            try:
+                # Wait for all threads to be ready before proceeding
+                barrier.wait()
+                instance = RulesetRegistry()
+                instances.append(instance)
+            except Exception as e:
+                errors.append(e)
+
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(get_registry) for _ in range(num_threads)]
+            for future in as_completed(futures):
+                future.result()  # Raise any exceptions
+
+        assert not errors, f"Errors occurred: {errors}"
+        assert len(instances) == num_threads
+
+        # All instances should be the exact same object
+        first_instance = instances[0]
+        for instance in instances[1:]:
+            assert instance is first_instance, "Different instances were created!"
