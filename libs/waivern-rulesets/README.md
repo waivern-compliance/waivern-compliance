@@ -38,21 +38,6 @@ for rule in rules:
     print(f"Data type: {rule.data_type}")
 ```
 
-### Using the Registry
-
-```python
-from waivern_rulesets import RulesetRegistry, PersonalDataRuleset, PersonalDataRule
-
-# Get a ruleset class from the registry
-registry = RulesetRegistry()
-ruleset_class = registry.get_ruleset_class("personal_data", PersonalDataRule)
-
-# Instantiate and use
-ruleset = ruleset_class()
-print(f"Ruleset: {ruleset.name} v{ruleset.version}")
-rules = ruleset.get_rules()
-```
-
 ## Dependencies
 
 - `waivern-core` - Core abstractions (Rule, DetectionRule, ClassificationRule, RulesetData)

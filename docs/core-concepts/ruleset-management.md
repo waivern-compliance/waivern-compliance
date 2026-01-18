@@ -209,11 +209,12 @@ class TestMyRulesetContract(RulesetContractTests[MyRule]):
 
 ### Registry Isolation
 
-`RulesetRegistry` is a singleton with global state. Tests must isolate this state:
+`RulesetRegistry` is an internal singleton with global state. Tests must isolate this state:
 
 ```python
 import pytest
-from waivern_rulesets import RulesetRegistry
+# Use internal import - RulesetRegistry is not part of the public API
+from waivern_rulesets.core.registry import RulesetRegistry
 
 @pytest.fixture(autouse=True)
 def isolate_registry():
@@ -228,10 +229,11 @@ def isolate_registry():
 ### Registering Test Rulesets
 
 ```python
-from waivern_rulesets import RulesetRegistry
+# Use internal import - RulesetRegistry is not part of the public API
+from waivern_rulesets.core.registry import RulesetRegistry
 
 # Register a custom ruleset for testing
-RulesetRegistry.register(MyTestRuleset, MyTestRule)
+RulesetRegistry().register(MyTestRuleset, MyTestRule)
 ```
 
 ## Common Errors

@@ -75,7 +75,6 @@ __all__ = [
     # URI and Loader
     "RulesetURI",
     "RulesetLoader",
-    "RulesetRegistry",
     # Base classes
     "AbstractRuleset",
     # Protocols

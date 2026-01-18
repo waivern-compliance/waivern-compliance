@@ -9,7 +9,7 @@ See docs/how-tos/testing-patterns.md for the singleton testing pattern.
 import pytest
 from dotenv import load_dotenv
 from waivern_core.schemas import SchemaRegistry
-from waivern_rulesets import RulesetRegistry
+from waivern_rulesets.core.registry import RulesetRegistry
 from waivern_source_code_analyser.languages.registry import LanguageRegistry
 from wct.exporters.registry import ExporterRegistry
 

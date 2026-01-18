@@ -5,7 +5,7 @@ This module provides fixtures and configuration for the waivern-rulesets test su
 
 import pytest
 
-from waivern_rulesets import RulesetRegistry
+from waivern_rulesets.core.registry import RulesetRegistry
 
 
 def pytest_configure(config: pytest.Config) -> None:
