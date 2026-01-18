@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field, field_validator
+from waivern_core.schemas import BaseFindingModel
 
 
 class SchemaReader[T](Protocol):
@@ -27,6 +28,32 @@ class SchemaReader[T](Protocol):
 
         Returns:
             Typed Pydantic model for the schema.
+
+        """
+        ...
+
+
+class SchemaInputHandler[T: BaseFindingModel](Protocol):
+    """Protocol for schema-specific input handlers.
+
+    All handlers must implement this interface to ensure consistent
+    integration with the analyser. The analyser uses this protocol
+    to remain schema-agnostic.
+
+    Type parameter T is the finding model type (must extend BaseFindingModel).
+    """
+
+    def analyse(self, data: object) -> list[T]:
+        """Analyse input data for patterns.
+
+        Args:
+            data: Schema-validated input data from the reader.
+
+        Returns:
+            List of findings.
+
+        Raises:
+            TypeError: If data is not the expected schema type.
 
         """
         ...

@@ -2,9 +2,10 @@
 
 from typing import Any
 
+from waivern_analysers_shared import SchemaInputHandler
 from waivern_source_code_analyser import SourceCodeDataModel
 
-from ..protocols import SchemaInputHandler
+from ..schemas.types import DataSubjectIndicatorModel
 from ..source_code_schema_input_handler import SourceCodeSchemaInputHandler
 from ..types import DataSubjectAnalyserConfig
 
@@ -25,7 +26,9 @@ def read(content: dict[str, Any]) -> SourceCodeDataModel:
     return SourceCodeDataModel.model_validate(content)
 
 
-def create_handler(config: DataSubjectAnalyserConfig) -> SchemaInputHandler:
+def create_handler(
+    config: DataSubjectAnalyserConfig,
+) -> SchemaInputHandler[DataSubjectIndicatorModel]:
     """Create handler for source_code schema.
 
     Args:
