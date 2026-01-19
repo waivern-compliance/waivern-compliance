@@ -82,8 +82,8 @@ class TestDatabaseExtractionUtils:
         assert hasattr(result, "content")
         assert hasattr(result, "metadata")
 
-        # Assert - Check values
-        assert result.content == str(cell_value)  # Should be converted to string
+        # Assert - Check values (content includes column name for pattern matching)
+        assert result.content == f"{metadata.column_name}: {cell_value}"
         assert result.metadata == metadata  # Should be the actual metadata object
 
         # Assert - Check that we can still convert to dict if needed (for compatibility)
@@ -108,14 +108,15 @@ class TestDatabaseExtractionUtils:
         )
 
         # Test various data types that databases can return
+        # Content format is "column_name: value" for better pattern matching
         test_values = [
-            (123, "123"),  # Integer
-            (45.67, "45.67"),  # Float
-            (True, "True"),  # Boolean True
-            (False, "False"),  # Boolean False
-            (0, "0"),  # Zero integer
-            (0.0, "0.0"),  # Zero float
-            ("already string", "already string"),  # String (should remain unchanged)
+            (123, "value: 123"),  # Integer
+            (45.67, "value: 45.67"),  # Float
+            (True, "value: True"),  # Boolean True
+            (False, "value: False"),  # Boolean False
+            (0, "value: 0"),  # Zero integer
+            (0.0, "value: 0.0"),  # Zero float
+            ("already string", "value: already string"),  # String
         ]
 
         for original_value, expected_string in test_values:

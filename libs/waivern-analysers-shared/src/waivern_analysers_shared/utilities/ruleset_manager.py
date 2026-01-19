@@ -93,10 +93,6 @@ class RulesetManager:
             logger.debug(f"Loading ruleset: {ruleset_uri} (type: {rule_type.__name__})")
             ruleset = RulesetLoader.load_ruleset_instance(ruleset_uri, rule_type)
             cls._cache[cache_key] = ruleset
-        else:
-            logger.debug(
-                f"Using cached ruleset: {ruleset_uri} (type: {rule_type.__name__})"
-            )
 
         return cls._cache[cache_key]  # type: ignore[return-value]
 

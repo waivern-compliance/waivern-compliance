@@ -209,9 +209,13 @@ class MongoDBConnector(Connector):
                     field_name=full_field_name,
                 )
 
+                # Include field name in content for better pattern matching
+                # e.g., "user_name: Thomas" instead of just "Thomas"
+                content_with_field = f"{full_field_name}: {str_value}"
+
                 data_items.append(
                     StandardInputDataItemModel(
-                        content=str_value,
+                        content=content_with_field,
                         metadata=metadata,
                     )
                 )

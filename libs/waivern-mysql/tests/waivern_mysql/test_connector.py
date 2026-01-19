@@ -506,13 +506,13 @@ class TestMySQLConnectorEdgeCases:
         assert "None" not in contents
         assert "" not in contents
 
-        # Verify non-NULL values are included
-        assert "1" in contents  # id values converted to string
-        assert "John" in contents
-        assert "john@test.com" in contents
-        assert "2" in contents
-        assert "3" in contents
-        assert "Bob" in contents
+        # Verify non-NULL values are included (format: "column_name: value")
+        assert "id: 1" in contents
+        assert "name: John" in contents
+        assert "email: john@test.com" in contents
+        assert "id: 2" in contents
+        assert "id: 3" in contents
+        assert "name: Bob" in contents
 
     def test_returned_message_validates_against_schema(
         self, clear_mysql_env: None, mock_pymysql_connect: MagicMock
