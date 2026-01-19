@@ -24,6 +24,12 @@ class ValidationDecisionEngine:
         2. FALSE_POSITIVE → remove
         3. TRUE_POSITIVE → keep
 
+        Note: Most validation prompts instruct the LLM to only return FALSE_POSITIVE
+        findings (to save output tokens). In those cases, TRUE_POSITIVE findings are
+        simply omitted from the response and handled separately as "not_flagged".
+        This method still handles explicit TRUE_POSITIVE results to support prompts
+        that may be configured to return all validation results.
+
         Args:
             result: LLM validation result
             finding: The finding being evaluated.
