@@ -157,7 +157,7 @@ class SourceCodeSchemaInputHandler:
             confidence = self._confidence_scorer.calculate_confidence(matched_rules)
 
             indicator = DataSubjectIndicatorModel(
-                primary_category=category,
+                subject_category=category,
                 confidence_score=confidence,
                 evidence=evidence,
                 matched_patterns=all_patterns,

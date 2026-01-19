@@ -159,7 +159,7 @@ class DataSubjectPatternMatcher:
                 # Note: Risk modifiers (vulnerable, minor, etc.) are GDPR-specific
                 # and will be detected by the GDPRDataSubjectClassifier
                 indicator = DataSubjectIndicatorModel(
-                    primary_category=category,
+                    subject_category=category,
                     confidence_score=confidence_score,
                     evidence=evidence,
                     matched_patterns=matched_patterns,

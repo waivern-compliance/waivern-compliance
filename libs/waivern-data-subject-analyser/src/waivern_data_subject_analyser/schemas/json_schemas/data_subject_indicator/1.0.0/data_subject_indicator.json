@@ -123,9 +123,9 @@
           "title": "Matched Patterns",
           "type": "array"
         },
-        "primary_category": {
-          "description": "Primary data subject category detected",
-          "title": "Primary Category",
+        "subject_category": {
+          "description": "Data subject category detected",
+          "title": "Subject Category",
           "type": "string"
         },
         "confidence_score": {
@@ -151,7 +151,7 @@
       "required": [
         "evidence",
         "matched_patterns",
-        "primary_category",
+        "subject_category",
         "confidence_score"
       ],
       "title": "DataSubjectIndicatorModel",

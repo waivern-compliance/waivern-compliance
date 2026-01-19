@@ -128,7 +128,7 @@ class EmployeeService {
         findings = handler.analyse(source_data)
 
         # Assert - should have exactly ONE employee indicator, not multiple
-        employee_findings = [f for f in findings if f.primary_category == "employee"]
+        employee_findings = [f for f in findings if f.subject_category == "employee"]
         assert len(employee_findings) == 1, (
             f"Expected 1 employee indicator (grouped), got {len(employee_findings)}"
         )
@@ -237,7 +237,7 @@ class EmployeeService {
         findings = handler.analyse(source_data)
 
         # Assert
-        employee_findings = [f for f in findings if f.primary_category == "employee"]
+        employee_findings = [f for f in findings if f.subject_category == "employee"]
         assert len(employee_findings) == 1, "Expected exactly one employee indicator"
 
         # Check that patterns are deduplicated

@@ -184,15 +184,15 @@ class GDPRDataSubjectClassifier(Classifier):
             Classified finding with GDPR enrichment.
 
         """
-        # Look up classification based on primary_category
-        primary_category = finding.get("primary_category", "")
-        classification = self._classification_map.get(primary_category, {})
+        # Look up classification based on subject_category
+        subject_category = finding.get("subject_category", "")
+        classification = self._classification_map.get(subject_category, {})
 
         if not classification:
             logger.warning(
                 "Indicator category '%s' has no GDPR classification mapping. "
                 "Add mapping to gdpr_data_subject_classification.yaml",
-                primary_category,
+                subject_category,
             )
 
         # Extract evidence texts for risk modifier detection
