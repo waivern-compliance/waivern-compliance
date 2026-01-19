@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 # Type alias for validation results
-ValidationResultType = Literal["TRUE_POSITIVE", "FALSE_POSITIVE", "UNKNOWN"]
+ValidationResultType = Literal["TRUE_POSITIVE", "FALSE_POSITIVE"]
 
 # Type alias for recommended actions
 RecommendedActionType = Literal["keep", "discard", "flag_for_review"]
@@ -26,7 +26,7 @@ class LLMValidationResultModel(BaseModel):
         description="UUID of the finding this result corresponds to (echo back exactly)",
     )
     validation_result: ValidationResultType = Field(
-        default="UNKNOWN", description="The validation result"
+        default="TRUE_POSITIVE", description="The validation result"
     )
     confidence: float = Field(
         default=0.0,

@@ -19,8 +19,10 @@ class ValidationDecisionEngine:
     ) -> bool:
         """Determine whether a finding should be kept based on validation results.
 
-        Unified logic supporting both analysers with FLAG_FOR_REVIEW handling.
-        Optimized decision tree for performance.
+        Decision logic:
+        1. flag_for_review → keep (conservative, regardless of validation_result)
+        2. FALSE_POSITIVE → remove
+        3. TRUE_POSITIVE → keep
 
         Args:
             result: LLM validation result
@@ -30,18 +32,11 @@ class ValidationDecisionEngine:
             True if finding should be kept, False otherwise
 
         """
-        # Fast path: Keep validated true positives
-        if (
-            result.validation_result == "TRUE_POSITIVE"
-            and result.recommended_action == "keep"
-        ):
-            return True
-
-        # Fast path: Keep findings flagged for review (conservative approach)
+        # Keep findings flagged for review (conservative approach)
         if result.recommended_action == "flag_for_review":
             return True
 
-        # Fast path: Remove clear false positives
+        # Remove false positives
         if result.validation_result == "FALSE_POSITIVE":
             logger.info(
                 f"Removed false positive: {finding} "
@@ -49,10 +44,7 @@ class ValidationDecisionEngine:
             )
             return False
 
-        # Conservative fallback: Keep uncertain findings for safety
-        logger.warning(
-            f"Uncertain validation result for {finding}, keeping for safety: {result.reasoning}"
-        )
+        # Keep true positives
         return True
 
     @staticmethod

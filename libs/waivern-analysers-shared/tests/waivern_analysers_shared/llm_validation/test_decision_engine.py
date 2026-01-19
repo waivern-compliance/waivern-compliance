@@ -59,20 +59,6 @@ class TestValidationDecisionEngine:
 
         assert ValidationDecisionEngine.should_keep_finding(result, finding) is False
 
-    def test_should_keep_uncertain_findings_conservatively(self) -> None:
-        """Test that uncertain findings are kept for safety."""
-        finding = _create_test_finding("uncertain_pattern")
-        result = LLMValidationResultModel(
-            finding_id=finding.id,
-            validation_result="UNKNOWN",
-            confidence=0.5,
-            reasoning="Unclear classification",
-            recommended_action="keep",
-        )
-
-        # Should keep uncertain findings conservatively
-        assert ValidationDecisionEngine.should_keep_finding(result, finding) is True
-
     def test_handles_various_action_types(self) -> None:
         """Test handling of different recommended action types."""
         finding = _create_test_finding()
