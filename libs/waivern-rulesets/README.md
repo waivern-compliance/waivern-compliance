@@ -26,16 +26,32 @@ uv add waivern-rulesets
 
 ## Usage
 
+### For WCF Components (Recommended)
+
+WCF components (analysers, classifiers, etc.) should use `RulesetManager` from `waivern-analysers-shared`, which provides caching and is the standard API:
+
 ```python
-from waivern_rulesets import RulesetLoader, PersonalDataRule
+from waivern_analysers_shared.utilities import RulesetManager
+from waivern_rulesets import PersonalDataRule
 
 # Load a ruleset using URI format: provider/name/version
-rules = RulesetLoader.load_ruleset("local/personal_data/1.0.0", PersonalDataRule)
+rules = RulesetManager.get_rules("local/personal_data/1.0.0", PersonalDataRule)
 
 # Access rule properties
 for rule in rules:
     print(f"{rule.name}: {rule.patterns}")
     print(f"Data type: {rule.data_type}")
+```
+
+### For Internal/Testing Use
+
+`RulesetLoader` is the low-level loader used internally by `RulesetManager`. Direct usage is appropriate for testing utilities and internal infrastructure:
+
+```python
+from waivern_rulesets import RulesetLoader, PersonalDataRule
+
+# Direct loading (no caching) - use for tests or internal utilities
+rules = RulesetLoader.load_ruleset("local/personal_data/1.0.0", PersonalDataRule)
 ```
 
 ## Dependencies

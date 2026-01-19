@@ -81,7 +81,7 @@ class TestGDPRDataSubjectClassifier:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee John Smith, HR ID: 12345"}],
                     "matched_patterns": ["employee", "HR"],
@@ -114,7 +114,7 @@ class TestGDPRDataSubjectClassifier:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "customer",
+                    "subject_category": "customer",
                     "confidence_score": 90,
                     "evidence": [{"content": "Customer order placed by Jane Doe"}],
                     "matched_patterns": ["customer", "order"],
@@ -147,7 +147,7 @@ class TestGDPRDataSubjectClassifier:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 80,
                     "evidence": [{"content": "Employee record"}],
                     "matched_patterns": ["employee"],
@@ -183,7 +183,7 @@ class TestGDPRDataSubjectClassifier:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 80,
                     "evidence": [{"content": "Employee salary"}],
                     "matched_patterns": ["employee"],
@@ -222,7 +222,7 @@ class TestGDPRDataSubjectClassifier:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": original_evidence,
                     "matched_patterns": ["employee"],
@@ -258,13 +258,13 @@ class TestGDPRDataSubjectClassifier:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee data"}],
                     "matched_patterns": ["employee"],
                 },
                 {
-                    "primary_category": "customer",
+                    "subject_category": "customer",
                     "confidence_score": 90,
                     "evidence": [{"content": "Customer purchase"}],
                     "matched_patterns": ["customer"],
@@ -303,7 +303,7 @@ class TestGDPRDataSubjectClassifier:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "unknown_category",
+                    "subject_category": "unknown_category",
                     "confidence_score": 50,
                     "evidence": [{"content": "some data"}],
                     "matched_patterns": ["unknown"],
@@ -338,7 +338,7 @@ class TestGDPRDataSubjectClassifier:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee data"}],
                     "matched_patterns": ["employee"],
@@ -383,7 +383,7 @@ class TestGDPRDataSubjectClassifier:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee data"}],
                     "matched_patterns": ["employee"],
@@ -428,7 +428,7 @@ class TestRiskModifierDetection:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "student",
+                    "subject_category": "student",
                     "confidence_score": 90,
                     "evidence": [
                         {"content": "Student record for minor under 16 years"}
@@ -464,7 +464,7 @@ class TestRiskModifierDetection:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "patient",
+                    "subject_category": "patient",
                     "confidence_score": 85,
                     "evidence": [{"content": "Pediatric patient - child under 10"}],
                     "matched_patterns": ["patient"],
@@ -498,7 +498,7 @@ class TestRiskModifierDetection:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee salary record"}],
                     "matched_patterns": ["employee"],
@@ -532,13 +532,13 @@ class TestRiskModifierDetection:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "student",
+                    "subject_category": "student",
                     "confidence_score": 90,
                     "evidence": [{"content": "Minor student, age 14"}],
                     "matched_patterns": ["student"],
                 },
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Adult employee"}],
                     "matched_patterns": ["employee"],
@@ -592,7 +592,7 @@ class TestGDPRDataSubjectClassifierErrorHandling:
         input_data = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee data"}],
                     "matched_patterns": ["employee"],
@@ -666,7 +666,7 @@ class TestFanInSupport:
         input_data_1 = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee John Smith"}],
                     "matched_patterns": ["employee"],
@@ -688,7 +688,7 @@ class TestFanInSupport:
         input_data_2 = {
             "findings": [
                 {
-                    "primary_category": "customer",
+                    "subject_category": "customer",
                     "confidence_score": 90,
                     "evidence": [{"content": "Customer order placed"}],
                     "matched_patterns": ["customer"],
@@ -725,7 +725,7 @@ class TestFanInSupport:
         input_data_1 = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Adult employee record"}],
                     "matched_patterns": ["employee"],
@@ -747,7 +747,7 @@ class TestFanInSupport:
         input_data_2 = {
             "findings": [
                 {
-                    "primary_category": "student",
+                    "subject_category": "student",
                     "confidence_score": 90,
                     "evidence": [{"content": "Minor student, age 14"}],
                     "matched_patterns": ["student"],
@@ -785,7 +785,7 @@ class TestFanInSupport:
         input_data_1 = {
             "findings": [
                 {
-                    "primary_category": "employee",
+                    "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee data"}],
                     "matched_patterns": ["employee"],
@@ -811,7 +811,7 @@ class TestFanInSupport:
         input_data_2 = {
             "findings": [
                 {
-                    "primary_category": "customer",
+                    "subject_category": "customer",
                     "confidence_score": 90,
                     "evidence": [{"content": "Customer record"}],
                     "matched_patterns": ["customer"],

@@ -75,5 +75,5 @@ class TestDataSubjectPatternMatcher:
         # filesystem context: only employee_hr_system_indicators
         if len(db_findings) > 0 and len(fs_findings) > 0:
             # Database context typically has more applicable rules
-            assert db_findings[0].primary_category == "employee"
-            assert fs_findings[0].primary_category == "employee"
+            assert db_findings[0].subject_category == "employee"
+            assert fs_findings[0].subject_category == "employee"

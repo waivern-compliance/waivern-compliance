@@ -90,7 +90,7 @@ class DataSubjectResultBuilder:
         """
         return DataSubjectIndicatorSummary(
             total_indicators=len(indicators),
-            categories_identified=list(set(i.primary_category for i in indicators)),
+            categories_identified=list(set(i.subject_category for i in indicators)),
         )
 
     def _build_analysis_metadata(self) -> BaseAnalysisOutputMetadata:

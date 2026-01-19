@@ -2,9 +2,10 @@
 
 from typing import Any
 
+from waivern_analysers_shared import SchemaInputHandler
 from waivern_core.schemas import BaseMetadata, StandardInputDataModel
 
-from ..protocols import SchemaInputHandler
+from ..schemas.types import ProcessingPurposeFindingModel
 from ..standard_input_schema_input_handler import StandardInputSchemaInputHandler
 from ..types import ProcessingPurposeAnalyserConfig
 
@@ -28,7 +29,9 @@ def read(content: dict[str, Any]) -> StandardInputDataModel[BaseMetadata]:
     return StandardInputDataModel[BaseMetadata].model_validate(content)
 
 
-def create_handler(config: ProcessingPurposeAnalyserConfig) -> SchemaInputHandler:
+def create_handler(
+    config: ProcessingPurposeAnalyserConfig,
+) -> SchemaInputHandler[ProcessingPurposeFindingModel]:
     """Create handler for standard_input schema.
 
     Args:

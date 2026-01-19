@@ -28,7 +28,7 @@ class DataSubjectIndicatorMetadata(BaseFindingMetadata):
 class DataSubjectIndicatorModel(BaseFindingModel):
     """Data subject indicator from pattern-based detection."""
 
-    primary_category: str = Field(description="Primary data subject category detected")
+    subject_category: str = Field(description="Data subject category detected")
     confidence_score: int = Field(
         ge=0, le=100, description="Confidence score for the detection (0-100)"
     )
@@ -39,7 +39,7 @@ class DataSubjectIndicatorModel(BaseFindingModel):
     @override
     def __str__(self) -> str:
         """Human-readable representation for logging and debugging."""
-        return f"{self.primary_category} - {', '.join(self.matched_patterns)}"
+        return f"{self.subject_category} - {', '.join(self.matched_patterns)}"
 
 
 class DataSubjectIndicatorSummary(BaseModel):

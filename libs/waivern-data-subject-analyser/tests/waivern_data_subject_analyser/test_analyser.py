@@ -169,7 +169,7 @@ class TestDataSubjectAnalyserProcessing:
         if len(findings) > 0:
             # Verify indicator structure for pattern matches
             finding = findings[0]
-            assert "primary_category" in finding
+            assert "subject_category" in finding
             assert "confidence_score" in finding
             assert "evidence" in finding
             assert "matched_patterns" in finding
@@ -287,7 +287,7 @@ class TestDataSubjectAnalyserProcessing:
 
         # Find director finding
         director_finding = next(
-            (f for f in findings if f["primary_category"] == "director"), None
+            (f for f in findings if f["subject_category"] == "director"), None
         )
         assert director_finding is not None
 
@@ -367,7 +367,7 @@ class EmployeeService {
 
         # Find employee finding
         employee_finding = next(
-            (f for f in findings if f["primary_category"] == "employee"), None
+            (f for f in findings if f["subject_category"] == "employee"), None
         )
         assert employee_finding is not None
 

@@ -61,7 +61,7 @@ class TestGDPRDataSubjectClassifierFactory:
             content={
                 "findings": [
                     {
-                        "primary_category": "employee",
+                        "subject_category": "employee",
                         "confidence_score": 85,
                         "evidence": [{"content": "employee record"}],
                         "matched_patterns": ["employee_pattern"],
