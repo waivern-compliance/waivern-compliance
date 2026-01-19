@@ -1,4 +1,9 @@
-"""Tests for DataSubjectValidationStrategy."""
+"""Tests for DataSubjectValidationStrategy.
+
+These tests verify behaviour specific to the DataSubjectValidationStrategy.
+Base class behaviour (batching, error handling) is tested in
+waivern_analysers_shared/llm_validation/test_default_strategy.py.
+"""
 
 from unittest.mock import Mock
 
@@ -18,10 +23,6 @@ from waivern_data_subject_analyser.schemas.types import (
     DataSubjectIndicatorMetadata,
     DataSubjectIndicatorModel,
 )
-
-# =============================================================================
-# Test Helpers
-# =============================================================================
 
 
 def _make_finding(
@@ -57,17 +58,8 @@ def _make_response(
     return LLMValidationResponseModel(results=results)
 
 
-# =============================================================================
-# Test Class
-# =============================================================================
-
-
 class TestDataSubjectValidationStrategy:
-    """Test suite for DataSubjectValidationStrategy."""
-
-    # -------------------------------------------------------------------------
-    # Fixtures
-    # -------------------------------------------------------------------------
+    """Test suite for DataSubjectValidationStrategy-specific behaviour."""
 
     @pytest.fixture
     def strategy(self) -> DataSubjectValidationStrategy:
@@ -99,23 +91,6 @@ class TestDataSubjectValidationStrategy:
                 "Employee", "employee_id", "mysql_database_(prod)_table_(employees)"
             ),
         ]
-
-    # -------------------------------------------------------------------------
-    # Core Validation Behaviour
-    # -------------------------------------------------------------------------
-
-    def test_returns_empty_outcome_when_no_findings_provided(
-        self,
-        strategy: DataSubjectValidationStrategy,
-        config: LLMValidationConfig,
-        llm_service: Mock,
-    ) -> None:
-        """Empty input returns empty outcome without calling LLM."""
-        outcome = strategy.validate_findings([], config, llm_service)
-
-        assert outcome.kept_findings == []
-        assert outcome.validation_succeeded is True
-        llm_service.invoke_with_structured_output.assert_not_called()
 
     def test_filters_out_false_positive_findings(
         self,
@@ -156,100 +131,26 @@ class TestDataSubjectValidationStrategy:
         assert outcome.validation_succeeded is True
         assert len(outcome.llm_not_flagged) == 2
 
-    def test_returns_same_finding_instances_not_copies(
+    def test_generates_prompt_with_finding_details(
         self,
         strategy: DataSubjectValidationStrategy,
         config: LLMValidationConfig,
         llm_service: Mock,
         sample_findings: list[DataSubjectIndicatorModel],
     ) -> None:
-        """Returned findings are the same object instances as input."""
-        # LLM returns empty response - all findings kept
+        """Prompt includes finding IDs, categories, and evidence."""
         llm_service.invoke_with_structured_output.return_value = _make_response([])
 
-        outcome = strategy.validate_findings(sample_findings, config, llm_service)
+        strategy.validate_findings(sample_findings, config, llm_service)
 
-        # Same instances, not copies (order may differ due to internal set iteration)
-        assert set(id(f) for f in outcome.kept_findings) == set(
-            id(f) for f in sample_findings
-        )
+        # Verify prompt was generated with finding details
+        call_args = llm_service.invoke_with_structured_output.call_args
+        prompt = call_args[0][0]
 
-    # -------------------------------------------------------------------------
-    # Error Handling
-    # -------------------------------------------------------------------------
+        # Should include finding IDs for response matching
+        assert sample_findings[0].id in prompt
+        assert sample_findings[1].id in prompt
 
-    def test_returns_original_findings_as_skipped_on_llm_error(
-        self,
-        strategy: DataSubjectValidationStrategy,
-        config: LLMValidationConfig,
-        llm_service: Mock,
-        sample_findings: list[DataSubjectIndicatorModel],
-    ) -> None:
-        """On LLM error, return original findings as skipped."""
-        llm_service.invoke_with_structured_output.side_effect = Exception(
-            "LLM service unavailable"
-        )
-
-        outcome = strategy.validate_findings(sample_findings, config, llm_service)
-
-        # Findings are kept but marked as skipped
-        assert len(outcome.kept_findings) == len(sample_findings)
-        assert outcome.validation_succeeded is False
-        assert len(outcome.skipped) == len(sample_findings)
-
-    # -------------------------------------------------------------------------
-    # Batch Processing
-    # -------------------------------------------------------------------------
-
-    @pytest.mark.parametrize(
-        ("batch_size", "expected_calls"),
-        [
-            (1, 3),  # 3 findings, batch size 1 = 3 calls
-            (2, 2),  # 3 findings, batch size 2 = 2 calls (2+1)
-            (3, 1),  # 3 findings, batch size 3 = 1 call
-            (5, 1),  # 3 findings, batch size 5 = 1 call (larger than count)
-        ],
-    )
-    def test_processes_findings_in_batches(
-        self,
-        strategy: DataSubjectValidationStrategy,
-        config: LLMValidationConfig,
-        llm_service: Mock,
-        batch_size: int,
-        expected_calls: int,
-    ) -> None:
-        """Findings are batched according to config."""
-        findings = [_make_finding("Customer", f"customer_{i}") for i in range(3)]
-        config.llm_batch_size = batch_size
-
-        # Return empty response for each batch (all findings kept as not_flagged)
-        llm_service.invoke_with_structured_output.return_value = _make_response([])
-
-        outcome = strategy.validate_findings(findings, config, llm_service)
-
-        assert len(outcome.kept_findings) == 3
-        assert llm_service.invoke_with_structured_output.call_count == expected_calls
-        assert outcome.validation_succeeded is True
-
-    def test_continues_processing_after_batch_error(
-        self,
-        strategy: DataSubjectValidationStrategy,
-        config: LLMValidationConfig,
-        llm_service: Mock,
-    ) -> None:
-        """If one batch fails, continue with remaining batches."""
-        findings = [_make_finding("Customer", f"customer_{i}") for i in range(4)]
-        config.llm_batch_size = 2
-
-        # First batch fails, second succeeds
-        llm_service.invoke_with_structured_output.side_effect = [
-            Exception("Batch 1 failed"),
-            _make_response([]),  # Second batch returns empty (all kept)
-        ]
-
-        outcome = strategy.validate_findings(findings, config, llm_service)
-
-        # All 4 findings kept (2 from failed batch as skipped, 2 not flagged)
-        assert len(outcome.kept_findings) == 4
-        assert outcome.validation_succeeded is False  # Not all batches succeeded
-        assert len(outcome.skipped) == 2  # First batch was skipped
+        # Should include subject categories
+        assert "Customer" in prompt
+        assert "Employee" in prompt
