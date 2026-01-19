@@ -10,7 +10,6 @@ from .types import (
     PersonalDataIndicatorModel,
     PersonalDataIndicatorOutput,
     PersonalDataIndicatorSummary,
-    PersonalDataValidationSummary,
 )
 
 __all__ = [
@@ -18,5 +17,4 @@ __all__ = [
     "PersonalDataIndicatorModel",
     "PersonalDataIndicatorOutput",
     "PersonalDataIndicatorSummary",
-    "PersonalDataValidationSummary",
 ]

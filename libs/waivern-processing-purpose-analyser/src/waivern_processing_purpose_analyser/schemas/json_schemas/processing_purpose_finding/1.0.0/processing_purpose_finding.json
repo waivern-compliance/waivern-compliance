@@ -265,64 +265,6 @@
       "title": "ProcessingPurposeSummary",
       "type": "object"
     },
-    "ProcessingPurposeValidationSummary": {
-      "description": "LLM validation summary for processing purpose findings.",
-      "properties": {
-        "llm_validation_enabled": {
-          "default": true,
-          "description": "Whether LLM validation was enabled",
-          "title": "Llm Validation Enabled",
-          "type": "boolean"
-        },
-        "original_findings_count": {
-          "description": "Number of findings before validation",
-          "minimum": 0,
-          "title": "Original Findings Count",
-          "type": "integer"
-        },
-        "validated_findings_count": {
-          "description": "Number of findings after validation",
-          "minimum": 0,
-          "title": "Validated Findings Count",
-          "type": "integer"
-        },
-        "false_positives_removed": {
-          "description": "Number of false positives removed by validation",
-          "minimum": 0,
-          "title": "False Positives Removed",
-          "type": "integer"
-        },
-        "validation_effectiveness_percentage": {
-          "description": "Percentage of findings identified as false positives",
-          "maximum": 100.0,
-          "minimum": 0.0,
-          "title": "Validation Effectiveness Percentage",
-          "type": "number"
-        },
-        "validation_mode": {
-          "description": "LLM validation mode used",
-          "title": "Validation Mode",
-          "type": "string"
-        },
-        "removed_purposes": {
-          "description": "List of purposes that were removed",
-          "items": {
-            "type": "string"
-          },
-          "title": "Removed Purposes",
-          "type": "array"
-        }
-      },
-      "required": [
-        "original_findings_count",
-        "validated_findings_count",
-        "false_positives_removed",
-        "validation_effectiveness_percentage",
-        "validation_mode"
-      ],
-      "title": "ProcessingPurposeValidationSummary",
-      "type": "object"
-    },
     "PurposeBreakdown": {
       "description": "Per-purpose breakdown of findings.",
       "properties": {
@@ -363,18 +305,6 @@
     "analysis_metadata": {
       "$ref": "#/$defs/BaseAnalysisOutputMetadata",
       "description": "Metadata about the analysis process"
-    },
-    "validation_summary": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/ProcessingPurposeValidationSummary"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "LLM validation summary (if validation was applied)"
     }
   },
   "required": [

@@ -130,18 +130,16 @@ class ProcessingPurposeAnalyser(Analyser):
 
         # Apply LLM validation if enabled
         validation_result: ValidationResult[ProcessingPurposeFindingModel] | None = None
+        final_findings = findings
         if self._config.llm_validation.enable_llm_validation:
-            validated_findings, validation_applied, validation_result = (
-                self._validate_findings(findings, inputs)
+            validated_findings, _, validation_result = self._validate_findings(
+                findings, inputs
             )
-        else:
-            validated_findings, validation_applied = findings, False
+            final_findings = validated_findings
 
         # Build output message
         return self._result_builder.build_output_message(
-            findings,
-            validated_findings,
-            validation_applied,
+            final_findings,
             output_schema,
             validation_result,
         )

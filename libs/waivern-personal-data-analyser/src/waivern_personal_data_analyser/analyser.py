@@ -162,18 +162,14 @@ class PersonalDataAnalyser(Analyser):
 
         # Apply LLM validation if enabled
         validation_result: ValidationResult[PersonalDataIndicatorModel] | None = None
+        final_findings = findings
         if self._config.llm_validation.enable_llm_validation:
-            validated_findings, validation_applied, validation_result = (
-                self._validate_findings(findings)
-            )
-        else:
-            validated_findings, validation_applied = findings, False
+            validated_findings, _, validation_result = self._validate_findings(findings)
+            final_findings = validated_findings
 
         # Build and return output message
         return self._result_builder.build_output_message(
-            findings,
-            validated_findings,
-            validation_applied,
+            final_findings,
             output_schema,
             validation_result,
         )

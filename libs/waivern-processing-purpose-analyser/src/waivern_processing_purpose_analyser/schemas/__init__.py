@@ -5,7 +5,6 @@ from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeFindingModel,
     ProcessingPurposeFindingOutput,
     ProcessingPurposeSummary,
-    ProcessingPurposeValidationSummary,
 )
 
 __all__ = [
@@ -13,5 +12,4 @@ __all__ = [
     "ProcessingPurposeFindingModel",
     "ProcessingPurposeFindingOutput",
     "ProcessingPurposeSummary",
-    "ProcessingPurposeValidationSummary",
 ]
