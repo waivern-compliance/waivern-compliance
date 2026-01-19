@@ -6,6 +6,17 @@ adapting them to ProcessingPurposeAnalyser's domain.
 Provider naming convention:
 - Schema-specific providers: prefixed with schema name (e.g., SourceCode*)
 - Domain-specific providers: prefixed with domain name (e.g., ProcessingPurpose*)
+
+Testing rationale:
+    The ConcernProvider classes have NO dedicated unit tests because:
+
+    1. They implement trivial behaviour (simple attribute access)
+    2. The type checker validates protocol compliance with ConcernProvider[T]
+    3. The grouping logic that uses these providers is tested in
+       waivern-analysers-shared/tests/llm_validation/test_grouping.py
+
+    SourceProvider implementations MAY warrant tests if they have non-trivial
+    logic (e.g., error handling for missing metadata, content transformation).
 """
 
 from waivern_processing_purpose_analyser.schemas.types import (
