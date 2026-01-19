@@ -35,7 +35,7 @@ For each finding, determine if it represents an actual data subject indicator (T
 **VALIDATION CRITERIA:**
 - TRUE_POSITIVE: Pattern appears in schema/code that actually stores or references data subjects
 - FALSE_POSITIVE: Pattern appears in comments, documentation, or unrelated context
-- Consider source context and evidence content
+- **CRITICAL: Always analyse the Source field to determine context (database type, collection/table names, file paths). Source context is essential for accurate validation.**
 - Prioritise compliance safety when uncertain
 
 **CATEGORY-SPECIFIC GUIDANCE:**

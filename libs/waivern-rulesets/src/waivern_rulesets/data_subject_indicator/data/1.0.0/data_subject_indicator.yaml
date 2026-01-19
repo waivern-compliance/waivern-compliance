@@ -21,10 +21,6 @@ subject_categories:
 - guardian
 - account_holder
 - beneficiary
-applicable_contexts:
-- database
-- filesystem
-- source_code
 risk_increasing_modifiers:
 - minor
 - child
@@ -63,9 +59,6 @@ rules:
   subject_category: employee
   indicator_type: primary
   confidence_weight: 45
-  applicable_contexts:
-  - database
-  - source_code
 - name: employee_hr_system_indicators
   description: HR system integration patterns for employees
   patterns:
@@ -103,9 +96,6 @@ rules:
   subject_category: employee
   indicator_type: secondary
   confidence_weight: 30
-  applicable_contexts:
-  - database
-  - filesystem
 - name: employee_company_domain_email
   description: Company email domain patterns for employees
   patterns:
@@ -127,9 +117,6 @@ rules:
   subject_category: employee
   indicator_type: contextual
   confidence_weight: 15
-  applicable_contexts:
-  - database
-  - source_code
 - name: former_employee_status_indicators
   description: Former employee status and termination patterns
   patterns:
@@ -166,9 +153,6 @@ rules:
   subject_category: former_employee
   indicator_type: primary
   confidence_weight: 40
-  applicable_contexts:
-  - database
-  - filesystem
 - name: job_applicant_recruitment_indicators
   description: Job application and recruitment system patterns
   patterns:
@@ -209,9 +193,6 @@ rules:
   subject_category: job_applicant
   indicator_type: primary
   confidence_weight: 45
-  applicable_contexts:
-  - database
-  - filesystem
 - name: contractor_role_indicators
   description: External contractor and consultant patterns
   patterns:
@@ -248,9 +229,6 @@ rules:
   subject_category: contractor
   indicator_type: primary
   confidence_weight: 40
-  applicable_contexts:
-  - database
-  - source_code
 - name: director_executive_indicators
   description: Board members and executive governance patterns
   patterns:
@@ -288,9 +266,6 @@ rules:
   subject_category: director
   indicator_type: primary
   confidence_weight: 45
-  applicable_contexts:
-  - database
-  - filesystem
 - name: customer_active_account_indicators
   description: Active customer account and subscription patterns
   patterns:
@@ -328,9 +303,6 @@ rules:
   subject_category: customer
   indicator_type: primary
   confidence_weight: 40
-  applicable_contexts:
-  - database
-  - source_code
 - name: customer_transaction_indicators
   description: Customer transaction and purchase history patterns
   patterns:
@@ -367,9 +339,6 @@ rules:
   subject_category: customer
   indicator_type: secondary
   confidence_weight: 25
-  applicable_contexts:
-  - database
-  - filesystem
 - name: prospect_lead_management_indicators
   description: Lead management and prospective customer patterns
   patterns:
@@ -410,9 +379,6 @@ rules:
   subject_category: prospect
   indicator_type: primary
   confidence_weight: 35
-  applicable_contexts:
-  - database
-  - source_code
 - name: prospect_trial_indicators
   description: Trial account and demo request patterns
   patterns:
@@ -451,9 +417,6 @@ rules:
   subject_category: prospect
   indicator_type: secondary
   confidence_weight: 20
-  applicable_contexts:
-  - database
-  - filesystem
 - name: former_customer_cancellation_indicators
   description: Former customer cancellation and churn patterns
   patterns:
@@ -491,9 +454,6 @@ rules:
   subject_category: former_customer
   indicator_type: primary
   confidence_weight: 40
-  applicable_contexts:
-  - database
-  - filesystem
 - name: visitor_web_analytics_indicators
   description: Website visitor and anonymous user patterns
   patterns:
@@ -535,9 +495,6 @@ rules:
   subject_category: visitor
   indicator_type: primary
   confidence_weight: 35
-  applicable_contexts:
-  - database
-  - source_code
 - name: subscriber_email_marketing_indicators
   description: Email marketing and newsletter subscription patterns
   patterns:
@@ -578,9 +535,6 @@ rules:
   subject_category: subscriber
   indicator_type: primary
   confidence_weight: 40
-  applicable_contexts:
-  - database
-  - source_code
 - name: supplier_vendor_management_indicators
   description: Supplier and vendor management system patterns
   patterns:
@@ -623,9 +577,6 @@ rules:
   subject_category: supplier
   indicator_type: primary
   confidence_weight: 40
-  applicable_contexts:
-  - database
-  - source_code
 - name: advisor_professional_services_indicators
   description: Professional advisors and consulting service patterns
   patterns:
@@ -667,9 +618,6 @@ rules:
   subject_category: advisor
   indicator_type: primary
   confidence_weight: 40
-  applicable_contexts:
-  - database
-  - filesystem
 - name: partner_business_alliance_indicators
   description: Business partner and strategic alliance patterns
   patterns:
@@ -711,9 +659,6 @@ rules:
   subject_category: partner
   indicator_type: primary
   confidence_weight: 40
-  applicable_contexts:
-  - database
-  - source_code
 - name: patient_healthcare_indicators
   description: Healthcare patient record and EMR system patterns
   patterns:
@@ -756,9 +701,6 @@ rules:
   subject_category: patient
   indicator_type: primary
   confidence_weight: 45
-  applicable_contexts:
-  - database
-  - source_code
 - name: provider_healthcare_professional_indicators
   description: Healthcare provider and medical professional patterns
   patterns:
@@ -801,9 +743,6 @@ rules:
   subject_category: provider
   indicator_type: primary
   confidence_weight: 45
-  applicable_contexts:
-  - database
-  - source_code
 - name: student_education_system_indicators
   description: Student information system and academic record patterns
   patterns:
@@ -848,9 +787,6 @@ rules:
   subject_category: student
   indicator_type: primary
   confidence_weight: 45
-  applicable_contexts:
-  - database
-  - source_code
 - name: guardian_parental_consent_indicators
   description: Parent and guardian consent and contact patterns
   patterns:
@@ -893,9 +829,6 @@ rules:
   subject_category: guardian
   indicator_type: primary
   confidence_weight: 40
-  applicable_contexts:
-  - database
-  - source_code
 - name: account_holder_financial_indicators
   description: Financial account holder and banking patterns
   patterns:
@@ -937,9 +870,6 @@ rules:
   subject_category: account_holder
   indicator_type: primary
   confidence_weight: 45
-  applicable_contexts:
-  - database
-  - source_code
 - name: beneficiary_insurance_pension_indicators
   description: Insurance and pension beneficiary patterns
   patterns:
@@ -982,9 +912,6 @@ rules:
   subject_category: beneficiary
   indicator_type: primary
   confidence_weight: 40
-  applicable_contexts:
-  - database
-  - filesystem
 - name: user_authentication_contextual
   description: General user authentication and login patterns
   patterns:
@@ -1026,9 +953,6 @@ rules:
   subject_category: visitor
   indicator_type: contextual
   confidence_weight: 10
-  applicable_contexts:
-  - database
-  - source_code
 - name: personal_information_contextual
   description: General personal information field patterns
   patterns:
@@ -1073,7 +997,3 @@ rules:
   subject_category: visitor
   indicator_type: contextual
   confidence_weight: 5
-  applicable_contexts:
-  - database
-  - filesystem
-  - source_code

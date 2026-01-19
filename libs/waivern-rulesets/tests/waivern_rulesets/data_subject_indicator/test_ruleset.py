@@ -62,14 +62,12 @@ class TestDataSubjectIndicatorRule:
             subject_category="employee",
             indicator_type="primary",
             confidence_weight=40,
-            applicable_contexts=["database", "source_code"],
         )
 
         assert rule.name == "employee_rule"
         assert rule.subject_category == "employee"
         assert rule.indicator_type == "primary"
         assert rule.confidence_weight == 40
-        assert rule.applicable_contexts == ["database", "source_code"]
 
     def test_data_subject_rule_confidence_weight_validation(self) -> None:
         """Test DataSubjectIndicatorRule confidence_weight constraints."""
@@ -84,7 +82,6 @@ class TestDataSubjectIndicatorRule:
                 subject_category="employee",
                 indicator_type="primary",
                 confidence_weight=0,  # Invalid: below minimum
-                applicable_contexts=["database"],
             )
 
         # Test maximum bound
@@ -98,7 +95,6 @@ class TestDataSubjectIndicatorRule:
                 subject_category="employee",
                 indicator_type="primary",
                 confidence_weight=51,  # Invalid: above maximum
-                applicable_contexts=["database"],
             )
 
     def test_data_subject_rule_indicator_type_validation(self) -> None:
@@ -112,7 +108,6 @@ class TestDataSubjectIndicatorRule:
                 subject_category="employee",
                 indicator_type=indicator_type,  # type: ignore
                 confidence_weight=25,
-                applicable_contexts=["database"],
             )
             assert rule.indicator_type == indicator_type
 
@@ -128,7 +123,6 @@ class TestDataSubjectIndicatorRule:
                 subject_category="employee",
                 indicator_type="invalid_type",  # Invalid literal value # type: ignore
                 confidence_weight=25,
-                applicable_contexts=["database"],
             )
 
 
@@ -149,7 +143,6 @@ class TestDataSubjectIndicatorRulesetData:
             subject_category="employee",
             indicator_type="primary",
             confidence_weight=40,
-            applicable_contexts=["database"],
         )
 
         ruleset = DataSubjectIndicatorRulesetData(
@@ -157,7 +150,6 @@ class TestDataSubjectIndicatorRulesetData:
             version="1.0.0",
             description="Data subject classification ruleset",
             subject_categories=["employee", "customer", "prospect"],
-            applicable_contexts=["database", "filesystem", "source_code"],
             risk_increasing_modifiers=["minor", "vulnerable group"],
             risk_decreasing_modifiers=["non-EU-resident"],
             rules=[rule],
@@ -177,7 +169,6 @@ class TestDataSubjectIndicatorRulesetData:
             subject_category="invalid_category",  # Not in master list
             indicator_type="primary",
             confidence_weight=40,
-            applicable_contexts=["database"],
         )
 
         with pytest.raises(ValidationError, match="invalid subject_category"):
@@ -186,7 +177,6 @@ class TestDataSubjectIndicatorRulesetData:
                 version="1.0.0",
                 description="Data subject classification ruleset",
                 subject_categories=["employee", "customer"],
-                applicable_contexts=["database", "filesystem", "source_code"],
                 risk_increasing_modifiers=["minor", "vulnerable group"],
                 risk_decreasing_modifiers=["non-EU-resident"],
                 rules=[rule],
@@ -202,7 +192,6 @@ class TestDataSubjectIndicatorRulesetData:
             subject_category="employee",
             indicator_type="primary",
             confidence_weight=25,
-            applicable_contexts=["database"],
         )
 
         # Valid modifiers should work
@@ -211,7 +200,6 @@ class TestDataSubjectIndicatorRulesetData:
             version="1.0.0",
             description="Test ruleset",
             subject_categories=["employee"],
-            applicable_contexts=["database", "filesystem", "source_code"],
             risk_increasing_modifiers=["minor", "vulnerable group"],
             risk_decreasing_modifiers=["non-EU-resident"],
             rules=[rule],
@@ -229,7 +217,6 @@ class TestDataSubjectIndicatorRulesetData:
             subject_category="employee",
             indicator_type="primary",
             confidence_weight=40,
-            applicable_contexts=["database"],
         )
 
         rule2 = DataSubjectIndicatorRule(
@@ -239,7 +226,6 @@ class TestDataSubjectIndicatorRulesetData:
             subject_category="customer",
             indicator_type="secondary",
             confidence_weight=20,
-            applicable_contexts=["database", "filesystem"],
         )
 
         with pytest.raises(ValidationError, match="Duplicate rule names found"):
@@ -248,34 +234,9 @@ class TestDataSubjectIndicatorRulesetData:
                 version="1.0.0",
                 description="Test ruleset",
                 subject_categories=["employee", "customer"],
-                applicable_contexts=["database", "filesystem", "source_code"],
                 risk_increasing_modifiers=["minor", "vulnerable group"],
                 risk_decreasing_modifiers=["non-EU-resident"],
                 rules=[rule1, rule2],
-            )
-
-    def test_data_subject_ruleset_invalid_applicable_contexts(self) -> None:
-        """Test DataSubjectIndicatorRulesetData rejects rules with invalid applicable contexts."""
-        rule = DataSubjectIndicatorRule(
-            name="invalid_context_rule",
-            description="Rule with invalid context",
-            patterns=("test",),
-            subject_category="employee",
-            indicator_type="primary",
-            confidence_weight=40,
-            applicable_contexts=["invalid_context"],  # Not in master list
-        )
-
-        with pytest.raises(ValidationError, match="invalid applicable_contexts"):
-            DataSubjectIndicatorRulesetData(
-                name="data_subjects",
-                version="1.0.0",
-                description="Data subject classification ruleset",
-                subject_categories=["employee", "customer"],
-                applicable_contexts=["database", "filesystem", "source_code"],
-                risk_increasing_modifiers=["minor", "vulnerable group"],
-                risk_decreasing_modifiers=["non-EU-resident"],
-                rules=[rule],
             )
 
 
