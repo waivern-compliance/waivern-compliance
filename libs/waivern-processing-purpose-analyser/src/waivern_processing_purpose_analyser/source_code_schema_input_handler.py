@@ -17,8 +17,8 @@ with the key difference being evidence extraction strategy:
 
 from collections.abc import Generator, Sequence
 
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core.schemas import BaseFindingEvidence
-from waivern_rulesets import RulesetLoader
 from waivern_rulesets.data_collection import DataCollectionRule
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 from waivern_rulesets.service_integrations import ServiceIntegrationRule
@@ -71,13 +71,13 @@ class SourceCodeSchemaInputHandler:
         # analysis - the handler always analyses all three aspects together.
         # If configurability is needed later, consider accepting a list of
         # (ruleset_path, rule_type) tuples in the config.
-        self._processing_purposes_rules = RulesetLoader.load_ruleset(
+        self._processing_purposes_rules = RulesetManager.get_rules(
             "local/processing_purposes/1.0.0", ProcessingPurposeRule
         )
-        self._service_integrations_rules = RulesetLoader.load_ruleset(
+        self._service_integrations_rules = RulesetManager.get_rules(
             "local/service_integrations/1.0.0", ServiceIntegrationRule
         )
-        self._data_collection_rules = RulesetLoader.load_ruleset(
+        self._data_collection_rules = RulesetManager.get_rules(
             "local/data_collection/1.0.0", DataCollectionRule
         )
 
