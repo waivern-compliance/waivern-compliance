@@ -27,6 +27,17 @@ class RulesetLoader:
     Currently supported providers:
         - local: Loads from bundled waivern-rulesets package
 
+    Note:
+        This is a low-level loader without caching. WCF components (analysers,
+        classifiers, etc.) should use ``RulesetManager`` from
+        ``waivern-analysers-shared`` instead, which provides caching and is the
+        standard API for ruleset access.
+
+        Direct ``RulesetLoader`` usage is appropriate for:
+        - Testing utilities within ``waivern-rulesets``
+        - Internal infrastructure (e.g., ``RulesetManager`` implementation)
+        - One-off scripts where caching is not needed
+
     """
 
     # Supported providers - extend this as new providers are added

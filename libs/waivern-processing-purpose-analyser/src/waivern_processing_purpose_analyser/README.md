@@ -31,16 +31,18 @@ function trackUserBehavior($userId) {
 ### Core Handler: `SourceCodeSchemaInputHandler`
 
 ```python
+from waivern_analysers_shared.utilities import RulesetManager
+
 class SourceCodeSchemaInputHandler:
     def __init__(self):
-        # Load all three rulesets using URI format
-        self.processing_purposes_rules = RulesetLoader.load_ruleset(
+        # Load all three rulesets using RulesetManager (provides caching)
+        self._processing_purposes_rules = RulesetManager.get_rules(
             "local/processing_purposes/1.0.0", ProcessingPurposeRule
         )
-        self.service_integrations_rules = RulesetLoader.load_ruleset(
+        self._service_integrations_rules = RulesetManager.get_rules(
             "local/service_integrations/1.0.0", ServiceIntegrationRule
         )
-        self.data_collection_rules = RulesetLoader.load_ruleset(
+        self._data_collection_rules = RulesetManager.get_rules(
             "local/data_collection/1.0.0", DataCollectionRule
         )
 ```
