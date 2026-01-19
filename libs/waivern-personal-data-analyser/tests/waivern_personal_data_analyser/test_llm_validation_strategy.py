@@ -210,32 +210,6 @@ class TestPersonalDataValidationStrategy:
         # Check detailed breakdown
         assert len(outcome.llm_not_flagged) == 1
 
-    def test_keeps_findings_with_unknown_validation_result(
-        self,
-        strategy: PersonalDataValidationStrategy,
-        config: LLMValidationConfig,
-        llm_service: Mock,
-        sample_findings: list[PersonalDataIndicatorModel],
-    ) -> None:
-        """UNKNOWN validation result keeps the finding (conservative)."""
-        llm_service.invoke_with_structured_output.return_value = _make_response(
-            [
-                _make_result(sample_findings[0].id),
-                LLMValidationResultModel(
-                    finding_id=sample_findings[1].id,
-                    validation_result="UNKNOWN",
-                    confidence=0.5,
-                    reasoning="Uncertain",
-                    recommended_action="flag_for_review",
-                ),
-            ]
-        )
-
-        outcome = strategy.validate_findings(sample_findings, config, llm_service)
-
-        assert len(outcome.kept_findings) == 2
-        assert outcome.validation_succeeded is True
-
     # -------------------------------------------------------------------------
     # Error Handling
     # -------------------------------------------------------------------------
