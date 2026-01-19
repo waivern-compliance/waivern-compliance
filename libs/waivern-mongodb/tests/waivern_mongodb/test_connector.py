@@ -208,11 +208,11 @@ class TestMongoDBConnectorExtraction:
         connector = MongoDBConnector(test_config)
         result = connector.extract(Schema("standard_input", "1.0.0"))
 
-        # Should extract nested values
+        # Should extract nested values with field names
         data = result.content.get("data", [])
         contents = [item.get("content") for item in data]
-        assert "John" in contents
-        assert "john@example.com" in contents
+        assert "user.name: John" in contents
+        assert "user.contact.email: john@example.com" in contents
 
     def test_extract_handles_empty_database(
         self, test_config: MongoDBConnectorConfig, mock_mongo_client: MagicMock
@@ -282,9 +282,9 @@ class TestMongoDBConnectorDataItems:
         # Should have separate items for name, email, age (and _id)
         assert len(data) >= 3
         contents = [item.get("content") for item in data]
-        assert "John" in contents
-        assert "john@example.com" in contents
-        assert "30" in contents
+        assert "name: John" in contents
+        assert "email: john@example.com" in contents
+        assert "age: 30" in contents
 
     def test_data_item_metadata_includes_collection_name(
         self, test_config: MongoDBConnectorConfig, mock_mongo_client: MagicMock
@@ -329,7 +329,7 @@ class TestMongoDBConnectorDataItems:
 
         data = result.content.get("data", [])
         email_item = next(
-            (d for d in data if d.get("content") == "test@example.com"), None
+            (d for d in data if d.get("content") == "email: test@example.com"), None
         )
         assert email_item is not None
         assert email_item.get("metadata", {}).get("field_name") == "email"

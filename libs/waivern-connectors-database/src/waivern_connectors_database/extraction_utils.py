@@ -45,7 +45,11 @@ class DatabaseExtractionUtils:
             Properly typed StandardInputDataItemModel
 
         """
+        # Include column name in content for better pattern matching
+        # e.g., "user_name: John" instead of just "John"
+        content_with_column = f"{metadata.column_name}: {cell_value}"
+
         return StandardInputDataItemModel[RelationalDatabaseMetadata](
-            content=str(cell_value),
+            content=content_with_column,
             metadata=metadata,
         )

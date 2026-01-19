@@ -1,7 +1,41 @@
 """Orchestration factory for processing purpose validation.
 
 Creates ValidationOrchestrator instances configured for processing purpose
-analysis, with LLM strategy selection based on input schema.
+analysis, with LLM strategy selection based on input schema and optional
+sampling based on configuration.
+
+Architecture notes:
+    This factory makes two types of decisions:
+
+    1. **LLM Strategy Selection** (design-time, schema-dependent):
+       - source_code schema + content available → ExtendedContextLLMValidationStrategy
+       - Otherwise → simple finding-based strategy
+       This is determined by the input schema, not runtime configuration.
+
+    2. **Grouping vs Sampling** (separate concerns):
+       - **Grouping** is a design-time decision. ProcessingPurposeAnalyser groups
+         findings by `purpose`. This enables group-level decision logic - if all
+         findings for a purpose are false positives, the entire purpose is removed.
+       - **Sampling** is a runtime configuration for cost/performance tradeoffs.
+         When enabled, only a sample of findings per group is validated by the LLM.
+
+    The ValidationOrchestrator supports grouping without sampling - when no
+    sampling strategy is provided, all findings are validated but group-level
+    decision logic (Case A/B/C) still applies.
+
+Testing rationale:
+    This factory function has NO dedicated unit tests because:
+
+    1. It contains only simple wiring logic (no runtime behaviour to test)
+    2. The components it assembles are tested independently:
+       - ProcessingPurposeValidationStrategy: inline, follows tested pattern
+       - SourceCodeValidationStrategy: tested in test_extended_context_strategy.py
+       - ValidationOrchestrator: tested in waivern-analysers-shared
+       - ConcernGroupingStrategy/RandomSamplingStrategy: tested in waivern-analysers-shared
+    3. The complete validation flow is verified by integration tests
+
+    If you add non-trivial logic (e.g., complex strategy selection, error
+    handling, validation), you SHOULD add tests for that behaviour.
 """
 
 from typing import override
@@ -9,7 +43,6 @@ from typing import override
 from waivern_analysers_shared.llm_validation import (
     ConcernGroupingStrategy,
     DefaultLLMValidationStrategy,
-    GroupingStrategy,
     RandomSamplingStrategy,
     SamplingStrategy,
     ValidationOrchestrator,
@@ -57,10 +90,6 @@ def create_validation_orchestrator(
 ) -> ValidationOrchestrator[ProcessingPurposeFindingModel]:
     """Create orchestrator configured for processing purpose validation.
 
-    LLM strategy selection is based on input schema (not configuration):
-    - source_code schema + content available → ExtendedContextLLMValidationStrategy
-    - Otherwise → simple finding-based strategy
-
     Args:
         config: LLM validation configuration.
         input_schema_name: Name of the input schema (e.g., "source_code", "standard_input").
@@ -70,19 +99,28 @@ def create_validation_orchestrator(
         Configured ValidationOrchestrator instance.
 
     """
-    # Select LLM strategy based on input schema (internal decision, not config)
+    # LLM Strategy: Design-time decision based on input schema
+    # source_code schema with content → extended context strategy (includes full file)
+    # Otherwise → simple finding-based strategy (evidence snippets only)
     if input_schema_name == "source_code" and source_contents:
         source_provider = SourceCodeSourceProvider(source_contents)
         llm_strategy = SourceCodeValidationStrategy(source_provider)
     else:
         llm_strategy = ProcessingPurposeValidationStrategy()
 
-    # Add grouping/sampling when sampling_size is configured
-    grouping_strategy: GroupingStrategy[ProcessingPurposeFindingModel] | None = None
+    # Grouping: Design-time decision
+    # ProcessingPurposeAnalyser groups findings by purpose (e.g., "Payment Processing",
+    # "User Authentication"). This enables group-level decision logic - if all findings
+    # for a purpose are false positives, the entire purpose can be removed.
+    concern_provider = ProcessingPurposeConcernProvider()
+    grouping_strategy = ConcernGroupingStrategy(concern_provider)
+
+    # Sampling: Runtime configuration
+    # When sampling_size is configured, only a sample of findings per group is
+    # validated by the LLM. This reduces cost for large datasets while still
+    # applying group-level decisions to all findings.
     sampling_strategy: SamplingStrategy[ProcessingPurposeFindingModel] | None = None
     if config.sampling_size is not None:
-        concern_provider = ProcessingPurposeConcernProvider()
-        grouping_strategy = ConcernGroupingStrategy(concern_provider)
         sampling_strategy = RandomSamplingStrategy(config.sampling_size)
 
     return ValidationOrchestrator(

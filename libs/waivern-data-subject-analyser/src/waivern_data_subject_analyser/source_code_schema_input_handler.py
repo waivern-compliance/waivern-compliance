@@ -113,9 +113,6 @@ class SourceCodeSchemaInputHandler:
             self._config.ruleset, DataSubjectIndicatorRule
         )
 
-        # Filter to rules applicable in source_code context
-        source_code_rules = [r for r in rules if "source_code" in r.applicable_contexts]
-
         lines = file_data.raw_content.splitlines()
         file_path = file_data.file_path
 
@@ -126,7 +123,7 @@ class SourceCodeSchemaInputHandler:
         ] = {}
 
         # Find pattern matches line-by-line
-        for rule in source_code_rules:
+        for rule in rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
                 category = rule.subject_category
                 line_number = line_idx + 1  # Convert to 1-based

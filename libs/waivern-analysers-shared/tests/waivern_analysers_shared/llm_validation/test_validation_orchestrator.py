@@ -662,3 +662,140 @@ class TestMultipleGroups:
 
         assert len(result.removed_groups) == 1
         assert result.removed_groups[0].concern_value == "GroupB"
+
+
+# =============================================================================
+# Marker Callback
+# =============================================================================
+
+
+class TestMarkerCallback:
+    """Tests for the marker callback functionality.
+
+    The marker callback allows analysers to mark findings that were actually
+    validated by the LLM, distinguishing them from findings kept by inference
+    (non-sampled) or skipped due to errors.
+    """
+
+    def test_marker_applied_to_validated_findings_only(self) -> None:
+        """Marker is applied to llm_validated_kept and llm_not_flagged only."""
+        # Arrange: 2 findings, one validated as kept, one not flagged
+        findings = [make_finding("1", "A"), make_finding("2", "A")]
+
+        # Track which findings get marked
+        marked_ids: set[str] = set()
+
+        def marker(finding: MockFinding) -> MockFinding:
+            marked_ids.add(finding.id)
+            return finding
+
+        mock_llm_strategy = Mock()
+        mock_llm_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[0]],  # Explicitly validated
+            llm_validated_removed=[],
+            llm_not_flagged=[findings[1]],  # Not flagged = kept
+            skipped=[],
+        )
+
+        orchestrator = ValidationOrchestrator(llm_strategy=mock_llm_strategy)
+
+        # Act
+        orchestrator.validate(
+            findings, make_config(), make_llm_service(), marker=marker
+        )
+
+        # Assert - both validated findings should be marked
+        assert marked_ids == {"1", "2"}
+
+    def test_marker_not_applied_to_skipped_findings(self) -> None:
+        """Marker is NOT applied to findings skipped due to errors."""
+        # Arrange
+        findings = [make_finding("1", "A"), make_finding("2", "A")]
+
+        marked_ids: set[str] = set()
+
+        def marker(finding: MockFinding) -> MockFinding:
+            marked_ids.add(finding.id)
+            return finding
+
+        mock_llm_strategy = Mock()
+        mock_llm_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[0]],
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[SkippedFinding(finding=findings[1], reason="error")],
+        )
+
+        orchestrator = ValidationOrchestrator(llm_strategy=mock_llm_strategy)
+
+        # Act
+        orchestrator.validate(
+            findings, make_config(), make_llm_service(), marker=marker
+        )
+
+        # Assert - only validated finding is marked, not skipped one
+        assert marked_ids == {"1"}
+
+    def test_marker_not_applied_to_non_sampled_findings(self) -> None:
+        """Marker is NOT applied to non-sampled findings (kept by inference)."""
+        # Arrange: 3 findings in one group, only 1 sampled
+        findings = [
+            make_finding("1", "GroupA"),
+            make_finding("2", "GroupA"),
+            make_finding("3", "GroupA"),
+        ]
+
+        marked_ids: set[str] = set()
+
+        def marker(finding: MockFinding) -> MockFinding:
+            marked_ids.add(finding.id)
+            return finding
+
+        # Only finding "1" is sampled and validated
+        sampling_strategy = MockSamplingStrategy(
+            sampled={"GroupA": [findings[0]]},
+            non_sampled={"GroupA": [findings[1], findings[2]]},
+        )
+        mock_llm_strategy = Mock()
+        mock_llm_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[0]],  # Sample validated
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[],
+        )
+
+        orchestrator = ValidationOrchestrator(
+            llm_strategy=mock_llm_strategy,
+            grouping_strategy=MockGroupingStrategy(),
+            sampling_strategy=sampling_strategy,
+        )
+
+        # Act
+        result = orchestrator.validate(
+            findings, make_config(), make_llm_service(), marker=marker
+        )
+
+        # Assert - only sampled finding is marked
+        assert marked_ids == {"1"}
+        # But all 3 findings are kept (non-sampled kept by inference)
+        assert len(result.kept_findings) == 3
+
+    def test_no_marker_callback_still_works(self) -> None:
+        """Validation works correctly when no marker callback is provided."""
+        # Arrange
+        findings = [make_finding("1", "A")]
+        mock_llm_strategy = Mock()
+        mock_llm_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[0]],
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[],
+        )
+        orchestrator = ValidationOrchestrator(llm_strategy=mock_llm_strategy)
+
+        # Act - no marker provided
+        result = orchestrator.validate(findings, make_config(), make_llm_service())
+
+        # Assert - validation still works
+        assert len(result.kept_findings) == 1
+        assert result.kept_findings[0].id == "1"

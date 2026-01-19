@@ -1,48 +1,12 @@
 """Pattern matcher for data subject classification.
 
-CONTEXT-AWARE PATTERN MATCHING EXPLAINED
-========================================
+This module provides pattern matching to identify potential data subjects in content.
+Pattern matching operates as a high-recall first pass - it finds all potential matches
+based on keyword patterns (e.g., "customer", "patient", "employee").
 
-The data subject pattern matcher applies different rules based on the data source
-context to improve classification accuracy and reduce false positives.
-
-CONTEXT MAPPING SYSTEM:
-The system maps connector types to standardized context names:
-- mysql → "database" context
-- filesystem → "filesystem" context
-- source_code → "source_code" context
-
-RULE FILTERING BY CONTEXT:
-Each rule declares which contexts it applies to via applicable_contexts field.
-Only rules matching the current context are considered during pattern matching.
-
-EXAMPLE RULE CONTEXTS:
-- employee_direct_role_fields: ["database", "source_code"]
-  → Applies to database tables and source code, NOT filesystem files
-- employee_hr_system_indicators: ["database", "filesystem"]
-  → Applies to databases and files, NOT source code comments
-
-CONTEXT FILTERING LOGIC:
-1. Determine current context from metadata.connector_type
-2. Load all rules from ruleset
-3. Filter rules: only include those with current context in applicable_contexts
-4. Apply pattern matching on filtered rule set
-5. Calculate confidence from matched rules only
-
-WHY CONTEXT MATTERS:
-- "employee" in database table = strong indicator (employee record)
-- "employee" in source code = weak indicator (variable name, comment)
-- "patient" in medical database = strong indicator (patient record)
-- "patient" in general filesystem = weak indicator (could be documentation)
-
-BENEFITS:
-- Reduces false positives from generic terms in wrong contexts
-- Allows context-specific confidence weights
-- Enables domain-specific pattern sets
-- Improves classification precision
-
-Note: Context filtering happens before pattern matching, ensuring only
-relevant rules are evaluated for each data source type.
+Context-aware filtering and false positive reduction is handled by LLM validation,
+which receives rich metadata (source, connector_type, table/field names, file paths)
+to make intelligent decisions about whether matches are genuine data subject indicators.
 """
 
 from waivern_analysers_shared.types import PatternMatchingConfig
@@ -107,10 +71,6 @@ class DataSubjectPatternMatcher:
 
         # Find all matching rules and track which patterns matched
         for rule in rules:
-            # Check if rule applies to this context
-            if not self._rule_applies_to_context(rule, metadata):
-                continue
-
             # Check each pattern in the rule and collect all matches
             # Uses word boundary-aware matching to reduce false positives
             matched_patterns_for_rule: list[str] = []
@@ -168,28 +128,3 @@ class DataSubjectPatternMatcher:
                 indicators.append(indicator)
 
         return indicators
-
-    def _rule_applies_to_context(
-        self, rule: DataSubjectIndicatorRule, metadata: BaseMetadata
-    ) -> bool:
-        """Check if rule applies to the given context.
-
-        Args:
-            rule: Data subject rule to check
-            metadata: Content metadata
-
-        Returns:
-            True if rule applies to this context
-
-        """
-        # Map connector types to context names
-        context_mapping = {
-            "mysql": "database",
-            "filesystem": "filesystem",
-            "source_code": "source_code",
-        }
-
-        current_context = context_mapping.get(
-            metadata.connector_type, metadata.connector_type
-        )
-        return current_context in rule.applicable_contexts

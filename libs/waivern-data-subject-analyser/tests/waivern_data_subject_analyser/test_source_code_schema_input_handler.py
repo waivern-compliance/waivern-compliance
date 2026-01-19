@@ -22,62 +22,6 @@ class TestSourceCodeSchemaInputHandler:
         with pytest.raises(TypeError, match="Expected SourceCodeDataModel"):
             handler.analyse(invalid_data)
 
-    def test_analyse_filters_rules_by_applicable_contexts(self) -> None:
-        """Test that only rules with 'source_code' in applicable_contexts are applied.
-
-        employee_hr_system_indicators rule has applicable_contexts: [database, filesystem]
-        So patterns like 'salary' should NOT match in source_code context.
-
-        employee_direct_role_fields rule has applicable_contexts: [database, source_code]
-        So patterns like 'employee' SHOULD match.
-        """
-        from waivern_source_code_analyser import SourceCodeDataModel
-        from waivern_source_code_analyser.schemas.source_code import (
-            SourceCodeAnalysisMetadataModel,
-            SourceCodeFileDataModel,
-            SourceCodeFileMetadataModel,
-        )
-
-        # Arrange
-        config = PatternMatchingConfig(ruleset="local/data_subject_indicator/1.0.0")
-        handler = SourceCodeSchemaInputHandler(config)
-        file_data = SourceCodeFileDataModel(
-            file_path="/src/PayrollService.php",
-            language="php",
-            raw_content="""<?php
-class PayrollService {
-    public function calculateSalary($amount) {
-        // This mentions salary but should NOT match (rule is database/filesystem only)
-        return $amount * 1.1;
-    }
-}
-""",
-            metadata=SourceCodeFileMetadataModel(
-                file_size=200, line_count=8, last_modified="2024-01-01T00:00:00Z"
-            ),
-        )
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Context filter test",
-            description="Test context filtering",
-            source="source_code",
-            metadata=SourceCodeAnalysisMetadataModel(
-                total_files=1, total_lines=8, analysis_timestamp="2024-01-01T00:00:00Z"
-            ),
-            data=[file_data],
-        )
-
-        # Act
-        findings = handler.analyse(source_data)
-
-        # Assert - 'salary' is in employee_hr_system_indicators which excludes source_code
-        salary_findings = [
-            f for f in findings if "salary" in [p.lower() for p in f.matched_patterns]
-        ]
-        assert len(salary_findings) == 0, (
-            "salary pattern should not match - rule excludes source_code context"
-        )
-
     def test_analyse_groups_findings_by_category(self) -> None:
         """Test that findings are grouped by subject category (one per category per file).
 

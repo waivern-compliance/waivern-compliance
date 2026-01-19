@@ -106,14 +106,14 @@ class TestSQLiteConnector:
             assert len(users_data) == expected_items
 
             # Verify we got the first 2 rows (check for ID values 1 and 2 in content)
-            id_values = [
+            # Content format is "column_name: value", e.g., "id: 1"
+            id_contents = [
                 item["content"]
                 for item in users_data
                 if item.get("metadata", {}).get("column_name") == "id"
             ]
-            id_values = sorted(
-                [int(val) for val in id_values if val and str(val).isdigit()]
-            )
+            # Extract values from "id: 1" format
+            id_values = sorted([int(content.split(": ")[1]) for content in id_contents])
             assert id_values == [1, 2]
 
         finally:
@@ -307,13 +307,14 @@ class TestSQLiteConnectorDataExtraction:
         assert len(typed_result.data) == 3
 
         # Verify each data item has proper RelationalDatabaseMetadata
+        # Content format is "column_name: value"
         email_item = next(
-            item for item in typed_result.data if "john@test.com" in item.content
+            item for item in typed_result.data if "email: john@test.com" in item.content
         )
         phone_item = next(
-            item for item in typed_result.data if "+1234567890" in item.content
+            item for item in typed_result.data if "phone: +1234567890" in item.content
         )
-        id_item = next(item for item in typed_result.data if "1" == item.content)
+        id_item = next(item for item in typed_result.data if "id: 1" == item.content)
 
         # Test email metadata
         assert email_item.metadata.connector_type == "sqlite_connector"
@@ -542,10 +543,10 @@ class TestSQLiteConnectorEdgeCases:
             assert "None" not in contents
             assert "" not in contents
 
-            # Verify non-NULL values are included
-            assert "John" in contents
-            assert "jane@test.com" in contents
-            assert "Bob" in contents
+            # Verify non-NULL values are included (format: "column_name: value")
+            assert "name: John" in contents
+            assert "email: jane@test.com" in contents
+            assert "name: Bob" in contents
 
         finally:
             Path(temp_db_path).unlink(missing_ok=True)
@@ -598,10 +599,10 @@ class TestSQLiteConnectorEdgeCases:
             assert "table with spaces" not in table_names
             assert "table;drop" not in table_names
 
-            # Verify safe data is extracted
+            # Verify safe data is extracted (format: "column_name: value")
             contents = [item.content for item in typed_result.data]
-            assert "safe" in contents
-            assert "1" in contents
+            assert "data: safe" in contents
+            assert "id: 1" in contents
 
         finally:
             Path(temp_db_path).unlink(missing_ok=True)

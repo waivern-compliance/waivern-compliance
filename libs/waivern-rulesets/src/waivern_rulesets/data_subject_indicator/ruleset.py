@@ -1,7 +1,7 @@
 """Data subject indicator detection ruleset.
 
 This module implements pattern-based data subject detection with confidence scoring
-and context-aware pattern matching for identifying categories of data subjects.
+for identifying categories of data subjects.
 """
 
 from typing import ClassVar, Literal
@@ -28,10 +28,6 @@ class DataSubjectIndicatorRule(DetectionRule):
     confidence_weight: int = Field(
         ge=1, le=50, description="Confidence points awarded when this rule matches"
     )
-    applicable_contexts: list[str] = Field(
-        min_length=1,
-        description="Data source contexts where this rule applies (e.g., database, filesystem, source_code)",
-    )
 
 
 class DataSubjectIndicatorRulesetData(RulesetData[DataSubjectIndicatorRule]):
@@ -40,9 +36,6 @@ class DataSubjectIndicatorRulesetData(RulesetData[DataSubjectIndicatorRule]):
     # Ruleset-specific properties
     subject_categories: list[str] = Field(
         min_length=1, description="Master list of valid data subject categories"
-    )
-    applicable_contexts: list[str] = Field(
-        min_length=1, description="Master list of valid applicable contexts"
     )
     risk_increasing_modifiers: list[str] = Field(
         min_length=1,
@@ -61,19 +54,6 @@ class DataSubjectIndicatorRulesetData(RulesetData[DataSubjectIndicatorRule]):
             if rule.subject_category not in valid_categories:
                 raise ValueError(
                     f"Rule '{rule.name}' has invalid subject_category '{rule.subject_category}'. Valid: {valid_categories}"
-                )
-        return self
-
-    @model_validator(mode="after")
-    def validate_rule_contexts(self) -> "DataSubjectIndicatorRulesetData":
-        """Validate all rule applicable_contexts values against master list."""
-        valid_contexts = set(self.applicable_contexts)
-
-        for rule in self.rules:
-            invalid_contexts = set(rule.applicable_contexts) - valid_contexts
-            if invalid_contexts:
-                raise ValueError(
-                    f"Rule '{rule.name}' has invalid applicable_contexts {sorted(invalid_contexts)}. Valid: {sorted(valid_contexts)}"
                 )
         return self
 

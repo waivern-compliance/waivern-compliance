@@ -1,6 +1,6 @@
-"""Orchestration factory for personal data validation.
+"""Orchestration factory for data subject validation.
 
-Creates ValidationOrchestrator instances configured for personal data
+Creates ValidationOrchestrator instances configured for data subject
 analysis, with grouping and optional sampling based on configuration.
 
 Architecture notes:
@@ -8,7 +8,7 @@ Architecture notes:
 
     - **Grouping** is a design-time decision made by the analyser. Each analyser
       knows whether its findings should be grouped and by what attribute (via
-      ConcernProvider). PersonalDataAnalyser groups by `category`.
+      ConcernProvider). DataSubjectAnalyser groups by `subject_category`.
 
     - **Sampling** is a runtime configuration for cost/performance tradeoffs.
       When enabled, only a sample of findings per group is validated by the LLM,
@@ -23,10 +23,12 @@ Testing rationale:
 
     1. It contains only simple wiring logic (no runtime behaviour to test)
     2. The components it assembles are tested independently:
-       - PersonalDataValidationStrategy: tested in test_llm_validation_strategy.py
+       - DataSubjectValidationStrategy: tested in test_llm_validation_strategy.py
        - ValidationOrchestrator: tested in waivern-analysers-shared
        - ConcernGroupingStrategy/RandomSamplingStrategy: tested in waivern-analysers-shared
-    3. The complete validation flow is verified by integration tests
+    3. The complete validation flow is verified by integration tests (Step 7)
+    4. This pattern is consistent with PersonalDataAnalyser and
+       ProcessingPurposeAnalyser, which also have no orchestration factory tests
 
     If you add non-trivial logic (e.g., strategy selection based on schema,
     error handling, validation), you SHOULD add tests for that behaviour.
@@ -40,21 +42,22 @@ from waivern_analysers_shared.llm_validation import (
 )
 from waivern_analysers_shared.types import LLMValidationConfig
 
-from waivern_personal_data_analyser.llm_validation_strategy import (
-    PersonalDataValidationStrategy,
+from waivern_data_subject_analyser.llm_validation_strategy import (
+    DataSubjectValidationStrategy,
 )
-from waivern_personal_data_analyser.schemas.types import PersonalDataIndicatorModel
+from waivern_data_subject_analyser.schemas import DataSubjectIndicatorModel
 
-from .providers import PersonalDataConcernProvider
+from .providers import DataSubjectConcernProvider
 
 
 def create_validation_orchestrator(
     config: LLMValidationConfig,
-) -> ValidationOrchestrator[PersonalDataIndicatorModel]:
-    """Create orchestrator configured for personal data validation.
+) -> ValidationOrchestrator[DataSubjectIndicatorModel]:
+    """Create orchestrator configured for data subject validation.
 
-    PersonalDataAnalyser only supports standard_input schema, so it uses
-    the simple finding-based strategy (no extended context).
+    DataSubjectAnalyser uses the simple finding-based strategy (no extended
+    context) as the evidence snippets in findings provide sufficient context
+    for validation.
 
     Args:
         config: LLM validation configuration.
@@ -63,20 +66,20 @@ def create_validation_orchestrator(
         Configured ValidationOrchestrator instance.
 
     """
-    llm_strategy = PersonalDataValidationStrategy()
+    llm_strategy = DataSubjectValidationStrategy()
 
     # Grouping: Design-time decision
-    # PersonalDataAnalyser groups findings by category (e.g., "email", "phone",
-    # "health"). This enables group-level decision logic - if all findings in
+    # DataSubjectAnalyser groups findings by subject_category (e.g., "Customer",
+    # "Employee"). This enables group-level decision logic - if all findings in
     # a category are false positives, the entire category can be removed.
-    concern_provider = PersonalDataConcernProvider()
+    concern_provider = DataSubjectConcernProvider()
     grouping_strategy = ConcernGroupingStrategy(concern_provider)
 
     # Sampling: Runtime configuration
     # When sampling_size is configured, only a sample of findings per group is
     # validated by the LLM. This reduces cost for large datasets while still
     # applying group-level decisions to all findings.
-    sampling_strategy: SamplingStrategy[PersonalDataIndicatorModel] | None = None
+    sampling_strategy: SamplingStrategy[DataSubjectIndicatorModel] | None = None
     if config.sampling_size is not None:
         sampling_strategy = RandomSamplingStrategy(config.sampling_size)
 

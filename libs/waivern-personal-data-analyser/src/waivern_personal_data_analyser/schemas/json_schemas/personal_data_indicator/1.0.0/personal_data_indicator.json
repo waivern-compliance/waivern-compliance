@@ -182,48 +182,6 @@
       ],
       "title": "PersonalDataIndicatorSummary",
       "type": "object"
-    },
-    "PersonalDataValidationSummary": {
-      "description": "LLM validation summary for personal data findings.",
-      "properties": {
-        "llm_validation_enabled": {
-          "default": true,
-          "description": "Whether LLM validation was enabled",
-          "title": "Llm Validation Enabled",
-          "type": "boolean"
-        },
-        "original_findings_count": {
-          "description": "Number of findings before validation",
-          "minimum": 0,
-          "title": "Original Findings Count",
-          "type": "integer"
-        },
-        "validated_findings_count": {
-          "description": "Number of findings after validation",
-          "minimum": 0,
-          "title": "Validated Findings Count",
-          "type": "integer"
-        },
-        "false_positives_removed": {
-          "description": "Number of false positives removed by validation",
-          "minimum": 0,
-          "title": "False Positives Removed",
-          "type": "integer"
-        },
-        "validation_mode": {
-          "description": "LLM validation mode used",
-          "title": "Validation Mode",
-          "type": "string"
-        }
-      },
-      "required": [
-        "original_findings_count",
-        "validated_findings_count",
-        "false_positives_removed",
-        "validation_mode"
-      ],
-      "title": "PersonalDataValidationSummary",
-      "type": "object"
     }
   },
   "description": "Complete output structure for personal_data_indicator schema.\n\nThis model represents the full wire format for personal data indicator results.\nThese indicators are framework-agnostic and can be consumed by regulatory\nclassifiers (e.g., GDPR, CCPA) for framework-specific enrichment.",
@@ -243,18 +201,6 @@
     "analysis_metadata": {
       "$ref": "#/$defs/BaseAnalysisOutputMetadata",
       "description": "Metadata about the analysis process"
-    },
-    "validation_summary": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/PersonalDataValidationSummary"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "LLM validation summary (if validation was applied)"
     }
   },
   "required": [

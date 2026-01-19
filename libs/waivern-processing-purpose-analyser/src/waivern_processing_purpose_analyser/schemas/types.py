@@ -79,54 +79,6 @@ class ProcessingPurposeSummary(BaseModel):
     )
 
 
-class RemovedPurpose(BaseModel):
-    """A purpose that was removed during validation."""
-
-    purpose: str = Field(description="Purpose name that was removed")
-    reason: str = Field(description="Reason for removal")
-    require_review: bool = Field(
-        default=True, description="Whether human review is recommended"
-    )
-
-
-class SamplingValidationSummary(BaseModel):
-    """Sampling-based validation summary."""
-
-    strategy: str = Field(
-        default="purpose_sampling", description="Sampling strategy used"
-    )
-    samples_per_purpose: int = Field(
-        ge=1, description="Number of samples per purpose group"
-    )
-    samples_validated: int = Field(ge=0, description="Total samples validated")
-
-
-class ProcessingPurposeValidationSummary(BaseModel):
-    """LLM validation summary for processing purpose findings."""
-
-    llm_validation_enabled: bool = Field(
-        default=True, description="Whether LLM validation was enabled"
-    )
-    original_findings_count: int = Field(
-        ge=0, description="Number of findings before validation"
-    )
-    validated_findings_count: int = Field(
-        ge=0, description="Number of findings after validation"
-    )
-    false_positives_removed: int = Field(
-        ge=0, description="Number of false positives removed by validation"
-    )
-    validation_effectiveness_percentage: float = Field(
-        ge=0.0,
-        le=100.0,
-        description="Percentage of findings identified as false positives",
-    )
-    validation_mode: str = Field(description="LLM validation mode used")
-    removed_purposes: list[str] = Field(
-        default_factory=list, description="List of purposes that were removed"
-    )
-
-
 class ProcessingPurposeFindingOutput(BaseSchemaOutput):
     """Complete output structure for processing_purpose_finding schema.
 
@@ -144,8 +96,4 @@ class ProcessingPurposeFindingOutput(BaseSchemaOutput):
     )
     analysis_metadata: BaseAnalysisOutputMetadata = Field(
         description="Metadata about the analysis process"
-    )
-    validation_summary: ProcessingPurposeValidationSummary | None = Field(
-        default=None,
-        description="LLM validation summary (if validation was applied)",
     )

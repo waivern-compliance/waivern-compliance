@@ -28,7 +28,6 @@ class TestDataSubjectConfidenceScorer:
                 subject_category="employee",
                 indicator_type="primary",
                 confidence_weight=45,
-                applicable_contexts=["database"],
             ),
             DataSubjectIndicatorRule(
                 name="secondary_rule",
@@ -37,7 +36,6 @@ class TestDataSubjectConfidenceScorer:
                 subject_category="employee",
                 indicator_type="secondary",
                 confidence_weight=25,
-                applicable_contexts=["database"],
             ),
             DataSubjectIndicatorRule(
                 name="contextual_rule",
@@ -46,7 +44,6 @@ class TestDataSubjectConfidenceScorer:
                 subject_category="employee",
                 indicator_type="contextual",
                 confidence_weight=15,
-                applicable_contexts=["database"],
             ),
         ]
 

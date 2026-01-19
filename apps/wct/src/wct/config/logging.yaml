@@ -48,6 +48,11 @@ loggers:
     handlers: [rich_console]
     propagate: false
 
+  # Silence noisy third-party libraries
+  pymongo:
+    level: WARNING
+    propagate: false
+
 root:
   level: WARNING
   handlers: [rich_console]

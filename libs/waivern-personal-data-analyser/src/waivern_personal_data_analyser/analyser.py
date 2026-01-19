@@ -162,18 +162,14 @@ class PersonalDataAnalyser(Analyser):
 
         # Apply LLM validation if enabled
         validation_result: ValidationResult[PersonalDataIndicatorModel] | None = None
+        final_findings = findings
         if self._config.llm_validation.enable_llm_validation:
-            validated_findings, validation_applied, validation_result = (
-                self._validate_findings(findings)
-            )
-        else:
-            validated_findings, validation_applied = findings, False
+            validated_findings, _, validation_result = self._validate_findings(findings)
+            final_findings = validated_findings
 
         # Build and return output message
         return self._result_builder.build_output_message(
-            findings,
-            validated_findings,
-            validation_applied,
+            final_findings,
             output_schema,
             validation_result,
         )
@@ -207,23 +203,22 @@ class PersonalDataAnalyser(Analyser):
             return findings, False, None
 
         try:
-            # Create orchestrator and validate
+            # Create orchestrator and validate with marker callback
+            # Marker is applied at strategy level to only mark actually-validated findings
             orchestrator = create_validation_orchestrator(self._config.llm_validation)
             result = orchestrator.validate(
-                findings, self._config.llm_validation, self._llm_service
+                findings,
+                self._config.llm_validation,
+                self._llm_service,
+                marker=self._mark_finding_validated,
             )
 
-            # Mark validated findings
-            marked_findings = [
-                self._mark_finding_validated(f) for f in result.kept_findings
-            ]
-
             logger.info(
-                f"Validation complete: {len(findings)} → {len(marked_findings)} findings "
+                f"Validation complete: {len(findings)} → {len(result.kept_findings)} findings "
                 f"({len(result.removed_groups)} groups removed)"
             )
 
-            return marked_findings, result.all_succeeded, result
+            return result.kept_findings, result.all_succeeded, result
 
         except Exception as e:
             logger.error(f"LLM validation failed: {e}")

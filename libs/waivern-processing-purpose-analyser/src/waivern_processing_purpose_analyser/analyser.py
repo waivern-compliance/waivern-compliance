@@ -130,18 +130,16 @@ class ProcessingPurposeAnalyser(Analyser):
 
         # Apply LLM validation if enabled
         validation_result: ValidationResult[ProcessingPurposeFindingModel] | None = None
+        final_findings = findings
         if self._config.llm_validation.enable_llm_validation:
-            validated_findings, validation_applied, validation_result = (
-                self._validate_findings(findings, inputs)
+            validated_findings, _, validation_result = self._validate_findings(
+                findings, inputs
             )
-        else:
-            validated_findings, validation_applied = findings, False
+            final_findings = validated_findings
 
         # Build output message
         return self._result_builder.build_output_message(
-            findings,
-            validated_findings,
-            validation_applied,
+            final_findings,
             output_schema,
             validation_result,
         )
@@ -206,27 +204,26 @@ class ProcessingPurposeAnalyser(Analyser):
                     for f in source_data.data:
                         source_contents[f.file_path] = f.raw_content
 
-            # Create orchestrator and validate
+            # Create orchestrator and validate with marker callback
+            # Marker is applied at strategy level to only mark actually-validated findings
             orchestrator = create_validation_orchestrator(
                 self._config.llm_validation,
                 input_schema.name,
                 source_contents,
             )
             result = orchestrator.validate(
-                findings, self._config.llm_validation, self._llm_service
+                findings,
+                self._config.llm_validation,
+                self._llm_service,
+                marker=self._mark_finding_validated,
             )
 
-            # Mark validated findings
-            marked_findings = [
-                self._mark_finding_validated(f) for f in result.kept_findings
-            ]
-
             logger.info(
-                f"Validation complete: {len(findings)} → {len(marked_findings)} findings "
+                f"Validation complete: {len(findings)} → {len(result.kept_findings)} findings "
                 f"({len(result.removed_groups)} groups removed)"
             )
 
-            return marked_findings, result.all_succeeded, result
+            return result.kept_findings, result.all_succeeded, result
 
         except Exception as e:
             logger.error(f"LLM validation failed: {e}")

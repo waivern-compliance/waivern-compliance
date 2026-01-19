@@ -1,6 +1,6 @@
 """Result builder for processing purpose analysis output.
 
-Handles construction of output messages, summaries, and validation statistics.
+Handles construction of output messages and summaries.
 Keeps the analyser focused on orchestration.
 """
 
@@ -14,7 +14,6 @@ from .schemas.types import (
     ProcessingPurposeFindingModel,
     ProcessingPurposeFindingOutput,
     ProcessingPurposeSummary,
-    ProcessingPurposeValidationSummary,
     PurposeBreakdown,
 )
 from .types import ProcessingPurposeAnalyserConfig
@@ -40,9 +39,7 @@ class ProcessingPurposeResultBuilder:
 
     def build_output_message(
         self,
-        original_findings: list[ProcessingPurposeFindingModel],
-        validated_findings: list[ProcessingPurposeFindingModel],
-        validation_applied: bool,
+        findings: list[ProcessingPurposeFindingModel],
         output_schema: Schema,
         validation_result: ValidationResult[ProcessingPurposeFindingModel]
         | None = None,
@@ -50,32 +47,21 @@ class ProcessingPurposeResultBuilder:
         """Build the complete output message.
 
         Args:
-            original_findings: Findings before LLM validation.
-            validated_findings: Findings after LLM validation.
-            validation_applied: Whether validation was applied.
+            findings: Processing purpose findings (validated if LLM validation was applied).
             output_schema: Schema for output validation.
-            validation_result: Optional validation result from orchestrator.
+            validation_result: Validation result from orchestrator (None if validation disabled).
 
         Returns:
             Complete output message.
 
         """
-        summary = self._build_findings_summary(validated_findings)
-
-        # Skip old-style validation_summary when using orchestrator - metadata tells the story
-        validation_summary = None
-        if validation_applied and validation_result is None:
-            validation_summary = self._build_validation_summary(
-                original_findings, validated_findings
-            )
-
+        summary = self._build_findings_summary(findings)
         analysis_metadata = self._build_analysis_metadata(validation_result)
 
         output_model = ProcessingPurposeFindingOutput(
-            findings=validated_findings,
+            findings=findings,
             summary=summary,
             analysis_metadata=analysis_metadata,
-            validation_summary=validation_summary,
         )
 
         result_data = output_model.model_dump(mode="json", exclude_none=True)
@@ -123,46 +109,6 @@ class ProcessingPurposeResultBuilder:
             purposes_identified=len(unique_purposes),
             purpose_categories=purpose_categories,
             purposes=purposes,
-        )
-
-    def _build_validation_summary(
-        self,
-        original_findings: list[ProcessingPurposeFindingModel],
-        validated_findings: list[ProcessingPurposeFindingModel],
-    ) -> ProcessingPurposeValidationSummary:
-        """Build LLM validation summary statistics.
-
-        Args:
-            original_findings: Findings before validation.
-            validated_findings: Findings after validation.
-
-        Returns:
-            Validation summary with effectiveness metrics.
-
-        """
-        original_count = len(original_findings)
-        validated_count = len(validated_findings)
-        false_positives_removed = original_count - validated_count
-        validation_effectiveness = (false_positives_removed / original_count) * 100
-
-        original_purposes = {f.purpose for f in original_findings}
-        validated_purposes = {f.purpose for f in validated_findings}
-        removed_purposes = original_purposes - validated_purposes
-
-        logger.info(
-            f"LLM validation completed: {original_count} → {validated_count} findings "
-            f"({false_positives_removed} false positives removed, "
-            f"{validation_effectiveness:.1f}% effectiveness)"
-        )
-
-        return ProcessingPurposeValidationSummary(
-            llm_validation_enabled=True,
-            original_findings_count=original_count,
-            validated_findings_count=validated_count,
-            false_positives_removed=false_positives_removed,
-            validation_effectiveness_percentage=round(validation_effectiveness, 1),
-            validation_mode=self._config.llm_validation.llm_validation_mode,
-            removed_purposes=sorted(list(removed_purposes)),
         )
 
     def _build_analysis_metadata(

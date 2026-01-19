@@ -1,6 +1,6 @@
 """Result builder for personal data analysis output.
 
-Handles construction of output messages, summaries, and validation statistics.
+Handles construction of output messages and summaries.
 Keeps the analyser focused on orchestration.
 """
 
@@ -15,7 +15,6 @@ from .schemas.types import (
     PersonalDataIndicatorModel,
     PersonalDataIndicatorOutput,
     PersonalDataIndicatorSummary,
-    PersonalDataValidationSummary,
 )
 from .types import PersonalDataAnalyserConfig
 
@@ -40,41 +39,28 @@ class PersonalDataResultBuilder:
 
     def build_output_message(
         self,
-        original_findings: list[PersonalDataIndicatorModel],
-        validated_findings: list[PersonalDataIndicatorModel],
-        validation_applied: bool,
+        findings: list[PersonalDataIndicatorModel],
         output_schema: Schema,
         validation_result: ValidationResult[PersonalDataIndicatorModel] | None = None,
     ) -> Message:
         """Build the complete output message.
 
         Args:
-            original_findings: Findings before LLM validation.
-            validated_findings: Findings after LLM validation.
-            validation_applied: Whether validation was applied.
+            findings: Personal data indicators (validated if LLM validation was applied).
             output_schema: Schema for output validation.
-            validation_result: Optional validation result from orchestrator.
+            validation_result: Validation result from orchestrator (None if validation disabled).
 
         Returns:
             Complete validated output message.
 
         """
-        summary = self._build_findings_summary(validated_findings)
-
-        # Skip old-style validation_summary when using orchestrator - metadata tells the story
-        validation_summary = None
-        if validation_applied and validation_result is None:
-            validation_summary = self._build_validation_summary(
-                original_findings, validated_findings
-            )
-
+        summary = self._build_findings_summary(findings)
         analysis_metadata = self._build_analysis_metadata(validation_result)
 
         output_model = PersonalDataIndicatorOutput(
-            findings=validated_findings,
+            findings=findings,
             summary=summary,
             analysis_metadata=analysis_metadata,
-            validation_summary=validation_summary,
         )
 
         result_data = output_model.model_dump(mode="json", exclude_none=True)
@@ -111,38 +97,6 @@ class PersonalDataResultBuilder:
         """
         return PersonalDataIndicatorSummary(
             total_findings=len(findings),
-        )
-
-    def _build_validation_summary(
-        self,
-        original_findings: list[PersonalDataIndicatorModel],
-        validated_findings: list[PersonalDataIndicatorModel],
-    ) -> PersonalDataValidationSummary:
-        """Build LLM validation summary statistics.
-
-        Args:
-            original_findings: Original findings before validation.
-            validated_findings: Findings after validation.
-
-        Returns:
-            Validation summary model.
-
-        """
-        original_count = len(original_findings)
-        validated_count = len(validated_findings)
-        false_positives_removed = original_count - validated_count
-
-        logger.info(
-            f"LLM validation completed: {original_count} → {validated_count} findings "
-            f"({false_positives_removed} false positives removed)"
-        )
-
-        return PersonalDataValidationSummary(
-            llm_validation_enabled=True,
-            original_findings_count=original_count,
-            validated_findings_count=validated_count,
-            false_positives_removed=false_positives_removed,
-            validation_mode=self._config.llm_validation.llm_validation_mode,
         )
 
     def _build_analysis_metadata(

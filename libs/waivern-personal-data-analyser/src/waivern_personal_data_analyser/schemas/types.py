@@ -51,24 +51,6 @@ class PersonalDataIndicatorSummary(BaseModel):
     )
 
 
-class PersonalDataValidationSummary(BaseModel):
-    """LLM validation summary for personal data findings."""
-
-    llm_validation_enabled: bool = Field(
-        default=True, description="Whether LLM validation was enabled"
-    )
-    original_findings_count: int = Field(
-        ge=0, description="Number of findings before validation"
-    )
-    validated_findings_count: int = Field(
-        ge=0, description="Number of findings after validation"
-    )
-    false_positives_removed: int = Field(
-        ge=0, description="Number of false positives removed by validation"
-    )
-    validation_mode: str = Field(description="LLM validation mode used")
-
-
 class PersonalDataIndicatorOutput(BaseSchemaOutput):
     """Complete output structure for personal_data_indicator schema.
 
@@ -87,7 +69,4 @@ class PersonalDataIndicatorOutput(BaseSchemaOutput):
     )
     analysis_metadata: BaseAnalysisOutputMetadata = Field(
         description="Metadata about the analysis process"
-    )
-    validation_summary: PersonalDataValidationSummary | None = Field(
-        default=None, description="LLM validation summary (if validation was applied)"
     )
