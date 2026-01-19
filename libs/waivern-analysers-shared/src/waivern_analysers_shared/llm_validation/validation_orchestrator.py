@@ -5,6 +5,8 @@ and LLM validation strategies. Applies group-level decisions based on
 sample validation results.
 """
 
+from collections.abc import Callable
+
 from waivern_core.schemas import BaseFindingModel
 from waivern_llm import BaseLLMService
 
@@ -68,6 +70,7 @@ class ValidationOrchestrator[T: BaseFindingModel]:
         findings: list[T],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
+        marker: Callable[[T], T] | None = None,
     ) -> ValidationResult[T]:
         """Validate findings using the configured strategies.
 
@@ -75,6 +78,9 @@ class ValidationOrchestrator[T: BaseFindingModel]:
             findings: List of findings to validate.
             config: LLM validation configuration.
             llm_service: LLM service instance.
+            marker: Optional callback to mark validated findings. Called on findings
+                that actually went through LLM validation (not skipped/errored).
+                Applied at the strategy level before aggregation into ValidationResult.
 
         Returns:
             ValidationResult with validated findings and metadata.
@@ -93,11 +99,13 @@ class ValidationOrchestrator[T: BaseFindingModel]:
 
         # No grouping - direct validation
         if self._grouping_strategy is None:
-            return self._validate_without_grouping(findings, config, llm_service)
+            return self._validate_without_grouping(
+                findings, config, llm_service, marker
+            )
 
         # With grouping - full orchestration flow
         return self._validate_with_grouping(
-            self._grouping_strategy, findings, config, llm_service
+            self._grouping_strategy, findings, config, llm_service, marker
         )
 
     def _validate_without_grouping(
@@ -105,6 +113,7 @@ class ValidationOrchestrator[T: BaseFindingModel]:
         findings: list[T],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
+        marker: Callable[[T], T] | None = None,
     ) -> ValidationResult[T]:
         """Validate findings directly without grouping.
 
@@ -113,6 +122,10 @@ class ValidationOrchestrator[T: BaseFindingModel]:
 
         """
         outcome = self._llm_strategy.validate_findings(findings, config, llm_service)
+
+        # Apply marker at strategy level (before aggregation) if provided
+        if marker:
+            outcome = outcome.with_marked_findings(marker)
 
         return ValidationResult(
             kept_findings=outcome.llm_validated_kept + outcome.llm_not_flagged,
@@ -129,6 +142,7 @@ class ValidationOrchestrator[T: BaseFindingModel]:
         findings: list[T],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
+        marker: Callable[[T], T] | None = None,
     ) -> ValidationResult[T]:
         """Validate findings with grouping and optional sampling.
 
@@ -136,8 +150,9 @@ class ValidationOrchestrator[T: BaseFindingModel]:
         1. Group findings
         2. Sample from groups (if sampling strategy provided)
         3. Flatten samples and validate via LLM
-        4. Match results back to groups
-        5. Apply group-level decisions (Case A/B/C)
+        4. Apply marker at strategy level (before aggregation)
+        5. Match results back to groups
+        6. Apply group-level decisions (Case A/B/C)
 
         """
         # Step 1: Group findings
@@ -170,7 +185,11 @@ class ValidationOrchestrator[T: BaseFindingModel]:
         # Step 4: Validate samples via LLM
         outcome = self._llm_strategy.validate_findings(all_samples, config, llm_service)
 
-        # Step 5: Apply group-level decisions
+        # Step 5: Apply marker at strategy level (before aggregation) if provided
+        if marker:
+            outcome = outcome.with_marked_findings(marker)
+
+        # Step 6: Apply group-level decisions
         return self._apply_group_decisions(
             grouping_strategy=grouping_strategy,
             groups=groups,
@@ -201,6 +220,12 @@ class ValidationOrchestrator[T: BaseFindingModel]:
         removed_ids = {f.id for f in outcome.llm_validated_removed}
         skipped_ids = {s.finding.id for s in outcome.skipped}
 
+        # Build mapping from ID to actual findings from outcome
+        # (these may be marked if marker was applied)
+        kept_findings_by_id = {f.id: f for f in outcome.llm_validated_kept}
+        kept_findings_by_id.update({f.id: f for f in outcome.llm_not_flagged})
+        skipped_findings_by_id = {s.finding.id: s.finding for s in outcome.skipped}
+
         # Accumulators
         all_kept: list[T] = []
         all_removed: list[T] = []
@@ -210,13 +235,13 @@ class ValidationOrchestrator[T: BaseFindingModel]:
             group_samples = sampled.get(group_key, [])
             group_non_sampled = non_sampled.get(group_key, [])
 
-            # Count validated samples (exclude skipped from decision)
-            validated_kept = [f for f in group_samples if f.id in kept_ids]
+            # Identify validated samples by category (exclude skipped from decision)
+            validated_kept_ids = [f.id for f in group_samples if f.id in kept_ids]
             validated_removed = [f for f in group_samples if f.id in removed_ids]
-            group_skipped = [f for f in group_samples if f.id in skipped_ids]
+            group_skipped_ids = [f.id for f in group_samples if f.id in skipped_ids]
 
             # Determine case based on validated samples only
-            total_validated = len(validated_kept) + len(validated_removed)
+            total_validated = len(validated_kept_ids) + len(validated_removed)
 
             if total_validated == 0:
                 # No validated samples - keep group (conservative)
@@ -236,10 +261,14 @@ class ValidationOrchestrator[T: BaseFindingModel]:
                 )
             else:
                 # Case B or C: Keep group
-                # Keep: validated TRUE_POSITIVE samples + non-sampled + skipped samples
-                all_kept.extend(validated_kept)
+                # Use findings from outcome (may be marked) for validated samples
+                all_kept.extend(kept_findings_by_id[fid] for fid in validated_kept_ids)
+                # Non-sampled findings are kept as-is (not validated, not marked)
                 all_kept.extend(group_non_sampled)
-                all_kept.extend(group_skipped)
+                # Skipped findings use original from outcome (not marked)
+                all_kept.extend(
+                    skipped_findings_by_id[fid] for fid in group_skipped_ids
+                )
                 # Remove: FALSE_POSITIVE samples
                 all_removed.extend(validated_removed)
 

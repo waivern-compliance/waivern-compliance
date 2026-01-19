@@ -5,6 +5,7 @@ import logging
 from types import ModuleType
 from typing import override
 
+from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
@@ -13,6 +14,7 @@ from waivern_llm import BaseLLMService
 from .result_builder import DataSubjectResultBuilder
 from .schemas.types import DataSubjectIndicatorModel
 from .types import DataSubjectAnalyserConfig
+from .validation import create_validation_orchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -38,14 +40,6 @@ class DataSubjectAnalyser(Analyser):
         """
         self._config = config
         self._result_builder = DataSubjectResultBuilder(config)
-        # TODO: LLM validation is not yet implemented for DataSubjectAnalyser.
-        # The llm_service is accepted for interface consistency with other analysers
-        # and to prepare for future implementation. When implementing:
-        # 1. Create llm_validation_strategy.py similar to personal-data-analyser
-        # 2. Add validation prompts in prompts/ directory
-        # 3. Call validation after pattern matching in process()
-        # 4. Add comprehensive tests for the validation strategy
-        # 5. Add integration tests (see personal-data-analyser's test_integration.py)
         self._llm_service = llm_service
 
     @classmethod
@@ -133,8 +127,21 @@ class DataSubjectAnalyser(Analyser):
             message_indicators = handler.analyse(input_data)
             indicators.extend(message_indicators)
 
+        # Apply LLM validation if enabled
+        validation_result: ValidationResult[DataSubjectIndicatorModel] | None = None
+        final_findings = indicators
+        if self._config.llm_validation.enable_llm_validation:
+            validated_findings, _, validation_result = self._validate_findings(
+                indicators
+            )
+            final_findings = validated_findings
+
         # Build and return output message
-        return self._result_builder.build_output_message(indicators, output_schema)
+        return self._result_builder.build_output_message(
+            final_findings,
+            output_schema,
+            validation_result,
+        )
 
     def _load_reader_module(self, schema: Schema) -> ModuleType:
         """Load reader module for the given schema.
@@ -153,3 +160,77 @@ class DataSubjectAnalyser(Analyser):
             return self._load_reader(schema)
         except (ModuleNotFoundError, AttributeError) as e:
             raise ValueError(f"Unsupported input schema: {schema.name}") from e
+
+    def _validate_findings(
+        self,
+        findings: list[DataSubjectIndicatorModel],
+    ) -> tuple[
+        list[DataSubjectIndicatorModel],
+        bool,
+        ValidationResult[DataSubjectIndicatorModel] | None,
+    ]:
+        """Validate findings using ValidationOrchestrator.
+
+        The orchestrator handles:
+        - Grouping by subject_category (design-time decision)
+        - Sampling and group-level decisions (when sampling enabled)
+
+        Args:
+            findings: List of findings to validate.
+
+        Returns:
+            Tuple of (validated findings, validation applied, validation result).
+
+        """
+        if not findings:
+            return findings, False, None
+
+        if not self._llm_service:
+            logger.warning("LLM service unavailable, returning original findings")
+            return findings, False, None
+
+        try:
+            # Create orchestrator and validate with marker callback
+            # Marker is applied at strategy level to only mark actually-validated findings
+            orchestrator = create_validation_orchestrator(self._config.llm_validation)
+            result = orchestrator.validate(
+                findings,
+                self._config.llm_validation,
+                self._llm_service,
+                marker=self._mark_finding_validated,
+            )
+
+            logger.info(
+                f"Validation complete: {len(findings)} → {len(result.kept_findings)} findings "
+                f"({len(result.removed_groups)} groups removed)"
+            )
+
+            return result.kept_findings, result.all_succeeded, result
+
+        except Exception as e:
+            logger.error(f"LLM validation failed: {e}")
+            logger.warning("Returning original findings due to validation error")
+            return findings, False, None
+
+    def _mark_finding_validated(
+        self, finding: DataSubjectIndicatorModel
+    ) -> DataSubjectIndicatorModel:
+        """Mark a finding as LLM validated.
+
+        Args:
+            finding: Finding to mark.
+
+        Returns:
+            New finding with validation marker in metadata context.
+
+        """
+        if finding.metadata:
+            updated_context = dict(finding.metadata.context)
+            updated_context["data_subject_llm_validated"] = True
+
+            updated_metadata = finding.metadata.model_copy(
+                update={"context": updated_context}
+            )
+            return finding.model_copy(update={"metadata": updated_metadata})
+
+        return finding

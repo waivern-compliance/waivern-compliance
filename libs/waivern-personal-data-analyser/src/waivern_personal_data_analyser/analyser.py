@@ -203,23 +203,22 @@ class PersonalDataAnalyser(Analyser):
             return findings, False, None
 
         try:
-            # Create orchestrator and validate
+            # Create orchestrator and validate with marker callback
+            # Marker is applied at strategy level to only mark actually-validated findings
             orchestrator = create_validation_orchestrator(self._config.llm_validation)
             result = orchestrator.validate(
-                findings, self._config.llm_validation, self._llm_service
+                findings,
+                self._config.llm_validation,
+                self._llm_service,
+                marker=self._mark_finding_validated,
             )
 
-            # Mark validated findings
-            marked_findings = [
-                self._mark_finding_validated(f) for f in result.kept_findings
-            ]
-
             logger.info(
-                f"Validation complete: {len(findings)} → {len(marked_findings)} findings "
+                f"Validation complete: {len(findings)} → {len(result.kept_findings)} findings "
                 f"({len(result.removed_groups)} groups removed)"
             )
 
-            return marked_findings, result.all_succeeded, result
+            return result.kept_findings, result.all_succeeded, result
 
         except Exception as e:
             logger.error(f"LLM validation failed: {e}")
