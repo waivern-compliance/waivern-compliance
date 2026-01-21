@@ -64,14 +64,29 @@ class PersonalDataPatternMatcher:
                 if self._pattern_matcher.matches(content, pattern):
                     matched_patterns.append(pattern)
 
+            # Check value patterns (regex-based matching)
+            matched_value_patterns: list[str] = []
+            for value_pattern in rule.value_patterns:
+                if self._pattern_matcher.matches_value(content, value_pattern):
+                    matched_value_patterns.append(f"value:{value_pattern}")
+
+            # Combine all matched patterns (OR logic - either type triggers detection)
+            all_matched = matched_patterns + matched_value_patterns
+
             # If any patterns matched, create a single indicator for this rule
-            if matched_patterns:
+            if all_matched:
                 # Extract evidence using the first matched pattern as representative
+                # Determine if we need value pattern extraction
+                first_match = all_matched[0]
+                is_value_pattern = first_match.startswith("value:")
+                evidence_pattern = first_match[6:] if is_value_pattern else first_match
+
                 evidence_matches = self._evidence_extractor.extract_evidence(
                     content,
-                    matched_patterns[0],
+                    evidence_pattern,
                     self.config.maximum_evidence_count,
                     self.config.evidence_context_size,
+                    is_value_pattern=is_value_pattern,
                 )
 
                 if evidence_matches:  # Only create indicator if we have evidence
@@ -85,7 +100,7 @@ class PersonalDataPatternMatcher:
 
                     finding = PersonalDataIndicatorModel(
                         category=rule.category,
-                        matched_patterns=matched_patterns,
+                        matched_patterns=all_matched,
                         evidence=evidence_matches,
                         metadata=finding_metadata,
                     )

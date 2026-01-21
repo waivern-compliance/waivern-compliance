@@ -78,6 +78,11 @@ class DataSubjectPatternMatcher:
                 if self._pattern_matcher.matches(content, pattern):
                     matched_patterns_for_rule.append(pattern)
 
+            # Check value patterns (regex-based matching)
+            for value_pattern in rule.value_patterns:
+                if self._pattern_matcher.matches_value(content, value_pattern):
+                    matched_patterns_for_rule.append(f"value:{value_pattern}")
+
             # If any patterns matched, add the rule and its matched patterns
             if matched_patterns_for_rule:
                 category = rule.subject_category
@@ -101,11 +106,17 @@ class DataSubjectPatternMatcher:
             )
 
             # Extract evidence for the first matched pattern (representative)
+            # Determine if we need value pattern extraction
+            first_match = matched_patterns[0]
+            is_value_pattern = first_match.startswith("value:")
+            evidence_pattern = first_match[6:] if is_value_pattern else first_match
+
             evidence = self._evidence_extractor.extract_evidence(
                 content,
-                matched_patterns[0],  # Use first actually matched pattern for evidence
+                evidence_pattern,
                 self._config.maximum_evidence_count,
                 self._config.evidence_context_size,
+                is_value_pattern=is_value_pattern,
             )
 
             if evidence:  # Only create indicator if we have evidence

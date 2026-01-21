@@ -377,6 +377,62 @@ class TestEvidenceExtractorDefaultParameters:
         assert len(evidence[0].content) < len(long_content)
 
 
+class TestEvidenceExtractorValuePatterns:
+    """Test evidence extraction for regex value patterns."""
+
+    def test_extract_evidence_for_value_pattern_finds_email(self) -> None:
+        """Test extracting evidence using regex pattern for email addresses."""
+        extractor = EvidenceExtractor()
+        content = "Contact us at support@example.com for assistance."
+        email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+        evidence = extractor.extract_evidence(
+            content,
+            email_pattern,
+            max_evidence=3,
+            context_size="small",
+            is_value_pattern=True,
+        )
+
+        assert len(evidence) == 1
+        assert "support@example.com" in evidence[0].content
+
+    def test_extract_evidence_for_value_pattern_finds_correct_positions(self) -> None:
+        """Test that value pattern extraction finds correct match positions."""
+        extractor = EvidenceExtractor()
+        content = "Emails: john@example.com and jane@test.org are valid."
+        email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+        evidence = extractor.extract_evidence(
+            content,
+            email_pattern,
+            max_evidence=5,
+            context_size="full",
+            is_value_pattern=True,
+        )
+
+        # Should find both email addresses
+        assert len(evidence) == 1  # Full context returns one snippet
+        assert "john@example.com" in evidence[0].content
+        assert "jane@test.org" in evidence[0].content
+
+    def test_extract_evidence_for_value_pattern_respects_max_evidence(self) -> None:
+        """Test that max_evidence limit is respected for value patterns."""
+        extractor = EvidenceExtractor()
+        content = "a@b.com c@d.com e@f.com g@h.com i@j.com"
+        email_pattern = r"[a-z]@[a-z]\.[a-z]{3}"
+
+        evidence = extractor.extract_evidence(
+            content,
+            email_pattern,
+            max_evidence=2,
+            context_size="small",
+            is_value_pattern=True,
+        )
+
+        assert len(evidence) <= 2
+
+
 class TestEvidenceExtractorEllipsisHandling:
     """Test ellipsis markers in truncated evidence."""
 

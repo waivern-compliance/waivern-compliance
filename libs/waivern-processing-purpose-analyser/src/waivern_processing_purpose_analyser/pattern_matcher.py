@@ -67,14 +67,25 @@ class ProcessingPurposePatternMatcher:
                 if self._pattern_matcher.matches(content, pattern):
                     matched_patterns.append(pattern)
 
+            # Check value patterns (regex-based matching)
+            for value_pattern in rule.value_patterns:
+                if self._pattern_matcher.matches_value(content, value_pattern):
+                    matched_patterns.append(f"value:{value_pattern}")
+
             # If any patterns matched, create a single finding for this rule
             if matched_patterns:
                 # Extract evidence using the first matched pattern as representative
+                # Determine if we need value pattern extraction
+                first_match = matched_patterns[0]
+                is_value_pattern = first_match.startswith("value:")
+                evidence_pattern = first_match[6:] if is_value_pattern else first_match
+
                 evidence = self._evidence_extractor.extract_evidence(
                     content,
-                    matched_patterns[0],
+                    evidence_pattern,
                     self._config.maximum_evidence_count,
                     self._config.evidence_context_size,
+                    is_value_pattern=is_value_pattern,
                 )
 
                 if evidence:  # Only create finding if we have evidence

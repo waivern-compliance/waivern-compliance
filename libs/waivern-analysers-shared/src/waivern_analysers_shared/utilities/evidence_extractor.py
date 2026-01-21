@@ -30,15 +30,17 @@ class EvidenceExtractor:
         pattern: str,
         max_evidence: int = _DEFAULT_MAX_EVIDENCE,
         context_size: str = _DEFAULT_CONTEXT_SIZE,
+        is_value_pattern: bool = False,
     ) -> list[BaseFindingEvidence]:
         """Extract evidence snippets where the pattern was found.
 
         Args:
             content: The full content to search in
-            pattern: The pattern that was matched
+            pattern: The pattern that was matched (word-boundary or regex)
             max_evidence: Maximum number of evidence snippets to collect
             context_size: Size of context around evidence matches
                          ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars, 'full': entire content)
+            is_value_pattern: If True, use regex matching; if False, use word-boundary matching
 
         Returns:
             List of unique evidence items with content and collection timestamps
@@ -53,17 +55,22 @@ class EvidenceExtractor:
         evidence_content_set: set[str] = set()  # Use set to avoid duplicate content
         evidence_items: list[BaseFindingEvidence] = []
 
-        # Use PatternMatcher for word boundary-aware matching
+        # Use PatternMatcher with appropriate matching strategy
         matcher = PatternMatcher()
-        matches = matcher.find_all(content, pattern)
+        if is_value_pattern:
+            matches = matcher.find_all_values(content, pattern)
+        else:
+            matches = matcher.find_all(content, pattern)
 
         # Extract evidence from each match position
-        for match_start, _match_end in matches:
+        for match_start, match_end in matches:
             if len(evidence_content_set) >= max_evidence:
                 break
 
+            # Calculate actual match length (important for regex where len(pattern) != match length)
+            match_length = match_end - match_start
             evidence_snippet = self._extract_evidence_snippet(
-                content, pattern, match_start, context_size
+                content, match_start, match_length, context_size
             )
 
             if evidence_snippet and evidence_snippet not in evidence_content_set:
@@ -78,14 +85,14 @@ class EvidenceExtractor:
         return sorted(evidence_items, key=lambda item: item.content)
 
     def _extract_evidence_snippet(
-        self, content: str, pattern: str, match_pos: int, context_size: str
+        self, content: str, match_pos: int, match_length: int, context_size: str
     ) -> str:
         """Extract a single evidence snippet with appropriate context.
 
         Args:
             content: Original content
-            pattern: Matched pattern
             match_pos: Position where pattern was found
+            match_length: Length of the matched text
             context_size: Context size specification
 
         Returns:
@@ -100,18 +107,18 @@ class EvidenceExtractor:
         else:
             # Standard context window extraction
             return self._extract_windowed_context(
-                content, pattern, match_pos, context_size_chars
+                content, match_pos, match_length, context_size_chars
             )
 
     def _extract_windowed_context(
-        self, content: str, pattern: str, match_pos: int, context_chars: int
+        self, content: str, match_pos: int, match_length: int, context_chars: int
     ) -> str:
         """Extract evidence with a fixed-size context window around the match.
 
         Args:
             content: Original content
-            pattern: Matched pattern
             match_pos: Position where pattern was found
+            match_length: Length of the matched text
             context_chars: Number of characters for context window
 
         Returns:
@@ -119,7 +126,7 @@ class EvidenceExtractor:
 
         """
         context_start = max(0, match_pos - context_chars)
-        context_end = min(len(content), match_pos + len(pattern) + context_chars)
+        context_end = min(len(content), match_pos + match_length + context_chars)
 
         # Extract the evidence with context
         evidence_snippet = content[context_start:context_end].strip()
