@@ -552,8 +552,9 @@ export default PaymentService;
         """
         # Create a large file (120 lines) with a pattern in the middle
         # This ensures all window sizes can show their full range
+        # Use word-boundary-compatible pattern (underscore as separator)
         lines = [f"function line{i}() {{}}" for i in range(120)]
-        lines[60] = "async processPayment(amount) { return amount; }"
+        lines[60] = "async process_payment(amount) { return amount; }"
         file_data = SourceCodeFileDataModel(
             file_path="src/large_file.js",
             language="javascript",

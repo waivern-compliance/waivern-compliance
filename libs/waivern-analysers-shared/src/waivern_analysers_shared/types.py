@@ -57,11 +57,13 @@ class PatternMatchResult:
     the total match count (for auditing/reporting).
 
     Attributes:
+        pattern: The pattern that was searched for
         first_match: The first match found, or None if no matches
         match_count: Total number of times the pattern matched
 
     """
 
+    pattern: str
     first_match: PatternMatch | None
     match_count: int
 
@@ -175,7 +177,7 @@ class LLMValidationConfig(BaseModel):
     """Strongly typed configuration for LLM validation analysis."""
 
     enable_llm_validation: bool = Field(
-        default=True,
+        default=False,
         description="Whether to enable LLM-based validation to filter false positives",
     )
 

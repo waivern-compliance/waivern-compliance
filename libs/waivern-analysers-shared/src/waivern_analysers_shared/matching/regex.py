@@ -35,16 +35,17 @@ class RegexMatcher:
 
         """
         if not content or not pattern:
-            return PatternMatchResult(first_match=None, match_count=0)
+            return PatternMatchResult(pattern=pattern, first_match=None, match_count=0)
 
         regex = _compile_regex_pattern(pattern)
         matches = list(regex.finditer(content))
 
         if not matches:
-            return PatternMatchResult(first_match=None, match_count=0)
+            return PatternMatchResult(pattern=pattern, first_match=None, match_count=0)
 
         first = matches[0]
         return PatternMatchResult(
+            pattern=pattern,
             first_match=PatternMatch(
                 pattern=pattern,
                 pattern_type=PatternType.REGEX,

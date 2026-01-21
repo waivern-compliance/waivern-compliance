@@ -5,6 +5,7 @@ Keeps the analyser focused on orchestration.
 """
 
 import logging
+from datetime import UTC, datetime
 from pprint import pformat
 
 from waivern_analysers_shared.llm_validation import ValidationResult
@@ -66,7 +67,7 @@ class PersonalDataResultBuilder:
         result_data = output_model.model_dump(mode="json", exclude_none=True)
 
         output_message = Message(
-            id="Personal_data_analysis",
+            id=f"personal_data_analysis_{datetime.now(UTC).isoformat()}",
             content=result_data,
             schema=output_schema,
         )

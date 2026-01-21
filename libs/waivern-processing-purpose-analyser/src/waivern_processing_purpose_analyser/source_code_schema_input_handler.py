@@ -6,10 +6,11 @@ Groups matches by purpose (rule.name) within each file, similar to how
 DataSubjectAnalyser groups by subject_category.
 """
 
-from collections.abc import Generator, Sequence
+from collections.abc import Generator
 from dataclasses import dataclass
 from typing import Literal
 
+from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_rulesets.data_collection import DataCollectionRule
@@ -68,6 +69,7 @@ class SourceCodeSchemaInputHandler:
 
         """
         self.context_window: SourceCodeContextWindow = context_window
+        self._dispatcher = RulePatternDispatcher()
 
         # NOTE: Rulesets are hardcoded here rather than config-driven (unlike
         # DataSubjectAnalyser which uses config.ruleset). This is intentional:
@@ -159,7 +161,7 @@ class SourceCodeSchemaInputHandler:
 
         # Collect matches from processing purpose rules
         for rule in self._processing_purposes_rules:
-            for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
+            for line_idx, pattern in self._find_pattern_matches(lines, rule):
                 purpose = rule.name
                 if purpose not in purpose_matches:
                     purpose_matches[purpose] = []
@@ -174,7 +176,7 @@ class SourceCodeSchemaInputHandler:
 
         # Collect matches from service integration rules
         for rule in self._service_integrations_rules:
-            for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
+            for line_idx, pattern in self._find_pattern_matches(lines, rule):
                 purpose = rule.name
                 if purpose not in purpose_matches:
                     purpose_matches[purpose] = []
@@ -190,7 +192,7 @@ class SourceCodeSchemaInputHandler:
 
         # Collect matches from data collection rules
         for rule in self._data_collection_rules:
-            for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
+            for line_idx, pattern in self._find_pattern_matches(lines, rule):
                 purpose = rule.name
                 if purpose not in purpose_matches:
                     purpose_matches[purpose] = []
@@ -243,23 +245,27 @@ class SourceCodeSchemaInputHandler:
         return findings
 
     def _find_pattern_matches(
-        self, lines: list[str], patterns: Sequence[str]
+        self,
+        lines: list[str],
+        rule: ProcessingPurposeRule | ServiceIntegrationRule | DataCollectionRule,
     ) -> Generator[tuple[int, str], None, None]:
         """Find all pattern matches in source code lines.
 
+        Uses RulePatternDispatcher to handle both word-boundary patterns
+        and regex patterns (value_patterns) consistently.
+
         Args:
-            lines: Source code lines to search
-            patterns: Patterns to match (case-insensitive)
+            lines: Source code lines to search.
+            rule: Rule containing patterns and value_patterns to match.
 
         Yields:
-            Tuples of (line_index, matched_pattern)
+            Tuples of (line_index, matched_pattern).
 
         """
         for i, line in enumerate(lines):
-            line_lower = line.lower()
-            for pattern in patterns:
-                if pattern.lower() in line_lower:
-                    yield (i, pattern)
+            matches = self._dispatcher.find_matches(line, rule)
+            for match in matches:
+                yield (i, match.pattern)
 
     def _create_evidence(
         self,

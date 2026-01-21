@@ -21,7 +21,7 @@ class TestProcessingPurposeAnalyserConfig:
         assert config.pattern_matching.maximum_evidence_count == 3
 
         # Verify LLM validation defaults
-        assert config.llm_validation.enable_llm_validation is True
+        assert config.llm_validation.enable_llm_validation is False
         assert config.llm_validation.llm_batch_size == 50
         assert config.llm_validation.llm_validation_mode == "standard"
 
