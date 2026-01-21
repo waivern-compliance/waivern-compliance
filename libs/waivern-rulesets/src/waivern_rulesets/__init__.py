@@ -27,6 +27,7 @@ from waivern_rulesets.data_subject_indicator import (
 from waivern_rulesets.gdpr_data_subject_classification import (
     GDPRDataSubjectClassificationRule,
     GDPRDataSubjectClassificationRuleset,
+    RiskModifier,
     RiskModifiers,
 )
 from waivern_rulesets.gdpr_personal_data_classification import (
@@ -85,5 +86,6 @@ __all__ = [
     "GDPRPersonalDataClassificationRule",
     "GDPRDataSubjectClassificationRule",
     # Supporting types
+    "RiskModifier",
     "RiskModifiers",
 ]

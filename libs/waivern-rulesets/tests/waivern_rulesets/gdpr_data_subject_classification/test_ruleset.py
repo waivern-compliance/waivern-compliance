@@ -126,22 +126,56 @@ class TestRiskModifiers:
     """Test cases for RiskModifier and RiskModifiers classes."""
 
     def test_risk_modifier_with_all_fields(self) -> None:
-        """Test RiskModifier with all fields."""
+        """Test RiskModifier with patterns and value_patterns fields."""
         modifier = RiskModifier(
-            pattern="minor|child|under.*years",
+            patterns=["minor", "child"],
+            value_patterns=["under.*years"],
             modifier="minor",
             article_references=["Article 8"],
         )
 
-        assert modifier.pattern == "minor|child|under.*years"
+        assert modifier.patterns == ["minor", "child"]
+        assert modifier.value_patterns == ["under.*years"]
         assert modifier.modifier == "minor"
         assert modifier.article_references == ["Article 8"]
+
+    def test_risk_modifier_with_patterns_only(self) -> None:
+        """Test RiskModifier with only word boundary patterns."""
+        modifier = RiskModifier(
+            patterns=["vulnerable"],
+            modifier="vulnerable_individual",
+            article_references=["Recital 75"],
+        )
+
+        assert modifier.patterns == ["vulnerable"]
+        assert modifier.value_patterns == []
+
+    def test_risk_modifier_with_value_patterns_only(self) -> None:
+        """Test RiskModifier with only regex patterns."""
+        modifier = RiskModifier(
+            value_patterns=["third.country"],
+            modifier="non_eu_resident",
+            article_references=["Article 3"],
+        )
+
+        assert modifier.patterns == []
+        assert modifier.value_patterns == ["third.country"]
+
+    def test_risk_modifier_requires_at_least_one_pattern(self) -> None:
+        """Test that RiskModifier requires at least one pattern type."""
+        with pytest.raises(ValidationError, match="must have at least one pattern"):
+            RiskModifier(
+                patterns=[],
+                value_patterns=[],
+                modifier="test_modifier",
+                article_references=["Article 8"],
+            )
 
     def test_risk_modifier_requires_article_references(self) -> None:
         """Test that RiskModifier requires at least one article reference."""
         with pytest.raises(ValidationError, match="at least 1 item"):
             RiskModifier(
-                pattern="test",
+                patterns=["test"],
                 modifier="test_modifier",
                 article_references=[],  # Empty - invalid
             )
@@ -151,14 +185,14 @@ class TestRiskModifiers:
         modifiers = RiskModifiers(
             risk_increasing=[
                 RiskModifier(
-                    pattern="minor",
+                    patterns=["minor"],
                     modifier="minor",
                     article_references=["Article 8"],
                 ),
             ],
             risk_decreasing=[
                 RiskModifier(
-                    pattern="non-EU",
+                    patterns=["non-EU"],
                     modifier="non_eu_resident",
                     article_references=["Article 3"],
                 ),
