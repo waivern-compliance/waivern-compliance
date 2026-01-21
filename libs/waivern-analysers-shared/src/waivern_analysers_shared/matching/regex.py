@@ -3,7 +3,11 @@
 import re
 from functools import cache
 
-from waivern_analysers_shared.types import PatternMatch, PatternType
+from waivern_analysers_shared.types import (
+    PatternMatch,
+    PatternMatchResult,
+    PatternType,
+)
 
 
 @cache
@@ -19,29 +23,33 @@ class RegexMatcher:
     phone numbers, etc.
     """
 
-    def find_match(self, content: str, pattern: str) -> PatternMatch | None:
-        """Find first match of regex pattern in content.
+    def find_match(self, content: str, pattern: str) -> PatternMatchResult:
+        """Find regex pattern in content.
 
         Args:
             content: Text to search in
             pattern: Regex pattern to find
 
         Returns:
-            PatternMatch if found, None otherwise.
+            PatternMatchResult with first match position and total count.
 
         """
         if not content or not pattern:
-            return None
+            return PatternMatchResult(first_match=None, match_count=0)
 
         regex = _compile_regex_pattern(pattern)
-        match = regex.search(content)
+        matches = list(regex.finditer(content))
 
-        if match:
-            return PatternMatch(
+        if not matches:
+            return PatternMatchResult(first_match=None, match_count=0)
+
+        first = matches[0]
+        return PatternMatchResult(
+            first_match=PatternMatch(
                 pattern=pattern,
                 pattern_type=PatternType.REGEX,
-                start=match.start(),
-                end=match.end(),
-            )
-
-        return None
+                start=first.start(),
+                end=first.end(),
+            ),
+            match_count=len(matches),
+        )

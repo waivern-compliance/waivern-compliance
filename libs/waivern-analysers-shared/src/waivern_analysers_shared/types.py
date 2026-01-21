@@ -49,6 +49,23 @@ class PatternMatch:
         return self.end - self.start
 
 
+@dataclass(frozen=True, slots=True)
+class PatternMatchResult:
+    """Result of searching for a pattern in content.
+
+    Contains the first match position (for evidence extraction) and
+    the total match count (for auditing/reporting).
+
+    Attributes:
+        first_match: The first match found, or None if no matches
+        match_count: Total number of times the pattern matched
+
+    """
+
+    first_match: PatternMatch | None
+    match_count: int
+
+
 class SchemaReader[T](Protocol):
     """Protocol for schema reader modules.
 

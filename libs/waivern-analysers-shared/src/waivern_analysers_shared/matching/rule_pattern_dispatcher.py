@@ -4,7 +4,7 @@ from waivern_core import DetectionRule
 
 from waivern_analysers_shared.matching.regex import RegexMatcher
 from waivern_analysers_shared.matching.word_boundary import WordBoundaryMatcher
-from waivern_analysers_shared.types import PatternMatch
+from waivern_analysers_shared.types import PatternMatchResult
 
 
 class RulePatternDispatcher:
@@ -19,7 +19,9 @@ class RulePatternDispatcher:
         self._word_boundary = WordBoundaryMatcher()
         self._regex = RegexMatcher()
 
-    def find_matches(self, content: str, rule: DetectionRule) -> list[PatternMatch]:
+    def find_matches(
+        self, content: str, rule: DetectionRule
+    ) -> list[PatternMatchResult]:
         """Find all pattern matches for a rule.
 
         Args:
@@ -27,22 +29,23 @@ class RulePatternDispatcher:
             rule: Detection rule with patterns and/or value_patterns
 
         Returns:
-            List of matches (one per matching pattern), properly typed with PatternType
+            List of match results (one per pattern that matched), including
+            first match position and total match count for each.
 
         """
         if not content.strip():
             return []
 
-        matches: list[PatternMatch] = []
+        results: list[PatternMatchResult] = []
 
         for pattern in rule.patterns:
-            match = self._word_boundary.find_match(content, pattern)
-            if match:
-                matches.append(match)
+            result = self._word_boundary.find_match(content, pattern)
+            if result.first_match is not None:
+                results.append(result)
 
         for pattern in rule.value_patterns:
-            match = self._regex.find_match(content, pattern)
-            if match:
-                matches.append(match)
+            result = self._regex.find_match(content, pattern)
+            if result.first_match is not None:
+                results.append(result)
 
-        return matches
+        return results
