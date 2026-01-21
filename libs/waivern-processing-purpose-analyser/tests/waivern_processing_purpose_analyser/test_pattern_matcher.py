@@ -89,13 +89,13 @@ class TestProcessingPurposePatternMatcher:
         support_findings = [
             f
             for f in findings
-            if any("support" in pattern.lower() for pattern in f.matched_patterns)
+            if any("support" in p.pattern.lower() for p in f.matched_patterns)
         ]
         assert len(support_findings) > 0
 
         support_finding = support_findings[0]
         assert isinstance(support_finding, ProcessingPurposeFindingModel)
-        assert "support" in support_finding.matched_patterns
+        assert any(p.pattern == "support" for p in support_finding.matched_patterns)
 
     def test_find_patterns_creates_multiple_findings_for_multiple_matches(
         self,
@@ -118,7 +118,7 @@ class TestProcessingPurposePatternMatcher:
         # Verify we get findings for different purposes
         all_matched_patterns = set()
         for f in findings:
-            all_matched_patterns.update(f.matched_patterns)
+            all_matched_patterns.update(p.pattern for p in f.matched_patterns)
         assert len(all_matched_patterns) > 1
 
     def test_find_patterns_creates_metadata_from_input_metadata(

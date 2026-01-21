@@ -13,7 +13,7 @@ from waivern_analysers_shared.llm_validation.models import (
     LLMValidationResultModel,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_core.schemas import BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_llm import AnthropicLLMService
 
 from waivern_data_subject_analyser.llm_validation_strategy import (
@@ -33,7 +33,7 @@ def _make_finding(
     """Create a finding with minimal boilerplate."""
     return DataSubjectIndicatorModel(
         subject_category=subject_category,
-        matched_patterns=[pattern],
+        matched_patterns=[PatternMatchDetail(pattern=pattern, match_count=1)],
         confidence_score=80,
         evidence=[BaseFindingEvidence(content=f"Content: {pattern}")],
         metadata=DataSubjectIndicatorMetadata(source=source),

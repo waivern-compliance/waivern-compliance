@@ -292,18 +292,21 @@ class TestDataSubjectAnalyserProcessing:
         assert director_finding is not None
 
         # Verify matched_patterns contains only the pattern that actually matched
-        matched_patterns = director_finding["matched_patterns"]
-        assert isinstance(matched_patterns, list)
-        assert len(matched_patterns) >= 2  # Should have multiple matches
+        matched_patterns_raw = director_finding["matched_patterns"]
+        assert isinstance(matched_patterns_raw, list)
+        assert len(matched_patterns_raw) >= 2  # Should have multiple matches
+
+        # Extract pattern strings from PatternMatchDetail objects
+        matched_pattern_names = [p["pattern"] for p in matched_patterns_raw]
 
         # Verify it contains the patterns that are actually in the content
-        assert "director" in matched_patterns
-        assert "ceo" in matched_patterns
+        assert "director" in matched_pattern_names
+        assert "ceo" in matched_pattern_names
         # Note: "executive" and "executive_officer" may both match "executive officer"
 
         # Verify it doesn't contain patterns that aren't in the content
-        assert "board_member" not in matched_patterns
-        assert "chairman" not in matched_patterns
+        assert "board_member" not in matched_pattern_names
+        assert "chairman" not in matched_pattern_names
 
     def test_process_source_code_with_pattern_matches(self) -> None:
         """Test that process handles source_code schema correctly."""

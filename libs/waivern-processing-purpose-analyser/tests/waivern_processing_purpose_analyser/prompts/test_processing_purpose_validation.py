@@ -1,7 +1,7 @@
 """Tests for processing purpose validation prompts focusing on behaviour."""
 
 import pytest
-from waivern_core.schemas import BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 
 from waivern_processing_purpose_analyser.prompts.processing_purpose_validation import (
     get_processing_purpose_validation_prompt,
@@ -34,7 +34,9 @@ class TestProcessingPurposeValidationPrompt:
         return ProcessingPurposeFindingModel(
             purpose=purpose,
             purpose_category=purpose_category,
-            matched_patterns=[matched_pattern],
+            matched_patterns=[
+                PatternMatchDetail(pattern=matched_pattern, match_count=1)
+            ],
             evidence=evidence_items,
             metadata=metadata,
         )

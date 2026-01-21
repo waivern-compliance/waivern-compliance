@@ -1,7 +1,11 @@
 """Tests for shared LLM validation models - focuses on business-critical constraints."""
 
 import pytest
-from waivern_core.schemas import BaseFindingEvidence, BaseFindingModel
+from waivern_core.schemas import (
+    BaseFindingEvidence,
+    BaseFindingModel,
+    PatternMatchDetail,
+)
 
 from waivern_analysers_shared.llm_validation import LLMValidationResultModel
 
@@ -10,7 +14,7 @@ def _create_test_finding() -> BaseFindingModel:
     """Create a test finding with auto-generated UUID."""
     return BaseFindingModel(
         evidence=[BaseFindingEvidence(content="test content")],
-        matched_patterns=["test_pattern"],
+        matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
     )
 
 

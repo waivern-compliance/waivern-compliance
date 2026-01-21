@@ -3,7 +3,7 @@
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
-from waivern_core.schemas import BaseMetadata
+from waivern_core.schemas import BaseMetadata, PatternMatchDetail
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
 from .schemas.types import (
@@ -69,9 +69,13 @@ class ProcessingPurposePatternMatcher:
                     self._config.evidence_context_size,
                 )
 
-                # Collect all matched patterns
+                # Collect all matched patterns with their counts
                 matched_patterns = [
-                    r.first_match.pattern for r in results if r.first_match
+                    PatternMatchDetail(
+                        pattern=r.first_match.pattern, match_count=r.match_count
+                    )
+                    for r in results
+                    if r.first_match
                 ]
 
                 finding_metadata = None

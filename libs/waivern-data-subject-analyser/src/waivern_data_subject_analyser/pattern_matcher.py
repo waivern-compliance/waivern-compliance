@@ -12,7 +12,7 @@ to make intelligent decisions about whether matches are genuine data subject ind
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig, PatternMatchResult
 from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
-from waivern_core.schemas import BaseMetadata
+from waivern_core.schemas import BaseMetadata, PatternMatchDetail
 from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 
 from .confidence_scorer import DataSubjectConfidenceScorer
@@ -86,7 +86,11 @@ class DataSubjectPatternMatcher:
                 all_results.extend(results)
 
             matched_patterns = [
-                r.first_match.pattern for r in all_results if r.first_match
+                PatternMatchDetail(
+                    pattern=r.first_match.pattern, match_count=r.match_count
+                )
+                for r in all_results
+                if r.first_match
             ]
 
             # Calculate confidence for this category

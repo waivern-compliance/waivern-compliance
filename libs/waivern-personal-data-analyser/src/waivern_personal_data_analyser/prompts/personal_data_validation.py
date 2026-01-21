@@ -145,7 +145,7 @@ def _build_findings_block(findings: list[PersonalDataIndicatorModel]) -> str:
         findings_text.append(f"""
 Finding [{finding.id}]:
   Category: {finding.category}
-  Patterns: {", ".join(finding.matched_patterns)}
+  Patterns: {", ".join(p.pattern for p in finding.matched_patterns)}
   Source: {source}
   Evidence:
   {evidence_text}""")

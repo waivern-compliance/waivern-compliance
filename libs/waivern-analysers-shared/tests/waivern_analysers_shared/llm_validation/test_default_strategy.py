@@ -9,7 +9,11 @@ from typing import override
 from unittest.mock import Mock
 
 import pytest
-from waivern_core.schemas import BaseFindingEvidence, BaseFindingModel
+from waivern_core.schemas import (
+    BaseFindingEvidence,
+    BaseFindingModel,
+    PatternMatchDetail,
+)
 from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.llm_validation.default_strategy import (
@@ -52,7 +56,7 @@ def make_finding(finding_id: str | None = None, category: str = "test") -> MockF
     finding = MockFinding(
         category=category,
         evidence=[BaseFindingEvidence(content=f"Evidence for {category}")],
-        matched_patterns=["test_pattern"],
+        matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
     )
     if finding_id:
         # Override the auto-generated ID for deterministic testing

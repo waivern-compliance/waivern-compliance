@@ -136,7 +136,7 @@ class SourceCodeValidationStrategy(
             lines.append(f"\nFile: {source_id}")
             for finding in findings:
                 line_num = finding.metadata.line_number if finding.metadata else None
-                patterns = ", ".join(finding.matched_patterns)
+                patterns = ", ".join(p.pattern for p in finding.matched_patterns)
                 lines.append(
                     f"  [{finding.id}] Purpose: {finding.purpose}, "
                     f"Patterns: {patterns}, Line: L{line_num}"

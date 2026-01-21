@@ -65,7 +65,7 @@ class GDPRDataSubjectFindingModel(BaseFindingModel):
         modifiers = (
             f" [{', '.join(self.risk_modifiers)}]" if self.risk_modifiers else ""
         )
-        return f"{self.data_subject_category}{modifiers} - {', '.join(self.matched_patterns)}"
+        return f"{self.data_subject_category}{modifiers} - {', '.join(p.pattern for p in self.matched_patterns)}"
 
 
 class GDPRDataSubjectSummary(BaseModel):

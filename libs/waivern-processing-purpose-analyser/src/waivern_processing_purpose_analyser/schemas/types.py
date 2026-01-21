@@ -51,7 +51,7 @@ class ProcessingPurposeFindingModel(BaseFindingModel):
     @override
     def __str__(self) -> str:
         """Human-readable representation for logging and debugging."""
-        return f"{self.purpose} - {', '.join(self.matched_patterns)}"
+        return f"{self.purpose} - {', '.join(p.pattern for p in self.matched_patterns)}"
 
 
 class PurposeBreakdown(BaseModel):

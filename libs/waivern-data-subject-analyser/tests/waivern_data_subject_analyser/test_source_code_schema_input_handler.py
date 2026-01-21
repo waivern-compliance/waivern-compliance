@@ -186,12 +186,13 @@ class EmployeeService {
 
         # Check that patterns are deduplicated
         patterns = employee_findings[0].matched_patterns
-        assert len(patterns) == len(set(patterns)), (
+        pattern_strs = [p.pattern for p in patterns]
+        assert len(pattern_strs) == len(set(pattern_strs)), (
             f"matched_patterns contains duplicates: {patterns}"
         )
 
         # Verify 'employee' appears exactly once despite multiple occurrences in code
-        employee_count = sum(1 for p in patterns if p.lower() == "employee")
+        employee_count = sum(1 for p in patterns if p.pattern.lower() == "employee")
         assert employee_count == 1, (
             f"'employee' should appear once, found {employee_count} times in {patterns}"
         )

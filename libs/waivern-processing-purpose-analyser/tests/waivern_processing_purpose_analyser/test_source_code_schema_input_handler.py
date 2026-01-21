@@ -214,7 +214,7 @@ class UserFormHandler {
         payment_findings = [
             f
             for f in findings
-            if any("payment" in pattern.lower() for pattern in f.matched_patterns)
+            if any("payment" in p.pattern.lower() for p in f.matched_patterns)
             or "payment" in f.purpose.lower()
         ]
         assert len(payment_findings) > 0
@@ -390,8 +390,8 @@ class UserFormHandler {
             f
             for f in findings
             if any(
-                pattern.lower() in ["aws", "dropbox", "amazon"]
-                for pattern in f.matched_patterns
+                p.pattern.lower() in ["aws", "dropbox", "amazon"]
+                for p in f.matched_patterns
             )
         ]
 
@@ -435,8 +435,8 @@ class UserFormHandler {
             f
             for f in findings
             if any(
-                pattern in ["$_POST[", "$_GET[", "$_COOKIE[", "setcookie("]
-                for pattern in f.matched_patterns
+                p.pattern in ["$_POST[", "$_GET[", "$_COOKIE[", "setcookie("]
+                for p in f.matched_patterns
             )
         ]
 

@@ -18,7 +18,7 @@ with the key difference being evidence extraction strategy:
 from collections.abc import Generator, Sequence
 
 from waivern_analysers_shared.utilities import RulesetManager
-from waivern_core.schemas import BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_rulesets.data_collection import DataCollectionRule
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 from waivern_rulesets.service_integrations import ServiceIntegrationRule
@@ -136,9 +136,10 @@ class SourceCodeSchemaInputHandler:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
                 evidence = self._create_evidence(line_idx, lines)
                 line_number = line_idx + 1  # Convert to 1-based
+                matched_patterns = [PatternMatchDetail(pattern=pattern, match_count=1)]
                 findings.append(
                     self._create_finding_from_processing_purpose_rule(
-                        rule, [pattern], evidence, file_path, line_number
+                        rule, matched_patterns, evidence, file_path, line_number
                     )
                 )
 
@@ -147,9 +148,10 @@ class SourceCodeSchemaInputHandler:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
                 evidence = self._create_evidence(line_idx, lines)
                 line_number = line_idx + 1  # Convert to 1-based
+                matched_patterns = [PatternMatchDetail(pattern=pattern, match_count=1)]
                 findings.append(
                     self._create_finding_from_service_integration_rule(
-                        rule, [pattern], evidence, file_path, line_number
+                        rule, matched_patterns, evidence, file_path, line_number
                     )
                 )
 
@@ -158,9 +160,10 @@ class SourceCodeSchemaInputHandler:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
                 evidence = self._create_evidence(line_idx, lines)
                 line_number = line_idx + 1  # Convert to 1-based
+                matched_patterns = [PatternMatchDetail(pattern=pattern, match_count=1)]
                 findings.append(
                     self._create_finding_from_data_collection_rule(
-                        rule, [pattern], evidence, file_path, line_number
+                        rule, matched_patterns, evidence, file_path, line_number
                     )
                 )
 
@@ -224,7 +227,7 @@ class SourceCodeSchemaInputHandler:
     def _create_finding_from_processing_purpose_rule(
         self,
         rule: ProcessingPurposeRule,
-        matched_patterns: list[str],
+        matched_patterns: list[PatternMatchDetail],
         evidence: list[BaseFindingEvidence],
         file_path: str,
         line_number: int,
@@ -244,7 +247,7 @@ class SourceCodeSchemaInputHandler:
     def _create_finding_from_service_integration_rule(
         self,
         rule: ServiceIntegrationRule,
-        matched_patterns: list[str],
+        matched_patterns: list[PatternMatchDetail],
         evidence: list[BaseFindingEvidence],
         file_path: str,
         line_number: int,
@@ -265,7 +268,7 @@ class SourceCodeSchemaInputHandler:
     def _create_finding_from_data_collection_rule(
         self,
         rule: DataCollectionRule,
-        matched_patterns: list[str],
+        matched_patterns: list[PatternMatchDetail],
         evidence: list[BaseFindingEvidence],
         file_path: str,
         line_number: int,

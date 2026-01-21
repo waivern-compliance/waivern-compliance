@@ -63,7 +63,9 @@ class TestGDPRPersonalDataClassifierFactory:
                     {
                         "category": "email",
                         "evidence": [{"content": "test@example.com"}],
-                        "matched_patterns": ["email_pattern"],
+                        "matched_patterns": [
+                            {"pattern": "email_pattern", "match_count": 1}
+                        ],
                     }
                 ]
             },

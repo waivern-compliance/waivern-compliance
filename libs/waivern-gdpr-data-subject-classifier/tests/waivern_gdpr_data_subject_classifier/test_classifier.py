@@ -84,7 +84,10 @@ class TestGDPRDataSubjectClassifier:
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee John Smith, HR ID: 12345"}],
-                    "matched_patterns": ["employee", "HR"],
+                    "matched_patterns": [
+                        {"pattern": "employee", "match_count": 1},
+                        {"pattern": "HR", "match_count": 1},
+                    ],
                 }
             ],
             "summary": {
@@ -117,7 +120,10 @@ class TestGDPRDataSubjectClassifier:
                     "subject_category": "customer",
                     "confidence_score": 90,
                     "evidence": [{"content": "Customer order placed by Jane Doe"}],
-                    "matched_patterns": ["customer", "order"],
+                    "matched_patterns": [
+                        {"pattern": "customer", "match_count": 1},
+                        {"pattern": "order", "match_count": 1},
+                    ],
                 }
             ],
             "summary": {
@@ -150,7 +156,7 @@ class TestGDPRDataSubjectClassifier:
                     "subject_category": "employee",
                     "confidence_score": 80,
                     "evidence": [{"content": "Employee record"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -186,7 +192,7 @@ class TestGDPRDataSubjectClassifier:
                     "subject_category": "employee",
                     "confidence_score": 80,
                     "evidence": [{"content": "Employee salary"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -225,7 +231,7 @@ class TestGDPRDataSubjectClassifier:
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": original_evidence,
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -261,13 +267,13 @@ class TestGDPRDataSubjectClassifier:
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee data"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                 },
                 {
                     "subject_category": "customer",
                     "confidence_score": 90,
                     "evidence": [{"content": "Customer purchase"}],
-                    "matched_patterns": ["customer"],
+                    "matched_patterns": [{"pattern": "customer", "match_count": 1}],
                 },
             ],
             "summary": {
@@ -306,7 +312,7 @@ class TestGDPRDataSubjectClassifier:
                     "subject_category": "unknown_category",
                     "confidence_score": 50,
                     "evidence": [{"content": "some data"}],
-                    "matched_patterns": ["unknown"],
+                    "matched_patterns": [{"pattern": "unknown", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -341,7 +347,7 @@ class TestGDPRDataSubjectClassifier:
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee data"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                     "metadata": {
                         "source": "hr_database",
                         "context": {
@@ -386,7 +392,7 @@ class TestGDPRDataSubjectClassifier:
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee data"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                     # No metadata field
                 }
             ],
@@ -433,7 +439,7 @@ class TestRiskModifierDetection:
                     "evidence": [
                         {"content": "Student record for minor under 16 years"}
                     ],
-                    "matched_patterns": ["student"],
+                    "matched_patterns": [{"pattern": "student", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -467,7 +473,7 @@ class TestRiskModifierDetection:
                     "subject_category": "patient",
                     "confidence_score": 85,
                     "evidence": [{"content": "Pediatric patient - child under 10"}],
-                    "matched_patterns": ["patient"],
+                    "matched_patterns": [{"pattern": "patient", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -501,7 +507,7 @@ class TestRiskModifierDetection:
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee salary record"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -535,13 +541,13 @@ class TestRiskModifierDetection:
                     "subject_category": "student",
                     "confidence_score": 90,
                     "evidence": [{"content": "Minor student, age 14"}],
-                    "matched_patterns": ["student"],
+                    "matched_patterns": [{"pattern": "student", "match_count": 1}],
                 },
                 {
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Adult employee"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                 },
             ],
             "summary": {
@@ -595,7 +601,7 @@ class TestGDPRDataSubjectClassifierErrorHandling:
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee data"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                     "metadata": "not_a_dict",  # Malformed: string instead of dict
                 }
             ],
@@ -669,7 +675,7 @@ class TestFanInSupport:
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee John Smith"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                 }
             ],
             "summary": {"total_indicators": 1, "categories_identified": ["employee"]},
@@ -691,7 +697,7 @@ class TestFanInSupport:
                     "subject_category": "customer",
                     "confidence_score": 90,
                     "evidence": [{"content": "Customer order placed"}],
-                    "matched_patterns": ["customer"],
+                    "matched_patterns": [{"pattern": "customer", "match_count": 1}],
                 }
             ],
             "summary": {"total_indicators": 1, "categories_identified": ["customer"]},
@@ -728,7 +734,7 @@ class TestFanInSupport:
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Adult employee record"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                 }
             ],
             "summary": {"total_indicators": 1, "categories_identified": ["employee"]},
@@ -750,7 +756,7 @@ class TestFanInSupport:
                     "subject_category": "student",
                     "confidence_score": 90,
                     "evidence": [{"content": "Minor student, age 14"}],
-                    "matched_patterns": ["student"],
+                    "matched_patterns": [{"pattern": "student", "match_count": 1}],
                 }
             ],
             "summary": {"total_indicators": 1, "categories_identified": ["student"]},
@@ -788,7 +794,7 @@ class TestFanInSupport:
                     "subject_category": "employee",
                     "confidence_score": 85,
                     "evidence": [{"content": "Employee data"}],
-                    "matched_patterns": ["employee"],
+                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
                     "metadata": {
                         "source": "mysql_hr_table",
                         "context": {"connector_type": "mysql"},
@@ -814,7 +820,7 @@ class TestFanInSupport:
                     "subject_category": "customer",
                     "confidence_score": 90,
                     "evidence": [{"content": "Customer record"}],
-                    "matched_patterns": ["customer"],
+                    "matched_patterns": [{"pattern": "customer", "match_count": 1}],
                     "metadata": {
                         "source": "customers.csv",
                         "context": {"connector_type": "filesystem"},

@@ -9,7 +9,11 @@ from typing import override
 from unittest.mock import Mock
 
 from pydantic import Field
-from waivern_core.schemas import BaseFindingEvidence, BaseFindingModel
+from waivern_core.schemas import (
+    BaseFindingEvidence,
+    BaseFindingModel,
+    PatternMatchDetail,
+)
 from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.llm_validation.extended_context_strategy import (
@@ -33,7 +37,7 @@ class MockFinding(BaseFindingModel):
     @override
     def __str__(self) -> str:
         """Human-readable representation for logging."""
-        return f"{self.purpose} - {', '.join(self.matched_patterns)}"
+        return f"{self.purpose} - {', '.join(p.pattern for p in self.matched_patterns)}"
 
 
 def _create_finding(purpose: str, source_id: str) -> MockFinding:
@@ -42,7 +46,7 @@ def _create_finding(purpose: str, source_id: str) -> MockFinding:
         source_id=source_id,
         purpose=purpose,
         evidence=[BaseFindingEvidence(content=f"Evidence for {purpose}")],
-        matched_patterns=[purpose.lower()],
+        matched_patterns=[PatternMatchDetail(pattern=purpose.lower(), match_count=1)],
     )
 
 

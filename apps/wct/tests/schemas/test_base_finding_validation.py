@@ -2,7 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
-from waivern_core.schemas import BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_personal_data_analyser.schemas import (
     PersonalDataIndicatorModel,
 )
@@ -49,7 +49,7 @@ class TestBaseFindingModelValidation:
         with pytest.raises(ValidationError) as exc_info:
             PersonalDataIndicatorModel(
                 category="email",
-                matched_patterns=["email"],
+                matched_patterns=[PatternMatchDetail(pattern="email", match_count=1)],
                 evidence=[],  # Empty evidence - should fail business requirement
                 metadata=PersonalDataIndicatorMetadata(source="test_source"),
             )

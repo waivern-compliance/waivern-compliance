@@ -8,7 +8,7 @@ from collections.abc import Generator, Sequence
 from waivern_analysers_shared.matching import WordBoundaryMatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_analysers_shared.utilities import RulesetManager
-from waivern_core.schemas import BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_source_code_analyser import SourceCodeDataModel
 from waivern_source_code_analyser.schemas.source_code import SourceCodeFileDataModel
@@ -140,12 +140,17 @@ class SourceCodeSchemaInputHandler:
             # Collect all rules for confidence scoring
             matched_rules = [match[0] for match in matches]
 
-            # Collect unique matched patterns (preserve order using dict)
-            seen_patterns: dict[str, None] = {}
+            # Count pattern occurrences (preserve order using dict)
+            pattern_counts: dict[str, int] = {}
             for _, patterns, _ in matches:
                 for pattern in patterns:
-                    seen_patterns[pattern] = None
-            all_patterns = list(seen_patterns.keys())
+                    pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+
+            # Build PatternMatchDetail objects with counts
+            matched_patterns = [
+                PatternMatchDetail(pattern=p, match_count=c)
+                for p, c in pattern_counts.items()
+            ]
 
             # Use first match for evidence and line number
             first_line_number = matches[0][2]
@@ -158,7 +163,7 @@ class SourceCodeSchemaInputHandler:
                 subject_category=category,
                 confidence_score=confidence,
                 evidence=evidence,
-                matched_patterns=all_patterns,
+                matched_patterns=matched_patterns,
                 metadata=DataSubjectIndicatorMetadata(
                     source=file_path,
                     line_number=first_line_number,

@@ -48,6 +48,20 @@ class BaseFindingMetadata(BaseModel):
     )
 
 
+class PatternMatchDetail(BaseModel):
+    """Detail about a matched pattern including occurrence count.
+
+    This structured type replaces simple pattern strings to provide
+    richer information about how many times each pattern was found,
+    which is useful for auditing and confidence assessment.
+    """
+
+    pattern: str = Field(description="The pattern that matched")
+    match_count: int = Field(
+        ge=1, description="Number of times this pattern matched in the content"
+    )
+
+
 class BaseFindingModel(BaseModel):
     """Base model for all finding types with mandatory common fields.
 
@@ -64,9 +78,9 @@ class BaseFindingModel(BaseModel):
         min_length=1,
         description="Evidence items with content and timestamps for this finding",
     )
-    matched_patterns: list[str] = Field(
+    matched_patterns: list[PatternMatchDetail] = Field(
         min_length=1,
-        description="Patterns that were matched during analysis",
+        description="Patterns that were matched during analysis with occurrence counts",
     )
 
 
