@@ -28,7 +28,7 @@ class PersonalDataAnalyserConfig(BaseComponentConfiguration):
         description="Pattern matching configuration for personal data detection",
     )
     llm_validation: LLMValidationConfig = Field(
-        default_factory=lambda: LLMValidationConfig(enable_llm_validation=True),
+        default_factory=LLMValidationConfig,
         description="LLM validation configuration for filtering false positives",
     )
 

@@ -39,7 +39,7 @@ class TestPersonalDataAnalyser:
 
     # Test constants - defined locally, not imported from implementation
     EXPECTED_ANALYSER_NAME = "personal_data_analyser"
-    EXPECTED_OUTPUT_MESSAGE_ID = "Personal_data_analysis"
+    EXPECTED_OUTPUT_MESSAGE_ID_PREFIX = "personal_data_analysis_"
 
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
@@ -172,7 +172,7 @@ class TestPersonalDataAnalyser:
 
         # Assert - Basic message structure
         assert isinstance(result_message, Message)
-        assert result_message.id == self.EXPECTED_OUTPUT_MESSAGE_ID
+        assert result_message.id.startswith(self.EXPECTED_OUTPUT_MESSAGE_ID_PREFIX)
         assert result_message.schema == output_schema
 
         # Verify findings structure exists (count may vary based on real pattern matching)

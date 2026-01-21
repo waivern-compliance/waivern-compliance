@@ -10,10 +10,9 @@ from waivern_analysers_shared.types import PatternMatch, PatternType
 from waivern_analysers_shared.utilities import EvidenceExtractor
 
 
-def _make_match(pattern: str, start: int, end: int) -> PatternMatch:
+def _make_match(start: int, end: int) -> PatternMatch:
     """Helper to create a PatternMatch for testing."""
     return PatternMatch(
-        pattern=pattern,
         pattern_type=PatternType.WORD_BOUNDARY,
         start=start,
         end=end,
@@ -28,7 +27,7 @@ class TestExtractFromMatchBasicFunctionality:
         extractor = EvidenceExtractor()
         content = "The user email address is test@example.com for contact."
         # "email" starts at position 9
-        match = _make_match("email", start=9, end=14)
+        match = _make_match(start=9, end=14)
 
         evidence = extractor.extract_from_match(content, match, context_size="small")
 
@@ -41,7 +40,7 @@ class TestExtractFromMatchBasicFunctionality:
         extractor = EvidenceExtractor()
         content = "The USERNAME field contains AdminUser123."
         # "USERNAME" starts at position 4
-        match = _make_match("username", start=4, end=12)
+        match = _make_match(start=4, end=12)
 
         evidence = extractor.extract_from_match(content, match, context_size="small")
 
@@ -59,7 +58,7 @@ class TestExtractFromMatchContextSizes:
         prefix = "x" * 100
         suffix = "y" * 100
         content = prefix + " target_pattern " + suffix
-        match = _make_match("target_pattern", start=101, end=115)
+        match = _make_match(start=101, end=115)
 
         evidence = extractor.extract_from_match(content, match, context_size="small")
 
@@ -72,7 +71,7 @@ class TestExtractFromMatchContextSizes:
         prefix = "a" * 150
         suffix = "b" * 150
         content = prefix + " target_pattern " + suffix
-        match = _make_match("target_pattern", start=151, end=165)
+        match = _make_match(start=151, end=165)
 
         small_evidence = extractor.extract_from_match(
             content, match, context_size="small"
@@ -91,7 +90,7 @@ class TestExtractFromMatchContextSizes:
         prefix = "a" * 300
         suffix = "b" * 300
         content = prefix + " target_pattern " + suffix
-        match = _make_match("target_pattern", start=301, end=315)
+        match = _make_match(start=301, end=315)
 
         medium_evidence = extractor.extract_from_match(
             content, match, context_size="medium"
@@ -108,7 +107,7 @@ class TestExtractFromMatchContextSizes:
         """Test that full context returns the entire content."""
         extractor = EvidenceExtractor()
         content = "Start of document. The important pattern is here. End of document."
-        match = _make_match("pattern", start=33, end=40)
+        match = _make_match(start=33, end=40)
 
         evidence = extractor.extract_from_match(content, match, context_size="full")
 
@@ -120,7 +119,7 @@ class TestExtractFromMatchContextSizes:
         prefix = "x" * 100
         suffix = "y" * 100
         content = prefix + " target_pattern " + suffix
-        match = _make_match("target_pattern", start=101, end=115)
+        match = _make_match(start=101, end=115)
 
         small_evidence = extractor.extract_from_match(
             content, match, context_size="small"
@@ -141,7 +140,7 @@ class TestExtractFromMatchEllipsisHandling:
         extractor = EvidenceExtractor()
         prefix = "x" * 200
         content = prefix + " target "
-        match = _make_match("target", start=201, end=207)
+        match = _make_match(start=201, end=207)
 
         evidence = extractor.extract_from_match(content, match, context_size="small")
 
@@ -153,7 +152,7 @@ class TestExtractFromMatchEllipsisHandling:
         extractor = EvidenceExtractor()
         suffix = "y" * 200
         content = " target " + suffix
-        match = _make_match("target", start=1, end=7)
+        match = _make_match(start=1, end=7)
 
         evidence = extractor.extract_from_match(content, match, context_size="small")
 
@@ -166,7 +165,7 @@ class TestExtractFromMatchEllipsisHandling:
         prefix = "x" * 200
         suffix = "y" * 200
         content = prefix + " target " + suffix
-        match = _make_match("target", start=201, end=207)
+        match = _make_match(start=201, end=207)
 
         evidence = extractor.extract_from_match(content, match, context_size="small")
 
@@ -178,7 +177,7 @@ class TestExtractFromMatchEllipsisHandling:
         """Test that no ellipsis is added when using full context."""
         extractor = EvidenceExtractor()
         content = "Short content with target_pattern here."
-        match = _make_match("target_pattern", start=19, end=33)
+        match = _make_match(start=19, end=33)
 
         evidence = extractor.extract_from_match(content, match, context_size="full")
 
@@ -190,7 +189,7 @@ class TestExtractFromMatchEllipsisHandling:
         """Test that no ellipsis is added when content fits within context window."""
         extractor = EvidenceExtractor()
         content = "short target here"
-        match = _make_match("target", start=6, end=12)
+        match = _make_match(start=6, end=12)
 
         evidence = extractor.extract_from_match(content, match, context_size="small")
 
@@ -205,7 +204,7 @@ class TestExtractFromMatchBoundaryConditions:
         """Test extraction when match is at the start of content."""
         extractor = EvidenceExtractor()
         content = "target followed by more text here"
-        match = _make_match("target", start=0, end=6)
+        match = _make_match(start=0, end=6)
 
         evidence = extractor.extract_from_match(content, match, context_size="small")
 
@@ -217,7 +216,7 @@ class TestExtractFromMatchBoundaryConditions:
         """Test extraction when match is at the end of content."""
         extractor = EvidenceExtractor()
         content = "Some text before the target"
-        match = _make_match("target", start=21, end=27)
+        match = _make_match(start=21, end=27)
 
         evidence = extractor.extract_from_match(content, match, context_size="small")
 
@@ -229,7 +228,7 @@ class TestExtractFromMatchBoundaryConditions:
         """Test extraction with single character match."""
         extractor = EvidenceExtractor()
         content = "a"
-        match = _make_match("a", start=0, end=1)
+        match = _make_match(start=0, end=1)
 
         evidence = extractor.extract_from_match(content, match, context_size="small")
 
@@ -245,7 +244,7 @@ class TestExtractFromMatchDefaultParameters:
         prefix = "x" * 200
         suffix = "y" * 200
         content = prefix + " target " + suffix
-        match = _make_match("target", start=201, end=207)
+        match = _make_match(start=201, end=207)
 
         # Call without context_size parameter
         default_evidence = extractor.extract_from_match(content, match)

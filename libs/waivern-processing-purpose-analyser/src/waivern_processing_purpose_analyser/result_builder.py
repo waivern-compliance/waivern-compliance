@@ -5,6 +5,7 @@ Keeps the analyser focused on orchestration.
 """
 
 import logging
+from datetime import UTC, datetime
 
 from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core.message import Message
@@ -67,7 +68,7 @@ class ProcessingPurposeResultBuilder:
         result_data = output_model.model_dump(mode="json", exclude_none=True)
 
         output_message = Message(
-            id="Processing_purpose_analysis",
+            id=f"processing_purpose_analysis_{datetime.now(UTC).isoformat()}",
             content=result_data,
             schema=output_schema,
         )

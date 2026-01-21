@@ -27,11 +27,11 @@ class TestLLMValidationConfig:
     """Tests for LLMValidationConfig business rules."""
 
     def test_default_configuration_is_ready_to_use(self) -> None:
-        """Default config enables validation with sensible defaults."""
+        """Default config disables validation to avoid unexpected costs."""
         config = LLMValidationConfig()
 
-        # Validation enabled by default - users want false positive filtering
-        assert config.enable_llm_validation is True
+        # Validation disabled by default - users must opt-in to incur LLM costs
+        assert config.enable_llm_validation is False
 
         # Standard mode balances precision and recall
         assert config.llm_validation_mode == "standard"

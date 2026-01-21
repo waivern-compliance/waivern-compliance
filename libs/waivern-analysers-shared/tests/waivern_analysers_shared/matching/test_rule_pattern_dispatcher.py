@@ -22,7 +22,7 @@ class TestRulePatternDispatcherFindMatches:
 
         assert len(results) == 1
         assert results[0].first_match is not None
-        assert results[0].first_match.pattern == "email"
+        assert results[0].pattern == "email"
         assert results[0].first_match.pattern_type == PatternType.WORD_BOUNDARY
 
     def test_routes_value_patterns_to_regex_matcher(self) -> None:
@@ -38,7 +38,7 @@ class TestRulePatternDispatcherFindMatches:
 
         assert len(results) == 1
         assert results[0].first_match is not None
-        assert results[0].first_match.pattern == r"[a-z]+@[a-z]+\.[a-z]+"
+        assert results[0].pattern == r"[a-z]+@[a-z]+\.[a-z]+"
         assert results[0].first_match.pattern_type == PatternType.REGEX
 
     def test_combines_matches_from_both_matchers(self) -> None:
@@ -81,7 +81,7 @@ class TestRulePatternDispatcherFindMatches:
 
         # "email" and "address" match, "mailing" doesn't appear
         assert len(results) == 2
-        matched_patterns = {r.first_match.pattern for r in results if r.first_match}
+        matched_patterns = {r.pattern for r in results if r.first_match}
         assert matched_patterns == {"email", "address"}
 
 

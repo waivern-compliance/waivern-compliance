@@ -118,10 +118,10 @@ class TestProcessingPurposeAnalyserInitialisation:
         assert analyser is not None
         assert isinstance(analyser, ProcessingPurposeAnalyser)
 
-    def test_from_properties_enables_llm_validation_by_default(
+    def test_from_properties_disables_llm_validation_by_default(
         self, mock_llm_service: Mock
     ) -> None:
-        """Test that from_properties enables LLM validation by default."""
+        """Test that from_properties disables LLM validation by default."""
         # Arrange
         properties: dict[str, dict[str, str]] = {}
 
@@ -130,7 +130,7 @@ class TestProcessingPurposeAnalyserInitialisation:
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
         # Assert
-        # Create a test message to verify LLM validation is enabled in metadata
+        # Create a test message to verify LLM validation is disabled in metadata
         test_data = StandardInputDataModel(
             schemaVersion="1.0.0",
             name="LLM validation test",
@@ -150,7 +150,7 @@ class TestProcessingPurposeAnalyserInitialisation:
             Schema("processing_purpose_finding", "1.0.0"),
         )
         metadata = result.content["analysis_metadata"]
-        assert metadata["llm_validation_enabled"] is True
+        assert metadata["llm_validation_enabled"] is False
 
     def test_from_properties_respects_explicit_llm_validation_config(
         self, mock_llm_service: Mock
@@ -631,20 +631,20 @@ class TestProcessingPurposeAnalyserOutputValidation:
         # Verify the message validates successfully
         result.validate()  # Should not raise exception
 
-    def test_process_output_has_consistent_message_id(
+    def test_process_output_has_timestamped_message_id(
         self,
         analyser: ProcessingPurposeAnalyser,
         output_schema: Schema,
         test_message: Message,
     ) -> None:
-        """Test that process creates output with consistent message ID."""
+        """Test that process creates output with timestamped message ID."""
         # Act
         result = analyser.process([test_message], output_schema)
 
         # Assert
         assert isinstance(result.id, str)
         assert len(result.id) > 0
-        assert result.id == "Processing_purpose_analysis"
+        assert result.id.startswith("processing_purpose_analysis_")
 
     def test_process_output_summary_reflects_findings_count(
         self,
@@ -1059,6 +1059,7 @@ class TestFanInSupport:
     ) -> None:
         """Test that findings from multiple source_code messages are combined."""
         # Arrange - Message 1: payment service file
+        # Use word-boundary-compatible patterns (underscore as separator)
         content_1 = {
             "schemaVersion": "1.0.0",
             "name": "Repo 1",
@@ -1073,8 +1074,8 @@ class TestFanInSupport:
                 {
                     "file_path": "/repo1/PaymentService.php",
                     "language": "php",
-                    "raw_content": "<?php\nclass PaymentService {\n    public function processPayment() {}\n}\n",
-                    "metadata": {"file_size": 100, "line_count": 4},
+                    "raw_content": "<?php\nclass PaymentService {\n    // Handle payment processing\n    public function process_payment() {}\n}\n",
+                    "metadata": {"file_size": 100, "line_count": 5},
                 }
             ],
         }
@@ -1085,6 +1086,7 @@ class TestFanInSupport:
         )
 
         # Arrange - Message 2: analytics service file
+        # Use word-boundary-compatible patterns (standalone word in comment)
         content_2 = {
             "schemaVersion": "1.0.0",
             "name": "Repo 2",
@@ -1099,8 +1101,8 @@ class TestFanInSupport:
                 {
                     "file_path": "/repo2/AnalyticsService.php",
                     "language": "php",
-                    "raw_content": "<?php\nclass AnalyticsService {\n    public function trackAnalytics() {}\n}\n",
-                    "metadata": {"file_size": 100, "line_count": 4},
+                    "raw_content": "<?php\nclass AnalyticsService {\n    // Track analytics for users\n    public function track_analytics() {}\n}\n",
+                    "metadata": {"file_size": 100, "line_count": 5},
                 }
             ],
         }
@@ -1135,6 +1137,7 @@ class TestFanInSupport:
     ) -> None:
         """Test that summary statistics reflect ALL findings from all source_code messages."""
         # Arrange - Message 1: payment service
+        # Use word-boundary-compatible patterns (underscore as separator)
         content_1 = {
             "schemaVersion": "1.0.0",
             "name": "Repo 1",
@@ -1149,14 +1152,15 @@ class TestFanInSupport:
                 {
                     "file_path": "/repo1/PaymentService.php",
                     "language": "php",
-                    "raw_content": "<?php\nclass PaymentService {\n    public function processPayment() {}\n}\n",
-                    "metadata": {"file_size": 100, "line_count": 4},
+                    "raw_content": "<?php\nclass PaymentService {\n    // Handle payment processing\n    public function process_payment() {}\n}\n",
+                    "metadata": {"file_size": 100, "line_count": 5},
                 }
             ],
         }
         message_1 = Message(id="source_1", content=content_1, schema=source_code_schema)
 
         # Arrange - Message 2: analytics service
+        # Use word-boundary-compatible patterns (standalone word in comment)
         content_2 = {
             "schemaVersion": "1.0.0",
             "name": "Repo 2",
@@ -1171,8 +1175,8 @@ class TestFanInSupport:
                 {
                     "file_path": "/repo2/AnalyticsService.php",
                     "language": "php",
-                    "raw_content": "<?php\nclass AnalyticsService {\n    public function trackAnalytics() {}\n}\n",
-                    "metadata": {"file_size": 100, "line_count": 4},
+                    "raw_content": "<?php\nclass AnalyticsService {\n    // Track analytics for users\n    public function track_analytics() {}\n}\n",
+                    "metadata": {"file_size": 100, "line_count": 5},
                 }
             ],
         }
