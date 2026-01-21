@@ -52,7 +52,6 @@ class WordBoundaryMatcher:
         return PatternMatchResult(
             pattern=pattern,
             first_match=PatternMatch(
-                pattern=pattern,
                 pattern_type=PatternType.WORD_BOUNDARY,
                 start=first.start(),
                 end=first.end(),

@@ -14,7 +14,7 @@ class TestWordBoundaryMatcherBoundaryDetection:
         result = matcher.find_match("user dna sample", "dna")
 
         assert result.first_match is not None
-        assert result.first_match.pattern == "dna"
+        assert result.pattern == "dna"
         assert result.first_match.pattern_type == PatternType.WORD_BOUNDARY
 
     def test_matches_pattern_with_underscore_boundaries(self) -> None:
@@ -24,7 +24,7 @@ class TestWordBoundaryMatcherBoundaryDetection:
         result = matcher.find_match("user_dna_sample", "dna")
 
         assert result.first_match is not None
-        assert result.first_match.pattern == "dna"
+        assert result.pattern == "dna"
 
     def test_matches_pattern_with_punctuation_boundaries(self) -> None:
         """Pattern matches when surrounded by punctuation."""

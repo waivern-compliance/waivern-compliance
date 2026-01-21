@@ -47,7 +47,6 @@ class RegexMatcher:
         return PatternMatchResult(
             pattern=pattern,
             first_match=PatternMatch(
-                pattern=pattern,
                 pattern_type=PatternType.REGEX,
                 start=first.start(),
                 end=first.end(),

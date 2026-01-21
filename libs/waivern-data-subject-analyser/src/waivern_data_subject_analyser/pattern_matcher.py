@@ -86,9 +86,7 @@ class DataSubjectPatternMatcher:
                 all_results.extend(results)
 
             matched_patterns = [
-                PatternMatchDetail(
-                    pattern=r.first_match.pattern, match_count=r.match_count
-                )
+                PatternMatchDetail(pattern=r.pattern, match_count=r.match_count)
                 for r in all_results
                 if r.first_match
             ]

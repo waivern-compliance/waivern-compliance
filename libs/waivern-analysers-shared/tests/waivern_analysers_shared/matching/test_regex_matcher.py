@@ -15,7 +15,7 @@ class TestRegexMatcherPatternMatching:
         result = matcher.find_match("email@example.com", r"[a-z]+@[a-z]+\.[a-z]+")
 
         assert result.first_match is not None
-        assert result.first_match.pattern == r"[a-z]+@[a-z]+\.[a-z]+"
+        assert result.pattern == r"[a-z]+@[a-z]+\.[a-z]+"
 
     def test_matching_is_case_insensitive(self) -> None:
         """Matching is case insensitive."""

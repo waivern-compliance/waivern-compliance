@@ -30,15 +30,17 @@ class PatternMatch:
     Used to track matches from both word-boundary and regex patterns with
     their exact positions for evidence extraction.
 
+    Note: The pattern itself is not stored here - it belongs to the parent
+    PatternMatchResult which represents the search operation. This avoids
+    redundant data storage.
+
     Attributes:
-        pattern: The pattern string that matched
         pattern_type: Whether this was word-boundary or regex matching
         start: Start position (inclusive) in the content
         end: End position (exclusive) in the content
 
     """
 
-    pattern: str
     pattern_type: PatternType
     start: int
     end: int
