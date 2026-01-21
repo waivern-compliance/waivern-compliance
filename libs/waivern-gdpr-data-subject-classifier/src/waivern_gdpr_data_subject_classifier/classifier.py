@@ -1,9 +1,9 @@
 """GDPR data subject classifier implementation."""
 
 import logging
-import re
 from typing import Any, cast, override
 
+from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
@@ -26,11 +26,15 @@ logger = logging.getLogger(__name__)
 
 
 class RiskModifierDetector:
-    """Detects risk modifiers from evidence text using compiled regex patterns.
+    """Detects risk modifiers from evidence text using word boundary and regex patterns.
 
     Risk modifiers indicate special considerations for data subject processing,
     such as minors (Article 8) or vulnerable individuals (Recital 75) that
     require additional protections under GDPR.
+
+    Uses RulePatternDispatcher for consistent pattern matching:
+    - patterns: Word boundary matching (case-insensitive)
+    - value_patterns: Regex matching for complex patterns
     """
 
     def __init__(self, risk_modifiers: RiskModifiers) -> None:
@@ -41,11 +45,10 @@ class RiskModifierDetector:
                            and risk-decreasing modifiers.
 
         """
-        self._patterns: list[tuple[re.Pattern[str], str]] = []
-        all_modifiers = risk_modifiers.risk_increasing + risk_modifiers.risk_decreasing
-        for modifier in all_modifiers:
-            compiled = re.compile(modifier.pattern, re.IGNORECASE)
-            self._patterns.append((compiled, modifier.modifier))
+        self._modifiers = (
+            risk_modifiers.risk_increasing + risk_modifiers.risk_decreasing
+        )
+        self._dispatcher = RulePatternDispatcher()
 
     def detect(self, evidence_texts: list[str]) -> list[str]:
         """Detect risk modifiers from evidence texts.
@@ -59,9 +62,11 @@ class RiskModifierDetector:
         """
         detected: set[str] = set()
         for text in evidence_texts:
-            for pattern, modifier_name in self._patterns:
-                if pattern.search(text):
-                    detected.add(modifier_name)
+            for modifier in self._modifiers:
+                # RulePatternDispatcher works with any object that has
+                # patterns and value_patterns attributes (duck typing)
+                if self._dispatcher.find_matches(text, modifier):  # type: ignore[arg-type]
+                    detected.add(modifier.modifier)
         return sorted(detected)
 
 

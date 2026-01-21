@@ -14,14 +14,34 @@ from waivern_rulesets.core.base import YAMLRuleset
 
 
 class RiskModifier(BaseModel):
-    """Risk modifier definition for data subject classification."""
+    """Risk modifier definition for data subject classification.
 
-    pattern: str = Field(description="Regex pattern to match risk modifier")
+    Uses the same pattern matching structure as detection rules:
+    - patterns: Word boundary matching (case-insensitive)
+    - value_patterns: Regex matching for complex patterns
+    """
+
+    patterns: list[str] = Field(
+        default_factory=list,
+        description="Word boundary patterns to match (case-insensitive)",
+    )
+    value_patterns: list[str] = Field(
+        default_factory=list,
+        description="Regex patterns for complex matching",
+    )
     modifier: str = Field(description="Name of the risk modifier")
     article_references: list[str] = Field(
         min_length=1,
         description="GDPR article references for this modifier",
     )
+
+    @model_validator(mode="after")
+    def validate_has_patterns(self) -> "RiskModifier":
+        """Ensure at least one pattern type is provided."""
+        if not self.patterns and not self.value_patterns:
+            msg = f"RiskModifier '{self.modifier}' must have at least one pattern"
+            raise ValueError(msg)
+        return self
 
 
 class RiskModifiers(BaseModel):
