@@ -265,6 +265,42 @@ risk_modifiers:
       modifier: "vulnerable_individual"
       article_references:
         - "Recital 75"
+    - pattern: "patient"
+      modifier: "health_related"
+      article_references:
+        - "Article 9"
+    - pattern: "union_member|union|guild|guild_member"
+      modifier: "union_related"
+      article_references:
+        - "Article 9"
+    - pattern: "heterosexual|homosexual|trans|bisexual|straight|queer|gay|transsexual"
+      modifier: "sexuality_related"
+      article_references:
+        - "Article 9"
+    - pattern: "labour|conservative|reform|liberal_democrat|green|democrat|republican|socialist|communist|party|SDLP|unionist|coalition|sinn_fein|scottish_national_party|plaid_cymru"
+      modifier: "party_membership_related"
+      article_references:
+        - "Article 9"
+    - pattern: "white|caucasian|european|white_british|white_irish|white_other|black|african|caribbean|black_british|black_african|black_caribbean|asian|south_asian|east_asian|southeast_asian|chinese|indian|pakistani|bangladeshi|filipino|vietnamese|korean|japanese|arab|middle_eastern|hispanic|latino|latina|latinx|native_american|indigenous|aboriginal|first_nations|inuit|metis|pacific_islander|polynesian|maori|mixed|mixed_race|multiracial|biracial"
+      modifier: "ethnic_group_related"
+      article_references:
+        - "Article 9"
+    - pattern: "christianity|christian|catholic|protestant|orthodox|anglican|baptist|methodist|lutheran|presbyterian|evangelical|pentecostal|mormon|jehovah_witness|seventh_day_adventist|islam|muslim|sunni|shia|sufi|judaism|jewish|orthodox_jewish|reform_jewish|conservative_jewish|hinduism|hindu|buddhism|buddhist|sikhism|sikh|jainism|jain|zoroastrianism|zoroastrian|bahai|shinto|taoism|taoist|confucianism|paganism|pagan|wicca|druid|rastafarian|scientology|atheism|atheist|agnostic|agnosticism|humanism|humanist|secularism|secular|rationalism|rationalist|no_religion|non_religious|irreligious|spiritual_but_not_religious|free_thinker|ethical_culture|unitarian|universalist|other_religion|prefer_not_to_say|declined|unknown"
+      modifier: "religious_belief_related"
+      article_references:
+        - "Article 9"
+    - pattern: "veganism|vegan|vegetarianism|pacifism|pacifist|feminism|feminist|environmentalism|anti_capitalism|socialism|socialist|communism|libertarianism|anarchism|political_belief|ethical_veganism|animal_rights|conscientious_objection|philosophical_veganism"
+      modifier: "philosophical_belief_related"
+      article_references:
+        - "Article 9"
+    - pattern: "fingerprint_id|face_template_id|iris_data|voice_sample|biometric_hash|genetic_sample_id|dna_profile_id|genome_data|genetic_test_result|biometric_image|facial_vector|fingerprint_minutiae|iris_code|voice_signature|genetic_sequence|genomic_file|biometric_feature_vector"
+      modifier: "biometric_data"
+      article_references:
+        - "Article 9"
+    - pattern: "vcf_file|fasta|fastq|bam_file|genetic_sample|dna_sample|genetic_report|test_result_genetic|genomic_sequence|nucleotide|base_pair|snp|genetic_variant|hereditary_condition|family_medical_history|inherited_condition|genetic_disorder"
+      modifier: "genetic_data"
+      article_references:
+        - "Article 9"
   risk_decreasing:
     - pattern: "non-EU|third.country"
       modifier: "non_eu_resident"
