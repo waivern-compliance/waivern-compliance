@@ -180,7 +180,7 @@ def _build_findings_to_validate(findings: list[ProcessingPurposeFindingModel]) -
 Finding [{finding.id}]:
   Purpose: {finding.purpose}
   Category: {finding.purpose_category}
-  Patterns: {", ".join(p.pattern for p in finding.matched_patterns)}
+  Patterns: {", ".join(f"{p.pattern} (×{p.match_count})" for p in finding.matched_patterns)}
   Source: {source}
   Evidence:
   {evidence_text}""")

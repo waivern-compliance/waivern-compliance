@@ -145,7 +145,7 @@ def _build_findings_block(findings: list[DataSubjectIndicatorModel]) -> str:
         findings_text.append(f"""
 Finding [{finding.id}]:
   Subject Category: {finding.subject_category}
-  Patterns: {", ".join(p.pattern for p in finding.matched_patterns)}
+  Patterns: {", ".join(f"{p.pattern} (×{p.match_count})" for p in finding.matched_patterns)}
   Source: {source}
   Evidence:
   {evidence_text}""")
