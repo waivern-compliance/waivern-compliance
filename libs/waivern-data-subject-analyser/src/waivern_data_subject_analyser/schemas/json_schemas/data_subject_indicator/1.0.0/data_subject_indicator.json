@@ -115,9 +115,9 @@
           "type": "array"
         },
         "matched_patterns": {
-          "description": "Patterns that were matched during analysis",
+          "description": "Patterns that were matched during analysis with occurrence counts",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/PatternMatchDetail"
           },
           "minItems": 1,
           "title": "Matched Patterns",
@@ -212,6 +212,28 @@
           "type": "null"
         }
       ]
+    },
+    "PatternMatchDetail": {
+      "description": "Detail about a matched pattern including occurrence count.\n\nThis structured type replaces simple pattern strings to provide\nricher information about how many times each pattern was found,\nwhich is useful for auditing and confidence assessment.",
+      "properties": {
+        "pattern": {
+          "description": "The pattern that matched",
+          "title": "Pattern",
+          "type": "string"
+        },
+        "match_count": {
+          "description": "Number of times this pattern matched in the content",
+          "minimum": 1,
+          "title": "Match Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pattern",
+        "match_count"
+      ],
+      "title": "PatternMatchDetail",
+      "type": "object"
     }
   },
   "description": "Complete output structure for data_subject_indicator schema.\n\nThis model represents the full wire format for data subject detection results,\nincluding indicators, summary statistics, and analysis metadata.",

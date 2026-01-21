@@ -1,7 +1,7 @@
 """Tests for data subject validation prompts focusing on behaviour."""
 
 import pytest
-from waivern_core.schemas import BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 
 from waivern_data_subject_analyser.prompts.data_subject_validation import (
     get_data_subject_validation_prompt,
@@ -32,7 +32,9 @@ class TestDataSubjectValidationPrompt:
 
         return DataSubjectIndicatorModel(
             subject_category=subject_category,
-            matched_patterns=[matched_pattern],
+            matched_patterns=[
+                PatternMatchDetail(pattern=matched_pattern, match_count=1)
+            ],
             confidence_score=confidence_score,
             evidence=evidence_items,
             metadata=metadata,

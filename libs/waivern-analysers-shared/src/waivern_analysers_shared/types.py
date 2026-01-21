@@ -1,10 +1,69 @@
 """Configuration types for analysers."""
 
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field, field_validator
 from waivern_core.schemas import BaseFindingModel
+
+
+class PatternType(Enum):
+    """Type of pattern matching strategy.
+
+    WORD_BOUNDARY: Matches patterns at word boundaries only, avoiding false
+        positives in compound words or encoded strings (e.g., base64).
+
+    REGEX: Full regex matching for detecting actual data values like
+        email addresses, phone numbers, etc.
+    """
+
+    WORD_BOUNDARY = "word_boundary"
+    REGEX = "regex"
+
+
+@dataclass(frozen=True, slots=True)
+class PatternMatch:
+    """A single pattern match with position information.
+
+    Immutable value object representing where a pattern matched in content.
+    Used to track matches from both word-boundary and regex patterns with
+    their exact positions for evidence extraction.
+
+    Attributes:
+        pattern: The pattern string that matched
+        pattern_type: Whether this was word-boundary or regex matching
+        start: Start position (inclusive) in the content
+        end: End position (exclusive) in the content
+
+    """
+
+    pattern: str
+    pattern_type: PatternType
+    start: int
+    end: int
+
+    @property
+    def matched_text_length(self) -> int:
+        """Length of the actual matched text."""
+        return self.end - self.start
+
+
+@dataclass(frozen=True, slots=True)
+class PatternMatchResult:
+    """Result of searching for a pattern in content.
+
+    Contains the first match position (for evidence extraction) and
+    the total match count (for auditing/reporting).
+
+    Attributes:
+        first_match: The first match found, or None if no matches
+        match_count: Total number of times the pattern matched
+
+    """
+
+    first_match: PatternMatch | None
+    match_count: int
 
 
 class SchemaReader[T](Protocol):

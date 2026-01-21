@@ -147,6 +147,15 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message: ...
 
 **Schema files:** `{package}/schemas/json_schemas/{name}/{version}/{name}.json`
 
+**JSON Schema Generation:**
+- JSON schemas are **auto-generated** from Pydantic models - **NEVER edit them manually**
+- Each analyser/classifier package has a `scripts/generate-schema.sh` script
+- When updating Pydantic models that affect schema output, regenerate using:
+  ```bash
+  bash libs/<package-name>/scripts/generate-schema.sh
+  ```
+- The script uses `OutputModel.generate_json_schema(path)` to generate from Pydantic
+
 ## Code Standards
 
 - **Type annotations required** (basedpyright strict mode)

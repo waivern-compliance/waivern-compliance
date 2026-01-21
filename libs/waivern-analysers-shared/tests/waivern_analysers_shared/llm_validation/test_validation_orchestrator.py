@@ -8,7 +8,11 @@ decisions (Case A/B/C) based on sample validation results.
 from unittest.mock import Mock
 
 import pytest
-from waivern_core.schemas.finding_types import BaseFindingEvidence, BaseFindingModel
+from waivern_core.schemas.finding_types import (
+    BaseFindingEvidence,
+    BaseFindingModel,
+    PatternMatchDetail,
+)
 from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.llm_validation.models import (
@@ -34,7 +38,7 @@ def make_finding(finding_id: str, group: str) -> MockFinding:
         id=finding_id,
         group=group,
         evidence=[BaseFindingEvidence(content=f"Evidence for {finding_id}")],
-        matched_patterns=["test_pattern"],
+        matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
     )
 
 

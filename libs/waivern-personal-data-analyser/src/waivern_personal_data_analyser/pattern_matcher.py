@@ -1,12 +1,9 @@
 """Pattern matcher class for personal data analysis."""
 
+from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
-from waivern_analysers_shared.utilities import (
-    EvidenceExtractor,
-    PatternMatcher,
-    RulesetManager,
-)
-from waivern_core.schemas import BaseMetadata
+from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
+from waivern_core.schemas import BaseMetadata, PatternMatchDetail
 from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 
 from .schemas.types import PersonalDataIndicatorMetadata, PersonalDataIndicatorModel
@@ -29,7 +26,7 @@ class PersonalDataPatternMatcher:
         self.config = config
         self._evidence_extractor = EvidenceExtractor()
         self._ruleset_manager = RulesetManager()
-        self._pattern_matcher = PatternMatcher()
+        self._dispatcher = RulePatternDispatcher()
 
     def find_patterns(
         self,
@@ -46,7 +43,6 @@ class PersonalDataPatternMatcher:
             List of personal data indicators
 
         """
-        # Check if content is empty
         if not content.strip():
             return []
 
@@ -55,40 +51,43 @@ class PersonalDataPatternMatcher:
         )
         findings: list[PersonalDataIndicatorModel] = []
 
-        # Process each rule
         for rule in rules:
-            # Check each pattern in the rule and collect all matches
-            # Uses word boundary-aware matching to reduce false positives
-            matched_patterns: list[str] = []
-            for pattern in rule.patterns:
-                if self._pattern_matcher.matches(content, pattern):
-                    matched_patterns.append(pattern)
+            results = self._dispatcher.find_matches(content, rule)
 
-            # If any patterns matched, create a single indicator for this rule
-            if matched_patterns:
-                # Extract evidence using the first matched pattern as representative
-                evidence_matches = self._evidence_extractor.extract_evidence(
+            if results:
+                # Get first match for evidence extraction
+                first_result = results[0]
+                if first_result.first_match is None:
+                    continue
+
+                evidence = self._evidence_extractor.extract_from_match(
                     content,
-                    matched_patterns[0],
-                    self.config.maximum_evidence_count,
+                    first_result.first_match,
                     self.config.evidence_context_size,
                 )
 
-                if evidence_matches:  # Only create indicator if we have evidence
-                    # Create personal data indicator
-                    finding_metadata = None
-                    if metadata:
-                        finding_metadata = PersonalDataIndicatorMetadata(
-                            source=metadata.source,
-                            context=metadata.context,
-                        )
-
-                    finding = PersonalDataIndicatorModel(
-                        category=rule.category,
-                        matched_patterns=matched_patterns,
-                        evidence=evidence_matches,
-                        metadata=finding_metadata,
+                # Collect all matched patterns with their counts
+                matched_patterns = [
+                    PatternMatchDetail(
+                        pattern=r.first_match.pattern, match_count=r.match_count
                     )
-                    findings.append(finding)
+                    for r in results
+                    if r.first_match
+                ]
+
+                finding_metadata = None
+                if metadata:
+                    finding_metadata = PersonalDataIndicatorMetadata(
+                        source=metadata.source,
+                        context=metadata.context,
+                    )
+
+                finding = PersonalDataIndicatorModel(
+                    category=rule.category,
+                    matched_patterns=matched_patterns,
+                    evidence=[evidence],
+                    metadata=finding_metadata,
+                )
+                findings.append(finding)
 
         return findings

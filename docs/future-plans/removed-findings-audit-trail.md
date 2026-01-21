@@ -89,7 +89,7 @@ class RemovedFindingRecord(BaseModel):
       "original_finding": {
         "category": "biometric",
         "evidence": [...],
-        "matched_patterns": ["voice"]
+        "matched_patterns": [{"pattern": "voice", "match_count": 1}]
       },
       "validation_result": "FALSE_POSITIVE",
       "confidence": 0.99,

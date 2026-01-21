@@ -1,6 +1,10 @@
 """Tests for sampling strategies."""
 
-from waivern_core.schemas.finding_types import BaseFindingEvidence, BaseFindingModel
+from waivern_core.schemas.finding_types import (
+    BaseFindingEvidence,
+    BaseFindingModel,
+    PatternMatchDetail,
+)
 
 from waivern_analysers_shared.llm_validation.sampling import (
     RandomSamplingStrategy,
@@ -18,7 +22,7 @@ def make_finding(finding_id: str) -> MockFinding:
     return MockFinding(
         id=finding_id,
         evidence=[BaseFindingEvidence(content="test evidence")],
-        matched_patterns=["test_pattern"],
+        matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
     )
 
 

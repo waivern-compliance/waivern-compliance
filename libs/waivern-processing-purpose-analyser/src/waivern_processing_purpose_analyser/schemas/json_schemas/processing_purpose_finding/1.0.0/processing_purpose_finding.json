@@ -91,6 +91,28 @@
         }
       ]
     },
+    "PatternMatchDetail": {
+      "description": "Detail about a matched pattern including occurrence count.\n\nThis structured type replaces simple pattern strings to provide\nricher information about how many times each pattern was found,\nwhich is useful for auditing and confidence assessment.",
+      "properties": {
+        "pattern": {
+          "description": "The pattern that matched",
+          "title": "Pattern",
+          "type": "string"
+        },
+        "match_count": {
+          "description": "Number of times this pattern matched in the content",
+          "minimum": 1,
+          "title": "Match Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pattern",
+        "match_count"
+      ],
+      "title": "PatternMatchDetail",
+      "type": "object"
+    },
     "ProcessingPurposeFindingMetadata": {
       "additionalProperties": false,
       "description": "Metadata for processing purpose findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
@@ -146,9 +168,9 @@
           "type": "array"
         },
         "matched_patterns": {
-          "description": "Patterns that were matched during analysis",
+          "description": "Patterns that were matched during analysis with occurrence counts",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/PatternMatchDetail"
           },
           "minItems": 1,
           "title": "Matched Patterns",

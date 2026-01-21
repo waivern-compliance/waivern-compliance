@@ -49,36 +49,57 @@ class SourceCodeSchemaInputHandler:
 
 ### Analysis Flow
 
-Pattern matching is performed line-by-line against raw content:
+Pattern matching is performed line-by-line against raw content. Matches are then
+**grouped by purpose** (rule name), aggregating pattern counts and using the first
+match location for evidence:
 
 ```python
-def _analyse_file_data(self, file_data, file_metadata):
-    findings = []
+def _analyse_file_data(self, file_data):
+    # 1. Collect all matches across all rules
+    purpose_matches: dict[str, list[MatchInfo]] = {}
 
     for rule in self._processing_purposes_rules:
-        for i, line in enumerate(file_data["raw_content"].splitlines()):
-            for pattern in rule.patterns:
-                if pattern.lower() in line.lower():
-                    # Create finding with line-based evidence
-                    ...
+        for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
+            purpose = rule.name  # Group key
+            if purpose not in purpose_matches:
+                purpose_matches[purpose] = []
+            purpose_matches[purpose].append(MatchInfo(pattern=pattern, ...))
 
-    return findings
+    # 2. Create ONE finding per purpose with aggregated pattern counts
+    for purpose, matches in purpose_matches.items():
+        pattern_counts = Counter(m.pattern for m in matches)
+        matched_patterns = [
+            PatternMatchDetail(pattern=p, match_count=c)
+            for p, c in pattern_counts.items()
+        ]
+        # Evidence from first match location with context window
+        ...
 ```
+
+This grouping behaviour ensures that multiple occurrences of the same processing
+purpose in a file produce a single finding with accurate match counts, rather than
+one finding per pattern match.
 
 ### Example Finding Structure
 
+Findings are grouped by purpose (rule name), with pattern match counts aggregated:
+
 ```json
 {
-  "purpose": "payment_processing",
-  "purpose_category": "OPERATIONAL",
-  "matched_patterns": ["payment"],
+  "purpose": "Payment, Billing, and Invoicing",
+  "purpose_category": "operational",
+  "matched_patterns": [
+    {"pattern": "payment", "match_count": 3},
+    {"pattern": "checkout", "match_count": 2}
+  ],
   "evidence": [
-    {"content": "Line 15: function processPayment($amount)"}
+    {"content": "  15  function processPayment($amount) {\n  16      // Process checkout\n  17  }"}
   ],
   "metadata": {
-    "source": "source_code"
+    "source": "src/payments/checkout.php",
+    "line_number": 15
   },
-  "service_category": "payment_processing"
+  "service_category": null
 }
 ```
 

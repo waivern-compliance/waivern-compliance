@@ -40,7 +40,9 @@ class PersonalDataIndicatorModel(BaseFindingModel):
     @override
     def __str__(self) -> str:
         """Human-readable representation for logging and debugging."""
-        return f"{self.category} - {', '.join(self.matched_patterns)}"
+        return (
+            f"{self.category} - {', '.join(p.pattern for p in self.matched_patterns)}"
+        )
 
 
 class PersonalDataIndicatorSummary(BaseModel):

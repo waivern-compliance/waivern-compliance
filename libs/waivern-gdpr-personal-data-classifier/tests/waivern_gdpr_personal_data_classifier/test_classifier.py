@@ -83,7 +83,7 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "category": "email",
                     "evidence": [{"content": "user@example.com"}],
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -117,7 +117,7 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "category": "health",
                     "evidence": [{"content": "patient diagnosis"}],
-                    "matched_patterns": ["medical"],
+                    "matched_patterns": [{"pattern": "medical", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -149,7 +149,7 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "category": "email",
                     "evidence": [{"content": "test@example.com"}],
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -187,7 +187,7 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "category": "email",
                     "evidence": original_evidence,
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -221,12 +221,12 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "category": "email",
                     "evidence": [{"content": "test@example.com"}],
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                 },
                 {
                     "category": "health",
                     "evidence": [{"content": "patient data"}],
-                    "matched_patterns": ["medical"],
+                    "matched_patterns": [{"pattern": "medical", "match_count": 1}],
                 },
             ],
             "summary": {
@@ -259,7 +259,7 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "category": "unknown_category",
                     "evidence": [{"content": "some data"}],
-                    "matched_patterns": ["unknown"],
+                    "matched_patterns": [{"pattern": "unknown", "match_count": 1}],
                 }
             ],
             "summary": {
@@ -294,7 +294,7 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "category": "email",
                     "evidence": [{"content": "user@example.com"}],
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                     "metadata": {
                         "source": "users_table",
                         "context": {
@@ -335,7 +335,7 @@ class TestGDPRPersonalDataClassifier:
                 {
                     "category": "email",
                     "evidence": [{"content": "user@example.com"}],
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                     # No metadata field
                 }
             ],
@@ -384,7 +384,7 @@ class TestGDPRPersonalDataClassifierErrorHandling:
                 {
                     "category": "email",
                     "evidence": [{"content": "test@example.com"}],
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                     "metadata": "not_a_dict",  # Malformed: string instead of dict
                 }
             ],
@@ -417,7 +417,7 @@ class TestGDPRPersonalDataClassifierErrorHandling:
                 {
                     "category": "email",
                     "evidence": [{"content": "test@example.com"}],
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                     "metadata": ["not", "a", "dict"],  # Malformed: list instead of dict
                 }
             ],
@@ -484,7 +484,7 @@ class TestFanInSupport:
                 {
                     "category": "email",
                     "evidence": [{"content": "user@example.com"}],
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                 }
             ],
             "summary": {"total_findings": 1},
@@ -505,7 +505,7 @@ class TestFanInSupport:
                 {
                     "category": "phone",
                     "evidence": [{"content": "+44 123 456 7890"}],
-                    "matched_patterns": ["phone"],
+                    "matched_patterns": [{"pattern": "phone", "match_count": 1}],
                 }
             ],
             "summary": {"total_findings": 1},
@@ -541,7 +541,7 @@ class TestFanInSupport:
                 {
                     "category": "email",
                     "evidence": [{"content": "user@example.com"}],
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                 }
             ],
             "summary": {"total_findings": 1},
@@ -562,7 +562,7 @@ class TestFanInSupport:
                 {
                     "category": "health",
                     "evidence": [{"content": "patient diagnosis"}],
-                    "matched_patterns": ["medical"],
+                    "matched_patterns": [{"pattern": "medical", "match_count": 1}],
                 }
             ],
             "summary": {"total_findings": 1},
@@ -596,7 +596,7 @@ class TestFanInSupport:
                 {
                     "category": "email",
                     "evidence": [{"content": "user@example.com"}],
-                    "matched_patterns": ["email"],
+                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
                     "metadata": {
                         "source": "mysql_users_table",
                         "context": {"connector_type": "mysql"},
@@ -621,7 +621,7 @@ class TestFanInSupport:
                 {
                     "category": "phone",
                     "evidence": [{"content": "+44 123 456 7890"}],
-                    "matched_patterns": ["phone"],
+                    "matched_patterns": [{"pattern": "phone", "match_count": 1}],
                     "metadata": {
                         "source": "config_file.txt",
                         "context": {"connector_type": "filesystem"},

@@ -75,7 +75,7 @@ class GDPRPersonalDataFindingModel(BaseFindingModel):
     @override
     def __str__(self) -> str:
         """Human-readable representation for logging and debugging."""
-        return f"{self.indicator_type} ({self.privacy_category}) - {', '.join(self.matched_patterns)}"
+        return f"{self.indicator_type} ({self.privacy_category}) - {', '.join(p.pattern for p in self.matched_patterns)}"
 
 
 class GDPRPersonalDataSummary(BaseModel):

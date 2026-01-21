@@ -39,7 +39,7 @@ class DataSubjectIndicatorModel(BaseFindingModel):
     @override
     def __str__(self) -> str:
         """Human-readable representation for logging and debugging."""
-        return f"{self.subject_category} - {', '.join(self.matched_patterns)}"
+        return f"{self.subject_category} - {', '.join(p.pattern for p in self.matched_patterns)}"
 
 
 class DataSubjectIndicatorSummary(BaseModel):

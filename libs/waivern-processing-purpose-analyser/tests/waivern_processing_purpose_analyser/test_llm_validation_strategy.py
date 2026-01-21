@@ -10,7 +10,7 @@ from unittest.mock import Mock
 import pytest
 from waivern_analysers_shared.llm_validation import SourceBatch
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_core.schemas import BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 
 from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeFindingMetadata,
@@ -35,7 +35,7 @@ def _make_finding(
     return ProcessingPurposeFindingModel(
         purpose=purpose,
         purpose_category=purpose_category,
-        matched_patterns=[pattern],
+        matched_patterns=[PatternMatchDetail(pattern=pattern, match_count=1)],
         evidence=[BaseFindingEvidence(content=f"Content: {pattern}")],
         metadata=ProcessingPurposeFindingMetadata(
             source=source, line_number=line_number

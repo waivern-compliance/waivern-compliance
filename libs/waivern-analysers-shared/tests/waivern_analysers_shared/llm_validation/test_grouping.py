@@ -1,6 +1,10 @@
 """Tests for grouping strategies."""
 
-from waivern_core.schemas.finding_types import BaseFindingEvidence, BaseFindingModel
+from waivern_core.schemas.finding_types import (
+    BaseFindingEvidence,
+    BaseFindingModel,
+    PatternMatchDetail,
+)
 
 from waivern_analysers_shared.llm_validation.grouping import (
     ConcernGroupingStrategy,
@@ -22,7 +26,7 @@ def make_finding(finding_id: str, purpose: str, source: str) -> MockFinding:
         purpose=purpose,
         source=source,
         evidence=[BaseFindingEvidence(content="test evidence")],
-        matched_patterns=["test_pattern"],
+        matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
     )
 
 

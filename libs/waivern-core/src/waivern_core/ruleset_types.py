@@ -16,6 +16,7 @@ from pydantic import (
     ConfigDict,
     Field,
     field_validator,
+    model_validator,
 )
 
 
@@ -52,23 +53,34 @@ class DetectionRule(Rule):
     data subjects, etc. by matching patterns against text content.
 
     Attributes:
-        patterns: Tuple of patterns to match (case-insensitive word boundary matching)
+        patterns: Tuple of word-boundary patterns to match (case-insensitive)
+        value_patterns: Tuple of regex patterns for value-based detection
 
     """
 
     patterns: tuple[str, ...] = Field(
-        min_length=1, description="Tuple of patterns to match"
+        default=(), description="Word-boundary patterns (case-insensitive matching)"
+    )
+    value_patterns: tuple[str, ...] = Field(
+        default=(), description="Regex patterns for value-based detection"
     )
 
-    @field_validator("patterns")
+    @field_validator("patterns", "value_patterns")
     @classmethod
-    def validate_patterns_not_empty(cls, patterns: tuple[str, ...]) -> tuple[str, ...]:
-        """Validate that patterns contains at least one non-empty pattern."""
-        if not patterns:
-            raise ValueError("Rule must contain at least one pattern")
+    def validate_patterns_not_empty_strings(
+        cls, patterns: tuple[str, ...]
+    ) -> tuple[str, ...]:
+        """Validate that pattern tuples contain no empty strings."""
         if any(not pattern.strip() for pattern in patterns):
             raise ValueError("All patterns must be non-empty strings")
         return patterns
+
+    @model_validator(mode="after")
+    def validate_has_patterns(self) -> "DetectionRule":
+        """Ensure at least one pattern type is specified."""
+        if not self.patterns and not self.value_patterns:
+            raise ValueError("Rule must have at least one pattern or value_pattern")
+        return self
 
 
 class ClassificationRule(Rule):

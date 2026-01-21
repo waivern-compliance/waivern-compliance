@@ -1,7 +1,7 @@
 """Tests for personal data validation prompts focusing on behaviour."""
 
 import pytest
-from waivern_core.schemas import BaseFindingEvidence
+from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 
 from waivern_personal_data_analyser.prompts.personal_data_validation import (
     get_personal_data_validation_prompt,
@@ -31,7 +31,9 @@ class TestPersonalDataValidationPrompt:
 
         return PersonalDataIndicatorModel(
             category=category,
-            matched_patterns=[matched_pattern],
+            matched_patterns=[
+                PatternMatchDetail(pattern=matched_pattern, match_count=1)
+            ],
             evidence=evidence_items,
             metadata=metadata,
         )

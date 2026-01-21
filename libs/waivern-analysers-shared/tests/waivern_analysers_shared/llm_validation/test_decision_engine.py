@@ -1,6 +1,10 @@
 """Tests for shared validation decision engine."""
 
-from waivern_core.schemas import BaseFindingEvidence, BaseFindingModel
+from waivern_core.schemas import (
+    BaseFindingEvidence,
+    BaseFindingModel,
+    PatternMatchDetail,
+)
 
 from waivern_analysers_shared.llm_validation import (
     LLMValidationResultModel,
@@ -13,7 +17,7 @@ def _create_test_finding(pattern: str = "test_pattern") -> BaseFindingModel:
     """Create a test finding for validation tests."""
     return BaseFindingModel(
         evidence=[BaseFindingEvidence(content="test content")],
-        matched_patterns=[pattern],
+        matched_patterns=[PatternMatchDetail(pattern=pattern, match_count=1)],
     )
 
 
