@@ -133,3 +133,115 @@ class TestPatternMatcherFindAll:
         # Verify we can use positions to extract the actual matched text
         for start, end in matches:
             assert content[start:end].lower() == "email"
+
+
+class TestPatternMatcherMatchesValue:
+    """Test the matches_value() method for regex pattern matching."""
+
+    def test_matches_value_with_email_pattern(self) -> None:
+        """Test matching an email address pattern in content."""
+        matcher = PatternMatcher()
+        email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+        assert matcher.matches_value("contact: john@example.com", email_pattern) is True
+        assert (
+            matcher.matches_value(
+                "notes: email is test.user@company.co.uk", email_pattern
+            )
+            is True
+        )
+
+    def test_matches_value_with_phone_pattern(self) -> None:
+        """Test matching a phone number pattern in content."""
+        matcher = PatternMatcher()
+        uk_phone_pattern = r"(?:\+44|0)\s?[1-9]\d{8,9}"
+
+        assert matcher.matches_value("call: +44 7911123456", uk_phone_pattern) is True
+        assert matcher.matches_value("phone: 07911123456", uk_phone_pattern) is True
+
+    def test_matches_value_returns_false_when_no_match(self) -> None:
+        """Test that non-matching content returns False."""
+        matcher = PatternMatcher()
+        email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+        assert matcher.matches_value("no email address here", email_pattern) is False
+        assert matcher.matches_value("just some random text", email_pattern) is False
+
+    def test_matches_value_is_case_insensitive(self) -> None:
+        """Test that regex matching is case insensitive."""
+        matcher = PatternMatcher()
+
+        # Pattern in lowercase, content in uppercase
+        assert (
+            matcher.matches_value("EMAIL: JOHN@EXAMPLE.COM", r"john@example\.com")
+            is True
+        )
+        # Pattern specifies case, content differs
+        assert matcher.matches_value("Test Value Here", r"test value") is True
+
+    def test_matches_value_returns_false_for_empty_content(self) -> None:
+        """Test that empty content returns False."""
+        matcher = PatternMatcher()
+
+        assert matcher.matches_value("", r"pattern") is False
+        assert matcher.matches_value("   ", r"pattern") is False
+
+    def test_matches_value_returns_false_for_empty_pattern(self) -> None:
+        """Test that empty pattern returns False."""
+        matcher = PatternMatcher()
+
+        assert matcher.matches_value("some content", "") is False
+
+
+class TestPatternMatcherFindAllValues:
+    """Test the find_all_values() method for finding regex match positions."""
+
+    def test_find_all_values_returns_single_match_position(self) -> None:
+        """Test finding a single regex match returns correct position."""
+        matcher = PatternMatcher()
+        email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+        matches = matcher.find_all_values("contact: john@example.com", email_pattern)
+        assert len(matches) == 1
+
+    def test_find_all_values_returns_multiple_match_positions(self) -> None:
+        """Test finding multiple regex matches returns all positions."""
+        matcher = PatternMatcher()
+        email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+        content = "emails: john@example.com and jane@test.org"
+        matches = matcher.find_all_values(content, email_pattern)
+        assert len(matches) == 2
+
+    def test_find_all_values_returns_empty_list_when_no_matches(self) -> None:
+        """Test that no matches returns empty list."""
+        matcher = PatternMatcher()
+        email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+        assert matcher.find_all_values("no email here", email_pattern) == []
+        assert matcher.find_all_values("just text", email_pattern) == []
+
+    def test_find_all_values_positions_allow_text_extraction(self) -> None:
+        """Test that returned positions can extract the matched text."""
+        matcher = PatternMatcher()
+        email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+        content = "contact: john@example.com for info"
+        matches = matcher.find_all_values(content, email_pattern)
+
+        # Verify we can use positions to extract the actual matched text
+        assert len(matches) == 1
+        start, end = matches[0]
+        assert content[start:end] == "john@example.com"
+
+    def test_find_all_values_returns_empty_list_for_empty_content(self) -> None:
+        """Test that empty content returns empty list."""
+        matcher = PatternMatcher()
+
+        assert matcher.find_all_values("", r"pattern") == []
+
+    def test_find_all_values_returns_empty_list_for_empty_pattern(self) -> None:
+        """Test that empty pattern returns empty list."""
+        matcher = PatternMatcher()
+
+        assert matcher.find_all_values("some content", "") == []
