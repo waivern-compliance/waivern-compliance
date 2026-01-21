@@ -1,11 +1,8 @@
 """Pattern matcher class for processing purpose analysis."""
 
+from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
-from waivern_analysers_shared.utilities import (
-    EvidenceExtractor,
-    PatternMatcher,
-    RulesetManager,
-)
+from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
 from waivern_core.schemas import BaseMetadata
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
@@ -32,7 +29,7 @@ class ProcessingPurposePatternMatcher:
         self._config = config
         self._evidence_extractor = EvidenceExtractor()
         self._ruleset_manager = RulesetManager()
-        self._pattern_matcher = PatternMatcher()
+        self._dispatcher = RulePatternDispatcher()
 
     def find_patterns(
         self,
@@ -49,7 +46,6 @@ class ProcessingPurposePatternMatcher:
             List of processing purpose findings
 
         """
-        # Check if content is empty
         if not content.strip():
             return []
 
@@ -58,52 +54,40 @@ class ProcessingPurposePatternMatcher:
         )
         findings: list[ProcessingPurposeFindingModel] = []
 
-        # Process each rule
         for rule in rules:
-            # Check each pattern in the rule and collect all matches
-            # Uses word boundary-aware matching to reduce false positives
-            matched_patterns: list[str] = []
-            for pattern in rule.patterns:
-                if self._pattern_matcher.matches(content, pattern):
-                    matched_patterns.append(pattern)
+            results = self._dispatcher.find_matches(content, rule)
 
-            # Check value patterns (regex-based matching)
-            for value_pattern in rule.value_patterns:
-                if self._pattern_matcher.matches_value(content, value_pattern):
-                    matched_patterns.append(f"value:{value_pattern}")
+            if results:
+                # Get first match for evidence extraction
+                first_result = results[0]
+                if first_result.first_match is None:
+                    continue
 
-            # If any patterns matched, create a single finding for this rule
-            if matched_patterns:
-                # Extract evidence using the first matched pattern as representative
-                # Determine if we need value pattern extraction
-                first_match = matched_patterns[0]
-                is_value_pattern = first_match.startswith("value:")
-                evidence_pattern = first_match[6:] if is_value_pattern else first_match
-
-                evidence = self._evidence_extractor.extract_evidence(
+                evidence = self._evidence_extractor.extract_from_match(
                     content,
-                    evidence_pattern,
-                    self._config.maximum_evidence_count,
+                    first_result.first_match,
                     self._config.evidence_context_size,
-                    is_value_pattern=is_value_pattern,
                 )
 
-                if evidence:  # Only create finding if we have evidence
-                    # Create processing purpose specific finding
-                    finding_metadata = None
-                    if metadata:
-                        finding_metadata = ProcessingPurposeFindingMetadata(
-                            source=metadata.source,
-                            context=metadata.context,
-                        )
+                # Collect all matched patterns
+                matched_patterns = [
+                    r.first_match.pattern for r in results if r.first_match
+                ]
 
-                    finding = ProcessingPurposeFindingModel(
-                        purpose=rule.name,
-                        purpose_category=rule.purpose_category,
-                        matched_patterns=matched_patterns,
-                        evidence=evidence,
-                        metadata=finding_metadata,
+                finding_metadata = None
+                if metadata:
+                    finding_metadata = ProcessingPurposeFindingMetadata(
+                        source=metadata.source,
+                        context=metadata.context,
                     )
-                    findings.append(finding)
+
+                finding = ProcessingPurposeFindingModel(
+                    purpose=rule.name,
+                    purpose_category=rule.purpose_category,
+                    matched_patterns=matched_patterns,
+                    evidence=[evidence],
+                    metadata=finding_metadata,
+                )
+                findings.append(finding)
 
         return findings

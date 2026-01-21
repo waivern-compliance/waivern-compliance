@@ -5,8 +5,9 @@ Uses authoritative Pydantic models from waivern-source-code-analyser.
 
 from collections.abc import Generator, Sequence
 
+from waivern_analysers_shared.matching import WordBoundaryMatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
-from waivern_analysers_shared.utilities import PatternMatcher, RulesetManager
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core.schemas import BaseFindingEvidence
 from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_source_code_analyser import SourceCodeDataModel
@@ -50,7 +51,7 @@ class SourceCodeSchemaInputHandler:
         self._context_window: SourceCodeContextWindow = context_window
         self._ruleset_manager = RulesetManager()
         self._confidence_scorer = DataSubjectConfidenceScorer()
-        self._pattern_matcher = PatternMatcher()
+        self._word_boundary_matcher = WordBoundaryMatcher()
 
     def analyse(self, data: object) -> list[DataSubjectIndicatorModel]:
         """Analyse input data for data subject patterns.
@@ -172,8 +173,8 @@ class SourceCodeSchemaInputHandler:
     ) -> Generator[tuple[int, str], None, None]:
         """Find all pattern matches in source code lines.
 
-        Uses word boundary-aware matching (via PatternMatcher) to reduce
-        false positives from partial matches.
+        Uses word boundary-aware matching to reduce false positives
+        from partial matches.
 
         Args:
             lines: Source code lines to search.
@@ -185,7 +186,8 @@ class SourceCodeSchemaInputHandler:
         """
         for i, line in enumerate(lines):
             for pattern in patterns:
-                if self._pattern_matcher.matches(line, pattern):
+                result = self._word_boundary_matcher.find_match(line, pattern)
+                if result.first_match is not None:
                     yield (i, pattern)
 
     def _create_evidence(

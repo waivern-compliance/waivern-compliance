@@ -2,7 +2,7 @@
 
 from waivern_core.schemas import BaseFindingEvidence
 
-from waivern_analysers_shared.utilities.pattern_matcher import PatternMatcher
+from waivern_analysers_shared.types import PatternMatch
 
 
 class EvidenceExtractor:
@@ -14,7 +14,6 @@ class EvidenceExtractor:
     _CONTEXT_SIZE_LARGE = 200
 
     # Default values
-    _DEFAULT_MAX_EVIDENCE = 3
     _DEFAULT_CONTEXT_SIZE = "small"
 
     # Special markers
@@ -24,65 +23,33 @@ class EvidenceExtractor:
     # Context size options
     _CONTEXT_SIZE_FULL = "full"
 
-    def extract_evidence(
+    def extract_from_match(
         self,
         content: str,
-        pattern: str,
-        max_evidence: int = _DEFAULT_MAX_EVIDENCE,
+        match: PatternMatch,
         context_size: str = _DEFAULT_CONTEXT_SIZE,
-        is_value_pattern: bool = False,
-    ) -> list[BaseFindingEvidence]:
-        """Extract evidence snippets where the pattern was found.
+    ) -> BaseFindingEvidence:
+        """Extract a single evidence snippet from a pattern match.
+
+        Uses the match position directly - no re-searching required.
 
         Args:
-            content: The full content to search in
-            pattern: The pattern that was matched (word-boundary or regex)
-            max_evidence: Maximum number of evidence snippets to collect
-            context_size: Size of context around evidence matches
-                         ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars, 'full': entire content)
-            is_value_pattern: If True, use regex matching; if False, use word-boundary matching
+            content: The full content
+            match: PatternMatch with position information
+            context_size: Size of context around evidence
+                ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars, 'full': entire content)
 
         Returns:
-            List of unique evidence items with content and collection timestamps
+            Evidence item with content snippet around the match
 
         """
-        if not content or not pattern:
-            return []
-
-        if max_evidence <= 0:
-            return []
-
-        evidence_content_set: set[str] = set()  # Use set to avoid duplicate content
-        evidence_items: list[BaseFindingEvidence] = []
-
-        # Use PatternMatcher with appropriate matching strategy
-        matcher = PatternMatcher()
-        if is_value_pattern:
-            matches = matcher.find_all_values(content, pattern)
-        else:
-            matches = matcher.find_all(content, pattern)
-
-        # Extract evidence from each match position
-        for match_start, match_end in matches:
-            if len(evidence_content_set) >= max_evidence:
-                break
-
-            # Calculate actual match length (important for regex where len(pattern) != match length)
-            match_length = match_end - match_start
-            evidence_snippet = self._extract_evidence_snippet(
-                content, match_start, match_length, context_size
-            )
-
-            if evidence_snippet and evidence_snippet not in evidence_content_set:
-                evidence_content_set.add(evidence_snippet)
-                evidence_items.append(BaseFindingEvidence(content=evidence_snippet))
-
-            # For 'full' context, only include one snippet since it contains everything
-            if self._is_full_context(context_size):
-                break
-
-        # Return evidence items sorted by content for consistent ordering
-        return sorted(evidence_items, key=lambda item: item.content)
+        snippet = self._extract_evidence_snippet(
+            content,
+            match.start,
+            match.matched_text_length,
+            context_size,
+        )
+        return BaseFindingEvidence(content=snippet)
 
     def _extract_evidence_snippet(
         self, content: str, match_pos: int, match_length: int, context_size: str
@@ -157,15 +124,3 @@ class EvidenceExtractor:
             self._CONTEXT_SIZE_FULL: None,
         }
         return size_mapping.get(context_size.lower(), self._CONTEXT_SIZE_SMALL)
-
-    def _is_full_context(self, context_size: str) -> bool:
-        """Check if the context size is set to 'full'.
-
-        Args:
-            context_size: Context size specification string
-
-        Returns:
-            True if context size is 'full', False otherwise
-
-        """
-        return context_size.lower() == self._CONTEXT_SIZE_FULL
