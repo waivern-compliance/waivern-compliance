@@ -709,3 +709,196 @@ const payment = require('stripe');""",
                 assert line[4:6] == "  ", (
                     f"Expected two spaces after line number: {line}"
                 )
+
+
+class TestFindingGroupingBehaviour:
+    """Tests for finding grouping behaviour.
+
+    Verifies that multiple matches of the same purpose in a file are
+    grouped into a single finding with aggregated match_count values.
+    """
+
+    @pytest.fixture
+    def sample_file_metadata(self) -> SourceCodeFileMetadataModel:
+        """Create sample file metadata for testing."""
+        return SourceCodeFileMetadataModel(
+            file_size=1024,
+            line_count=20,
+            last_modified="2024-01-01T00:00:00Z",
+        )
+
+    @pytest.fixture
+    def sample_analysis_metadata(self) -> SourceCodeAnalysisMetadataModel:
+        """Create sample analysis metadata for testing."""
+        return SourceCodeAnalysisMetadataModel(
+            total_files=1,
+            total_lines=20,
+            analysis_timestamp="2024-01-01T00:00:00Z",
+        )
+
+    def test_multiple_matches_of_same_purpose_grouped_into_single_finding(
+        self,
+        sample_file_metadata: SourceCodeFileMetadataModel,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+    ) -> None:
+        """Test that multiple matches of the same purpose produce one finding.
+
+        Grouping is by PURPOSE (rule.name), not by pattern keyword. When the same
+        rule's patterns match multiple times, matches are aggregated into ONE
+        finding with match_count reflecting total occurrences.
+
+        Note: Different rules may have overlapping patterns (e.g., 'payment' in
+        one rule and 'charge' in another), producing separate findings.
+        """
+        # Arrange - file with 'payment' appearing multiple times on different lines
+        file_data = SourceCodeFileDataModel(
+            file_path="/src/PaymentService.php",
+            language="php",
+            raw_content="""<?php
+class PaymentService {
+    public function processPayment($amount) {
+        // Handle payment processing
+        return $this->payment->process($amount);
+    }
+
+    public function refundPayment($id) {
+        // Handle payment refund
+        return $this->payment->refund($id);
+    }
+}
+""",
+            metadata=sample_file_metadata,
+        )
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Grouping test",
+            description="Test finding grouping behaviour",
+            source="source_code",
+            metadata=sample_analysis_metadata,
+            data=[file_data],
+        )
+        handler = SourceCodeSchemaInputHandler()
+
+        # Act
+        findings = handler.analyse(source_data)
+
+        # Assert - find the "Payment, Billing, and Invoicing" finding specifically
+        # This is the purpose name from the processing_purposes ruleset
+        billing_findings = [
+            f for f in findings if f.purpose == "Payment, Billing, and Invoicing"
+        ]
+
+        # Should have exactly ONE finding for this specific purpose
+        assert len(billing_findings) == 1, (
+            f"Expected 1 finding for 'Payment, Billing, and Invoicing', "
+            f"got {len(billing_findings)}"
+        )
+
+        # The finding should have match_count > 1 (multiple 'payment' occurrences)
+        finding = billing_findings[0]
+        payment_pattern = next(
+            (p for p in finding.matched_patterns if p.pattern == "payment"), None
+        )
+        assert payment_pattern is not None, "Expected 'payment' in matched_patterns"
+        assert payment_pattern.match_count > 1, (
+            f"Expected match_count > 1 for grouped 'payment' matches, "
+            f"got {payment_pattern.match_count}"
+        )
+
+    def test_different_purposes_produce_separate_findings(
+        self,
+        sample_file_metadata: SourceCodeFileMetadataModel,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+    ) -> None:
+        """Test that different purposes produce separate findings.
+
+        While matches of the same purpose are grouped, different purposes
+        should still produce separate findings.
+        """
+        # Arrange - file with both payment and analytics patterns
+        file_data = SourceCodeFileDataModel(
+            file_path="/src/MultiService.php",
+            language="php",
+            raw_content="""<?php
+class MultiService {
+    public function processPayment($amount) {
+        $this->analytics->track('payment_started');
+        return $this->payment->charge($amount);
+    }
+}
+""",
+            metadata=sample_file_metadata,
+        )
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Multiple purposes test",
+            description="Test separate findings for different purposes",
+            source="source_code",
+            metadata=sample_analysis_metadata,
+            data=[file_data],
+        )
+        handler = SourceCodeSchemaInputHandler()
+
+        # Act
+        findings = handler.analyse(source_data)
+
+        # Assert - should have findings from different purposes
+        purposes = {f.purpose for f in findings}
+        assert len(purposes) > 1, (
+            f"Expected multiple different purposes, got: {purposes}"
+        )
+
+    def test_match_count_reflects_actual_pattern_occurrences(
+        self,
+        sample_file_metadata: SourceCodeFileMetadataModel,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+    ) -> None:
+        """Test that match_count accurately reflects pattern occurrences.
+
+        The match_count should equal the number of LINES where the pattern
+        appears (case-insensitive substring match per line).
+        """
+        # Arrange - file with 'payment' appearing on exactly 4 lines
+        # (avoiding comments that might also match)
+        file_data = SourceCodeFileDataModel(
+            file_path="/src/PaymentHandler.php",
+            language="php",
+            raw_content="""<?php
+$payment1 = new Payment();
+$payment2 = new Payment();
+$payment3 = new Payment();
+$payment4 = new Payment();
+""",
+            metadata=sample_file_metadata,
+        )
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Match count test",
+            description="Test accurate match counting",
+            source="source_code",
+            metadata=sample_analysis_metadata,
+            data=[file_data],
+        )
+        handler = SourceCodeSchemaInputHandler()
+
+        # Act
+        findings = handler.analyse(source_data)
+
+        # Assert - find "Payment, Billing, and Invoicing" finding
+        billing_findings = [
+            f for f in findings if f.purpose == "Payment, Billing, and Invoicing"
+        ]
+
+        assert len(billing_findings) == 1, "Expected exactly one billing finding"
+
+        finding = billing_findings[0]
+        payment_pattern = next(
+            (p for p in finding.matched_patterns if p.pattern == "payment"), None
+        )
+        assert payment_pattern is not None, "Expected 'payment' pattern"
+
+        # 'payment' appears on exactly 4 lines
+        assert payment_pattern.match_count == 4, (
+            f"Expected match_count=4 for 'payment' (4 lines), "
+            f"got {payment_pattern.match_count}"
+        )
