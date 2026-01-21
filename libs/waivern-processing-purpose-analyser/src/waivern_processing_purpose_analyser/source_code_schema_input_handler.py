@@ -2,20 +2,13 @@
 
 Uses authoritative Pydantic models from waivern-source-code-analyser.
 
-TODO: Architecture improvements to consider:
-
-Pattern Matching Consolidation: This handler duplicates pattern matching
-logic from ProcessingPurposePatternMatcher. Both do:
-- Case-insensitive pattern matching against rulesets
-- Creating ProcessingPurposeFindingModel with compliance/evidence
-
-Consider extracting a shared base class or utility that both can use,
-with the key difference being evidence extraction strategy:
-- pattern_matcher: uses EvidenceExtractor for context windows
-- source_code_handler: uses line-by-line evidence with line numbers
+Groups matches by purpose (rule.name) within each file, similar to how
+DataSubjectAnalyser groups by subject_category.
 """
 
 from collections.abc import Generator, Sequence
+from dataclasses import dataclass
+from typing import Literal
 
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
@@ -32,6 +25,23 @@ from .schemas.types import (
     ProcessingPurposeFindingModel,
 )
 from .types import SourceCodeContextWindow
+
+RuleType = Literal["processing_purpose", "service_integration", "data_collection"]
+
+
+@dataclass
+class MatchInfo:
+    """Information about a pattern match for grouping."""
+
+    pattern: str
+    line_number: int
+    rule_type: RuleType
+    # Extra fields from specific rule types
+    purpose_category: str
+    service_category: str | None = None
+    collection_type: str | None = None
+    data_source: str | None = None
+
 
 # Context window sizes (lines before/after match)
 CONTEXT_WINDOW_SIZES: dict[SourceCodeContextWindow, int | None] = {
@@ -126,46 +136,109 @@ class SourceCodeSchemaInputHandler:
         self,
         file_data: SourceCodeFileDataModel,
     ) -> list[ProcessingPurposeFindingModel]:
-        """Analyse a single source code file for processing purpose patterns."""
-        findings: list[ProcessingPurposeFindingModel] = []
+        """Analyse a single source code file for processing purpose patterns.
+
+        Orchestrates the analysis flow:
+        1. Collect matches from all three rule types
+        2. Group matches by purpose (rule.name)
+        3. Aggregate pattern counts and create one finding per purpose
+
+        Args:
+            file_data: Source code file data to analyse.
+
+        Returns:
+            List of processing purpose findings for this file.
+
+        """
         lines = file_data.raw_content.splitlines()
         file_path = file_data.file_path
 
-        # Analyse processing purpose rules
+        # Group matches by purpose (rule.name)
+        # Structure: {purpose: [MatchInfo, ...]}
+        purpose_matches: dict[str, list[MatchInfo]] = {}
+
+        # Collect matches from processing purpose rules
         for rule in self._processing_purposes_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
-                evidence = self._create_evidence(line_idx, lines)
-                line_number = line_idx + 1  # Convert to 1-based
-                matched_patterns = [PatternMatchDetail(pattern=pattern, match_count=1)]
-                findings.append(
-                    self._create_finding_from_processing_purpose_rule(
-                        rule, matched_patterns, evidence, file_path, line_number
+                purpose = rule.name
+                if purpose not in purpose_matches:
+                    purpose_matches[purpose] = []
+                purpose_matches[purpose].append(
+                    MatchInfo(
+                        pattern=pattern,
+                        line_number=line_idx + 1,
+                        rule_type="processing_purpose",
+                        purpose_category=rule.purpose_category,
                     )
                 )
 
-        # Analyse service integration rules
+        # Collect matches from service integration rules
         for rule in self._service_integrations_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
-                evidence = self._create_evidence(line_idx, lines)
-                line_number = line_idx + 1  # Convert to 1-based
-                matched_patterns = [PatternMatchDetail(pattern=pattern, match_count=1)]
-                findings.append(
-                    self._create_finding_from_service_integration_rule(
-                        rule, matched_patterns, evidence, file_path, line_number
+                purpose = rule.name
+                if purpose not in purpose_matches:
+                    purpose_matches[purpose] = []
+                purpose_matches[purpose].append(
+                    MatchInfo(
+                        pattern=pattern,
+                        line_number=line_idx + 1,
+                        rule_type="service_integration",
+                        purpose_category=rule.purpose_category,
+                        service_category=rule.service_category,
                     )
                 )
 
-        # Analyse data collection rules
+        # Collect matches from data collection rules
         for rule in self._data_collection_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
-                evidence = self._create_evidence(line_idx, lines)
-                line_number = line_idx + 1  # Convert to 1-based
-                matched_patterns = [PatternMatchDetail(pattern=pattern, match_count=1)]
-                findings.append(
-                    self._create_finding_from_data_collection_rule(
-                        rule, matched_patterns, evidence, file_path, line_number
+                purpose = rule.name
+                if purpose not in purpose_matches:
+                    purpose_matches[purpose] = []
+                purpose_matches[purpose].append(
+                    MatchInfo(
+                        pattern=pattern,
+                        line_number=line_idx + 1,
+                        rule_type="data_collection",
+                        purpose_category="operational",
+                        collection_type=rule.collection_type,
+                        data_source=rule.data_source,
                     )
                 )
+
+        # Create one finding per purpose (grouped)
+        findings: list[ProcessingPurposeFindingModel] = []
+
+        for purpose, matches in purpose_matches.items():
+            # Count pattern occurrences (preserve order using dict)
+            pattern_counts: dict[str, int] = {}
+            for match in matches:
+                pattern_counts[match.pattern] = pattern_counts.get(match.pattern, 0) + 1
+
+            # Build PatternMatchDetail objects with counts
+            matched_patterns = [
+                PatternMatchDetail(pattern=p, match_count=c)
+                for p, c in pattern_counts.items()
+            ]
+
+            # Use first match for evidence, line number, and extra fields
+            first_match = matches[0]
+            first_line_idx = first_match.line_number - 1
+            evidence = self._create_evidence(first_line_idx, lines)
+
+            finding = ProcessingPurposeFindingModel(
+                purpose=purpose,
+                purpose_category=first_match.purpose_category,
+                matched_patterns=matched_patterns,
+                evidence=evidence,
+                metadata=ProcessingPurposeFindingMetadata(
+                    source=file_path,
+                    line_number=first_match.line_number,
+                ),
+                service_category=first_match.service_category,
+                collection_type=first_match.collection_type,
+                data_source=first_match.data_source,
+            )
+            findings.append(finding)
 
         return findings
 
@@ -223,66 +296,3 @@ class SourceCodeSchemaInputHandler:
         content = "\n".join(context_lines)
 
         return [BaseFindingEvidence(content=content)]
-
-    def _create_finding_from_processing_purpose_rule(
-        self,
-        rule: ProcessingPurposeRule,
-        matched_patterns: list[PatternMatchDetail],
-        evidence: list[BaseFindingEvidence],
-        file_path: str,
-        line_number: int,
-    ) -> ProcessingPurposeFindingModel:
-        """Create finding from ProcessingPurposeRule."""
-        return ProcessingPurposeFindingModel(
-            purpose=rule.name,
-            purpose_category=rule.purpose_category,
-            matched_patterns=matched_patterns,
-            evidence=evidence,
-            metadata=ProcessingPurposeFindingMetadata(
-                source=file_path,
-                line_number=line_number,
-            ),
-        )
-
-    def _create_finding_from_service_integration_rule(
-        self,
-        rule: ServiceIntegrationRule,
-        matched_patterns: list[PatternMatchDetail],
-        evidence: list[BaseFindingEvidence],
-        file_path: str,
-        line_number: int,
-    ) -> ProcessingPurposeFindingModel:
-        """Create finding from ServiceIntegrationRule."""
-        return ProcessingPurposeFindingModel(
-            purpose=rule.name,
-            purpose_category=rule.purpose_category,
-            matched_patterns=matched_patterns,
-            evidence=evidence,
-            metadata=ProcessingPurposeFindingMetadata(
-                source=file_path,
-                line_number=line_number,
-            ),
-            service_category=rule.service_category,
-        )
-
-    def _create_finding_from_data_collection_rule(
-        self,
-        rule: DataCollectionRule,
-        matched_patterns: list[PatternMatchDetail],
-        evidence: list[BaseFindingEvidence],
-        file_path: str,
-        line_number: int,
-    ) -> ProcessingPurposeFindingModel:
-        """Create finding from DataCollectionRule."""
-        return ProcessingPurposeFindingModel(
-            purpose=rule.name,
-            purpose_category="operational",
-            matched_patterns=matched_patterns,
-            evidence=evidence,
-            metadata=ProcessingPurposeFindingMetadata(
-                source=file_path,
-                line_number=line_number,
-            ),
-            collection_type=rule.collection_type,
-            data_source=rule.data_source,
-        )
