@@ -37,7 +37,6 @@ Testing rationale:
 from waivern_analysers_shared.llm_validation import (
     ConcernGroupingStrategy,
     RandomSamplingStrategy,
-    SamplingStrategy,
     ValidationOrchestrator,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
@@ -75,13 +74,12 @@ def create_validation_orchestrator(
     concern_provider = DataSubjectConcernProvider()
     grouping_strategy = ConcernGroupingStrategy(concern_provider)
 
-    # Sampling: Runtime configuration
-    # When sampling_size is configured, only a sample of findings per group is
-    # validated by the LLM. This reduces cost for large datasets while still
-    # applying group-level decisions to all findings.
-    sampling_strategy: SamplingStrategy[DataSubjectIndicatorModel] | None = None
-    if config.sampling_size is not None:
-        sampling_strategy = RandomSamplingStrategy(config.sampling_size)
+    # Sampling: Runtime configuration (always enabled, defaults to 3)
+    # Only a sample of findings per group is validated by the LLM. This reduces
+    # cost for large datasets while still applying group-level decisions to all.
+    sampling_strategy: RandomSamplingStrategy[DataSubjectIndicatorModel] = (
+        RandomSamplingStrategy(config.sampling_size)
+    )
 
     return ValidationOrchestrator(
         llm_strategy=llm_strategy,

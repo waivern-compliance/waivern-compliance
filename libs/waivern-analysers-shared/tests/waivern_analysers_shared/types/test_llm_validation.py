@@ -39,6 +39,9 @@ class TestLLMValidationConfig:
         # Batching config uses auto-detect
         assert config.batching.model_context_window is None
 
+        # Sampling enabled by default to limit API costs
+        assert config.sampling_size == 3
+
     def test_batch_size_minimum_prevents_degenerate_batches(self) -> None:
         """Batch size must be at least 1 - zero findings per batch is not useful."""
         with pytest.raises(ValidationError, match="llm_batch_size"):

@@ -40,9 +40,10 @@ class LLMValidationConfig(BaseModel):
         description="Token-aware batching configuration for extended context validation",
     )
 
-    sampling_size: int | None = Field(
-        default=None,
+    sampling_size: int = Field(
+        default=3,
         ge=1,
         le=100,
-        description="Number of samples per group for sampling-based validation. None = validate all.",
+        description="Number of samples per group for sampling-based validation. "
+        "Defaults to 3 to limit LLM API costs.",
     )
