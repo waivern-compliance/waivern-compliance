@@ -135,8 +135,7 @@ class GDPRPersonalDataClassifier(Classifier):
                 category,
             )
 
-        # Propagate metadata from indicator finding
-        metadata = None
+        # Propagate metadata from indicator finding (always present, fallback to "unknown")
         raw_metadata = finding.get("metadata")
         if isinstance(raw_metadata, dict):
             meta_dict = cast(dict[str, Any], raw_metadata)
@@ -144,6 +143,8 @@ class GDPRPersonalDataClassifier(Classifier):
                 source=meta_dict.get("source", "unknown"),
                 context=meta_dict.get("context", {}),
             )
+        else:
+            metadata = GDPRPersonalDataFindingMetadata(source="unknown")
 
         return GDPRPersonalDataFindingModel(
             indicator_type=category,

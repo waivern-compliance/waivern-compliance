@@ -2,7 +2,7 @@
 
 import logging
 
-from waivern_core.schemas import BaseFindingModel
+from waivern_core import Finding
 
 from .models import LLMValidationResultModel
 
@@ -15,7 +15,7 @@ class ValidationDecisionEngine:
     @staticmethod
     def should_keep_finding(
         result: LLMValidationResultModel,
-        finding: BaseFindingModel,
+        finding: Finding,
     ) -> bool:
         """Determine whether a finding should be kept based on validation results.
 
@@ -56,7 +56,7 @@ class ValidationDecisionEngine:
     @staticmethod
     def log_validation_decision(
         result: LLMValidationResultModel,
-        finding: BaseFindingModel,
+        finding: Finding,
     ) -> None:
         """Log validation decision with consistent format.
 

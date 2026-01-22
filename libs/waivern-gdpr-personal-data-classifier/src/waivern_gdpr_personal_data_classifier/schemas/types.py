@@ -23,7 +23,7 @@ class GDPRPersonalDataFindingMetadata(BaseFindingMetadata):
     pass
 
 
-class GDPRPersonalDataFindingModel(BaseFindingModel):
+class GDPRPersonalDataFindingModel(BaseFindingModel[GDPRPersonalDataFindingMetadata]):
     """GDPR personal data classification finding structure.
 
     Represents a personal data indicator that has been enriched with
@@ -34,6 +34,12 @@ class GDPRPersonalDataFindingModel(BaseFindingModel):
     Note: privacy_category values are NOT GDPR-defined terms - they're from
     legal team for reporting/governance purposes. GDPR only mandates the
     distinction between personal data (Article 4) and special category (Article 9).
+
+    Inherits from BaseFindingModel[GDPRPersonalDataFindingMetadata] which provides:
+    - id: str - Unique identifier (auto-generated UUID)
+    - evidence: list[BaseFindingEvidence] - Evidence items with content
+    - matched_patterns: list[PatternMatchDetail] - Patterns that matched
+    - metadata: GDPRPersonalDataFindingMetadata - Required metadata with source
     """
 
     # Original indicator information
@@ -66,10 +72,6 @@ class GDPRPersonalDataFindingModel(BaseFindingModel):
     ] = Field(
         default_factory=tuple,
         description="Applicable GDPR Article 6 lawful bases for processing",
-    )
-
-    metadata: GDPRPersonalDataFindingMetadata | None = Field(
-        default=None, description="Additional metadata from the original data source"
     )
 
     @override

@@ -145,23 +145,6 @@ class TestProcessingPurposePatternMatcher:
         assert "source" in metadata_dict
         assert "context" in metadata_dict
 
-    def test_find_patterns_handles_none_metadata_gracefully(
-        self,
-        valid_config: PatternMatchingConfig,
-    ) -> None:
-        """Test that find_patterns handles None metadata gracefully."""
-        # Arrange
-        pattern_matcher = ProcessingPurposePatternMatcher(valid_config)
-        content_with_support = "Support contact information"
-
-        # Act
-        findings = pattern_matcher.find_patterns(content_with_support, None)  # type: ignore[arg-type]
-
-        # Assert
-        assert len(findings) > 0
-        finding = findings[0]
-        assert finding.metadata is None
-
     def test_find_patterns_returns_valid_finding_structure(
         self,
         valid_config: PatternMatchingConfig,

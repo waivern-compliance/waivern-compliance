@@ -53,12 +53,9 @@ class SourceCodeSourceProvider:
             finding: The finding to extract source from.
 
         Returns:
-            File path, or empty string if metadata is missing.
-            Empty string triggers SKIP_REASON_NO_SOURCE in the shared strategy.
+            File path from the finding's metadata.source field.
 
         """
-        if finding.metadata is None:
-            return ""
         return finding.metadata.source
 
     def get_source_content(self, source_id: str) -> str | None:

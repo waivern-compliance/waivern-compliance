@@ -329,7 +329,11 @@ class TestGDPRPersonalDataClassifier:
         assert finding["metadata"]["context"]["database"] == "customers_db"
 
     def test_process_handles_findings_without_metadata(self) -> None:
-        """Test graceful handling of findings that lack metadata."""
+        """Test graceful handling of findings that lack metadata.
+
+        When input findings don't have metadata, the classifier provides
+        a fallback with source='unknown' to ensure metadata is always present.
+        """
         input_data = {
             "findings": [
                 {
@@ -356,9 +360,10 @@ class TestGDPRPersonalDataClassifier:
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
-        # Should still work, metadata should be None
+        # Should provide fallback metadata with source="unknown"
         finding = result.content["findings"][0]
-        assert finding.get("metadata") is None
+        assert finding["metadata"] is not None
+        assert finding["metadata"]["source"] == "unknown"
 
 
 # =============================================================================
@@ -378,7 +383,11 @@ class TestGDPRPersonalDataClassifierErrorHandling:
             classifier.process([], output_schema)
 
     def test_process_handles_malformed_metadata_gracefully(self) -> None:
-        """Test that non-dict metadata values don't crash the classifier."""
+        """Test that non-dict metadata values don't crash the classifier.
+
+        When input metadata is malformed (not a dict), the classifier provides
+        a fallback with source='unknown' to ensure metadata is always present.
+        """
         input_data = {
             "findings": [
                 {
@@ -401,17 +410,22 @@ class TestGDPRPersonalDataClassifierErrorHandling:
         )
         classifier = GDPRPersonalDataClassifier()
 
-        # Should not crash, metadata should be None
+        # Should not crash, provides fallback metadata
         result = classifier.process(
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
         finding = result.content["findings"][0]
-        assert finding.get("metadata") is None
+        assert finding["metadata"] is not None
+        assert finding["metadata"]["source"] == "unknown"
         assert finding["privacy_category"] == "identification_data"
 
     def test_process_handles_list_metadata_gracefully(self) -> None:
-        """Test that list metadata values (another malformed type) don't crash."""
+        """Test that list metadata values (another malformed type) don't crash.
+
+        When input metadata is malformed (list instead of dict), the classifier
+        provides a fallback with source='unknown' to ensure metadata is always present.
+        """
         input_data = {
             "findings": [
                 {
@@ -438,8 +452,10 @@ class TestGDPRPersonalDataClassifierErrorHandling:
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
+        # Should provide fallback metadata with source="unknown"
         finding = result.content["findings"][0]
-        assert finding.get("metadata") is None
+        assert finding["metadata"] is not None
+        assert finding["metadata"]["source"] == "unknown"
 
     def test_process_handles_empty_findings_list(self) -> None:
         """Test that empty findings list produces valid output with zero counts."""

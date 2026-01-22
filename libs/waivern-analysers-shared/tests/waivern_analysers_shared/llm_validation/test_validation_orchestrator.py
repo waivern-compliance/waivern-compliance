@@ -10,6 +10,7 @@ from unittest.mock import Mock
 import pytest
 from waivern_core.schemas.finding_types import (
     BaseFindingEvidence,
+    BaseFindingMetadata,
     BaseFindingModel,
     PatternMatchDetail,
 )
@@ -26,7 +27,7 @@ from waivern_analysers_shared.llm_validation.validation_orchestrator import (
 from waivern_analysers_shared.types import LLMValidationConfig
 
 
-class MockFinding(BaseFindingModel):
+class MockFinding(BaseFindingModel[BaseFindingMetadata]):
     """Simple finding for testing with group attribute."""
 
     group: str
@@ -39,6 +40,7 @@ def make_finding(finding_id: str, group: str) -> MockFinding:
         group=group,
         evidence=[BaseFindingEvidence(content=f"Evidence for {finding_id}")],
         matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
+        metadata=BaseFindingMetadata(source="test_source"),
     )
 
 

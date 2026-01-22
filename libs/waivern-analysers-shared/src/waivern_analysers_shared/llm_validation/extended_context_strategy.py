@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import override
 
-from waivern_core.schemas import BaseFindingModel
+from waivern_core import Finding
 from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.types import LLMValidationConfig
@@ -122,9 +122,7 @@ class _BatchBuilder:
         return self._batches
 
 
-class ExtendedContextLLMValidationStrategy[T: BaseFindingModel](
-    LLMValidationStrategy[T], ABC
-):
+class ExtendedContextLLMValidationStrategy[T: Finding](LLMValidationStrategy[T], ABC):
     """LLM validation strategy with full source content.
 
     Batches findings by source (file, table, etc.) and includes full source
@@ -134,7 +132,7 @@ class ExtendedContextLLMValidationStrategy[T: BaseFindingModel](
     Requires a SourceProvider to extract source identifiers and content.
     Falls back to evidence-only validation for sources without available content.
 
-    Type parameter T is the finding type, must be a BaseFindingModel subclass.
+    Type parameter T is the finding type, must satisfy the Finding protocol.
     """
 
     _source_provider: SourceProvider[T]

@@ -98,7 +98,7 @@
       "type": "object"
     },
     "DataSubjectIndicatorModel": {
-      "description": "Data subject indicator from pattern-based detection.",
+      "description": "Data subject indicator from pattern-based detection.\n\nInherits from BaseFindingModel[DataSubjectIndicatorMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: DataSubjectIndicatorMetadata - Required metadata with source",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -123,6 +123,10 @@
           "title": "Matched Patterns",
           "type": "array"
         },
+        "metadata": {
+          "$ref": "#/$defs/DataSubjectIndicatorMetadata",
+          "description": "Metadata with source and context information"
+        },
         "subject_category": {
           "description": "Data subject category detected",
           "title": "Subject Category",
@@ -134,23 +138,12 @@
           "minimum": 0,
           "title": "Confidence Score",
           "type": "integer"
-        },
-        "metadata": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DataSubjectIndicatorMetadata"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Additional metadata about the indicator"
         }
       },
       "required": [
         "evidence",
         "matched_patterns",
+        "metadata",
         "subject_category",
         "confidence_score"
       ],

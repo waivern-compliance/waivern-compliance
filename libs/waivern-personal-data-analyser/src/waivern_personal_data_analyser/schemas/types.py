@@ -22,19 +22,22 @@ class PersonalDataIndicatorMetadata(BaseFindingMetadata):
     pass
 
 
-class PersonalDataIndicatorModel(BaseFindingModel):
+class PersonalDataIndicatorModel(BaseFindingModel[PersonalDataIndicatorMetadata]):
     """Personal data indicator finding structure.
 
     This is a framework-agnostic indicator that identifies personal data patterns.
     Regulatory classification (e.g., GDPR special categories) is performed by
     downstream classifiers.
+
+    Inherits from BaseFindingModel[PersonalDataIndicatorMetadata] which provides:
+    - id: str - Unique identifier (auto-generated UUID)
+    - evidence: list[BaseFindingEvidence] - Evidence items with content
+    - matched_patterns: list[PatternMatchDetail] - Patterns that matched
+    - metadata: PersonalDataIndicatorMetadata - Required metadata with source
     """
 
     category: str = Field(
         description="Category of personal data (e.g., 'email', 'phone', 'health')"
-    )
-    metadata: PersonalDataIndicatorMetadata | None = Field(
-        default=None, description="Additional metadata from the original data source"
     )
 
     @override

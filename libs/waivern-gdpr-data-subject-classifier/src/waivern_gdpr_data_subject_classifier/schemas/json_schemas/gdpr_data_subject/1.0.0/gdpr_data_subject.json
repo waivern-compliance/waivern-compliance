@@ -85,7 +85,7 @@
       "type": "object"
     },
     "GDPRDataSubjectFindingModel": {
-      "description": "GDPR data subject classification finding structure.\n\nRepresents a data subject indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nrisk_modifiers - e.g., minors (Article 8) or vulnerable individuals\n(Recital 75) require additional protections under GDPR.",
+      "description": "GDPR data subject classification finding structure.\n\nRepresents a data subject indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nrisk_modifiers - e.g., minors (Article 8) or vulnerable individuals\n(Recital 75) require additional protections under GDPR.\n\nInherits from BaseFindingModel[GDPRDataSubjectFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: GDPRDataSubjectFindingMetadata - Required metadata with source",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -109,6 +109,10 @@
           "minItems": 1,
           "title": "Matched Patterns",
           "type": "array"
+        },
+        "metadata": {
+          "$ref": "#/$defs/GDPRDataSubjectFindingMetadata",
+          "description": "Metadata with source and context information"
         },
         "data_subject_category": {
           "description": "Normalised GDPR data subject category (e.g., 'employee', 'customer')",
@@ -145,23 +149,12 @@
           "minimum": 0,
           "title": "Confidence Score",
           "type": "integer"
-        },
-        "metadata": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/GDPRDataSubjectFindingMetadata"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Additional metadata from the original data source"
         }
       },
       "required": [
         "evidence",
         "matched_patterns",
+        "metadata",
         "data_subject_category",
         "confidence_score"
       ],

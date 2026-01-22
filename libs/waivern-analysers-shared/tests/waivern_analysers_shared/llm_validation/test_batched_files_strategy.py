@@ -11,6 +11,7 @@ from unittest.mock import Mock
 from pydantic import Field
 from waivern_core.schemas import (
     BaseFindingEvidence,
+    BaseFindingMetadata,
     BaseFindingModel,
     PatternMatchDetail,
 )
@@ -27,7 +28,7 @@ from waivern_analysers_shared.llm_validation.models import (
 )
 
 
-class MockFinding(BaseFindingModel):
+class MockFinding(BaseFindingModel[BaseFindingMetadata]):
     """Mock finding for testing."""
 
     file_path: str = Field(description="File path for testing")
@@ -46,6 +47,7 @@ def _create_finding(purpose: str, file_path: str) -> MockFinding:
         purpose=purpose,
         evidence=[BaseFindingEvidence(content=f"Evidence for {purpose}")],
         matched_patterns=[PatternMatchDetail(pattern=purpose.lower(), match_count=1)],
+        metadata=BaseFindingMetadata(source=file_path),
     )
 
 

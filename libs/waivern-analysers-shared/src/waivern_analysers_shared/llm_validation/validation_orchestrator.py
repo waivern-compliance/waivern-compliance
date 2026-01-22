@@ -7,7 +7,7 @@ sample validation results.
 
 from collections.abc import Callable
 
-from waivern_core.schemas import BaseFindingModel
+from waivern_core import Finding
 from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.llm_validation.grouping import GroupingStrategy
@@ -21,7 +21,7 @@ from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrate
 from waivern_analysers_shared.types import LLMValidationConfig
 
 
-class ValidationOrchestrator[T: BaseFindingModel]:
+class ValidationOrchestrator[T: Finding]:
     """Orchestrates the complete validation flow.
 
     Composes orthogonal strategies:

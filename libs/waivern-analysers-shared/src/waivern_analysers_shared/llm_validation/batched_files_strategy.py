@@ -9,7 +9,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
-from waivern_core.schemas import BaseFindingModel
+from waivern_core import Finding
 from waivern_llm import BaseLLMService
 
 from .decision_engine import ValidationDecisionEngine
@@ -114,13 +114,13 @@ class _BatchBuilder[T]:
         return self._batches
 
 
-class BatchedFilesStrategyBase[T: BaseFindingModel](ABC):
+class BatchedFilesStrategyBase[T: Finding](ABC):
     """Abstract base class for batched-files validation strategies.
 
     Provides token-aware batching infrastructure. Concrete implementations
     define analyser-specific behaviour (file path extraction, prompt generation).
 
-    Type parameter T is the finding type, must be a BaseFindingModel subclass.
+    Type parameter T is the finding type, must satisfy the Finding protocol.
     """
 
     @abstractmethod

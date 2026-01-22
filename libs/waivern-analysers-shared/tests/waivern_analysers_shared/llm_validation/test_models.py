@@ -3,6 +3,7 @@
 import pytest
 from waivern_core.schemas import (
     BaseFindingEvidence,
+    BaseFindingMetadata,
     BaseFindingModel,
     PatternMatchDetail,
 )
@@ -10,11 +11,12 @@ from waivern_core.schemas import (
 from waivern_analysers_shared.llm_validation import LLMValidationResultModel
 
 
-def _create_test_finding() -> BaseFindingModel:
+def _create_test_finding() -> BaseFindingModel[BaseFindingMetadata]:
     """Create a test finding with auto-generated UUID."""
     return BaseFindingModel(
         evidence=[BaseFindingEvidence(content="test content")],
         matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
+        metadata=BaseFindingMetadata(source="test_source"),
     )
 
 

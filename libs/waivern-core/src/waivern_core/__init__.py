@@ -28,6 +28,7 @@ from waivern_core.errors import (
     WaivernError,
 )
 from waivern_core.message import ExecutionContext, Message, MessageExtensions
+from waivern_core.protocols import Finding, FindingMetadata
 from waivern_core.ruleset_types import (
     ClassificationRule,
     DetectionRule,
@@ -97,6 +98,9 @@ __all__ = [
     # Types
     "InputRequirement",
     "JsonValue",
+    # Protocols
+    "Finding",
+    "FindingMetadata",
     # Utilities
     "validate_output_schema",
     # Errors

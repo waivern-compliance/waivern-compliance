@@ -75,18 +75,14 @@ class PersonalDataPatternMatcher:
                     if r.representative_matches
                 ]
 
-                finding_metadata = None
-                if metadata:
-                    finding_metadata = PersonalDataIndicatorMetadata(
-                        source=metadata.source,
-                        context=metadata.context,
-                    )
-
                 finding = PersonalDataIndicatorModel(
                     category=rule.category,
                     matched_patterns=matched_patterns,
                     evidence=evidence_items,
-                    metadata=finding_metadata,
+                    metadata=PersonalDataIndicatorMetadata(
+                        source=metadata.source,
+                        context=metadata.context,
+                    ),
                 )
                 findings.append(finding)
 
