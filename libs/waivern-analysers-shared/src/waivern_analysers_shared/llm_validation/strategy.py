@@ -16,7 +16,11 @@ class LLMValidationStrategy[T: Finding](ABC):
     Defines the interface that all validation strategies must implement.
     Concrete implementations handle batching and LLM interaction differently.
 
-    Type parameter T is the finding type, must satisfy the Finding protocol.
+    Type parameter T uses the ``Finding`` protocol bound (not ``BaseFindingModel``)
+    because protocols provide structural typing that avoids generic invariance
+    issues. A ``BaseFindingModel[ChildMetadata]`` is NOT a subtype of
+    ``BaseFindingModel[BaseMetadata]`` due to invariance, but any finding class
+    satisfies the ``Finding`` protocol regardless of its metadata type parameter.
     """
 
     @abstractmethod
