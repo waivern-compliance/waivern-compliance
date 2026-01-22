@@ -7,7 +7,7 @@ and group-level validation decisions.
 from collections import defaultdict
 from typing import Protocol
 
-from waivern_core.schemas.finding_types import BaseFindingModel
+from waivern_core import Finding
 
 from waivern_analysers_shared.llm_validation.protocols import (
     ConcernProvider,
@@ -15,7 +15,7 @@ from waivern_analysers_shared.llm_validation.protocols import (
 )
 
 
-class GroupingStrategy[T: BaseFindingModel](Protocol):
+class GroupingStrategy[T: Finding](Protocol):
     """Protocol for grouping findings.
 
     Grouping strategies are orthogonal to LLM validation strategies:
@@ -50,7 +50,7 @@ class GroupingStrategy[T: BaseFindingModel](Protocol):
         ...
 
 
-class ConcernGroupingStrategy[T: BaseFindingModel]:
+class ConcernGroupingStrategy[T: Finding]:
     """Groups findings by compliance concern using a ConcernProvider.
 
     Example:
@@ -97,7 +97,7 @@ class ConcernGroupingStrategy[T: BaseFindingModel]:
         return dict(groups)
 
 
-class SourceGroupingStrategy[T: BaseFindingModel]:
+class SourceGroupingStrategy[T: Finding]:
     """Groups findings by source file using a SourceProvider.
 
     Example:

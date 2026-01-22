@@ -258,7 +258,7 @@ class UserFormHandler {
         # Verify findings from both files are present
         assert len(findings) >= 2
         # All findings should have file paths as metadata.source
-        sources = {f.metadata.source for f in findings if f.metadata is not None}
+        sources = {f.metadata.source for f in findings}
         assert simple_php_file_data.file_path in sources
         assert service_integration_file_data.file_path in sources
 

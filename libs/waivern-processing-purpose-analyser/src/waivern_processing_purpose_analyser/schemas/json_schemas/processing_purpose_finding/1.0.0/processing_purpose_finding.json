@@ -151,7 +151,7 @@
       "type": "object"
     },
     "ProcessingPurposeFindingModel": {
-      "description": "Processing purpose finding structure.",
+      "description": "Processing purpose finding structure.\n\nInherits from BaseFindingModel[ProcessingPurposeFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: ProcessingPurposeFindingMetadata - Required metadata with source",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -176,6 +176,10 @@
           "title": "Matched Patterns",
           "type": "array"
         },
+        "metadata": {
+          "$ref": "#/$defs/ProcessingPurposeFindingMetadata",
+          "description": "Metadata with source and context information"
+        },
         "purpose": {
           "description": "Processing purpose name",
           "title": "Purpose",
@@ -186,18 +190,6 @@
           "description": "Category of the processing purpose",
           "title": "Purpose Category",
           "type": "string"
-        },
-        "metadata": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ProcessingPurposeFindingMetadata"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Additional metadata about the finding"
         },
         "service_category": {
           "anyOf": [
@@ -242,6 +234,7 @@
       "required": [
         "evidence",
         "matched_patterns",
+        "metadata",
         "purpose"
       ],
       "title": "ProcessingPurposeFindingModel",

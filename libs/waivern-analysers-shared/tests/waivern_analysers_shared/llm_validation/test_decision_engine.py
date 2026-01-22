@@ -2,6 +2,7 @@
 
 from waivern_core.schemas import (
     BaseFindingEvidence,
+    BaseFindingMetadata,
     BaseFindingModel,
     PatternMatchDetail,
 )
@@ -13,11 +14,14 @@ from waivern_analysers_shared.llm_validation import (
 )
 
 
-def _create_test_finding(pattern: str = "test_pattern") -> BaseFindingModel:
+def _create_test_finding(
+    pattern: str = "test_pattern",
+) -> BaseFindingModel[BaseFindingMetadata]:
     """Create a test finding for validation tests."""
     return BaseFindingModel(
         evidence=[BaseFindingEvidence(content="test content")],
         matched_patterns=[PatternMatchDetail(pattern=pattern, match_count=1)],
+        metadata=BaseFindingMetadata(source="test_source"),
     )
 
 

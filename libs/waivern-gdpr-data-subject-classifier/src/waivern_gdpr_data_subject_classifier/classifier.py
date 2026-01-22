@@ -217,8 +217,7 @@ class GDPRDataSubjectClassifier(Classifier):
         # Detect risk modifiers from evidence
         risk_modifiers = self._risk_modifier_detector.detect(evidence_texts)
 
-        # Propagate metadata from indicator finding
-        metadata = None
+        # Propagate metadata from indicator finding (always present, fallback to "unknown")
         raw_metadata = finding.get("metadata")
         if isinstance(raw_metadata, dict):
             meta_dict = cast(dict[str, Any], raw_metadata)
@@ -226,6 +225,8 @@ class GDPRDataSubjectClassifier(Classifier):
                 source=meta_dict.get("source", "unknown"),
                 context=meta_dict.get("context", {}),
             )
+        else:
+            metadata = GDPRDataSubjectFindingMetadata(source="unknown")
 
         return GDPRDataSubjectFindingModel(
             data_subject_category=classification.get(

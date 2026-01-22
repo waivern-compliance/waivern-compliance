@@ -25,15 +25,19 @@ class DataSubjectIndicatorMetadata(BaseFindingMetadata):
     )
 
 
-class DataSubjectIndicatorModel(BaseFindingModel):
-    """Data subject indicator from pattern-based detection."""
+class DataSubjectIndicatorModel(BaseFindingModel[DataSubjectIndicatorMetadata]):
+    """Data subject indicator from pattern-based detection.
+
+    Inherits from BaseFindingModel[DataSubjectIndicatorMetadata] which provides:
+    - id: str - Unique identifier (auto-generated UUID)
+    - evidence: list[BaseFindingEvidence] - Evidence items with content
+    - matched_patterns: list[PatternMatchDetail] - Patterns that matched
+    - metadata: DataSubjectIndicatorMetadata - Required metadata with source
+    """
 
     subject_category: str = Field(description="Data subject category detected")
     confidence_score: int = Field(
         ge=0, le=100, description="Confidence score for the detection (0-100)"
-    )
-    metadata: DataSubjectIndicatorMetadata | None = Field(
-        default=None, description="Additional metadata about the indicator"
     )
 
     @override

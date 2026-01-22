@@ -62,12 +62,30 @@ class PatternMatchDetail(BaseModel):
     )
 
 
-class BaseFindingModel(BaseModel):
+class BaseFindingModel[MetadataT: BaseFindingMetadata](BaseModel):
     """Base model for all finding types with mandatory common fields.
+
+    This generic base class ensures:
+    1. Type-safe metadata specialisation in child classes
+    2. Mandatory metadata.source at the type level (no optional metadata)
+
+    Design Note:
+        We use a generic type parameter for metadata rather than a simple required
+        field because of Liskov Substitution Principle constraints. If we declared
+        ``metadata: BaseFindingMetadata`` here and child classes overrode it with
+        ``metadata: ChildMetadata``, the type checker would complain (attributes
+        are invariant). The generic approach allows type-safe specialisation.
+
+        For generic code that needs to accept any finding type, use the ``Finding``
+        protocol as a type bound instead of this class (see ``waivern_core.protocols``).
 
     Risk assessment is intentionally excluded from this base model as it is
     a framework-specific concern. Each regulatory classifier should define
     its own risk model in its output schema.
+
+    Usage:
+        class MyFindingModel(BaseFindingModel[MyFindingMetadata]):
+            my_field: str
     """
 
     id: str = Field(
@@ -81,6 +99,9 @@ class BaseFindingModel(BaseModel):
     matched_patterns: list[PatternMatchDetail] = Field(
         min_length=1,
         description="Patterns that were matched during analysis with occurrence counts",
+    )
+    metadata: MetadataT = Field(
+        description="Metadata with source and context information",
     )
 
 

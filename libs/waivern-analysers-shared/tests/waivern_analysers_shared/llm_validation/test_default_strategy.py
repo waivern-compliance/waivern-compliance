@@ -11,6 +11,7 @@ from unittest.mock import Mock
 import pytest
 from waivern_core.schemas import (
     BaseFindingEvidence,
+    BaseFindingMetadata,
     BaseFindingModel,
     PatternMatchDetail,
 )
@@ -30,7 +31,7 @@ from waivern_analysers_shared.types import LLMValidationConfig
 # =============================================================================
 
 
-class MockFinding(BaseFindingModel):
+class MockFinding(BaseFindingModel[BaseFindingMetadata]):
     """Minimal finding type for testing."""
 
     category: str = "test"
@@ -57,6 +58,7 @@ def make_finding(finding_id: str | None = None, category: str = "test") -> MockF
         category=category,
         evidence=[BaseFindingEvidence(content=f"Evidence for {category}")],
         matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
+        metadata=BaseFindingMetadata(source="test_source"),
     )
     if finding_id:
         # Override the auto-generated ID for deterministic testing

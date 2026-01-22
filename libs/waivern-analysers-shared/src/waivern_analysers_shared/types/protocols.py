@@ -2,7 +2,7 @@
 
 from typing import Any, Protocol
 
-from waivern_core.schemas import BaseFindingModel
+from waivern_core import Finding
 
 
 class SchemaReader[T](Protocol):
@@ -31,14 +31,14 @@ class SchemaReader[T](Protocol):
         ...
 
 
-class SchemaInputHandler[T: BaseFindingModel](Protocol):
+class SchemaInputHandler[T: Finding](Protocol):
     """Protocol for schema-specific input handlers.
 
     All handlers must implement this interface to ensure consistent
     integration with the analyser. The analyser uses this protocol
     to remain schema-agnostic.
 
-    Type parameter T is the finding model type (must extend BaseFindingModel).
+    Type parameter T is the finding type, must satisfy the Finding protocol.
     """
 
     def analyse(self, data: object) -> list[T]:

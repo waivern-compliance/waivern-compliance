@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from waivern_core.schemas import BaseFindingModel
+from waivern_core import Finding
 from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.types import LLMValidationConfig
@@ -10,13 +10,17 @@ from waivern_analysers_shared.types import LLMValidationConfig
 from .models import LLMValidationOutcome
 
 
-class LLMValidationStrategy[T: BaseFindingModel](ABC):
+class LLMValidationStrategy[T: Finding](ABC):
     """Abstract base class for LLM validation strategies.
 
     Defines the interface that all validation strategies must implement.
     Concrete implementations handle batching and LLM interaction differently.
 
-    Type parameter T is the finding type, must be a BaseFindingModel subclass.
+    Type parameter T uses the ``Finding`` protocol bound (not ``BaseFindingModel``)
+    because protocols provide structural typing that avoids generic invariance
+    issues. A ``BaseFindingModel[ChildMetadata]`` is NOT a subtype of
+    ``BaseFindingModel[BaseMetadata]`` due to invariance, but any finding class
+    satisfies the ``Finding`` protocol regardless of its metadata type parameter.
     """
 
     @abstractmethod

@@ -138,7 +138,7 @@
       "type": "object"
     },
     "PersonalDataIndicatorModel": {
-      "description": "Personal data indicator finding structure.\n\nThis is a framework-agnostic indicator that identifies personal data patterns.\nRegulatory classification (e.g., GDPR special categories) is performed by\ndownstream classifiers.",
+      "description": "Personal data indicator finding structure.\n\nThis is a framework-agnostic indicator that identifies personal data patterns.\nRegulatory classification (e.g., GDPR special categories) is performed by\ndownstream classifiers.\n\nInherits from BaseFindingModel[PersonalDataIndicatorMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: PersonalDataIndicatorMetadata - Required metadata with source",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -163,27 +163,20 @@
           "title": "Matched Patterns",
           "type": "array"
         },
+        "metadata": {
+          "$ref": "#/$defs/PersonalDataIndicatorMetadata",
+          "description": "Metadata with source and context information"
+        },
         "category": {
           "description": "Category of personal data (e.g., 'email', 'phone', 'health')",
           "title": "Category",
           "type": "string"
-        },
-        "metadata": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PersonalDataIndicatorMetadata"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Additional metadata from the original data source"
         }
       },
       "required": [
         "evidence",
         "matched_patterns",
+        "metadata",
         "category"
       ],
       "title": "PersonalDataIndicatorModel",

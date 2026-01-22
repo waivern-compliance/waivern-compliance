@@ -23,13 +23,19 @@ class GDPRDataSubjectFindingMetadata(BaseFindingMetadata):
     pass
 
 
-class GDPRDataSubjectFindingModel(BaseFindingModel):
+class GDPRDataSubjectFindingModel(BaseFindingModel[GDPRDataSubjectFindingMetadata]):
     """GDPR data subject classification finding structure.
 
     Represents a data subject indicator that has been enriched with
     GDPR-specific classification information. Risk is indicated by
     risk_modifiers - e.g., minors (Article 8) or vulnerable individuals
     (Recital 75) require additional protections under GDPR.
+
+    Inherits from BaseFindingModel[GDPRDataSubjectFindingMetadata] which provides:
+    - id: str - Unique identifier (auto-generated UUID)
+    - evidence: list[BaseFindingEvidence] - Evidence items with content
+    - matched_patterns: list[PatternMatchDetail] - Patterns that matched
+    - metadata: GDPRDataSubjectFindingMetadata - Required metadata with source
     """
 
     # GDPR classification (from ruleset mapping)
@@ -54,9 +60,6 @@ class GDPRDataSubjectFindingModel(BaseFindingModel):
     # Propagated from indicator
     confidence_score: int = Field(
         ge=0, le=100, description="Confidence score from indicator detection (0-100)"
-    )
-    metadata: GDPRDataSubjectFindingMetadata | None = Field(
-        default=None, description="Additional metadata from the original data source"
     )
 
     @override

@@ -78,19 +78,15 @@ class ProcessingPurposePatternMatcher:
                     if r.representative_matches
                 ]
 
-                finding_metadata = None
-                if metadata:
-                    finding_metadata = ProcessingPurposeFindingMetadata(
-                        source=metadata.source,
-                        context=metadata.context,
-                    )
-
                 finding = ProcessingPurposeFindingModel(
                     purpose=rule.name,
                     purpose_category=rule.purpose_category,
                     matched_patterns=matched_patterns,
                     evidence=evidence_items,
-                    metadata=finding_metadata,
+                    metadata=ProcessingPurposeFindingMetadata(
+                        source=metadata.source,
+                        context=metadata.context,
+                    ),
                 )
                 findings.append(finding)
 

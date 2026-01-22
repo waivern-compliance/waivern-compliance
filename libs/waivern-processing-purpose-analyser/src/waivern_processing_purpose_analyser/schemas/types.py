@@ -27,15 +27,19 @@ class ProcessingPurposeFindingMetadata(BaseFindingMetadata):
     )
 
 
-class ProcessingPurposeFindingModel(BaseFindingModel):
-    """Processing purpose finding structure."""
+class ProcessingPurposeFindingModel(BaseFindingModel[ProcessingPurposeFindingMetadata]):
+    """Processing purpose finding structure.
+
+    Inherits from BaseFindingModel[ProcessingPurposeFindingMetadata] which provides:
+    - id: str - Unique identifier (auto-generated UUID)
+    - evidence: list[BaseFindingEvidence] - Evidence items with content
+    - matched_patterns: list[PatternMatchDetail] - Patterns that matched
+    - metadata: ProcessingPurposeFindingMetadata - Required metadata with source
+    """
 
     purpose: str = Field(description="Processing purpose name")
     purpose_category: str = Field(
         default="", description="Category of the processing purpose"
-    )
-    metadata: ProcessingPurposeFindingMetadata | None = Field(
-        default=None, description="Additional metadata about the finding"
     )
     service_category: str | None = Field(
         default=None,

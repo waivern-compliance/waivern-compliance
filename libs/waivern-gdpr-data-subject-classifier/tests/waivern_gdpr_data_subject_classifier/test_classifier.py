@@ -385,7 +385,11 @@ class TestGDPRDataSubjectClassifier:
         assert finding["metadata"]["context"]["database"] == "hr_db"
 
     def test_process_handles_findings_without_metadata(self) -> None:
-        """Test graceful handling of findings that lack metadata."""
+        """Test graceful handling of findings that lack metadata.
+
+        When input findings don't have metadata, the classifier provides
+        a fallback with source='unknown' to ensure metadata is always present.
+        """
         input_data = {
             "findings": [
                 {
@@ -416,9 +420,10 @@ class TestGDPRDataSubjectClassifier:
             [input_message], Schema("gdpr_data_subject", "1.0.0")
         )
 
-        # Should still work, metadata should be None
+        # Should provide fallback metadata with source="unknown"
         finding = result.content["findings"][0]
-        assert finding.get("metadata") is None
+        assert finding["metadata"] is not None
+        assert finding["metadata"]["source"] == "unknown"
 
 
 # =============================================================================
@@ -594,7 +599,11 @@ class TestGDPRDataSubjectClassifierErrorHandling:
             classifier.process([], output_schema)
 
     def test_process_handles_malformed_metadata_gracefully(self) -> None:
-        """Test that non-dict metadata values don't crash the classifier."""
+        """Test that non-dict metadata values don't crash the classifier.
+
+        When input metadata is malformed (not a dict), the classifier provides
+        a fallback with source='unknown' to ensure metadata is always present.
+        """
         input_data = {
             "findings": [
                 {
@@ -621,13 +630,14 @@ class TestGDPRDataSubjectClassifierErrorHandling:
         )
         classifier = GDPRDataSubjectClassifier()
 
-        # Should not crash, metadata should be None
+        # Should not crash, provides fallback metadata
         result = classifier.process(
             [input_message], Schema("gdpr_data_subject", "1.0.0")
         )
 
         finding = result.content["findings"][0]
-        assert finding.get("metadata") is None
+        assert finding["metadata"] is not None
+        assert finding["metadata"]["source"] == "unknown"
         assert finding["data_subject_category"] == "employee"
 
     def test_process_handles_empty_findings_list(self) -> None:

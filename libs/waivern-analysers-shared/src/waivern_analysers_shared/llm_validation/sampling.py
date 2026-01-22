@@ -8,11 +8,11 @@ import random
 from dataclasses import dataclass
 from typing import Protocol
 
-from waivern_core.schemas.finding_types import BaseFindingModel
+from waivern_core import Finding
 
 
 @dataclass
-class SamplingResult[T: BaseFindingModel]:
+class SamplingResult[T: Finding]:
     """Result of a sampling operation.
 
     Tracks which findings were selected for validation and which
@@ -26,7 +26,7 @@ class SamplingResult[T: BaseFindingModel]:
     """Findings kept by inference (not directly validated), keyed by group."""
 
 
-class SamplingStrategy[T: BaseFindingModel](Protocol):
+class SamplingStrategy[T: Finding](Protocol):
     """Protocol for sampling findings from groups."""
 
     def sample(self, groups: dict[str, list[T]]) -> SamplingResult[T]:
@@ -42,7 +42,7 @@ class SamplingStrategy[T: BaseFindingModel](Protocol):
         ...
 
 
-class RandomSamplingStrategy[T: BaseFindingModel]:
+class RandomSamplingStrategy[T: Finding]:
     """Randomly samples N findings per group.
 
     When a group has fewer findings than the sample size,

@@ -5,7 +5,7 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import override
 
-from waivern_core.schemas import BaseFindingModel
+from waivern_core import Finding
 from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.types import LLMValidationConfig
@@ -32,7 +32,7 @@ class _BatchResult[T]:
     not_flagged: list[T] = field(default_factory=list)
 
 
-class DefaultLLMValidationStrategy[T: BaseFindingModel](LLMValidationStrategy[T]):
+class DefaultLLMValidationStrategy[T: Finding](LLMValidationStrategy[T]):
     """Default LLM validation strategy using count-based batching.
 
     Batches findings by fixed count (llm_batch_size) and includes evidence
@@ -41,7 +41,7 @@ class DefaultLLMValidationStrategy[T: BaseFindingModel](LLMValidationStrategy[T]
 
     Subclasses must implement prompt generation methods.
 
-    Type parameter T is the finding type, must be a BaseFindingModel subclass.
+    Type parameter T is the finding type, must satisfy the Finding protocol.
     """
 
     @abstractmethod

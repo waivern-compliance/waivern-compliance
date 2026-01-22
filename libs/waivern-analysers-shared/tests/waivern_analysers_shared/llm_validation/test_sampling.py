@@ -2,6 +2,7 @@
 
 from waivern_core.schemas.finding_types import (
     BaseFindingEvidence,
+    BaseFindingMetadata,
     BaseFindingModel,
     PatternMatchDetail,
 )
@@ -11,7 +12,7 @@ from waivern_analysers_shared.llm_validation.sampling import (
 )
 
 
-class MockFinding(BaseFindingModel):
+class MockFinding(BaseFindingModel[BaseFindingMetadata]):
     """Simple finding for testing."""
 
     pass
@@ -23,6 +24,7 @@ def make_finding(finding_id: str) -> MockFinding:
         id=finding_id,
         evidence=[BaseFindingEvidence(content="test evidence")],
         matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
+        metadata=BaseFindingMetadata(source="test_source"),
     )
 
 
