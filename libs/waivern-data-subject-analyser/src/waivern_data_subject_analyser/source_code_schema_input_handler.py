@@ -192,7 +192,7 @@ class SourceCodeSchemaInputHandler:
         for i, line in enumerate(lines):
             for pattern in patterns:
                 result = self._word_boundary_matcher.find_match(line, pattern)
-                if result.first_match is not None:
+                if result.representative_matches:
                     yield (i, pattern)
 
     def _create_evidence(

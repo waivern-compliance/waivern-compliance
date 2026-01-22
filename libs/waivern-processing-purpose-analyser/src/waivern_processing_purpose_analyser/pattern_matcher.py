@@ -55,25 +55,27 @@ class ProcessingPurposePatternMatcher:
         findings: list[ProcessingPurposeFindingModel] = []
 
         for rule in rules:
-            results = self._dispatcher.find_matches(content, rule)
+            results = self._dispatcher.find_matches(
+                content,
+                rule,
+                proximity_threshold=self._config.evidence_proximity_threshold,
+                max_representatives=self._config.maximum_evidence_count,
+            )
 
             if results:
-                # Get first match for evidence extraction
-                first_result = results[0]
-                if first_result.first_match is None:
-                    continue
-
-                evidence = self._evidence_extractor.extract_from_match(
+                # Extract evidence from representative matches (up to max evidence count)
+                evidence_items = self._evidence_extractor.extract_from_results(
                     content,
-                    first_result.first_match,
+                    results,
                     self._config.evidence_context_size,
+                    self._config.maximum_evidence_count,
                 )
 
                 # Collect all matched patterns with their counts
                 matched_patterns = [
                     PatternMatchDetail(pattern=r.pattern, match_count=r.match_count)
                     for r in results
-                    if r.first_match
+                    if r.representative_matches
                 ]
 
                 finding_metadata = None
@@ -87,7 +89,7 @@ class ProcessingPurposePatternMatcher:
                     purpose=rule.name,
                     purpose_category=rule.purpose_category,
                     matched_patterns=matched_patterns,
-                    evidence=[evidence],
+                    evidence=evidence_items,
                     metadata=finding_metadata,
                 )
                 findings.append(finding)

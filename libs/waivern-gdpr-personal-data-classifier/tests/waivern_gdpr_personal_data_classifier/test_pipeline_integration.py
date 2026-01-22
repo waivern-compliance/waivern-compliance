@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 from waivern_analysers_shared.types import (
+    EvidenceContextSize,
     LLMValidationConfig,
     PatternMatchingConfig,
 )
@@ -28,7 +29,7 @@ class TestPersonalDataToGDPRPipeline:
         config = PersonalDataAnalyserConfig(
             pattern_matching=PatternMatchingConfig(
                 ruleset="local/personal_data_indicator/1.0.0",
-                evidence_context_size="medium",
+                evidence_context_size=EvidenceContextSize.MEDIUM,
                 maximum_evidence_count=3,
             ),
             llm_validation=LLMValidationConfig(

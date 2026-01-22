@@ -20,17 +20,23 @@ class RulePatternDispatcher:
         self._regex = RegexMatcher()
 
     def find_matches(
-        self, content: str, rule: DetectionRule
+        self,
+        content: str,
+        rule: DetectionRule,
+        proximity_threshold: int = 200,
+        max_representatives: int = 10,
     ) -> list[PatternMatchResult]:
         """Find all pattern matches for a rule.
 
         Args:
             content: Text to search
             rule: Detection rule with patterns and/or value_patterns
+            proximity_threshold: Characters between matches to consider distinct locations
+            max_representatives: Maximum number of representative matches to return
 
         Returns:
             List of match results (one per pattern that matched), including
-            first match position and total match count for each.
+            representative matches grouped by proximity and total match count for each.
 
         """
         if not content.strip():
@@ -39,13 +45,17 @@ class RulePatternDispatcher:
         results: list[PatternMatchResult] = []
 
         for pattern in rule.patterns:
-            result = self._word_boundary.find_match(content, pattern)
-            if result.first_match is not None:
+            result = self._word_boundary.find_match(
+                content, pattern, proximity_threshold, max_representatives
+            )
+            if result.representative_matches:  # Check new field
                 results.append(result)
 
         for pattern in rule.value_patterns:
-            result = self._regex.find_match(content, pattern)
-            if result.first_match is not None:
+            result = self._regex.find_match(
+                content, pattern, proximity_threshold, max_representatives
+            )
+            if result.representative_matches:  # Check new field
                 results.append(result)
 
         return results

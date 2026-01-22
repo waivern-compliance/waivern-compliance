@@ -14,6 +14,7 @@ from waivern_analysers_shared.llm_validation import (
     LLMValidationResultModel,
 )
 from waivern_analysers_shared.types import (
+    EvidenceContextSize,
     LLMValidationConfig,
     PatternMatchingConfig,
 )
@@ -54,7 +55,7 @@ class TestPersonalDataAnalyser:
         return PersonalDataAnalyserConfig(
             pattern_matching=PatternMatchingConfig(
                 ruleset="local/personal_data_indicator/1.0.0",
-                evidence_context_size="medium",
+                evidence_context_size=EvidenceContextSize.MEDIUM,
                 maximum_evidence_count=5,
             ),
             llm_validation=LLMValidationConfig(
