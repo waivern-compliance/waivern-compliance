@@ -1,6 +1,8 @@
 """Schema data models for processing purpose findings."""
 
-from typing import ClassVar, override
+from typing import ClassVar, Literal, override
+
+SourceCodeContextWindow = Literal["small", "medium", "large", "full"]
 
 from pydantic import BaseModel, Field
 from waivern_core.schemas import (

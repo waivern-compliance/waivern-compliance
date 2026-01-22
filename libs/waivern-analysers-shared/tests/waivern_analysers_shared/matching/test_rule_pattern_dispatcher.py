@@ -21,9 +21,12 @@ class TestRulePatternDispatcherFindMatches:
         results = dispatcher.find_matches("user email address", rule)
 
         assert len(results) == 1
-        assert results[0].first_match is not None
+        assert len(results[0].representative_matches) > 0
         assert results[0].pattern == "email"
-        assert results[0].first_match.pattern_type == PatternType.WORD_BOUNDARY
+        assert (
+            results[0].representative_matches[0].pattern_type
+            == PatternType.WORD_BOUNDARY
+        )
 
     def test_routes_value_patterns_to_regex_matcher(self) -> None:
         """rule.value_patterns are matched using RegexMatcher."""
@@ -37,9 +40,9 @@ class TestRulePatternDispatcherFindMatches:
         results = dispatcher.find_matches("contact john@example.com today", rule)
 
         assert len(results) == 1
-        assert results[0].first_match is not None
+        assert len(results[0].representative_matches) > 0
         assert results[0].pattern == r"[a-z]+@[a-z]+\.[a-z]+"
-        assert results[0].first_match.pattern_type == PatternType.REGEX
+        assert results[0].representative_matches[0].pattern_type == PatternType.REGEX
 
     def test_combines_matches_from_both_matchers(self) -> None:
         """Matches from both pattern types are returned together."""
@@ -54,7 +57,11 @@ class TestRulePatternDispatcherFindMatches:
         results = dispatcher.find_matches('{"email": "john@example.com"}', rule)
 
         assert len(results) == 2
-        pattern_types = {r.first_match.pattern_type for r in results if r.first_match}
+        pattern_types = {
+            r.representative_matches[0].pattern_type
+            for r in results
+            if r.representative_matches[0]
+        }
         assert pattern_types == {PatternType.WORD_BOUNDARY, PatternType.REGEX}
 
     def test_returns_empty_list_for_whitespace_only_content(self) -> None:
@@ -81,7 +88,7 @@ class TestRulePatternDispatcherFindMatches:
 
         # "email" and "address" match, "mailing" doesn't appear
         assert len(results) == 2
-        matched_patterns = {r.pattern for r in results if r.first_match}
+        matched_patterns = {r.pattern for r in results if r.representative_matches[0]}
         assert matched_patterns == {"email", "address"}
 
 
@@ -101,3 +108,63 @@ class TestRulePatternDispatcherMatchCount:
 
         assert len(results) == 1
         assert results[0].match_count == 2
+
+
+class TestRulePatternDispatcherProximityParameters:
+    """Tests for RulePatternDispatcher with proximity parameters."""
+
+    def test_dispatcher_passes_proximity_params_to_matchers(self) -> None:
+        """Dispatcher passes proximity parameters to underlying matchers."""
+        dispatcher = RulePatternDispatcher()
+        rule = DetectionRule(
+            name="email",
+            description="Email detection",
+            patterns=("email",),
+            value_patterns=(r"\w+@\w+",),
+        )
+        content = "email: user@example.com ... email: admin@test.com"
+
+        results = dispatcher.find_matches(
+            content, rule, proximity_threshold=50, max_representatives=3
+        )
+
+        # Should have results from both word_boundary and regex matchers
+        assert len(results) == 2
+
+        # Check that results have representative matches (not just first_match)
+        for result in results:
+            assert len(result.representative_matches) >= 1
+            assert result.match_count >= 1
+
+    def test_empty_content_with_proximity_params(self) -> None:
+        """Empty content returns empty results even with proximity parameters."""
+        dispatcher = RulePatternDispatcher()
+        rule = DetectionRule(
+            name="test",
+            description="Test rule",
+            patterns=("test",),
+        )
+
+        results = dispatcher.find_matches(
+            "", rule, proximity_threshold=200, max_representatives=10
+        )
+
+        assert results == []
+
+    def test_no_matches_with_proximity_params(self) -> None:
+        """No matches returns empty results even with proximity parameters."""
+        dispatcher = RulePatternDispatcher()
+        rule = DetectionRule(
+            name="test",
+            description="Test rule",
+            patterns=("xyz",),  # Pattern that won't match
+        )
+
+        results = dispatcher.find_matches(
+            "some content without matches",
+            rule,
+            proximity_threshold=200,
+            max_representatives=10,
+        )
+
+        assert results == []

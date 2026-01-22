@@ -8,7 +8,11 @@ encapsulates specific concerns and processing paths.
 from unittest.mock import Mock
 
 import pytest
-from waivern_analysers_shared.types import LLMValidationConfig, PatternMatchingConfig
+from waivern_analysers_shared.types import (
+    EvidenceContextSize,
+    LLMValidationConfig,
+    PatternMatchingConfig,
+)
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseMetadata,
@@ -39,7 +43,7 @@ class TestProcessingPurposeAnalyserInitialisation:
         """Create valid pattern matching configuration."""
         return PatternMatchingConfig(
             ruleset="local/processing_purposes/1.0.0",
-            evidence_context_size="medium",
+            evidence_context_size=EvidenceContextSize.MEDIUM,
             maximum_evidence_count=3,
         )
 

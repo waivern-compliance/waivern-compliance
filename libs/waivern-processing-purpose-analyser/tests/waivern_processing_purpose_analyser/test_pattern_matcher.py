@@ -5,7 +5,7 @@ following black-box testing principles and proper encapsulation.
 """
 
 import pytest
-from waivern_analysers_shared.types import PatternMatchingConfig
+from waivern_analysers_shared.types import EvidenceContextSize, PatternMatchingConfig
 from waivern_core.schemas import BaseMetadata
 
 from waivern_processing_purpose_analyser.pattern_matcher import (
@@ -28,7 +28,7 @@ class TestProcessingPurposePatternMatcher:
         """Create a valid configuration for testing."""
         return PatternMatchingConfig(
             ruleset=self.TEST_RULESET_URI,
-            evidence_context_size="medium",
+            evidence_context_size=EvidenceContextSize.MEDIUM,
             maximum_evidence_count=3,
         )
 
@@ -185,3 +185,143 @@ class TestProcessingPurposePatternMatcher:
         assert isinstance(finding.purpose_category, str)
         assert isinstance(finding.matched_patterns, list)
         assert len(finding.matched_patterns) > 0
+
+
+class TestProximityBasedEvidenceCollection:
+    """Tests for proximity-based evidence collection in ProcessingPurposePatternMatcher."""
+
+    TEST_RULESET_URI = "local/processing_purposes/1.0.0"
+
+    @pytest.fixture
+    def metadata(self) -> BaseMetadata:
+        """Create sample metadata for testing."""
+        return BaseMetadata(source="test_file.php", connector_type="test")
+
+    def test_spread_matches_produce_multiple_evidence_items(
+        self, metadata: BaseMetadata
+    ) -> None:
+        """Spread matches produce multiple evidence items up to maximum_evidence_count."""
+        config = PatternMatchingConfig(
+            ruleset=self.TEST_RULESET_URI,
+            evidence_context_size=EvidenceContextSize.SMALL,
+            maximum_evidence_count=3,
+            evidence_proximity_threshold=50,  # 50 chars = distinct locations
+        )
+        matcher = ProcessingPurposePatternMatcher(config)
+
+        # Create content with support patterns spread far apart
+        content = (
+            "contact support here"
+            + "x" * 100
+            + "support team available"
+            + "x" * 100
+            + "support assistance needed"
+        )
+
+        findings = matcher.find_patterns(content, metadata)
+
+        # Should have findings with multiple evidence items
+        assert len(findings) > 0, "Expected findings"
+        support_findings = [
+            f
+            for f in findings
+            if any("support" in p.pattern.lower() for p in f.matched_patterns)
+        ]
+        assert len(support_findings) > 0, "Expected support-related finding"
+        # With spread matches, should have multiple evidence items
+        assert len(support_findings[0].evidence) > 1
+
+    def test_dense_matches_produce_fewer_evidence_items(
+        self, metadata: BaseMetadata
+    ) -> None:
+        """Dense matches (within proximity threshold) produce fewer evidence items."""
+        config = PatternMatchingConfig(
+            ruleset=self.TEST_RULESET_URI,
+            evidence_context_size=EvidenceContextSize.SMALL,
+            maximum_evidence_count=3,
+            evidence_proximity_threshold=200,  # Large threshold
+        )
+        matcher = ProcessingPurposePatternMatcher(config)
+
+        # Create content with support patterns close together
+        content = "contact support team for support assistance with support queries"
+
+        findings = matcher.find_patterns(content, metadata)
+
+        # Should have findings
+        assert len(findings) > 0, "Expected findings"
+        support_findings = [
+            f
+            for f in findings
+            if any("support" in p.pattern.lower() for p in f.matched_patterns)
+        ]
+        assert len(support_findings) > 0, "Expected support-related finding"
+        # Dense matches typically produce fewer evidence items
+        assert len(support_findings[0].evidence) >= 1
+
+    def test_maximum_evidence_count_is_respected(self, metadata: BaseMetadata) -> None:
+        """Evidence collection respects maximum_evidence_count limit."""
+        config = PatternMatchingConfig(
+            ruleset=self.TEST_RULESET_URI,
+            evidence_context_size=EvidenceContextSize.SMALL,
+            maximum_evidence_count=2,  # Limit to 2
+            evidence_proximity_threshold=50,  # Very small threshold
+        )
+        matcher = ProcessingPurposePatternMatcher(config)
+
+        # Create content with many spread-out support patterns (use spaces for word boundaries)
+        content = (
+            "support here "
+            + "x " * 50
+            + "support there "
+            + "x " * 50
+            + "support elsewhere "
+            + "x " * 50
+            + "support again"
+        )
+
+        findings = matcher.find_patterns(content, metadata)
+
+        # All findings should respect maximum_evidence_count
+        for finding in findings:
+            assert len(finding.evidence) <= 2
+
+    def test_match_count_reflects_total_occurrences(
+        self, metadata: BaseMetadata
+    ) -> None:
+        """match_count reflects total matches regardless of evidence count."""
+        config = PatternMatchingConfig(
+            ruleset=self.TEST_RULESET_URI,
+            evidence_context_size=EvidenceContextSize.SMALL,
+            maximum_evidence_count=2,  # Limit evidence
+            evidence_proximity_threshold=50,
+        )
+        matcher = ProcessingPurposePatternMatcher(config)
+
+        # Content with multiple support mentions (use spaces to maintain word boundaries)
+        content = (
+            "support "
+            + "x " * 25
+            + "support "
+            + "x " * 25
+            + "support "
+            + "x " * 25
+            + "support"
+        )
+
+        findings = matcher.find_patterns(content, metadata)
+
+        assert len(findings) > 0, "Expected findings"
+        support_findings = [
+            f
+            for f in findings
+            if any("support" in p.pattern.lower() for p in f.matched_patterns)
+        ]
+        assert len(support_findings) > 0, "Expected support-related finding"
+
+        finding = support_findings[0]
+        # Evidence limited
+        assert len(finding.evidence) <= 2
+        # But match count reflects all occurrences
+        total_matches = sum(p.match_count for p in finding.matched_patterns)
+        assert total_matches >= len(finding.evidence)

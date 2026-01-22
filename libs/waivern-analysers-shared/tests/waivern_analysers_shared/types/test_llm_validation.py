@@ -1,12 +1,9 @@
-"""Tests for configuration types."""
+"""Tests for LLM validation configuration types."""
 
 import pytest
 from pydantic import ValidationError
 
-from waivern_analysers_shared.types import (
-    BatchingConfig,
-    LLMValidationConfig,
-)
+from waivern_analysers_shared.types import BatchingConfig, LLMValidationConfig
 
 
 class TestBatchingConfig:

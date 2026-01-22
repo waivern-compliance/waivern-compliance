@@ -67,7 +67,12 @@ class DataSubjectPatternMatcher:
 
         # Find all matching rules and track results
         for rule in rules:
-            results = self._dispatcher.find_matches(content, rule)
+            results = self._dispatcher.find_matches(
+                content,
+                rule,
+                proximity_threshold=self._config.evidence_proximity_threshold,
+                max_representatives=self._config.maximum_evidence_count,
+            )
 
             if results:
                 category = rule.subject_category
@@ -88,23 +93,20 @@ class DataSubjectPatternMatcher:
             matched_patterns = [
                 PatternMatchDetail(pattern=r.pattern, match_count=r.match_count)
                 for r in all_results
-                if r.first_match
+                if r.representative_matches
             ]
+
+            # Extract evidence from representative matches (up to max evidence count)
+            evidence_items = self._evidence_extractor.extract_from_results(
+                content,
+                all_results,
+                self._config.evidence_context_size,
+                self._config.maximum_evidence_count,
+            )
 
             # Calculate confidence for this category
             confidence_score = self._confidence_scorer.calculate_confidence(
                 matched_rules
-            )
-
-            # Extract evidence from the first match
-            first_result = all_results[0]
-            if first_result.first_match is None:
-                continue
-
-            evidence = self._evidence_extractor.extract_from_match(
-                content,
-                first_result.first_match,
-                self._config.evidence_context_size,
             )
 
             # Create metadata for the indicator
@@ -117,7 +119,7 @@ class DataSubjectPatternMatcher:
             indicator = DataSubjectIndicatorModel(
                 subject_category=category,
                 confidence_score=confidence_score,
-                evidence=[evidence],
+                evidence=evidence_items,
                 matched_patterns=matched_patterns,
                 metadata=indicator_metadata,
             )

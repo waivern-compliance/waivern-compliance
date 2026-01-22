@@ -1,126 +1,122 @@
 """Utility for extracting evidence snippets from content."""
 
+from collections.abc import Iterable
+
 from waivern_core.schemas import BaseFindingEvidence
 
-from waivern_analysers_shared.types import PatternMatch
+from waivern_analysers_shared.types import EvidenceContextSize, PatternMatchResult
 
 
 class EvidenceExtractor:
-    """Utility for extracting evidence snippets from content where patterns are found."""
+    """Extracts evidence snippets from content where patterns are found."""
 
-    # Context size constants (in characters)
-    _CONTEXT_SIZE_SMALL = 50
-    _CONTEXT_SIZE_MEDIUM = 100
-    _CONTEXT_SIZE_LARGE = 200
+    _ELLIPSIS = "..."
 
-    # Default values
-    _DEFAULT_CONTEXT_SIZE = "small"
-
-    # Special markers
-    _ELLIPSIS_PREFIX = "..."
-    _ELLIPSIS_SUFFIX = "..."
-
-    # Context size options
-    _CONTEXT_SIZE_FULL = "full"
-
-    def extract_from_match(
+    def extract_from_results(
         self,
         content: str,
-        match: PatternMatch,
-        context_size: str = _DEFAULT_CONTEXT_SIZE,
-    ) -> BaseFindingEvidence:
-        """Extract a single evidence snippet from a pattern match.
+        results: Iterable[PatternMatchResult],
+        context_size: EvidenceContextSize,
+        max_evidence_count: int,
+    ) -> list[BaseFindingEvidence]:
+        """Extract evidence items from pattern match results.
 
-        Uses the match position directly - no re-searching required.
+        Uses round-robin collection across patterns to ensure diverse evidence.
 
         Args:
-            content: The full content
-            match: PatternMatch with position information
-            context_size: Size of context around evidence
-                ('small': 50 chars, 'medium': 100 chars, 'large': 200 chars, 'full': entire content)
+            content: The full content to extract evidence from
+            results: Iterable of PatternMatchResult objects
+            context_size: Size of context window around matches
+            max_evidence_count: Maximum number of evidence items to extract
 
         Returns:
-            Evidence item with content snippet around the match
+            List of evidence items, up to max_evidence_count
 
         """
-        snippet = self._extract_evidence_snippet(
-            content,
-            match.start,
-            match.matched_text_length,
-            context_size,
-        )
-        return BaseFindingEvidence(content=snippet)
+        evidence_items: list[BaseFindingEvidence] = []
 
-    def _extract_evidence_snippet(
-        self, content: str, match_pos: int, match_length: int, context_size: str
+        # Round-robin collection: take one match from each pattern before taking
+        # a second from any. This ensures evidence is representative across all
+        # matched patterns, rather than being dominated by whichever pattern
+        # happens to have the most matches.
+        #
+        # Example with max_evidence_count=3:
+        #   Pattern A: 5 matches, Pattern B: 2 matches, Pattern C: 1 match
+        #   Result: [A[0], B[0], C[0]] - one from each pattern
+        #
+        # Without round-robin, we'd get [A[0], A[1], A[2]] - all from pattern A.
+        results_list = list(results)
+
+        # Track progress through each pattern's matches independently.
+        # positions[i] = index of next match to take from results_list[i]
+        positions = [0] * len(results_list)
+
+        while len(evidence_items) < max_evidence_count:
+            added_any = False
+
+            for i, result in enumerate(results_list):
+                if len(evidence_items) >= max_evidence_count:
+                    return evidence_items
+
+                if positions[i] < len(result.representative_matches):
+                    match = result.representative_matches[positions[i]]
+                    snippet = self.extract_snippet(
+                        content,
+                        match.start,
+                        match.matched_text_length,
+                        context_size,
+                    )
+                    evidence_items.append(BaseFindingEvidence(content=snippet))
+                    positions[i] += 1
+                    added_any = True
+
+            if not added_any:
+                break
+
+        return evidence_items
+
+    def extract_snippet(
+        self,
+        content: str,
+        match_start: int,
+        match_length: int,
+        context_size: EvidenceContextSize,
     ) -> str:
-        """Extract a single evidence snippet with appropriate context.
+        """Extract a text snippet with context window around a position.
 
         Args:
-            content: Original content
-            match_pos: Position where pattern was found
-            match_length: Length of the matched text
-            context_size: Context size specification
+            content: The full text content
+            match_start: Start position of the region of interest
+            match_length: Length of the region
+            context_size: How much context to include on each side
 
         Returns:
-            Evidence snippet with context, or empty string if extraction fails
+            Snippet with ellipsis markers if truncated
 
         """
-        context_size_chars = self._get_context_size(context_size)
+        context_chars = context_size.char_count
 
-        if context_size_chars is None:
-            # 'full' option: include entire content without truncation
+        if context_chars is None:
             return content.strip()
-        else:
-            # Standard context window extraction
-            return self._extract_windowed_context(
-                content, match_pos, match_length, context_size_chars
-            )
 
-    def _extract_windowed_context(
-        self, content: str, match_pos: int, match_length: int, context_chars: int
-    ) -> str:
-        """Extract evidence with a fixed-size context window around the match.
+        # Extract a window of text centred on the match:
+        #
+        #   content: "Hello, my email is test@example.com for contact"
+        #   match:             |email|  (start=10, length=5)
+        #   context_chars: 10
+        #
+        #   start = max(0, 10 - 10) = 0
+        #   end   = min(47, 10 + 5 + 10) = 25
+        #   snippet = content[0:25] = "Hello, my email is test@"
+        #
+        start = max(0, match_start - context_chars)
+        end = min(len(content), match_start + match_length + context_chars)
 
-        Args:
-            content: Original content
-            match_pos: Position where pattern was found
-            match_length: Length of the matched text
-            context_chars: Number of characters for context window
+        snippet = content[start:end].strip()
 
-        Returns:
-            Evidence snippet with context window and ellipsis markers if truncated
+        if start > 0:
+            snippet = self._ELLIPSIS + snippet
+        if end < len(content):
+            snippet = snippet + self._ELLIPSIS
 
-        """
-        context_start = max(0, match_pos - context_chars)
-        context_end = min(len(content), match_pos + match_length + context_chars)
-
-        # Extract the evidence with context
-        evidence_snippet = content[context_start:context_end].strip()
-
-        # Add ellipsis if we truncated the context
-        if context_start > 0:
-            evidence_snippet = self._ELLIPSIS_PREFIX + evidence_snippet
-        if context_end < len(content):
-            evidence_snippet = evidence_snippet + self._ELLIPSIS_SUFFIX
-
-        return evidence_snippet
-
-    def _get_context_size(self, context_size: str) -> int | None:
-        """Get the context size in characters based on the configured level.
-
-        Args:
-            context_size: Context size specification string
-
-        Returns:
-            Number of characters to include before and after each match,
-            or None for full content (no truncation)
-
-        """
-        size_mapping = {
-            "small": self._CONTEXT_SIZE_SMALL,
-            "medium": self._CONTEXT_SIZE_MEDIUM,
-            "large": self._CONTEXT_SIZE_LARGE,
-            self._CONTEXT_SIZE_FULL: None,
-        }
-        return size_mapping.get(context_size.lower(), self._CONTEXT_SIZE_SMALL)
+        return snippet

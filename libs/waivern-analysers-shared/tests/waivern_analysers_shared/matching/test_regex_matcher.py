@@ -14,7 +14,7 @@ class TestRegexMatcherPatternMatching:
         # Regex with character class and quantifier
         result = matcher.find_match("email@example.com", r"[a-z]+@[a-z]+\.[a-z]+")
 
-        assert result.first_match is not None
+        assert len(result.representative_matches) > 0
         assert result.pattern == r"[a-z]+@[a-z]+\.[a-z]+"
 
     def test_matching_is_case_insensitive(self) -> None:
@@ -24,13 +24,13 @@ class TestRegexMatcherPatternMatching:
         assert (
             matcher.find_match(
                 "EMAIL@EXAMPLE.COM", r"[a-z]+@[a-z]+\.[a-z]+"
-            ).first_match
+            ).representative_matches[0]
             is not None
         )
         assert (
             matcher.find_match(
                 "Email@Example.Com", r"[a-z]+@[a-z]+\.[a-z]+"
-            ).first_match
+            ).representative_matches[0]
             is not None
         )
 
@@ -44,7 +44,7 @@ class TestRegexMatcherEdgeCases:
 
         result = matcher.find_match("", r"\d+")
 
-        assert result.first_match is None
+        assert len(result.representative_matches) == 0
         assert result.match_count == 0
 
     def test_returns_no_match_for_empty_pattern(self) -> None:
@@ -53,7 +53,7 @@ class TestRegexMatcherEdgeCases:
 
         result = matcher.find_match("some content", "")
 
-        assert result.first_match is None
+        assert len(result.representative_matches) == 0
         assert result.match_count == 0
 
 
@@ -67,10 +67,17 @@ class TestRegexMatcherReturnType:
 
         result = matcher.find_match(content, r"\d{3}-\d{4}")
 
-        assert result.first_match is not None
-        assert result.first_match.start == 5
-        assert result.first_match.end == 13
-        assert content[result.first_match.start : result.first_match.end] == "555-1234"
+        assert len(result.representative_matches) > 0
+        assert result.representative_matches[0].start == 5
+        assert result.representative_matches[0].end == 13
+        assert (
+            content[
+                result.representative_matches[0].start : result.representative_matches[
+                    0
+                ].end
+            ]
+            == "555-1234"
+        )
 
     def test_returns_pattern_match_with_regex_type(self) -> None:
         """PatternMatch has pattern_type=REGEX."""
@@ -78,8 +85,8 @@ class TestRegexMatcherReturnType:
 
         result = matcher.find_match("test 123", r"\d+")
 
-        assert result.first_match is not None
-        assert result.first_match.pattern_type == PatternType.REGEX
+        assert len(result.representative_matches) > 0
+        assert result.representative_matches[0].pattern_type == PatternType.REGEX
 
 
 class TestRegexMatcherMatchCount:
@@ -101,8 +108,8 @@ class TestRegexMatcherMatchCount:
 
         assert result.match_count == 3
         # First match position should still be the first occurrence
-        assert result.first_match is not None
-        assert result.first_match.start == 0
+        assert len(result.representative_matches) > 0
+        assert result.representative_matches[0].start == 0
 
     def test_match_count_zero_when_no_match(self) -> None:
         """No matches returns match_count=0."""
@@ -111,4 +118,71 @@ class TestRegexMatcherMatchCount:
         result = matcher.find_match("no numbers here", r"\d+")
 
         assert result.match_count == 0
-        assert result.first_match is None
+        assert len(result.representative_matches) == 0
+
+
+class TestRegexMatcherProximityGrouping:
+    """Tests for RegexMatcher with proximity grouping."""
+
+    def test_returns_multiple_representatives_for_spread_matches(self) -> None:
+        """Spread matches return multiple representatives based on proximity threshold."""
+        matcher = RegexMatcher()
+        content = (
+            "email: a@b.com ... email: c@d.com .................... email: e@f.com"
+        )
+        result = matcher.find_match(
+            content, r"\w+@\w+", proximity_threshold=50, max_representatives=3
+        )
+
+        assert (
+            len(result.representative_matches) == 1
+        )  # All matches within 50 char threshold
+        assert result.match_count == 3  # Total of 3 email matches
+        assert result.representative_matches[0].start == 7  # First email position
+
+    def test_proximity_threshold_creates_multiple_groups(self) -> None:
+        """Larger threshold creates separate groups for distant matches."""
+        matcher = RegexMatcher()
+        content = (
+            "email: a@b.com ... email: c@d.com .................... email: e@f.com"
+        )
+        result = matcher.find_match(
+            content, r"\w+@\w+", proximity_threshold=1, max_representatives=10
+        )
+
+        # With threshold=1, each match should be its own group (they're separated by more than 1 char)
+        assert len(result.representative_matches) == 3  # Three separate groups
+        assert result.match_count == 3  # Total of 3 email matches
+
+    def test_max_representatives_limits_returned_matches(self) -> None:
+        """max_representatives parameter limits the number of returned matches."""
+        matcher = RegexMatcher()
+        content = (
+            "email: a@b.com ... email: c@d.com .................... email: e@f.com"
+        )
+        result = matcher.find_match(
+            content, r"\w+@\w+", proximity_threshold=1, max_representatives=2
+        )
+
+        assert len(result.representative_matches) == 2  # Limited by max_representatives
+        assert result.match_count == 3  # Still reports total match count
+
+    def test_empty_content_returns_empty_representatives(self) -> None:
+        """Empty content returns empty representative_matches tuple."""
+        matcher = RegexMatcher()
+        result = matcher.find_match(
+            "", r"\d+", proximity_threshold=200, max_representatives=10
+        )
+
+        assert result.representative_matches == ()
+        assert result.match_count == 0
+
+    def test_no_matches_returns_empty_representatives(self) -> None:
+        """No matches returns empty representative_matches tuple."""
+        matcher = RegexMatcher()
+        result = matcher.find_match(
+            "no numbers here", r"\d+", proximity_threshold=200, max_representatives=10
+        )
+
+        assert result.representative_matches == ()
+        assert result.match_count == 0
