@@ -15,8 +15,8 @@ LLMValidationConfig(
     llm_batch_size: int = 50,
     llm_validation_mode: Literal["standard", "conservative", "aggressive"] = "standard",
 
-    # Sampling (user-facing, optional)
-    sampling_size: int | None = None,  # N samples per group, None = validate all
+    # Sampling (user-facing, defaults to 3 to limit API costs)
+    sampling_size: int = 3,  # N samples per group (1-100)
 
     # Batching parameters (tuning, rarely changed)
     batching: BatchingConfig(
@@ -82,13 +82,13 @@ while `LLMValidationStrategy` decides how to batch and what context to include i
 
 ### Sampling Configuration
 
-Since grouping is always enabled (design-time decision), the only runtime choice is whether
-to sample:
+Since grouping is always enabled (design-time decision), sampling controls how many findings
+per group are validated:
 
-| `sampling_size` | Behaviour                                              |
-| --------------- | ------------------------------------------------------ |
-| `None`          | Validate all findings, apply group-level decisions     |
-| `3`             | Sample 3 per group, apply group-level decisions to all |
+| `sampling_size` | Behaviour                                                               |
+| --------------- | ----------------------------------------------------------------------- |
+| `3` (default)   | Sample 3 per group, apply group-level decisions to all                  |
+| `100`           | Sample up to 100 per group (effectively "validate all" for most groups) |
 
 ### Context Inclusion (Protocol-Driven)
 
@@ -434,9 +434,8 @@ and delegates batching/LLM calls entirely to the strategy.
 │        │                                                                    │
 │        ▼                                                                    │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │ 2. SAMPLING (optional, requires grouping)                           │   │
-│   │    ├─ sampling_size=None → Use all findings in group                │   │
-│   │    └─ sampling_size=N    → Randomly sample N per group              │   │
+│   │ 2. SAMPLING (always enabled, defaults to 3)                         │   │
+│   │    └─ sampling_size=N    → Randomly sample N per group (1-100)      │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
 │        │                                                                    │
 │        ▼                                                                    │
@@ -649,10 +648,8 @@ def create_validation_orchestrator(
     concern_provider = ProcessingPurposeConcernProvider()
     grouping_strategy = ConcernGroupingStrategy(concern_provider)
 
-    # Sampling: Runtime configuration (optional)
-    sampling_strategy: SamplingStrategy | None = None
-    if config.sampling_size is not None:
-        sampling_strategy = RandomSamplingStrategy(config.sampling_size)
+    # Sampling: Runtime configuration (always enabled, defaults to 3)
+    sampling_strategy = RandomSamplingStrategy(config.sampling_size)
 
     return ValidationOrchestrator(
         llm_strategy=llm_strategy,
