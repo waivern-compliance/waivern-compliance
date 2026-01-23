@@ -81,7 +81,7 @@ For source code findings, infer context from file paths in evidence:
 - Example/sample files (`*.example.*`, `sample/*`, `examples/*`): Usually FALSE_POSITIVE
 - Production code (`src/*`, `lib/*`, `app/*`): Requires deeper analysis
 - Config templates (`*.template.*`, `*.sample.*`): Usually FALSE_POSITIVE
-- Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE
+- Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE (library docs/examples, not application code)
 
 **DATABASE - SOURCE METADATA INTERPRETATION:**
 For database findings, parse the source field format:
