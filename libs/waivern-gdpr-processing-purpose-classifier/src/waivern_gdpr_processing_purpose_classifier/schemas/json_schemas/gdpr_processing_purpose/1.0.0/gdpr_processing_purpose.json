@@ -1,0 +1,291 @@
+{
+  "$defs": {
+    "BaseAnalysisOutputMetadata": {
+      "additionalProperties": true,
+      "description": "Base metadata for analysis outputs.",
+      "properties": {
+        "ruleset_used": {
+          "description": "Name of the ruleset used for analysis",
+          "title": "Ruleset Used",
+          "type": "string"
+        },
+        "llm_validation_enabled": {
+          "description": "Whether LLM validation was enabled for this analysis",
+          "title": "Llm Validation Enabled",
+          "type": "boolean"
+        },
+        "analysis_timestamp": {
+          "description": "ISO 8601 timestamp when the analysis was performed",
+          "title": "Analysis Timestamp",
+          "type": "string"
+        },
+        "evidence_context_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Size of context used for evidence extraction",
+          "title": "Evidence Context Size"
+        }
+      },
+      "required": [
+        "ruleset_used",
+        "llm_validation_enabled"
+      ],
+      "title": "BaseAnalysisOutputMetadata",
+      "type": "object"
+    },
+    "BaseFindingEvidence": {
+      "description": "Evidence item with content and collection timestamp.",
+      "properties": {
+        "content": {
+          "description": "The evidence content snippet",
+          "title": "Content",
+          "type": "string"
+        },
+        "collection_timestamp": {
+          "description": "When the evidence was collected",
+          "title": "Collection Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "BaseFindingEvidence",
+      "type": "object"
+    },
+    "GDPRProcessingPurposeFindingMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata for GDPR processing purpose classification findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "properties": {
+        "source": {
+          "description": "Source file or location where the data was found",
+          "title": "Source",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
+          "title": "Context",
+          "type": "object"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "GDPRProcessingPurposeFindingMetadata",
+      "type": "object"
+    },
+    "GDPRProcessingPurposeFindingModel": {
+      "description": "GDPR processing purpose classification finding structure.\n\nRepresents a processing purpose indicator that has been enriched with\nGDPR-specific classification information. Sensitive purposes (e.g., AI/ML,\nanalytics, marketing) may require additional considerations such as\nexplicit consent or DPIA under GDPR.\n\nInherits from BaseFindingModel[GDPRProcessingPurposeFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: GDPRProcessingPurposeFindingMetadata - Required metadata with source",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this finding (UUID)",
+          "title": "Id",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "Evidence items with content and timestamps for this finding",
+          "items": {
+            "$ref": "#/$defs/BaseFindingEvidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "matched_patterns": {
+          "description": "Patterns that were matched during analysis with occurrence counts",
+          "items": {
+            "$ref": "#/$defs/PatternMatchDetail"
+          },
+          "minItems": 1,
+          "title": "Matched Patterns",
+          "type": "array"
+        },
+        "metadata": {
+          "$ref": "#/$defs/GDPRProcessingPurposeFindingMetadata",
+          "description": "Metadata with source and context information"
+        },
+        "processing_purpose": {
+          "description": "Processing purpose name from indicator (e.g., 'Analytics', 'Payment Processing')",
+          "title": "Processing Purpose",
+          "type": "string"
+        },
+        "purpose_category": {
+          "description": "Normalised GDPR purpose category (e.g., 'analytics', 'operational')",
+          "title": "Purpose Category",
+          "type": "string"
+        },
+        "article_references": {
+          "description": "Relevant GDPR article references (e.g., 'Article 6(1)(a)', 'Article 22')",
+          "items": {
+            "type": "string"
+          },
+          "title": "Article References",
+          "type": "array"
+        },
+        "typical_lawful_bases": {
+          "description": "Typical GDPR Article 6 lawful bases for this processing purpose",
+          "items": {
+            "type": "string"
+          },
+          "title": "Typical Lawful Bases",
+          "type": "array"
+        },
+        "sensitive_purpose": {
+          "default": false,
+          "description": "Whether this purpose is privacy-sensitive (AI/ML, analytics, marketing)",
+          "title": "Sensitive Purpose",
+          "type": "boolean"
+        },
+        "dpia_recommendation": {
+          "default": "not_required",
+          "description": "DPIA recommendation level for this purpose",
+          "enum": [
+            "required",
+            "recommended",
+            "not_required"
+          ],
+          "title": "Dpia Recommendation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence",
+        "matched_patterns",
+        "metadata",
+        "processing_purpose",
+        "purpose_category"
+      ],
+      "title": "GDPRProcessingPurposeFindingModel",
+      "type": "object"
+    },
+    "GDPRProcessingPurposeSummary": {
+      "description": "Summary statistics for GDPR processing purpose classification findings.",
+      "properties": {
+        "total_findings": {
+          "description": "Total number of classified processing purpose findings",
+          "minimum": 0,
+          "title": "Total Findings",
+          "type": "integer"
+        },
+        "purpose_categories": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Count of findings per GDPR purpose category",
+          "title": "Purpose Categories",
+          "type": "object"
+        },
+        "sensitive_purposes_count": {
+          "description": "Number of findings with sensitive purposes",
+          "minimum": 0,
+          "title": "Sensitive Purposes Count",
+          "type": "integer"
+        },
+        "dpia_required_count": {
+          "description": "Number of findings where DPIA is required",
+          "minimum": 0,
+          "title": "Dpia Required Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total_findings",
+        "sensitive_purposes_count",
+        "dpia_required_count"
+      ],
+      "title": "GDPRProcessingPurposeSummary",
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "PatternMatchDetail": {
+      "description": "Detail about a matched pattern including occurrence count.\n\nThis structured type replaces simple pattern strings to provide\nricher information about how many times each pattern was found,\nwhich is useful for auditing and confidence assessment.",
+      "properties": {
+        "pattern": {
+          "description": "The pattern that matched",
+          "title": "Pattern",
+          "type": "string"
+        },
+        "match_count": {
+          "description": "Number of times this pattern matched in the content",
+          "minimum": 1,
+          "title": "Match Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pattern",
+        "match_count"
+      ],
+      "title": "PatternMatchDetail",
+      "type": "object"
+    }
+  },
+  "description": "Complete output structure for gdpr_processing_purpose schema.\n\nThis model represents the full wire format for GDPR processing purpose\nclassification results, including findings enriched with GDPR-specific\ninformation, summary statistics, and analysis metadata.",
+  "properties": {
+    "findings": {
+      "description": "List of processing purpose findings with GDPR classification",
+      "items": {
+        "$ref": "#/$defs/GDPRProcessingPurposeFindingModel"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/GDPRProcessingPurposeSummary",
+      "description": "Summary statistics of the GDPR classification analysis"
+    },
+    "analysis_metadata": {
+      "$ref": "#/$defs/BaseAnalysisOutputMetadata",
+      "description": "Metadata about the classification process"
+    }
+  },
+  "required": [
+    "findings",
+    "summary",
+    "analysis_metadata"
+  ],
+  "title": "GDPRProcessingPurposeFindingOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}
