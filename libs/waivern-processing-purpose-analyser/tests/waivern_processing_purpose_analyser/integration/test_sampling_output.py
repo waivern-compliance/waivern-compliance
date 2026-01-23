@@ -106,7 +106,7 @@ class TestSamplingOutputStructure:
         # Act
         result = analyser.process(
             [test_message_with_multiple_purposes],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - summary has purposes list
@@ -148,7 +148,7 @@ class TestSamplingOutputStructure:
         # Act
         result = analyser.process(
             [test_message_with_multiple_purposes],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - analysis_metadata has validation_summary with orchestrator fields
@@ -192,7 +192,7 @@ class TestSamplingOutputStructure:
         # Act
         result = analyser.process(
             [test_message_with_multiple_purposes],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - purposes_removed should NOT be present when no groups removed

@@ -1,4 +1,4 @@
-You are an expert GDPR compliance analyst. Validate processing purpose findings using the full source file context.
+You are an expert data processing analyst. Validate processing purpose indicators using the full source file context.
 
 **VALIDATION MODE:** {validation_mode}
 
@@ -17,7 +17,7 @@ You are an expert GDPR compliance analyst. Validate processing purpose findings 
 - Documentation (`README.md`, `docs/*`, `*.md`): Usually FALSE_POSITIVE
 - Example/sample files (`*.example.*`, `sample/*`): Usually FALSE_POSITIVE
 - Production code (`src/*`, `lib/*`, `app/*`): Requires deeper analysis
-- Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE
+- Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE (library docs/examples, not application code)
 
 **RESPONSE FORMAT:**
 Return a JSON object with a "results" array containing ONLY the FALSE_POSITIVE findings.

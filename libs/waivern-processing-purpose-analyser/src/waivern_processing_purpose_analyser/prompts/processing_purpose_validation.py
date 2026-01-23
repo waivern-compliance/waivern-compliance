@@ -1,4 +1,4 @@
-"""LLM validation prompts for processing purpose findings validation.
+"""LLM validation prompts for processing purpose indicator validation.
 
 TODO: Refactor to use separate prompt strategies for different source types
 (database, source_code, filesystem) when adding more connector types.
@@ -6,25 +6,25 @@ Currently this single prompt handles all source types with combined guidance.
 """
 
 from waivern_processing_purpose_analyser.schemas import (
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorModel,
 )
 
 
 def get_processing_purpose_validation_prompt(
-    findings: list[ProcessingPurposeFindingModel],
+    findings: list[ProcessingPurposeIndicatorModel],
     validation_mode: str = "standard",
-    sensitive_categories: list[str] | None = None,
+    sensitive_purposes: list[str] | None = None,
 ) -> str:
-    """Generate validation prompt for processing purpose findings.
+    """Generate validation prompt for processing purpose indicators.
 
     This prompt is designed to help LLMs distinguish between actual business
     processing activities and false positives (documentation, examples, code comments).
     Handles both single findings (as a list of 1) and multiple findings efficiently.
 
     Args:
-        findings: List of processing purpose findings to validate
+        findings: List of processing purpose indicators to validate
         validation_mode: "standard" or "conservative" validation approach
-        sensitive_categories: List of categories considered privacy-sensitive (optional)
+        sensitive_purposes: List of purposes considered privacy-sensitive (optional)
 
     Returns:
         Formatted validation prompt for the LLM
@@ -40,7 +40,7 @@ def get_processing_purpose_validation_prompt(
 
     # Build validation approach section
     validation_approach = _get_validation_approach(
-        validation_mode, findings, sensitive_categories
+        validation_mode, findings, sensitive_purposes
     )
 
     # Build category guidance
@@ -50,7 +50,7 @@ def get_processing_purpose_validation_prompt(
     response_format = _get_response_format(len(findings), is_conservative)
 
     return f"""
-You are an expert GDPR compliance analyst. Validate processing purpose findings to identify false positives.
+You are an expert data processing analyst. Validate processing purpose indicators to identify false positives.
 
 **FINDINGS TO VALIDATE:**
 {findings_to_validate}
@@ -62,7 +62,7 @@ For each finding, determine if it represents actual business processing (TRUE_PO
 **VALIDATION CRITERIA:**
 - TRUE_POSITIVE: Actual business processing activities affecting real users/customers
 - FALSE_POSITIVE: Documentation, examples, tutorials, code comments, configuration templates
-- Consider purpose category and source context
+- Consider the purpose type and source context
 - Assess source context (database vs. code vs. documentation)
 
 **CATEGORY-SPECIFIC GUIDANCE:**
@@ -81,7 +81,7 @@ For source code findings, infer context from file paths in evidence:
 - Example/sample files (`*.example.*`, `sample/*`, `examples/*`): Usually FALSE_POSITIVE
 - Production code (`src/*`, `lib/*`, `app/*`): Requires deeper analysis
 - Config templates (`*.template.*`, `*.sample.*`): Usually FALSE_POSITIVE
-- Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE
+- Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE (library docs/examples, not application code)
 
 **DATABASE - SOURCE METADATA INTERPRETATION:**
 For database findings, parse the source field format:
@@ -156,7 +156,7 @@ Finding:
 {response_format}"""
 
 
-def _build_findings_to_validate(findings: list[ProcessingPurposeFindingModel]) -> str:
+def _build_findings_to_validate(findings: list[ProcessingPurposeIndicatorModel]) -> str:
     """Build formatted findings block for the prompt.
 
     Args:
@@ -179,7 +179,6 @@ def _build_findings_to_validate(findings: list[ProcessingPurposeFindingModel]) -
         findings_text.append(f"""
 Finding [{finding.id}]:
   Purpose: {finding.purpose}
-  Category: {finding.purpose_category}
   Patterns: {", ".join(f"{p.pattern} (×{p.match_count})" for p in finding.matched_patterns)}
   Source: {source}
   Evidence:
@@ -190,22 +189,22 @@ Finding [{finding.id}]:
 
 def _get_validation_approach(
     validation_mode: str,
-    findings: list[ProcessingPurposeFindingModel],
-    sensitive_categories: list[str] | None = None,
+    findings: list[ProcessingPurposeIndicatorModel],
+    sensitive_purposes: list[str] | None = None,
 ) -> str:
     """Get validation approach section based on mode and findings."""
     if validation_mode == "conservative":
-        # Check if any findings are in sensitive categories
-        sensitive_category_findings = [
+        # Check if any findings have sensitive purposes
+        sensitive_purpose_findings = [
             f
             for f in findings
-            if sensitive_categories and f.purpose_category in sensitive_categories
+            if sensitive_purposes and f.purpose in sensitive_purposes
         ]
 
         warnings: list[str] = []
-        if sensitive_category_findings:
+        if sensitive_purpose_findings:
             warnings.append(
-                "⚠️ PRIVACY SENSITIVE categories detected - conservative approach required"
+                "⚠️ PRIVACY SENSITIVE purposes detected - conservative approach required"
             )
 
         warning_text = "\n".join(f"**{w}**" for w in warnings) if warnings else ""
@@ -214,27 +213,27 @@ def _get_validation_approach(
 **CONSERVATIVE VALIDATION MODE:**
 {warning_text}
 - Only mark as FALSE_POSITIVE if very confident it's not actual business processing
-- When in doubt, mark as TRUE_POSITIVE to protect privacy and compliance
-- Consider potential regulatory impact if this processing is mishandled
-- Err on the side of data protection compliance
-- Prioritize regulatory compliance over false positive reduction"""
+- When in doubt, mark as TRUE_POSITIVE to ensure complete detection
+- Consider potential business and privacy impact if this processing is missed
+- Err on the side of thorough detection
+- Prioritise completeness over false positive reduction"""
 
     else:  # standard mode
         return """
 **STANDARD VALIDATION MODE:**
 - Balance false positive reduction with compliance requirements
-- Apply context-aware assessment considering purpose category
+- Apply context-aware assessment considering the processing purpose
 - Focus on clear business context indicators"""
 
 
 def _get_category_guidance_summary() -> str:
-    """Get consolidated category-specific guidance."""
+    """Get consolidated purpose-specific guidance."""
     return """
-- AI_AND_ML: Conservative validation, distinguish actual implementation from discussion/tutorials
-- OPERATIONAL: Generic terms need strong context validation, check for real customer interactions
-- ANALYTICS: High privacy impact, conservative validation for actual data collection vs. theoretical discussion
-- MARKETING_AND_ADVERTISING: High privacy risk, conservative validation for personalization/targeting
-- SECURITY: Generally legitimate in business context, rarely false positives"""
+- AI/ML purposes: Distinguish actual model training/testing from tutorials or documentation
+- Marketing purposes: High false positive rate from examples; validate actual campaign/targeting code
+- Payment/Billing: Usually true positives in production code; watch for test card numbers
+- Analytics purposes: Distinguish actual tracking implementation from documentation
+- Security purposes: Generally legitimate in business context, rarely false positives"""
 
 
 def _get_response_format(finding_count: int, is_conservative: bool) -> str:

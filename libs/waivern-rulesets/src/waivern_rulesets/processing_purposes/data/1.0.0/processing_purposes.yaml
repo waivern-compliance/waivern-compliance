@@ -1,448 +1,487 @@
+# Processing Purposes Detection Ruleset
+# Framework-agnostic patterns for detecting data processing purposes
+# Regulatory classification is performed by downstream classifiers (e.g., GDPR classifier)
+
 name: processing_purposes
 version: 1.0.0
-description: Known processing purposes to search for during analysis. This ruleset contains processing purpose patterns for
-  GDPR compliance analysis.
-purpose_categories:
-- ai_and_ml
-- analytics
-- marketing_and_advertising
-- operational
-- security
-sensitive_categories:
-- ai_and_ml
-- analytics
-- marketing_and_advertising
+description: Ruleset for detecting processing purpose patterns in source code and documents
+
+# Master list of valid processing purpose names
+# Each rule's name must match an entry in this list
+purposes:
+  # AI and Machine Learning
+  - Artificial Intelligence Model Training
+  - Artificial Intelligence Bias Testing
+  - Artificial Intelligence Model Refinement
+  - Artificial Intelligence Performance Testing
+  - Artificial Intelligence Security Testing
+  - Artificial Intelligence Compliance Management
+  # Operational
+  - General Product and Service Delivery
+  - Customer Service and Support
+  - Customization of Products and Services
+  - User Identity and Login Management
+  - Payment, Billing, and Invoicing
+  # Analytics
+  - Behavioral Data Analysis for Product Improvement
+  # Marketing and Advertising
+  - Dynamic Personalization of Products and Services
+  - Consumer Marketing Within Owned Products
+  - Targeted Marketing via Third-Party Platforms
+  - Third-Party Marketing via Owned Products
+  # Security
+  - Security, Fraud Prevention, and Abuse Detection
+
 rules:
-- name: Artificial Intelligence Model Training
-  description: Training AI/ML models using personal data
-  patterns:
-  - model training
-  - machine learning
-  - ai training
-  - training data
-  - ml model
-  - learning model
-  - predictive model
-  - google vertex ai
-  - aws sagemaker
-  - microsoft azure machine learning
-  - ibm watson machine learning
-  - datarobot
-  - tensorflow extended
-  - hugging face transformers
-  - hopsworks
-  - snorkel ai
-  - kubeflow
-  - feast
-  purpose_category: ai_and_ml
-- name: Artificial Intelligence Bias Testing
-  description: Testing AI/ML models for bias and fairness issues
-  patterns:
-  - bias testing
-  - fairness testing
-  - model bias
-  - ai fairness
-  - bias detection
-  - fairness metrics
-  - ibm ai fairness 360
-  - microsoft fairlearn
-  - themis-ml
-  - shap
-  - lime
-  - uchicago aequitas
-  - google what-if tool
-  - responsibly
-  - rebias
-  - fiddler ai
-  - arthur ai
-  - truera
-  - credo ai
-  - aws sagemaker clarify
-  - parity ai
-  purpose_category: ai_and_ml
-- name: Artificial Intelligence Model Refinement
-  description: Refining and improving AI/ML models for better performance
-  patterns:
-  - model refinement
-  - model improvement
-  - fine-tuning
-  - model optimisation
-  - performance enhancement
-  - finetunedb
-  - entry point ai
-  - openai api
-  - google ai platform vizier
-  - aws sagemaker
-  - nvidia rtx ai toolkit
-  - lmflow
-  - optuna
-  - hyperopt
-  - mlflow
-  - deepchecks
-  - granica signal
-  - superannotate
-  - kili technology
-  - cohere
-  - scale ai
-  - labelbox
-  purpose_category: ai_and_ml
-- name: Artificial Intelligence Performance Testing
-  description: Testing AI/ML model performance, accuracy, and robustness
-  patterns:
-  - performance testing
-  - model evaluation
-  - accuracy testing
-  - robustness testing
-  - efficiency testing
-  - deepchecks
-  - aitest
-  - mlperf
-  - hpc ai500
-  - aiperf
-  - mlcommons
-  - ailuminate
-  - chatbot arena
-  - helm
-  - big-bench
-  - decoding trust benchmark
-  purpose_category: ai_and_ml
-- name: Artificial Intelligence Security Testing
-  description: Testing AI/ML models for security vulnerabilities and threats
-  patterns:
-  - security testing
-  - penetration testing
-  - adversarial testing
-  - model security
-  - vulnerability testing
-  - ibm adversarial robustness toolbox
-  - microsoft counterfit
-  - garak
-  - privacy meter
-  - ai-exploits
-  - pentest ai
-  - hcl app scan
-  - purple llama
-  - aptori
-  - ai jack
-  - pentest gpt
-  - devaic
-  - darktrace
-  - synack
-  - shellgpt
-  purpose_category: ai_and_ml
-- name: Artificial Intelligence Compliance Management
-  description: Managing AI/ML compliance, governance, and regulatory requirements
-  patterns:
-  - compliance
-  - risk management
-  - governance
-  - regulatory compliance
-  - ethics
-  - accountability
-  - centraleyes
-  - compliance.ai
-  - ibm watson
-  - auditboard
-  - trustlayer
-  - robust intelligence
-  - fairnow
-  - logicgate
-  - validmind
-  - credo.ai
-  - saidot
-  - holisticai
-  - onetrust
-  - fairly.ai
-  - anch.ai
-  - fiddler ai
-  - complyzen
-  - modulos
-  - vanta
-  - waivern
-  - mineos
-  purpose_category: ai_and_ml
-- name: General Product and Service Delivery
-  description: Delivering products and services to customers and users
-  patterns:
-  - service
-  - delivery
-  - product
-  - fulfill
-  - provide
-  - technical operations
-  - online services
-  - apache web server
-  - shopify
-  - webflow
-  - wordpress
-  - drupal
-  - squarespace
-  - labrador
-  - Stibo DX
-  - Dr Publish
-  purpose_category: operational
-- name: Customer Service and Support
-  description: Providing customer service, support, and assistance
-  patterns:
-  - support
-  - customer
-  - help
-  - chat
-  - email
-  - inquiry
-  - ticket
-  - assistance
-  - zendesk
-  - freshdesk
-  - intercom
-  - salesforce servicecloud
-  - helpscout
-  - liveagent
-  purpose_category: operational
-- name: Customization of Products and Services
-  description: Customising products and services based on user preferences
-  patterns:
-  - customisation
-  - preferences
-  - settings
-  - user choice
-  - theme
-  - ui
-  - personalization
-  purpose_category: operational
-- name: User Identity and Login Management
-  description: Managing user identity, authentication, and login processes
-  patterns:
-  - authentication
-  - login
-  - account
-  - profile
-  - credentials
-  - password
-  - user id
-  - ssn
-  - social security number
-  - National Insurance Number
-  - NI number
-  - fødselsnummer
-  - Numéro de Sécurité Sociale
-  - Numéro INSEE
-  - Sozialversicherungsnummer
-  - Steuerliche Identifikationsnummer
-  - ssPIN
-  - CRR
-  - Rijksregisternummer
-  - Numéro de registre national
-  - EGN
-  - OIB
-  - Osobni identifikacijski broj
-  - RČ
-  - Rodné číslo
-  - CPR-nummer
-  - Isikukood
-  - IK
-  - Henkilötunnus
-  - HETU
-  - AFM
-  - AMKA
-  - Personal Public Service Number
-  - PPSN
-  - Codice fiscale
-  - Personas kods
-  - Asmens kodas
-  - Burgerservicenummer
-  - BSN
-  - Powszechny Elektroniczny System Ewidencji Ludności
-  - PESEL
-  - Cod Numeric Personal
-  - CNP
-  - Číslo občianskeho preukazu
-  - ČOP
-  - Enotna matična številka občana
-  - EMŠO
-  - Documento Nacional de Identidad
-  - DNI
-  - Número de Identificación de Extranjeros
-  - NIE
-  - Personnummer
-  - Kennitala
-  - Alters- und Hinterlassenenversicherungsnummer
-  - AHV/AVS-Nummer
-  - google identity
-  - facebook login
-  - apple sign-in
-  - microsoft sign-in
-  - amazon sign-in
-  - bank ID sign-in
-  - vipps sign-in
-  - microsoft active directory
-  - forgerock
-  purpose_category: operational
-- name: Payment, Billing, and Invoicing
-  description: Processing payments, billing, and financial transactions
-  patterns:
-  - payment
-  - transaction
-  - billing
-  - purchase
-  - subscription
-  - order
-  - financial
-  - klarna
-  - recurly
-  - credit card
-  - debit card
-  - IBAN
-  - direct debit
-  - stripe
-  - Visa
-  - Mastercard
-  - American Express
-  - Amex
-  - Square
-  - Paypal
-  - Adyen
-  - checkout.com
-  - worldpay
-  - First Data
-  - FIServ
-  - authorize.net
-  - Razorpay
-  - Mollie
-  - Affirm
-  - Amazon Pay
-  - Google Pay
-  - Apple Pay
-  - Samsung Pay
-  - Chase Paymentech
-  - Bank of America Merchant Services
-  - Wells Fargo Merchant Services
-  purpose_category: operational
-- name: Behavioral Data Analysis for Product Improvement
-  description: Analysing user behaviour and data to improve products and services
-  patterns:
-  - analytics
-  - tracking
-  - monitor
-  - measure
-  - behavior
-  - survey
-  - product improvement
-  - adobe analytics
-  - snowflake
-  - piwik pro
-  - matomo
-  - heap
-  - Google analytics
-  - Mixpanel
-  - Amplitude
-  - Hotjar
-  - Plausible Analytics
-  - Fathom Analytics
-  - Umami Analytics
-  - Clicky
-  - Statcounter
-  - Woopra
-  - Kissmetrics
-  - Kibana
-  - Microsoft Power BI
-  - Chartio
-  - Salesforce Analytics
-  - Tableau
-  - SAS Analytics
-  - IBM Watson Analytics
-  purpose_category: analytics
-- name: Dynamic Personalization of Products and Services
-  description: Dynamically personalising products and services based on user data
-  patterns:
-  - personalization
-  - recommendation
-  - history
-  - mirror audience
-  - preferences
-  - targeting
-  - braze
-  - twilio
-  - optimizely
-  - dynamic yield
-  - adobe target
-  - coveo relevance cloud
-  - Salesforce marketing cloud
-  - adobe campaign
-  - Iterable
-  - Klaviyo
-  - Marketo
-  - Pardot
-  - Oracle Eloquoa
-  - ActiveCampaign
-  - Airship
-  - OneSignal
-  - Leanplum
-  - Clevertap
-  purpose_category: marketing_and_advertising
-- name: Consumer Marketing Within Owned Products
-  description: Marketing and promotional activities within company-owned products and platforms
-  patterns:
-  - marketing
-  - promotion
-  - advertising
-  - notification
-  - email campaign
-  - loyalty program
-  - braze
-  - sap emarsys
-  - salesforce marketing cloud
-  - klaviyo
-  - omnisend
-  - mailchimp
-  - sendgrid
-  - mailjet
-  - onesignal
-  purpose_category: marketing_and_advertising
-- name: Targeted Marketing via Third-Party Platforms
-  description: Targeted marketing and advertising through third-party platforms
-  patterns:
-  - advertising
-  - targeting
-  - third-party marketing
-  - tracking
-  - custom audience
-  - retargeting
-  - meta
-  - snap
-  - google ads 360
-  - tiktok
-  - twitter
-  - linkedin ads
-  purpose_category: marketing_and_advertising
-- name: Third-Party Marketing via Owned Products
-  description: Third-party marketing and advertising activities conducted through company-owned products
-  patterns:
-  - partner marketing
-  - third-party advertising
-  - sponsored content
-  - custom audience
-  - meta
-  - snap
-  - google ads 360
-  - tiktok
-  - third-party advertisers
-  purpose_category: marketing_and_advertising
-- name: Security, Fraud Prevention, and Abuse Detection
-  description: Protecting against security threats, fraud, and platform abuse
-  patterns:
-  - security
-  - fraud
-  - protection
-  - abuse
-  - compliance
-  - policy enforcement
-  - verification
-  - scamalytics
-  - seon
-  - netcraft
-  - threatmark
-  - complyadvantage
-  - veriff
-  - feedzai
-  purpose_category: security
+  # =============================================================================
+  # AI and Machine Learning Purposes
+  # =============================================================================
+
+  - name: Artificial Intelligence Model Training
+    description: Training AI/ML models using personal data
+    patterns:
+      - model training
+      - machine learning
+      - ai training
+      - training data
+      - ml model
+      - learning model
+      - predictive model
+      - google vertex ai
+      - aws sagemaker
+      - microsoft azure machine learning
+      - ibm watson machine learning
+      - datarobot
+      - tensorflow extended
+      - hugging face transformers
+      - hopsworks
+      - snorkel ai
+      - kubeflow
+      - feast
+
+  - name: Artificial Intelligence Bias Testing
+    description: Testing AI/ML models for bias and fairness issues
+    patterns:
+      - bias testing
+      - fairness testing
+      - model bias
+      - ai fairness
+      - bias detection
+      - fairness metrics
+      - ibm ai fairness 360
+      - microsoft fairlearn
+      - themis-ml
+      - shap
+      - lime
+      - uchicago aequitas
+      - google what-if tool
+      - responsibly
+      - rebias
+      - fiddler ai
+      - arthur ai
+      - truera
+      - credo ai
+      - aws sagemaker clarify
+      - parity ai
+
+  - name: Artificial Intelligence Model Refinement
+    description: Refining and improving AI/ML models for better performance
+    patterns:
+      - model refinement
+      - model improvement
+      - fine-tuning
+      - model optimisation
+      - performance enhancement
+      - finetunedb
+      - entry point ai
+      - openai api
+      - google ai platform vizier
+      - aws sagemaker
+      - nvidia rtx ai toolkit
+      - lmflow
+      - optuna
+      - hyperopt
+      - mlflow
+      - deepchecks
+      - granica signal
+      - superannotate
+      - kili technology
+      - cohere
+      - scale ai
+      - labelbox
+
+  - name: Artificial Intelligence Performance Testing
+    description: Testing AI/ML model performance, accuracy, and robustness
+    patterns:
+      - performance testing
+      - model evaluation
+      - accuracy testing
+      - robustness testing
+      - efficiency testing
+      - deepchecks
+      - aitest
+      - mlperf
+      - hpc ai500
+      - aiperf
+      - mlcommons
+      - ailuminate
+      - chatbot arena
+      - helm
+      - big-bench
+      - decoding trust benchmark
+
+  - name: Artificial Intelligence Security Testing
+    description: Testing AI/ML models for security vulnerabilities and threats
+    patterns:
+      - security testing
+      - penetration testing
+      - adversarial testing
+      - model security
+      - vulnerability testing
+      - ibm adversarial robustness toolbox
+      - microsoft counterfit
+      - garak
+      - privacy meter
+      - ai-exploits
+      - pentest ai
+      - hcl app scan
+      - purple llama
+      - aptori
+      - ai jack
+      - pentest gpt
+      - devaic
+      - darktrace
+      - synack
+      - shellgpt
+
+  - name: Artificial Intelligence Compliance Management
+    description: Managing AI/ML compliance, governance, and regulatory requirements
+    patterns:
+      - compliance
+      - risk management
+      - governance
+      - regulatory compliance
+      - ethics
+      - accountability
+      - centraleyes
+      - compliance.ai
+      - ibm watson
+      - auditboard
+      - trustlayer
+      - robust intelligence
+      - fairnow
+      - logicgate
+      - validmind
+      - credo.ai
+      - saidot
+      - holisticai
+      - onetrust
+      - fairly.ai
+      - anch.ai
+      - fiddler ai
+      - complyzen
+      - modulos
+      - vanta
+      - waivern
+      - mineos
+
+  # =============================================================================
+  # Operational Purposes
+  # =============================================================================
+
+  - name: General Product and Service Delivery
+    description: Delivering products and services to customers and users
+    patterns:
+      - service
+      - delivery
+      - product
+      - fulfill
+      - provide
+      - technical operations
+      - online services
+      - apache web server
+      - shopify
+      - webflow
+      - wordpress
+      - drupal
+      - squarespace
+      - labrador
+      - Stibo DX
+      - Dr Publish
+
+  - name: Customer Service and Support
+    description: Providing customer service, support, and assistance
+    patterns:
+      - support
+      - customer
+      - help
+      - chat
+      - email
+      - inquiry
+      - ticket
+      - assistance
+      - zendesk
+      - freshdesk
+      - intercom
+      - salesforce servicecloud
+      - helpscout
+      - liveagent
+
+  - name: Customization of Products and Services
+    description: Customising products and services based on user preferences
+    patterns:
+      - customisation
+      - preferences
+      - settings
+      - user choice
+      - theme
+      - ui
+      - personalization
+
+  - name: User Identity and Login Management
+    description: Managing user identity, authentication, and login processes
+    patterns:
+      - authentication
+      - login
+      - account
+      - profile
+      - credentials
+      - password
+      - user id
+      - ssn
+      - social security number
+      - National Insurance Number
+      - NI number
+      - fødselsnummer
+      - Numéro de Sécurité Sociale
+      - Numéro INSEE
+      - Sozialversicherungsnummer
+      - Steuerliche Identifikationsnummer
+      - ssPIN
+      - CRR
+      - Rijksregisternummer
+      - Numéro de registre national
+      - EGN
+      - OIB
+      - Osobni identifikacijski broj
+      - RČ
+      - Rodné číslo
+      - CPR-nummer
+      - Isikukood
+      - IK
+      - Henkilötunnus
+      - HETU
+      - AFM
+      - AMKA
+      - Personal Public Service Number
+      - PPSN
+      - Codice fiscale
+      - Personas kods
+      - Asmens kodas
+      - Burgerservicenummer
+      - BSN
+      - Powszechny Elektroniczny System Ewidencji Ludności
+      - PESEL
+      - Cod Numeric Personal
+      - CNP
+      - Číslo občianskeho preukazu
+      - ČOP
+      - Enotna matična številka občana
+      - EMŠO
+      - Documento Nacional de Identidad
+      - DNI
+      - Número de Identificación de Extranjeros
+      - NIE
+      - Personnummer
+      - Kennitala
+      - Alters- und Hinterlassenenversicherungsnummer
+      - AHV/AVS-Nummer
+      - google identity
+      - facebook login
+      - apple sign-in
+      - microsoft sign-in
+      - amazon sign-in
+      - bank ID sign-in
+      - vipps sign-in
+      - microsoft active directory
+      - forgerock
+
+  - name: Payment, Billing, and Invoicing
+    description: Processing payments, billing, and financial transactions
+    patterns:
+      - payment
+      - transaction
+      - billing
+      - purchase
+      - subscription
+      - order
+      - financial
+      - klarna
+      - recurly
+      - credit card
+      - debit card
+      - IBAN
+      - direct debit
+      - stripe
+      - Visa
+      - Mastercard
+      - American Express
+      - Amex
+      - Square
+      - Paypal
+      - Adyen
+      - checkout.com
+      - worldpay
+      - First Data
+      - FIServ
+      - authorize.net
+      - Razorpay
+      - Mollie
+      - Affirm
+      - Amazon Pay
+      - Google Pay
+      - Apple Pay
+      - Samsung Pay
+      - Chase Paymentech
+      - Bank of America Merchant Services
+      - Wells Fargo Merchant Services
+
+  # =============================================================================
+  # Analytics Purposes
+  # =============================================================================
+
+  - name: Behavioral Data Analysis for Product Improvement
+    description: Analysing user behaviour and data to improve products and services
+    patterns:
+      - analytics
+      - tracking
+      - monitor
+      - measure
+      - behavior
+      - survey
+      - product improvement
+      - adobe analytics
+      - snowflake
+      - piwik pro
+      - matomo
+      - heap
+      - Google analytics
+      - Mixpanel
+      - Amplitude
+      - Hotjar
+      - Plausible Analytics
+      - Fathom Analytics
+      - Umami Analytics
+      - Clicky
+      - Statcounter
+      - Woopra
+      - Kissmetrics
+      - Kibana
+      - Microsoft Power BI
+      - Chartio
+      - Salesforce Analytics
+      - Tableau
+      - SAS Analytics
+      - IBM Watson Analytics
+
+  # =============================================================================
+  # Marketing and Advertising Purposes
+  # =============================================================================
+
+  - name: Dynamic Personalization of Products and Services
+    description: Dynamically personalising products and services based on user data
+    patterns:
+      - personalization
+      - recommendation
+      - history
+      - mirror audience
+      - preferences
+      - targeting
+      - braze
+      - twilio
+      - optimizely
+      - dynamic yield
+      - adobe target
+      - coveo relevance cloud
+      - Salesforce marketing cloud
+      - adobe campaign
+      - Iterable
+      - Klaviyo
+      - Marketo
+      - Pardot
+      - Oracle Eloquoa
+      - ActiveCampaign
+      - Airship
+      - OneSignal
+      - Leanplum
+      - Clevertap
+
+  - name: Consumer Marketing Within Owned Products
+    description: Marketing and promotional activities within company-owned products and platforms
+    patterns:
+      - marketing
+      - promotion
+      - advertising
+      - notification
+      - email campaign
+      - loyalty program
+      - braze
+      - sap emarsys
+      - salesforce marketing cloud
+      - klaviyo
+      - omnisend
+      - mailchimp
+      - sendgrid
+      - mailjet
+      - onesignal
+
+  - name: Targeted Marketing via Third-Party Platforms
+    description: Targeted marketing and advertising through third-party platforms
+    patterns:
+      - advertising
+      - targeting
+      - third-party marketing
+      - tracking
+      - custom audience
+      - retargeting
+      - meta
+      - snap
+      - google ads 360
+      - tiktok
+      - twitter
+      - linkedin ads
+
+  - name: Third-Party Marketing via Owned Products
+    description: Third-party marketing and advertising activities conducted through company-owned products
+    patterns:
+      - partner marketing
+      - third-party advertising
+      - sponsored content
+      - custom audience
+      - meta
+      - snap
+      - google ads 360
+      - tiktok
+      - third-party advertisers
+
+  # =============================================================================
+  # Security Purposes
+  # =============================================================================
+
+  - name: Security, Fraud Prevention, and Abuse Detection
+    description: Protecting against security threats, fraud, and platform abuse
+    patterns:
+      - security
+      - fraud
+      - protection
+      - abuse
+      - compliance
+      - policy enforcement
+      - verification
+      - scamalytics
+      - seon
+      - netcraft
+      - threatmark
+      - complyadvantage
+      - veriff
+      - feedzai

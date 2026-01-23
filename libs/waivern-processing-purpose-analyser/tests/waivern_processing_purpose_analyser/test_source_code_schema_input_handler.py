@@ -16,7 +16,7 @@ from waivern_source_code_analyser.schemas.source_code import (
 )
 
 from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorModel,
 )
 from waivern_processing_purpose_analyser.source_code_schema_input_handler import (
     SourceCodeSchemaInputHandler,
@@ -29,7 +29,6 @@ class TestSourceCodeSchemaInputHandler:
     # Test constants - defined locally, not imported from implementation
     EXPECTED_FINDING_FIELDS = [
         "purpose",
-        "purpose_category",
         "matched_patterns",
         "evidence",
         "metadata",
@@ -183,7 +182,7 @@ class UserFormHandler {
 
         # Verify findings structure
         for finding in findings:
-            assert isinstance(finding, ProcessingPurposeFindingModel)
+            assert isinstance(finding, ProcessingPurposeIndicatorModel)
             for field in self.EXPECTED_FINDING_FIELDS:
                 assert hasattr(finding, field)
             assert isinstance(finding.evidence, list)
@@ -290,7 +289,6 @@ class UserFormHandler {
         for finding in findings:
             # Verify all string fields are non-empty strings
             assert isinstance(finding.purpose, str) and len(finding.purpose) > 0
-            assert isinstance(finding.purpose_category, str)
             assert (
                 isinstance(finding.matched_patterns, list)
                 and len(finding.matched_patterns) > 0
@@ -364,51 +362,6 @@ class UserFormHandler {
     # =========================================================================
     # Rule-Specific Tests (ServiceIntegration, DataCollection)
     # =========================================================================
-
-    def test_service_integration_findings_include_service_category(
-        self,
-        handler: SourceCodeSchemaInputHandler,
-        service_integration_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
-    ) -> None:
-        """Test that findings from ServiceIntegrationRule include service_category field."""
-        # Arrange
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Service integration test",
-            description="Test service integration categorical data",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[service_integration_file_data],
-        )
-
-        # Act
-        findings = handler.analyse(source_data)
-
-        # Assert
-        service_integration_findings = [
-            f
-            for f in findings
-            if any(
-                p.pattern.lower() in ["aws", "dropbox", "amazon"]
-                for p in f.matched_patterns
-            )
-        ]
-
-        assert len(service_integration_findings) > 0, (
-            "Expected at least one service integration finding"
-        )
-
-        for finding in service_integration_findings:
-            assert hasattr(finding, "service_category"), (
-                "Finding should have service_category field from ServiceIntegrationRule"
-            )
-            assert isinstance(finding.service_category, str), (
-                "service_category should be a string"
-            )
-            assert len(finding.service_category) > 0, (
-                "service_category should not be empty"
-            )
 
     def test_data_collection_findings_include_collection_type_and_data_source(
         self,

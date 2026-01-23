@@ -151,7 +151,7 @@ class TestProcessingPurposeAnalyserInitialisation:
 
         result = analyser.process(
             [message],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
         metadata = result.content["analysis_metadata"]
         assert metadata["llm_validation_enabled"] is False
@@ -185,7 +185,7 @@ class TestProcessingPurposeAnalyserInitialisation:
 
         result = analyser.process(
             [message],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
         metadata = result.content["analysis_metadata"]
         assert metadata["llm_validation_enabled"] is False
@@ -234,7 +234,7 @@ class TestProcessingPurposeAnalyserSchemaSupport:
 
         # Verify processing purpose schema is present
         schema_names = {schema.name for schema in schemas}
-        assert "processing_purpose_finding" in schema_names
+        assert "processing_purpose_indicator" in schema_names
 
 
 class TestProcessingPurposeAnalyserStandardInputProcessing:
@@ -259,7 +259,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     @pytest.fixture
     def output_schema(self) -> Schema:
         """Create output schema."""
-        return Schema("processing_purpose_finding", "1.0.0")
+        return Schema("processing_purpose_indicator", "1.0.0")
 
     @pytest.fixture
     def empty_standard_input_message(self, standard_input_schema: Schema) -> Message:
@@ -340,7 +340,6 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             # Verify finding structure if patterns were matched
             finding = findings[0]
             assert "purpose" in finding
-            assert "purpose_category" in finding
             assert "matched_patterns" in finding
             assert "evidence" in finding
             assert "metadata" in finding
@@ -362,29 +361,20 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
         assert isinstance(summary, dict)
         assert "total_findings" in summary
         assert "purposes_identified" in summary
-        assert "purpose_categories" in summary
+        assert "purposes" in summary
 
         assert isinstance(summary["total_findings"], int)
         assert isinstance(summary["purposes_identified"], int)
-        assert isinstance(summary["purpose_categories"], dict)
+        assert isinstance(summary["purposes"], list)
 
         assert summary["total_findings"] >= 0
         assert summary["purposes_identified"] >= 0
-
-        for category, count in summary["purpose_categories"].items():
-            assert isinstance(category, str)
-            assert isinstance(count, int) and count > 0
 
         assert summary["total_findings"] == len(findings)
 
         if len(findings) > 0:
             actual_unique_purposes = len(set(f["purpose"] for f in findings))
             assert summary["purposes_identified"] == actual_unique_purposes
-            if summary["purpose_categories"]:
-                assert (
-                    sum(summary["purpose_categories"].values())
-                    == summary["total_findings"]
-                )
 
     def test_process_standard_input_creates_valid_analysis_metadata(
         self,
@@ -455,7 +445,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
 
         assert summary["total_findings"] == 0
         assert summary["purposes_identified"] == 0
-        assert summary["purpose_categories"] == {}
+        assert summary["purposes"] == []
 
     def test_process_standard_input_summary_handles_duplicate_purposes_correctly(
         self,
@@ -534,7 +524,7 @@ class TestProcessingPurposeAnalyserErrorHandling:
     @pytest.fixture
     def output_schema(self) -> Schema:
         """Create output schema."""
-        return Schema("processing_purpose_finding", "1.0.0")
+        return Schema("processing_purpose_indicator", "1.0.0")
 
     def test_process_raises_value_error_for_unsupported_input_schema(
         self,
@@ -590,7 +580,7 @@ class TestProcessingPurposeAnalyserOutputValidation:
     @pytest.fixture
     def output_schema(self) -> Schema:
         """Create output schema."""
-        return Schema("processing_purpose_finding", "1.0.0")
+        return Schema("processing_purpose_indicator", "1.0.0")
 
     @pytest.fixture
     def test_message(self, standard_input_schema: Schema) -> Message:
@@ -718,7 +708,7 @@ class TestProcessingPurposeAnalyserSourceCodeProcessing:
     @pytest.fixture
     def output_schema(self) -> Schema:
         """Create output schema."""
-        return Schema("processing_purpose_finding", "1.0.0")
+        return Schema("processing_purpose_indicator", "1.0.0")
 
     @pytest.fixture
     def source_code_message(self, source_code_schema: Schema) -> Message:
@@ -777,7 +767,7 @@ class CustomerService {
         - source_code schema input is accepted
         - Pattern matching generates findings
         - Output message has correct structure (findings, summary, analysis_metadata)
-        - Output validates against processing_purpose_finding schema
+        - Output validates against processing_purpose_indicator schema
         """
         # Act
         result = analyser_no_llm.process([source_code_message], output_schema)
@@ -802,7 +792,7 @@ class CustomerService {
         assert isinstance(summary, dict)
         assert "total_findings" in summary
         assert "purposes_identified" in summary
-        assert "purpose_categories" in summary
+        assert "purposes" in summary
         assert summary["total_findings"] == len(findings)
 
         # Assert - Analysis metadata structure
@@ -851,7 +841,7 @@ class TestFanInSupport:
     @pytest.fixture
     def output_schema(self) -> Schema:
         """Create output schema."""
-        return Schema("processing_purpose_finding", "1.0.0")
+        return Schema("processing_purpose_indicator", "1.0.0")
 
     # -------------------------------------------------------------------------
     # Standard Input Fan-in Tests

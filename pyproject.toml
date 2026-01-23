@@ -19,6 +19,7 @@ waivern-orchestration = { workspace = true }
 waivern-filesystem = { workspace = true }
 waivern-gdpr-personal-data-classifier = { workspace = true }
 waivern-gdpr-data-subject-classifier = { workspace = true }
+waivern-gdpr-processing-purpose-classifier = { workspace = true }
 waivern-processing-purpose-analyser = { workspace = true }
 waivern-sqlite = { workspace = true }
 waivern-source-code-analyser = { workspace = true }

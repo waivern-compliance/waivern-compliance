@@ -92,9 +92,9 @@ artifacts:
       type: "gdpr_personal_data_classifier"
     output: true
 
-  logs_processing_purpose:
-    name: "Processing Purpose Analysis of Log Content"
-    description: "Identify data processing purposes and compliance frameworks from log file content and system activities"
+  logs_processing_purpose_indicators:
+    name: "Processing Purpose Detection in Log Files"
+    description: "Detect processing purposes from log file content using pattern matching"
     inputs: log_files
     process:
       type: "processing_purpose"
@@ -108,12 +108,19 @@ artifacts:
           llm_batch_size: 30
           llm_validation_mode: "conservative"
           confidence_threshold: 0.5
+
+  logs_gdpr_processing_purpose:
+    name: "GDPR Processing Purpose Classification (Logs)"
+    description: "Classify detected processing purposes according to GDPR categories, sensitivity, and DPIA requirements"
+    inputs: logs_processing_purpose_indicators
+    process:
+      type: "gdpr_processing_purpose_classifier"
     output: true
 
   # MySQL analysis artifacts
-  mysql_processing_purpose:
-    name: "Processing Purpose Analysis of Database Content"
-    description: "Identify GDPR and CCPA compliance processing purposes from database structure and content"
+  mysql_processing_purpose_indicators:
+    name: "Processing Purpose Detection in MySQL Database"
+    description: "Detect processing purposes from database structure and content using pattern matching"
     inputs: mysql_data
     process:
       type: "processing_purpose"
@@ -127,6 +134,13 @@ artifacts:
           llm_batch_size: 20
           llm_validation_mode: "conservative"
           confidence_threshold: 0.5
+
+  mysql_gdpr_processing_purpose:
+    name: "GDPR Processing Purpose Classification (MySQL)"
+    description: "Classify detected processing purposes according to GDPR categories, sensitivity, and DPIA requirements"
+    inputs: mysql_processing_purpose_indicators
+    process:
+      type: "gdpr_processing_purpose_classifier"
     output: true
 
   mysql_personal_data_indicators:
@@ -192,7 +206,7 @@ artifacts:
         max_file_size: 10485760  # 10MB
     output: true
 
-  php_processing_purpose:
+  php_processing_purpose_indicators:
     name: "PHP Source Code Processing Purpose Detection"
     description: "Analyse PHP application code for business logic, service integrations, and data processing activities"
     contact: "James Wilson (Lead Developer) <james.wilson@company.co.uk>"
@@ -207,6 +221,13 @@ artifacts:
         llm_validation:
           enable_llm_validation: false
           llm_batch_size: 50
+
+  php_gdpr_processing_purpose:
+    name: "GDPR Processing Purpose Classification (PHP Source Code)"
+    description: "Classify detected processing purposes from PHP code according to GDPR categories, sensitivity, and DPIA requirements"
+    inputs: php_processing_purpose_indicators
+    process:
+      type: "gdpr_processing_purpose_classifier"
     output: true
 
   php_data_subject_indicators:

@@ -22,8 +22,8 @@ from waivern_source_code_analyser.schemas.source_code import (
 )
 
 from .schemas.types import (
-    ProcessingPurposeFindingMetadata,
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorMetadata,
+    ProcessingPurposeIndicatorModel,
 )
 from .types import SourceCodeContextWindow
 
@@ -37,9 +37,7 @@ class MatchInfo:
     pattern: str
     line_number: int
     rule_type: RuleType
-    # Extra fields from specific rule types
-    purpose_category: str
-    service_category: str | None = None
+    # Technical metadata (from DataCollectionRule only)
     collection_type: str | None = None
     data_source: str | None = None
 
@@ -93,7 +91,7 @@ class SourceCodeSchemaInputHandler:
             "local/data_collection/1.0.0", DataCollectionRule
         )
 
-    def analyse(self, data: object) -> list[ProcessingPurposeFindingModel]:
+    def analyse(self, data: object) -> list[ProcessingPurposeIndicatorModel]:
         """Analyse input data for processing purpose patterns.
 
         This is the public boundary - accepts object to keep analyser schema-agnostic.
@@ -117,7 +115,7 @@ class SourceCodeSchemaInputHandler:
 
     def _analyse_validated_data(
         self, data: SourceCodeDataModel
-    ) -> list[ProcessingPurposeFindingModel]:
+    ) -> list[ProcessingPurposeIndicatorModel]:
         """Analyse validated source code data (internal, type-safe).
 
         Args:
@@ -127,7 +125,7 @@ class SourceCodeSchemaInputHandler:
             List of processing purpose findings detected in the source code
 
         """
-        findings: list[ProcessingPurposeFindingModel] = []
+        findings: list[ProcessingPurposeIndicatorModel] = []
 
         for file_data in data.data:
             findings.extend(self._analyse_file_data(file_data))
@@ -137,7 +135,7 @@ class SourceCodeSchemaInputHandler:
     def _analyse_file_data(
         self,
         file_data: SourceCodeFileDataModel,
-    ) -> list[ProcessingPurposeFindingModel]:
+    ) -> list[ProcessingPurposeIndicatorModel]:
         """Analyse a single source code file for processing purpose patterns.
 
         Orchestrates the analysis flow:
@@ -170,7 +168,6 @@ class SourceCodeSchemaInputHandler:
                         pattern=pattern,
                         line_number=line_idx + 1,
                         rule_type="processing_purpose",
-                        purpose_category=rule.purpose_category,
                     )
                 )
 
@@ -185,12 +182,10 @@ class SourceCodeSchemaInputHandler:
                         pattern=pattern,
                         line_number=line_idx + 1,
                         rule_type="service_integration",
-                        purpose_category=rule.purpose_category,
-                        service_category=rule.service_category,
                     )
                 )
 
-        # Collect matches from data collection rules
+        # Collect matches from data collection rules (includes technical metadata)
         for rule in self._data_collection_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule):
                 purpose = rule.name
@@ -201,14 +196,13 @@ class SourceCodeSchemaInputHandler:
                         pattern=pattern,
                         line_number=line_idx + 1,
                         rule_type="data_collection",
-                        purpose_category="operational",
                         collection_type=rule.collection_type,
                         data_source=rule.data_source,
                     )
                 )
 
         # Create one finding per purpose (grouped)
-        findings: list[ProcessingPurposeFindingModel] = []
+        findings: list[ProcessingPurposeIndicatorModel] = []
 
         for purpose, matches in purpose_matches.items():
             # Count pattern occurrences (preserve order using dict)
@@ -222,21 +216,19 @@ class SourceCodeSchemaInputHandler:
                 for p, c in pattern_counts.items()
             ]
 
-            # Use first match for evidence, line number, and extra fields
+            # Use first match for evidence, line number, and technical metadata
             first_match = matches[0]
             first_line_idx = first_match.line_number - 1
             evidence = self._create_evidence(first_line_idx, lines)
 
-            finding = ProcessingPurposeFindingModel(
+            finding = ProcessingPurposeIndicatorModel(
                 purpose=purpose,
-                purpose_category=first_match.purpose_category,
                 matched_patterns=matched_patterns,
                 evidence=evidence,
-                metadata=ProcessingPurposeFindingMetadata(
+                metadata=ProcessingPurposeIndicatorMetadata(
                     source=file_path,
                     line_number=first_match.line_number,
                 ),
-                service_category=first_match.service_category,
                 collection_type=first_match.collection_type,
                 data_source=first_match.data_source,
             )

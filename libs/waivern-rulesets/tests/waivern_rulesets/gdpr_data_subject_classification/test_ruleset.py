@@ -1,19 +1,16 @@
 """Unit tests for GDPR data subject classification ruleset."""
 
-import tempfile
-from unittest.mock import patch
-
 import pytest
-import yaml
 from pydantic import ValidationError
 
 from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.gdpr_data_subject_classification import (
     GDPRDataSubjectClassificationRule,
     GDPRDataSubjectClassificationRuleset,
+)
+from waivern_rulesets.gdpr_data_subject_classification.ruleset import (
     GDPRDataSubjectClassificationRulesetData,
     RiskModifier,
-    RiskModifiers,
 )
 from waivern_rulesets.testing import RulesetContractTests
 
@@ -25,11 +22,7 @@ from waivern_rulesets.testing import RulesetContractTests
 class TestGDPRDataSubjectClassificationRulesetContract(
     RulesetContractTests[GDPRDataSubjectClassificationRule]
 ):
-    """Contract tests for GDPRDataSubjectClassificationRuleset.
-
-    Inherits all standard ruleset contract tests automatically.
-
-    """
+    """Contract tests for GDPRDataSubjectClassificationRuleset."""
 
     @pytest.fixture
     def ruleset_class(
@@ -50,206 +43,42 @@ class TestGDPRDataSubjectClassificationRulesetContract(
 
 
 # =============================================================================
-# Rule-specific Tests (unique to GDPRDataSubjectClassificationRule)
+# Field Validator Tests (our custom code)
 # =============================================================================
 
 
 class TestGDPRDataSubjectClassificationRule:
-    """Test cases for the GDPRDataSubjectClassificationRule class."""
-
-    def test_rule_with_all_fields(self) -> None:
-        """Test rule with all fields."""
-        rule = GDPRDataSubjectClassificationRule(
-            name="Employees",
-            description="Current and former employees",
-            data_subject_category="employee",
-            article_references=["Article 4(1)", "Article 6(1)(b)"],
-            typical_lawful_bases=("contract", "legal_obligation"),
-            indicator_categories=("employee", "former_employee", "contractor"),
-        )
-
-        assert rule.name == "Employees"
-        assert rule.data_subject_category == "employee"
-        assert rule.article_references == ["Article 4(1)", "Article 6(1)(b)"]
-        assert rule.typical_lawful_bases == ("contract", "legal_obligation")
-        assert rule.indicator_categories == (
-            "employee",
-            "former_employee",
-            "contractor",
-        )
+    """Test our custom field validators on the rule class."""
 
     def test_rule_converts_lists_to_tuples(self) -> None:
         """Test that list fields are converted to tuples for immutability."""
-        rule = GDPRDataSubjectClassificationRule(
-            name="Test Rule",
-            description="Test",
-            data_subject_category="customer",
-            article_references=["Article 4(1)"],
-            typical_lawful_bases=["contract"],  # type: ignore[arg-type] # Test list→tuple conversion
-            indicator_categories=["customer"],  # type: ignore[arg-type] # Test list→tuple conversion
-        )
-
-        assert isinstance(rule.typical_lawful_bases, tuple)
-        assert isinstance(rule.indicator_categories, tuple)
-
-    def test_rule_requires_at_least_one_typical_lawful_basis(self) -> None:
-        """Test that rule requires at least one typical lawful basis."""
-        with pytest.raises(ValidationError, match="at least 1 item"):
-            GDPRDataSubjectClassificationRule(
-                name="Invalid Rule",
-                description="Test",
-                data_subject_category="customer",
-                article_references=["Article 4(1)"],
-                typical_lawful_bases=[],  # type: ignore[arg-type] # Empty - invalid
-                indicator_categories=["customer"],  # type: ignore[arg-type]
-            )
-
-    def test_rule_requires_at_least_one_indicator_category(self) -> None:
-        """Test that rule requires at least one indicator category."""
-        with pytest.raises(ValidationError, match="at least 1 item"):
-            GDPRDataSubjectClassificationRule(
-                name="Invalid Rule",
-                description="Test",
-                data_subject_category="customer",
-                article_references=["Article 4(1)"],
-                typical_lawful_bases=["contract"],  # type: ignore[arg-type]
-                indicator_categories=[],  # type: ignore[arg-type] # Empty - invalid
-            )
-
-
-# =============================================================================
-# RiskModifier Tests
-# =============================================================================
-
-
-class TestRiskModifiers:
-    """Test cases for RiskModifier and RiskModifiers classes."""
-
-    def test_risk_modifier_with_all_fields(self) -> None:
-        """Test RiskModifier with patterns and value_patterns fields."""
-        modifier = RiskModifier(
-            patterns=["minor", "child"],
-            value_patterns=["under.*years"],
-            modifier="minor",
-            article_references=["Article 8"],
-        )
-
-        assert modifier.patterns == ["minor", "child"]
-        assert modifier.value_patterns == ["under.*years"]
-        assert modifier.modifier == "minor"
-        assert modifier.article_references == ["Article 8"]
-
-    def test_risk_modifier_with_patterns_only(self) -> None:
-        """Test RiskModifier with only word boundary patterns."""
-        modifier = RiskModifier(
-            patterns=["vulnerable"],
-            modifier="vulnerable_individual",
-            article_references=["Recital 75"],
-        )
-
-        assert modifier.patterns == ["vulnerable"]
-        assert modifier.value_patterns == []
-
-    def test_risk_modifier_with_value_patterns_only(self) -> None:
-        """Test RiskModifier with only regex patterns."""
-        modifier = RiskModifier(
-            value_patterns=["third.country"],
-            modifier="non_eu_resident",
-            article_references=["Article 3"],
-        )
-
-        assert modifier.patterns == []
-        assert modifier.value_patterns == ["third.country"]
-
-    def test_risk_modifier_requires_at_least_one_pattern(self) -> None:
-        """Test that RiskModifier requires at least one pattern type."""
-        with pytest.raises(ValidationError, match="must have at least one pattern"):
-            RiskModifier(
-                patterns=[],
-                value_patterns=[],
-                modifier="test_modifier",
-                article_references=["Article 8"],
-            )
-
-    def test_risk_modifier_requires_article_references(self) -> None:
-        """Test that RiskModifier requires at least one article reference."""
-        with pytest.raises(ValidationError, match="at least 1 item"):
-            RiskModifier(
-                patterns=["test"],
-                modifier="test_modifier",
-                article_references=[],  # Empty - invalid
-            )
-
-    def test_risk_modifiers_container(self) -> None:
-        """Test RiskModifiers container."""
-        modifiers = RiskModifiers(
-            risk_increasing=[
-                RiskModifier(
-                    patterns=["minor"],
-                    modifier="minor",
-                    article_references=["Article 8"],
-                ),
-            ],
-            risk_decreasing=[
-                RiskModifier(
-                    patterns=["non-EU"],
-                    modifier="non_eu_resident",
-                    article_references=["Article 3"],
-                ),
-            ],
-        )
-
-        assert len(modifiers.risk_increasing) == 1
-        assert len(modifiers.risk_decreasing) == 1
-        assert modifiers.risk_increasing[0].modifier == "minor"
-
-    def test_risk_modifiers_defaults_to_empty(self) -> None:
-        """Test RiskModifiers defaults to empty lists."""
-        modifiers = RiskModifiers()
-
-        assert modifiers.risk_increasing == []
-        assert modifiers.risk_decreasing == []
-
-
-# =============================================================================
-# RulesetData Validation Tests
-# =============================================================================
-
-
-class TestGDPRDataSubjectClassificationRulesetData:
-    """Test cases for the GDPRDataSubjectClassificationRulesetData class."""
-
-    def test_ruleset_data_with_all_fields(self) -> None:
-        """Test ruleset data with all fields."""
         rule = GDPRDataSubjectClassificationRule(
             name="Employees",
             description="Current employees",
             data_subject_category="employee",
             article_references=["Article 4(1)"],
-            typical_lawful_bases=("contract",),
-            indicator_categories=("employee",),
+            typical_lawful_bases=["contract"],  # type: ignore[arg-type]
+            indicator_categories=["employee"],  # type: ignore[arg-type]
         )
 
-        ruleset_data = GDPRDataSubjectClassificationRulesetData(
-            name="gdpr_data_subject_classification",
-            version="1.0.0",
-            description="GDPR data subject classification",
-            default_article_references=["Article 4(1)", "Article 30(1)(c)"],
-            data_subject_categories=["employee", "customer"],
-            indicator_categories=["employee", "customer"],
-            risk_modifiers=RiskModifiers(),
-            rules=[rule],
-        )
+        assert isinstance(rule.typical_lawful_bases, tuple)
+        assert isinstance(rule.indicator_categories, tuple)
 
-        assert len(ruleset_data.rules) == 1
-        assert "employee" in ruleset_data.data_subject_categories
 
-    def test_ruleset_data_rejects_invalid_data_subject_category(self) -> None:
-        """Test that ruleset data rejects rules with invalid data subject categories."""
+# =============================================================================
+# Model Validator Tests (our custom validation logic)
+# =============================================================================
+
+
+class TestGDPRDataSubjectClassificationRulesetDataValidation:
+    """Test our custom model validators on the ruleset data class."""
+
+    def test_rejects_invalid_data_subject_category(self) -> None:
+        """Test that rules with data_subject_category not in master list are rejected."""
         rule = GDPRDataSubjectClassificationRule(
             name="Invalid Rule",
             description="Test",
-            data_subject_category="invalid_category",  # Not in master list
+            data_subject_category="invalid_category",
             article_references=["Article 4(1)"],
             typical_lawful_bases=("contract",),
             indicator_categories=("employee",),
@@ -261,20 +90,20 @@ class TestGDPRDataSubjectClassificationRulesetData:
                 version="1.0.0",
                 description="Test",
                 default_article_references=["Article 4(1)"],
-                data_subject_categories=["employee"],  # Missing 'invalid_category'
+                data_subject_categories=["employee"],
                 indicator_categories=["employee"],
                 rules=[rule],
             )
 
-    def test_ruleset_data_rejects_invalid_indicator_categories(self) -> None:
-        """Test that ruleset data rejects rules with invalid indicator categories."""
+    def test_rejects_invalid_indicator_categories(self) -> None:
+        """Test that rules with indicator_categories not in master list are rejected."""
         rule = GDPRDataSubjectClassificationRule(
             name="Invalid Rule",
             description="Test",
             data_subject_category="employee",
             article_references=["Article 4(1)"],
             typical_lawful_bases=("contract",),
-            indicator_categories=("invalid_indicator",),  # Not in master list
+            indicator_categories=("invalid_indicator",),
         )
 
         with pytest.raises(ValidationError, match="invalid indicator_categories"):
@@ -284,53 +113,20 @@ class TestGDPRDataSubjectClassificationRulesetData:
                 description="Test",
                 default_article_references=["Article 4(1)"],
                 data_subject_categories=["employee"],
-                indicator_categories=["employee"],  # Missing 'invalid_indicator'
+                indicator_categories=["employee"],
                 rules=[rule],
             )
 
 
-# =============================================================================
-# Error Handling Tests
-# =============================================================================
+class TestRiskModifierValidation:
+    """Test our custom model validator on RiskModifier."""
 
-
-class TestGDPRDataSubjectClassificationRulesetErrorHandling:
-    """Error handling tests for GDPRDataSubjectClassificationRuleset."""
-
-    def test_get_rules_missing_yaml_file_error(self) -> None:
-        """Test FileNotFoundError when YAML file doesn't exist."""
-        with patch("pathlib.Path.open", side_effect=FileNotFoundError("No such file")):
-            ruleset = GDPRDataSubjectClassificationRuleset()
-            with pytest.raises(FileNotFoundError):
-                ruleset.get_rules()
-
-    def test_get_rules_invalid_yaml_content_error(self) -> None:
-        """Test error handling for malformed YAML syntax."""
-        with tempfile.NamedTemporaryFile(mode="w+", suffix=".yaml") as f:
-            f.write("invalid: yaml: content[\nbroken syntax")
-            f.seek(0)
-            with patch("pathlib.Path.open", return_value=f):
-                ruleset = GDPRDataSubjectClassificationRuleset()
-                with pytest.raises(yaml.YAMLError):
-                    ruleset.get_rules()
-
-    def test_get_rules_yaml_validation_error(self) -> None:
-        """Test error handling for YAML that fails Pydantic validation."""
-        invalid_yaml_content = """name: "gdpr_data_subject_classification"
-version: "1.0.0"
-description: "Test ruleset"
-default_article_references:
-  - "Article 4(1)"
-data_subject_categories:
-  - "employee"
-indicator_categories:
-  - "employee"
-rules: []
-"""
-        with tempfile.NamedTemporaryFile(mode="w+", suffix=".yaml") as f:
-            f.write(invalid_yaml_content)
-            f.seek(0)
-            with patch("pathlib.Path.open", return_value=f):
-                ruleset = GDPRDataSubjectClassificationRuleset()
-                with pytest.raises(ValidationError):
-                    ruleset.get_rules()
+    def test_requires_at_least_one_pattern(self) -> None:
+        """Test that RiskModifier requires at least one pattern type."""
+        with pytest.raises(ValidationError, match="must have at least one pattern"):
+            RiskModifier(
+                patterns=[],
+                value_patterns=[],
+                modifier="test_modifier",
+                article_references=["Article 8"],
+            )

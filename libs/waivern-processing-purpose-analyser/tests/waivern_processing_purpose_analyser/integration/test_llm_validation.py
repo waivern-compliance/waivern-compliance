@@ -78,7 +78,7 @@ class TestProcessingPurposeAnalyserLLMIntegration:
         # Run analysis with real LLM
         result = analyser.process(
             [message],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Verify response structure

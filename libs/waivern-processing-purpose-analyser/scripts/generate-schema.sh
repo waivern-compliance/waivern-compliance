@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Generate JSON schema from Pydantic model for processing_purpose_finding
+# Generate JSON schema from Pydantic model for processing_purpose_indicator
 # Usage: bash scripts/generate-schema.sh
 
 set -e
@@ -10,14 +10,14 @@ PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PACKAGE_DIR"
 
-echo "Generating processing_purpose_finding JSON schema..."
+echo "Generating processing_purpose_indicator JSON schema..."
 
 uv run python -c "
 from pathlib import Path
-from waivern_processing_purpose_analyser.schemas import ProcessingPurposeFindingOutput
+from waivern_processing_purpose_analyser.schemas import ProcessingPurposeIndicatorOutput
 
-output_path = Path('src/waivern_processing_purpose_analyser/schemas/json_schemas/processing_purpose_finding/1.0.0/processing_purpose_finding.json')
-ProcessingPurposeFindingOutput.generate_json_schema(output_path)
+output_path = Path('src/waivern_processing_purpose_analyser/schemas/json_schemas/processing_purpose_indicator/1.0.0/processing_purpose_indicator.json')
+ProcessingPurposeIndicatorOutput.generate_json_schema(output_path)
 print(f'Generated: {output_path}')
 "
 

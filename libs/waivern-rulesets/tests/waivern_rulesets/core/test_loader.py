@@ -116,7 +116,6 @@ class TestRulesetIntegration:
         # 4. Verify rules are correct
         assert len(rules) == 1
         assert rules[0].name == "test_rule"
-        assert rules[0].purpose_category == "OPERATIONAL"
 
     def test_ruleset_version_accessible_through_loader(
         self, isolated_registry: RulesetRegistry

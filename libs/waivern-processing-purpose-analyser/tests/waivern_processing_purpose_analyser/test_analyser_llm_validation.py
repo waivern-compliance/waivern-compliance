@@ -110,7 +110,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Act
         analyser.process(
             [test_message_with_patterns],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - LLM service should be called for validation
@@ -159,7 +159,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Act
         result = analyser.process(
             [test_message_with_patterns],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - Should have findings filtered (one FP removed)
@@ -207,7 +207,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Act
         result = analyser.process(
             [test_message_with_patterns],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - LLM service should not be called
@@ -231,7 +231,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Act
         result = analyser.process(
             [test_message_with_patterns],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - Should return original findings without validation
@@ -261,7 +261,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Act
         result = analyser.process(
             [test_message_with_patterns],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - Should return original findings despite error
@@ -304,7 +304,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Act
         result = analyser.process(
             [test_message],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - LLM should not be called when no findings exist

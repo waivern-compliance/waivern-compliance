@@ -1,58 +1,44 @@
 """Known processing purposes to search for during analysis.
 
-This ruleset contains processing purpose patterns for GDPR compliance analysis.
-Version 1.0.0 has separated service integration patterns into dedicated service_integrations ruleset.
+This ruleset contains processing purpose patterns for detecting data processing
+activities in source code and documents.
 """
 
 from typing import ClassVar
 
-from pydantic import Field, ValidationInfo, field_validator, model_validator
+from pydantic import Field, model_validator
 from waivern_core import DetectionRule, RulesetData
 
 from waivern_rulesets.core.base import YAMLRuleset
 
 
 class ProcessingPurposeRule(DetectionRule):
-    """Processing purpose rule with category and risk information."""
+    """Processing purpose detection rule.
 
-    purpose_category: str = Field(description="Category of this processing purpose")
+    A simple detection rule for identifying processing purposes.
+    Inherits name, description, patterns, and value_patterns from DetectionRule.
+    """
+
+    pass
 
 
 class ProcessingPurposesRulesetData(RulesetData[ProcessingPurposeRule]):
-    """Processing purposes ruleset data model with category management."""
+    """Processing purposes ruleset data model with validation."""
 
-    # Ruleset-specific properties
-    purpose_categories: list[str] = Field(
-        min_length=1, description="Master list of valid purpose categories"
+    purposes: list[str] = Field(
+        min_length=1, description="Master list of valid processing purpose names"
     )
-    sensitive_categories: list[str] = Field(
-        default_factory=list,
-        description="Subset of purpose_categories considered privacy-sensitive",
-    )
-
-    @field_validator("sensitive_categories")
-    @classmethod
-    def validate_sensitive_categories_subset(
-        cls, v: list[str], info: ValidationInfo
-    ) -> list[str]:
-        """Ensure sensitive_categories is subset of purpose_categories."""
-        purpose_categories = info.data.get("purpose_categories", [])
-        invalid = [cat for cat in v if cat not in purpose_categories]
-        if invalid:
-            raise ValueError(
-                f"Sensitive categories must be subset of purpose_categories. Invalid: {invalid}"
-            )
-        return v
 
     @model_validator(mode="after")
-    def validate_rule_categories(self) -> "ProcessingPurposesRulesetData":
-        """Validate all rule purpose_categories against master list."""
-        purpose_categories = set(self.purpose_categories)
+    def validate_rule_names_in_purposes(self) -> "ProcessingPurposesRulesetData":
+        """Validate all rule names exist in the purposes list."""
+        valid_purposes = set(self.purposes)
 
         for rule in self.rules:
-            if rule.purpose_category not in purpose_categories:
+            if rule.name not in valid_purposes:
                 raise ValueError(
-                    f"Rule '{rule.name}' has invalid purpose_category '{rule.purpose_category}'. Valid: {purpose_categories}"
+                    f"Rule '{rule.name}' is not in purposes list. "
+                    f"Add it to purposes or remove the rule."
                 )
         return self
 
@@ -60,8 +46,8 @@ class ProcessingPurposesRulesetData(RulesetData[ProcessingPurposeRule]):
 class ProcessingPurposesRuleset(YAMLRuleset[ProcessingPurposeRule]):
     """Processing purposes detection ruleset.
 
-    Identifies business activities and data use intentions for privacy compliance,
-    consent management, and understanding data processing activities.
+    Identifies business activities and data use intentions in source code
+    and documents.
     """
 
     ruleset_name: ClassVar[str] = "processing_purposes"

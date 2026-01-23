@@ -55,7 +55,7 @@ message = Message(
 
 result = analyser.process(
     input_schema=Schema("source_code", "1.0.0"),
-    output_schema=Schema("processing_purpose_finding", "1.0.0"),
+    output_schema=Schema("processing_purpose_indicator", "1.0.0"),
     message=message
 )
 ```

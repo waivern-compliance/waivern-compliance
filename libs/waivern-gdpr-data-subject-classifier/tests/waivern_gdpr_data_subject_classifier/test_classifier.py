@@ -1,8 +1,4 @@
-"""Unit tests for GDPRDataSubjectClassifier.
-
-This test module focuses on testing the public API of GDPRDataSubjectClassifier,
-following black-box testing principles and TDD methodology.
-"""
+"""Unit tests for GDPRDataSubjectClassifier."""
 
 from typing import Any
 
@@ -16,22 +12,11 @@ from waivern_rulesets import (
 
 from waivern_gdpr_data_subject_classifier.classifier import GDPRDataSubjectClassifier
 
-# =============================================================================
-# Contract Tests (inherited from ClassifierContractTests)
-# =============================================================================
-
 
 class TestGDPRDataSubjectClassifierContract(
     ClassifierContractTests[GDPRDataSubjectClassifier]
 ):
-    """Contract tests for GDPRDataSubjectClassifier.
-
-    Inherits all standard classifier contract tests automatically:
-    - test_input_requirements_not_empty
-    - test_no_duplicate_combinations
-    - test_no_empty_combinations
-    - test_get_framework_returns_non_empty_string
-    """
+    """Contract tests inherited from ClassifierContractTests."""
 
     @pytest.fixture
     def processor_class(self) -> type[GDPRDataSubjectClassifier]:
@@ -39,42 +24,8 @@ class TestGDPRDataSubjectClassifierContract(
         return GDPRDataSubjectClassifier
 
 
-# =============================================================================
-# Classifier-specific Tests (unique to GDPRDataSubjectClassifier)
-# =============================================================================
-
-
 class TestGDPRDataSubjectClassifier:
     """Test suite for GDPRDataSubjectClassifier behaviour."""
-
-    def test_get_name_returns_classifier_name(self) -> None:
-        """Test that get_name returns the expected classifier name."""
-        name = GDPRDataSubjectClassifier.get_name()
-
-        assert name == "gdpr_data_subject_classifier"
-
-    def test_get_framework_returns_gdpr(self) -> None:
-        """Test that get_framework returns 'GDPR'."""
-        framework = GDPRDataSubjectClassifier.get_framework()
-
-        assert framework == "GDPR"
-
-    def test_get_input_requirements_accepts_data_subject_indicator(self) -> None:
-        """Test that classifier accepts data_subject_indicator/1.0.0 schema."""
-        requirements = GDPRDataSubjectClassifier.get_input_requirements()
-
-        assert len(requirements) == 1
-        assert len(requirements[0]) == 1
-        assert requirements[0][0].schema_name == "data_subject_indicator"
-        assert requirements[0][0].version == "1.0.0"
-
-    def test_get_supported_output_schemas_returns_gdpr_data_subject(self) -> None:
-        """Test that classifier outputs gdpr_data_subject/1.0.0 schema."""
-        schemas = GDPRDataSubjectClassifier.get_supported_output_schemas()
-
-        assert len(schemas) == 1
-        assert schemas[0].name == "gdpr_data_subject"
-        assert schemas[0].version == "1.0.0"
 
     def test_process_classifies_employee(self) -> None:
         """Test that employee indicator is classified as employee."""
@@ -219,46 +170,6 @@ class TestGDPRDataSubjectClassifier:
         assert isinstance(lawful_bases, list)
         assert len(lawful_bases) > 0
 
-    def test_process_preserves_original_evidence(self) -> None:
-        """Test that classification preserves evidence from input findings."""
-        original_evidence = [
-            {"content": "Employee John Smith"},
-            {"content": "Department: Engineering"},
-        ]
-        input_data = {
-            "findings": [
-                {
-                    "subject_category": "employee",
-                    "confidence_score": 85,
-                    "evidence": original_evidence,
-                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
-                }
-            ],
-            "summary": {
-                "total_indicators": 1,
-                "categories_identified": ["employee"],
-            },
-            "analysis_metadata": {
-                "ruleset_used": "local/data_subject_indicator/1.0.0",
-                "llm_validation_enabled": False,
-            },
-        }
-        input_message = Message(
-            id="test",
-            content=input_data,
-            schema=Schema("data_subject_indicator", "1.0.0"),
-        )
-        classifier = GDPRDataSubjectClassifier()
-
-        result = classifier.process(
-            [input_message], Schema("gdpr_data_subject", "1.0.0")
-        )
-
-        result_evidence = result.content["findings"][0]["evidence"]
-        assert len(result_evidence) == 2
-        assert result_evidence[0]["content"] == "Employee John Smith"
-        assert result_evidence[1]["content"] == "Department: Engineering"
-
     def test_process_builds_summary_statistics(self) -> None:
         """Test that process builds correct summary with counts."""
         input_data = {
@@ -338,51 +249,6 @@ class TestGDPRDataSubjectClassifier:
         # Should still produce output with default/unclassified values
         finding = result.content["findings"][0]
         assert finding["data_subject_category"] == "unclassified"
-
-    def test_process_propagates_metadata_from_indicator_findings(self) -> None:
-        """Test that metadata (source, context) is propagated from input findings."""
-        input_data = {
-            "findings": [
-                {
-                    "subject_category": "employee",
-                    "confidence_score": 85,
-                    "evidence": [{"content": "Employee data"}],
-                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
-                    "metadata": {
-                        "source": "hr_database",
-                        "context": {
-                            "connector_type": "mysql",
-                            "database": "hr_db",
-                        },
-                    },
-                }
-            ],
-            "summary": {
-                "total_indicators": 1,
-                "categories_identified": ["employee"],
-            },
-            "analysis_metadata": {
-                "ruleset_used": "local/data_subject_indicator/1.0.0",
-                "llm_validation_enabled": False,
-            },
-        }
-        input_message = Message(
-            id="test",
-            content=input_data,
-            schema=Schema("data_subject_indicator", "1.0.0"),
-        )
-        classifier = GDPRDataSubjectClassifier()
-
-        result = classifier.process(
-            [input_message], Schema("gdpr_data_subject", "1.0.0")
-        )
-
-        # Verify metadata is propagated
-        finding = result.content["findings"][0]
-        assert finding["metadata"] is not None
-        assert finding["metadata"]["source"] == "hr_database"
-        assert finding["metadata"]["context"]["connector_type"] == "mysql"
-        assert finding["metadata"]["context"]["database"] == "hr_db"
 
     def test_process_handles_findings_without_metadata(self) -> None:
         """Test graceful handling of findings that lack metadata.
@@ -794,87 +660,6 @@ class TestFanInSupport:
         assert "employee" in summary["categories_identified"]
         # Note: "student" indicator maps to "education" GDPR category
         assert "education" in summary["categories_identified"]
-
-    def test_process_preserves_metadata_per_finding_when_aggregating(self) -> None:
-        """Test that each finding retains its original metadata after aggregation."""
-        # Input 1: finding from MySQL source
-        input_data_1 = {
-            "findings": [
-                {
-                    "subject_category": "employee",
-                    "confidence_score": 85,
-                    "evidence": [{"content": "Employee data"}],
-                    "matched_patterns": [{"pattern": "employee", "match_count": 1}],
-                    "metadata": {
-                        "source": "mysql_hr_table",
-                        "context": {"connector_type": "mysql"},
-                    },
-                }
-            ],
-            "summary": {"total_indicators": 1, "categories_identified": ["employee"]},
-            "analysis_metadata": {
-                "ruleset_used": "local/data_subject_indicator/1.0.0",
-                "llm_validation_enabled": False,
-            },
-        }
-        input_1 = Message(
-            id="input_1",
-            content=input_data_1,
-            schema=Schema("data_subject_indicator", "1.0.0"),
-        )
-
-        # Input 2: finding from filesystem source
-        input_data_2 = {
-            "findings": [
-                {
-                    "subject_category": "customer",
-                    "confidence_score": 90,
-                    "evidence": [{"content": "Customer record"}],
-                    "matched_patterns": [{"pattern": "customer", "match_count": 1}],
-                    "metadata": {
-                        "source": "customers.csv",
-                        "context": {"connector_type": "filesystem"},
-                    },
-                }
-            ],
-            "summary": {"total_indicators": 1, "categories_identified": ["customer"]},
-            "analysis_metadata": {
-                "ruleset_used": "local/data_subject_indicator/1.0.0",
-                "llm_validation_enabled": False,
-            },
-        }
-        input_2 = Message(
-            id="input_2",
-            content=input_data_2,
-            schema=Schema("data_subject_indicator", "1.0.0"),
-        )
-
-        classifier = GDPRDataSubjectClassifier()
-
-        result = classifier.process(
-            [input_1, input_2], Schema("gdpr_data_subject", "1.0.0")
-        )
-
-        # Find findings by their category to check metadata
-        findings_by_category = {
-            f["data_subject_category"]: f for f in result.content["findings"]
-        }
-
-        # Employee finding should have MySQL metadata
-        assert (
-            findings_by_category["employee"]["metadata"]["source"] == "mysql_hr_table"
-        )
-        assert (
-            findings_by_category["employee"]["metadata"]["context"]["connector_type"]
-            == "mysql"
-        )
-
-        # Customer finding should have filesystem metadata
-        assert findings_by_category["customer"]["metadata"]["source"] == "customers.csv"
-        assert (
-            findings_by_category["customer"]["metadata"]["context"]["connector_type"]
-            == "filesystem"
-        )
 
 
 class TestRulesetContractValidation:

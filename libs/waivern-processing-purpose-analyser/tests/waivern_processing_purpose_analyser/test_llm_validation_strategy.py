@@ -13,8 +13,8 @@ from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 
 from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeFindingMetadata,
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorMetadata,
+    ProcessingPurposeIndicatorModel,
 )
 from waivern_processing_purpose_analyser.validation.extended_context_strategy import (
     SourceCodeValidationStrategy,
@@ -26,18 +26,16 @@ from waivern_processing_purpose_analyser.validation.providers import (
 
 def _make_finding(
     purpose: str = "Payment Processing",
-    purpose_category: str = "OPERATIONAL",
     pattern: str = "stripe",
     source: str = "src/payments/checkout.py",
     line_number: int = 42,
-) -> ProcessingPurposeFindingModel:
+) -> ProcessingPurposeIndicatorModel:
     """Create a finding with minimal boilerplate."""
-    return ProcessingPurposeFindingModel(
+    return ProcessingPurposeIndicatorModel(
         purpose=purpose,
-        purpose_category=purpose_category,
         matched_patterns=[PatternMatchDetail(pattern=pattern, match_count=1)],
         evidence=[BaseFindingEvidence(content=f"Content: {pattern}")],
-        metadata=ProcessingPurposeFindingMetadata(
+        metadata=ProcessingPurposeIndicatorMetadata(
             source=source, line_number=line_number
         ),
     )
@@ -66,22 +64,20 @@ class TestSourceCodeValidationStrategy:
         )
 
     @pytest.fixture
-    def sample_findings(self) -> list[ProcessingPurposeFindingModel]:
+    def sample_findings(self) -> list[ProcessingPurposeIndicatorModel]:
         """Create two sample findings for testing."""
         return [
             _make_finding(
-                "Payment Processing",
-                "FINANCIAL",
-                "stripe",
-                "src/payments/checkout.py",
-                42,
+                purpose="Payment Processing",
+                pattern="stripe",
+                source="src/payments/checkout.py",
+                line_number=42,
             ),
             _make_finding(
-                "User Analytics",
-                "ANALYTICS",
-                "mixpanel",
-                "src/analytics/tracker.py",
-                12,
+                purpose="User Analytics",
+                pattern="mixpanel",
+                source="src/analytics/tracker.py",
+                line_number=12,
             ),
         ]
 
@@ -89,7 +85,7 @@ class TestSourceCodeValidationStrategy:
         self,
         strategy: SourceCodeValidationStrategy,
         config: LLMValidationConfig,
-        sample_findings: list[ProcessingPurposeFindingModel],
+        sample_findings: list[ProcessingPurposeIndicatorModel],
     ) -> None:
         """Prompt includes finding IDs so LLM can reference them in response."""
         batch = SourceBatch(
@@ -117,7 +113,7 @@ class TestSourceCodeValidationStrategy:
         self,
         strategy: SourceCodeValidationStrategy,
         config: LLMValidationConfig,
-        sample_findings: list[ProcessingPurposeFindingModel],
+        sample_findings: list[ProcessingPurposeIndicatorModel],
     ) -> None:
         """Prompt includes full file contents for context-aware validation."""
         batch = SourceBatch(
@@ -142,7 +138,7 @@ class TestSourceCodeValidationStrategy:
         self,
         strategy: SourceCodeValidationStrategy,
         config: LLMValidationConfig,
-        sample_findings: list[ProcessingPurposeFindingModel],
+        sample_findings: list[ProcessingPurposeIndicatorModel],
     ) -> None:
         """Prompt includes purpose, patterns, and line numbers."""
         batch = SourceBatch(

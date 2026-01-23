@@ -25,6 +25,7 @@ service_integrations = "waivern_rulesets.service_integrations:ServiceIntegration
 data_subject_indicator = "waivern_rulesets.data_subject_indicator:DataSubjectIndicatorRuleset"
 gdpr_personal_data_classification = "waivern_rulesets.gdpr_personal_data_classification:GDPRPersonalDataClassificationRuleset"
 gdpr_data_subject_classification = "waivern_rulesets.gdpr_data_subject_classification:GDPRDataSubjectClassificationRuleset"
+gdpr_processing_purpose_classification = "waivern_rulesets.gdpr_processing_purpose_classification:GDPRProcessingPurposeClassificationRuleset"
 
 [build-system]
 requires = ["hatchling"]

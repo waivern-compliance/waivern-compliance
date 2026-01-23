@@ -5,7 +5,7 @@ from typing import Any
 from waivern_analysers_shared import SchemaInputHandler
 from waivern_core.schemas import BaseMetadata, StandardInputDataModel
 
-from ..schemas.types import ProcessingPurposeFindingModel
+from ..schemas.types import ProcessingPurposeIndicatorModel
 from ..standard_input_schema_input_handler import StandardInputSchemaInputHandler
 from ..types import ProcessingPurposeAnalyserConfig
 
@@ -31,7 +31,7 @@ def read(content: dict[str, Any]) -> StandardInputDataModel[BaseMetadata]:
 
 def create_handler(
     config: ProcessingPurposeAnalyserConfig,
-) -> SchemaInputHandler[ProcessingPurposeFindingModel]:
+) -> SchemaInputHandler[ProcessingPurposeIndicatorModel]:
     """Create handler for standard_input schema.
 
     Args:

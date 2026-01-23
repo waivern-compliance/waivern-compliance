@@ -10,7 +10,7 @@ from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_core.schemas import BaseMetadata, StandardInputDataModel
 
 from .pattern_matcher import ProcessingPurposePatternMatcher
-from .schemas.types import ProcessingPurposeFindingModel
+from .schemas.types import ProcessingPurposeIndicatorModel
 
 
 class StandardInputSchemaInputHandler:
@@ -29,7 +29,7 @@ class StandardInputSchemaInputHandler:
         """
         self._pattern_matcher = ProcessingPurposePatternMatcher(pattern_matching_config)
 
-    def analyse(self, data: object) -> list[ProcessingPurposeFindingModel]:
+    def analyse(self, data: object) -> list[ProcessingPurposeIndicatorModel]:
         """Analyse input data for processing purpose patterns.
 
         This is the public boundary - accepts object to keep analyser schema-agnostic.
@@ -57,7 +57,7 @@ class StandardInputSchemaInputHandler:
 
     def _analyse_validated_data(
         self, data: StandardInputDataModel[BaseMetadata]
-    ) -> list[ProcessingPurposeFindingModel]:
+    ) -> list[ProcessingPurposeIndicatorModel]:
         """Analyse validated standard input data (internal, type-safe).
 
         Args:
@@ -67,7 +67,7 @@ class StandardInputSchemaInputHandler:
             List of processing purpose findings detected in the content.
 
         """
-        findings: list[ProcessingPurposeFindingModel] = []
+        findings: list[ProcessingPurposeIndicatorModel] = []
 
         for data_item in data.data:
             content = data_item.content

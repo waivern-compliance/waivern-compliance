@@ -12,8 +12,8 @@ from waivern_processing_purpose_analyser.pattern_matcher import (
     ProcessingPurposePatternMatcher,
 )
 from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeFindingMetadata,
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorMetadata,
+    ProcessingPurposeIndicatorModel,
 )
 
 
@@ -94,7 +94,7 @@ class TestProcessingPurposePatternMatcher:
         assert len(support_findings) > 0
 
         support_finding = support_findings[0]
-        assert isinstance(support_finding, ProcessingPurposeFindingModel)
+        assert isinstance(support_finding, ProcessingPurposeIndicatorModel)
         assert any(p.pattern == "support" for p in support_finding.matched_patterns)
 
     def test_find_patterns_creates_multiple_findings_for_multiple_matches(
@@ -138,7 +138,7 @@ class TestProcessingPurposePatternMatcher:
         assert len(findings) > 0
         finding = findings[0]
         assert finding.metadata is not None
-        assert isinstance(finding.metadata, ProcessingPurposeFindingMetadata)
+        assert isinstance(finding.metadata, ProcessingPurposeIndicatorMetadata)
         assert finding.metadata.source == "test_file.php"
         # Verify that metadata contains source and context fields
         metadata_dict = finding.metadata.model_dump()
@@ -165,7 +165,6 @@ class TestProcessingPurposePatternMatcher:
         # Verify all required fields are present and valid
         assert isinstance(finding.purpose, str)
         assert len(finding.purpose) > 0
-        assert isinstance(finding.purpose_category, str)
         assert isinstance(finding.matched_patterns, list)
         assert len(finding.matched_patterns) > 0
 

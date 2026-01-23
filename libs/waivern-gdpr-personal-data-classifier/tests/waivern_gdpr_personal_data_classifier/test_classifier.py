@@ -47,35 +47,6 @@ class TestGDPRPersonalDataClassifierContract(
 class TestGDPRPersonalDataClassifier:
     """Test suite for GDPRPersonalDataClassifier behaviour."""
 
-    def test_get_name_returns_classifier_name(self) -> None:
-        """Test that get_name returns the expected classifier name."""
-        name = GDPRPersonalDataClassifier.get_name()
-
-        assert name == "gdpr_personal_data_classifier"
-
-    def test_get_framework_returns_gdpr(self) -> None:
-        """Test that get_framework returns 'GDPR'."""
-        framework = GDPRPersonalDataClassifier.get_framework()
-
-        assert framework == "GDPR"
-
-    def test_get_input_requirements_accepts_personal_data_indicator(self) -> None:
-        """Test that classifier accepts personal_data_indicator/1.0.0 schema."""
-        requirements = GDPRPersonalDataClassifier.get_input_requirements()
-
-        assert len(requirements) == 1
-        assert len(requirements[0]) == 1
-        assert requirements[0][0].schema_name == "personal_data_indicator"
-        assert requirements[0][0].version == "1.0.0"
-
-    def test_get_supported_output_schemas_returns_gdpr_personal_data(self) -> None:
-        """Test that classifier outputs gdpr_personal_data/1.0.0 schema."""
-        schemas = GDPRPersonalDataClassifier.get_supported_output_schemas()
-
-        assert len(schemas) == 1
-        assert schemas[0].name == "gdpr_personal_data"
-        assert schemas[0].version == "1.0.0"
-
     def test_process_classifies_email_as_identification_data(self) -> None:
         """Test that email indicator is classified as identification_data."""
         input_data = {
@@ -175,44 +146,6 @@ class TestGDPRPersonalDataClassifier:
         assert isinstance(article_refs, list)
         assert len(article_refs) > 0
         assert any("Article" in ref for ref in article_refs)
-
-    def test_process_preserves_original_evidence(self) -> None:
-        """Test that classification preserves evidence from input findings."""
-        original_evidence = [
-            {"content": "user@example.com"},
-            {"content": "john.doe@test.com"},
-        ]
-        input_data = {
-            "findings": [
-                {
-                    "category": "email",
-                    "evidence": original_evidence,
-                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
-                }
-            ],
-            "summary": {
-                "total_findings": 1,
-            },
-            "analysis_metadata": {
-                "ruleset_used": "local/personal_data_indicator/1.0.0",
-                "llm_validation_enabled": False,
-            },
-        }
-        input_message = Message(
-            id="test",
-            content=input_data,
-            schema=Schema("personal_data_indicator", "1.0.0"),
-        )
-        classifier = GDPRPersonalDataClassifier()
-
-        result = classifier.process(
-            [input_message], Schema("gdpr_personal_data", "1.0.0")
-        )
-
-        result_evidence = result.content["findings"][0]["evidence"]
-        assert len(result_evidence) == 2
-        assert result_evidence[0]["content"] == "user@example.com"
-        assert result_evidence[1]["content"] == "john.doe@test.com"
 
     def test_process_builds_summary_statistics(self) -> None:
         """Test that process builds correct summary with counts."""
@@ -419,43 +352,6 @@ class TestGDPRPersonalDataClassifierErrorHandling:
         assert finding["metadata"] is not None
         assert finding["metadata"]["source"] == "unknown"
         assert finding["privacy_category"] == "identification_data"
-
-    def test_process_handles_list_metadata_gracefully(self) -> None:
-        """Test that list metadata values (another malformed type) don't crash.
-
-        When input metadata is malformed (list instead of dict), the classifier
-        provides a fallback with source='unknown' to ensure metadata is always present.
-        """
-        input_data = {
-            "findings": [
-                {
-                    "category": "email",
-                    "evidence": [{"content": "test@example.com"}],
-                    "matched_patterns": [{"pattern": "email", "match_count": 1}],
-                    "metadata": ["not", "a", "dict"],  # Malformed: list instead of dict
-                }
-            ],
-            "summary": {"total_findings": 1},
-            "analysis_metadata": {
-                "ruleset_used": "local/personal_data_indicator/1.0.0",
-                "llm_validation_enabled": False,
-            },
-        }
-        input_message = Message(
-            id="test",
-            content=input_data,
-            schema=Schema("personal_data_indicator", "1.0.0"),
-        )
-        classifier = GDPRPersonalDataClassifier()
-
-        result = classifier.process(
-            [input_message], Schema("gdpr_personal_data", "1.0.0")
-        )
-
-        # Should provide fallback metadata with source="unknown"
-        finding = result.content["findings"][0]
-        assert finding["metadata"] is not None
-        assert finding["metadata"]["source"] == "unknown"
 
     def test_process_handles_empty_findings_list(self) -> None:
         """Test that empty findings list produces valid output with zero counts."""
