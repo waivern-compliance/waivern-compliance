@@ -78,9 +78,9 @@ artifacts:
       type: "gdpr_data_subject_classifier"
     output: true
 
-  sqlite_processing_purpose:
-    name: "Processing Purpose Analysis of Database Content"
-    description: "Identify GDPR and CCPA compliance processing purposes from database content"
+  sqlite_processing_purpose_indicators:
+    name: "Processing Purpose Detection in SQLite Database"
+    description: "Detect processing purposes from database content using pattern matching"
     inputs: sqlite_data
     process:
       type: "processing_purpose"
@@ -94,6 +94,13 @@ artifacts:
           llm_batch_size: 20
           llm_validation_mode: "conservative"
           confidence_threshold: 0.5
+
+  sqlite_gdpr_processing_purpose:
+    name: "GDPR Processing Purpose Classification (SQLite)"
+    description: "Classify detected processing purposes according to GDPR categories, sensitivity, and DPIA requirements"
+    inputs: sqlite_processing_purpose_indicators
+    process:
+      type: "gdpr_processing_purpose_classifier"
     output: true
 
   # Filesystem analysis artifacts
@@ -122,9 +129,9 @@ artifacts:
       type: "gdpr_personal_data_classifier"
     output: true
 
-  filesystem_processing_purpose:
-    name: "Processing Purpose Analysis of Filesystem Content"
-    description: "Identify data processing purposes and compliance frameworks from filesystem content"
+  filesystem_processing_purpose_indicators:
+    name: "Processing Purpose Detection in Filesystem"
+    description: "Detect processing purposes from filesystem content using pattern matching"
     inputs: filesystem_data
     process:
       type: "processing_purpose"
@@ -138,6 +145,13 @@ artifacts:
           llm_batch_size: 30
           llm_validation_mode: "conservative"
           confidence_threshold: 0.5
+
+  filesystem_gdpr_processing_purpose:
+    name: "GDPR Processing Purpose Classification (Filesystem)"
+    description: "Classify detected processing purposes according to GDPR categories, sensitivity, and DPIA requirements"
+    inputs: filesystem_processing_purpose_indicators
+    process:
+      type: "gdpr_processing_purpose_classifier"
     output: true
 
   # PHP source code pipeline: Filesystem → SourceCode → DataSubject
@@ -188,7 +202,7 @@ artifacts:
       type: "gdpr_data_subject_classifier"
     output: true
 
-  php_processing_purpose:
+  php_processing_purpose_indicators:
     name: "PHP Source Code Processing Purpose Detection"
     description: "Analyse PHP application code for business logic and data processing activities"
     inputs: php_source_code
@@ -202,4 +216,11 @@ artifacts:
         llm_validation:
           enable_llm_validation: false
           llm_batch_size: 50
+
+  php_gdpr_processing_purpose:
+    name: "GDPR Processing Purpose Classification (PHP Source Code)"
+    description: "Classify detected processing purposes from PHP code according to GDPR categories, sensitivity, and DPIA requirements"
+    inputs: php_processing_purpose_indicators
+    process:
+      type: "gdpr_processing_purpose_classifier"
     output: true
