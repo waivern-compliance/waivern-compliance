@@ -1,6 +1,7 @@
 """Configuration types for GDPR data subject classifier."""
 
 from pydantic import Field
+from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core import BaseComponentConfiguration
 
 
@@ -17,4 +18,8 @@ class GDPRDataSubjectClassifierConfig(BaseComponentConfiguration):
     ruleset: str = Field(
         default="local/gdpr_data_subject_classification/1.0.0",
         description="Ruleset URI for GDPR data subject classification rules",
+    )
+    llm_validation: LLMValidationConfig = Field(
+        default_factory=LLMValidationConfig,
+        description="LLM validation configuration for risk modifier detection",
     )
