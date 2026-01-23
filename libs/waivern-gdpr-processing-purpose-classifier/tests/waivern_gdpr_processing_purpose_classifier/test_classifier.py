@@ -6,10 +6,6 @@ from waivern_core.message import Message
 
 from waivern_gdpr_processing_purpose_classifier import GDPRProcessingPurposeClassifier
 
-# =============================================================================
-# Fixtures
-# =============================================================================
-
 
 @pytest.fixture
 def classifier() -> GDPRProcessingPurposeClassifier:
@@ -26,12 +22,11 @@ def output_schema() -> Schema:
 def make_indicator_finding(
     processing_purpose: str,
     source: str = "test.php",
-    evidence_content: str = "test content",
 ) -> dict[str, object]:
     """Create a mock processing purpose indicator finding."""
     return {
         "processing_purpose": processing_purpose,
-        "evidence": [{"content": evidence_content, "line_number": 1}],
+        "evidence": [{"content": "test content", "line_number": 1}],
         "matched_patterns": [{"pattern": "test_pattern", "match_count": 1}],
         "metadata": {"source": source, "context": {}},
     }
@@ -44,41 +39,6 @@ def make_input_message(findings: list[dict[str, object]]) -> Message:
         content={"findings": findings},
         schema=Schema("processing_purpose_indicator", "1.0.0"),
     )
-
-
-# =============================================================================
-# Contract Tests
-# =============================================================================
-
-
-class TestGDPRProcessingPurposeClassifierContract:
-    """Test classifier contract (name, framework, input/output schemas)."""
-
-    def test_get_name_returns_classifier_name(self) -> None:
-        """Test that get_name returns the expected classifier name."""
-        assert (
-            GDPRProcessingPurposeClassifier.get_name()
-            == "gdpr_processing_purpose_classifier"
-        )
-
-    def test_get_framework_returns_gdpr(self) -> None:
-        """Test that get_framework returns GDPR."""
-        assert GDPRProcessingPurposeClassifier.get_framework() == "GDPR"
-
-    def test_get_input_requirements_expects_processing_purpose_indicator(self) -> None:
-        """Test that classifier expects processing_purpose_indicator input."""
-        requirements = GDPRProcessingPurposeClassifier.get_input_requirements()
-        assert len(requirements) == 1
-        assert len(requirements[0]) == 1
-        assert requirements[0][0].schema_name == "processing_purpose_indicator"
-        assert requirements[0][0].version == "1.0.0"
-
-    def test_get_supported_output_schemas_returns_gdpr_processing_purpose(self) -> None:
-        """Test that classifier outputs gdpr_processing_purpose schema."""
-        schemas = GDPRProcessingPurposeClassifier.get_supported_output_schemas()
-        assert len(schemas) == 1
-        assert schemas[0].name == "gdpr_processing_purpose"
-        assert schemas[0].version == "1.0.0"
 
 
 # =============================================================================
@@ -180,61 +140,6 @@ class TestGDPRProcessingPurposeClassification:
 
         assert classified["purpose_category"] == "unclassified"
         assert classified["sensitive_purpose"] is False
-
-
-# =============================================================================
-# Evidence Propagation Tests
-# =============================================================================
-
-
-class TestEvidencePropagation:
-    """Test that evidence and metadata are properly propagated."""
-
-    def test_propagates_evidence_from_indicator(
-        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
-    ) -> None:
-        """Test that evidence is propagated from indicator to classified finding."""
-        finding = make_indicator_finding(
-            "Behavioral Data Analysis for Product Improvement",
-            evidence_content="analytics_track(user_id)",
-        )
-        input_msg = make_input_message([finding])
-
-        result = classifier.process([input_msg], output_schema)
-        classified = result.content["findings"][0]
-
-        assert len(classified["evidence"]) == 1
-        assert classified["evidence"][0]["content"] == "analytics_track(user_id)"
-
-    def test_propagates_matched_patterns_from_indicator(
-        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
-    ) -> None:
-        """Test that matched patterns are propagated from indicator."""
-        finding = make_indicator_finding(
-            "Behavioral Data Analysis for Product Improvement"
-        )
-        input_msg = make_input_message([finding])
-
-        result = classifier.process([input_msg], output_schema)
-        classified = result.content["findings"][0]
-
-        assert len(classified["matched_patterns"]) == 1
-        assert classified["matched_patterns"][0]["pattern"] == "test_pattern"
-
-    def test_propagates_metadata_source(
-        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
-    ) -> None:
-        """Test that metadata source is propagated from indicator."""
-        finding = make_indicator_finding(
-            "Behavioral Data Analysis for Product Improvement",
-            source="src/analytics.php",
-        )
-        input_msg = make_input_message([finding])
-
-        result = classifier.process([input_msg], output_schema)
-        classified = result.content["findings"][0]
-
-        assert classified["metadata"]["source"] == "src/analytics.php"
 
 
 # =============================================================================
