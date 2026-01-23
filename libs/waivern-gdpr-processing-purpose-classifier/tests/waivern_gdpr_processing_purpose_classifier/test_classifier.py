@@ -1,10 +1,21 @@
 """Unit tests for GDPRProcessingPurposeClassifier."""
 
 import pytest
-from waivern_core import Schema
+from waivern_core import ClassifierContractTests, Schema
 from waivern_core.message import Message
 
 from waivern_gdpr_processing_purpose_classifier import GDPRProcessingPurposeClassifier
+
+
+class TestGDPRProcessingPurposeClassifierContract(
+    ClassifierContractTests[GDPRProcessingPurposeClassifier]
+):
+    """Contract tests inherited from ClassifierContractTests."""
+
+    @pytest.fixture
+    def processor_class(self) -> type[GDPRProcessingPurposeClassifier]:
+        """Provide the classifier class to test."""
+        return GDPRProcessingPurposeClassifier
 
 
 @pytest.fixture
