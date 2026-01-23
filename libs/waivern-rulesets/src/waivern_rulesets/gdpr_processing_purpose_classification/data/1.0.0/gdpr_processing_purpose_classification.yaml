@@ -1,0 +1,187 @@
+# GDPR Processing Purpose Classification Ruleset
+# Maps processing purpose indicators to GDPR classifications
+
+name: "gdpr_processing_purpose_classification"
+version: "1.0.0"
+description: "Maps processing purpose indicators to GDPR classification"
+
+# Master list of valid GDPR purpose categories (for reporting/governance)
+purpose_categories:
+  - ai_and_ml
+  - analytics
+  - marketing_and_advertising
+  - operational
+  - security
+
+# Valid indicator purposes (from processing_purposes ruleset)
+indicator_purposes:
+  - Artificial Intelligence Model Training
+  - Artificial Intelligence Bias Testing
+  - Artificial Intelligence Model Refinement
+  - Artificial Intelligence Performance Testing
+  - Artificial Intelligence Security Testing
+  - Artificial Intelligence Compliance Management
+  - General Product and Service Delivery
+  - Customer Service and Support
+  - Customization of Products and Services
+  - User Identity and Login Management
+  - Payment, Billing, and Invoicing
+  - Behavioral Data Analysis for Product Improvement
+  - Dynamic Personalization of Products and Services
+  - Consumer Marketing Within Owned Products
+  - Targeted Marketing via Third-Party Platforms
+  - Third-Party Marketing via Owned Products
+  - Security, Fraud Prevention, and Abuse Detection
+
+# Categories considered privacy-sensitive (require extra scrutiny)
+sensitive_categories:
+  - ai_and_ml
+  - analytics
+  - marketing_and_advertising
+
+rules:
+  # =============================================================================
+  # AI and Machine Learning Purposes
+  # =============================================================================
+
+  - name: "AI and Machine Learning"
+    description: "Processing for AI/ML model training, testing, and refinement"
+    purpose_category: "ai_and_ml"
+    article_references:
+      - "Article 22"
+      - "Article 35"
+      - "Recital 71"
+    typical_lawful_bases:
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: true
+    dpia_recommendation: "required"
+    indicator_purposes:
+      - Artificial Intelligence Model Training
+      - Artificial Intelligence Bias Testing
+      - Artificial Intelligence Model Refinement
+      - Artificial Intelligence Performance Testing
+      - Artificial Intelligence Security Testing
+      - Artificial Intelligence Compliance Management
+
+  # =============================================================================
+  # Analytics Purposes
+  # =============================================================================
+
+  - name: "Analytics and Profiling"
+    description: "Processing for behavioural analysis, profiling, and personalisation"
+    purpose_category: "analytics"
+    article_references:
+      - "Article 22"
+      - "Article 35"
+      - "Recital 71"
+      - "Recital 72"
+    typical_lawful_bases:
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: true
+    dpia_recommendation: "recommended"
+    indicator_purposes:
+      - Behavioral Data Analysis for Product Improvement
+      - Dynamic Personalization of Products and Services
+
+  # =============================================================================
+  # Marketing and Advertising Purposes
+  # =============================================================================
+
+  - name: "Marketing and Advertising"
+    description: "Processing for marketing, advertising, and promotional activities"
+    purpose_category: "marketing_and_advertising"
+    article_references:
+      - "Article 6(1)(a)"
+      - "Article 7"
+      - "Article 21"
+      - "Recital 47"
+    typical_lawful_bases:
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: true
+    dpia_recommendation: "recommended"
+    indicator_purposes:
+      - Consumer Marketing Within Owned Products
+      - Targeted Marketing via Third-Party Platforms
+      - Third-Party Marketing via Owned Products
+
+  # =============================================================================
+  # Operational Purposes
+  # =============================================================================
+
+  - name: "Service Delivery"
+    description: "Processing for core product and service delivery"
+    purpose_category: "operational"
+    article_references:
+      - "Article 6(1)(b)"
+    typical_lawful_bases:
+      - "contract"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - General Product and Service Delivery
+      - Customization of Products and Services
+
+  - name: "Customer Support"
+    description: "Processing for customer service and support activities"
+    purpose_category: "operational"
+    article_references:
+      - "Article 6(1)(b)"
+      - "Article 6(1)(f)"
+    typical_lawful_bases:
+      - "contract"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - Customer Service and Support
+
+  - name: "Identity Management"
+    description: "Processing for user authentication and identity verification"
+    purpose_category: "operational"
+    article_references:
+      - "Article 6(1)(b)"
+      - "Article 32"
+    typical_lawful_bases:
+      - "contract"
+      - "legal_obligation"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - User Identity and Login Management
+
+  - name: "Payment Processing"
+    description: "Processing for billing, invoicing, and payment transactions"
+    purpose_category: "operational"
+    article_references:
+      - "Article 6(1)(b)"
+      - "Article 6(1)(c)"
+    typical_lawful_bases:
+      - "contract"
+      - "legal_obligation"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - Payment, Billing, and Invoicing
+
+  # =============================================================================
+  # Security Purposes
+  # =============================================================================
+
+  - name: "Security and Fraud Prevention"
+    description: "Processing for security, fraud prevention, and abuse detection"
+    purpose_category: "security"
+    article_references:
+      - "Article 6(1)(f)"
+      - "Article 32"
+      - "Recital 49"
+    typical_lawful_bases:
+      - "legitimate_interests"
+      - "legal_obligation"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - Security, Fraud Prevention, and Abuse Detection

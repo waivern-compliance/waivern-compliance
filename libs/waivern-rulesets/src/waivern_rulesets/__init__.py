@@ -34,6 +34,10 @@ from waivern_rulesets.gdpr_personal_data_classification import (
     GDPRPersonalDataClassificationRule,
     GDPRPersonalDataClassificationRuleset,
 )
+from waivern_rulesets.gdpr_processing_purpose_classification import (
+    GDPRProcessingPurposeClassificationRule,
+    GDPRProcessingPurposeClassificationRuleset,
+)
 from waivern_rulesets.personal_data_indicator import (
     PersonalDataIndicatorRule,
     PersonalDataIndicatorRuleset,
@@ -77,6 +81,7 @@ __all__ = [
     "DataSubjectIndicatorRuleset",
     "GDPRPersonalDataClassificationRuleset",
     "GDPRDataSubjectClassificationRuleset",
+    "GDPRProcessingPurposeClassificationRuleset",
     # Rule types
     "PersonalDataIndicatorRule",
     "ProcessingPurposeRule",
@@ -85,6 +90,7 @@ __all__ = [
     "DataSubjectIndicatorRule",
     "GDPRPersonalDataClassificationRule",
     "GDPRDataSubjectClassificationRule",
+    "GDPRProcessingPurposeClassificationRule",
     # Supporting types
     "RiskModifier",
     "RiskModifiers",
