@@ -42,86 +42,71 @@ class TestProcessingPurposesRulesetContract(
 
 
 # =============================================================================
-# Rule-specific Tests (unique to ProcessingPurposeRule)
-# =============================================================================
-
-
-class TestProcessingPurposeRule:
-    """Test cases for the ProcessingPurposeRule class."""
-
-    def test_processing_purpose_rule_with_all_fields(self) -> None:
-        """Test ProcessingPurposeRule with all fields."""
-        rule = ProcessingPurposeRule(
-            name="analytics_rule",
-            description="Analytics processing rule",
-            patterns=("analytics", "tracking"),
-            purpose_category="analytics",
-        )
-
-        assert rule.name == "analytics_rule"
-        assert rule.purpose_category == "analytics"
-
-
-# =============================================================================
 # RulesetData Validation Tests
 # =============================================================================
 
 
 class TestProcessingPurposesRulesetData:
-    """Test cases for the ProcessingPurposesRulesetData class."""
+    """Test cases for the ProcessingPurposesRulesetData class.
 
-    def test_processing_purposes_ruleset_validation(self) -> None:
-        """Test ProcessingPurposesRulesetData validates categories correctly."""
+    The processing purposes ruleset maintains a pre-defined list of valid
+    processing purpose names (the `purposes` field). Each rule's `name` must
+    match an entry in this list. This ensures consistency and prevents typos
+    in purpose names, as the rule name becomes the `purpose` field in findings.
+    """
+
+    def test_processing_purposes_ruleset_accepts_valid_data(self) -> None:
+        """Test ProcessingPurposesRulesetData accepts valid ruleset structure.
+
+        A valid ruleset has:
+        - A `purposes` list defining all valid processing purpose names
+        - Rules whose `name` fields match entries in the `purposes` list
+        """
+        # Arrange - rule name matches an entry in purposes list
         rule = ProcessingPurposeRule(
-            name="test_rule",
-            description="Test rule",
-            patterns=("test",),
-            purpose_category="ANALYTICS",
+            name="Payment Processing",
+            description="Detects payment-related purposes",
+            patterns=("payment", "billing"),
         )
 
-        ruleset = ProcessingPurposesRulesetData(
+        # Act
+        ruleset_data = ProcessingPurposesRulesetData(
             name="test_ruleset",
             version="1.0.0",
             description="Test ruleset",
-            purpose_categories=["ANALYTICS", "OPERATIONAL"],
-            sensitive_categories=["ANALYTICS"],
+            purposes=["Payment Processing", "Analytics"],
             rules=[rule],
         )
 
-        assert len(ruleset.rules) == 1
-        assert "ANALYTICS" in ruleset.sensitive_categories
-        assert "OPERATIONAL" in ruleset.purpose_categories
+        # Assert
+        assert len(ruleset_data.rules) == 1
+        assert "Payment Processing" in ruleset_data.purposes
+        assert "Analytics" in ruleset_data.purposes
 
-    def test_processing_purposes_ruleset_invalid_category(self) -> None:
-        """Test ProcessingPurposesRulesetData rejects invalid rule categories."""
+    def test_processing_purposes_ruleset_rejects_rule_with_unknown_purpose_name(
+        self,
+    ) -> None:
+        """Test ProcessingPurposesRulesetData rejects rules with names not in purposes list.
+
+        This validation prevents typos and ensures all rules map to a known
+        processing purpose. The rule's `name` is used as the `purpose` field
+        in findings, so it must be a recognised value.
+        """
+        # Arrange - rule name NOT in purposes list (typo or unknown purpose)
         rule = ProcessingPurposeRule(
-            name="test_rule",
-            description="Test rule",
-            patterns=("test",),
-            purpose_category="INVALID_CATEGORY",
+            name="Unknown Purpose",
+            description="This purpose is not in the allowed list",
+            patterns=("unknown",),
         )
 
-        with pytest.raises(ValidationError, match="invalid purpose_category"):
-            ProcessingPurposesRulesetData(
+        # Act & Assert
+        with pytest.raises(ValidationError, match="not in purposes"):
+            _ = ProcessingPurposesRulesetData(
                 name="test_ruleset",
                 version="1.0.0",
                 description="Test ruleset",
-                purpose_categories=["ANALYTICS", "OPERATIONAL"],
+                purposes=["Payment Processing", "Analytics"],
                 rules=[rule],
-            )
-
-    def test_processing_purposes_sensitive_categories_subset_validation(self) -> None:
-        """Test sensitive_categories must be subset of purpose_categories."""
-        with pytest.raises(
-            ValidationError, match="must be subset of purpose_categories"
-        ):
-            ProcessingPurposesRulesetData(
-                name="test_ruleset",
-                version="1.0.0",
-                description="Test ruleset",
-                purpose_categories=["ANALYTICS"],
-                sensitive_categories=["INVALID_SENSITIVE"],
-                rules=[],
             )
 
 
@@ -137,13 +122,3 @@ class TestProcessingPurposesRuleset:
     def ruleset(self) -> ProcessingPurposesRuleset:
         """Provide a ProcessingPurposesRuleset instance for testing."""
         return ProcessingPurposesRuleset()
-
-    def test_rules_have_purpose_category_field(
-        self, ruleset: ProcessingPurposesRuleset
-    ) -> None:
-        """Test that all rules have purpose_category field."""
-        rules = ruleset.get_rules()
-
-        for rule in rules:
-            assert isinstance(rule.purpose_category, str)
-            assert len(rule.purpose_category) > 0

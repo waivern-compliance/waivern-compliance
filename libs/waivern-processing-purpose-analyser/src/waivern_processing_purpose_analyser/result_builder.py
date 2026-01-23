@@ -12,9 +12,9 @@ from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
 
 from .schemas.types import (
-    ProcessingPurposeFindingModel,
-    ProcessingPurposeFindingOutput,
-    ProcessingPurposeSummary,
+    ProcessingPurposeIndicatorModel,
+    ProcessingPurposeIndicatorOutput,
+    ProcessingPurposeIndicatorSummary,
     PurposeBreakdown,
 )
 from .types import ProcessingPurposeAnalyserConfig
@@ -40,9 +40,9 @@ class ProcessingPurposeResultBuilder:
 
     def build_output_message(
         self,
-        findings: list[ProcessingPurposeFindingModel],
+        findings: list[ProcessingPurposeIndicatorModel],
         output_schema: Schema,
-        validation_result: ValidationResult[ProcessingPurposeFindingModel]
+        validation_result: ValidationResult[ProcessingPurposeIndicatorModel]
         | None = None,
     ) -> Message:
         """Build the complete output message.
@@ -59,7 +59,7 @@ class ProcessingPurposeResultBuilder:
         summary = self._build_findings_summary(findings)
         analysis_metadata = self._build_analysis_metadata(validation_result)
 
-        output_model = ProcessingPurposeFindingOutput(
+        output_model = ProcessingPurposeIndicatorOutput(
             findings=findings,
             summary=summary,
             analysis_metadata=analysis_metadata,
@@ -80,24 +80,21 @@ class ProcessingPurposeResultBuilder:
         return output_message
 
     def _build_findings_summary(
-        self, findings: list[ProcessingPurposeFindingModel]
-    ) -> ProcessingPurposeSummary:
+        self, findings: list[ProcessingPurposeIndicatorModel]
+    ) -> ProcessingPurposeIndicatorSummary:
         """Build summary statistics for findings.
 
         Args:
             findings: List of validated findings.
 
         Returns:
-            Summary with purpose categories, totals, and per-purpose breakdown.
+            Summary with totals and per-purpose breakdown.
 
         """
         unique_purposes = set(f.purpose for f in findings)
-        purpose_categories: dict[str, int] = {}
         purpose_counts: dict[str, int] = {}
 
         for finding in findings:
-            category = finding.purpose_category or "uncategorised"
-            purpose_categories[category] = purpose_categories.get(category, 0) + 1
             purpose_counts[finding.purpose] = purpose_counts.get(finding.purpose, 0) + 1
 
         purposes = [
@@ -105,16 +102,15 @@ class ProcessingPurposeResultBuilder:
             for purpose, count in sorted(purpose_counts.items())
         ]
 
-        return ProcessingPurposeSummary(
+        return ProcessingPurposeIndicatorSummary(
             total_findings=len(findings),
             purposes_identified=len(unique_purposes),
-            purpose_categories=purpose_categories,
             purposes=purposes,
         )
 
     def _build_analysis_metadata(
         self,
-        validation_result: ValidationResult[ProcessingPurposeFindingModel]
+        validation_result: ValidationResult[ProcessingPurposeIndicatorModel]
         | None = None,
     ) -> BaseAnalysisOutputMetadata:
         """Build analysis metadata for output.

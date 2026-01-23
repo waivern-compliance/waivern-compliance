@@ -53,7 +53,6 @@ class TestRulesetManager:
                 name="test_purpose",
                 description="Test processing purpose",
                 patterns=("test_pattern",),
-                purpose_category="OPERATIONAL",
             ),
         )
         mock_ruleset = _create_mock_ruleset(test_rules)
@@ -83,7 +82,6 @@ class TestRulesetManager:
                 name="test_purpose",
                 description="Test processing purpose",
                 patterns=("test_pattern",),
-                purpose_category="OPERATIONAL",
             ),
         )
         mock_ruleset = _create_mock_ruleset(test_rules, name="test_ruleset")
@@ -142,7 +140,6 @@ class TestRulesetManager:
                 name="purpose_rule",
                 description="Test purpose",
                 patterns=("purpose_pattern",),
-                purpose_category="ANALYTICS",
             ),
         )
         mock_ruleset = _create_mock_ruleset(processing_rules)
@@ -161,7 +158,6 @@ class TestRulesetManager:
                 "local/processing_purposes/1.0.0", ProcessingPurposeRule
             )
             assert len(result) == 1
-            assert result[0].purpose_category == "ANALYTICS"
 
 
 # =============================================================================
@@ -188,7 +184,6 @@ class TestRulesetManagerCaching:
                 name="cached_rule",
                 description="Test caching",
                 patterns=("cache_test",),
-                purpose_category="OPERATIONAL",
             ),
         )
         mock_ruleset = _create_mock_ruleset(test_rules)
@@ -223,7 +218,6 @@ class TestRulesetManagerCaching:
                 name="cached_rule",
                 description="Test caching",
                 patterns=("cache_test",),
-                purpose_category="OPERATIONAL",
             ),
         )
         mock_ruleset = _create_mock_ruleset(test_rules)
@@ -253,7 +247,6 @@ class TestRulesetManagerCaching:
                 name="processing_rule",
                 description="Processing rule",
                 patterns=("processing",),
-                purpose_category="ANALYTICS",
             ),
         )
         data_rules = (
@@ -309,7 +302,6 @@ class TestRulesetManagerCaching:
                 name="clear_test",
                 description="Cache clear test",
                 patterns=("clear",),
-                purpose_category="OPERATIONAL",
             ),
         )
         mock_ruleset = _create_mock_ruleset(test_rules)

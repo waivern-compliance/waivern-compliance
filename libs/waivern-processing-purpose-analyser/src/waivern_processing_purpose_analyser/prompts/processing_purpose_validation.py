@@ -6,25 +6,25 @@ Currently this single prompt handles all source types with combined guidance.
 """
 
 from waivern_processing_purpose_analyser.schemas import (
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorModel,
 )
 
 
 def get_processing_purpose_validation_prompt(
-    findings: list[ProcessingPurposeFindingModel],
+    findings: list[ProcessingPurposeIndicatorModel],
     validation_mode: str = "standard",
-    sensitive_categories: list[str] | None = None,
+    sensitive_purposes: list[str] | None = None,
 ) -> str:
-    """Generate validation prompt for processing purpose findings.
+    """Generate validation prompt for processing purpose indicators.
 
     This prompt is designed to help LLMs distinguish between actual business
     processing activities and false positives (documentation, examples, code comments).
     Handles both single findings (as a list of 1) and multiple findings efficiently.
 
     Args:
-        findings: List of processing purpose findings to validate
+        findings: List of processing purpose indicators to validate
         validation_mode: "standard" or "conservative" validation approach
-        sensitive_categories: List of categories considered privacy-sensitive (optional)
+        sensitive_purposes: List of purposes considered privacy-sensitive (optional)
 
     Returns:
         Formatted validation prompt for the LLM
@@ -40,7 +40,7 @@ def get_processing_purpose_validation_prompt(
 
     # Build validation approach section
     validation_approach = _get_validation_approach(
-        validation_mode, findings, sensitive_categories
+        validation_mode, findings, sensitive_purposes
     )
 
     # Build category guidance
@@ -156,7 +156,7 @@ Finding:
 {response_format}"""
 
 
-def _build_findings_to_validate(findings: list[ProcessingPurposeFindingModel]) -> str:
+def _build_findings_to_validate(findings: list[ProcessingPurposeIndicatorModel]) -> str:
     """Build formatted findings block for the prompt.
 
     Args:
@@ -179,7 +179,6 @@ def _build_findings_to_validate(findings: list[ProcessingPurposeFindingModel]) -
         findings_text.append(f"""
 Finding [{finding.id}]:
   Purpose: {finding.purpose}
-  Category: {finding.purpose_category}
   Patterns: {", ".join(f"{p.pattern} (×{p.match_count})" for p in finding.matched_patterns)}
   Source: {source}
   Evidence:
@@ -190,22 +189,22 @@ Finding [{finding.id}]:
 
 def _get_validation_approach(
     validation_mode: str,
-    findings: list[ProcessingPurposeFindingModel],
-    sensitive_categories: list[str] | None = None,
+    findings: list[ProcessingPurposeIndicatorModel],
+    sensitive_purposes: list[str] | None = None,
 ) -> str:
     """Get validation approach section based on mode and findings."""
     if validation_mode == "conservative":
-        # Check if any findings are in sensitive categories
-        sensitive_category_findings = [
+        # Check if any findings have sensitive purposes
+        sensitive_purpose_findings = [
             f
             for f in findings
-            if sensitive_categories and f.purpose_category in sensitive_categories
+            if sensitive_purposes and f.purpose in sensitive_purposes
         ]
 
         warnings: list[str] = []
-        if sensitive_category_findings:
+        if sensitive_purpose_findings:
             warnings.append(
-                "⚠️ PRIVACY SENSITIVE categories detected - conservative approach required"
+                "⚠️ PRIVACY SENSITIVE purposes detected - conservative approach required"
             )
 
         warning_text = "\n".join(f"**{w}**" for w in warnings) if warnings else ""
@@ -223,7 +222,7 @@ def _get_validation_approach(
         return """
 **STANDARD VALIDATION MODE:**
 - Balance false positive reduction with compliance requirements
-- Apply context-aware assessment considering purpose category
+- Apply context-aware assessment considering the processing purpose
 - Focus on clear business context indicators"""
 
 

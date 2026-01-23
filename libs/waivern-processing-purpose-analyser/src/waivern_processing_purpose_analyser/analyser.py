@@ -1,4 +1,4 @@
-"""Processing purpose analysis analyser for GDPR compliance."""
+"""Processing purpose analysis analyser for compliance frameworks."""
 
 import importlib
 import logging
@@ -13,7 +13,7 @@ from waivern_llm import BaseLLMService
 from waivern_source_code_analyser import SourceCodeDataModel
 
 from .result_builder import ProcessingPurposeResultBuilder
-from .schemas.types import ProcessingPurposeFindingModel
+from .schemas.types import ProcessingPurposeIndicatorModel
 from .types import ProcessingPurposeAnalyserConfig
 from .validation import create_validation_orchestrator
 
@@ -88,7 +88,7 @@ class ProcessingPurposeAnalyser(Analyser):
     @override
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Return the output schemas supported by this analyser."""
-        return [Schema("processing_purpose_finding", "1.0.0")]
+        return [Schema("processing_purpose_indicator", "1.0.0")]
 
     @override
     def process(
@@ -122,14 +122,16 @@ class ProcessingPurposeAnalyser(Analyser):
         handler = reader.create_handler(self._config)
 
         # Process all input messages and aggregate findings (fan-in)
-        findings: list[ProcessingPurposeFindingModel] = []
+        findings: list[ProcessingPurposeIndicatorModel] = []
         for message in inputs:
             input_data = reader.read(message.content)
             message_findings = handler.analyse(input_data)
             findings.extend(message_findings)
 
         # Apply LLM validation if enabled
-        validation_result: ValidationResult[ProcessingPurposeFindingModel] | None = None
+        validation_result: ValidationResult[ProcessingPurposeIndicatorModel] | None = (
+            None
+        )
         final_findings = findings
         if self._config.llm_validation.enable_llm_validation:
             validated_findings, _, validation_result = self._validate_findings(
@@ -164,12 +166,12 @@ class ProcessingPurposeAnalyser(Analyser):
 
     def _validate_findings(
         self,
-        findings: list[ProcessingPurposeFindingModel],
+        findings: list[ProcessingPurposeIndicatorModel],
         input_messages: list[Message],
     ) -> tuple[
-        list[ProcessingPurposeFindingModel],
+        list[ProcessingPurposeIndicatorModel],
         bool,
-        ValidationResult[ProcessingPurposeFindingModel] | None,
+        ValidationResult[ProcessingPurposeIndicatorModel] | None,
     ]:
         """Validate findings using ValidationOrchestrator.
 
@@ -231,8 +233,8 @@ class ProcessingPurposeAnalyser(Analyser):
             return findings, False, None
 
     def _mark_finding_validated(
-        self, finding: ProcessingPurposeFindingModel
-    ) -> ProcessingPurposeFindingModel:
+        self, finding: ProcessingPurposeIndicatorModel
+    ) -> ProcessingPurposeIndicatorModel:
         """Mark a finding as LLM validated.
 
         Args:

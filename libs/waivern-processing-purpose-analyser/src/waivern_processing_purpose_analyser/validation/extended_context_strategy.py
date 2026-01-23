@@ -14,7 +14,7 @@ from waivern_analysers_shared.llm_validation import (
 from waivern_analysers_shared.types import LLMValidationConfig
 
 from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorModel,
 )
 
 from .providers import SourceCodeSourceProvider
@@ -23,7 +23,7 @@ _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "batched_files_validat
 
 
 class SourceCodeValidationStrategy(
-    ExtendedContextLLMValidationStrategy[ProcessingPurposeFindingModel]
+    ExtendedContextLLMValidationStrategy[ProcessingPurposeIndicatorModel]
 ):
     """Validation strategy for source_code schema findings.
 
@@ -47,7 +47,7 @@ class SourceCodeValidationStrategy(
     def get_batch_validation_prompt(
         self,
         batch: SourceBatch,
-        findings_by_source: dict[str, list[ProcessingPurposeFindingModel]],
+        findings_by_source: dict[str, list[ProcessingPurposeIndicatorModel]],
         source_contents: dict[str, str],
         config: LLMValidationConfig,
     ) -> str:
@@ -86,7 +86,7 @@ class SourceCodeValidationStrategy(
         self,
         sources: list[str],
         source_contents: dict[str, str],
-        findings_by_source: dict[str, list[ProcessingPurposeFindingModel]],
+        findings_by_source: dict[str, list[ProcessingPurposeIndicatorModel]],
     ) -> str:
         """Build the source files section of the prompt.
 
@@ -113,7 +113,7 @@ class SourceCodeValidationStrategy(
     def _build_findings_section(
         self,
         sources: list[str],
-        findings_by_source: dict[str, list[ProcessingPurposeFindingModel]],
+        findings_by_source: dict[str, list[ProcessingPurposeIndicatorModel]],
     ) -> str:
         """Build the findings section with finding IDs.
 

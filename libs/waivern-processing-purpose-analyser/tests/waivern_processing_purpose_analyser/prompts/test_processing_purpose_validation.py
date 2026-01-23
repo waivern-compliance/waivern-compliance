@@ -7,8 +7,8 @@ from waivern_processing_purpose_analyser.prompts.processing_purpose_validation i
     get_processing_purpose_validation_prompt,
 )
 from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeFindingMetadata,
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorMetadata,
+    ProcessingPurposeIndicatorModel,
 )
 
 
@@ -18,22 +18,20 @@ class TestProcessingPurposeValidationPrompt:
     def create_test_finding(
         self,
         purpose: str = "Test Purpose",
-        purpose_category: str = "OPERATIONAL",
         matched_pattern: str = "test",
         evidence: list[str] | None = None,
         source: str = "test_source",
-    ) -> ProcessingPurposeFindingModel:
+    ) -> ProcessingPurposeIndicatorModel:
         """Helper to create test finding objects."""
         evidence_list = evidence if evidence is not None else ["test evidence"]
         evidence_items = [
             BaseFindingEvidence(content=content)  # collection_timestamp has default
             for content in evidence_list
         ]
-        metadata = ProcessingPurposeFindingMetadata(source=source)
+        metadata = ProcessingPurposeIndicatorMetadata(source=source)
 
-        return ProcessingPurposeFindingModel(
+        return ProcessingPurposeIndicatorModel(
             purpose=purpose,
-            purpose_category=purpose_category,
             matched_patterns=[
                 PatternMatchDetail(pattern=matched_pattern, match_count=1)
             ],
@@ -47,7 +45,6 @@ class TestProcessingPurposeValidationPrompt:
         findings = [
             self.create_test_finding(
                 purpose="Customer Service",
-                purpose_category="OPERATIONAL",
                 matched_pattern="zendesk",
                 evidence=["zendesk ticket system"],
                 source="database",
@@ -63,7 +60,6 @@ class TestProcessingPurposeValidationPrompt:
 
         # Test that finding data is properly injected
         assert "Customer Service" in prompt
-        assert "OPERATIONAL" in prompt
         assert "zendesk" in prompt
         assert "zendesk ticket system" in prompt
 
@@ -89,47 +85,46 @@ class TestProcessingPurposeValidationPrompt:
         # Assert - Standard mode should not offer flag_for_review option
         assert '"flag_for_review"' not in prompt
 
-    def test_privacy_sensitive_categories_trigger_warnings(self) -> None:
-        """Test that privacy-sensitive categories trigger warnings when explicitly configured."""
-        sensitive_categories = ["AI_AND_ML", "ANALYTICS", "MARKETING_AND_ADVERTISING"]
+    def test_privacy_sensitive_purposes_trigger_warnings(self) -> None:
+        """Test that privacy-sensitive purposes trigger warnings when explicitly configured."""
+        sensitive_purposes = ["AI Training", "User Analytics", "Marketing Targeting"]
 
-        for category in sensitive_categories:
+        for purpose in sensitive_purposes:
             # Arrange
             findings = [
                 self.create_test_finding(
-                    purpose_category=category,
+                    purpose=purpose,
                 )
             ]
 
-            # Act - Pass sensitive categories explicitly
+            # Act - Pass sensitive purposes explicitly
             prompt = get_processing_purpose_validation_prompt(
-                findings, "conservative", sensitive_categories
+                findings, "conservative", sensitive_purposes
             )
 
             # Assert
             assert "PRIVACY SENSITIVE" in prompt, (
-                f"Category {category} should trigger privacy warning when configured"
+                f"Purpose '{purpose}' should trigger privacy warning when configured"
             )
 
-    def test_security_category_does_not_trigger_privacy_warnings(self) -> None:
-        """Test that security category alone doesn't trigger privacy-sensitive warnings."""
+    def test_non_sensitive_purpose_does_not_trigger_privacy_warnings(self) -> None:
+        """Test that non-sensitive purposes don't trigger privacy-sensitive warnings."""
         # Arrange
         findings = [
             self.create_test_finding(
-                purpose="Security",
-                purpose_category="SECURITY",
+                purpose="Security Monitoring",
                 matched_pattern="security",
             )
         ]
-        # Define which categories are privacy-sensitive (does not include SECURITY)
-        sensitive_categories = ["AI_AND_ML", "ANALYTICS", "MARKETING_AND_ADVERTISING"]
+        # Define which purposes are privacy-sensitive (does not include Security Monitoring)
+        sensitive_purposes = ["AI Training", "User Analytics", "Marketing Targeting"]
 
         # Act
         prompt = get_processing_purpose_validation_prompt(
-            findings, "conservative", sensitive_categories
+            findings, "conservative", sensitive_purposes
         )
 
-        # Assert - SECURITY is not in the sensitive categories list
+        # Assert - Security Monitoring is not in the sensitive purposes list
         assert "PRIVACY SENSITIVE" not in prompt
 
     def test_always_uses_array_response_format(self) -> None:

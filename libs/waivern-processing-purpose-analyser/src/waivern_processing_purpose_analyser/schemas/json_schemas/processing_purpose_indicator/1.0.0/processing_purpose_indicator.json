@@ -113,9 +113,9 @@
       "title": "PatternMatchDetail",
       "type": "object"
     },
-    "ProcessingPurposeFindingMetadata": {
+    "ProcessingPurposeIndicatorMetadata": {
       "additionalProperties": false,
-      "description": "Metadata for processing purpose findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "description": "Metadata for processing purpose indicators.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
       "properties": {
         "source": {
           "description": "Source file or location where the data was found",
@@ -140,18 +140,18 @@
             }
           ],
           "default": null,
-          "description": "Line number where the finding was detected (for source code findings)",
+          "description": "Line number where the indicator was detected (for source code)",
           "title": "Line Number"
         }
       },
       "required": [
         "source"
       ],
-      "title": "ProcessingPurposeFindingMetadata",
+      "title": "ProcessingPurposeIndicatorMetadata",
       "type": "object"
     },
-    "ProcessingPurposeFindingModel": {
-      "description": "Processing purpose finding structure.\n\nInherits from BaseFindingModel[ProcessingPurposeFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: ProcessingPurposeFindingMetadata - Required metadata with source",
+    "ProcessingPurposeIndicatorModel": {
+      "description": "Processing purpose indicator structure.\n\nA framework-agnostic indicator of a detected processing purpose.\nRegulatory classification (e.g., GDPR category) is performed by\ndownstream classifiers.\n\nInherits from BaseFindingModel[ProcessingPurposeIndicatorMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: ProcessingPurposeIndicatorMetadata - Required metadata with source",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -177,32 +177,13 @@
           "type": "array"
         },
         "metadata": {
-          "$ref": "#/$defs/ProcessingPurposeFindingMetadata",
+          "$ref": "#/$defs/ProcessingPurposeIndicatorMetadata",
           "description": "Metadata with source and context information"
         },
         "purpose": {
-          "description": "Processing purpose name",
+          "description": "Processing purpose name (from ruleset)",
           "title": "Purpose",
           "type": "string"
-        },
-        "purpose_category": {
-          "default": "",
-          "description": "Category of the processing purpose",
-          "title": "Purpose Category",
-          "type": "string"
-        },
-        "service_category": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Service category from ServiceIntegrationRule (when applicable)",
-          "title": "Service Category"
         },
         "collection_type": {
           "anyOf": [
@@ -214,7 +195,7 @@
             }
           ],
           "default": null,
-          "description": "Collection type from DataCollectionRule (when applicable)",
+          "description": "Technical mechanism of data collection (e.g., form_data, cookies, api_endpoint)",
           "title": "Collection Type"
         },
         "data_source": {
@@ -227,7 +208,7 @@
             }
           ],
           "default": null,
-          "description": "Data source from DataCollectionRule (when applicable)",
+          "description": "Origin of collected data (e.g., http_request, browser_storage)",
           "title": "Data Source"
         }
       },
@@ -237,14 +218,14 @@
         "metadata",
         "purpose"
       ],
-      "title": "ProcessingPurposeFindingModel",
+      "title": "ProcessingPurposeIndicatorModel",
       "type": "object"
     },
-    "ProcessingPurposeSummary": {
-      "description": "Summary statistics for processing purpose findings.",
+    "ProcessingPurposeIndicatorSummary": {
+      "description": "Summary statistics for processing purpose indicators.",
       "properties": {
         "total_findings": {
-          "description": "Total number of processing purpose findings",
+          "description": "Total number of processing purpose indicators",
           "minimum": 0,
           "title": "Total Findings",
           "type": "integer"
@@ -255,16 +236,8 @@
           "title": "Purposes Identified",
           "type": "integer"
         },
-        "purpose_categories": {
-          "additionalProperties": {
-            "type": "integer"
-          },
-          "description": "Count of findings by purpose category",
-          "title": "Purpose Categories",
-          "type": "object"
-        },
         "purposes": {
-          "description": "Per-purpose breakdown of findings",
+          "description": "Per-purpose breakdown of indicators",
           "items": {
             "$ref": "#/$defs/PurposeBreakdown"
           },
@@ -274,14 +247,13 @@
       },
       "required": [
         "total_findings",
-        "purposes_identified",
-        "purpose_categories"
+        "purposes_identified"
       ],
-      "title": "ProcessingPurposeSummary",
+      "title": "ProcessingPurposeIndicatorSummary",
       "type": "object"
     },
     "PurposeBreakdown": {
-      "description": "Per-purpose breakdown of findings.",
+      "description": "Per-purpose breakdown of indicators.",
       "properties": {
         "purpose": {
           "description": "Purpose name",
@@ -289,7 +261,7 @@
           "type": "string"
         },
         "findings_count": {
-          "description": "Number of findings for this purpose",
+          "description": "Number of indicators for this purpose",
           "minimum": 0,
           "title": "Findings Count",
           "type": "integer"
@@ -303,18 +275,18 @@
       "type": "object"
     }
   },
-  "description": "Complete output structure for processing_purpose_finding schema.\n\nThis model represents the full wire format for processing purpose analysis results,\nincluding findings, summary statistics, and analysis metadata.",
+  "description": "Complete output structure for processing_purpose_indicator schema.\n\nThis model represents the full wire format for processing purpose analysis results,\nincluding indicators, summary statistics, and analysis metadata.",
   "properties": {
     "findings": {
-      "description": "List of processing purpose findings from GDPR compliance analysis",
+      "description": "List of processing purpose indicators from analysis",
       "items": {
-        "$ref": "#/$defs/ProcessingPurposeFindingModel"
+        "$ref": "#/$defs/ProcessingPurposeIndicatorModel"
       },
       "title": "Findings",
       "type": "array"
     },
     "summary": {
-      "$ref": "#/$defs/ProcessingPurposeSummary",
+      "$ref": "#/$defs/ProcessingPurposeIndicatorSummary",
       "description": "Summary statistics of the processing purpose analysis"
     },
     "analysis_metadata": {
@@ -327,7 +299,7 @@
     "summary",
     "analysis_metadata"
   ],
-  "title": "ProcessingPurposeFindingOutput",
+  "title": "ProcessingPurposeIndicatorOutput",
   "type": "object",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "version": "1.0.0"

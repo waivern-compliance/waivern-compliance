@@ -5,7 +5,7 @@ from typing import Any
 from waivern_analysers_shared import SchemaInputHandler
 from waivern_source_code_analyser import SourceCodeDataModel
 
-from ..schemas.types import ProcessingPurposeFindingModel
+from ..schemas.types import ProcessingPurposeIndicatorModel
 from ..source_code_schema_input_handler import SourceCodeSchemaInputHandler
 from ..types import ProcessingPurposeAnalyserConfig
 
@@ -28,7 +28,7 @@ def read(content: dict[str, Any]) -> SourceCodeDataModel:
 
 def create_handler(
     config: ProcessingPurposeAnalyserConfig,
-) -> SchemaInputHandler[ProcessingPurposeFindingModel]:
+) -> SchemaInputHandler[ProcessingPurposeIndicatorModel]:
     """Create handler for source_code schema.
 
     Args:

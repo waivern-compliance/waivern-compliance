@@ -1,4 +1,4 @@
-"""Processing purpose analyser for GDPR compliance analysis."""
+"""Processing purpose analyser for detecting data processing activities."""
 
 from importlib.resources import files
 from pathlib import Path
@@ -7,7 +7,7 @@ from waivern_core.schemas import SchemaRegistry
 
 from .analyser import ProcessingPurposeAnalyser
 from .factory import ProcessingPurposeAnalyserFactory
-from .schemas import ProcessingPurposeFindingModel
+from .schemas import ProcessingPurposeIndicatorModel
 from .types import ProcessingPurposeAnalyserConfig
 
 
@@ -27,6 +27,6 @@ __all__ = [
     "ProcessingPurposeAnalyser",
     "ProcessingPurposeAnalyserConfig",
     "ProcessingPurposeAnalyserFactory",
-    "ProcessingPurposeFindingModel",
+    "ProcessingPurposeIndicatorModel",
     "register_schemas",
 ]

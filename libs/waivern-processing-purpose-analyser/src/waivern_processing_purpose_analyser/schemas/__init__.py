@@ -1,15 +1,17 @@
 """Schema for processing purpose analyser output."""
 
 from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeFindingMetadata,
-    ProcessingPurposeFindingModel,
-    ProcessingPurposeFindingOutput,
-    ProcessingPurposeSummary,
+    ProcessingPurposeIndicatorMetadata,
+    ProcessingPurposeIndicatorModel,
+    ProcessingPurposeIndicatorOutput,
+    ProcessingPurposeIndicatorSummary,
+    PurposeBreakdown,
 )
 
 __all__ = [
-    "ProcessingPurposeFindingMetadata",
-    "ProcessingPurposeFindingModel",
-    "ProcessingPurposeFindingOutput",
-    "ProcessingPurposeSummary",
+    "ProcessingPurposeIndicatorMetadata",
+    "ProcessingPurposeIndicatorModel",
+    "ProcessingPurposeIndicatorOutput",
+    "ProcessingPurposeIndicatorSummary",
+    "PurposeBreakdown",
 ]

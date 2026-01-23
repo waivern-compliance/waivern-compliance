@@ -32,7 +32,6 @@ class ConcreteRuleset(AbstractRuleset[ProcessingPurposeRule]):
                 name="test_rule",
                 description="Test rule for unit tests",
                 patterns=("test_pattern", "test_pattern_2"),
-                purpose_category="OPERATIONAL",
             ),
         )
 
@@ -63,7 +62,6 @@ class ConcreteRulesetV2(AbstractRuleset[ProcessingPurposeRule]):
                 name="test_rule_v2",
                 description="Test rule for v2",
                 patterns=("v2_pattern",),
-                purpose_category="MARKETING",
             ),
         )
 

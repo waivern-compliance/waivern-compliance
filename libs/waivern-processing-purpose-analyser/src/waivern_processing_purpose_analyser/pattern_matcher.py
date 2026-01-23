@@ -7,8 +7,8 @@ from waivern_core.schemas import BaseMetadata, PatternMatchDetail
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 
 from .schemas.types import (
-    ProcessingPurposeFindingMetadata,
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorMetadata,
+    ProcessingPurposeIndicatorModel,
 )
 
 
@@ -35,7 +35,7 @@ class ProcessingPurposePatternMatcher:
         self,
         content: str,
         metadata: BaseMetadata,
-    ) -> list[ProcessingPurposeFindingModel]:
+    ) -> list[ProcessingPurposeIndicatorModel]:
         """Find all processing purpose patterns in content.
 
         Args:
@@ -52,7 +52,7 @@ class ProcessingPurposePatternMatcher:
         rules = self._ruleset_manager.get_rules(
             self._config.ruleset, ProcessingPurposeRule
         )
-        findings: list[ProcessingPurposeFindingModel] = []
+        findings: list[ProcessingPurposeIndicatorModel] = []
 
         for rule in rules:
             results = self._dispatcher.find_matches(
@@ -78,12 +78,11 @@ class ProcessingPurposePatternMatcher:
                     if r.representative_matches
                 ]
 
-                finding = ProcessingPurposeFindingModel(
+                finding = ProcessingPurposeIndicatorModel(
                     purpose=rule.name,
-                    purpose_category=rule.purpose_category,
                     matched_patterns=matched_patterns,
                     evidence=evidence_items,
-                    metadata=ProcessingPurposeFindingMetadata(
+                    metadata=ProcessingPurposeIndicatorMetadata(
                         source=metadata.source,
                         context=metadata.context,
                     ),

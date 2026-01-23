@@ -120,7 +120,7 @@ class PaymentService {
         # Act
         analyser.process(
             [source_code_message],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - prompt should contain file content (SourceCodeValidationStrategy)
@@ -185,7 +185,7 @@ class PaymentService {
         # Act
         result = analyser.process(
             [source_code_message],
-            Schema("processing_purpose_finding", "1.0.0"),
+            Schema("processing_purpose_indicator", "1.0.0"),
         )
 
         # Assert - validation should have been applied

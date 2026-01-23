@@ -20,7 +20,7 @@ Testing rationale:
 """
 
 from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorModel,
 )
 
 
@@ -46,7 +46,7 @@ class SourceCodeSourceProvider:
         """
         self._file_contents = file_contents
 
-    def get_source_id(self, finding: ProcessingPurposeFindingModel) -> str:
+    def get_source_id(self, finding: ProcessingPurposeIndicatorModel) -> str:
         """Extract file path from finding metadata.
 
         Args:
@@ -83,7 +83,7 @@ class ProcessingPurposeConcernProvider:
         """Return the attribute name for grouping."""
         return "purpose"
 
-    def get_concern(self, finding: ProcessingPurposeFindingModel) -> str:
+    def get_concern(self, finding: ProcessingPurposeIndicatorModel) -> str:
         """Extract purpose from finding.
 
         Args:

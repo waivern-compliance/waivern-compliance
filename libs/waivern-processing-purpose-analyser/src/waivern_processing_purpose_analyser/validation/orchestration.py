@@ -52,7 +52,7 @@ from waivern_processing_purpose_analyser.prompts.processing_purpose_validation i
     get_processing_purpose_validation_prompt,
 )
 from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeFindingModel,
+    ProcessingPurposeIndicatorModel,
 )
 
 from .extended_context_strategy import SourceCodeValidationStrategy
@@ -63,7 +63,7 @@ from .providers import (
 
 
 class ProcessingPurposeValidationStrategy(
-    DefaultLLMValidationStrategy[ProcessingPurposeFindingModel]
+    DefaultLLMValidationStrategy[ProcessingPurposeIndicatorModel]
 ):
     """Simple finding-based validation strategy for processing purposes.
 
@@ -73,7 +73,7 @@ class ProcessingPurposeValidationStrategy(
     @override
     def get_validation_prompt(
         self,
-        findings_batch: list[ProcessingPurposeFindingModel],
+        findings_batch: list[ProcessingPurposeIndicatorModel],
         config: LLMValidationConfig,
     ) -> str:
         """Generate validation prompt for processing purpose findings."""
@@ -86,7 +86,7 @@ def create_validation_orchestrator(
     config: LLMValidationConfig,
     input_schema_name: str,
     source_contents: dict[str, str] | None = None,
-) -> ValidationOrchestrator[ProcessingPurposeFindingModel]:
+) -> ValidationOrchestrator[ProcessingPurposeIndicatorModel]:
     """Create orchestrator configured for processing purpose validation.
 
     Args:
@@ -117,7 +117,7 @@ def create_validation_orchestrator(
     # Sampling: Runtime configuration (always enabled, defaults to 3)
     # Only a sample of findings per group is validated by the LLM. This reduces
     # cost for large datasets while still applying group-level decisions to all.
-    sampling_strategy: RandomSamplingStrategy[ProcessingPurposeFindingModel] = (
+    sampling_strategy: RandomSamplingStrategy[ProcessingPurposeIndicatorModel] = (
         RandomSamplingStrategy(config.sampling_size)
     )
 
