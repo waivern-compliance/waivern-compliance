@@ -1,4 +1,4 @@
-"""LLM validation prompts for processing purpose findings validation.
+"""LLM validation prompts for processing purpose indicator validation.
 
 TODO: Refactor to use separate prompt strategies for different source types
 (database, source_code, filesystem) when adding more connector types.
@@ -50,7 +50,7 @@ def get_processing_purpose_validation_prompt(
     response_format = _get_response_format(len(findings), is_conservative)
 
     return f"""
-You are an expert GDPR compliance analyst. Validate processing purpose findings to identify false positives.
+You are an expert data processing analyst. Validate processing purpose indicators to identify false positives.
 
 **FINDINGS TO VALIDATE:**
 {findings_to_validate}
@@ -62,7 +62,7 @@ For each finding, determine if it represents actual business processing (TRUE_PO
 **VALIDATION CRITERIA:**
 - TRUE_POSITIVE: Actual business processing activities affecting real users/customers
 - FALSE_POSITIVE: Documentation, examples, tutorials, code comments, configuration templates
-- Consider purpose category and source context
+- Consider the purpose type and source context
 - Assess source context (database vs. code vs. documentation)
 
 **CATEGORY-SPECIFIC GUIDANCE:**
@@ -213,10 +213,10 @@ def _get_validation_approach(
 **CONSERVATIVE VALIDATION MODE:**
 {warning_text}
 - Only mark as FALSE_POSITIVE if very confident it's not actual business processing
-- When in doubt, mark as TRUE_POSITIVE to protect privacy and compliance
-- Consider potential regulatory impact if this processing is mishandled
-- Err on the side of data protection compliance
-- Prioritize regulatory compliance over false positive reduction"""
+- When in doubt, mark as TRUE_POSITIVE to ensure complete detection
+- Consider potential business and privacy impact if this processing is missed
+- Err on the side of thorough detection
+- Prioritise completeness over false positive reduction"""
 
     else:  # standard mode
         return """
@@ -227,13 +227,13 @@ def _get_validation_approach(
 
 
 def _get_category_guidance_summary() -> str:
-    """Get consolidated category-specific guidance."""
+    """Get consolidated purpose-specific guidance."""
     return """
-- AI_AND_ML: Conservative validation, distinguish actual implementation from discussion/tutorials
-- OPERATIONAL: Generic terms need strong context validation, check for real customer interactions
-- ANALYTICS: High privacy impact, conservative validation for actual data collection vs. theoretical discussion
-- MARKETING_AND_ADVERTISING: High privacy risk, conservative validation for personalization/targeting
-- SECURITY: Generally legitimate in business context, rarely false positives"""
+- AI/ML purposes: Distinguish actual model training/testing from tutorials or documentation
+- Marketing purposes: High false positive rate from examples; validate actual campaign/targeting code
+- Payment/Billing: Usually true positives in production code; watch for test card numbers
+- Analytics purposes: Distinguish actual tracking implementation from documentation
+- Security purposes: Generally legitimate in business context, rarely false positives"""
 
 
 def _get_response_format(finding_count: int, is_conservative: bool) -> str:
