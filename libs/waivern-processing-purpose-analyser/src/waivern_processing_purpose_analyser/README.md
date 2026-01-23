@@ -80,14 +80,13 @@ This grouping behaviour ensures that multiple occurrences of the same processing
 purpose in a file produce a single finding with accurate match counts, rather than
 one finding per pattern match.
 
-### Example Finding Structure
+### Example Indicator Structure
 
-Findings are grouped by purpose (rule name), with pattern match counts aggregated:
+Indicators are grouped by purpose (rule name), with pattern match counts aggregated:
 
 ```json
 {
   "purpose": "Payment, Billing, and Invoicing",
-  "purpose_category": "operational",
   "matched_patterns": [
     {"pattern": "payment", "match_count": 3},
     {"pattern": "checkout", "match_count": 2}
@@ -98,8 +97,7 @@ Findings are grouped by purpose (rule name), with pattern match counts aggregate
   "metadata": {
     "source": "src/payments/checkout.php",
     "line_number": 15
-  },
-  "service_category": null
+  }
 }
 ```
 
@@ -115,7 +113,7 @@ Findings are grouped by purpose (rule name), with pattern match counts aggregate
 - LLMs understand code structure natively
 - No pre-extracted structure needed
 
-### 3. GDPR Compliance Support
-- **Article 30**: Processing activity documentation
-- **Article 28**: Service integration identification
-- **Article 25**: Data collection mechanism analysis
+### 3. Compliance Framework Support
+- Processing activity documentation for regulatory compliance
+- Service integration identification for vendor management
+- Data collection mechanism analysis for privacy audits
