@@ -1,10 +1,6 @@
-"""Unit tests for data subject indicator rule types."""
-
-import tempfile
-from unittest.mock import patch
+"""Unit tests for data subject indicator ruleset."""
 
 import pytest
-import yaml
 from pydantic import ValidationError
 
 from waivern_rulesets import AbstractRuleset
@@ -23,11 +19,7 @@ from waivern_rulesets.testing import RulesetContractTests
 class TestDataSubjectIndicatorRulesetContract(
     RulesetContractTests[DataSubjectIndicatorRule]
 ):
-    """Contract tests for DataSubjectIndicatorRuleset.
-
-    Inherits all standard ruleset contract tests automatically.
-
-    """
+    """Contract tests for DataSubjectIndicatorRuleset."""
 
     @pytest.fixture
     def ruleset_class(self) -> type[AbstractRuleset[DataSubjectIndicatorRule]]:
@@ -46,127 +38,20 @@ class TestDataSubjectIndicatorRulesetContract(
 
 
 # =============================================================================
-# Rule-specific Tests (unique to DataSubjectIndicatorRule)
+# Model Validator Tests (our custom validation logic)
 # =============================================================================
 
 
-class TestDataSubjectIndicatorRule:
-    """Test cases for the DataSubjectIndicatorRule class."""
+class TestDataSubjectIndicatorRulesetDataValidation:
+    """Test our custom model validators on the ruleset data class."""
 
-    def test_data_subject_rule_with_all_fields(self) -> None:
-        """Test DataSubjectIndicatorRule with all fields."""
-        rule = DataSubjectIndicatorRule(
-            name="employee_rule",
-            description="Employee detection rule",
-            patterns=("employee", "staff"),
-            subject_category="employee",
-            indicator_type="primary",
-            confidence_weight=40,
-        )
-
-        assert rule.name == "employee_rule"
-        assert rule.subject_category == "employee"
-        assert rule.indicator_type == "primary"
-        assert rule.confidence_weight == 40
-
-    def test_data_subject_rule_confidence_weight_validation(self) -> None:
-        """Test DataSubjectIndicatorRule confidence_weight constraints."""
-        # Test minimum bound
-        with pytest.raises(
-            ValidationError, match="Input should be greater than or equal to 1"
-        ):
-            DataSubjectIndicatorRule(
-                name="invalid_rule",
-                description="Rule with invalid weight",
-                patterns=("test",),
-                subject_category="employee",
-                indicator_type="primary",
-                confidence_weight=0,  # Invalid: below minimum
-            )
-
-        # Test maximum bound
-        with pytest.raises(
-            ValidationError, match="Input should be less than or equal to 50"
-        ):
-            DataSubjectIndicatorRule(
-                name="invalid_rule",
-                description="Rule with invalid weight",
-                patterns=("test",),
-                subject_category="employee",
-                indicator_type="primary",
-                confidence_weight=51,  # Invalid: above maximum
-            )
-
-    def test_data_subject_rule_indicator_type_validation(self) -> None:
-        """Test DataSubjectIndicatorRule indicator_type literal validation."""
-        # Valid indicator types should work
-        for indicator_type in ["primary", "secondary", "contextual"]:
-            rule = DataSubjectIndicatorRule(
-                name=f"{indicator_type}_rule",
-                description=f"{indicator_type} indicator rule",
-                patterns=("test",),
-                subject_category="employee",
-                indicator_type=indicator_type,  # type: ignore
-                confidence_weight=25,
-            )
-            assert rule.indicator_type == indicator_type
-
-        # Invalid indicator type should fail
-        with pytest.raises(
-            ValidationError,
-            match="Input should be 'primary', 'secondary' or 'contextual'",
-        ):
-            DataSubjectIndicatorRule(
-                name="invalid_rule",
-                description="Rule with invalid indicator type",
-                patterns=("test",),
-                subject_category="employee",
-                indicator_type="invalid_type",  # Invalid literal value # type: ignore
-                confidence_weight=25,
-            )
-
-
-# =============================================================================
-# RulesetData Validation Tests
-# =============================================================================
-
-
-class TestDataSubjectIndicatorRulesetData:
-    """Test cases for the DataSubjectIndicatorRulesetData class."""
-
-    def test_data_subject_ruleset_with_all_fields(self) -> None:
-        """Test DataSubjectIndicatorRulesetData with all fields."""
-        rule = DataSubjectIndicatorRule(
-            name="employee_rule",
-            description="Employee detection rule",
-            patterns=("employee", "staff"),
-            subject_category="employee",
-            indicator_type="primary",
-            confidence_weight=40,
-        )
-
-        ruleset = DataSubjectIndicatorRulesetData(
-            name="data_subjects",
-            version="1.0.0",
-            description="Data subject classification ruleset",
-            subject_categories=["employee", "customer", "prospect"],
-            risk_increasing_modifiers=["minor", "vulnerable group"],
-            risk_decreasing_modifiers=["non-EU-resident"],
-            rules=[rule],
-        )
-
-        assert len(ruleset.rules) == 1
-        assert "employee" in ruleset.subject_categories
-        assert "minor" in ruleset.risk_increasing_modifiers
-        assert "non-EU-resident" in ruleset.risk_decreasing_modifiers
-
-    def test_data_subject_ruleset_invalid_subject_category(self) -> None:
-        """Test DataSubjectIndicatorRulesetData rejects rules with invalid subject categories."""
+    def test_rejects_invalid_subject_category(self) -> None:
+        """Test that rules with subject_category not in master list are rejected."""
         rule = DataSubjectIndicatorRule(
             name="invalid_rule",
             description="Rule with invalid category",
             patterns=("test",),
-            subject_category="invalid_category",  # Not in master list
+            subject_category="invalid_category",
             indicator_type="primary",
             confidence_weight=40,
         )
@@ -177,39 +62,13 @@ class TestDataSubjectIndicatorRulesetData:
                 version="1.0.0",
                 description="Data subject classification ruleset",
                 subject_categories=["employee", "customer"],
-                risk_increasing_modifiers=["minor", "vulnerable group"],
+                risk_increasing_modifiers=["minor"],
                 risk_decreasing_modifiers=["non-EU-resident"],
                 rules=[rule],
             )
 
-    def test_data_subject_ruleset_modifiers_validation(self) -> None:
-        """Test DataSubjectIndicatorRulesetData validates modifiers."""
-        # Create dummy rule to satisfy minimum rule requirement
-        rule = DataSubjectIndicatorRule(
-            name="dummy_rule",
-            description="Dummy rule for modifier testing",
-            patterns=("test",),
-            subject_category="employee",
-            indicator_type="primary",
-            confidence_weight=25,
-        )
-
-        # Valid modifiers should work
-        ruleset = DataSubjectIndicatorRulesetData(
-            name="data_subjects",
-            version="1.0.0",
-            description="Test ruleset",
-            subject_categories=["employee"],
-            risk_increasing_modifiers=["minor", "vulnerable group"],
-            risk_decreasing_modifiers=["non-EU-resident"],
-            rules=[rule],
-        )
-        assert "minor" in ruleset.risk_increasing_modifiers
-        assert "vulnerable group" in ruleset.risk_increasing_modifiers
-        assert "non-EU-resident" in ruleset.risk_decreasing_modifiers
-
-    def test_data_subject_ruleset_duplicate_rule_names(self) -> None:
-        """Test DataSubjectIndicatorRulesetData rejects duplicate rule names."""
+    def test_rejects_duplicate_rule_names(self) -> None:
+        """Test that duplicate rule names are rejected."""
         rule1 = DataSubjectIndicatorRule(
             name="duplicate_name",
             description="First rule",
@@ -220,7 +79,7 @@ class TestDataSubjectIndicatorRulesetData:
         )
 
         rule2 = DataSubjectIndicatorRule(
-            name="duplicate_name",  # Same name as rule1
+            name="duplicate_name",
             description="Second rule",
             patterns=("test2",),
             subject_category="customer",
@@ -234,50 +93,7 @@ class TestDataSubjectIndicatorRulesetData:
                 version="1.0.0",
                 description="Test ruleset",
                 subject_categories=["employee", "customer"],
-                risk_increasing_modifiers=["minor", "vulnerable group"],
+                risk_increasing_modifiers=["minor"],
                 risk_decreasing_modifiers=["non-EU-resident"],
                 rules=[rule1, rule2],
             )
-
-
-# =============================================================================
-# Error Handling Tests
-# =============================================================================
-
-
-class TestDataSubjectIndicatorRulesetErrorHandling:
-    """Error handling tests for DataSubjectIndicatorRuleset file operations."""
-
-    def test_get_rules_missing_yaml_file_error(self) -> None:
-        """Test FileNotFoundError when YAML file doesn't exist."""
-        with patch("pathlib.Path.open", side_effect=FileNotFoundError("No such file")):
-            ruleset = DataSubjectIndicatorRuleset()
-            with pytest.raises(FileNotFoundError):
-                ruleset.get_rules()
-
-    def test_get_rules_invalid_yaml_content_error(self) -> None:
-        """Test error handling for malformed YAML syntax."""
-        with tempfile.NamedTemporaryFile(mode="w+", suffix=".yaml") as f:
-            f.write("invalid: yaml: content[\nbroken syntax")
-            f.seek(0)
-            with patch("pathlib.Path.open", return_value=f):
-                ruleset = DataSubjectIndicatorRuleset()
-                with pytest.raises(yaml.YAMLError):
-                    ruleset.get_rules()
-
-    def test_get_rules_yaml_validation_error(self) -> None:
-        """Test error handling for YAML that fails Pydantic validation."""
-        invalid_yaml_content = """name: "data_subject_indicator"
-version: "1.0.0"
-description: "Test ruleset"
-subject_categories:
-  - "employee"
-rules: []
-"""
-        with tempfile.NamedTemporaryFile(mode="w+", suffix=".yaml") as f:
-            f.write(invalid_yaml_content)
-            f.seek(0)
-            with patch("pathlib.Path.open", return_value=f):
-                ruleset = DataSubjectIndicatorRuleset()
-                with pytest.raises(ValidationError):
-                    ruleset.get_rules()
