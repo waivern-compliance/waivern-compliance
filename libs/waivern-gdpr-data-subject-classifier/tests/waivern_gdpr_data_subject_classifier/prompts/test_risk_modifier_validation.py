@@ -1,10 +1,10 @@
-"""Tests for data subject validation prompt.
+"""Tests for risk modifier validation prompt.
 
 Testing Philosophy for LLM Prompts
 ==================================
 
 Prompts are treated as **configuration**, not code. We deliberately avoid testing
-prompt content (e.g., "does the prompt contain 'TRUE_POSITIVE'?") because:
+prompt content (e.g., "does the prompt contain 'minor'?") because:
 
 1. **False confidence**: String-contains tests pass even when prompts are broken.
    A prompt could contain all the "right" strings but still produce poor LLM results.
@@ -24,18 +24,18 @@ What we DO test:
 - **Mode-specific branching**: If a prompt function has conditional logic (e.g.,
   conservative vs standard mode), those code branches are worth testing
 
-This analyser's prompt has no mode-specific branching, so we only test input validation.
+This classifier's prompt has no mode-specific branching, so we only test input validation.
 """
 
 import pytest
 
-from waivern_data_subject_analyser.prompts.data_subject_validation import (
-    get_data_subject_validation_prompt,
+from waivern_gdpr_data_subject_classifier.prompts import (
+    get_risk_modifier_validation_prompt,
 )
 
 
-class TestDataSubjectValidationPrompt:
-    """Test data subject validation prompt generation."""
+class TestRiskModifierValidationPrompt:
+    """Test risk modifier validation prompt generation."""
 
     def test_empty_findings_raises_error(self) -> None:
         """Test that empty findings list raises ValueError.
@@ -43,4 +43,4 @@ class TestDataSubjectValidationPrompt:
         Defensive check - no point calling LLM with no findings to analyse.
         """
         with pytest.raises(ValueError, match="At least one finding must be provided"):
-            get_data_subject_validation_prompt([], "standard")
+            get_risk_modifier_validation_prompt(findings=[], available_modifiers=[])

@@ -20,10 +20,9 @@ class TestProcessingPurposeAnalyserConfig:
         assert config.pattern_matching.evidence_context_size == "medium"
         assert config.pattern_matching.maximum_evidence_count == 3
 
-        # Verify LLM validation defaults
+        # Verify LLM validation field exists with disabled default
+        # (LLMValidationConfig defaults are tested in waivern-analysers-shared)
         assert config.llm_validation.enable_llm_validation is False
-        assert config.llm_validation.llm_batch_size == 50
-        assert config.llm_validation.llm_validation_mode == "standard"
 
     def test_from_properties_with_full_config_respects_all_values(self):
         """Test from_properties respects all provided properties."""
@@ -35,9 +34,8 @@ class TestProcessingPurposeAnalyserConfig:
                     "maximum_evidence_count": 10,
                 },
                 "llm_validation": {
-                    "enable_llm_validation": False,
+                    "enable_llm_validation": True,
                     "llm_batch_size": 100,
-                    "llm_validation_mode": "aggressive",
                 },
             }
         )
@@ -47,10 +45,9 @@ class TestProcessingPurposeAnalyserConfig:
         assert config.pattern_matching.evidence_context_size == "large"
         assert config.pattern_matching.maximum_evidence_count == 10
 
-        # Verify LLM validation config respected
-        assert config.llm_validation.enable_llm_validation is False
+        # Verify LLM validation config respected (tests nested model parsing)
+        assert config.llm_validation.enable_llm_validation is True
         assert config.llm_validation.llm_batch_size == 100
-        assert config.llm_validation.llm_validation_mode == "aggressive"
 
     def test_from_properties_invalid_ruleset_type_raises_validation_error(self):
         """Test from_properties rejects invalid ruleset type."""
@@ -97,35 +94,6 @@ class TestProcessingPurposeAnalyserConfig:
             ProcessingPurposeAnalyserConfig.from_properties(invalid_properties_high)
 
         assert "maximum_evidence_count" in str(exc_info.value)
-
-    def test_from_properties_invalid_llm_batch_size_raises_validation_error(self):
-        """Test from_properties rejects LLM batch size outside valid range."""
-        # Test below minimum (< 1)
-        invalid_properties_low = {"llm_validation": {"llm_batch_size": 0}}
-
-        with pytest.raises(ValidationError) as exc_info:
-            ProcessingPurposeAnalyserConfig.from_properties(invalid_properties_low)
-
-        assert "llm_batch_size" in str(exc_info.value)
-
-        # Test above maximum (> 200)
-        invalid_properties_high = {"llm_validation": {"llm_batch_size": 201}}
-
-        with pytest.raises(ValidationError) as exc_info:
-            ProcessingPurposeAnalyserConfig.from_properties(invalid_properties_high)
-
-        assert "llm_batch_size" in str(exc_info.value)
-
-    def test_from_properties_invalid_llm_validation_mode_raises_validation_error(self):
-        """Test from_properties rejects invalid LLM validation mode."""
-        invalid_properties = {"llm_validation": {"llm_validation_mode": "invalid_mode"}}
-
-        with pytest.raises(ValidationError) as exc_info:
-            ProcessingPurposeAnalyserConfig.from_properties(invalid_properties)
-
-        # Verify error mentions the field and valid options
-        error_message = str(exc_info.value)
-        assert "llm_validation_mode" in error_message
 
     def test_from_properties_extra_fields_rejected(self):
         """Test from_properties rejects extra unknown fields."""
