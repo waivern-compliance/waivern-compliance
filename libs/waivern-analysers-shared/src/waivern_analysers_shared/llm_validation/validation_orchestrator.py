@@ -60,12 +60,16 @@ from waivern_analysers_shared.types import LLMValidationConfig
 
 
 class ValidationOrchestrator[T: Finding]:
-    """Orchestrates the complete validation flow.
+    """Orchestrates the complete validation flow for filtering strategies.
 
     Composes orthogonal strategies:
     - GroupingStrategy: How to organise findings (optional)
     - SamplingStrategy: How to sample from groups (optional, requires grouping)
     - LLMValidationStrategy: How to batch and call the LLM
+
+    Note: This orchestrator is specific to the **filtering** paradigm where
+    strategies return ``LLMValidationOutcome``. For enrichment strategies
+    that return different result types, use a different orchestrator.
 
     Validation flow:
     1. Group findings using GroupingStrategy (if provided)
@@ -79,7 +83,7 @@ class ValidationOrchestrator[T: Finding]:
 
     def __init__(
         self,
-        llm_strategy: LLMValidationStrategy[T],
+        llm_strategy: LLMValidationStrategy[T, LLMValidationOutcome[T]],
         grouping_strategy: GroupingStrategy[T] | None = None,
         sampling_strategy: SamplingStrategy[T] | None = None,
     ) -> None:

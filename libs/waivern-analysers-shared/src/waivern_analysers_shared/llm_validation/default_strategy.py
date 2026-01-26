@@ -11,25 +11,25 @@ Flow
     │                                                                         │
     │  Findings ──► Batch by count (llm_batch_size) ──► For each batch:       │
     │                        │                               │                │
-    │                        │                               ├──► get_validation_prompt()
-    │                        │                               │         (abstract)
-    │                        │                               │                │
-    │                        │                               ├──► LLM call    │
-    │                        │                               │                │
-    │                        │                               └──► categorise findings
+    │                        │                               └──► validate_batch()
+    │                        │                                        (abstract)
     │                        │                                                │
-    │                        └──► Aggregate results ──► LLMValidationOutcome  │
+    │                        └──► aggregate_batch_results() ──► TResult       │
+    │                                     (abstract)                          │
     │                                                                         │
     └─────────────────────────────────────────────────────────────────────────┘
 
 Batching is count-based: findings are split into batches of ``llm_batch_size``
 regardless of content size. For token-aware batching with full source content,
 use :class:`ExtendedContextLLMValidationStrategy` instead.
+
+This is an abstract base class. For filtering (keep/remove findings), use
+:class:`FilteringLLMValidationStrategy`. For enrichment (extract attributes),
+create a strategy that extends this class with appropriate result types.
 """
 
 import logging
 from abc import abstractmethod
-from dataclasses import dataclass, field
 from typing import override
 
 from waivern_core import Finding
@@ -37,67 +37,55 @@ from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.types import LLMValidationConfig
 
-from .decision_engine import ValidationDecisionEngine
-from .models import (
-    SKIP_REASON_BATCH_ERROR,
-    LLMValidationOutcome,
-    LLMValidationResponseModel,
-    LLMValidationResultModel,
-    SkippedFinding,
-)
 from .strategy import LLMValidationStrategy
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class _BatchResult[T]:
-    """Result of validating a single batch."""
+class DefaultLLMValidationStrategy[
+    TFinding: Finding,
+    TResult,
+    TBatchResult,
+](LLMValidationStrategy[TFinding, TResult]):
+    """Abstract base for LLM validation strategies using count-based batching.
 
-    kept: list[T] = field(default_factory=list)
-    removed: list[T] = field(default_factory=list)
-    not_flagged: list[T] = field(default_factory=list)
+    Provides reusable infrastructure:
+    - Count-based batching (by llm_batch_size)
+    - Error handling per batch
+    - Total failure handling
 
+    Subclasses define:
+    - Batch validation (prompt generation, LLM call, response processing)
+    - Result aggregation (how to combine batch results)
 
-class DefaultLLMValidationStrategy[T: Finding](LLMValidationStrategy[T]):
-    """Default LLM validation strategy using count-based batching.
-
-    Batches findings by fixed count (llm_batch_size) and includes evidence
-    snippets in prompts. This is the standard approach suitable for most
-    validation scenarios.
-
-    Subclasses must implement prompt generation methods.
-
-    Type parameter T is the finding type, must satisfy the Finding protocol.
+    Type parameters:
+        TFinding: The finding type, bound to the Finding protocol.
+        TResult: The final strategy result type (returned by validate_findings).
+        TBatchResult: The intermediate per-batch result type.
     """
 
-    @abstractmethod
-    def get_validation_prompt(
-        self, findings_batch: list[T], config: LLMValidationConfig
-    ) -> str:
-        """Generate validation prompt for a batch of findings.
-
-        Args:
-            findings_batch: Batch of findings to validate.
-            config: LLM validation configuration.
-
-        Returns:
-            Validation prompt string for the LLM.
-
-        """
-        ...
+    # -------------------------------------------------------------------------
+    # Reusable: Batching and Error Handling
+    # -------------------------------------------------------------------------
 
     @override
     def validate_findings(
         self,
-        findings: list[T],
+        findings: list[TFinding],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
-    ) -> LLMValidationOutcome[T]:
+    ) -> TResult:
         """Validate findings using LLM with count-based batching.
 
-        Processes findings in batches of llm_batch_size, generates prompts
-        using the subclass implementation, and filters based on LLM responses.
+        Orchestrates the validation flow:
+        1. Batch findings by count (llm_batch_size)
+        2. For each batch: call validate_batch()
+        3. Aggregate all batch results
+        4. Handle errors gracefully
+
+        Empty input is handled naturally: the batching loop executes zero
+        times, and aggregate_batch_results([], []) returns the correct
+        empty result.
 
         Args:
             findings: List of findings to validate.
@@ -105,52 +93,23 @@ class DefaultLLMValidationStrategy[T: Finding](LLMValidationStrategy[T]):
             llm_service: LLM service instance.
 
         Returns:
-            LLMValidationOutcome with detailed breakdown of validation results.
+            Strategy-specific result type.
 
         """
-        if not findings:
-            logger.debug("No findings to validate")
-            return LLMValidationOutcome(
-                llm_validated_kept=[],
-                llm_validated_removed=[],
-                llm_not_flagged=[],
-                skipped=[],
-            )
-
         try:
-            outcome = self._process_findings_in_batches(findings, config, llm_service)
-
-            logger.debug(
-                f"LLM validation completed: {len(findings)} → "
-                f"{len(outcome.kept_findings)} kept "
-                f"({len(outcome.llm_validated_kept)} validated, "
-                f"{len(outcome.llm_not_flagged)} not flagged, "
-                f"{len(outcome.skipped)} skipped)"
-            )
-
-            return outcome
+            return self._process_findings_in_batches(findings, config, llm_service)
 
         except Exception as e:
             logger.error(f"LLM validation strategy failed: {e}")
-            logger.warning(
-                "Returning original findings as skipped due to validation strategy error"
-            )
-            return LLMValidationOutcome(
-                llm_validated_kept=[],
-                llm_validated_removed=[],
-                llm_not_flagged=[],
-                skipped=[
-                    SkippedFinding(finding=f, reason=SKIP_REASON_BATCH_ERROR)
-                    for f in findings
-                ],
-            )
+            logger.warning("Returning failure result due to validation strategy error")
+            return self._handle_total_failure(findings)
 
     def _process_findings_in_batches(
         self,
-        findings: list[T],
+        findings: list[TFinding],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
-    ) -> LLMValidationOutcome[T]:
+    ) -> TResult:
         """Process findings in batches for LLM validation.
 
         Args:
@@ -159,51 +118,48 @@ class DefaultLLMValidationStrategy[T: Finding](LLMValidationStrategy[T]):
             llm_service: LLM service instance.
 
         Returns:
-            LLMValidationOutcome with aggregated results from all batches.
+            Aggregated result from all batches.
 
         """
         batch_size = config.llm_batch_size
 
         # Accumulators for all batches
-        all_kept: list[T] = []
-        all_removed: list[T] = []
-        all_not_flagged: list[T] = []
-        all_skipped: list[SkippedFinding[T]] = []
+        batch_results: list[TBatchResult] = []
+        failed_batches: list[list[TFinding]] = []
 
         for i in range(0, len(findings), batch_size):
             batch = findings[i : i + batch_size]
             try:
-                batch_result = self._validate_findings_batch(batch, config, llm_service)
-                all_kept.extend(batch_result.kept)
-                all_removed.extend(batch_result.removed)
-                all_not_flagged.extend(batch_result.not_flagged)
+                batch_result = self._validate_batch(batch, config, llm_service)
+                batch_results.append(batch_result)
             except Exception as e:
                 logger.error(
                     f"LLM validation failed for batch {i // batch_size + 1}: {e}"
                 )
                 logger.warning(
-                    "Marking batch findings as skipped due to validation error"
+                    "Marking batch findings as failed due to validation error"
                 )
-                # Batch error - all findings in this batch are skipped
-                all_skipped.extend(
-                    SkippedFinding(finding=f, reason=SKIP_REASON_BATCH_ERROR)
-                    for f in batch
-                )
+                failed_batches.append(batch)
 
-        return LLMValidationOutcome(
-            llm_validated_kept=all_kept,
-            llm_validated_removed=all_removed,
-            llm_not_flagged=all_not_flagged,
-            skipped=all_skipped,
-        )
+        return self._aggregate_batch_results(batch_results, failed_batches)
 
-    def _validate_findings_batch(
+    # -------------------------------------------------------------------------
+    # Abstract: Batch Validation (internal hooks for subclasses)
+    # -------------------------------------------------------------------------
+
+    @abstractmethod
+    def _validate_batch(
         self,
-        findings_batch: list[T],
+        findings_batch: list[TFinding],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
-    ) -> _BatchResult[T]:
-        """Validate a batch of findings using LLM.
+    ) -> TBatchResult:
+        """Validate a single batch of findings using LLM.
+
+        Subclasses implement this to:
+        1. Generate the validation prompt
+        2. Call the LLM with the appropriate response model
+        3. Process the response into a batch result
 
         Args:
             findings_batch: Batch of findings to validate.
@@ -211,74 +167,41 @@ class DefaultLLMValidationStrategy[T: Finding](LLMValidationStrategy[T]):
             llm_service: LLM service instance.
 
         Returns:
-            BatchResult with categorised findings from this batch.
+            Intermediate result for this batch.
 
         """
-        # Generate validation prompt using subclass implementation
-        prompt = self.get_validation_prompt(findings_batch, config)
+        ...
 
-        # Get LLM validation response with structured output
-        logger.debug(f"Validating batch of {len(findings_batch)} findings")
-        response = llm_service.invoke_with_structured_output(
-            prompt, LLMValidationResponseModel
-        )
-        logger.debug(f"Received {len(response.results)} validation results")
-
-        # Categorise findings based on validation results
-        return self._categorise_findings_by_validation_results(
-            findings_batch, response.results
-        )
-
-    def _categorise_findings_by_validation_results(
+    @abstractmethod
+    def _aggregate_batch_results(
         self,
-        findings_batch: list[T],
-        validation_results: list[LLMValidationResultModel],
-    ) -> _BatchResult[T]:
-        """Categorise findings based on LLM validation results.
-
-        Uses fail-safe approach: findings not mentioned by LLM are categorised
-        as 'not_flagged' and kept, consistent with existing validation error handling.
+        batch_results: list[TBatchResult],
+        failed_batches: list[list[TFinding]],
+    ) -> TResult:
+        """Aggregate results from all batches into final result.
 
         Args:
-            findings_batch: Original batch of findings.
-            validation_results: Strongly-typed validation results from LLM.
+            batch_results: Results from successful batches.
+            failed_batches: Findings from batches that failed LLM validation.
 
         Returns:
-            BatchResult with findings categorised as kept, removed, or not_flagged.
+            Final strategy result.
 
         """
-        # Build lookup from finding ID to finding
-        findings_by_id = {f.id: f for f in findings_batch}
-        result = _BatchResult[T]()
-        processed_ids: set[str] = set()
+        ...
 
-        for llm_result in validation_results:
-            finding = findings_by_id.get(llm_result.finding_id)
+    @abstractmethod
+    def _handle_total_failure(self, findings: list[TFinding]) -> TResult:
+        """Handle case where entire validation fails.
 
-            if finding is None:
-                logger.warning(f"Unknown finding_id from LLM: {llm_result.finding_id}")
-                continue
+        Called when an unexpected exception occurs at the strategy level
+        (outside of individual batch processing).
 
-            processed_ids.add(llm_result.finding_id)
+        Args:
+            findings: All findings that were to be validated.
 
-            # Log validation decision using optimized engine
-            ValidationDecisionEngine.log_validation_decision(llm_result, finding)
+        Returns:
+            Strategy-specific failure result.
 
-            # Categorise based on decision engine
-            if ValidationDecisionEngine.should_keep_finding(llm_result, finding):
-                result.kept.append(finding)
-            else:
-                result.removed.append(finding)
-
-        # Findings not flagged by LLM are considered valid (true positives)
-        # LLM only returns false positives to save output tokens
-        not_flagged_ids = set(findings_by_id.keys()) - processed_ids
-
-        if not_flagged_ids:
-            logger.debug(
-                f"{len(not_flagged_ids)} findings not flagged by LLM, keeping as valid"
-            )
-            for finding_id in not_flagged_ids:
-                result.not_flagged.append(findings_by_id[finding_id])
-
-        return result
+        """
+        ...

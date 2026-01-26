@@ -14,6 +14,9 @@ from waivern_analysers_shared.llm_validation.file_content import (
     FileContentProvider,
     FileInfo,
 )
+from waivern_analysers_shared.llm_validation.filtering_strategy import (
+    FilteringLLMValidationStrategy,
+)
 from waivern_analysers_shared.llm_validation.grouping import (
     ConcernGroupingStrategy,
     GroupingStrategy,
@@ -80,6 +83,7 @@ __all__ = [
     # Strategies
     "DefaultLLMValidationStrategy",
     "ExtendedContextLLMValidationStrategy",
+    "FilteringLLMValidationStrategy",
     "LLMValidationStrategy",
     "SourceBatch",
     # Orchestration

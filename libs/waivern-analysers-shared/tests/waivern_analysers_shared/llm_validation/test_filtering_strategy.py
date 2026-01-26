@@ -1,8 +1,11 @@
-"""Tests for DefaultLLMValidationStrategy base class behaviour.
+"""Tests for FilteringLLMValidationStrategy behaviour.
 
-These tests verify the count-based batching, error handling, and fail-safe
-behaviours implemented in the abstract base class. Concrete strategy
-implementations inherit this behaviour and should NOT re-test it.
+These tests verify the filtering paradigm: count-based batching, error handling,
+fail-safe behaviours, and true/false positive categorisation.
+
+Note: The tests use FilteringLLMValidationStrategy (not DefaultLLMValidationStrategy)
+because the base class is now abstract. FilteringLLMValidationStrategy provides
+the concrete filtering implementation.
 """
 
 from typing import override
@@ -17,8 +20,8 @@ from waivern_core.schemas import (
 )
 from waivern_llm import BaseLLMService
 
-from waivern_analysers_shared.llm_validation.default_strategy import (
-    DefaultLLMValidationStrategy,
+from waivern_analysers_shared.llm_validation.filtering_strategy import (
+    FilteringLLMValidationStrategy,
 )
 from waivern_analysers_shared.llm_validation.models import (
     LLMValidationResponseModel,
@@ -37,8 +40,8 @@ class MockFinding(BaseFindingModel[BaseFindingMetadata]):
     category: str = "test"
 
 
-class ConcreteTestStrategy(DefaultLLMValidationStrategy[MockFinding]):
-    """Concrete implementation for testing the abstract base class."""
+class ConcreteTestStrategy(FilteringLLMValidationStrategy[MockFinding]):
+    """Concrete implementation for testing the filtering strategy."""
 
     @override
     def get_validation_prompt(
@@ -89,8 +92,8 @@ def make_response(
 # =============================================================================
 
 
-class TestDefaultLLMValidationStrategy:
-    """Test suite for DefaultLLMValidationStrategy base class behaviour."""
+class TestFilteringLLMValidationStrategy:
+    """Test suite for FilteringLLMValidationStrategy behaviour."""
 
     @pytest.fixture
     def strategy(self) -> ConcreteTestStrategy:

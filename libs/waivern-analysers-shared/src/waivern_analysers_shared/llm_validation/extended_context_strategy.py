@@ -161,7 +161,9 @@ class _BatchBuilder:
         return self._batches
 
 
-class ExtendedContextLLMValidationStrategy[T: Finding](LLMValidationStrategy[T], ABC):
+class ExtendedContextLLMValidationStrategy[T: Finding](
+    LLMValidationStrategy[T, LLMValidationOutcome[T]], ABC
+):
     """LLM validation strategy with full source content.
 
     Batches findings by source (file, table, etc.) and includes full source
@@ -170,6 +172,10 @@ class ExtendedContextLLMValidationStrategy[T: Finding](LLMValidationStrategy[T],
 
     Requires a SourceProvider to extract source identifiers and content.
     Falls back to evidence-only validation for sources without available content.
+
+    Note: This is a **filtering** strategy that returns ``LLMValidationOutcome``.
+    For token-aware batching with different result types, create a new strategy
+    following the same token-aware batching approach.
 
     Type parameter T is the finding type, must satisfy the Finding protocol.
     """
