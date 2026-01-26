@@ -48,20 +48,18 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
             ValueError: If configuration is invalid or requirements cannot be met
 
         """
-        # Parse and validate configuration
+        if not self.can_create(config):
+            raise ValueError("Cannot create analyser with given configuration")
+
         analyser_config = PersonalDataAnalyserConfig.from_properties(config)
 
-        # Only resolve LLM service if validation is enabled (lazy loading)
-        if analyser_config.llm_validation.enable_llm_validation:
-            try:
-                llm_service = self._container.get_service(BaseLLMService)
-            except (ValueError, KeyError) as e:
-                msg = "LLM validation enabled but no LLM service available"
-                raise ValueError(msg) from e
-        else:
-            llm_service = None
+        # Safe to resolve - can_create() already validated availability
+        llm_service = (
+            self._container.get_service(BaseLLMService)
+            if analyser_config.llm_validation.enable_llm_validation
+            else None
+        )
 
-        # Create analyser with resolved LLM service
         return PersonalDataAnalyser(
             config=analyser_config,
             llm_service=llm_service,
