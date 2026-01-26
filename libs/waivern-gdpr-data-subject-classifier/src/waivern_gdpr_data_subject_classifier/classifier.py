@@ -22,6 +22,9 @@ from waivern_gdpr_data_subject_classifier.schemas import (
     GDPRDataSubjectFindingModel,
 )
 from waivern_gdpr_data_subject_classifier.types import GDPRDataSubjectClassifierConfig
+from waivern_gdpr_data_subject_classifier.validation.models import (
+    RiskModifierValidationResult,
+)
 from waivern_gdpr_data_subject_classifier.validation.strategy import (
     RiskModifierValidationStrategy,
 )
@@ -109,7 +112,7 @@ class GDPRDataSubjectClassifier(Classifier):
         self._risk_modifier_detector = RiskModifierDetector(
             self._ruleset.get_risk_modifiers()
         )
-        self._result_builder = GDPRDataSubjectResultBuilder()
+        self._result_builder = GDPRDataSubjectResultBuilder(config)
 
         # Create validation strategy when LLM validation is enabled
         # (Factory ensures llm_service is available when config enables validation)
@@ -204,7 +207,9 @@ class GDPRDataSubjectClassifier(Classifier):
         ]
 
         # Step 3: Detect risk modifiers
-        classified_findings = self._apply_risk_modifiers(classified_findings)
+        classified_findings, validation_result = self._apply_risk_modifiers(
+            classified_findings
+        )
 
         # Step 4: Build and return output message
         return self._result_builder.build_output_message(
@@ -212,6 +217,7 @@ class GDPRDataSubjectClassifier(Classifier):
             output_schema,
             self._ruleset.name,
             self._ruleset.version,
+            validation_result,
         )
 
     def _classify_finding(
@@ -316,7 +322,7 @@ class GDPRDataSubjectClassifier(Classifier):
     def _apply_risk_modifiers(
         self,
         findings: list[GDPRDataSubjectFindingModel],
-    ) -> list[GDPRDataSubjectFindingModel]:
+    ) -> tuple[list[GDPRDataSubjectFindingModel], RiskModifierValidationResult | None]:
         """Apply risk modifiers to findings via LLM or regex fallback.
 
         Two paths:
@@ -327,29 +333,29 @@ class GDPRDataSubjectClassifier(Classifier):
             findings: Classified findings without risk modifiers.
 
         Returns:
-            Findings with risk modifiers applied.
+            Tuple of (findings with risk modifiers applied, validation result or None).
 
         """
         if self._validation_strategy and self._llm_service:
             return self._apply_risk_modifiers_via_llm(findings)
-        return self._apply_risk_modifiers_via_regex(findings)
+        return self._apply_risk_modifiers_via_regex(findings), None
 
     def _apply_risk_modifiers_via_llm(
         self,
         findings: list[GDPRDataSubjectFindingModel],
-    ) -> list[GDPRDataSubjectFindingModel]:
+    ) -> tuple[list[GDPRDataSubjectFindingModel], RiskModifierValidationResult | None]:
         """Apply risk modifiers using LLM validation at category level.
 
         Args:
             findings: Classified findings without risk modifiers.
 
         Returns:
-            Findings with category-level risk modifiers applied.
+            Tuple of (findings with category-level risk modifiers, validation result).
 
         """
         # Type narrowing handled by caller check, but be explicit for type checker
         if self._validation_strategy is None or self._llm_service is None:
-            return self._apply_risk_modifiers_via_regex(findings)
+            return self._apply_risk_modifiers_via_regex(findings), None
 
         # Call LLM validation strategy
         result = self._validation_strategy.validate_findings(
@@ -363,7 +369,7 @@ class GDPRDataSubjectClassifier(Classifier):
             logger.warning(
                 "LLM validation failed or returned no results, falling back to regex"
             )
-            return self._apply_risk_modifiers_via_regex(findings)
+            return self._apply_risk_modifiers_via_regex(findings), None
 
         # Build category → modifiers mapping
         category_modifiers: dict[str, list[str]] = {
@@ -372,13 +378,15 @@ class GDPRDataSubjectClassifier(Classifier):
         }
 
         # Apply modifiers to ALL findings in each category
-        return [
+        enriched_findings = [
             self._finding_with_modifiers(
                 finding,
                 category_modifiers.get(finding.data_subject_category, []),
             )
             for finding in findings
         ]
+
+        return enriched_findings, result
 
     def _apply_risk_modifiers_via_regex(
         self,
