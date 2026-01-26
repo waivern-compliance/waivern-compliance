@@ -3,7 +3,7 @@
 from typing import override
 
 from waivern_analysers_shared.llm_validation import (
-    DefaultLLMValidationStrategy,
+    FilteringLLMValidationStrategy,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
 
@@ -12,9 +12,13 @@ from .schemas.types import PersonalDataIndicatorModel
 
 
 class PersonalDataValidationStrategy(
-    DefaultLLMValidationStrategy[PersonalDataIndicatorModel]
+    FilteringLLMValidationStrategy[PersonalDataIndicatorModel]
 ):
-    """LLM validation strategy for personal data indicators."""
+    """LLM validation strategy for personal data indicators.
+
+    Uses the filtering paradigm to validate personal data indicators,
+    categorising them as TRUE_POSITIVE (keep) or FALSE_POSITIVE (remove).
+    """
 
     @override
     def get_validation_prompt(

@@ -3,7 +3,7 @@
 from typing import override
 
 from waivern_analysers_shared.llm_validation import (
-    DefaultLLMValidationStrategy,
+    FilteringLLMValidationStrategy,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
 
@@ -12,9 +12,13 @@ from waivern_data_subject_analyser.schemas import DataSubjectIndicatorModel
 
 
 class DataSubjectValidationStrategy(
-    DefaultLLMValidationStrategy[DataSubjectIndicatorModel]
+    FilteringLLMValidationStrategy[DataSubjectIndicatorModel]
 ):
-    """LLM validation strategy for data subject indicators."""
+    """LLM validation strategy for data subject indicators.
+
+    Uses the filtering paradigm to validate data subject indicators,
+    categorising them as TRUE_POSITIVE (keep) or FALSE_POSITIVE (remove).
+    """
 
     @override
     def get_validation_prompt(

@@ -2,6 +2,45 @@
 
 Provides validation with full source content, batching findings by their source
 (file, table, API endpoint) to enable richer LLM context.
+
+Flow
+----
+
+::
+
+    ┌─────────────────────────────────────────────────────────────────────────┐
+    │                 ExtendedContextLLMValidationStrategy                    │
+    ├─────────────────────────────────────────────────────────────────────────┤
+    │                                                                         │
+    │  Findings ──► Group by source ──► Estimate tokens per source            │
+    │                     │                      │                            │
+    │                     ▼                      ▼                            │
+    │              ┌─────────────────────────────────────┐                    │
+    │              │ Token-aware batch creation:         │                    │
+    │              │ • Sort sources by token count       │                    │
+    │              │ • Greedy bin-packing into batches   │                    │
+    │              │ • Respect model context window      │                    │
+    │              │ • Handle oversized sources          │                    │
+    │              └─────────────────────────────────────┘                    │
+    │                              │                                          │
+    │                              ▼                                          │
+    │              For each batch (with full source content):                 │
+    │                              │                                          │
+    │                              ├──► get_batch_validation_prompt()         │
+    │                              │         (abstract, includes content)     │
+    │                              │                                          │
+    │                              ├──► LLM call                              │
+    │                              │                                          │
+    │                              └──► categorise findings                   │
+    │                                                                         │
+    │                              ▼                                          │
+    │              Aggregate + handle skipped ──► LLMValidationOutcome        │
+    │                                                                         │
+    └─────────────────────────────────────────────────────────────────────────┘
+
+Batching is token-aware: sources are grouped into batches that fit within the
+model's context window. Oversized or missing sources are skipped with reason.
+For simple count-based batching, use :class:`DefaultLLMValidationStrategy`.
 """
 
 import logging
@@ -122,7 +161,9 @@ class _BatchBuilder:
         return self._batches
 
 
-class ExtendedContextLLMValidationStrategy[T: Finding](LLMValidationStrategy[T], ABC):
+class ExtendedContextLLMValidationStrategy[T: Finding](
+    LLMValidationStrategy[T, LLMValidationOutcome[T]], ABC
+):
     """LLM validation strategy with full source content.
 
     Batches findings by source (file, table, etc.) and includes full source
@@ -131,6 +172,10 @@ class ExtendedContextLLMValidationStrategy[T: Finding](LLMValidationStrategy[T],
 
     Requires a SourceProvider to extract source identifiers and content.
     Falls back to evidence-only validation for sources without available content.
+
+    Note: This is a **filtering** strategy that returns ``LLMValidationOutcome``.
+    For token-aware batching with different result types, create a new strategy
+    following the same token-aware batching approach.
 
     Type parameter T is the finding type, must satisfy the Finding protocol.
     """

@@ -1,11 +1,5 @@
 """LLM validation utilities for analysers."""
 
-from waivern_analysers_shared.llm_validation.batched_files_strategy import (
-    BatchedFilesStrategyBase,
-    BatchingResult,
-    FileBatch,
-    FileValidationResult,
-)
 from waivern_analysers_shared.llm_validation.decision_engine import (
     ValidationDecisionEngine,
 )
@@ -19,6 +13,9 @@ from waivern_analysers_shared.llm_validation.extended_context_strategy import (
 from waivern_analysers_shared.llm_validation.file_content import (
     FileContentProvider,
     FileInfo,
+)
+from waivern_analysers_shared.llm_validation.filtering_strategy import (
+    FilteringLLMValidationStrategy,
 )
 from waivern_analysers_shared.llm_validation.grouping import (
     ConcernGroupingStrategy,
@@ -54,11 +51,7 @@ from waivern_analysers_shared.llm_validation.validation_orchestrator import (
 )
 
 __all__ = [
-    # Batched files strategy
-    "BatchedFilesStrategyBase",
-    "BatchingResult",
-    "FileBatch",
-    "FileValidationResult",
+    # File content provider
     "FileContentProvider",
     "FileInfo",
     # Validation decision
@@ -90,6 +83,7 @@ __all__ = [
     # Strategies
     "DefaultLLMValidationStrategy",
     "ExtendedContextLLMValidationStrategy",
+    "FilteringLLMValidationStrategy",
     "LLMValidationStrategy",
     "SourceBatch",
     # Orchestration

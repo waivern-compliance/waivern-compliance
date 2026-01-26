@@ -3,6 +3,44 @@
 Orchestrates the complete validation flow by composing grouping, sampling,
 and LLM validation strategies. Applies group-level decisions based on
 sample validation results.
+
+Architecture
+------------
+
+::
+
+    ┌────────────────────────────────────────────────────────────────┐
+    │                  ValidationOrchestrator                        │
+    │                                                                │
+    │  Composes orthogonal strategies:                               │
+    │  • GroupingStrategy: How to organise findings (optional)       │
+    │  • SamplingStrategy: How to sample from groups (optional)      │
+    │  • LLMValidationStrategy: How to batch and call the LLM ◄──────┼─ Batching
+    └────────────────────────────────────────────────────────────────┘
+                                  │
+              ┌───────────────────┴───────────────────┐
+              ▼                                       ▼
+    ┌───────────────────────┐           ┌──────────────────────────────┐
+    │ DefaultLLMValidation  │           │ ExtendedContextLLMValidation │
+    │      Strategy         │           │         Strategy             │
+    ├───────────────────────┤           ├──────────────────────────────┤
+    │ Count-based batching  │           │ Token-aware source           │
+    │ (llm_batch_size)      │           │ batching with content        │
+    │                       │           │                              │
+    │ Use for: simple       │           │ Use for: validation          │
+    │ finding validation    │           │ needing full source          │
+    └───────────────────────┘           └──────────────────────────────┘
+
+Batching is a strategy concern, not an orchestrator concern. Each
+LLMValidationStrategy implementation chooses its own batching approach:
+
+- **DefaultLLMValidationStrategy**: Simple count-based batching. Batches
+  findings by ``llm_batch_size`` regardless of content size.
+
+- **ExtendedContextLLMValidationStrategy**: Token-aware batching. Groups
+  findings by source (file, table, etc.) and batches based on token limits
+  to fit within model context windows.
+
 """
 
 from collections.abc import Callable
@@ -22,12 +60,16 @@ from waivern_analysers_shared.types import LLMValidationConfig
 
 
 class ValidationOrchestrator[T: Finding]:
-    """Orchestrates the complete validation flow.
+    """Orchestrates the complete validation flow for filtering strategies.
 
     Composes orthogonal strategies:
     - GroupingStrategy: How to organise findings (optional)
     - SamplingStrategy: How to sample from groups (optional, requires grouping)
     - LLMValidationStrategy: How to batch and call the LLM
+
+    Note: This orchestrator is specific to the **filtering** paradigm where
+    strategies return ``LLMValidationOutcome``. For enrichment strategies
+    that return different result types, use a different orchestrator.
 
     Validation flow:
     1. Group findings using GroupingStrategy (if provided)
@@ -41,7 +83,7 @@ class ValidationOrchestrator[T: Finding]:
 
     def __init__(
         self,
-        llm_strategy: LLMValidationStrategy[T],
+        llm_strategy: LLMValidationStrategy[T, LLMValidationOutcome[T]],
         grouping_strategy: GroupingStrategy[T] | None = None,
         sampling_strategy: SamplingStrategy[T] | None = None,
     ) -> None:

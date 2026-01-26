@@ -42,7 +42,7 @@ from typing import override
 
 from waivern_analysers_shared.llm_validation import (
     ConcernGroupingStrategy,
-    DefaultLLMValidationStrategy,
+    FilteringLLMValidationStrategy,
     RandomSamplingStrategy,
     ValidationOrchestrator,
 )
@@ -63,9 +63,12 @@ from .providers import (
 
 
 class ProcessingPurposeValidationStrategy(
-    DefaultLLMValidationStrategy[ProcessingPurposeIndicatorModel]
+    FilteringLLMValidationStrategy[ProcessingPurposeIndicatorModel]
 ):
     """Simple finding-based validation strategy for processing purposes.
+
+    Uses the filtering paradigm to validate processing purpose findings,
+    categorising them as TRUE_POSITIVE (keep) or FALSE_POSITIVE (remove).
 
     Used when source file content is not available (e.g., standard_input schema).
     """
