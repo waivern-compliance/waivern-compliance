@@ -1,4 +1,31 @@
-"""Default LLM validation strategy with count-based batching."""
+"""Default LLM validation strategy with count-based batching.
+
+Flow
+----
+
+::
+
+    ┌─────────────────────────────────────────────────────────────────────────┐
+    │                   DefaultLLMValidationStrategy                          │
+    ├─────────────────────────────────────────────────────────────────────────┤
+    │                                                                         │
+    │  Findings ──► Batch by count (llm_batch_size) ──► For each batch:       │
+    │                        │                               │                │
+    │                        │                               ├──► get_validation_prompt()
+    │                        │                               │         (abstract)
+    │                        │                               │                │
+    │                        │                               ├──► LLM call    │
+    │                        │                               │                │
+    │                        │                               └──► categorise findings
+    │                        │                                                │
+    │                        └──► Aggregate results ──► LLMValidationOutcome  │
+    │                                                                         │
+    └─────────────────────────────────────────────────────────────────────────┘
+
+Batching is count-based: findings are split into batches of ``llm_batch_size``
+regardless of content size. For token-aware batching with full source content,
+use :class:`ExtendedContextLLMValidationStrategy` instead.
+"""
 
 import logging
 from abc import abstractmethod
