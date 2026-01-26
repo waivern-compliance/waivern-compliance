@@ -192,6 +192,10 @@ class GDPRDataSubjectClassifier(Classifier):
     def _classify_finding(self, finding: dict[str, Any]) -> GDPRDataSubjectFindingModel:
         """Classify a single finding according to GDPR rules.
 
+        Performs two distinct operations:
+        1. Classification: Maps indicator category to GDPR articles and lawful bases
+        2. Risk detection: Identifies risk modifiers from evidence text
+
         Args:
             finding: Raw finding dictionary from input message.
 
@@ -199,7 +203,7 @@ class GDPRDataSubjectClassifier(Classifier):
             Classified finding with GDPR enrichment.
 
         """
-        # Look up classification based on subject_category
+        # Step 1: Classification - Map category to GDPR articles and lawful bases
         subject_category = finding.get("subject_category", "")
         classification = self._classification_map.get(subject_category, {})
 
@@ -210,22 +214,9 @@ class GDPRDataSubjectClassifier(Classifier):
                 subject_category,
             )
 
-        # Extract evidence texts for risk modifier detection
-        evidence_list: list[Any] = finding.get("evidence", [])
-        evidence_texts: list[str] = []
-        for ev in evidence_list:
-            if isinstance(ev, dict):
-                # Evidence object with 'content' field (BaseFindingEvidence format)
-                ev_dict = cast(dict[str, Any], ev)
-                content = ev_dict.get("content", "")
-                if isinstance(content, str) and content:
-                    evidence_texts.append(content)
-            elif isinstance(ev, str):
-                # Direct string evidence
-                evidence_texts.append(ev)
-
-        # Detect risk modifiers from evidence
-        risk_modifiers = self._risk_modifier_detector.detect(evidence_texts)
+        # Step 2: Risk detection - Identify risk modifiers from evidence
+        evidence_texts = self._extract_evidence_texts(finding)
+        risk_modifiers = self._detect_risk_modifiers(evidence_texts)
 
         # Propagate metadata from indicator finding (always present, fallback to "unknown")
         raw_metadata = finding.get("metadata")
@@ -250,3 +241,49 @@ class GDPRDataSubjectClassifier(Classifier):
             matched_patterns=finding.get("matched_patterns", []),
             metadata=metadata,
         )
+
+    def _extract_evidence_texts(self, finding: dict[str, Any]) -> list[str]:
+        """Extract text content from finding evidence.
+
+        Handles two evidence formats:
+        - Dict with 'content' field (BaseFindingEvidence format)
+        - Direct string evidence
+
+        Args:
+            finding: Raw finding dictionary containing evidence.
+
+        Returns:
+            List of evidence text strings.
+
+        """
+        evidence_list: list[Any] = finding.get("evidence", [])
+        evidence_texts: list[str] = []
+
+        for ev in evidence_list:
+            if isinstance(ev, dict):
+                ev_dict = cast(dict[str, Any], ev)
+                content = ev_dict.get("content", "")
+                if isinstance(content, str) and content:
+                    evidence_texts.append(content)
+            elif isinstance(ev, str):
+                evidence_texts.append(ev)
+
+        return evidence_texts
+
+    def _detect_risk_modifiers(self, evidence_texts: list[str]) -> list[str]:
+        """Detect risk modifiers from evidence texts.
+
+        Uses regex-based pattern matching to identify GDPR risk modifiers
+        such as 'minor' (Article 8) or 'vulnerable_individual' (Recital 75).
+
+        This method will be extended in Step 7 to support LLM-based detection
+        when LLM validation is enabled.
+
+        Args:
+            evidence_texts: List of evidence text strings to analyse.
+
+        Returns:
+            Sorted list of detected risk modifier names.
+
+        """
+        return self._risk_modifier_detector.detect(evidence_texts)
