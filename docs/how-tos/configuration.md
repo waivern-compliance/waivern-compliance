@@ -63,6 +63,17 @@ GOOGLE_MODEL=gemini-2.5-flash  # optional
 LLM_PROVIDER=anthropic  # Options: anthropic, openai, google
 ```
 
+**Local LLM support (LM Studio, Ollama, vLLM, etc.):**
+
+Local LLMs that expose an OpenAI-compatible API can be used by setting `OPENAI_BASE_URL`:
+
+```bash
+LLM_PROVIDER=openai
+OPENAI_BASE_URL=http://localhost:1234/v1  # LM Studio default
+OPENAI_MODEL=your-local-model-name
+# OPENAI_API_KEY is not required when OPENAI_BASE_URL is set
+```
+
 ### Database Connectors
 
 **MySQL Connector:**
@@ -275,6 +286,7 @@ analysers:
 - `ANTHROPIC_MODEL` - Override default model
 - `OPENAI_API_KEY` - For OpenAI provider
 - `OPENAI_MODEL` - Override default model
+- `OPENAI_BASE_URL` - Base URL for OpenAI-compatible local LLMs (when set, `OPENAI_API_KEY` is optional)
 - `GOOGLE_API_KEY` - For Google provider
 - `GOOGLE_MODEL` - Override default model
 

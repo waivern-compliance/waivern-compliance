@@ -73,19 +73,24 @@ class LLMServiceFactory:
 
     @staticmethod
     def create_openai_service(
-        model_name: str | None = None, api_key: str | None = None
+        model_name: str | None = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
     ) -> OpenAILLMService:
         """Create an OpenAI LLM service instance.
 
         Args:
             model_name: The OpenAI model to use (uses OPENAI_MODEL env var or default if not provided)
             api_key: Optional API key (uses OPENAI_API_KEY env var if not provided)
+            base_url: Optional base URL for OpenAI-compatible APIs (e.g., local LLMs)
 
         Returns:
             Configured OpenAILLMService instance
 
         """
-        return OpenAILLMService(model_name=model_name, api_key=api_key)
+        return OpenAILLMService(
+            model_name=model_name, api_key=api_key, base_url=base_url
+        )
 
     @staticmethod
     def create_google_service(

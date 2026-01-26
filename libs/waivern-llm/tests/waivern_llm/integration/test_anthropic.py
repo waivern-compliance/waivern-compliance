@@ -58,7 +58,7 @@ class TestAnthropicLLMServiceIntegration:
     @pytest.mark.integration
     def test_custom_model(self, require_anthropic_api_key: str) -> None:
         """Test real Anthropic API with explicitly specified model."""
-        custom_model = "claude-3-5-haiku-latest"
+        custom_model = "claude-haiku-4-5"
         service = AnthropicLLMService(
             model_name=custom_model, api_key=require_anthropic_api_key
         )

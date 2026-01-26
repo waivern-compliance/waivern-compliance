@@ -1,6 +1,6 @@
 """Integration tests with real LLM APIs for ProcessingPurposeAnalyser.
 
-These tests require ANTHROPIC_API_KEY and make real API calls.
+These tests require LLM service configuration (see root .env file).
 Run with: uv run pytest -m integration
 """
 
@@ -12,7 +12,7 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm import AnthropicLLMService
+from waivern_llm import BaseLLMService
 
 from waivern_processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
@@ -25,11 +25,9 @@ class TestProcessingPurposeAnalyserLLMIntegration:
 
     @pytest.mark.integration
     def test_real_llm_validation_filters_false_positives(
-        self, require_anthropic_api_key: str
+        self, llm_service: BaseLLMService
     ) -> None:
         """Test that real LLM validation filters false positives from pattern matching."""
-        # Create real LLM service
-        llm_service = AnthropicLLMService(api_key=require_anthropic_api_key)
 
         # Create analyser with LLM validation enabled
         config = ProcessingPurposeAnalyserConfig.from_properties(

@@ -54,6 +54,10 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
     model: str | None = Field(
         default=None, description="Model name (provider default if None)"
     )
+    base_url: str | None = Field(
+        default=None,
+        description="Base URL for OpenAI-compatible APIs (e.g., local LLMs)",
+    )
 
     @field_validator("provider")
     @classmethod
@@ -144,29 +148,33 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
         if "provider" not in config_data:
             config_data["provider"] = os.getenv("LLM_PROVIDER", "anthropic")
 
+        provider = config_data["provider"].lower()
+
         # API key (provider-specific env var)
         if "api_key" not in config_data:
-            provider = config_data["provider"].lower()
             env_key_map = {
                 "anthropic": "ANTHROPIC_API_KEY",
                 "openai": "OPENAI_API_KEY",
                 "google": "GOOGLE_API_KEY",
             }
-            env_var = env_key_map.get(provider, "")
-            config_data["api_key"] = os.getenv(env_var, "")
+            config_data["api_key"] = os.getenv(env_key_map.get(provider, ""), "")
 
         # Model (provider-specific env var, optional)
         if "model" not in config_data:
-            provider = config_data["provider"].lower()
             env_model_map = {
                 "anthropic": "ANTHROPIC_MODEL",
                 "openai": "OPENAI_MODEL",
                 "google": "GOOGLE_MODEL",
             }
-            env_var = env_model_map.get(provider, "")
-            model_value = os.getenv(env_var)
+            model_value = os.getenv(env_model_map.get(provider, ""))
             if model_value:
                 config_data["model"] = model_value
+
+        # Base URL (OpenAI only, for local LLMs)
+        if "base_url" not in config_data and provider == "openai":
+            base_url = os.getenv("OPENAI_BASE_URL")
+            if base_url:
+                config_data["base_url"] = base_url
 
         return cls.model_validate(config_data)
 
