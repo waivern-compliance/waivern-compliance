@@ -21,6 +21,38 @@ This package provides the `GDPRDataSubjectClassifier` which enriches generic dat
 - Enriches findings with GDPR article references
 - Provides typical lawful bases for processing
 - Detects risk modifiers (e.g., minors, vulnerable individuals) from evidence
+- Optional LLM validation for semantic risk modifier detection
+
+## Risk Modifier Detection
+
+Risk modifiers indicate special GDPR considerations:
+
+| Modifier | GDPR Reference | Meaning |
+|----------|----------------|---------|
+| `minor` | Article 8 | Data subject under 16 years old |
+| `vulnerable_individual` | Recital 75 | Elderly, disabled, or otherwise vulnerable |
+
+### Detection Methods
+
+**Regex (default):** Pattern matching on evidence text. Fast but may produce false positives (e.g., "minor changes" flagged as involving a child).
+
+**LLM validation:** Semantic analysis understands context. Correctly identifies:
+- "8-year-old patient" → `minor` (age reference)
+- "minor changes to the record" → No modifier (means "small")
+- "elderly patient with dementia" → `vulnerable_individual`
+
+Enable LLM validation in your runbook:
+
+```yaml
+gdpr_findings:
+  inputs: indicators
+  process:
+    type: gdpr_data_subject_classifier
+    properties:
+      llm_validation:
+        enable_llm_validation: true
+  output: true
+```
 
 ## Usage
 

@@ -5,6 +5,7 @@ from typing import override
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
+from waivern_llm import BaseLLMService
 from waivern_rulesets import GDPRDataSubjectClassificationRule
 
 from .classifier import GDPRDataSubjectClassifier
@@ -29,7 +30,7 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
 
     @override
     def create(self, config: ComponentConfig) -> GDPRDataSubjectClassifier:
-        """Create GDPRDataSubjectClassifier instance.
+        """Create GDPRDataSubjectClassifier instance with injected dependencies.
 
         Args:
             config: Configuration dict from runbook properties
@@ -37,9 +38,26 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
         Returns:
             Configured GDPRDataSubjectClassifier instance
 
+        Raises:
+            ValueError: If configuration is invalid or requirements cannot be met
+
         """
+        if not self.can_create(config):
+            raise ValueError("Cannot create classifier with given configuration")
+
         classifier_config = GDPRDataSubjectClassifierConfig.from_properties(config)
-        return GDPRDataSubjectClassifier(config=classifier_config)
+
+        # Safe to resolve - can_create() already validated availability
+        llm_service = (
+            self._container.get_service(BaseLLMService)
+            if classifier_config.llm_validation.enable_llm_validation
+            else None
+        )
+
+        return GDPRDataSubjectClassifier(
+            config=classifier_config,
+            llm_service=llm_service,
+        )
 
     @override
     def can_create(self, config: ComponentConfig) -> bool:
@@ -48,6 +66,7 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
         Validates:
         1. Configuration structure and required fields
         2. Ruleset exists and can be loaded
+        3. LLM service available (if LLM validation enabled)
 
         Args:
             config: Configuration dict to validate
@@ -69,6 +88,13 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
         except Exception:
             return False
 
+        # If LLM validation enabled, must have LLM service available in container
+        if classifier_config.llm_validation.enable_llm_validation:
+            try:
+                self._container.get_service(BaseLLMService)
+            except (ValueError, KeyError):
+                return False
+
         return True
 
     @property
@@ -82,7 +108,8 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
         """Declare service dependencies for DI container.
 
         Returns:
-            Empty dictionary as this classifier has no external dependencies
+            Dictionary mapping dependency names to their types.
+            Includes BaseLLMService for optional LLM validation.
 
         """
-        return {}
+        return {"llm_service": BaseLLMService}
