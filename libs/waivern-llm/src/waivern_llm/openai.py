@@ -10,6 +10,7 @@ from pydantic import BaseModel, SecretStr
 
 from waivern_llm.base import BaseLLMService
 from waivern_llm.errors import LLMConfigurationError, LLMConnectionError
+from waivern_llm.model_capabilities import ModelCapabilities
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class OpenAILLMService(BaseLLMService):
         model_name: str | None = None,
         api_key: str | None = None,
         base_url: str | None = None,
+        capabilities: ModelCapabilities | None = None,
     ) -> None:
         """Initialise the OpenAI LLM service.
 
@@ -34,6 +36,7 @@ class OpenAILLMService(BaseLLMService):
             api_key: OpenAI API key (will use OPENAI_API_KEY env var if not provided)
             base_url: Base URL for OpenAI-compatible APIs (e.g., local LLMs).
                      Will use OPENAI_BASE_URL env var if not provided.
+            capabilities: Model capabilities override. If None, auto-detected from model name.
 
         Raises:
             LLMConfigurationError: If API key is not provided and base_url is not set
@@ -54,6 +57,9 @@ class OpenAILLMService(BaseLLMService):
                 "or provide api_key parameter. "
                 "For local LLMs, set OPENAI_BASE_URL instead."
             )
+
+        # Get capabilities from parameter or auto-detect from model name
+        self._capabilities = capabilities or ModelCapabilities.get(self._model_name)
 
         self._llm = None
         logger.info(f"Initialised OpenAI LLM service with model: {self._model_name}")
@@ -173,6 +179,7 @@ class OpenAILLMService(BaseLLMService):
                 api_key=SecretStr(effective_api_key),
                 base_url=self._base_url,
                 temperature=0,  # Consistent responses for compliance analysis
+                max_tokens=self._capabilities.max_output_tokens,  # type: ignore[reportCallIssue]
                 timeout=300,  # Increased timeout for LLM requests
             )
             logger.debug("Created LangChain ChatOpenAI instance")

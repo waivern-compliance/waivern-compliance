@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from waivern_llm.base import BaseLLMService
 from waivern_llm.errors import LLMConfigurationError, LLMConnectionError
+from waivern_llm.model_capabilities import ModelCapabilities
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +23,17 @@ class GoogleLLMService(BaseLLMService):
     """
 
     def __init__(
-        self, model_name: str | None = None, api_key: str | None = None
+        self,
+        model_name: str | None = None,
+        api_key: str | None = None,
+        capabilities: ModelCapabilities | None = None,
     ) -> None:
         """Initialise the Google LLM service.
 
         Args:
             model_name: The Google model to use (will use GOOGLE_MODEL env var)
             api_key: Google API key (will use GOOGLE_API_KEY env var if not provided)
+            capabilities: Model capabilities override. If None, auto-detected from model name.
 
         Raises:
             LLMConfigurationError: If API key is not provided or found in environment
@@ -44,6 +49,9 @@ class GoogleLLMService(BaseLLMService):
                 "Google API key is required. Set GOOGLE_API_KEY environment variable "
                 "or provide api_key parameter."
             )
+
+        # Get capabilities from parameter or auto-detect from model name
+        self._capabilities = capabilities or ModelCapabilities.get(self._model_name)
 
         self._llm = None
         logger.info(f"Initialised Google LLM service with model: {self._model_name}")
@@ -157,6 +165,7 @@ class GoogleLLMService(BaseLLMService):
                 model=self.model_name,
                 google_api_key=self._api_key,
                 temperature=0,  # Consistent responses for compliance analysis
+                max_output_tokens=self._capabilities.max_output_tokens,
                 timeout=300,  # Increased timeout for LLM requests
             )
             logger.debug("Created LangChain ChatGoogleGenerativeAI instance")

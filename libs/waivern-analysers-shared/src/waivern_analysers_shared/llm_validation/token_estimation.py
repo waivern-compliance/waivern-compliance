@@ -1,35 +1,6 @@
 """Token estimation utilities for LLM context management."""
 
-# Model context windows for auto-detection (current as of late 2025)
-MODEL_CONTEXT_WINDOWS: dict[str, int] = {
-    # Anthropic Claude 4.5 family (200k standard, 1M beta for Sonnet)
-    "claude-opus-4-5": 200_000,
-    "claude-sonnet-4-5": 200_000,
-    "claude-haiku-4-5": 200_000,
-    # Anthropic Claude 4 family
-    "claude-opus-4": 200_000,
-    "claude-sonnet-4": 200_000,
-    "claude-haiku-4": 200_000,
-    # OpenAI GPT-5 family
-    "gpt-5.2-pro": 400_000,
-    "gpt-5.2": 400_000,
-    "gpt-5.1": 256_000,
-    "gpt-5-mini": 256_000,
-    "gpt-5-nano": 128_000,
-    "gpt-5": 256_000,
-    # OpenAI o-series reasoning models
-    "o3": 200_000,
-    "o4-mini": 200_000,
-    # Google Gemini 3 family (1M context)
-    "gemini-3-pro": 1_000_000,
-    "gemini-3-flash": 1_000_000,
-    # Google Gemini 2.5 family (still current)
-    "gemini-2.5-pro": 1_000_000,
-    "gemini-2.5-flash": 1_000_000,
-}
-
-# Conservative fallback for unknown models
-DEFAULT_CONTEXT_WINDOW = 128_000
+from waivern_llm.model_capabilities import ModelCapabilities
 
 # Constants for max payload calculation (implementation details)
 OUTPUT_RATIO = 0.15  # Expected output tokens as ratio of input
@@ -68,11 +39,7 @@ def get_model_context_window(model_name: str) -> int:
         Context window size in tokens.
 
     """
-    model_lower = model_name.lower()
-    for key, window in MODEL_CONTEXT_WINDOWS.items():
-        if key in model_lower:
-            return window
-    return DEFAULT_CONTEXT_WINDOW
+    return ModelCapabilities.get(model_name).context_window
 
 
 def calculate_max_payload_tokens(context_window: int) -> int:
