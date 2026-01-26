@@ -8,6 +8,7 @@ from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
+from waivern_llm import BaseLLMService
 from waivern_rulesets import (
     GDPRDataSubjectClassificationRule,
     RiskModifiers,
@@ -80,15 +81,24 @@ class GDPRDataSubjectClassifier(Classifier):
     - Risk modifiers detected from evidence context
     """
 
-    def __init__(self, config: GDPRDataSubjectClassifierConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: GDPRDataSubjectClassifierConfig | None = None,
+        llm_service: BaseLLMService | None = None,
+    ) -> None:
         """Initialise the classifier.
 
         Args:
             config: Configuration for the classifier. If not provided,
                    uses default configuration.
+            llm_service: Optional LLM service for risk modifier validation.
+                        When provided and LLM validation is enabled in config,
+                        risk modifiers will be validated/enriched via LLM.
 
         """
         config = config or GDPRDataSubjectClassifierConfig()
+        self._config = config
+        self._llm_service = llm_service
         self._ruleset = RulesetManager.get_ruleset(
             config.ruleset, GDPRDataSubjectClassificationRule
         )
