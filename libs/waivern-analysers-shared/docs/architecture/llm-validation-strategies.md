@@ -379,27 +379,44 @@ package provides a base class and common implementations; analysers can create b
 if domain-specific prompt generation or batching logic is required.
 
 ```
-LLMValidationStrategy[T: BaseFindingModel] (abstract base)
+LLMValidationStrategy[TFinding, TResult] (protocol)
     │
-    │   validate_findings(findings, config, llm_service) -> LLMValidationOutcome[T]
-    │   get_validation_prompt(batch, config) -> str  [abstract]
+    │   validate_findings(findings, config, llm_service) -> TResult
     │
-    ├── DefaultLLMValidationStrategy[T]
-    │       Batches by fixed count (llm_batch_size)
-    │       Prompt contains evidence snippets only
-    │       Use for: general validation, by_concern grouping
+    ├── DefaultLLMValidationStrategy[TFinding, TResult, TBatchResult] (abstract)
+    │       │   Provides reusable infrastructure:
+    │       │   - Count-based batching (by llm_batch_size)
+    │       │   - Error handling per batch
+    │       │   - Total failure handling
+    │       │
+    │       │   Subclasses implement:
+    │       │   - _validate_batch() → TBatchResult
+    │       │   - _aggregate_batch_results() → TResult
+    │       │   - _handle_total_failure() → TResult
+    │       │
+    │       └── FilteringLLMValidationStrategy[TFinding]
+    │               Implements the filtering paradigm (TRUE_POSITIVE/FALSE_POSITIVE)
+    │               Returns LLMValidationOutcome[TFinding]
+    │               Prompt contains evidence snippets only
+    │               Use for: general validation, by_concern grouping
     │
-    └── ExtendedContextLLMValidationStrategy[T]
-            Batches by source, extends prompt with source content
+    └── ExtendedContextLLMValidationStrategy[TFinding]
+            Batches by source with token-aware bin-packing
+            Includes full source content in prompts
+            Returns LLMValidationOutcome[TFinding] (filtering paradigm)
             Use for: by_source grouping when SourceProvider has content
 
-LLMValidationOutcome[T] provides detailed breakdown:
+LLMValidationOutcome[T] provides detailed breakdown (for filtering strategies):
     - llm_validated_kept: Findings LLM confirmed as TRUE_POSITIVE
     - llm_validated_removed: Findings LLM marked as FALSE_POSITIVE
     - llm_not_flagged: Findings LLM didn't return (fail-safe kept)
     - skipped: Findings that couldn't be validated (oversized, missing content, batch error)
     - kept_findings: Property returning all kept findings (validated + not_flagged + skipped)
     - validation_succeeded: Property indicating all findings were validated (no skipped)
+
+For non-filtering use cases (e.g., enrichment - extracting attributes per finding),
+create a strategy that extends DefaultLLMValidationStrategy directly with appropriate
+TResult and TBatchResult types.
 ```
 
 **Ownership**: The analyser's orchestration factory selects the appropriate LLM strategy based on
@@ -410,7 +427,7 @@ input schema (design-time decision), not configuration:
 if input_schema_name == "source_code" and source_contents:
     llm_strategy = ExtendedContextLLMValidationStrategy(source_provider)
 else:
-    llm_strategy = DefaultLLMValidationStrategy()
+    llm_strategy = MyAnalyserValidationStrategy()  # extends FilteringLLMValidationStrategy
 ```
 
 The `ValidationOrchestrator` is strategy-agnostic - it accepts any `LLMValidationStrategy`
