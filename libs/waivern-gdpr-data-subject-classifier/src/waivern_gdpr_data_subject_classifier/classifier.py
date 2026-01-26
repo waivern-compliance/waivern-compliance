@@ -22,6 +22,9 @@ from waivern_gdpr_data_subject_classifier.schemas import (
     GDPRDataSubjectFindingModel,
 )
 from waivern_gdpr_data_subject_classifier.types import GDPRDataSubjectClassifierConfig
+from waivern_gdpr_data_subject_classifier.validation.strategy import (
+    RiskModifierValidationStrategy,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +111,19 @@ class GDPRDataSubjectClassifier(Classifier):
         )
         self._result_builder = GDPRDataSubjectResultBuilder()
 
+        # Create validation strategy when LLM validation is enabled
+        # (Factory ensures llm_service is available when config enables validation)
+        risk_modifiers = self._ruleset.get_risk_modifiers()
+        self._validation_strategy = (
+            RiskModifierValidationStrategy(
+                available_modifiers=list(
+                    risk_modifiers.risk_increasing + risk_modifiers.risk_decreasing
+                )
+            )
+            if config.llm_validation.enable_llm_validation and llm_service
+            else None
+        )
+
     def _build_classification_map(self) -> dict[str, dict[str, Any]]:
         """Build a lookup map from indicator category to GDPR classification.
 
@@ -153,6 +169,12 @@ class GDPRDataSubjectClassifier(Classifier):
     def process(self, inputs: list[Message], output_schema: Schema) -> Message:
         """Process input findings and classify according to GDPR.
 
+        Orchestrates the classification flow:
+        1. Aggregate findings from all inputs
+        2. Classify each finding (GDPR mapping, no risk modifiers yet)
+        3. Detect risk modifiers via LLM (category-level) or regex (per-finding)
+        4. Build and return output message
+
         Args:
             inputs: List of input messages containing data subject indicators.
             output_schema: The schema to use for the output message.
@@ -170,18 +192,21 @@ class GDPRDataSubjectClassifier(Classifier):
                 "Received empty inputs list."
             )
 
-        # Aggregate findings from all input messages (fan-in support)
+        # Step 1: Aggregate findings from all input messages (fan-in support)
         input_findings: list[dict[str, object]] = []
         for input_message in inputs:
             input_findings.extend(input_message.content.get("findings", []))
 
-        # Classify each finding
-        classified_findings: list[GDPRDataSubjectFindingModel] = []
-        for finding in input_findings:
-            classified = self._classify_finding(finding)
-            classified_findings.append(classified)
+        # Step 2: Classify each finding (without risk modifiers)
+        classified_findings = [
+            self._classify_finding(finding, include_risk_modifiers=False)
+            for finding in input_findings
+        ]
 
-        # Build and return output message
+        # Step 3: Detect risk modifiers
+        classified_findings = self._apply_risk_modifiers(classified_findings)
+
+        # Step 4: Build and return output message
         return self._result_builder.build_output_message(
             classified_findings,
             output_schema,
@@ -189,21 +214,24 @@ class GDPRDataSubjectClassifier(Classifier):
             self._ruleset.version,
         )
 
-    def _classify_finding(self, finding: dict[str, Any]) -> GDPRDataSubjectFindingModel:
+    def _classify_finding(
+        self,
+        finding: dict[str, Any],
+        include_risk_modifiers: bool = True,
+    ) -> GDPRDataSubjectFindingModel:
         """Classify a single finding according to GDPR rules.
-
-        Performs two distinct operations:
-        1. Classification: Maps indicator category to GDPR articles and lawful bases
-        2. Risk detection: Identifies risk modifiers from evidence text
 
         Args:
             finding: Raw finding dictionary from input message.
+            include_risk_modifiers: If True, detect risk modifiers via regex.
+                If False, return empty risk_modifiers (for LLM path where
+                modifiers are applied at category level later).
 
         Returns:
             Classified finding with GDPR enrichment.
 
         """
-        # Step 1: Classification - Map category to GDPR articles and lawful bases
+        # Classification: Map category to GDPR articles and lawful bases
         subject_category = finding.get("subject_category", "")
         classification = self._classification_map.get(subject_category, {})
 
@@ -214,9 +242,12 @@ class GDPRDataSubjectClassifier(Classifier):
                 subject_category,
             )
 
-        # Step 2: Risk detection - Identify risk modifiers from evidence
-        evidence_texts = self._extract_evidence_texts(finding)
-        risk_modifiers = self._detect_risk_modifiers(evidence_texts)
+        # Risk detection (regex) - only when include_risk_modifiers=True
+        if include_risk_modifiers:
+            evidence_texts = self._extract_evidence_texts(finding)
+            risk_modifiers = self._detect_risk_modifiers(evidence_texts)
+        else:
+            risk_modifiers = []
 
         # Propagate metadata from indicator finding (always present, fallback to "unknown")
         raw_metadata = finding.get("metadata")
@@ -271,13 +302,7 @@ class GDPRDataSubjectClassifier(Classifier):
         return evidence_texts
 
     def _detect_risk_modifiers(self, evidence_texts: list[str]) -> list[str]:
-        """Detect risk modifiers from evidence texts.
-
-        Uses regex-based pattern matching to identify GDPR risk modifiers
-        such as 'minor' (Article 8) or 'vulnerable_individual' (Recital 75).
-
-        This method will be extended in Step 7 to support LLM-based detection
-        when LLM validation is enabled.
+        """Detect risk modifiers from evidence texts using regex.
 
         Args:
             evidence_texts: List of evidence text strings to analyse.
@@ -287,3 +312,120 @@ class GDPRDataSubjectClassifier(Classifier):
 
         """
         return self._risk_modifier_detector.detect(evidence_texts)
+
+    def _apply_risk_modifiers(
+        self,
+        findings: list[GDPRDataSubjectFindingModel],
+    ) -> list[GDPRDataSubjectFindingModel]:
+        """Apply risk modifiers to findings via LLM or regex fallback.
+
+        Two paths:
+        - LLM path: Detect modifiers at category level, apply to ALL findings in category
+        - Regex path: Detect modifiers per-finding using pattern matching
+
+        Args:
+            findings: Classified findings without risk modifiers.
+
+        Returns:
+            Findings with risk modifiers applied.
+
+        """
+        if self._validation_strategy and self._llm_service:
+            return self._apply_risk_modifiers_via_llm(findings)
+        return self._apply_risk_modifiers_via_regex(findings)
+
+    def _apply_risk_modifiers_via_llm(
+        self,
+        findings: list[GDPRDataSubjectFindingModel],
+    ) -> list[GDPRDataSubjectFindingModel]:
+        """Apply risk modifiers using LLM validation at category level.
+
+        Args:
+            findings: Classified findings without risk modifiers.
+
+        Returns:
+            Findings with category-level risk modifiers applied.
+
+        """
+        # Type narrowing handled by caller check, but be explicit for type checker
+        if self._validation_strategy is None or self._llm_service is None:
+            return self._apply_risk_modifiers_via_regex(findings)
+
+        # Call LLM validation strategy
+        result = self._validation_strategy.validate_findings(
+            findings,
+            self._config.llm_validation,
+            self._llm_service,
+        )
+
+        # If validation failed, fall back to regex
+        if not result.validation_succeeded or not result.category_results:
+            logger.warning(
+                "LLM validation failed or returned no results, falling back to regex"
+            )
+            return self._apply_risk_modifiers_via_regex(findings)
+
+        # Build category → modifiers mapping
+        category_modifiers: dict[str, list[str]] = {
+            cat_result.category: cat_result.detected_modifiers
+            for cat_result in result.category_results
+        }
+
+        # Apply modifiers to ALL findings in each category
+        return [
+            self._finding_with_modifiers(
+                finding,
+                category_modifiers.get(finding.data_subject_category, []),
+            )
+            for finding in findings
+        ]
+
+    def _apply_risk_modifiers_via_regex(
+        self,
+        findings: list[GDPRDataSubjectFindingModel],
+    ) -> list[GDPRDataSubjectFindingModel]:
+        """Apply risk modifiers using regex pattern matching per-finding.
+
+        Args:
+            findings: Classified findings without risk modifiers.
+
+        Returns:
+            Findings with per-finding risk modifiers applied.
+
+        """
+        result: list[GDPRDataSubjectFindingModel] = []
+        for finding in findings:
+            evidence_texts = [
+                ev.content if hasattr(ev, "content") else str(ev)
+                for ev in finding.evidence
+                if ev
+            ]
+            modifiers = self._detect_risk_modifiers(evidence_texts)
+            result.append(self._finding_with_modifiers(finding, modifiers))
+        return result
+
+    def _finding_with_modifiers(
+        self,
+        finding: GDPRDataSubjectFindingModel,
+        modifiers: list[str],
+    ) -> GDPRDataSubjectFindingModel:
+        """Create a new finding with the specified risk modifiers.
+
+        Args:
+            finding: Original finding.
+            modifiers: Risk modifiers to apply.
+
+        Returns:
+            New finding with updated risk_modifiers field.
+
+        """
+        return GDPRDataSubjectFindingModel(
+            data_subject_category=finding.data_subject_category,
+            article_references=finding.article_references,
+            typical_lawful_bases=finding.typical_lawful_bases,
+            risk_modifiers=modifiers,
+            confidence_score=finding.confidence_score,
+            evidence=finding.evidence,
+            matched_patterns=finding.matched_patterns,
+            metadata=finding.metadata,
+        )
