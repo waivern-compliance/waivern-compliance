@@ -491,15 +491,17 @@ class ValidationOrchestrator[T: BaseFindingModel]:
     - GroupingStrategy: How to organize findings (optional, owns concern_key)
     - SamplingStrategy: How to sample from groups (optional, requires grouping)
     - LLMValidationStrategy: How to batch and call the LLM
+    - fallback_strategy: Optional fallback for findings skipped by primary strategy
 
     Validation flow:
     1. Group findings using GroupingStrategy (if provided)
     2. Sample from groups using SamplingStrategy (if provided)
     3. Flatten all sampled findings into a single list
     4. Validate via llm_strategy.validate_findings() (one call, internally batched)
-    5. Match results back to groups by finding ID
-    6. Apply group-level decisions (Case A/B/C)
-    7. Get concern_key from grouping_strategy for RemovedGroup metadata
+    5. Run fallback validation on eligible skipped findings (if fallback configured)
+    6. Match results back to groups by finding ID
+    7. Apply group-level decisions (Case A/B/C)
+    8. Get concern_key from grouping_strategy for RemovedGroup metadata
 
     When grouping_strategy is None:
     - Direct validation without grouping or group-level decisions
@@ -517,6 +519,7 @@ class ValidationOrchestrator[T: BaseFindingModel]:
         llm_strategy: LLMValidationStrategy[T],
         grouping_strategy: GroupingStrategy[T] | None = None,
         sampling_strategy: SamplingStrategy[T] | None = None,
+        fallback_strategy: LLMValidationStrategy[T] | None = None,
     ) -> None: ...
 
     def validate(
@@ -654,11 +657,18 @@ def create_validation_orchestrator(
     """Create orchestrator configured for processing purpose validation."""
 
     # LLM Strategy: Design-time decision based on input schema
+    # Extended context strategy may skip findings (oversized, missing content)
+    # so we configure a fallback to validate those with evidence-only approach
+    fallback_strategy: FilteringLLMValidationStrategy | None = None
+
     if input_schema_name == "source_code" and source_contents:
         source_provider = SourceCodeSourceProvider(source_contents)
         llm_strategy = SourceCodeValidationStrategy(source_provider)
+        # Fallback validates skipped findings using evidence snippets only
+        fallback_strategy = ProcessingPurposeValidationStrategy()
     else:
         llm_strategy = ProcessingPurposeValidationStrategy()
+        # No fallback needed - already using evidence-only strategy
 
     # Grouping: Design-time decision (always enabled)
     # This analyser groups findings by purpose for group-level decisions.
@@ -672,6 +682,7 @@ def create_validation_orchestrator(
         llm_strategy=llm_strategy,
         grouping_strategy=grouping_strategy,
         sampling_strategy=sampling_strategy,
+        fallback_strategy=fallback_strategy,
     )
 ```
 
@@ -721,6 +732,65 @@ Analyser.process()
 | Group has < N sampling_size findings | Use all findings as samples                                      |
 | Empty response from LLM              | All samples treated as TRUE_POSITIVE                             |
 | Provider not implemented             | Analyser must implement ConcernProvider or SourceProvider        |
+
+## Fallback Validation
+
+Some LLM validation strategies skip findings that cannot be processed with their primary approach.
+For example, `ExtendedContextLLMValidationStrategy` skips findings when:
+
+- **`oversized_source`**: Source file exceeds token limit
+- **`missing_content`**: Source content unavailable from provider
+- **`no_source`**: Finding has no source metadata
+
+Without fallback, these findings are conservatively kept but never validated, reducing coverage.
+
+### Fallback Flow
+
+The `ValidationOrchestrator` supports an optional `fallback_strategy` that validates eligible
+skipped findings using an alternative approach (typically evidence-only validation):
+
+```
+Primary Strategy (e.g., ExtendedContextLLMValidationStrategy)
+    │
+    ▼
+LLMValidationOutcome with skipped findings
+    │
+    ▼
+[Orchestrator] _run_fallback_validation()
+    ├── Extract findings eligible for fallback (based on skip reason)
+    ├── If none eligible, return primary outcome unchanged
+    ├── Run fallback strategy on eligible findings
+    └── Merge results back into primary outcome
+    │
+    ▼
+Merged LLMValidationOutcome:
+  - Primary validated → in kept/removed
+  - Fallback validated → merged into kept/removed
+  - Failed both → remains in skipped
+```
+
+### Fallback Eligibility
+
+Only findings skipped for specific reasons are eligible for fallback validation:
+
+| Skip Reason       | Eligible | Rationale                                           |
+| ----------------- | -------- | --------------------------------------------------- |
+| `oversized_source`| ✓        | Evidence snippets can still provide validation      |
+| `missing_content` | ✓        | Evidence snippets can still provide validation      |
+| `no_source`       | ✓        | Evidence snippets can still provide validation      |
+| `batch_error`     | ✗        | LLM API failure - retrying likely fails again       |
+
+The constant `FALLBACK_ELIGIBLE_SKIP_REASONS` defines eligible reasons:
+
+```python
+from waivern_analysers_shared.llm_validation import FALLBACK_ELIGIBLE_SKIP_REASONS
+```
+
+### Marker Application
+
+When a `marker` callback is provided to `ValidationOrchestrator.validate()`, it is applied to
+findings validated by **both** primary and fallback strategies. Skipped findings (those that
+failed both strategies) are NOT marked.
 
 ## Future Plans
 
