@@ -50,8 +50,10 @@ from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.llm_validation.grouping import GroupingStrategy
 from waivern_analysers_shared.llm_validation.models import (
+    FALLBACK_ELIGIBLE_SKIP_REASONS,
     LLMValidationOutcome,
     RemovedGroup,
+    SkippedFinding,
     ValidationResult,
 )
 from waivern_analysers_shared.llm_validation.sampling import SamplingStrategy
@@ -86,13 +88,19 @@ class ValidationOrchestrator[T: Finding]:
         llm_strategy: LLMValidationStrategy[T, LLMValidationOutcome[T]],
         grouping_strategy: GroupingStrategy[T] | None = None,
         sampling_strategy: SamplingStrategy[T] | None = None,
+        fallback_strategy: LLMValidationStrategy[T, LLMValidationOutcome[T]]
+        | None = None,
     ) -> None:
         """Initialise orchestrator with strategies.
 
         Args:
-            llm_strategy: Strategy for LLM validation.
+            llm_strategy: Primary strategy for LLM validation.
             grouping_strategy: Optional strategy for grouping findings.
             sampling_strategy: Optional strategy for sampling (requires grouping).
+            fallback_strategy: Optional fallback for findings skipped by primary.
+                Used when primary strategy cannot validate certain findings (e.g.,
+                oversized sources, missing content). Only findings skipped for
+                specific reasons are eligible for fallback validation.
 
         Raises:
             ValueError: If sampling_strategy provided without grouping_strategy.
@@ -106,6 +114,7 @@ class ValidationOrchestrator[T: Finding]:
         self._llm_strategy = llm_strategy
         self._grouping_strategy = grouping_strategy
         self._sampling_strategy = sampling_strategy
+        self._fallback_strategy = fallback_strategy
 
     def validate(
         self,
@@ -159,11 +168,15 @@ class ValidationOrchestrator[T: Finding]:
     ) -> ValidationResult[T]:
         """Validate findings directly without grouping.
 
-        Calls LLM strategy directly and maps outcome to ValidationResult.
-        No group-level decisions apply.
+        Calls LLM strategy directly, runs fallback if configured and needed,
+        then maps outcome to ValidationResult. No group-level decisions apply.
 
         """
         outcome = self._llm_strategy.validate_findings(findings, config, llm_service)
+
+        # Run fallback on eligible skipped findings
+        if self._fallback_strategy is not None:
+            outcome = self._run_fallback_validation(outcome, config, llm_service)
 
         # Apply marker at strategy level (before aggregation) if provided
         if marker:
@@ -176,6 +189,84 @@ class ValidationOrchestrator[T: Finding]:
             samples_validated=len(findings),
             all_succeeded=outcome.validation_succeeded,
             skipped_samples=outcome.skipped,
+        )
+
+    def _run_fallback_validation(
+        self,
+        primary_outcome: LLMValidationOutcome[T],
+        config: LLMValidationConfig,
+        llm_service: BaseLLMService,
+    ) -> LLMValidationOutcome[T]:
+        """Run fallback validation on eligible skipped findings.
+
+        Orchestrates fallback flow:
+        1. Extract findings eligible for fallback (based on skip reason)
+        2. If none eligible, return primary outcome unchanged
+        3. Run fallback strategy on eligible findings
+        4. Merge results back into primary outcome
+
+        Args:
+            primary_outcome: Outcome from primary strategy.
+            config: LLM validation configuration.
+            llm_service: LLM service instance.
+
+        Returns:
+            LLMValidationOutcome with fallback results merged in.
+
+        """
+        # Caller ensures _fallback_strategy is not None before calling this method
+        fallback_strategy = self._fallback_strategy
+        if fallback_strategy is None:
+            return primary_outcome
+
+        # Extract findings eligible for fallback
+        eligible_for_fallback: list[T] = []
+        ineligible_skipped: list[SkippedFinding[T]] = []
+
+        for skipped in primary_outcome.skipped:
+            if skipped.reason in FALLBACK_ELIGIBLE_SKIP_REASONS:
+                eligible_for_fallback.append(skipped.finding)
+            else:
+                ineligible_skipped.append(skipped)
+
+        # No eligible findings - return unchanged
+        if not eligible_for_fallback:
+            return primary_outcome
+
+        # Run fallback strategy
+        fallback_outcome = fallback_strategy.validate_findings(
+            eligible_for_fallback, config, llm_service
+        )
+
+        # Merge results
+        return self._merge_fallback_outcome(
+            primary_outcome, fallback_outcome, ineligible_skipped
+        )
+
+    def _merge_fallback_outcome(
+        self,
+        primary: LLMValidationOutcome[T],
+        fallback: LLMValidationOutcome[T],
+        ineligible_skipped: list[SkippedFinding[T]],
+    ) -> LLMValidationOutcome[T]:
+        """Merge fallback validation results into primary outcome.
+
+        Args:
+            primary: Original outcome from primary strategy.
+            fallback: Outcome from fallback strategy.
+            ineligible_skipped: Skipped findings not eligible for fallback.
+
+        Returns:
+            New LLMValidationOutcome with merged results.
+
+        """
+        return LLMValidationOutcome(
+            llm_validated_kept=primary.llm_validated_kept + fallback.llm_validated_kept,
+            llm_validated_removed=(
+                primary.llm_validated_removed + fallback.llm_validated_removed
+            ),
+            llm_not_flagged=primary.llm_not_flagged + fallback.llm_not_flagged,
+            skipped=ineligible_skipped + fallback.skipped,
         )
 
     def _validate_with_grouping(
@@ -226,6 +317,10 @@ class ValidationOrchestrator[T: Finding]:
 
         # Step 4: Validate samples via LLM
         outcome = self._llm_strategy.validate_findings(all_samples, config, llm_service)
+
+        # Step 4b: Run fallback on eligible skipped findings
+        if self._fallback_strategy is not None:
+            outcome = self._run_fallback_validation(outcome, config, llm_service)
 
         # Step 5: Apply marker at strategy level (before aggregation) if provided
         if marker:

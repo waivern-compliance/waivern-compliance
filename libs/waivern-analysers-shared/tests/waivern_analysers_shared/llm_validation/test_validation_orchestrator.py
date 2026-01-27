@@ -805,3 +805,338 @@ class TestMarkerCallback:
         # Assert - validation still works
         assert len(result.kept_findings) == 1
         assert result.kept_findings[0].id == "1"
+
+
+# =============================================================================
+# Fallback Validation
+# =============================================================================
+
+
+class TestFallbackValidation:
+    """Tests for fallback validation of skipped findings.
+
+    When primary strategy skips findings (e.g., oversized source, missing content),
+    a fallback strategy can be configured to attempt validation using a different
+    approach (e.g., evidence-only instead of full source content).
+    """
+
+    def test_fallback_validates_skipped_findings_with_eligible_reason(self) -> None:
+        """Fallback validates findings skipped with eligible reasons."""
+        # Arrange: Primary skips finding due to oversized source,
+        # fallback validates it as TRUE_POSITIVE
+        findings = [make_finding("1", "A"), make_finding("2", "A")]
+
+        mock_primary_strategy = Mock()
+        mock_primary_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[0]],
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[SkippedFinding(findings[1], "oversized_source")],
+        )
+
+        mock_fallback_strategy = Mock()
+        mock_fallback_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[1]],  # Fallback validates it
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[],
+        )
+
+        orchestrator = ValidationOrchestrator(
+            llm_strategy=mock_primary_strategy,
+            fallback_strategy=mock_fallback_strategy,
+        )
+
+        # Act
+        result = orchestrator.validate(findings, make_config(), make_llm_service())
+
+        # Assert - both findings are kept (one by primary, one by fallback)
+        assert len(result.kept_findings) == 2
+        assert set(f.id for f in result.kept_findings) == {"1", "2"}
+        # Fallback was called with the skipped finding
+        mock_fallback_strategy.validate_findings.assert_called_once()
+        fallback_call_args = mock_fallback_strategy.validate_findings.call_args[0][0]
+        assert len(fallback_call_args) == 1
+        assert fallback_call_args[0].id == "2"
+        # No skipped findings in final result (fallback validated it)
+        assert result.skipped_samples == []
+
+    def test_fallback_not_called_when_no_skipped_findings(self) -> None:
+        """Fallback strategy not invoked when primary validates all findings."""
+        # Arrange: Primary validates all findings successfully
+        findings = [make_finding("1", "A"), make_finding("2", "A")]
+
+        mock_primary_strategy = Mock()
+        mock_primary_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=findings,
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[],  # No skipped findings
+        )
+
+        mock_fallback_strategy = Mock()
+
+        orchestrator = ValidationOrchestrator(
+            llm_strategy=mock_primary_strategy,
+            fallback_strategy=mock_fallback_strategy,
+        )
+
+        # Act
+        orchestrator.validate(findings, make_config(), make_llm_service())
+
+        # Assert - fallback should NOT be called
+        mock_fallback_strategy.validate_findings.assert_not_called()
+
+    def test_fallback_not_called_for_batch_error_skips(self) -> None:
+        """Findings skipped with batch_error are NOT sent to fallback."""
+        # Arrange: Primary skips finding due to batch_error (LLM API failure)
+        findings = [make_finding("1", "A")]
+
+        mock_primary_strategy = Mock()
+        mock_primary_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[],
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[SkippedFinding(findings[0], "batch_error")],  # NOT eligible
+        )
+
+        mock_fallback_strategy = Mock()
+
+        orchestrator = ValidationOrchestrator(
+            llm_strategy=mock_primary_strategy,
+            fallback_strategy=mock_fallback_strategy,
+        )
+
+        # Act
+        result = orchestrator.validate(findings, make_config(), make_llm_service())
+
+        # Assert - fallback should NOT be called (batch_error not eligible)
+        mock_fallback_strategy.validate_findings.assert_not_called()
+        # Finding remains skipped
+        assert len(result.skipped_samples) == 1
+        assert result.skipped_samples[0].reason == "batch_error"
+
+    def test_fallback_merges_kept_and_removed_correctly(self) -> None:
+        """Fallback results correctly categorised as kept or removed."""
+        # Arrange: Two findings skipped by primary, fallback keeps one, removes one
+        findings = [
+            make_finding("1", "A"),  # Primary keeps
+            make_finding("2", "A"),  # Primary skips, fallback keeps
+            make_finding("3", "A"),  # Primary skips, fallback removes
+        ]
+
+        mock_primary_strategy = Mock()
+        mock_primary_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[0]],
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[
+                SkippedFinding(findings[1], "oversized_source"),
+                SkippedFinding(findings[2], "oversized_source"),
+            ],
+        )
+
+        mock_fallback_strategy = Mock()
+        mock_fallback_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[1]],  # TRUE_POSITIVE
+            llm_validated_removed=[findings[2]],  # FALSE_POSITIVE
+            llm_not_flagged=[],
+            skipped=[],
+        )
+
+        orchestrator = ValidationOrchestrator(
+            llm_strategy=mock_primary_strategy,
+            fallback_strategy=mock_fallback_strategy,
+        )
+
+        # Act
+        result = orchestrator.validate(findings, make_config(), make_llm_service())
+
+        # Assert - correct categorisation
+        assert len(result.kept_findings) == 2
+        assert set(f.id for f in result.kept_findings) == {"1", "2"}
+        assert len(result.removed_findings) == 1
+        assert result.removed_findings[0].id == "3"
+        assert result.skipped_samples == []
+
+    def test_fallback_keeps_findings_skipped_by_both_strategies(self) -> None:
+        """Findings skipped by both strategies remain in skipped list."""
+        # Arrange: Primary skips finding, fallback also skips it
+        findings = [make_finding("1", "A")]
+
+        mock_primary_strategy = Mock()
+        mock_primary_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[],
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[SkippedFinding(findings[0], "oversized_source")],
+        )
+
+        mock_fallback_strategy = Mock()
+        mock_fallback_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[],
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[SkippedFinding(findings[0], "batch_error")],  # Fallback also fails
+        )
+
+        orchestrator = ValidationOrchestrator(
+            llm_strategy=mock_primary_strategy,
+            fallback_strategy=mock_fallback_strategy,
+        )
+
+        # Act
+        result = orchestrator.validate(findings, make_config(), make_llm_service())
+
+        # Assert - finding remains skipped (with fallback's reason)
+        assert len(result.skipped_samples) == 1
+        assert result.skipped_samples[0].finding.id == "1"
+        assert result.skipped_samples[0].reason == "batch_error"  # Fallback's reason
+        # Finding is still kept (conservative - skipped findings are kept)
+        assert len(result.kept_findings) == 0  # Without grouping, skipped not in kept
+        assert result.all_succeeded is False
+
+    def test_fallback_with_grouping_influences_group_decisions(self) -> None:
+        """Fallback-validated findings participate in group decisions.
+
+        Scenario: Group has 2 samples. Primary skips one (oversized), validates
+        other as FALSE_POSITIVE. Without fallback, group would have 1 FP out of 1
+        validated = Case A (remove group). With fallback validating the skipped
+        one as TRUE_POSITIVE, group has 1 TP + 1 FP = Case B (keep group).
+        """
+        # Arrange
+        findings = [
+            make_finding("1", "GroupA"),
+            make_finding("2", "GroupA"),
+            make_finding("3", "GroupA"),  # Non-sampled
+        ]
+        sampling_strategy = MockSamplingStrategy(
+            sampled={"GroupA": [findings[0], findings[1]]},
+            non_sampled={"GroupA": [findings[2]]},
+        )
+
+        mock_primary_strategy = Mock()
+        mock_primary_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[],
+            llm_validated_removed=[findings[1]],  # FP
+            llm_not_flagged=[],
+            skipped=[SkippedFinding(findings[0], "oversized_source")],
+        )
+
+        mock_fallback_strategy = Mock()
+        mock_fallback_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[0]],  # TP - changes group decision!
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[],
+        )
+
+        orchestrator = ValidationOrchestrator(
+            llm_strategy=mock_primary_strategy,
+            grouping_strategy=MockGroupingStrategy(),
+            sampling_strategy=sampling_strategy,
+            fallback_strategy=mock_fallback_strategy,
+        )
+
+        # Act
+        result = orchestrator.validate(findings, make_config(), make_llm_service())
+
+        # Assert - Case B: keep group (1 TP + 1 FP), remove only FP sample
+        assert len(result.removed_groups) == 0  # Group NOT removed
+        assert len(result.removed_findings) == 1
+        assert result.removed_findings[0].id == "2"  # Only the FP
+        # Kept: fallback-validated (1) + non-sampled (1) = 2
+        assert len(result.kept_findings) == 2
+        assert set(f.id for f in result.kept_findings) == {"1", "3"}
+
+    def test_marker_applied_to_fallback_validated_findings(self) -> None:
+        """Marker callback applied to findings validated by fallback."""
+        # Arrange
+        findings = [make_finding("1", "A"), make_finding("2", "A")]
+
+        marked_ids: set[str] = set()
+
+        def marker(finding: MockFinding) -> MockFinding:
+            marked_ids.add(finding.id)
+            return finding
+
+        mock_primary_strategy = Mock()
+        mock_primary_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[0]],  # Primary validates
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[SkippedFinding(findings[1], "oversized_source")],
+        )
+
+        mock_fallback_strategy = Mock()
+        mock_fallback_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[1]],  # Fallback validates
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[],
+        )
+
+        orchestrator = ValidationOrchestrator(
+            llm_strategy=mock_primary_strategy,
+            fallback_strategy=mock_fallback_strategy,
+        )
+
+        # Act
+        orchestrator.validate(
+            findings, make_config(), make_llm_service(), marker=marker
+        )
+
+        # Assert - both findings are marked (primary and fallback validated)
+        assert marked_ids == {"1", "2"}
+
+    def test_mixed_skip_reasons_only_eligible_sent_to_fallback(self) -> None:
+        """Only findings with eligible skip reasons are sent to fallback."""
+        # Arrange: Mix of eligible and ineligible skip reasons
+        findings = [
+            make_finding("1", "A"),  # oversized_source - eligible
+            make_finding("2", "A"),  # missing_content - eligible
+            make_finding("3", "A"),  # batch_error - NOT eligible
+        ]
+
+        mock_primary_strategy = Mock()
+        mock_primary_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[],
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[
+                SkippedFinding(findings[0], "oversized_source"),
+                SkippedFinding(findings[1], "missing_content"),
+                SkippedFinding(findings[2], "batch_error"),
+            ],
+        )
+
+        mock_fallback_strategy = Mock()
+        mock_fallback_strategy.validate_findings.return_value = LLMValidationOutcome(
+            llm_validated_kept=[findings[0], findings[1]],
+            llm_validated_removed=[],
+            llm_not_flagged=[],
+            skipped=[],
+        )
+
+        orchestrator = ValidationOrchestrator(
+            llm_strategy=mock_primary_strategy,
+            fallback_strategy=mock_fallback_strategy,
+        )
+
+        # Act
+        result = orchestrator.validate(findings, make_config(), make_llm_service())
+
+        # Assert - only eligible findings sent to fallback
+        mock_fallback_strategy.validate_findings.assert_called_once()
+        fallback_call_args = mock_fallback_strategy.validate_findings.call_args[0][0]
+        assert len(fallback_call_args) == 2
+        assert set(f.id for f in fallback_call_args) == {"1", "2"}
+
+        # batch_error finding remains skipped
+        assert len(result.skipped_samples) == 1
+        assert result.skipped_samples[0].finding.id == "3"
+        assert result.skipped_samples[0].reason == "batch_error"
+
+        # Eligible findings are now kept
+        assert len(result.kept_findings) == 2
+        assert set(f.id for f in result.kept_findings) == {"1", "2"}

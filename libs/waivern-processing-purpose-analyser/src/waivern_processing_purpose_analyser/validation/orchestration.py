@@ -104,11 +104,19 @@ def create_validation_orchestrator(
     # LLM Strategy: Design-time decision based on input schema
     # source_code schema with content → extended context strategy (includes full file)
     # Otherwise → simple finding-based strategy (evidence snippets only)
+    fallback_strategy: (
+        FilteringLLMValidationStrategy[ProcessingPurposeIndicatorModel] | None
+    ) = None
+
     if input_schema_name == "source_code" and source_contents:
         source_provider = SourceCodeSourceProvider(source_contents)
         llm_strategy = SourceCodeValidationStrategy(source_provider)
+        # Fallback to evidence-only strategy for findings that can't be validated
+        # with extended context (e.g., oversized sources, missing content)
+        fallback_strategy = ProcessingPurposeValidationStrategy()
     else:
         llm_strategy = ProcessingPurposeValidationStrategy()
+        # No fallback needed - already using evidence-only strategy
 
     # Grouping: Design-time decision
     # ProcessingPurposeAnalyser groups findings by purpose (e.g., "Payment Processing",
@@ -128,4 +136,5 @@ def create_validation_orchestrator(
         llm_strategy=llm_strategy,
         grouping_strategy=grouping_strategy,
         sampling_strategy=sampling_strategy,
+        fallback_strategy=fallback_strategy,
     )

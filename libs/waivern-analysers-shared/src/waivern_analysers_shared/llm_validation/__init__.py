@@ -23,6 +23,7 @@ from waivern_analysers_shared.llm_validation.grouping import (
     SourceGroupingStrategy,
 )
 from waivern_analysers_shared.llm_validation.models import (
+    FALLBACK_ELIGIBLE_SKIP_REASONS,
     SKIP_REASON_BATCH_ERROR,
     SKIP_REASON_MISSING_CONTENT,
     SKIP_REASON_NO_SOURCE,
@@ -65,6 +66,7 @@ __all__ = [
     "SamplingResult",
     "SamplingStrategy",
     # Models
+    "FALLBACK_ELIGIBLE_SKIP_REASONS",
     "LLMValidationOutcome",
     "LLMValidationResponseModel",
     "LLMValidationResultModel",
