@@ -77,6 +77,16 @@ SKIP_REASON_MISSING_CONTENT = "missing_content"
 SKIP_REASON_NO_SOURCE = "no_source"
 SKIP_REASON_BATCH_ERROR = "batch_error"
 
+# Skip reasons eligible for fallback validation
+# batch_error is NOT included - LLM API failure means retrying likely fails again
+FALLBACK_ELIGIBLE_SKIP_REASONS: frozenset[str] = frozenset(
+    {
+        SKIP_REASON_OVERSIZED,
+        SKIP_REASON_MISSING_CONTENT,
+        SKIP_REASON_NO_SOURCE,
+    }
+)
+
 
 # Orchestration result types
 
