@@ -5,6 +5,7 @@ Multi-provider LLM abstraction for Waivern Compliance Framework.
 ## Features
 
 - **Multi-provider support**: Anthropic, OpenAI, Google
+- **Local LLM support**: LM Studio, Ollama, vLLM via OpenAI-compatible API
 - **Unified interface**: Single API across all providers
 - **Factory pattern**: Easy provider selection
 - **Lazy imports**: Optional dependencies for non-default providers
@@ -46,7 +47,33 @@ result = llm.invoke(prompt="...")
 - `LLM_PROVIDER`: Provider to use (`anthropic`, `openai`, `google`)
 - `ANTHROPIC_API_KEY`: Anthropic API key
 - `ANTHROPIC_MODEL`: Anthropic model name (optional)
-- `OPENAI_API_KEY`: OpenAI API key
+- `OPENAI_API_KEY`: OpenAI API key (not required when `OPENAI_BASE_URL` is set)
 - `OPENAI_MODEL`: OpenAI model name (optional)
+- `OPENAI_BASE_URL`: Base URL for OpenAI-compatible APIs (for local LLMs)
 - `GOOGLE_API_KEY`: Google API key
 - `GOOGLE_MODEL`: Google model name (optional)
+
+## Local LLM Support
+
+Use local LLMs (LM Studio, Ollama, vLLM) via OpenAI-compatible API:
+
+```bash
+# Set provider to openai and configure base URL
+export LLM_PROVIDER=openai
+export OPENAI_BASE_URL=http://localhost:1234/v1  # LM Studio default
+export OPENAI_MODEL=your-local-model-name
+# OPENAI_API_KEY is not required when OPENAI_BASE_URL is set
+```
+
+```python
+from waivern_llm import OpenAILLMService
+
+# Using environment variables
+llm = OpenAILLMService()
+
+# Or explicitly
+llm = OpenAILLMService(
+    model_name="llama-3.2-3b",
+    base_url="http://localhost:1234/v1",
+)
+```

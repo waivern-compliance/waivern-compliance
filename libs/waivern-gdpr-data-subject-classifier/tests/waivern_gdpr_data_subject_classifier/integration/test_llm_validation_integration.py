@@ -9,7 +9,7 @@ Run with: uv run pytest -m integration
 import pytest
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import AnthropicLLMService
+from waivern_llm import BaseLLMService
 
 from waivern_gdpr_data_subject_classifier import GDPRDataSubjectClassifier
 from waivern_gdpr_data_subject_classifier.types import GDPRDataSubjectClassifierConfig
@@ -20,10 +20,9 @@ class TestGDPRDataSubjectClassifierLLMIntegration:
 
     @pytest.fixture
     def classifier_with_llm(
-        self, require_anthropic_api_key: str
+        self, llm_service: BaseLLMService
     ) -> GDPRDataSubjectClassifier:
         """Create classifier with real LLM service and validation enabled."""
-        llm_service = AnthropicLLMService(api_key=require_anthropic_api_key)
         config = GDPRDataSubjectClassifierConfig.from_properties(
             {"llm_validation": {"enable_llm_validation": True}}
         )

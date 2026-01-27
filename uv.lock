@@ -1919,7 +1919,9 @@ version = "0.1.0"
 source = { editable = "libs/waivern-gdpr-data-subject-classifier" }
 dependencies = [
     { name = "pydantic" },
+    { name = "waivern-analysers-shared" },
     { name = "waivern-core" },
+    { name = "waivern-llm" },
     { name = "waivern-rulesets" },
 ]
 
@@ -1932,7 +1934,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
 ]
 

@@ -262,3 +262,35 @@ class TestLLMServiceConfiguration:
             config = LLMServiceConfiguration.from_properties({})
             assert config.provider == "anthropic"
             assert config.api_key == "correct-key"  # Should use correct provider key
+
+    def test_from_properties_reads_base_url_from_environment_only_for_openai_provider(
+        self,
+    ) -> None:
+        """Test OPENAI_BASE_URL is read for openai provider but ignored for others."""
+        # When provider is openai, OPENAI_BASE_URL should be read
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "openai",
+                "OPENAI_API_KEY": "test-key",
+                "OPENAI_BASE_URL": "http://localhost:1234/v1",
+            },
+            clear=True,
+        ):
+            config = LLMServiceConfiguration.from_properties({})
+            assert config.provider == "openai"
+            assert config.base_url == "http://localhost:1234/v1"
+
+        # When provider is anthropic, OPENAI_BASE_URL should be ignored
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "anthropic",
+                "ANTHROPIC_API_KEY": "test-key",
+                "OPENAI_BASE_URL": "http://localhost:1234/v1",  # Should be ignored
+            },
+            clear=True,
+        ):
+            config = LLMServiceConfiguration.from_properties({})
+            assert config.provider == "anthropic"
+            assert config.base_url is None

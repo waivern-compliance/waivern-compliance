@@ -11,6 +11,7 @@ from pydantic import BaseModel, SecretStr
 
 from waivern_llm.base import BaseLLMService
 from waivern_llm.errors import LLMConfigurationError, LLMConnectionError
+from waivern_llm.model_capabilities import ModelCapabilities
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +24,17 @@ class AnthropicLLMService(BaseLLMService):
     """
 
     def __init__(
-        self, model_name: str | None = None, api_key: str | None = None
+        self,
+        model_name: str | None = None,
+        api_key: str | None = None,
+        capabilities: ModelCapabilities | None = None,
     ) -> None:
         """Initialise the Anthropic LLM service.
 
         Args:
             model_name: The Anthropic model to use (will use ANTHROPIC_MODEL env var)
             api_key: Anthropic API key (will use ANTHROPIC_API_KEY env var if not provided)
+            capabilities: Model capabilities override. If None, auto-detected from model name.
 
         Raises:
             LLMConfigurationError: If API key is not provided or found in environment
@@ -47,6 +52,9 @@ class AnthropicLLMService(BaseLLMService):
                 "Anthropic API key is required. Set ANTHROPIC_API_KEY environment variable "
                 "or provide api_key parameter."
             )
+
+        # Get capabilities from parameter or auto-detect from model name
+        self._capabilities = capabilities or ModelCapabilities.get(self._model_name)
 
         self._llm = None
         logger.info(f"Initialised Anthropic LLM service with model: {self._model_name}")
@@ -140,7 +148,7 @@ class AnthropicLLMService(BaseLLMService):
                 model_name=self.model_name,
                 api_key=SecretStr(self._api_key),
                 temperature=0,  # Consistent responses for compliance analysis
-                max_tokens_to_sample=16000,  # Sufficient for ~100 findings validation
+                max_tokens_to_sample=self._capabilities.max_output_tokens,
                 timeout=300,  # Increased timeout for LLM requests
                 stop=None,  # Stop sequences for clean output
             )

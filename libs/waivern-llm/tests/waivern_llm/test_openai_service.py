@@ -9,7 +9,7 @@ from langchain_core.messages import AIMessage
 
 from waivern_llm import BaseLLMService, LLMConfigurationError, OpenAILLMService
 
-OPENAI_ENV_VARS = ["OPENAI_API_KEY", "OPENAI_MODEL"]
+OPENAI_ENV_VARS = ["OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_BASE_URL"]
 
 
 class TestOpenAILLMServiceInitialisation:
@@ -59,29 +59,38 @@ class TestOpenAILLMServiceInitialisation:
         assert service.model_name == "param-model"
         # API key is private - service creation without error indicates it was set
 
-    def test_initialisation_missing_api_key_raises_error(
+    def test_initialisation_missing_api_key_without_base_url_raises_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that missing API key raises configuration error."""
+        """Test that missing API key raises error when base_url is also not set."""
+        # Clear all OpenAI environment variables
         for var in OPENAI_ENV_VARS:
             monkeypatch.delenv(var, raising=False)
 
+        # Should raise error when neither api_key nor base_url is set
         with pytest.raises(LLMConfigurationError) as exc_info:
             OpenAILLMService()
 
-        assert "OpenAI API key is required" in str(exc_info.value)
-        assert "OPENAI_API_KEY" in str(exc_info.value)
+        assert (
+            "OPENAI_API_KEY" in str(exc_info.value)
+            or "base_url" in str(exc_info.value).lower()
+        )
 
-    def test_initialisation_empty_api_key_raises_error(
+    def test_initialisation_with_base_url_parameter(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that empty API key raises configuration error."""
-        monkeypatch.setenv("OPENAI_API_KEY", "")
+        """Test service initialisation with explicit base_url parameter."""
+        # Clear environment to ensure we're testing the parameter
+        for var in OPENAI_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
 
-        with pytest.raises(LLMConfigurationError) as exc_info:
-            OpenAILLMService()
+        # Create service with just base_url - no API key needed for local LLMs
+        service = OpenAILLMService(
+            model_name="local-model",
+            base_url="http://localhost:1234/v1",
+        )
 
-        assert "OpenAI API key is required" in str(exc_info.value)
+        assert service.model_name == "local-model"
 
 
 class TestOpenAILLMServiceInvoke:

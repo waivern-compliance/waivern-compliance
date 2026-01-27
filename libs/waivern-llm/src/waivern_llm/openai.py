@@ -10,6 +10,7 @@ from pydantic import BaseModel, SecretStr
 
 from waivern_llm.base import BaseLLMService
 from waivern_llm.errors import LLMConfigurationError, LLMConnectionError
+from waivern_llm.model_capabilities import ModelCapabilities
 
 logger = logging.getLogger(__name__)
 
@@ -22,28 +23,43 @@ class OpenAILLMService(BaseLLMService):
     """
 
     def __init__(
-        self, model_name: str | None = None, api_key: str | None = None
+        self,
+        model_name: str | None = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        capabilities: ModelCapabilities | None = None,
     ) -> None:
         """Initialise the OpenAI LLM service.
 
         Args:
             model_name: The OpenAI model to use (will use OPENAI_MODEL env var)
             api_key: OpenAI API key (will use OPENAI_API_KEY env var if not provided)
+            base_url: Base URL for OpenAI-compatible APIs (e.g., local LLMs).
+                     Will use OPENAI_BASE_URL env var if not provided.
+            capabilities: Model capabilities override. If None, auto-detected from model name.
 
         Raises:
-            LLMConfigurationError: If API key is not provided or found in environment
+            LLMConfigurationError: If API key is not provided and base_url is not set
 
         """
         # Get model name from parameter, environment, or default
         self._model_name = model_name or os.getenv("OPENAI_MODEL") or "gpt-4o"
 
+        # Get base URL from parameter or environment (for local LLMs)
+        self._base_url = base_url or os.getenv("OPENAI_BASE_URL")
+
         # Get API key from parameter or environment
+        # API key is optional when base_url is set (local LLMs don't need it)
         self._api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not self._api_key:
+        if not self._api_key and not self._base_url:
             raise LLMConfigurationError(
                 "OpenAI API key is required. Set OPENAI_API_KEY environment variable "
-                "or provide api_key parameter."
+                "or provide api_key parameter. "
+                "For local LLMs, set OPENAI_BASE_URL instead."
             )
+
+        # Get capabilities from parameter or auto-detect from model name
+        self._capabilities = capabilities or ModelCapabilities.get(self._model_name)
 
         self._llm = None
         logger.info(f"Initialised OpenAI LLM service with model: {self._model_name}")
@@ -150,13 +166,20 @@ class OpenAILLMService(BaseLLMService):
                     "Or install all providers: uv sync --group llm-all"
                 ) from e
 
-            if not self._api_key:
+            # API key is required for cloud OpenAI, optional for local LLMs
+            if not self._api_key and not self._base_url:
                 raise LLMConnectionError("API key is required but not available")
+
+            # LangChain requires api_key even for local LLMs, but local servers ignore it
+            # Use "local" as placeholder when base_url is set but api_key is not
+            effective_api_key = self._api_key or "local"
 
             self._llm = ChatOpenAI(  # type: ignore[reportUnknownMemberType]
                 model=self.model_name,
-                api_key=SecretStr(self._api_key),
+                api_key=SecretStr(effective_api_key),
+                base_url=self._base_url,
                 temperature=0,  # Consistent responses for compliance analysis
+                max_tokens=self._capabilities.max_output_tokens,  # type: ignore[reportCallIssue]
                 timeout=300,  # Increased timeout for LLM requests
             )
             logger.debug("Created LangChain ChatOpenAI instance")
