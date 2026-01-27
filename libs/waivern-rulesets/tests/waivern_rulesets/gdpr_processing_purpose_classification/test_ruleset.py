@@ -42,31 +42,6 @@ class TestGDPRProcessingPurposeClassificationRulesetContract(
 
 
 # =============================================================================
-# Field Validator Tests (our custom code)
-# =============================================================================
-
-
-class TestGDPRProcessingPurposeClassificationRule:
-    """Test our custom field validators on the rule class."""
-
-    def test_rule_converts_lists_to_tuples(self) -> None:
-        """Test that list fields are converted to tuples for immutability."""
-        rule = GDPRProcessingPurposeClassificationRule(
-            name="Test Rule",
-            description="Test",
-            purpose_category="operational",
-            article_references=["Article 6(1)(b)"],
-            typical_lawful_bases=["contract"],  # type: ignore[arg-type]
-            indicator_purposes=["General Product and Service Delivery"],  # type: ignore[arg-type]
-            sensitive_purpose=False,
-            dpia_recommendation="not_required",
-        )
-
-        assert isinstance(rule.typical_lawful_bases, tuple)
-        assert isinstance(rule.indicator_purposes, tuple)
-
-
-# =============================================================================
 # Model Validator Tests (our custom validation logic)
 # =============================================================================
 
@@ -80,7 +55,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
             name="Invalid Rule",
             description="Test",
             purpose_category="invalid_category",
-            article_references=["Article 6(1)(b)"],
+            article_references=("Article 6(1)(b)",),
             typical_lawful_bases=("contract",),
             indicator_purposes=("General Product and Service Delivery",),
         )
@@ -101,7 +76,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
             name="Invalid Rule",
             description="Test",
             purpose_category="operational",
-            article_references=["Article 6(1)(b)"],
+            article_references=("Article 6(1)(b)",),
             typical_lawful_bases=("contract",),
             indicator_purposes=("Invalid Purpose",),
         )

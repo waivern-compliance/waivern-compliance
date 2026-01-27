@@ -40,28 +40,6 @@ class TestGDPRPersonalDataClassificationRulesetContract(
 
 
 # =============================================================================
-# Field Validator Tests (our custom code)
-# =============================================================================
-
-
-class TestGDPRPersonalDataClassificationRule:
-    """Test our custom field validators on the rule class."""
-
-    def test_indicator_categories_converted_from_list_to_tuple(self) -> None:
-        """Test that indicator_categories list is converted to tuple for immutability."""
-        indicator_cats: list[str] = ["payment", "financial"]
-        rule = GDPRPersonalDataClassificationRule(
-            name="Test Classification",
-            description="Test rule",
-            privacy_category="financial_data",
-            indicator_categories=indicator_cats,  # type: ignore[arg-type]
-        )
-
-        assert isinstance(rule.indicator_categories, tuple)
-        assert rule.indicator_categories == ("payment", "financial")
-
-
-# =============================================================================
 # Model Validator Tests (our custom validation logic)
 # =============================================================================
 

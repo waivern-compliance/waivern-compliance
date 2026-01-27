@@ -8,9 +8,10 @@ to GDPR-specific data subject types and article references.
 from typing import ClassVar, cast
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-from waivern_core import ClassificationRule, RulesetData
+from waivern_core import RulesetData
 
 from waivern_rulesets.core.base import YAMLRuleset
+from waivern_rulesets.types import GDPRClassificationRule
 
 
 class RiskModifier(BaseModel):
@@ -57,24 +58,20 @@ class RiskModifiers(BaseModel):
     )
 
 
-class GDPRDataSubjectClassificationRule(ClassificationRule):
+class GDPRDataSubjectClassificationRule(GDPRClassificationRule):
     """GDPR data subject classification rule.
 
     Maps data subject indicator categories to GDPR-specific classifications.
     Unlike detection rules, these rules don't have patterns - they map from
     indicator categories to GDPR data subject types.
 
-    Note: Unlike GDPRClassificationRule (for personal data), data subject
-    classification doesn't use privacy_category because it classifies WHO
-    the data is about (employee, customer), not WHAT TYPE of data it is.
+    Note: Data subject classification doesn't use privacy_category because it
+    classifies WHO the data is about (employee, customer), not WHAT TYPE of
+    data it is.
     """
 
     data_subject_category: str = Field(
         description="GDPR data subject category for reporting",
-    )
-    article_references: list[str] = Field(
-        default_factory=list,
-        description="Relevant GDPR article references",
     )
     typical_lawful_bases: tuple[str, ...] = Field(
         min_length=1,
@@ -85,7 +82,12 @@ class GDPRDataSubjectClassificationRule(ClassificationRule):
         description="Data subject indicator categories this rule classifies",
     )
 
-    @field_validator("indicator_categories", "typical_lawful_bases", mode="before")
+    @field_validator(
+        "article_references",
+        "indicator_categories",
+        "typical_lawful_bases",
+        mode="before",
+    )
     @classmethod
     def convert_list_to_tuple(cls, v: list[str] | tuple[str, ...]) -> tuple[str, ...]:
         """Convert list to tuple for immutability."""

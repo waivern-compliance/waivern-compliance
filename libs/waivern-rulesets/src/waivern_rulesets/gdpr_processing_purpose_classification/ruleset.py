@@ -8,12 +8,13 @@ purpose categories and article references.
 from typing import ClassVar, Literal
 
 from pydantic import Field, field_validator, model_validator
-from waivern_core import ClassificationRule, RulesetData
+from waivern_core import RulesetData
 
 from waivern_rulesets.core.base import YAMLRuleset
+from waivern_rulesets.types import GDPRClassificationRule
 
 
-class GDPRProcessingPurposeClassificationRule(ClassificationRule):
+class GDPRProcessingPurposeClassificationRule(GDPRClassificationRule):
     """GDPR processing purpose classification rule.
 
     Maps processing purpose indicator names to GDPR-specific classifications.
@@ -28,10 +29,6 @@ class GDPRProcessingPurposeClassificationRule(ClassificationRule):
         min_length=1,
         description="Processing purpose names this rule classifies (from indicator)",
     )
-    article_references: list[str] = Field(
-        default_factory=list,
-        description="Relevant GDPR article references",
-    )
     typical_lawful_bases: tuple[str, ...] = Field(
         min_length=1,
         description="Typical GDPR Article 6 lawful bases for this processing",
@@ -45,7 +42,12 @@ class GDPRProcessingPurposeClassificationRule(ClassificationRule):
         description="DPIA recommendation level for this purpose category",
     )
 
-    @field_validator("indicator_purposes", "typical_lawful_bases", mode="before")
+    @field_validator(
+        "article_references",
+        "indicator_purposes",
+        "typical_lawful_bases",
+        mode="before",
+    )
     @classmethod
     def convert_list_to_tuple(cls, v: list[str] | tuple[str, ...]) -> tuple[str, ...]:
         """Convert list to tuple for immutability."""

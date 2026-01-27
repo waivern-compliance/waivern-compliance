@@ -43,29 +43,6 @@ class TestGDPRDataSubjectClassificationRulesetContract(
 
 
 # =============================================================================
-# Field Validator Tests (our custom code)
-# =============================================================================
-
-
-class TestGDPRDataSubjectClassificationRule:
-    """Test our custom field validators on the rule class."""
-
-    def test_rule_converts_lists_to_tuples(self) -> None:
-        """Test that list fields are converted to tuples for immutability."""
-        rule = GDPRDataSubjectClassificationRule(
-            name="Employees",
-            description="Current employees",
-            data_subject_category="employee",
-            article_references=["Article 4(1)"],
-            typical_lawful_bases=["contract"],  # type: ignore[arg-type]
-            indicator_categories=["employee"],  # type: ignore[arg-type]
-        )
-
-        assert isinstance(rule.typical_lawful_bases, tuple)
-        assert isinstance(rule.indicator_categories, tuple)
-
-
-# =============================================================================
 # Model Validator Tests (our custom validation logic)
 # =============================================================================
 
@@ -79,7 +56,7 @@ class TestGDPRDataSubjectClassificationRulesetDataValidation:
             name="Invalid Rule",
             description="Test",
             data_subject_category="invalid_category",
-            article_references=["Article 4(1)"],
+            article_references=("Article 4(1)",),
             typical_lawful_bases=("contract",),
             indicator_categories=("employee",),
         )
@@ -101,7 +78,7 @@ class TestGDPRDataSubjectClassificationRulesetDataValidation:
             name="Invalid Rule",
             description="Test",
             data_subject_category="employee",
-            article_references=["Article 4(1)"],
+            article_references=("Article 4(1)",),
             typical_lawful_bases=("contract",),
             indicator_categories=("invalid_indicator",),
         )

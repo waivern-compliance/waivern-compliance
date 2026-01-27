@@ -20,8 +20,20 @@ class GDPRPersonalDataClassificationRule(GDPRClassificationRule):
     Maps personal data indicator categories to GDPR-specific classifications.
     Unlike detection rules, these rules don't have patterns - they map from
     indicator categories to GDPR data types.
+
+    Note: privacy_category values like 'identification_data', 'financial_data' are
+    NOT GDPR-defined terms - they're from legal team for reporting purposes.
+    GDPR only mandates: personal data (Article 4) vs special category (Article 9).
     """
 
+    privacy_category: str = Field(
+        min_length=1,
+        description="Privacy category for reporting (e.g., 'identification_data', 'health_data')",
+    )
+    special_category: bool = Field(
+        default=False,
+        description="Whether this is GDPR Article 9 special category data",
+    )
     indicator_categories: tuple[str, ...] = Field(
         min_length=1,
         description="Personal data indicator categories this rule classifies",
