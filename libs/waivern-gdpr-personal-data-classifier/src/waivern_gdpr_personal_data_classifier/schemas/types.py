@@ -1,6 +1,6 @@
 """Schema data models for GDPR personal data classification findings."""
 
-from typing import ClassVar, Literal, override
+from typing import ClassVar, override
 
 from pydantic import BaseModel, Field
 from waivern_core.schemas import (
@@ -58,20 +58,6 @@ class GDPRPersonalDataFindingModel(BaseFindingModel[GDPRPersonalDataFindingMetad
     article_references: tuple[str, ...] = Field(
         default_factory=tuple,
         description="Relevant GDPR article references (e.g., 'Article 9(1)', 'Article 4(1)')",
-    )
-    lawful_bases: tuple[
-        Literal[
-            "consent",
-            "contract",
-            "legal_obligation",
-            "vital_interests",
-            "public_task",
-            "legitimate_interests",
-        ],
-        ...,
-    ] = Field(
-        default_factory=tuple,
-        description="Applicable GDPR Article 6 lawful bases for processing",
     )
 
     @override

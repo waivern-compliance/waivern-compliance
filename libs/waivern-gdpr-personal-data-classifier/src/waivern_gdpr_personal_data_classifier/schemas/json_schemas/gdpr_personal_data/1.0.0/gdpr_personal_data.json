@@ -137,22 +137,6 @@
           },
           "title": "Article References",
           "type": "array"
-        },
-        "lawful_bases": {
-          "description": "Applicable GDPR Article 6 lawful bases for processing",
-          "items": {
-            "enum": [
-              "consent",
-              "contract",
-              "legal_obligation",
-              "vital_interests",
-              "public_task",
-              "legitimate_interests"
-            ],
-            "type": "string"
-          },
-          "title": "Lawful Bases",
-          "type": "array"
         }
       },
       "required": [

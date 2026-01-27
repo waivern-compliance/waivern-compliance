@@ -30,7 +30,6 @@ class GDPRPersonalDataClassifier(Classifier):
     - Privacy category (for reporting/governance)
     - Article 9 special category determination (core GDPR concern)
     - Relevant GDPR article references
-    - Applicable lawful bases
     """
 
     def __init__(self, config: GDPRPersonalDataClassifierConfig | None = None) -> None:
@@ -62,7 +61,6 @@ class GDPRPersonalDataClassifier(Classifier):
                     "privacy_category": rule.privacy_category,
                     "special_category": rule.special_category,
                     "article_references": rule.article_references,
-                    "lawful_bases": rule.lawful_bases,
                 }
         return classification_map
 
@@ -151,7 +149,6 @@ class GDPRPersonalDataClassifier(Classifier):
             privacy_category=classification.get("privacy_category", "unclassified"),
             special_category=classification.get("special_category", False),
             article_references=tuple(classification.get("article_references", ())),
-            lawful_bases=tuple(classification.get("lawful_bases", ())),
             evidence=finding.get("evidence", []),
             matched_patterns=finding.get("matched_patterns", []),
             metadata=metadata,
