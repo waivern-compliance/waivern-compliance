@@ -12,6 +12,10 @@ from waivern_artifact_store.persistent.config import (
     StoreConfig,
 )
 
+# =============================================================================
+# Discriminated Union Tests (type-based config selection)
+# =============================================================================
+
 
 class TestStoreConfigDiscriminatedUnion:
     """Test that discriminated union correctly selects config class based on type."""
@@ -47,6 +51,11 @@ class TestStoreConfigDiscriminatedUnion:
         assert isinstance(store, AsyncInMemoryStore)
 
 
+# =============================================================================
+# MemoryStoreConfig Tests (in-memory store for testing)
+# =============================================================================
+
+
 class TestMemoryStoreConfig:
     """Test MemoryStoreConfig behaviour."""
 
@@ -64,6 +73,11 @@ class TestMemoryStoreConfig:
 
         assert isinstance(store, AsyncInMemoryStore)
         assert store.run_id == "test-run"
+
+
+# =============================================================================
+# FilesystemStoreConfig Tests (local filesystem store)
+# =============================================================================
 
 
 class TestFilesystemStoreConfig:
@@ -94,6 +108,11 @@ class TestFilesystemStoreConfig:
         assert isinstance(store, LocalFilesystemStore)
         assert store.run_id == "test-run"
         assert store.base_path == Path(".waivern")
+
+
+# =============================================================================
+# RemoteStoreConfig Tests (remote HTTP store - not yet implemented)
+# =============================================================================
 
 
 class TestRemoteStoreConfig:

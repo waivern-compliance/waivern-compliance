@@ -15,9 +15,17 @@ from waivern_artifact_store.configuration import ArtifactStoreConfiguration
 from waivern_artifact_store.factory import ArtifactStoreFactory
 from waivern_artifact_store.in_memory import InMemoryArtifactStore
 
+# =============================================================================
+# Service Composition Tests (singleton, isolation, environment configuration)
+# =============================================================================
+
 
 class TestArtifactStoreServiceComposition:
     """Service composition tests for ArtifactStore with ServiceContainer."""
+
+    # -------------------------------------------------------------------------
+    # Singleton Behaviour
+    # -------------------------------------------------------------------------
 
     def test_singleton_behavior_returns_same_instance(self) -> None:
         """Test singleton lifetime returns same instance across multiple get_service calls."""
@@ -36,6 +44,10 @@ class TestArtifactStoreServiceComposition:
         assert store_second is not None
         assert store_first is store_second
         assert isinstance(store_first, InMemoryArtifactStore)
+
+    # -------------------------------------------------------------------------
+    # Container Isolation
+    # -------------------------------------------------------------------------
 
     def test_multiple_containers_have_independent_instances(self) -> None:
         """Test each ServiceContainer maintains its own ArtifactStore instance.
@@ -64,6 +76,10 @@ class TestArtifactStoreServiceComposition:
         assert store1 is not None
         assert store2 is not None
         assert store1 is not store2
+
+    # -------------------------------------------------------------------------
+    # Environment Configuration
+    # -------------------------------------------------------------------------
 
     def test_environment_variable_configuration_respected(self, monkeypatch) -> None:
         """Test factory respects ARTIFACT_STORE_BACKEND environment variable."""

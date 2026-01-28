@@ -6,27 +6,22 @@ from waivern_artifact_store.configuration import ArtifactStoreConfiguration
 from waivern_artifact_store.factory import ArtifactStoreFactory
 from waivern_artifact_store.in_memory import InMemoryArtifactStore
 
+# =============================================================================
+# Factory Tests (creation, environment fallback, configuration priority)
+# =============================================================================
+
 
 class TestArtifactStoreFactory:
     """Test ArtifactStoreFactory."""
+
+    # -------------------------------------------------------------------------
+    # Store Creation
+    # -------------------------------------------------------------------------
 
     def test_factory_creates_in_memory_store_with_explicit_config(self) -> None:
         """Test factory creates InMemoryArtifactStore with explicit configuration."""
         config = ArtifactStoreConfiguration(backend="memory")
         factory = ArtifactStoreFactory(config)
-
-        assert factory.can_create() is True
-        store = factory.create()
-
-        assert store is not None
-        assert isinstance(store, InMemoryArtifactStore)
-
-    def test_factory_creates_in_memory_store_with_env_fallback(
-        self, monkeypatch
-    ) -> None:
-        """Test factory creates InMemoryArtifactStore using environment variable."""
-        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "memory")
-        factory = ArtifactStoreFactory()
 
         assert factory.can_create() is True
         store = factory.create()
@@ -53,6 +48,27 @@ class TestArtifactStoreFactory:
 
         assert factory.can_create() is False
         assert factory.create() is None
+
+    # -------------------------------------------------------------------------
+    # Environment Variable Fallback
+    # -------------------------------------------------------------------------
+
+    def test_factory_creates_in_memory_store_with_env_fallback(
+        self, monkeypatch
+    ) -> None:
+        """Test factory creates InMemoryArtifactStore using environment variable."""
+        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "memory")
+        factory = ArtifactStoreFactory()
+
+        assert factory.can_create() is True
+        store = factory.create()
+
+        assert store is not None
+        assert isinstance(store, InMemoryArtifactStore)
+
+    # -------------------------------------------------------------------------
+    # Configuration Priority
+    # -------------------------------------------------------------------------
 
     def test_explicit_config_overrides_environment(self, monkeypatch) -> None:
         """Test explicit configuration takes precedence over environment variables."""

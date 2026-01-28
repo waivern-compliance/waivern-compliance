@@ -1,4 +1,4 @@
-"""Tests for InMemoryArtifactStore implementation."""
+"""Tests for InMemoryArtifactStore implementation (legacy sync store)."""
 
 from __future__ import annotations
 
@@ -9,6 +9,10 @@ import pytest
 
 from waivern_artifact_store.errors import ArtifactNotFoundError
 from waivern_artifact_store.in_memory import InMemoryArtifactStore
+
+# =============================================================================
+# CRUD Operations (save, get, exists, clear, list)
+# =============================================================================
 
 
 class TestInMemoryArtifactStoreCRUD:
@@ -96,6 +100,11 @@ class TestInMemoryArtifactStoreCRUD:
         # After clear, list should be empty again
         store.clear()
         assert store.list_artifacts() == []
+
+
+# =============================================================================
+# Thread Safety (concurrent access)
+# =============================================================================
 
 
 class TestInMemoryArtifactStoreThreadSafety:
