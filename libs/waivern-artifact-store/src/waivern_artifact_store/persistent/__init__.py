@@ -8,5 +8,17 @@ legacy sync interface until migration is complete.
 """
 
 from waivern_artifact_store.persistent.base import ArtifactStore
+from waivern_artifact_store.persistent.config import (
+    FilesystemStoreConfig,
+    MemoryStoreConfig,
+    RemoteStoreConfig,
+    StoreConfig,
+)
 
-__all__ = ["ArtifactStore"]
+__all__ = [
+    "ArtifactStore",
+    "FilesystemStoreConfig",
+    "MemoryStoreConfig",
+    "RemoteStoreConfig",
+    "StoreConfig",
+]
