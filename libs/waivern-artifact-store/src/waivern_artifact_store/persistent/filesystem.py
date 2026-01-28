@@ -20,6 +20,7 @@ from waivern_artifact_store.persistent.base import ArtifactStore
 class LocalFilesystemStore(ArtifactStore):
     """Filesystem-backed artifact store with run-scoped isolation.
 
+    Stateless singleton that stores artifacts on the local filesystem.
     Storage structure:
         {base_path}/runs/{run_id}/{key}.json
 
@@ -27,15 +28,16 @@ class LocalFilesystemStore(ArtifactStore):
     map to nested directories on the filesystem.
     """
 
-    def __init__(self, run_id: str, base_path: Path) -> None:
+    # Reserved prefix for system metadata (excluded from list_keys)
+    _SYSTEM_PREFIX = "_system"
+
+    def __init__(self, base_path: Path) -> None:
         """Initialise filesystem store.
 
         Args:
-            run_id: Unique identifier for the run.
             base_path: Root directory for storage (e.g., Path('.waivern')).
 
         """
-        super().__init__(run_id)
         self._base_path = base_path
 
     @property
@@ -43,10 +45,9 @@ class LocalFilesystemStore(ArtifactStore):
         """The base path for storage."""
         return self._base_path
 
-    @property
-    def _run_dir(self) -> Path:
-        """The directory for this run's artifacts."""
-        return self._base_path / "runs" / self._run_id
+    def _run_dir(self, run_id: str) -> Path:
+        """Get the directory for a run's artifacts."""
+        return self._base_path / "runs" / run_id
 
     def _validate_key(self, key: str) -> None:
         """Validate that a key is safe for filesystem use.
@@ -62,22 +63,22 @@ class LocalFilesystemStore(ArtifactStore):
         if key.startswith("/"):
             raise ValueError(f"Invalid key '{key}': absolute paths are not allowed.")
 
-    def _key_to_path(self, key: str) -> Path:
+    def _key_to_path(self, run_id: str, key: str) -> Path:
         """Convert a key to its filesystem path.
 
         Validates the key before conversion.
         """
         self._validate_key(key)
-        return self._run_dir / f"{key}.json"
+        return self._run_dir(run_id) / f"{key}.json"
 
     @override
-    async def save(self, key: str, message: Message) -> None:
+    async def save(self, run_id: str, key: str, message: Message) -> None:
         """Store artifact by key.
 
         Creates parent directories if they don't exist.
         Uses upsert semantics - overwrites if key already exists.
         """
-        file_path = self._key_to_path(key)
+        file_path = self._key_to_path(run_id, key)
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         data = message.to_dict()
@@ -85,18 +86,18 @@ class LocalFilesystemStore(ArtifactStore):
             await f.write(json.dumps(data, indent=2, default=str))
 
     @override
-    async def get(self, key: str) -> Message:
+    async def get(self, run_id: str, key: str) -> Message:
         """Retrieve artifact by key.
 
         Raises:
             ArtifactNotFoundError: If artifact with key does not exist.
 
         """
-        file_path = self._key_to_path(key)
+        file_path = self._key_to_path(run_id, key)
 
         if not file_path.exists():
             raise ArtifactNotFoundError(
-                f"Artifact '{key}' not found in run '{self._run_id}'."
+                f"Artifact '{key}' not found in run '{run_id}'."
             )
 
         async with aiofiles.open(file_path) as f:
@@ -105,37 +106,35 @@ class LocalFilesystemStore(ArtifactStore):
         return Message.from_dict(data)
 
     @override
-    async def exists(self, key: str) -> bool:
+    async def exists(self, run_id: str, key: str) -> bool:
         """Check if artifact exists."""
-        return self._key_to_path(key).exists()
+        return self._key_to_path(run_id, key).exists()
 
     @override
-    async def delete(self, key: str) -> None:
+    async def delete(self, run_id: str, key: str) -> None:
         """Delete artifact by key.
 
         No-op if the key does not exist.
         """
-        file_path = self._key_to_path(key)
+        file_path = self._key_to_path(run_id, key)
         if file_path.exists():
             file_path.unlink()
 
-    # Reserved prefix for system metadata (excluded from list_keys)
-    _SYSTEM_PREFIX = "_system"
-
     @override
-    async def list_keys(self, prefix: str = "") -> list[str]:
-        """List all keys, optionally filtered by prefix.
+    async def list_keys(self, run_id: str, prefix: str = "") -> list[str]:
+        """List all keys for a run, optionally filtered by prefix.
 
         Returns keys in the format they were saved (e.g., 'artifacts/findings').
         System files under '_system/' are excluded.
         """
-        if not self._run_dir.exists():
+        run_dir = self._run_dir(run_id)
+        if not run_dir.exists():
             return []
 
         keys: list[str] = []
-        for file_path in self._run_dir.rglob("*.json"):
+        for file_path in run_dir.rglob("*.json"):
             # Convert path back to key (relative to run_dir, without .json)
-            relative_path = file_path.relative_to(self._run_dir)
+            relative_path = file_path.relative_to(run_dir)
             key = str(relative_path.with_suffix(""))
 
             # Skip system files
@@ -149,18 +148,19 @@ class LocalFilesystemStore(ArtifactStore):
         return keys
 
     @override
-    async def clear(self) -> None:
-        """Remove all artifacts for this run.
+    async def clear(self, run_id: str) -> None:
+        """Remove all artifacts for a run.
 
         Removes all artifact files but preserves system metadata in '_system/'.
         Also cleans up empty directories.
         """
-        if not self._run_dir.exists():
+        run_dir = self._run_dir(run_id)
+        if not run_dir.exists():
             return
 
         # Delete all artifact files (excluding system files)
-        for file_path in self._run_dir.rglob("*.json"):
-            relative_path = file_path.relative_to(self._run_dir)
+        for file_path in run_dir.rglob("*.json"):
+            relative_path = file_path.relative_to(run_dir)
             key = str(relative_path.with_suffix(""))
 
             # Skip system files
@@ -170,9 +170,9 @@ class LocalFilesystemStore(ArtifactStore):
             file_path.unlink()
 
         # Clean up empty directories (except _system and run_dir itself)
-        for dir_path in sorted(self._run_dir.rglob("*"), reverse=True):
+        for dir_path in sorted(run_dir.rglob("*"), reverse=True):
             if dir_path.is_dir() and not any(dir_path.iterdir()):
-                if not str(dir_path.relative_to(self._run_dir)).startswith(
+                if not str(dir_path.relative_to(run_dir)).startswith(
                     self._SYSTEM_PREFIX
                 ):
                     dir_path.rmdir()

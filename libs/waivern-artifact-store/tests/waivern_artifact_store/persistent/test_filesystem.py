@@ -19,14 +19,14 @@ class TestLocalFilesystemStoreSave:
     """Tests for the save() method."""
 
     async def test_save_creates_file_with_message_content(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         message = Message(
             id="msg-1",
             content={"data": "test-value"},
             schema=Schema("test_schema", "1.0.0"),
         )
 
-        await store.save("my_artifact", message)
+        await store.save("test-run", "my_artifact", message)
 
         expected_path = tmp_path / "runs" / "test-run" / "my_artifact.json"
         assert expected_path.exists()
@@ -38,21 +38,21 @@ class TestLocalFilesystemStoreSave:
     async def test_save_with_hierarchical_key_creates_nested_structure(
         self, tmp_path: Path
     ) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         message = Message(
             id="msg-1",
             content={"findings": []},
             schema=Schema("test_schema", "1.0.0"),
         )
 
-        await store.save("artifacts/findings", message)
+        await store.save("test-run", "artifacts/findings", message)
 
         expected_path = tmp_path / "runs" / "test-run" / "artifacts" / "findings.json"
         assert expected_path.exists()
         assert expected_path.parent.is_dir()
 
     async def test_save_overwrites_existing_artifact(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         original_message = Message(
             id="msg-1",
             content={"version": "original"},
@@ -64,8 +64,8 @@ class TestLocalFilesystemStoreSave:
             schema=Schema("test_schema", "1.0.0"),
         )
 
-        await store.save("artifact", original_message)
-        await store.save("artifact", updated_message)
+        await store.save("test-run", "artifact", original_message)
+        await store.save("test-run", "artifact", updated_message)
 
         file_path = tmp_path / "runs" / "test-run" / "artifact.json"
         with file_path.open() as f:
@@ -83,7 +83,7 @@ class TestLocalFilesystemStoreGet:
     """Tests for the get() method."""
 
     async def test_get_returns_previously_saved_message(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         original = Message(
             id="msg-1",
             content={"data": "test-value"},
@@ -91,9 +91,9 @@ class TestLocalFilesystemStoreGet:
             run_id="run-123",
             source="connector:test",
         )
-        await store.save("artifact", original)
+        await store.save("test-run", "artifact", original)
 
-        retrieved = await store.get("artifact")
+        retrieved = await store.get("test-run", "artifact")
 
         assert retrieved.id == original.id
         assert retrieved.content == original.content
@@ -103,10 +103,10 @@ class TestLocalFilesystemStoreGet:
     async def test_get_raises_artifact_not_found_for_missing_key(
         self, tmp_path: Path
     ) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
 
         with pytest.raises(ArtifactNotFoundError):
-            await store.get("nonexistent")
+            await store.get("test-run", "nonexistent")
 
 
 # =============================================================================
@@ -118,22 +118,22 @@ class TestLocalFilesystemStoreExists:
     """Tests for the exists() method."""
 
     async def test_exists_returns_true_after_save(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         message = Message(
             id="msg-1",
             content={"data": "value"},
             schema=Schema("test_schema", "1.0.0"),
         )
-        await store.save("artifact", message)
+        await store.save("test-run", "artifact", message)
 
-        result = await store.exists("artifact")
+        result = await store.exists("test-run", "artifact")
 
         assert result is True
 
     async def test_exists_returns_false_for_unsaved_key(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
 
-        result = await store.exists("nonexistent")
+        result = await store.exists("test-run", "nonexistent")
 
         assert result is False
 
@@ -147,24 +147,24 @@ class TestLocalFilesystemStoreDelete:
     """Tests for the delete() method."""
 
     async def test_delete_removes_saved_artifact(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         message = Message(
             id="msg-1",
             content={"data": "value"},
             schema=Schema("test_schema", "1.0.0"),
         )
-        await store.save("artifact", message)
-        assert await store.exists("artifact")
+        await store.save("test-run", "artifact", message)
+        assert await store.exists("test-run", "artifact")
 
-        await store.delete("artifact")
+        await store.delete("test-run", "artifact")
 
-        assert not await store.exists("artifact")
+        assert not await store.exists("test-run", "artifact")
 
     async def test_delete_does_not_raise_for_missing_key(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
 
         # Should not raise any exception
-        await store.delete("nonexistent")
+        await store.delete("test-run", "nonexistent")
 
 
 # =============================================================================
@@ -176,64 +176,64 @@ class TestLocalFilesystemStoreListKeys:
     """Tests for the list_keys() method."""
 
     async def test_list_keys_returns_all_saved_keys(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         for key in ["alpha", "beta", "gamma"]:
             message = Message(
                 id=f"msg-{key}",
                 content={"key": key},
                 schema=Schema("test_schema", "1.0.0"),
             )
-            await store.save(key, message)
+            await store.save("test-run", key, message)
 
-        keys = await store.list_keys()
+        keys = await store.list_keys("test-run")
 
         assert set(keys) == {"alpha", "beta", "gamma"}
 
     async def test_list_keys_with_prefix_filters_results(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         for key in ["artifacts/a", "artifacts/b", "cache/x"]:
             message = Message(
                 id=f"msg-{key}",
                 content={"key": key},
                 schema=Schema("test_schema", "1.0.0"),
             )
-            await store.save(key, message)
+            await store.save("test-run", key, message)
 
-        keys = await store.list_keys(prefix="artifacts")
+        keys = await store.list_keys("test-run", prefix="artifacts")
 
         assert set(keys) == {"artifacts/a", "artifacts/b"}
 
     async def test_list_keys_preserves_hierarchical_key_format(
         self, tmp_path: Path
     ) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         message = Message(
             id="msg-1",
             content={"data": "value"},
             schema=Schema("test_schema", "1.0.0"),
         )
-        await store.save("deeply/nested/artifact", message)
+        await store.save("test-run", "deeply/nested/artifact", message)
 
-        keys = await store.list_keys()
+        keys = await store.list_keys("test-run")
 
         assert "deeply/nested/artifact" in keys
 
     async def test_list_keys_excludes_system_files(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         # Save a regular artifact
         message = Message(
             id="msg-1",
             content={"data": "value"},
             schema=Schema("test_schema", "1.0.0"),
         )
-        await store.save("artifacts/findings", message)
+        await store.save("test-run", "artifacts/findings", message)
 
         # Manually create a system file (simulating future state persistence)
         system_dir = tmp_path / "runs" / "test-run" / "_system"
         system_dir.mkdir(parents=True)
         (system_dir / "metadata.json").write_text('{"status": "running"}')
 
-        keys = await store.list_keys()
+        keys = await store.list_keys("test-run")
 
         assert "artifacts/findings" in keys
         assert "_system/metadata" not in keys
@@ -248,19 +248,19 @@ class TestLocalFilesystemStoreClear:
     """Tests for the clear() method."""
 
     async def test_clear_removes_all_artifacts(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         for key in ["alpha", "beta", "nested/gamma"]:
             message = Message(
                 id=f"msg-{key}",
                 content={"key": key},
                 schema=Schema("test_schema", "1.0.0"),
             )
-            await store.save(key, message)
-        assert len(await store.list_keys()) == 3
+            await store.save("test-run", key, message)
+        assert len(await store.list_keys("test-run")) == 3
 
-        await store.clear()
+        await store.clear("test-run")
 
-        assert await store.list_keys() == []
+        assert await store.list_keys("test-run") == []
 
 
 # =============================================================================
@@ -283,7 +283,7 @@ class TestLocalFilesystemStoreKeyValidation:
     async def test_save_rejects_invalid_keys(
         self, tmp_path: Path, invalid_key: str
     ) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
         message = Message(
             id="msg-1",
             content={"data": "value"},
@@ -291,7 +291,7 @@ class TestLocalFilesystemStoreKeyValidation:
         )
 
         with pytest.raises(ValueError, match="Invalid key"):
-            await store.save(invalid_key, message)
+            await store.save("test-run", invalid_key, message)
 
     @pytest.mark.parametrize(
         "invalid_key",
@@ -304,7 +304,57 @@ class TestLocalFilesystemStoreKeyValidation:
     async def test_get_rejects_invalid_keys(
         self, tmp_path: Path, invalid_key: str
     ) -> None:
-        store = LocalFilesystemStore(run_id="test-run", base_path=tmp_path)
+        store = LocalFilesystemStore(base_path=tmp_path)
 
         with pytest.raises(ValueError, match="Invalid key"):
-            await store.get(invalid_key)
+            await store.get("test-run", invalid_key)
+
+
+# =============================================================================
+# Run Isolation Tests (singleton store, multiple runs)
+# =============================================================================
+
+
+class TestLocalFilesystemStoreRunIsolation:
+    """Tests for run isolation in singleton store."""
+
+    async def test_different_runs_have_isolated_storage(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        message_run1 = Message(
+            id="msg-run1",
+            content={"run": "1"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        message_run2 = Message(
+            id="msg-run2",
+            content={"run": "2"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+
+        await store.save("run-1", "artifact", message_run1)
+        await store.save("run-2", "artifact", message_run2)
+
+        retrieved_run1 = await store.get("run-1", "artifact")
+        retrieved_run2 = await store.get("run-2", "artifact")
+
+        assert retrieved_run1.content == {"run": "1"}
+        assert retrieved_run2.content == {"run": "2"}
+
+        # Verify files are in separate directories
+        assert (tmp_path / "runs" / "run-1" / "artifact.json").exists()
+        assert (tmp_path / "runs" / "run-2" / "artifact.json").exists()
+
+    async def test_clear_only_affects_specified_run(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        for run_id in ["run-1", "run-2"]:
+            message = Message(
+                id=f"msg-{run_id}",
+                content={"run": run_id},
+                schema=Schema("test_schema", "1.0.0"),
+            )
+            await store.save(run_id, "artifact", message)
+
+        await store.clear("run-1")
+
+        assert not await store.exists("run-1", "artifact")
+        assert await store.exists("run-2", "artifact")

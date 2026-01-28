@@ -2,6 +2,8 @@
 
 Each backend defines its own config class with a `create_store()` method.
 Pydantic's discriminated union handles deserialisation automatically.
+
+Stores are stateless singletons - create_store() takes no parameters.
 """
 
 from __future__ import annotations
@@ -19,8 +21,8 @@ from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
 class StoreConfigProtocol(Protocol):
     """Protocol defining what all store configs must implement."""
 
-    def create_store(self, run_id: str) -> ArtifactStore:
-        """Create a store instance scoped to the given run_id."""
+    def create_store(self) -> ArtifactStore:
+        """Create a singleton store instance."""
         ...
 
 
@@ -29,9 +31,9 @@ class MemoryStoreConfig(BaseModel):
 
     type: Literal["memory"] = "memory"
 
-    def create_store(self, run_id: str) -> ArtifactStore:
+    def create_store(self) -> ArtifactStore:
         """Create an in-memory artifact store."""
-        return AsyncInMemoryStore(run_id=run_id)
+        return AsyncInMemoryStore()
 
 
 class FilesystemStoreConfig(BaseModel):
@@ -40,9 +42,9 @@ class FilesystemStoreConfig(BaseModel):
     type: Literal["filesystem"] = "filesystem"
     base_path: Path = Path(".waivern")
 
-    def create_store(self, run_id: str) -> ArtifactStore:
+    def create_store(self) -> ArtifactStore:
         """Create a filesystem-backed artifact store."""
-        return LocalFilesystemStore(run_id=run_id, base_path=self.base_path)
+        return LocalFilesystemStore(base_path=self.base_path)
 
 
 class RemoteStoreConfig(BaseModel):
@@ -52,7 +54,7 @@ class RemoteStoreConfig(BaseModel):
     endpoint_url: str
     api_key: str | None = None
 
-    def create_store(self, run_id: str) -> ArtifactStore:
+    def create_store(self) -> ArtifactStore:
         """Create a remote HTTP artifact store.
 
         Raises:
@@ -79,9 +81,11 @@ class StoreConfig(RootModel[_StoreConfigUnion]):
     correct config class (MemoryStoreConfig, FilesystemStoreConfig, or
     RemoteStoreConfig) based on the "type" field.
 
+    Stores are stateless singletons - create_store() takes no parameters.
+
     Example:
         >>> config = StoreConfig.model_validate({"type": "filesystem"})
-        >>> store = config.create_store(run_id="abc123")
+        >>> store = config.create_store()
 
         >>> # Access the inner config if needed
         >>> config.root.base_path
@@ -91,16 +95,13 @@ class StoreConfig(RootModel[_StoreConfigUnion]):
 
     model_config = ConfigDict(frozen=True)
 
-    def create_store(self, run_id: str) -> ArtifactStore:
-        """Create a store instance scoped to the given run_id.
+    def create_store(self) -> ArtifactStore:
+        """Create a singleton store instance.
 
         Delegates to the inner config's create_store method.
-
-        Args:
-            run_id: Unique identifier for the run.
 
         Returns:
             An ArtifactStore instance.
 
         """
-        return self.root.create_store(run_id)
+        return self.root.create_store()

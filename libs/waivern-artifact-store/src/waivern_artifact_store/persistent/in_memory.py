@@ -17,70 +17,72 @@ from waivern_artifact_store.persistent.base import ArtifactStore
 class AsyncInMemoryStore(ArtifactStore):
     """In-memory artifact store for testing.
 
-    Uses a simple dict for storage. No thread safety is needed
-    since asyncio runs in a single thread.
+    Stateless singleton that stores artifacts keyed by (run_id, key).
+    No thread safety is needed since asyncio runs in a single thread.
 
     This store implements the same `_system` prefix filtering as
     LocalFilesystemStore for behavioural consistency.
     """
 
-    def __init__(self, run_id: str) -> None:
-        """Initialise in-memory store.
+    # Reserved prefix for system metadata (excluded from list_keys)
+    _SYSTEM_PREFIX = "_system"
 
-        Args:
-            run_id: Unique identifier for the run.
+    def __init__(self) -> None:
+        """Initialise in-memory store."""
+        # Storage: run_id -> key -> Message
+        self._storage: dict[str, dict[str, Message]] = {}
 
-        """
-        super().__init__(run_id)
-        self._storage: dict[str, Message] = {}
+    def _get_run_storage(self, run_id: str) -> dict[str, Message]:
+        """Get or create storage dict for a run."""
+        if run_id not in self._storage:
+            self._storage[run_id] = {}
+        return self._storage[run_id]
 
     @override
-    async def save(self, key: str, message: Message) -> None:
+    async def save(self, run_id: str, key: str, message: Message) -> None:
         """Store artifact by key.
 
         Uses upsert semantics - overwrites if key already exists.
         """
-        self._storage[key] = message
+        self._get_run_storage(run_id)[key] = message
 
     @override
-    async def get(self, key: str) -> Message:
+    async def get(self, run_id: str, key: str) -> Message:
         """Retrieve artifact by key.
 
         Raises:
             ArtifactNotFoundError: If artifact with key does not exist.
 
         """
-        if key not in self._storage:
+        run_storage = self._get_run_storage(run_id)
+        if key not in run_storage:
             raise ArtifactNotFoundError(
-                f"Artifact '{key}' not found in run '{self._run_id}'."
+                f"Artifact '{key}' not found in run '{run_id}'."
             )
-        return self._storage[key]
+        return run_storage[key]
 
     @override
-    async def exists(self, key: str) -> bool:
+    async def exists(self, run_id: str, key: str) -> bool:
         """Check if artifact exists."""
-        return key in self._storage
+        return key in self._get_run_storage(run_id)
 
     @override
-    async def delete(self, key: str) -> None:
+    async def delete(self, run_id: str, key: str) -> None:
         """Delete artifact by key.
 
         No-op if the key does not exist.
         """
-        self._storage.pop(key, None)
-
-    # Reserved prefix for system metadata (excluded from list_keys)
-    _SYSTEM_PREFIX = "_system"
+        self._get_run_storage(run_id).pop(key, None)
 
     @override
-    async def list_keys(self, prefix: str = "") -> list[str]:
-        """List all keys, optionally filtered by prefix.
+    async def list_keys(self, run_id: str, prefix: str = "") -> list[str]:
+        """List all keys for a run, optionally filtered by prefix.
 
         System files under '_system/' are excluded for consistency
         with LocalFilesystemStore behaviour.
         """
         keys: list[str] = []
-        for key in self._storage:
+        for key in self._get_run_storage(run_id):
             # Skip system files
             if key.startswith(self._SYSTEM_PREFIX):
                 continue
@@ -90,6 +92,7 @@ class AsyncInMemoryStore(ArtifactStore):
         return keys
 
     @override
-    async def clear(self) -> None:
-        """Remove all artifacts for this run."""
-        self._storage.clear()
+    async def clear(self, run_id: str) -> None:
+        """Remove all artifacts for a run."""
+        if run_id in self._storage:
+            self._storage[run_id].clear()

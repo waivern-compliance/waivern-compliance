@@ -46,7 +46,7 @@ class TestStoreConfigDiscriminatedUnion:
 
         config = StoreConfig.model_validate({"type": "memory"})
 
-        store = config.create_store(run_id="test-run")
+        store = config.create_store()
 
         assert isinstance(store, AsyncInMemoryStore)
 
@@ -64,10 +64,9 @@ class TestMemoryStoreConfig:
 
         config = MemoryStoreConfig()
 
-        store = config.create_store(run_id="test-run")
+        store = config.create_store()
 
         assert isinstance(store, AsyncInMemoryStore)
-        assert store.run_id == "test-run"
 
 
 # =============================================================================
@@ -88,10 +87,9 @@ class TestFilesystemStoreConfig:
 
         config = FilesystemStoreConfig()
 
-        store = config.create_store(run_id="test-run")
+        store = config.create_store()
 
         assert isinstance(store, LocalFilesystemStore)
-        assert store.run_id == "test-run"
         assert store.base_path == Path(".waivern")
 
 
@@ -111,4 +109,4 @@ class TestRemoteStoreConfig:
         config = RemoteStoreConfig(endpoint_url="https://example.com")
 
         with pytest.raises(NotImplementedError, match="RemoteHttpArtifactStore"):
-            config.create_store(run_id="test-run")
+            config.create_store()
