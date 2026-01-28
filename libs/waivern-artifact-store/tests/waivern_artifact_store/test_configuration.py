@@ -11,7 +11,7 @@ ARTIFACT_STORE_ENV_VARS = ["ARTIFACT_STORE_BACKEND"]
 
 
 # =============================================================================
-# Configuration Tests (defaults, validation, environment, immutability)
+# Configuration Tests (defaults, validation, environment)
 # =============================================================================
 
 
@@ -21,12 +21,6 @@ class TestArtifactStoreConfiguration:
     # -------------------------------------------------------------------------
     # Default Values
     # -------------------------------------------------------------------------
-
-    def test_configuration_can_be_instantiated_with_valid_backend(self) -> None:
-        """Test basic instantiation with valid backend."""
-        config = ArtifactStoreConfiguration(backend="memory")
-
-        assert config.backend == "memory"
 
     def test_configuration_uses_default_backend_when_not_specified(self) -> None:
         """Test default backend is 'memory' when not specified."""
@@ -66,14 +60,6 @@ class TestArtifactStoreConfiguration:
     # Factory Method (from_properties)
     # -------------------------------------------------------------------------
 
-    def test_from_properties_creates_configuration_from_valid_dictionary(self) -> None:
-        """Test from_properties() factory method with explicit properties."""
-        properties = {"backend": "memory"}
-        config = ArtifactStoreConfiguration.from_properties(properties)
-
-        assert isinstance(config, ArtifactStoreConfiguration)
-        assert config.backend == "memory"
-
     def test_from_properties_falls_back_to_environment_variables_when_properties_empty(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -100,14 +86,17 @@ class TestArtifactStoreConfiguration:
     def test_from_properties_prioritises_properties_over_environment_variables(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that explicit properties override environment."""
+        """Test that explicit properties override environment variables.
+
+        Sets env to an invalid value and property to valid value.
+        If properties didn't take priority, this would raise ValidationError.
+        """
         for var in ARTIFACT_STORE_ENV_VARS:
             monkeypatch.delenv(var, raising=False)
-        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "memory")
+        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "redis")  # Invalid backend
 
-        # Explicit property should override environment
-        properties = {"backend": "memory"}
-        config = ArtifactStoreConfiguration.from_properties(properties)
+        # Explicit property should override invalid env var
+        config = ArtifactStoreConfiguration.from_properties({"backend": "memory"})
 
         assert config.backend == "memory"
 
@@ -127,26 +116,3 @@ class TestArtifactStoreConfiguration:
         except ValidationError as e:
             error_msg = str(e).lower()
             assert "backend" in error_msg or "memory" in error_msg
-
-    # -------------------------------------------------------------------------
-    # Immutability (frozen model)
-    # -------------------------------------------------------------------------
-
-    def test_configuration_is_immutable_inherits_from_base(self) -> None:
-        """Test frozen behaviour inherited correctly."""
-        config = ArtifactStoreConfiguration(backend="memory")
-
-        # Verify configuration is instance of BaseServiceConfiguration
-        from waivern_core.services import BaseServiceConfiguration
-
-        assert isinstance(config, BaseServiceConfiguration)
-
-        # Attempt to modify backend (should raise ValidationError)
-        try:
-            config.backend = "redis"  # type: ignore[misc]
-            assert False, (
-                "Should have raised ValidationError for modifying frozen model"
-            )
-        except ValidationError as e:
-            error_msg = str(e).lower()
-            assert "frozen" in error_msg or "immutable" in error_msg

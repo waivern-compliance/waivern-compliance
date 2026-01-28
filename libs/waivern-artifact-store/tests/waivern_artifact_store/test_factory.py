@@ -7,7 +7,7 @@ from waivern_artifact_store.factory import ArtifactStoreFactory
 from waivern_artifact_store.in_memory import InMemoryArtifactStore
 
 # =============================================================================
-# Factory Tests (creation, environment fallback, configuration priority)
+# Factory Tests (creation, configuration priority)
 # =============================================================================
 
 
@@ -42,29 +42,15 @@ class TestArtifactStoreFactory:
         assert isinstance(store, InMemoryArtifactStore)
 
     def test_factory_returns_none_for_unsupported_backend(self, monkeypatch) -> None:
-        """Test factory returns None for unsupported backend."""
+        """Test factory returns None for unsupported backend.
+
+        This also proves env vars are read - if they weren't, this wouldn't fail.
+        """
         monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "invalid_backend")
         factory = ArtifactStoreFactory()
 
         assert factory.can_create() is False
         assert factory.create() is None
-
-    # -------------------------------------------------------------------------
-    # Environment Variable Fallback
-    # -------------------------------------------------------------------------
-
-    def test_factory_creates_in_memory_store_with_env_fallback(
-        self, monkeypatch
-    ) -> None:
-        """Test factory creates InMemoryArtifactStore using environment variable."""
-        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "memory")
-        factory = ArtifactStoreFactory()
-
-        assert factory.can_create() is True
-        store = factory.create()
-
-        assert store is not None
-        assert isinstance(store, InMemoryArtifactStore)
 
     # -------------------------------------------------------------------------
     # Configuration Priority

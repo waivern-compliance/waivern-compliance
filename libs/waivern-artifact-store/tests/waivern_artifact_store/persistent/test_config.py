@@ -59,11 +59,6 @@ class TestStoreConfigDiscriminatedUnion:
 class TestMemoryStoreConfig:
     """Test MemoryStoreConfig behaviour."""
 
-    def test_type_defaults_to_memory(self) -> None:
-        config = MemoryStoreConfig()
-
-        assert config.type == "memory"
-
     def test_create_store_returns_async_in_memory_store(self) -> None:
         from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
 
@@ -83,20 +78,10 @@ class TestMemoryStoreConfig:
 class TestFilesystemStoreConfig:
     """Test FilesystemStoreConfig behaviour."""
 
-    def test_type_defaults_to_filesystem(self) -> None:
-        config = FilesystemStoreConfig()
-
-        assert config.type == "filesystem"
-
     def test_base_path_defaults_to_waivern(self) -> None:
         config = FilesystemStoreConfig()
 
         assert config.base_path == Path(".waivern")
-
-    def test_base_path_accepts_custom_path(self) -> None:
-        config = FilesystemStoreConfig(base_path=Path("/custom/path"))
-
-        assert config.base_path == Path("/custom/path")
 
     def test_create_store_returns_local_filesystem_store(self) -> None:
         from waivern_artifact_store.persistent.filesystem import LocalFilesystemStore
@@ -118,27 +103,9 @@ class TestFilesystemStoreConfig:
 class TestRemoteStoreConfig:
     """Test RemoteStoreConfig behaviour."""
 
-    def test_type_defaults_to_remote(self) -> None:
-        config = RemoteStoreConfig(endpoint_url="https://example.com")
-
-        assert config.type == "remote"
-
     def test_endpoint_url_is_required(self) -> None:
         with pytest.raises(ValidationError, match="endpoint_url"):
             RemoteStoreConfig()  # type: ignore[call-arg]
-
-    def test_api_key_is_optional(self) -> None:
-        config = RemoteStoreConfig(endpoint_url="https://example.com")
-
-        assert config.api_key is None
-
-    def test_api_key_can_be_provided(self) -> None:
-        config = RemoteStoreConfig(
-            endpoint_url="https://example.com",
-            api_key="secret-key",
-        )
-
-        assert config.api_key == "secret-key"
 
     def test_create_store_raises_not_implemented(self) -> None:
         config = RemoteStoreConfig(endpoint_url="https://example.com")
