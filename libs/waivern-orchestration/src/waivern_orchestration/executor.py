@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 
-from waivern_artifact_store.base import ArtifactStore
+from waivern_artifact_store.persistent.base import ArtifactStore
 from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 from waivern_core.services import ComponentRegistry
 
@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 class _ExecutionContext:
     """Internal context for a single execution run."""
 
+    run_id: str
     store: ArtifactStore
     semaphore: asyncio.Semaphore
     thread_pool: ThreadPoolExecutor
@@ -79,6 +80,7 @@ class DAGExecutor:
         )
         with ThreadPoolExecutor(max_workers=config.max_concurrency) as thread_pool:
             ctx = _ExecutionContext(
+                run_id=run_id,
                 store=store,
                 semaphore=asyncio.Semaphore(config.max_concurrency),
                 thread_pool=thread_pool,
@@ -197,11 +199,10 @@ class DAGExecutor:
                     message = await self._produce_derived(
                         definition,
                         output_schema,
-                        ctx.store,
-                        ctx.thread_pool,
+                        ctx,
                     )
 
-                ctx.store.save(artifact_id, message)
+                await ctx.store.save(ctx.run_id, artifact_id, message)
 
                 duration = time.monotonic() - start_time
                 logger.debug(
@@ -319,16 +320,14 @@ class DAGExecutor:
         self,
         definition: ArtifactDefinition,
         output_schema: Schema,
-        store: ArtifactStore,
-        thread_pool: ThreadPoolExecutor,
+        ctx: _ExecutionContext,
     ) -> Message:
         """Produce a derived artifact from its inputs.
 
         Args:
             definition: The artifact definition with inputs.
             output_schema: The output schema for this artifact.
-            store: The artifact store containing upstream artifacts.
-            thread_pool: ThreadPoolExecutor for sync->async bridging.
+            ctx: The execution context containing store, run_id, and thread pool.
 
         Returns:
             The produced message.
@@ -341,15 +340,15 @@ class DAGExecutor:
 
         input_refs = [inputs] if isinstance(inputs, str) else inputs
 
-        # Retrieve input messages from store
-        input_messages = [store.get(ref) for ref in input_refs]
+        # Retrieve input messages from store (async)
+        input_messages = [await ctx.store.get(ctx.run_id, ref) for ref in input_refs]
 
         if definition.process is not None:
             return await self._run_processor(
                 definition.process,
                 input_messages,
                 output_schema,
-                thread_pool,
+                ctx.thread_pool,
             )
 
         # Passthrough: use first input (or merge for fan-in)

@@ -1,118 +1,187 @@
-"""Tests for artifact store configuration."""
+"""Tests for artifact store configuration classes."""
 
 from __future__ import annotations
+
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
-from waivern_artifact_store.configuration import ArtifactStoreConfiguration
+from waivern_artifact_store.configuration import (
+    ArtifactStoreConfiguration,
+    FilesystemStoreConfig,
+    MemoryStoreConfig,
+    RemoteStoreConfig,
+)
+from waivern_artifact_store.persistent.filesystem import LocalFilesystemStore
+from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
 
-ARTIFACT_STORE_ENV_VARS = ["ARTIFACT_STORE_BACKEND"]
+# =============================================================================
+# Discriminated Union Tests (type-based config selection)
+# =============================================================================
+
+
+class TestArtifactStoreConfigurationDiscriminatedUnion:
+    """Test that discriminated union correctly selects config class based on type."""
+
+    def test_memory_type_returns_memory_store_config(self) -> None:
+        config = ArtifactStoreConfiguration.model_validate({"type": "memory"})
+
+        assert isinstance(config.root, MemoryStoreConfig)
+
+    def test_filesystem_type_returns_filesystem_store_config(self) -> None:
+        config = ArtifactStoreConfiguration.model_validate({"type": "filesystem"})
+
+        assert isinstance(config.root, FilesystemStoreConfig)
+
+    def test_remote_type_returns_remote_store_config(self) -> None:
+        config = ArtifactStoreConfiguration.model_validate(
+            {"type": "remote", "endpoint_url": "https://example.com"}
+        )
+
+        assert isinstance(config.root, RemoteStoreConfig)
+
+    def test_invalid_type_raises_validation_error(self) -> None:
+        with pytest.raises(ValidationError):
+            ArtifactStoreConfiguration.model_validate({"type": "invalid"})
+
+    def test_create_store_delegates_to_inner_config(self) -> None:
+        config = ArtifactStoreConfiguration.model_validate({"type": "memory"})
+
+        store = config.create_store()
+
+        assert isinstance(store, AsyncInMemoryStore)
 
 
 # =============================================================================
-# Configuration Tests (defaults, validation, environment)
+# from_properties() Tests (environment variable support)
 # =============================================================================
 
 
-class TestArtifactStoreConfiguration:
-    """Test ArtifactStoreConfiguration class."""
+ENV_VARS = [
+    "WAIVERN_STORE_TYPE",
+    "WAIVERN_STORE_PATH",
+    "WAIVERN_STORE_URL",
+    "WAIVERN_STORE_API_KEY",
+]
 
-    # -------------------------------------------------------------------------
-    # Default Values
-    # -------------------------------------------------------------------------
 
-    def test_configuration_uses_default_backend_when_not_specified(self) -> None:
-        """Test default backend is 'memory' when not specified."""
-        config = ArtifactStoreConfiguration()
+class TestArtifactStoreConfigurationFromProperties:
+    """Test from_properties() factory method with env var support."""
 
-        assert config.backend == "memory"
+    @pytest.fixture(autouse=True)
+    def clear_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Clear all artifact store env vars before each test."""
+        for var in ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
 
-    def test_backend_is_case_insensitive(self) -> None:
-        """Test backend value is normalised to lowercase."""
-        config = ArtifactStoreConfiguration(backend="MEMORY")
+    def test_from_properties_returns_memory_config_by_default(self) -> None:
+        """Default to memory store when no properties or env vars."""
+        config = ArtifactStoreConfiguration.from_properties({})
 
-        assert config.backend == "memory"
+        assert isinstance(config.root, MemoryStoreConfig)
 
-    # -------------------------------------------------------------------------
-    # Validation
-    # -------------------------------------------------------------------------
-
-    def test_validation_rejects_unsupported_backend(self) -> None:
-        """Test only 'memory' backend is accepted."""
-        try:
-            ArtifactStoreConfiguration(backend="redis")
-            assert False, "Should have raised ValidationError for unsupported backend"
-        except ValidationError as e:
-            error_msg = str(e).lower()
-            assert "backend" in error_msg or "memory" in error_msg
-
-    def test_validation_rejects_empty_backend(self) -> None:
-        """Test backend cannot be empty string."""
-        try:
-            ArtifactStoreConfiguration(backend="")
-            assert False, "Should have raised ValidationError for empty backend"
-        except ValidationError as e:
-            error_msg = str(e).lower()
-            assert "backend" in error_msg or "memory" in error_msg
-
-    # -------------------------------------------------------------------------
-    # Factory Method (from_properties)
-    # -------------------------------------------------------------------------
-
-    def test_from_properties_falls_back_to_environment_variables_when_properties_empty(
+    def test_from_properties_reads_store_type_from_environment(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test environment fallback when no properties provided."""
-        for var in ARTIFACT_STORE_ENV_VARS:
-            monkeypatch.delenv(var, raising=False)
-        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "memory")
+        """Read store type from WAIVERN_STORE_TYPE env var."""
+        monkeypatch.setenv("WAIVERN_STORE_TYPE", "filesystem")
 
         config = ArtifactStoreConfiguration.from_properties({})
 
-        assert config.backend == "memory"
+        assert isinstance(config.root, FilesystemStoreConfig)
 
-    def test_from_properties_uses_default_when_no_properties_or_environment(
+    def test_from_properties_reads_store_path_from_environment(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test default backend used when no properties or environment variables."""
-        for var in ARTIFACT_STORE_ENV_VARS:
-            monkeypatch.delenv(var, raising=False)
+        """Read base_path from WAIVERN_STORE_PATH env var."""
+        monkeypatch.setenv("WAIVERN_STORE_TYPE", "filesystem")
+        monkeypatch.setenv("WAIVERN_STORE_PATH", "/custom/path")
 
         config = ArtifactStoreConfiguration.from_properties({})
 
-        assert config.backend == "memory"
+        assert isinstance(config.root, FilesystemStoreConfig)
+        assert config.root.base_path == Path("/custom/path")
 
-    def test_from_properties_prioritises_properties_over_environment_variables(
+    def test_from_properties_properties_override_environment(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that explicit properties override environment variables.
+        """Properties take priority over environment variables."""
+        monkeypatch.setenv("WAIVERN_STORE_TYPE", "filesystem")
+        monkeypatch.setenv("WAIVERN_STORE_PATH", "/env/path")
 
-        Sets env to an invalid value and property to valid value.
-        If properties didn't take priority, this would raise ValidationError.
-        """
-        for var in ARTIFACT_STORE_ENV_VARS:
-            monkeypatch.delenv(var, raising=False)
-        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "redis")  # Invalid backend
+        config = ArtifactStoreConfiguration.from_properties(
+            {
+                "type": "filesystem",
+                "base_path": "/explicit/path",
+            }
+        )
 
-        # Explicit property should override invalid env var
-        config = ArtifactStoreConfiguration.from_properties({"backend": "memory"})
+        assert isinstance(config.root, FilesystemStoreConfig)
+        assert config.root.base_path == Path("/explicit/path")
 
-        assert config.backend == "memory"
-
-    def test_from_properties_handles_invalid_backend_from_environment(
+    def test_from_properties_raises_for_invalid_type_from_environment(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test validation error when environment variable has invalid backend."""
-        for var in ARTIFACT_STORE_ENV_VARS:
-            monkeypatch.delenv(var, raising=False)
-        monkeypatch.setenv("ARTIFACT_STORE_BACKEND", "invalid_backend")
+        """Raise ValidationError for invalid type from env var."""
+        monkeypatch.setenv("WAIVERN_STORE_TYPE", "invalid_backend")
 
-        try:
+        with pytest.raises(ValidationError):
             ArtifactStoreConfiguration.from_properties({})
-            assert False, (
-                "Should have raised ValidationError for invalid backend from env"
-            )
-        except ValidationError as e:
-            error_msg = str(e).lower()
-            assert "backend" in error_msg or "memory" in error_msg
+
+
+# =============================================================================
+# MemoryStoreConfig Tests (in-memory store for testing)
+# =============================================================================
+
+
+class TestMemoryStoreConfig:
+    """Test MemoryStoreConfig behaviour."""
+
+    def test_create_store_returns_async_in_memory_store(self) -> None:
+        config = MemoryStoreConfig()
+
+        store = config.create_store()
+
+        assert isinstance(store, AsyncInMemoryStore)
+
+
+# =============================================================================
+# FilesystemStoreConfig Tests (local filesystem store)
+# =============================================================================
+
+
+class TestFilesystemStoreConfig:
+    """Test FilesystemStoreConfig behaviour."""
+
+    def test_base_path_defaults_to_waivern(self) -> None:
+        config = FilesystemStoreConfig()
+
+        assert config.base_path == Path(".waivern")
+
+    def test_create_store_returns_local_filesystem_store(self) -> None:
+        config = FilesystemStoreConfig()
+
+        store = config.create_store()
+
+        assert isinstance(store, LocalFilesystemStore)
+        assert store.base_path == Path(".waivern")
+
+
+# =============================================================================
+# RemoteStoreConfig Tests (remote HTTP store - not yet implemented)
+# =============================================================================
+
+
+class TestRemoteStoreConfig:
+    """Test RemoteStoreConfig behaviour."""
+
+    def test_endpoint_url_is_required(self) -> None:
+        with pytest.raises(ValidationError, match="endpoint_url"):
+            RemoteStoreConfig()  # type: ignore[call-arg]
+
+    def test_create_store_raises_not_implemented(self) -> None:
+        config = RemoteStoreConfig(endpoint_url="https://example.com")
+
+        with pytest.raises(NotImplementedError, match="RemoteHttpArtifactStore"):
+            config.create_store()

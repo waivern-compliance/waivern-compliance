@@ -6,8 +6,8 @@ import time
 from typing import Any
 from unittest.mock import MagicMock
 
-from waivern_artifact_store.base import ArtifactStore
-from waivern_artifact_store.in_memory import InMemoryArtifactStore
+from waivern_artifact_store.persistent.base import ArtifactStore
+from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
 from waivern_core.schemas import Schema
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 
@@ -112,10 +112,10 @@ class TestDAGExecutorObservability:
     """Tests for observability features in DAGExecutor."""
 
     def test_list_artifacts_after_execution(self) -> None:
-        """After execution, store.list_artifacts() returns all produced IDs."""
+        """After execution, store.list_keys() returns all produced IDs for the run."""
         # Arrange - use singleton store so we can access it after execution
 
-        store = InMemoryArtifactStore()
+        store = AsyncInMemoryStore()
         container = ServiceContainer()
         # Create a factory that returns our pre-created instance
         store_factory = MagicMock()
@@ -150,10 +150,10 @@ class TestDAGExecutorObservability:
         executor = DAGExecutor(registry)
 
         # Act
-        asyncio.run(executor.execute(plan))
+        result = asyncio.run(executor.execute(plan))
 
-        # Assert
-        stored_ids = store.list_artifacts()
+        # Assert - use run_id from result to query the store
+        stored_ids = asyncio.run(store.list_keys(result.run_id))
         assert "data_a" in stored_ids
         assert "data_b" in stored_ids
 

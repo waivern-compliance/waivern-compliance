@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from waivern_core.services import ServiceContainer, ServiceDescriptor
 
-from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
 from waivern_artifact_store.factory import ArtifactStoreFactory
-from waivern_artifact_store.in_memory import InMemoryArtifactStore
+from waivern_artifact_store.persistent.base import ArtifactStore
+from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
 
 # =============================================================================
 # Service Composition Tests (singleton behaviour)
@@ -29,7 +29,7 @@ class TestArtifactStoreServiceComposition:
 
     def test_singleton_behavior_returns_same_instance(self) -> None:
         """Test singleton lifetime returns same instance across multiple get_service calls."""
-        config = ArtifactStoreConfiguration(backend="memory")
+        config = ArtifactStoreConfiguration.model_validate({"type": "memory"})
         factory = ArtifactStoreFactory(config)
 
         container = ServiceContainer()
@@ -43,4 +43,4 @@ class TestArtifactStoreServiceComposition:
         assert store_first is not None
         assert store_second is not None
         assert store_first is store_second
-        assert isinstance(store_first, InMemoryArtifactStore)
+        assert isinstance(store_first, AsyncInMemoryStore)

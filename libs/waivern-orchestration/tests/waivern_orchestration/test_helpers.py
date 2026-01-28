@@ -5,9 +5,9 @@ from typing import Any, Literal
 from unittest.mock import MagicMock
 
 import yaml
-from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
 from waivern_artifact_store.factory import ArtifactStoreFactory
+from waivern_artifact_store.persistent.base import ArtifactStore
 from waivern_core import ExecutionContext, Message, MessageExtensions
 from waivern_core.schemas import Schema
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
@@ -94,10 +94,10 @@ def create_container_with_store() -> ServiceContainer:
     """Create a ServiceContainer with transient ArtifactStore.
 
     Returns:
-        ServiceContainer configured with InMemoryArtifactStore.
+        ServiceContainer configured with AsyncInMemoryStore.
 
     """
-    config = ArtifactStoreConfiguration(backend="memory")
+    config = ArtifactStoreConfiguration.model_validate({"type": "memory"})
     factory = ArtifactStoreFactory(config)
 
     container = ServiceContainer()
