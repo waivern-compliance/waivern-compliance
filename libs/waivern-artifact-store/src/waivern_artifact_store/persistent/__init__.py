@@ -14,10 +14,12 @@ from waivern_artifact_store.persistent.config import (
     RemoteStoreConfig,
     StoreConfig,
 )
+from waivern_artifact_store.persistent.filesystem import LocalFilesystemStore
 
 __all__ = [
     "ArtifactStore",
     "FilesystemStoreConfig",
+    "LocalFilesystemStore",
     "MemoryStoreConfig",
     "RemoteStoreConfig",
     "StoreConfig",

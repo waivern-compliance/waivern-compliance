@@ -78,11 +78,16 @@ class TestFilesystemStoreConfig:
 
         assert config.base_path == Path("/custom/path")
 
-    def test_create_store_raises_not_implemented(self) -> None:
+    def test_create_store_returns_local_filesystem_store(self) -> None:
+        from waivern_artifact_store.persistent.filesystem import LocalFilesystemStore
+
         config = FilesystemStoreConfig()
 
-        with pytest.raises(NotImplementedError, match="LocalFilesystemStore"):
-            config.create_store(run_id="test-run")
+        store = config.create_store(run_id="test-run")
+
+        assert isinstance(store, LocalFilesystemStore)
+        assert store.run_id == "test-run"
+        assert store.base_path == Path(".waivern")
 
 
 class TestRemoteStoreConfig:

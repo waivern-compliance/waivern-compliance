@@ -7,12 +7,12 @@ Pydantic's discriminated union handles deserialisation automatically.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, Protocol
+from typing import Annotated, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
-if TYPE_CHECKING:
-    from waivern_artifact_store.persistent.base import ArtifactStore
+from waivern_artifact_store.persistent.base import ArtifactStore
+from waivern_artifact_store.persistent.filesystem import LocalFilesystemStore
 
 
 class StoreConfigProtocol(Protocol):
@@ -48,16 +48,8 @@ class FilesystemStoreConfig(BaseModel):
     base_path: Path = Path(".waivern")
 
     def create_store(self, run_id: str) -> ArtifactStore:
-        """Create a filesystem-backed artifact store.
-
-        Raises:
-            NotImplementedError: LocalFilesystemStore not yet implemented (Step 1.3).
-
-        """
-        raise NotImplementedError(
-            "LocalFilesystemStore not yet implemented. See Phase 1.3 of the "
-            "persistent artifact store design."
-        )
+        """Create a filesystem-backed artifact store."""
+        return LocalFilesystemStore(run_id=run_id, base_path=self.base_path)
 
 
 class RemoteStoreConfig(BaseModel):
