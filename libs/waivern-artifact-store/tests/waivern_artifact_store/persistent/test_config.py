@@ -38,11 +38,13 @@ class TestStoreConfigDiscriminatedUnion:
             StoreConfig.model_validate({"type": "invalid"})
 
     def test_create_store_delegates_to_inner_config(self) -> None:
+        from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
+
         config = StoreConfig.model_validate({"type": "memory"})
 
-        # Should raise NotImplementedError from inner MemoryStoreConfig
-        with pytest.raises(NotImplementedError, match="AsyncInMemoryStore"):
-            config.create_store(run_id="test-run")
+        store = config.create_store(run_id="test-run")
+
+        assert isinstance(store, AsyncInMemoryStore)
 
 
 class TestMemoryStoreConfig:
@@ -53,11 +55,15 @@ class TestMemoryStoreConfig:
 
         assert config.type == "memory"
 
-    def test_create_store_raises_not_implemented(self) -> None:
+    def test_create_store_returns_async_in_memory_store(self) -> None:
+        from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
+
         config = MemoryStoreConfig()
 
-        with pytest.raises(NotImplementedError, match="AsyncInMemoryStore"):
-            config.create_store(run_id="test-run")
+        store = config.create_store(run_id="test-run")
+
+        assert isinstance(store, AsyncInMemoryStore)
+        assert store.run_id == "test-run"
 
 
 class TestFilesystemStoreConfig:

@@ -15,9 +15,11 @@ from waivern_artifact_store.persistent.config import (
     StoreConfig,
 )
 from waivern_artifact_store.persistent.filesystem import LocalFilesystemStore
+from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
 
 __all__ = [
     "ArtifactStore",
+    "AsyncInMemoryStore",
     "FilesystemStoreConfig",
     "LocalFilesystemStore",
     "MemoryStoreConfig",

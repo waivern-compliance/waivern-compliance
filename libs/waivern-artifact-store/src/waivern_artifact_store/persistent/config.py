@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 from waivern_artifact_store.persistent.base import ArtifactStore
 from waivern_artifact_store.persistent.filesystem import LocalFilesystemStore
+from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
 
 
 class StoreConfigProtocol(Protocol):
@@ -29,16 +30,8 @@ class MemoryStoreConfig(BaseModel):
     type: Literal["memory"] = "memory"
 
     def create_store(self, run_id: str) -> ArtifactStore:
-        """Create an in-memory artifact store.
-
-        Raises:
-            NotImplementedError: AsyncInMemoryStore not yet implemented (Step 1.4).
-
-        """
-        raise NotImplementedError(
-            "AsyncInMemoryStore not yet implemented. See Phase 1.4 of the "
-            "persistent artifact store design."
-        )
+        """Create an in-memory artifact store."""
+        return AsyncInMemoryStore(run_id=run_id)
 
 
 class FilesystemStoreConfig(BaseModel):
