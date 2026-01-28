@@ -8,8 +8,8 @@ import pytest
 
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
 from waivern_artifact_store.factory import ArtifactStoreFactory
-from waivern_artifact_store.persistent.filesystem import LocalFilesystemStore
-from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
+from waivern_artifact_store.filesystem import LocalFilesystemStore
+from waivern_artifact_store.in_memory import AsyncInMemoryStore
 
 ENV_VARS = [
     "WAIVERN_STORE_TYPE",

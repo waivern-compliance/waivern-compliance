@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 
-from waivern_artifact_store.persistent.base import ArtifactStore
+from waivern_artifact_store.base import ArtifactStore
 from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 from waivern_core.services import ComponentRegistry
 

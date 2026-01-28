@@ -13,8 +13,8 @@ from waivern_artifact_store.configuration import (
     MemoryStoreConfig,
     RemoteStoreConfig,
 )
-from waivern_artifact_store.persistent.filesystem import LocalFilesystemStore
-from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
+from waivern_artifact_store.filesystem import LocalFilesystemStore
+from waivern_artifact_store.in_memory import AsyncInMemoryStore
 
 # =============================================================================
 # Discriminated Union Tests (type-based config selection)

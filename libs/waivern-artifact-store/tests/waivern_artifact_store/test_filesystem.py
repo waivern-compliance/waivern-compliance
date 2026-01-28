@@ -8,7 +8,7 @@ from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
 from waivern_artifact_store.errors import ArtifactNotFoundError
-from waivern_artifact_store.persistent.filesystem import LocalFilesystemStore
+from waivern_artifact_store.filesystem import LocalFilesystemStore
 
 # =============================================================================
 # Save Tests (file creation, directory handling, upsert semantics)

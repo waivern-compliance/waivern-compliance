@@ -10,8 +10,8 @@ import logging
 
 from pydantic import ValidationError
 
+from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
-from waivern_artifact_store.persistent.base import ArtifactStore
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
 from waivern_artifact_store.errors import ArtifactNotFoundError
-from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
+from waivern_artifact_store.in_memory import AsyncInMemoryStore
 
 # =============================================================================
 # Save Tests (storage and upsert semantics)

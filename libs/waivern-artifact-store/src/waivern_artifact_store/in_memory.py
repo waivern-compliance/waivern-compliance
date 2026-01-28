@@ -10,8 +10,8 @@ from typing import override
 
 from waivern_core.message import Message
 
+from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.errors import ArtifactNotFoundError
-from waivern_artifact_store.persistent.base import ArtifactStore
 
 
 class AsyncInMemoryStore(ArtifactStore):

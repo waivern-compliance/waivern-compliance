@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from waivern_core.services import ServiceContainer, ServiceDescriptor
 
+from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
 from waivern_artifact_store.factory import ArtifactStoreFactory
-from waivern_artifact_store.persistent.base import ArtifactStore
-from waivern_artifact_store.persistent.in_memory import AsyncInMemoryStore
+from waivern_artifact_store.in_memory import AsyncInMemoryStore
 
 # =============================================================================
 # Service Composition Tests (singleton behaviour)
