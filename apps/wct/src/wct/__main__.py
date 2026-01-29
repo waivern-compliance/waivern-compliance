@@ -118,7 +118,7 @@ def run(  # noqa: PLR0913 - CLI entry point with many options
     execute_runbook_command(runbook, output_dir, output, verbose, log_level, exporter)
 
 
-@app.command(name="ls-connectors")
+@app.command(name="connectors")
 def list_available_connectors(
     log_level: Annotated[
         str,
@@ -133,7 +133,7 @@ def list_available_connectors(
     list_connectors_command(log_level)
 
 
-@app.command(name="ls-processors")
+@app.command(name="processors")
 def list_available_processors(
     log_level: Annotated[
         str,
@@ -148,7 +148,7 @@ def list_available_processors(
     list_processors_command(log_level)
 
 
-@app.command(name="ls-exporters")
+@app.command(name="exporters")
 def list_available_exporters(
     log_level: Annotated[
         str,
@@ -163,7 +163,7 @@ def list_available_exporters(
     list_exporters_command(log_level)
 
 
-@app.command(name="ls-rulesets")
+@app.command(name="rulesets")
 def list_available_rulesets(
     log_level: Annotated[
         str,

@@ -44,7 +44,7 @@ The `wct export` command requires access to the original `ExecutionResult` and `
    - Exporter protocol and registry
    - Auto-detection based on compliance frameworks
    - Manual override via `--exporter` flag
-   - Exporter listing via `wct ls-exporters`
+   - Exporter listing via `wct exporters`
 
 ## Design Considerations
 

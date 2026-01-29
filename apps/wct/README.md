@@ -82,8 +82,8 @@ See the [main README](../../README.md) for installation and usage instructions.
 ```bash
 # From workspace root
 uv run wct run runbooks/samples/file_content_analysis.yaml
-uv run wct ls-connectors
-uv run wct ls-processors
+uv run wct connectors
+uv run wct processors
 ```
 
 ## Testing

@@ -68,8 +68,8 @@ uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml -v
 
 ```bash
 # List components
-uv run wct ls-connectors
-uv run wct ls-processors    # Lists analysers
+uv run wct connectors
+uv run wct processors       # Lists analysers
 
 # Validate runbook
 uv run wct validate-runbook apps/wct/runbooks/samples/file_content_analysis.yaml

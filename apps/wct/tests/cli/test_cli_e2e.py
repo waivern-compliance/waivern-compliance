@@ -376,9 +376,9 @@ class TestWCTCLIE2E:
 
     def test_wct_cli_lists_available_connectors(self) -> None:
         """CLI lists available connectors with their names and descriptions."""
-        # Act - Execute ls-connectors command
+        # Act - Execute connectors command
         result = subprocess.run(
-            ["uv", "run", "wct", "ls-connectors"],  # noqa: S607
+            ["uv", "run", "wct", "connectors"],  # noqa: S607
             capture_output=True,
             text=True,
             timeout=30,
@@ -387,7 +387,7 @@ class TestWCTCLIE2E:
 
         # Assert - Command should succeed
         assert result.returncode == 0, (
-            f"wct ls-connectors failed with return code {result.returncode}.\n"
+            f"wct connectors failed with return code {result.returncode}.\n"
             f"STDOUT: {result.stdout}\n"
             f"STDERR: {result.stderr}"
         )
@@ -402,9 +402,9 @@ class TestWCTCLIE2E:
 
     def test_wct_cli_lists_available_processors(self) -> None:
         """CLI lists available processors with their names and descriptions."""
-        # Act - Execute ls-processors command
+        # Act - Execute processors command
         result = subprocess.run(
-            ["uv", "run", "wct", "ls-processors"],  # noqa: S607
+            ["uv", "run", "wct", "processors"],  # noqa: S607
             capture_output=True,
             text=True,
             timeout=30,
@@ -413,7 +413,7 @@ class TestWCTCLIE2E:
 
         # Assert - Command should succeed
         assert result.returncode == 0, (
-            f"wct ls-processors failed with return code {result.returncode}.\n"
+            f"wct processors failed with return code {result.returncode}.\n"
             f"STDOUT: {result.stdout}\n"
             f"STDERR: {result.stderr}"
         )
@@ -428,9 +428,9 @@ class TestWCTCLIE2E:
 
     def test_wct_cli_lists_available_exporters(self) -> None:
         """CLI lists available exporters with their supported frameworks."""
-        # Act - Execute ls-exporters command
+        # Act - Execute exporters command
         result = subprocess.run(
-            ["uv", "run", "wct", "ls-exporters"],  # noqa: S607
+            ["uv", "run", "wct", "exporters"],  # noqa: S607
             capture_output=True,
             text=True,
             timeout=30,
@@ -439,7 +439,7 @@ class TestWCTCLIE2E:
 
         # Assert - Command should succeed
         assert result.returncode == 0, (
-            f"wct ls-exporters failed with return code {result.returncode}.\\n"
+            f"wct exporters failed with return code {result.returncode}.\\n"
             f"STDOUT: {result.stdout}\\n"
             f"STDERR: {result.stderr}"
         )
@@ -456,9 +456,9 @@ class TestWCTCLIE2E:
 
     def test_wct_cli_lists_available_rulesets(self) -> None:
         """CLI lists available rulesets with their names, versions, and rule types."""
-        # Act - Execute ls-rulesets command
+        # Act - Execute rulesets command
         result = subprocess.run(
-            ["uv", "run", "wct", "ls-rulesets"],  # noqa: S607
+            ["uv", "run", "wct", "rulesets"],  # noqa: S607
             capture_output=True,
             text=True,
             timeout=30,
@@ -467,7 +467,7 @@ class TestWCTCLIE2E:
 
         # Assert - Command should succeed
         assert result.returncode == 0, (
-            f"wct ls-rulesets failed with return code {result.returncode}.\n"
+            f"wct rulesets failed with return code {result.returncode}.\n"
             f"STDOUT: {result.stdout}\n"
             f"STDERR: {result.stderr}"
         )

@@ -559,11 +559,11 @@ def export(
     # ... export logic ...
 ```
 
-### New `wct ls-exporters` Command
+### New `wct exporters` Command
 
 ```python
 @app.command()
-def ls_exporters():
+def exporters():
     """List available exporters."""
     exporters = ExporterRegistry.list_exporters()
 
@@ -609,7 +609,7 @@ apps/wct/src/wct/
 7. ✅ Implement `JsonExporter`
 8. ✅ Add `--exporter` flag to `wct run`
 9. ⏸️ Add `wct export` command - **DEFERRED** (see [Export Re-Export Command](./export-re-export-command.md))
-10. ✅ Add `wct ls-exporters` command
+10. ✅ Add `wct exporters` command
 11. ✅ Register exporters at app startup
 
 ### Task D: Organisation Config Enhancement

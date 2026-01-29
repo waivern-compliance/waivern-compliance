@@ -93,8 +93,8 @@ uv run pytest -m integration        # Integration tests (requires API keys)
 # WCT CLI
 uv run wct run <runbook.yaml>       # Run analysis
 uv run wct run <runbook.yaml> -v    # Verbose
-uv run wct ls-connectors            # List connectors
-uv run wct ls-processors            # List processors
+uv run wct connectors               # List connectors
+uv run wct processors               # List processors
 uv run wct validate-runbook <file>  # Validate runbook
 uv run wct test-llm                 # Test LLM config
 ```

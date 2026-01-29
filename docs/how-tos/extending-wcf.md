@@ -133,7 +133,7 @@ def create_my_connector_factory():
 4. Users can use them in runbooks immediately
 
 ```bash
-$ wct ls-connectors
+$ wct connectors
 Available Connectors:
 [local] mysql
 [local] sqlite
