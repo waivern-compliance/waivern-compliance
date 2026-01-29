@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import override
 
+from waivern_core import JsonValue
 from waivern_core.message import Message
 
 from waivern_artifact_store.base import ArtifactStore
@@ -31,12 +32,20 @@ class AsyncInMemoryStore(ArtifactStore):
         """Initialise in-memory store."""
         # Storage: run_id -> key -> Message
         self._storage: dict[str, dict[str, Message]] = {}
+        # JSON storage: run_id -> key -> dict (for system metadata)
+        self._json_storage: dict[str, dict[str, dict[str, JsonValue]]] = {}
 
     def _get_run_storage(self, run_id: str) -> dict[str, Message]:
         """Get or create storage dict for a run."""
         if run_id not in self._storage:
             self._storage[run_id] = {}
         return self._storage[run_id]
+
+    def _get_json_run_storage(self, run_id: str) -> dict[str, dict[str, JsonValue]]:
+        """Get or create JSON storage dict for a run."""
+        if run_id not in self._json_storage:
+            self._json_storage[run_id] = {}
+        return self._json_storage[run_id]
 
     @override
     async def save(self, run_id: str, key: str, message: Message) -> None:
@@ -96,3 +105,30 @@ class AsyncInMemoryStore(ArtifactStore):
         """Remove all artifacts for a run."""
         if run_id in self._storage:
             self._storage[run_id].clear()
+        if run_id in self._json_storage:
+            self._json_storage[run_id].clear()
+
+    @override
+    async def save_json(
+        self, run_id: str, key: str, data: dict[str, JsonValue]
+    ) -> None:
+        """Store raw JSON data by key.
+
+        Uses upsert semantics - overwrites if key already exists.
+        """
+        self._get_json_run_storage(run_id)[key] = data
+
+    @override
+    async def get_json(self, run_id: str, key: str) -> dict[str, JsonValue]:
+        """Retrieve raw JSON data by key.
+
+        Raises:
+            ArtifactNotFoundError: If data with key does not exist.
+
+        """
+        json_storage = self._get_json_run_storage(run_id)
+        if key not in json_storage:
+            raise ArtifactNotFoundError(
+                f"JSON data '{key}' not found in run '{run_id}'."
+            )
+        return json_storage[key]

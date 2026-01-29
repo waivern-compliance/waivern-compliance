@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from waivern_core import JsonValue
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
@@ -358,3 +359,62 @@ class TestLocalFilesystemStoreRunIsolation:
 
         assert not await store.exists("run-1", "artifact")
         assert await store.exists("run-2", "artifact")
+
+
+# =============================================================================
+# JSON Storage Tests (raw dict storage for system metadata)
+# =============================================================================
+
+
+class TestLocalFilesystemStoreSaveJson:
+    """Tests for the save_json() method."""
+
+    async def test_save_json_creates_file_with_content(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        data: dict[str, JsonValue] = {"status": "running", "count": 42}
+
+        await store.save_json("test-run", "_system/state", data)
+
+        expected_path = tmp_path / "runs" / "test-run" / "_system" / "state.json"
+        assert expected_path.exists()
+        with expected_path.open() as f:
+            saved_data = json.load(f)
+        assert saved_data == {"status": "running", "count": 42}
+
+    async def test_save_json_with_hierarchical_key_creates_nested_dirs(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        data: dict[str, JsonValue] = {"nested": True}
+
+        await store.save_json("test-run", "_system/deep/state", data)
+
+        expected_path = (
+            tmp_path / "runs" / "test-run" / "_system" / "deep" / "state.json"
+        )
+        assert expected_path.exists()
+        assert expected_path.parent.is_dir()
+
+
+class TestLocalFilesystemStoreGetJson:
+    """Tests for the get_json() method."""
+
+    async def test_get_json_returns_previously_saved_data(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        original_data: dict[str, JsonValue] = {
+            "completed": ["artifact_a"],
+            "metadata": {"nested": {"deep": True}},
+        }
+        await store.save_json("test-run", "_system/state", original_data)
+
+        retrieved = await store.get_json("test-run", "_system/state")
+
+        assert retrieved == original_data
+
+    async def test_get_json_raises_artifact_not_found_for_missing_key(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        with pytest.raises(ArtifactNotFoundError):
+            await store.get_json("test-run", "_system/nonexistent")

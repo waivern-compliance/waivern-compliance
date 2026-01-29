@@ -1,6 +1,7 @@
 """Tests for AsyncInMemoryStore implementation."""
 
 import pytest
+from waivern_core import JsonValue
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
@@ -251,3 +252,64 @@ class TestAsyncInMemoryStoreRunIsolation:
 
         assert not await store.exists("run-1", "artifact")
         assert await store.exists("run-2", "artifact")
+
+
+# =============================================================================
+# JSON Storage Tests (raw dict storage for system metadata)
+# =============================================================================
+
+
+class TestAsyncInMemoryStoreSaveJson:
+    """Tests for the save_json() method."""
+
+    async def test_save_json_stores_data_retrievable_by_get_json(self) -> None:
+        store = AsyncInMemoryStore()
+        data: dict[str, JsonValue] = {"status": "running", "count": 42}
+
+        await store.save_json("test-run", "_system/state", data)
+
+        retrieved = await store.get_json("test-run", "_system/state")
+        assert retrieved == {"status": "running", "count": 42}
+
+    async def test_save_json_overwrites_existing_data(self) -> None:
+        store = AsyncInMemoryStore()
+        original: dict[str, JsonValue] = {"version": "1.0"}
+        updated: dict[str, JsonValue] = {"version": "2.0"}
+
+        await store.save_json("test-run", "_system/state", original)
+        await store.save_json("test-run", "_system/state", updated)
+
+        retrieved = await store.get_json("test-run", "_system/state")
+        assert retrieved == {"version": "2.0"}
+
+    async def test_save_json_with_nested_data_preserves_structure(self) -> None:
+        store = AsyncInMemoryStore()
+        data: dict[str, JsonValue] = {
+            "completed": ["artifact_a", "artifact_b"],
+            "metadata": {"nested": {"deep": True}},
+            "count": 42,
+            "active": False,
+            "nullable": None,
+        }
+
+        await store.save_json("test-run", "_system/state", data)
+
+        retrieved = await store.get_json("test-run", "_system/state")
+        assert retrieved == data
+        assert retrieved["completed"] == ["artifact_a", "artifact_b"]
+        # Type narrowing for nested access
+        metadata = retrieved["metadata"]
+        assert isinstance(metadata, dict)
+        nested = metadata["nested"]
+        assert isinstance(nested, dict)
+        assert nested["deep"] is True
+
+
+class TestAsyncInMemoryStoreGetJson:
+    """Tests for the get_json() method."""
+
+    async def test_get_json_raises_artifact_not_found_for_missing_key(self) -> None:
+        store = AsyncInMemoryStore()
+
+        with pytest.raises(ArtifactNotFoundError):
+            await store.get_json("test-run", "_system/nonexistent")
