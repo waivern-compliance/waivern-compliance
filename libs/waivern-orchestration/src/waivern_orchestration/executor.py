@@ -26,6 +26,7 @@ from waivern_orchestration.models import (
     SourceConfig,
 )
 from waivern_orchestration.planner import ExecutionPlan
+from waivern_orchestration.state import ExecutionState
 from waivern_orchestration.utils import get_origin_from_artifact_id
 
 logger = logging.getLogger(__name__)
@@ -37,10 +38,10 @@ class _ExecutionContext:
 
     run_id: str
     store: ArtifactStore
+    state: ExecutionState
     semaphore: asyncio.Semaphore
     thread_pool: ThreadPoolExecutor
     results: dict[str, Message] = field(default_factory=dict)
-    skipped: set[str] = field(default_factory=set)
 
 
 class DAGExecutor:
@@ -74,6 +75,10 @@ class DAGExecutor:
         # Get fresh ArtifactStore from container (requires transient lifetime)
         store = self._registry.container.get_service(ArtifactStore)
 
+        # Create fresh execution state tracking all artifacts
+        artifact_ids = set(plan.runbook.artifacts.keys())
+        state = ExecutionState.fresh(artifact_ids)
+
         # Create thread pool for sync->async bridging
         logger.debug(
             "Creating ThreadPoolExecutor with max_workers=%d", config.max_concurrency
@@ -82,6 +87,7 @@ class DAGExecutor:
             ctx = _ExecutionContext(
                 run_id=run_id,
                 store=store,
+                state=state,
                 semaphore=asyncio.Semaphore(config.max_concurrency),
                 thread_pool=thread_pool,
             )
@@ -91,7 +97,7 @@ class DAGExecutor:
                     await self._execute_dag(plan, ctx)
             except TimeoutError:
                 # Mark all remaining artifacts as skipped due to timeout
-                self._mark_remaining_as_skipped(plan, ctx)
+                await self._mark_remaining_as_skipped(plan, ctx)
                 logger.warning("Execution timed out after %d seconds", config.timeout)
 
         logger.debug("ThreadPoolExecutor shutdown complete")
@@ -100,7 +106,7 @@ class DAGExecutor:
             run_id=run_id,
             start_timestamp=start_timestamp,
             artifacts=ctx.results,
-            skipped=ctx.skipped,
+            skipped=ctx.state.skipped,
             total_duration_seconds=total_duration,
         )
 
@@ -114,58 +120,109 @@ class DAGExecutor:
         sorter = plan.dag.create_sorter()
 
         while sorter.is_active():
-            # Get ready artifacts once (store result to avoid multiple calls)
-            all_ready = list(sorter.get_ready())
-            ready = [aid for aid in all_ready if aid not in ctx.skipped]
+            ready, skipped_in_batch = self._partition_ready_artifacts(
+                list(sorter.get_ready()), ctx
+            )
 
             # Mark skipped artifacts as done immediately so sorter can progress
-            skipped_in_batch = [aid for aid in all_ready if aid in ctx.skipped]
-            if skipped_in_batch:
-                logger.debug("Marking skipped artifacts as done: %s", skipped_in_batch)
-                for aid in skipped_in_batch:
-                    sorter.done(aid)
+            for aid in skipped_in_batch:
+                sorter.done(aid)
 
             if not ready:
                 continue
 
             logger.debug("Starting batch execution for artifacts: %s", ready)
             tasks = [self._produce(aid, plan, ctx) for aid in ready]
-
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
             logger.debug("Batch execution complete for artifacts: %s", ready)
 
             for aid, result in zip(ready, batch_results, strict=True):
-                if isinstance(result, BaseException):
-                    # Create error Message for unexpected exceptions
-                    _, output_schema = plan.artifact_schemas[aid]
-                    definition = plan.runbook.artifacts[aid]
-                    error_message = self._create_error_message(
-                        artifact_id=aid,
-                        schema=output_schema,
-                        execution_context=ExecutionContext(
-                            status="error",
-                            error=str(result),
-                            duration_seconds=0.0,
-                            origin=self._determine_origin(aid),
-                            alias=self._find_alias(aid, plan),
-                        ),
-                        run_id=ctx.run_id,
-                        source=self._determine_source(definition),
-                    )
-                    ctx.results[aid] = error_message
-                    # Skip all dependents of failed artifact
-                    self._skip_dependents(aid, plan, ctx)
-                else:
-                    ctx.results[aid] = result
-                    # Check if this artifact failed (status="error")
-                    exec_ctx = (
-                        result.extensions.execution if result.extensions else None
-                    )
-                    if exec_ctx and exec_ctx.status == "error":
-                        self._skip_dependents(aid, plan, ctx)
+                await self._handle_artifact_result(aid, result, plan, ctx)
                 sorter.done(aid)
 
         logger.debug("DAG execution complete")
+
+    def _partition_ready_artifacts(
+        self,
+        all_ready: list[str],
+        ctx: _ExecutionContext,
+    ) -> tuple[list[str], list[str]]:
+        """Partition ready artifacts into executable and already-skipped.
+
+        Returns:
+            Tuple of (ready_to_execute, already_skipped).
+
+        """
+        ready = [aid for aid in all_ready if aid not in ctx.state.skipped]
+        skipped = [aid for aid in all_ready if aid in ctx.state.skipped]
+
+        if skipped:
+            logger.debug("Marking skipped artifacts as done: %s", skipped)
+
+        return ready, skipped
+
+    async def _handle_artifact_result(
+        self,
+        artifact_id: str,
+        result: Message | BaseException,
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+    ) -> None:
+        """Handle the result of producing an artifact.
+
+        Updates ctx.results with the message and persists state transitions.
+        On failure, skips all dependent artifacts.
+
+        """
+        if isinstance(result, BaseException):
+            message = self._create_error_message_for_exception(
+                artifact_id, result, plan, ctx
+            )
+            ctx.results[artifact_id] = message
+            await self._mark_failed_and_skip_dependents(artifact_id, plan, ctx)
+        elif not result.is_success:
+            # Artifact returned an error message (status != "success")
+            ctx.results[artifact_id] = result
+            await self._mark_failed_and_skip_dependents(artifact_id, plan, ctx)
+        else:
+            ctx.results[artifact_id] = result
+            ctx.state.mark_completed(artifact_id)
+            await ctx.state.save(ctx.store, ctx.run_id)
+
+    def _create_error_message_for_exception(
+        self,
+        artifact_id: str,
+        exception: BaseException,
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+    ) -> Message:
+        """Create an error Message for an unexpected exception during production."""
+        _, output_schema = plan.artifact_schemas[artifact_id]
+        definition = plan.runbook.artifacts[artifact_id]
+
+        return self._create_error_message(
+            schema=output_schema,
+            execution_context=ExecutionContext(
+                status="error",
+                error=str(exception),
+                duration_seconds=0.0,
+                origin=self._determine_origin(artifact_id),
+                alias=self._find_alias(artifact_id, plan),
+            ),
+            run_id=ctx.run_id,
+            source=self._determine_source(definition),
+        )
+
+    async def _mark_failed_and_skip_dependents(
+        self,
+        artifact_id: str,
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+    ) -> None:
+        """Mark artifact as failed, persist state, and skip all dependents."""
+        ctx.state.mark_failed(artifact_id)
+        await ctx.state.save(ctx.store, ctx.run_id)
+        await self._skip_dependents(artifact_id, plan, ctx)
 
     async def _produce(
         self,
@@ -240,7 +297,6 @@ class DAGExecutor:
                     logger.warning("Optional artifact '%s' failed: %s", artifact_id, e)
 
                 return self._create_error_message(
-                    artifact_id=artifact_id,
                     schema=output_schema,
                     execution_context=ExecutionContext(
                         status="error",
@@ -253,32 +309,41 @@ class DAGExecutor:
                     source=self._determine_source(definition),
                 )
 
-    def _skip_dependents(
+    async def _skip_dependents(
         self,
         artifact_id: str,
         plan: ExecutionPlan,
         ctx: _ExecutionContext,
     ) -> None:
         """Mark all dependents of a failed artifact as skipped (transitively)."""
-        # Use iterative BFS to avoid stack overflow on deep chains
-        to_skip = list(plan.dag.get_dependents(artifact_id))
-        while to_skip:
-            dep = to_skip.pop()
-            if dep not in ctx.skipped:
-                ctx.skipped.add(dep)
-                # Add transitive dependents
-                to_skip.extend(plan.dag.get_dependents(dep))
+        # Collect all dependents to skip using BFS
+        to_process = list(plan.dag.get_dependents(artifact_id))
+        dependents_to_skip: set[str] = set()
 
-    def _mark_remaining_as_skipped(
+        while to_process:
+            dep = to_process.pop()
+            if dep not in ctx.state.skipped and dep not in dependents_to_skip:
+                dependents_to_skip.add(dep)
+                # Add transitive dependents
+                to_process.extend(plan.dag.get_dependents(dep))
+
+        # Mark all collected dependents as skipped and persist
+        if dependents_to_skip:
+            ctx.state.mark_skipped(dependents_to_skip)
+            await ctx.state.save(ctx.store, ctx.run_id)
+
+    async def _mark_remaining_as_skipped(
         self,
         plan: ExecutionPlan,
         ctx: _ExecutionContext,
     ) -> None:
         """Mark all artifacts not yet completed as skipped due to timeout."""
         all_artifacts = set(plan.runbook.artifacts.keys())
-        completed = set(ctx.results.keys())
-        remaining = all_artifacts - completed - ctx.skipped
-        ctx.skipped.update(remaining)
+        completed = ctx.state.completed
+        remaining = all_artifacts - completed - ctx.state.skipped - ctx.state.failed
+        if remaining:
+            ctx.state.mark_skipped(remaining)
+            await ctx.state.save(ctx.store, ctx.run_id)
 
     async def _run_connector(
         self,
@@ -420,7 +485,6 @@ class DAGExecutor:
 
     def _create_error_message(
         self,
-        artifact_id: str,
         schema: Schema,
         execution_context: ExecutionContext,
         run_id: str,
@@ -429,7 +493,6 @@ class DAGExecutor:
         """Create a Message representing a failed artifact execution.
 
         Args:
-            artifact_id: The artifact ID that failed.
             schema: The intended output schema.
             execution_context: Pre-built execution context with error status.
             run_id: The run identifier for correlation.
