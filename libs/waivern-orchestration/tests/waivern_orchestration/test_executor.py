@@ -8,6 +8,7 @@ import asyncio
 from typing import Any
 from unittest.mock import MagicMock
 
+from waivern_artifact_store import ArtifactStore
 from waivern_core import Message
 from waivern_core.schemas import Schema
 
@@ -463,3 +464,162 @@ class TestDAGExecutorProcess:
         assert "nonexistent_processor" in (
             result.artifacts["processed"].execution_error or ""
         )
+
+
+# =============================================================================
+# Artifact Metadata (run_id, source, extensions)
+# =============================================================================
+
+
+class TestDAGExecutorArtifactMetadata:
+    """Tests for artifact metadata population (run_id, source, extensions)."""
+
+    def test_stored_artifact_has_run_id(self) -> None:
+        """Stored artifact includes run_id for correlation."""
+        output_schema = Schema("standard_input", "1.0.0")
+        message = create_test_message({"files": []})
+
+        connector_factory = create_mock_connector_factory(
+            "filesystem", [output_schema], message
+        )
+
+        artifacts = {
+            "data": ArtifactDefinition(
+                source=SourceConfig(type="filesystem", properties={})
+            )
+        }
+        plan = create_simple_plan(artifacts, {"data": (None, output_schema)})
+
+        registry = create_mock_registry(
+            with_container=True, connector_factories={"filesystem": connector_factory}
+        )
+        executor = DAGExecutor(registry)
+
+        # Act
+        result = asyncio.run(executor.execute(plan))
+
+        # Assert - run_id should be set on the result and match stored artifact
+        assert result.run_id is not None
+        store = registry.container.get_service(ArtifactStore)
+        stored = asyncio.run(store.get(result.run_id, "data"))
+        assert stored.run_id == result.run_id
+
+    def test_stored_artifact_has_source_for_connector(self) -> None:
+        """Stored artifact has source field indicating connector type."""
+        output_schema = Schema("standard_input", "1.0.0")
+        message = create_test_message({"files": []})
+
+        connector_factory = create_mock_connector_factory(
+            "filesystem", [output_schema], message
+        )
+
+        artifacts = {
+            "data": ArtifactDefinition(
+                source=SourceConfig(type="filesystem", properties={})
+            )
+        }
+        plan = create_simple_plan(artifacts, {"data": (None, output_schema)})
+
+        registry = create_mock_registry(
+            with_container=True, connector_factories={"filesystem": connector_factory}
+        )
+        executor = DAGExecutor(registry)
+
+        # Act
+        result = asyncio.run(executor.execute(plan))
+
+        # Assert - source should be "connector:filesystem"
+        store = registry.container.get_service(ArtifactStore)
+        stored = asyncio.run(store.get(result.run_id, "data"))
+        assert stored.source == "connector:filesystem"
+
+    def test_stored_artifact_has_source_for_processor(self) -> None:
+        """Stored artifact has source field indicating processor type."""
+        source_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("personal_data_finding", "1.0.0")
+
+        source_message = create_test_message({"files": []})
+        processed_message = Message(
+            id="processed",
+            content={"findings": []},
+            schema=output_schema,
+        )
+
+        connector_factory = create_mock_connector_factory(
+            "filesystem", [source_schema], source_message
+        )
+
+        processor_factory = MagicMock()
+        mock_processor_class = MagicMock()
+        mock_processor_class.get_name.return_value = "personal_data"
+        mock_processor_class.get_supported_output_schemas.return_value = [output_schema]
+        processor_factory.component_class = mock_processor_class
+        mock_processor = MagicMock()
+        mock_processor.process.return_value = processed_message
+        processor_factory.create.return_value = mock_processor
+
+        artifacts = {
+            "source": ArtifactDefinition(
+                source=SourceConfig(type="filesystem", properties={})
+            ),
+            "findings": ArtifactDefinition(
+                inputs="source",
+                process=ProcessConfig(type="personal_data", properties={}),
+            ),
+        }
+        plan = create_simple_plan(
+            artifacts,
+            {
+                "source": (None, source_schema),
+                "findings": (source_schema, output_schema),
+            },
+        )
+
+        registry = create_mock_registry(
+            with_container=True,
+            connector_factories={"filesystem": connector_factory},
+            processor_factories={"personal_data": processor_factory},
+        )
+        executor = DAGExecutor(registry)
+
+        # Act
+        result = asyncio.run(executor.execute(plan))
+
+        # Assert - source should be "processor:personal_data"
+        store = registry.container.get_service(ArtifactStore)
+        stored = asyncio.run(store.get(result.run_id, "findings"))
+        assert stored.source == "processor:personal_data"
+
+    def test_stored_artifact_has_execution_context(self) -> None:
+        """Stored artifact includes ExecutionContext with status and duration."""
+        output_schema = Schema("standard_input", "1.0.0")
+        message = create_test_message({"files": []})
+
+        connector_factory = create_mock_connector_factory(
+            "filesystem", [output_schema], message
+        )
+
+        artifacts = {
+            "data": ArtifactDefinition(
+                source=SourceConfig(type="filesystem", properties={})
+            )
+        }
+        plan = create_simple_plan(artifacts, {"data": (None, output_schema)})
+
+        registry = create_mock_registry(
+            with_container=True, connector_factories={"filesystem": connector_factory}
+        )
+        executor = DAGExecutor(registry)
+
+        # Act
+        result = asyncio.run(executor.execute(plan))
+
+        # Assert - extensions.execution should be populated
+        store = registry.container.get_service(ArtifactStore)
+        stored = asyncio.run(store.get(result.run_id, "data"))
+
+        assert stored.extensions is not None
+        assert stored.extensions.execution is not None
+        assert stored.extensions.execution.status == "success"
+        assert stored.extensions.execution.duration_seconds is not None
+        assert stored.extensions.execution.duration_seconds >= 0

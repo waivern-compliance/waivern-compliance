@@ -91,7 +91,10 @@ def create_mock_processor_factory(
 
 
 def create_container_with_store() -> ServiceContainer:
-    """Create a ServiceContainer with transient ArtifactStore.
+    """Create a ServiceContainer with singleton ArtifactStore.
+
+    Uses singleton lifetime so the same store instance is shared between
+    executor and tests, allowing verification of stored artifacts.
 
     Returns:
         ServiceContainer configured with AsyncInMemoryStore.
@@ -101,7 +104,7 @@ def create_container_with_store() -> ServiceContainer:
     factory = ArtifactStoreFactory(config)
 
     container = ServiceContainer()
-    container.register(ServiceDescriptor(ArtifactStore, factory, "transient"))
+    container.register(ServiceDescriptor(ArtifactStore, factory, "singleton"))
 
     return container
 
