@@ -258,8 +258,8 @@ This enables real-time validation in VS Code, PyCharm, and other IDEs.
 List available connectors and processors:
 
 ```bash
-uv run wct ls-connectors
-uv run wct ls-processors
+uv run wct connectors
+uv run wct processors
 ```
 
 ### Connectors

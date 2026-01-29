@@ -631,7 +631,7 @@ def list_exporters_command(log_level: str = "INFO") -> None:
         logger.error("Failed to list exporters: %s", e)
         cli_error = CLIError(
             f"Unable to retrieve available exporters: {e}",
-            command="ls-exporters",
+            command="exporters",
             original_error=e,
         )
         error_panel = Panel(
@@ -667,7 +667,7 @@ def list_connectors_command(log_level: str = "INFO") -> None:
         logger.error("Failed to list connectors: %s", e)
         cli_error = CLIError(
             f"Unable to retrieve available connectors: {e}",
-            command="ls-connectors",
+            command="connectors",
             original_error=e,
         )
         error_panel = Panel(
@@ -703,7 +703,7 @@ def list_processors_command(log_level: str = "INFO") -> None:
         logger.error("Failed to list processors: %s", e)
         cli_error = CLIError(
             f"Unable to retrieve available processors: {e}",
-            command="ls-processors",
+            command="processors",
             original_error=e,
         )
         error_panel = Panel(
@@ -760,7 +760,7 @@ def list_rulesets_command(log_level: str = "INFO") -> None:
         logger.error("Failed to list rulesets: %s", e)
         cli_error = CLIError(
             f"Unable to retrieve available rulesets: {e}",
-            command="ls-rulesets",
+            command="rulesets",
             original_error=e,
         )
         error_panel = Panel(
