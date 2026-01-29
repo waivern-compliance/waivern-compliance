@@ -12,7 +12,6 @@ from pydantic import ValidationError
 
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
-from waivern_artifact_store.in_memory import InMemoryArtifactStore
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +41,7 @@ class ArtifactStoreFactory:
         )
 
         # Explicit configuration
-        config = ArtifactStoreConfiguration(backend="memory")
+        config = ArtifactStoreConfiguration.model_validate({"type": "filesystem"})
         container.register(
             ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(config), "singleton")
         )
@@ -85,8 +84,6 @@ class ArtifactStoreFactory:
         """Check if artifact store can be created with current configuration.
 
         Validates configuration by attempting to get or create it.
-        Configuration validation includes:
-        1. Backend is valid (currently only "memory" supported)
 
         Returns:
             True if service can be created, False otherwise.
@@ -106,18 +103,15 @@ class ArtifactStoreFactory:
             ArtifactStore instance, or None if service unavailable.
 
         """
-        # Get configuration
         config = self._get_config()
         if not config:
             logger.debug("Cannot create artifact store - configuration invalid")
             return None
 
-        if config.backend == "memory":
-            logger.info("Creating in-memory artifact store")
-            return InMemoryArtifactStore()
-        else:
-            logger.warning(
-                f"Unsupported artifact store backend: '{config.backend}'. "
-                f"Supported backends: 'memory'"
-            )
+        try:
+            store = config.create_store()
+            logger.info(f"Created artifact store: {type(store).__name__}")
+            return store
+        except NotImplementedError as e:
+            logger.warning(f"Cannot create artifact store: {e}")
             return None

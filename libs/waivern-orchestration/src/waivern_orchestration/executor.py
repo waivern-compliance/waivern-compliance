@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 class _ExecutionContext:
     """Internal context for a single execution run."""
 
+    run_id: str
     store: ArtifactStore
     semaphore: asyncio.Semaphore
     thread_pool: ThreadPoolExecutor
@@ -79,6 +80,7 @@ class DAGExecutor:
         )
         with ThreadPoolExecutor(max_workers=config.max_concurrency) as thread_pool:
             ctx = _ExecutionContext(
+                run_id=run_id,
                 store=store,
                 semaphore=asyncio.Semaphore(config.max_concurrency),
                 thread_pool=thread_pool,
@@ -136,6 +138,7 @@ class DAGExecutor:
                 if isinstance(result, BaseException):
                     # Create error Message for unexpected exceptions
                     _, output_schema = plan.artifact_schemas[aid]
+                    definition = plan.runbook.artifacts[aid]
                     error_message = self._create_error_message(
                         artifact_id=aid,
                         schema=output_schema,
@@ -146,6 +149,8 @@ class DAGExecutor:
                             origin=self._determine_origin(aid),
                             alias=self._find_alias(aid, plan),
                         ),
+                        run_id=ctx.run_id,
+                        source=self._determine_source(definition),
                     )
                     ctx.results[aid] = error_message
                     # Skip all dependents of failed artifact
@@ -197,20 +202,18 @@ class DAGExecutor:
                     message = await self._produce_derived(
                         definition,
                         output_schema,
-                        ctx.store,
-                        ctx.thread_pool,
+                        ctx,
                     )
 
-                ctx.store.save(artifact_id, message)
-
+                # Determine source component type
+                source = self._determine_source(definition)
                 duration = time.monotonic() - start_time
-                logger.debug(
-                    "Artifact %s completed successfully (%.2fs)", artifact_id, duration
-                )
 
-                # Create new Message with execution context (don't mutate original)
-                return replace(
+                # Add all metadata to the message before saving
+                message = replace(
                     message,
+                    run_id=ctx.run_id,
+                    source=source,
                     extensions=MessageExtensions(
                         execution=ExecutionContext(
                             status="success",
@@ -220,6 +223,13 @@ class DAGExecutor:
                         )
                     ),
                 )
+                await ctx.store.save(ctx.run_id, artifact_id, message)
+
+                logger.debug(
+                    "Artifact %s completed successfully (%.2fs)", artifact_id, duration
+                )
+
+                return message
 
             except Exception as e:
                 duration = time.monotonic() - start_time
@@ -239,6 +249,8 @@ class DAGExecutor:
                         origin=origin,
                         alias=alias,
                     ),
+                    run_id=ctx.run_id,
+                    source=self._determine_source(definition),
                 )
 
     def _skip_dependents(
@@ -319,16 +331,14 @@ class DAGExecutor:
         self,
         definition: ArtifactDefinition,
         output_schema: Schema,
-        store: ArtifactStore,
-        thread_pool: ThreadPoolExecutor,
+        ctx: _ExecutionContext,
     ) -> Message:
         """Produce a derived artifact from its inputs.
 
         Args:
             definition: The artifact definition with inputs.
             output_schema: The output schema for this artifact.
-            store: The artifact store containing upstream artifacts.
-            thread_pool: ThreadPoolExecutor for sync->async bridging.
+            ctx: The execution context containing store, run_id, and thread pool.
 
         Returns:
             The produced message.
@@ -341,15 +351,15 @@ class DAGExecutor:
 
         input_refs = [inputs] if isinstance(inputs, str) else inputs
 
-        # Retrieve input messages from store
-        input_messages = [store.get(ref) for ref in input_refs]
+        # Retrieve input messages from store (async)
+        input_messages = [await ctx.store.get(ctx.run_id, ref) for ref in input_refs]
 
         if definition.process is not None:
             return await self._run_processor(
                 definition.process,
                 input_messages,
                 output_schema,
-                thread_pool,
+                ctx.thread_pool,
             )
 
         # Passthrough: use first input (or merge for fan-in)
@@ -389,11 +399,32 @@ class DAGExecutor:
         """
         return plan.reversed_aliases.get(artifact_id)
 
+    def _determine_source(self, definition: ArtifactDefinition) -> str:
+        """Determine the source component type for an artifact.
+
+        Returns a string in the format 'connector:{type}' or 'processor:{type}'.
+
+        Args:
+            definition: The artifact definition.
+
+        Returns:
+            Source identifier string.
+
+        """
+        if definition.source is not None:
+            return f"connector:{definition.source.type}"
+        elif definition.process is not None:
+            return f"processor:{definition.process.type}"
+        else:
+            return "unknown"
+
     def _create_error_message(
         self,
         artifact_id: str,
         schema: Schema,
         execution_context: ExecutionContext,
+        run_id: str,
+        source: str,
     ) -> Message:
         """Create a Message representing a failed artifact execution.
 
@@ -401,6 +432,8 @@ class DAGExecutor:
             artifact_id: The artifact ID that failed.
             schema: The intended output schema.
             execution_context: Pre-built execution context with error status.
+            run_id: The run identifier for correlation.
+            source: The source component identifier.
 
         Returns:
             Message with empty content and error execution context.
@@ -410,6 +443,7 @@ class DAGExecutor:
             id=str(uuid.uuid4()),
             content={},
             schema=schema,
-            source=f"artifact:{artifact_id}",
+            run_id=run_id,
+            source=source,
             extensions=MessageExtensions(execution=execution_context),
         )

@@ -210,11 +210,11 @@ class DAGExecutor:
 
     async def execute(self, plan: ExecutionPlan) -> ExecutionResult:
         config = plan.runbook.config
+        run_id = str(uuid.uuid4())  # Generate unique run ID
         semaphore = asyncio.Semaphore(config.max_concurrency)
         thread_pool = ThreadPoolExecutor(max_workers=config.max_concurrency)
 
         store = self._registry.container.get_service(ArtifactStore)
-        store.clear()
 
         sorter = plan.dag.create_sorter()
         results: dict[str, Message] = {}
@@ -222,7 +222,7 @@ class DAGExecutor:
 
         while sorter.is_active():
             ready = [aid for aid in sorter.get_ready() if aid not in skipped]
-            tasks = [self._produce(aid, plan, store) for aid in ready]
+            tasks = [self._produce(aid, plan, store, run_id) for aid in ready]
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
 
             for aid, result in zip(ready, batch_results):
@@ -233,17 +233,22 @@ class DAGExecutor:
 
         return ExecutionResult(artifacts=results, skipped=skipped)
 
-    async def _produce(self, artifact_id: str, plan: ExecutionPlan, store: ArtifactStore) -> Message:
+    async def _produce(
+        self, artifact_id: str, plan: ExecutionPlan, store: ArtifactStore, run_id: str
+    ) -> Message:
         """Produce a single artifact."""
         defn = plan.artifact_definitions[artifact_id]
 
         if defn.source:
             message = await self._run_connector(defn.source)
         else:
-            input_messages = [store.get(ref) for ref in self._normalise_inputs(defn.inputs)]
+            input_messages = [
+                await store.get(run_id, ref)
+                for ref in self._normalise_inputs(defn.inputs)
+            ]
             message = await self._run_processor(defn.process, input_messages)
 
-        store.save(artifact_id, message)
+        await store.save(run_id, artifact_id, message)
 
         # Add execution context to message
         origin = get_origin_from_artifact_id(artifact_id)
@@ -255,25 +260,30 @@ class DAGExecutor:
 
 ### ArtifactStore
 
-In-memory storage for artifacts during execution:
+Async storage for artifacts with run-scoped isolation. The store is stateless—`run_id` is passed to each operation, enabling singleton stores compatible with standard DI patterns.
 
 ```python
 class ArtifactStore(ABC):
     @abstractmethod
-    def save(self, artifact_id: str, message: Message) -> None: ...
+    async def save(self, run_id: str, key: str, message: Message) -> None: ...
 
     @abstractmethod
-    def get(self, artifact_id: str) -> Message: ...
+    async def get(self, run_id: str, key: str) -> Message: ...
 
     @abstractmethod
-    def exists(self, artifact_id: str) -> bool: ...
+    async def exists(self, run_id: str, key: str) -> bool: ...
 
     @abstractmethod
-    def clear(self) -> None: ...
+    async def delete(self, run_id: str, key: str) -> None: ...
 
     @abstractmethod
-    def list_artifacts(self) -> list[str]: ...
+    async def list_keys(self, run_id: str, prefix: str = "") -> list[str]: ...
+
+    @abstractmethod
+    async def clear(self, run_id: str) -> None: ...
 ```
+
+See [Artifact Store Architecture](../../libs/waivern-artifact-store/docs/architecture.md) for detailed documentation.
 
 ## Schema Resolution
 

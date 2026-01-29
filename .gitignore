@@ -17,6 +17,9 @@ CLAUDE.local.md
 # Default analyses results output directory
 outputs/
 
+# Artifact store (execution artifacts, LLM cache)
+.waivern/
+
 # Environment variables
 .env
 

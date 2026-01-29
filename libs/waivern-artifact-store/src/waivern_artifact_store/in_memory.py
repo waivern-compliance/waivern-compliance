@@ -1,8 +1,11 @@
-"""In-memory artifact store implementation."""
+"""Async in-memory artifact store implementation.
+
+Provides an in-memory implementation of the ArtifactStore interface
+for testing without filesystem dependencies.
+"""
 
 from __future__ import annotations
 
-import threading
 from typing import override
 
 from waivern_core.message import Message
@@ -11,87 +14,85 @@ from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.errors import ArtifactNotFoundError
 
 
-class InMemoryArtifactStore(ArtifactStore):
-    """In-memory artifact store implementation using dict-based storage.
+class AsyncInMemoryStore(ArtifactStore):
+    """In-memory artifact store for testing.
 
-    This implementation stores artifacts in memory using a dictionary.
-    Thread-safe for concurrent access via threading.Lock.
+    Stateless singleton that stores artifacts keyed by (run_id, key).
+    No thread safety is needed since asyncio runs in a single thread.
 
-    Attributes:
-        _storage: Dictionary mapping step_id to Message
-        _lock: Lock for thread-safe operations
-
+    This store implements the same `_system` prefix filtering as
+    LocalFilesystemStore for behavioural consistency.
     """
 
+    # Reserved prefix for system metadata (excluded from list_keys)
+    _SYSTEM_PREFIX = "_system"
+
     def __init__(self) -> None:
-        """Initialise in-memory artifact store."""
-        self._storage: dict[str, Message] = {}
-        self._lock = threading.Lock()
+        """Initialise in-memory store."""
+        # Storage: run_id -> key -> Message
+        self._storage: dict[str, dict[str, Message]] = {}
+
+    def _get_run_storage(self, run_id: str) -> dict[str, Message]:
+        """Get or create storage dict for a run."""
+        if run_id not in self._storage:
+            self._storage[run_id] = {}
+        return self._storage[run_id]
 
     @override
-    def save(self, step_id: str, message: Message) -> None:
-        """Store artifact from completed step.
+    async def save(self, run_id: str, key: str, message: Message) -> None:
+        """Store artifact by key.
 
-        Args:
-            step_id: Unique identifier for the step that produced this artifact
-            message: The artifact data to store
-
+        Uses upsert semantics - overwrites if key already exists.
         """
-        with self._lock:
-            self._storage[step_id] = message
+        self._get_run_storage(run_id)[key] = message
 
     @override
-    def get(self, step_id: str) -> Message:
-        """Retrieve artifact for downstream step.
-
-        Args:
-            step_id: Unique identifier for the step artifact to retrieve
-
-        Returns:
-            The stored artifact
+    async def get(self, run_id: str, key: str) -> Message:
+        """Retrieve artifact by key.
 
         Raises:
-            ArtifactNotFoundError: If artifact with step_id does not exist
+            ArtifactNotFoundError: If artifact with key does not exist.
 
         """
-        with self._lock:
-            if step_id not in self._storage:
-                raise ArtifactNotFoundError(
-                    f"Artifact '{step_id}' not found. "
-                    f"Ensure the artifact exists in the runbook and completed successfully."
-                )
-            return self._storage[step_id]
+        run_storage = self._get_run_storage(run_id)
+        if key not in run_storage:
+            raise ArtifactNotFoundError(
+                f"Artifact '{key}' not found in run '{run_id}'."
+            )
+        return run_storage[key]
 
     @override
-    def exists(self, step_id: str) -> bool:
-        """Check if artifact exists in storage.
-
-        Args:
-            step_id: Unique identifier for the step artifact
-
-        Returns:
-            True if artifact exists, False otherwise
-
-        """
-        with self._lock:
-            return step_id in self._storage
+    async def exists(self, run_id: str, key: str) -> bool:
+        """Check if artifact exists."""
+        return key in self._get_run_storage(run_id)
 
     @override
-    def clear(self) -> None:
-        """Remove all artifacts from storage.
+    async def delete(self, run_id: str, key: str) -> None:
+        """Delete artifact by key.
 
-        This is called at the end of pipeline execution to clean up resources.
+        No-op if the key does not exist.
         """
-        with self._lock:
-            self._storage.clear()
+        self._get_run_storage(run_id).pop(key, None)
 
     @override
-    def list_artifacts(self) -> list[str]:
-        """Return list of all stored artifact IDs.
+    async def list_keys(self, run_id: str, prefix: str = "") -> list[str]:
+        """List all keys for a run, optionally filtered by prefix.
 
-        Returns:
-            List of artifact IDs currently in storage.
-
+        System files under '_system/' are excluded for consistency
+        with LocalFilesystemStore behaviour.
         """
-        with self._lock:
-            return list(self._storage.keys())
+        keys: list[str] = []
+        for key in self._get_run_storage(run_id):
+            # Skip system files
+            if key.startswith(self._SYSTEM_PREFIX):
+                continue
+            # Filter by prefix if provided
+            if not prefix or key.startswith(prefix):
+                keys.append(key)
+        return keys
+
+    @override
+    async def clear(self, run_id: str) -> None:
+        """Remove all artifacts for a run."""
+        if run_id in self._storage:
+            self._storage[run_id].clear()

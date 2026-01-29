@@ -1,135 +1,253 @@
-"""Tests for InMemoryArtifactStore implementation."""
-
-from __future__ import annotations
-
-import threading
-from unittest.mock import Mock
+"""Tests for AsyncInMemoryStore implementation."""
 
 import pytest
+from waivern_core.message import Message
+from waivern_core.schemas import Schema
 
 from waivern_artifact_store.errors import ArtifactNotFoundError
-from waivern_artifact_store.in_memory import InMemoryArtifactStore
+from waivern_artifact_store.in_memory import AsyncInMemoryStore
+
+# =============================================================================
+# Save Tests (storage and upsert semantics)
+# =============================================================================
 
 
-class TestInMemoryArtifactStoreCRUD:
-    """Test InMemoryArtifactStore CRUD operations."""
+class TestAsyncInMemoryStoreSave:
+    """Tests for the save() method."""
 
-    def test_save_and_retrieve_artifact(self) -> None:
-        """Test basic save and retrieve returns same Message reference."""
-        store = InMemoryArtifactStore()
-        message = Mock()  # Mock Message object
-        step_id = "extract"
+    async def test_save_stores_message_retrievable_by_get(self) -> None:
+        store = AsyncInMemoryStore()
+        message = Message(
+            id="msg-1",
+            content={"data": "test-value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
 
-        store.save(step_id, message)
-        retrieved = store.get(step_id)
+        await store.save("test-run", "my_artifact", message)
 
-        assert retrieved is message  # Same reference
+        retrieved = await store.get("test-run", "my_artifact")
+        assert retrieved.id == "msg-1"
+        assert retrieved.content == {"data": "test-value"}
 
-    def test_exists_returns_correct_boolean(self) -> None:
-        """Test exists() returns True for saved artifacts, False otherwise."""
-        store = InMemoryArtifactStore()
-        message = Mock()
-        step_id = "extract"
+    async def test_save_overwrites_existing_artifact(self) -> None:
+        store = AsyncInMemoryStore()
+        original = Message(
+            id="msg-1",
+            content={"version": "original"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        updated = Message(
+            id="msg-2",
+            content={"version": "updated"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
 
-        # Before save: should not exist
-        assert not store.exists(step_id)
+        await store.save("test-run", "artifact", original)
+        await store.save("test-run", "artifact", updated)
 
-        # After save: should exist
-        store.save(step_id, message)
-        assert store.exists(step_id)
-
-        # After clear: should not exist
-        store.clear()
-        assert not store.exists(step_id)
-
-    def test_get_raises_error_for_missing_artifact(self) -> None:
-        """Test get() raises ArtifactNotFoundError for missing artifact."""
-        store = InMemoryArtifactStore()
-        step_id = "nonexistent"
-
-        with pytest.raises(ArtifactNotFoundError) as exc_info:
-            store.get(step_id)
-
-        # Verify error message includes step_id for debugging
-        assert step_id in str(exc_info.value)
-        assert "not found" in str(exc_info.value).lower()
-
-    def test_clear_removes_all_artifacts(self) -> None:
-        """Test clear() removes all stored artifacts."""
-        store = InMemoryArtifactStore()
-
-        # Save multiple artifacts
-        store.save("step1", Mock())
-        store.save("step2", Mock())
-        store.save("step3", Mock())
-
-        # Verify all exist
-        assert store.exists("step1")
-        assert store.exists("step2")
-        assert store.exists("step3")
-
-        # Clear all
-        store.clear()
-
-        # Verify none exist
-        assert not store.exists("step1")
-        assert not store.exists("step2")
-        assert not store.exists("step3")
-
-    def test_list_artifacts_returns_all_stored_ids(self) -> None:
-        """Test list_artifacts() returns all stored artifact IDs."""
-        store = InMemoryArtifactStore()
-
-        # Empty store returns empty list
-        assert store.list_artifacts() == []
-
-        # Save artifacts
-        store.save("artifact_a", Mock())
-        store.save("artifact_b", Mock())
-        store.save("artifact_c", Mock())
-
-        # List should contain all IDs
-        artifact_ids = store.list_artifacts()
-        assert len(artifact_ids) == 3
-        assert set(artifact_ids) == {"artifact_a", "artifact_b", "artifact_c"}
-
-        # After clear, list should be empty again
-        store.clear()
-        assert store.list_artifacts() == []
+        retrieved = await store.get("test-run", "artifact")
+        assert retrieved.id == "msg-2"
+        assert retrieved.content == {"version": "updated"}
 
 
-class TestInMemoryArtifactStoreThreadSafety:
-    """Test InMemoryArtifactStore thread safety."""
+# =============================================================================
+# Get Tests (retrieval and error handling)
+# =============================================================================
 
-    def test_concurrent_operations_are_thread_safe(self) -> None:
-        """Test multiple threads performing saves/gets concurrently without corruption."""
-        store = InMemoryArtifactStore()
-        num_threads = 10
-        operations_per_thread = 100
 
-        def worker(thread_id: int) -> None:
-            """Worker function that saves and retrieves artifacts."""
-            message = Mock()
+class TestAsyncInMemoryStoreGet:
+    """Tests for the get() method."""
 
-            for i in range(operations_per_thread):
-                step_id = f"thread_{thread_id}_op_{i}"
-                store.save(step_id, message)
-                retrieved = store.get(step_id)
-                assert (
-                    retrieved is message
-                )  # Verify same object returned (no corruption)
+    async def test_get_raises_artifact_not_found_for_missing_key(self) -> None:
+        store = AsyncInMemoryStore()
 
-        # Launch threads
-        threads = [
-            threading.Thread(target=worker, args=(i,)) for i in range(num_threads)
-        ]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        with pytest.raises(ArtifactNotFoundError):
+            await store.get("test-run", "nonexistent")
 
-        # Verify all artifacts exist
-        for thread_id in range(num_threads):
-            for i in range(operations_per_thread):
-                step_id = f"thread_{thread_id}_op_{i}"
-                assert store.exists(step_id)
+
+# =============================================================================
+# Exists Tests (presence checking)
+# =============================================================================
+
+
+class TestAsyncInMemoryStoreExists:
+    """Tests for the exists() method."""
+
+    async def test_exists_returns_true_after_save(self) -> None:
+        store = AsyncInMemoryStore()
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save("test-run", "artifact", message)
+
+        result = await store.exists("test-run", "artifact")
+
+        assert result is True
+
+    async def test_exists_returns_false_for_unsaved_key(self) -> None:
+        store = AsyncInMemoryStore()
+
+        result = await store.exists("test-run", "nonexistent")
+
+        assert result is False
+
+
+# =============================================================================
+# Delete Tests (removal and idempotency)
+# =============================================================================
+
+
+class TestAsyncInMemoryStoreDelete:
+    """Tests for the delete() method."""
+
+    async def test_delete_removes_saved_artifact(self) -> None:
+        store = AsyncInMemoryStore()
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save("test-run", "artifact", message)
+        assert await store.exists("test-run", "artifact")
+
+        await store.delete("test-run", "artifact")
+
+        assert not await store.exists("test-run", "artifact")
+
+    async def test_delete_does_not_raise_for_missing_key(self) -> None:
+        store = AsyncInMemoryStore()
+
+        # Should not raise any exception
+        await store.delete("test-run", "nonexistent")
+
+
+# =============================================================================
+# List Keys Tests (enumeration and filtering)
+# =============================================================================
+
+
+class TestAsyncInMemoryStoreListKeys:
+    """Tests for the list_keys() method."""
+
+    async def test_list_keys_returns_all_saved_keys(self) -> None:
+        store = AsyncInMemoryStore()
+        for key in ["alpha", "beta", "gamma"]:
+            message = Message(
+                id=f"msg-{key}",
+                content={"key": key},
+                schema=Schema("test_schema", "1.0.0"),
+            )
+            await store.save("test-run", key, message)
+
+        keys = await store.list_keys("test-run")
+
+        assert set(keys) == {"alpha", "beta", "gamma"}
+
+    async def test_list_keys_with_prefix_filters_results(self) -> None:
+        store = AsyncInMemoryStore()
+        for key in ["artifacts/a", "artifacts/b", "cache/x"]:
+            message = Message(
+                id=f"msg-{key}",
+                content={"key": key},
+                schema=Schema("test_schema", "1.0.0"),
+            )
+            await store.save("test-run", key, message)
+
+        keys = await store.list_keys("test-run", prefix="artifacts")
+
+        assert set(keys) == {"artifacts/a", "artifacts/b"}
+
+    async def test_list_keys_excludes_system_files(self) -> None:
+        store = AsyncInMemoryStore()
+        # Save a regular artifact
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save("test-run", "artifacts/findings", message)
+
+        # Save a system file (simulating metadata)
+        system_message = Message(
+            id="msg-system",
+            content={"status": "running"},
+            schema=Schema("system_schema", "1.0.0"),
+        )
+        await store.save("test-run", "_system/metadata", system_message)
+
+        keys = await store.list_keys("test-run")
+
+        assert "artifacts/findings" in keys
+        assert "_system/metadata" not in keys
+
+
+# =============================================================================
+# Clear Tests (bulk removal)
+# =============================================================================
+
+
+class TestAsyncInMemoryStoreClear:
+    """Tests for the clear() method."""
+
+    async def test_clear_removes_all_artifacts(self) -> None:
+        store = AsyncInMemoryStore()
+        for key in ["alpha", "beta", "nested/gamma"]:
+            message = Message(
+                id=f"msg-{key}",
+                content={"key": key},
+                schema=Schema("test_schema", "1.0.0"),
+            )
+            await store.save("test-run", key, message)
+        assert len(await store.list_keys("test-run")) == 3
+
+        await store.clear("test-run")
+
+        assert await store.list_keys("test-run") == []
+
+
+# =============================================================================
+# Run Isolation Tests (singleton store, multiple runs)
+# =============================================================================
+
+
+class TestAsyncInMemoryStoreRunIsolation:
+    """Tests for run isolation in singleton store."""
+
+    async def test_different_runs_have_isolated_storage(self) -> None:
+        store = AsyncInMemoryStore()
+        message_run1 = Message(
+            id="msg-run1",
+            content={"run": "1"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        message_run2 = Message(
+            id="msg-run2",
+            content={"run": "2"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+
+        await store.save("run-1", "artifact", message_run1)
+        await store.save("run-2", "artifact", message_run2)
+
+        retrieved_run1 = await store.get("run-1", "artifact")
+        retrieved_run2 = await store.get("run-2", "artifact")
+
+        assert retrieved_run1.content == {"run": "1"}
+        assert retrieved_run2.content == {"run": "2"}
+
+    async def test_clear_only_affects_specified_run(self) -> None:
+        store = AsyncInMemoryStore()
+        for run_id in ["run-1", "run-2"]:
+            message = Message(
+                id=f"msg-{run_id}",
+                content={"run": run_id},
+                schema=Schema("test_schema", "1.0.0"),
+            )
+            await store.save(run_id, "artifact", message)
+
+        await store.clear("run-1")
+
+        assert not await store.exists("run-1", "artifact")
+        assert await store.exists("run-2", "artifact")

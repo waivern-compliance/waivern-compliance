@@ -11,6 +11,16 @@ import pytest
 class TestWCTCLIE2E:
     """Test WCT CLI command execution and JSON file output generation."""
 
+    @pytest.fixture(autouse=True)
+    def use_memory_store(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Override artifact store to use in-memory backend.
+
+        Ensures tests are reproducible regardless of local .env configuration
+        and don't pollute the filesystem with test artifacts.
+        """
+        monkeypatch.setenv("WAIVERN_STORE_TYPE", "memory")
+        monkeypatch.delenv("WAIVERN_STORE_PATH", raising=False)
+
     def test_wct_cli_runs_lamp_stack_lite_successfully(self, tmp_path: Path) -> None:
         """WCT CLI executes LAMP_stack_lite.yaml runbook and generates JSON outputs."""
         # Arrange
