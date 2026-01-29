@@ -207,19 +207,13 @@ class DAGExecutor:
 
                 # Determine source component type
                 source = self._determine_source(definition)
-
-                # Add run_id and source to the message before saving
-                message = replace(message, run_id=ctx.run_id, source=source)
-                await ctx.store.save(ctx.run_id, artifact_id, message)
-
                 duration = time.monotonic() - start_time
-                logger.debug(
-                    "Artifact %s completed successfully (%.2fs)", artifact_id, duration
-                )
 
-                # Create new Message with execution context (don't mutate original)
-                return replace(
+                # Add all metadata to the message before saving
+                message = replace(
                     message,
+                    run_id=ctx.run_id,
+                    source=source,
                     extensions=MessageExtensions(
                         execution=ExecutionContext(
                             status="success",
@@ -229,6 +223,13 @@ class DAGExecutor:
                         )
                     ),
                 )
+                await ctx.store.save(ctx.run_id, artifact_id, message)
+
+                logger.debug(
+                    "Artifact %s completed successfully (%.2fs)", artifact_id, duration
+                )
+
+                return message
 
             except Exception as e:
                 duration = time.monotonic() - start_time
