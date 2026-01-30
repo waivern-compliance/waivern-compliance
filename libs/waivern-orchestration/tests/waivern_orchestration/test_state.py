@@ -19,8 +19,9 @@ class TestExecutionStateFresh:
     def test_fresh_creates_state_with_all_artifacts_in_not_started(self) -> None:
         artifact_ids = {"source_data", "findings", "validated_findings"}
 
-        state = ExecutionState.fresh(artifact_ids)
+        state = ExecutionState.fresh("test-run-123", artifact_ids)
 
+        assert state.run_id == "test-run-123"
         assert state.not_started == {"source_data", "findings", "validated_findings"}
         assert state.completed == set()
         assert state.failed == set()
@@ -29,7 +30,7 @@ class TestExecutionStateFresh:
     def test_fresh_sets_checkpoint_to_current_utc_time(self) -> None:
         before = datetime.now(UTC)
 
-        state = ExecutionState.fresh({"artifact_a"})
+        state = ExecutionState.fresh("test-run", {"artifact_a"})
 
         after = datetime.now(UTC)
         assert before <= state.last_checkpoint <= after
@@ -44,7 +45,7 @@ class TestExecutionStateMarkCompleted:
     """Tests for the mark_completed() method."""
 
     def test_mark_completed_moves_artifact_from_not_started_to_completed(self) -> None:
-        state = ExecutionState.fresh({"artifact_a", "artifact_b"})
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
 
         state.mark_completed("artifact_a")
 
@@ -53,7 +54,7 @@ class TestExecutionStateMarkCompleted:
         assert "artifact_b" in state.not_started
 
     def test_mark_completed_updates_last_checkpoint(self) -> None:
-        state = ExecutionState.fresh({"artifact_a"})
+        state = ExecutionState.fresh("run-1", {"artifact_a"})
         original_checkpoint = state.last_checkpoint
 
         # Small delay to ensure checkpoint changes
@@ -62,7 +63,7 @@ class TestExecutionStateMarkCompleted:
         assert state.last_checkpoint >= original_checkpoint
 
     def test_mark_completed_is_idempotent_for_already_completed_artifact(self) -> None:
-        state = ExecutionState.fresh({"artifact_a", "artifact_b"})
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
         state.mark_completed("artifact_a")
 
         # Second call should be no-op (doesn't pollute or error)
@@ -72,7 +73,7 @@ class TestExecutionStateMarkCompleted:
         assert state.not_started == {"artifact_b"}
 
     def test_mark_completed_ignores_unknown_artifact(self) -> None:
-        state = ExecutionState.fresh({"artifact_a"})
+        state = ExecutionState.fresh("run-1", {"artifact_a"})
 
         # Should be no-op - doesn't pollute completed with unknown artifacts
         state.mark_completed("nonexistent_artifact")
@@ -85,7 +86,7 @@ class TestExecutionStateMarkFailed:
     """Tests for the mark_failed() method."""
 
     def test_mark_failed_moves_artifact_from_not_started_to_failed(self) -> None:
-        state = ExecutionState.fresh({"artifact_a", "artifact_b"})
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
 
         state.mark_failed("artifact_a")
 
@@ -94,7 +95,7 @@ class TestExecutionStateMarkFailed:
         assert "artifact_b" in state.not_started
 
     def test_mark_failed_updates_last_checkpoint(self) -> None:
-        state = ExecutionState.fresh({"artifact_a"})
+        state = ExecutionState.fresh("run-1", {"artifact_a"})
         original_checkpoint = state.last_checkpoint
 
         state.mark_failed("artifact_a")
@@ -106,7 +107,7 @@ class TestExecutionStateMarkSkipped:
     """Tests for the mark_skipped() method."""
 
     def test_mark_skipped_moves_multiple_artifacts_to_skipped(self) -> None:
-        state = ExecutionState.fresh({"a", "b", "c", "d"})
+        state = ExecutionState.fresh("run-1", {"a", "b", "c", "d"})
 
         state.mark_skipped({"b", "c"})
 
@@ -114,7 +115,7 @@ class TestExecutionStateMarkSkipped:
         assert state.not_started == {"a", "d"}
 
     def test_mark_skipped_updates_last_checkpoint(self) -> None:
-        state = ExecutionState.fresh({"artifact_a", "artifact_b"})
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
         original_checkpoint = state.last_checkpoint
 
         state.mark_skipped({"artifact_a"})
@@ -135,15 +136,16 @@ class TestExecutionStatePersistence:
         run_id = "test-run-123"
 
         # Create state with mixed statuses
-        original = ExecutionState.fresh({"a", "b", "c", "d"})
+        original = ExecutionState.fresh(run_id, {"a", "b", "c", "d"})
         original.mark_completed("a")
         original.mark_failed("b")
         original.mark_skipped({"c"})
         # "d" remains in not_started
 
-        await original.save(store, run_id)
+        await original.save(store)
         loaded = await ExecutionState.load(store, run_id)
 
+        assert loaded.run_id == run_id
         assert loaded.completed == {"a"}
         assert loaded.failed == {"b"}
         assert loaded.skipped == {"c"}
@@ -159,12 +161,22 @@ class TestExecutionStatePersistence:
         store = AsyncInMemoryStore()
         run_id = "test-run-456"
 
-        state = ExecutionState.fresh({"artifact_a"})
+        state = ExecutionState.fresh(run_id, {"artifact_a"})
         original_checkpoint = state.last_checkpoint
 
         # Small delay to ensure time difference
-        await state.save(store, run_id)
+        await state.save(store)
 
         # Reload and check checkpoint was updated
         loaded = await ExecutionState.load(store, run_id)
         assert loaded.last_checkpoint >= original_checkpoint
+
+    async def test_loaded_state_has_same_run_id(self) -> None:
+        store = AsyncInMemoryStore()
+        run_id = "my-test-run"
+
+        state = ExecutionState.fresh(run_id, {"artifact_a"})
+        await state.save(store)
+        loaded = await ExecutionState.load(store, run_id)
+
+        assert loaded.run_id == run_id

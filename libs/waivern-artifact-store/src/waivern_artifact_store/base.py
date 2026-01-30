@@ -24,49 +24,57 @@ class ArtifactStore(ABC):
 
     Supports multiple backends: local filesystem, remote HTTP, in-memory (testing).
 
-    Key format supports hierarchical paths (e.g., 'artifacts/findings',
-    'llm_cache/abc123') for organising different artifact types within a run.
+    This interface provides semantic methods for artifacts and system metadata.
+    Implementations handle the internal storage structure (e.g., prefixes,
+    directories) internally.
     """
 
-    @abstractmethod
-    async def save(self, run_id: str, key: str, message: Message) -> None:
-        """Store artifact by key.
+    # ========================================================================
+    # Artifact Operations
+    # ========================================================================
 
-        Uses upsert semantics - if the key already exists, it is overwritten.
+    @abstractmethod
+    async def save_artifact(
+        self, run_id: str, artifact_id: str, message: Message
+    ) -> None:
+        """Store an artifact by its ID.
+
+        Uses upsert semantics - if the artifact already exists, it is overwritten.
+        The artifact is stored in an implementation-specific location
+        (e.g., 'artifacts/' subdirectory for filesystem stores).
 
         Args:
             run_id: Unique identifier for the run.
-            key: Storage key, supports hierarchical paths
-                (e.g., 'artifacts/findings', 'llm_cache/abc123').
+            artifact_id: The artifact identifier (e.g., 'source_data', 'findings').
             message: The artifact data to store.
 
         """
         ...
 
     @abstractmethod
-    async def get(self, run_id: str, key: str) -> Message:
-        """Retrieve artifact by key.
+    async def get_artifact(self, run_id: str, artifact_id: str) -> Message:
+        """Retrieve an artifact by its ID.
 
         Args:
             run_id: Unique identifier for the run.
-            key: Storage key to retrieve.
+            artifact_id: The artifact identifier to retrieve.
 
         Returns:
-            The stored artifact.
+            The stored artifact message.
 
         Raises:
-            ArtifactNotFoundError: If artifact with key does not exist.
+            ArtifactNotFoundError: If artifact with this ID does not exist.
 
         """
         ...
 
     @abstractmethod
-    async def exists(self, run_id: str, key: str) -> bool:
-        """Check if artifact exists.
+    async def artifact_exists(self, run_id: str, artifact_id: str) -> bool:
+        """Check if an artifact exists.
 
         Args:
             run_id: Unique identifier for the run.
-            key: Storage key to check.
+            artifact_id: The artifact identifier to check.
 
         Returns:
             True if artifact exists, False otherwise.
@@ -75,83 +83,111 @@ class ArtifactStore(ABC):
         ...
 
     @abstractmethod
-    async def delete(self, run_id: str, key: str) -> None:
-        """Delete artifact by key.
+    async def delete_artifact(self, run_id: str, artifact_id: str) -> None:
+        """Delete an artifact by its ID.
 
-        No-op if the key does not exist.
+        No-op if the artifact does not exist.
 
         Args:
             run_id: Unique identifier for the run.
-            key: Storage key to delete.
+            artifact_id: The artifact identifier to delete.
 
         """
         ...
 
     @abstractmethod
-    async def list_keys(self, run_id: str, prefix: str = "") -> list[str]:
-        """List all keys for a run, optionally filtered by prefix.
+    async def list_artifacts(self, run_id: str) -> list[str]:
+        """List all artifact IDs for a run.
+
+        Returns artifact IDs without any internal prefix (e.g., 'source_data',
+        'findings', not 'artifacts/source_data').
 
         Args:
             run_id: Unique identifier for the run.
-            prefix: Optional prefix to filter keys. Empty string returns all keys.
 
         Returns:
-            List of matching keys.
+            List of artifact IDs. Empty list if no artifacts exist.
 
         """
         ...
 
     @abstractmethod
-    async def clear(self, run_id: str) -> None:
+    async def clear_artifacts(self, run_id: str) -> None:
         """Remove all artifacts for a run.
 
+        System metadata (execution state, run metadata) is preserved.
+
         Args:
             run_id: Unique identifier for the run.
 
         """
         ...
 
-    # -------------------------------------------------------------------------
-    # JSON Storage (for system metadata like execution state)
-    # -------------------------------------------------------------------------
+    # ========================================================================
+    # System Metadata Operations (raw dict to avoid circular imports)
+    # ========================================================================
 
     @abstractmethod
-    async def save_json(
-        self, run_id: str, key: str, data: dict[str, JsonValue]
+    async def save_execution_state(
+        self, run_id: str, state_data: dict[str, JsonValue]
     ) -> None:
-        """Store raw JSON data by key (for system metadata).
-
-        Uses upsert semantics - if the key already exists, it is overwritten.
+        """Persist execution state for a run.
 
         Args:
             run_id: Unique identifier for the run.
-            key: Storage key, supports hierarchical paths
-                (e.g., '_system/state', '_system/run').
-            data: The dictionary data to store.
+            state_data: The execution state as a dictionary.
 
         """
         ...
 
     @abstractmethod
-    async def get_json(self, run_id: str, key: str) -> dict[str, JsonValue]:
-        """Retrieve raw JSON data by key.
+    async def load_execution_state(self, run_id: str) -> dict[str, JsonValue]:
+        """Load execution state for a run.
 
         Args:
             run_id: Unique identifier for the run.
-            key: Storage key to retrieve.
 
         Returns:
-            The stored dictionary data.
+            The execution state as a dictionary.
 
         Raises:
-            ArtifactNotFoundError: If data with key does not exist.
+            ArtifactNotFoundError: If state does not exist for this run.
 
         """
         ...
 
-    # -------------------------------------------------------------------------
+    @abstractmethod
+    async def save_run_metadata(
+        self, run_id: str, metadata: dict[str, JsonValue]
+    ) -> None:
+        """Persist run metadata.
+
+        Args:
+            run_id: Unique identifier for the run.
+            metadata: The run metadata as a dictionary.
+
+        """
+        ...
+
+    @abstractmethod
+    async def load_run_metadata(self, run_id: str) -> dict[str, JsonValue]:
+        """Load run metadata.
+
+        Args:
+            run_id: Unique identifier for the run.
+
+        Returns:
+            The run metadata as a dictionary.
+
+        Raises:
+            ArtifactNotFoundError: If metadata does not exist for this run.
+
+        """
+        ...
+
+    # ========================================================================
     # Run Enumeration
-    # -------------------------------------------------------------------------
+    # ========================================================================
 
     @abstractmethod
     async def list_runs(self) -> list[str]:

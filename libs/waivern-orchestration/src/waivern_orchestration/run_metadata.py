@@ -14,9 +14,6 @@ from typing import Literal, Self
 from pydantic import BaseModel
 from waivern_artifact_store.base import ArtifactStore
 
-# Storage key for run metadata (under _system/ prefix)
-_RUN_METADATA_KEY = "_system/run"
-
 # Valid run status values
 RunStatus = Literal["running", "completed", "failed", "interrupted"]
 
@@ -107,7 +104,7 @@ class RunMetadata(BaseModel):
             ArtifactNotFoundError: If metadata does not exist for this run.
 
         """
-        data = await store.get_json(run_id, _RUN_METADATA_KEY)
+        data = await store.load_run_metadata(run_id)
         return cls.model_validate(data)
 
     async def save(self, store: ArtifactStore) -> None:
@@ -118,7 +115,7 @@ class RunMetadata(BaseModel):
 
         """
         data = self.model_dump(mode="json")
-        await store.save_json(self.run_id, _RUN_METADATA_KEY, data)
+        await store.save_run_metadata(self.run_id, data)
 
 
 def compute_runbook_hash(runbook_path: Path) -> str:

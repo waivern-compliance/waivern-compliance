@@ -151,5 +151,5 @@ def minimal_store(minimal_result: ExecutionResult) -> AsyncInMemoryStore:
 
     store = AsyncInMemoryStore()
     message = create_success_message()
-    asyncio.run(store.save(minimal_result.run_id, "art1", message))
+    asyncio.run(store.save_artifact(minimal_result.run_id, "art1", message))
     return store

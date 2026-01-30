@@ -43,7 +43,7 @@ class TestExecutorReuse:
             schema=Schema("standard_input", "1.0.0"),
             status="success",
         )
-        await store.save(previous_run_id, source_artifact_id, original_message)
+        await store.save_artifact(previous_run_id, source_artifact_id, original_message)
 
         # Create plan with reuse artifact
         artifacts = {
@@ -69,7 +69,7 @@ class TestExecutorReuse:
         assert len(result.skipped) == 0
 
         # Assert - content should be copied to new run
-        stored = await store.get(result.run_id, "reused_data")
+        stored = await store.get_artifact(result.run_id, "reused_data")
         assert stored.content == original_content
 
         # Assert - source should indicate reuse origin

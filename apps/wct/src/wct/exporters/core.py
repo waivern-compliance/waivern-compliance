@@ -124,7 +124,7 @@ async def _build_error_entries(
     """
     entries: list[ErrorEntry] = []
     for art_id in result.failed:
-        message = await store.get(result.run_id, art_id)
+        message = await store.get_artifact(result.run_id, art_id)
         entries.append(
             ErrorEntry(
                 artifact_id=art_id,
@@ -193,7 +193,7 @@ async def _build_output_entries(
             continue
 
         # Load artifact message from store
-        message = await store.get(result.run_id, art_id)
+        message = await store.get_artifact(result.run_id, art_id)
 
         # Get schema info from plan
         _, output_schema = plan.artifact_schemas.get(art_id, (None, None))

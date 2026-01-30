@@ -109,8 +109,12 @@ class TestBuildCoreExportStatus:
         )
 
         store = AsyncInMemoryStore()
-        await store.save(result.run_id, "art1", create_success_message(duration=1.0))
-        await store.save(result.run_id, "art2", create_success_message(duration=2.0))
+        await store.save_artifact(
+            result.run_id, "art1", create_success_message(duration=1.0)
+        )
+        await store.save_artifact(
+            result.run_id, "art2", create_success_message(duration=2.0)
+        )
 
         export = await build_core_export(result, plan, store)
 
@@ -131,8 +135,10 @@ class TestBuildCoreExportStatus:
         )
 
         store = AsyncInMemoryStore()
-        await store.save(result.run_id, "art1", create_success_message(duration=1.0))
-        await store.save(
+        await store.save_artifact(
+            result.run_id, "art1", create_success_message(duration=1.0)
+        )
+        await store.save_artifact(
             result.run_id,
             "art2",
             create_error_message("Something went wrong", duration=2.0),
@@ -159,7 +165,9 @@ class TestBuildCoreExportStatus:
         )
 
         store = AsyncInMemoryStore()
-        await store.save(result.run_id, "art1", create_success_message(duration=1.0))
+        await store.save_artifact(
+            result.run_id, "art1", create_success_message(duration=1.0)
+        )
 
         export = await build_core_export(result, plan, store)
 
@@ -191,12 +199,12 @@ class TestBuildCoreExportErrorsAndSkipped:
         )
 
         store = AsyncInMemoryStore()
-        await store.save(
+        await store.save_artifact(
             result.run_id,
             "art1",
             create_error_message("Database connection failed", duration=1.0),
         )
-        await store.save(
+        await store.save_artifact(
             result.run_id,
             "art2",
             create_error_message("Timeout exceeded", duration=2.0),
@@ -227,7 +235,9 @@ class TestBuildCoreExportErrorsAndSkipped:
         )
 
         store = AsyncInMemoryStore()
-        await store.save(result.run_id, "art1", create_success_message(duration=1.0))
+        await store.save_artifact(
+            result.run_id, "art1", create_success_message(duration=1.0)
+        )
 
         export = await build_core_export(result, plan, store)
 
@@ -258,13 +268,13 @@ class TestBuildCoreExportSummary:
         )
 
         store = AsyncInMemoryStore()
-        await store.save(
+        await store.save_artifact(
             result.run_id, "success1", create_success_message(duration=1.0)
         )
-        await store.save(
+        await store.save_artifact(
             result.run_id, "success2", create_success_message(duration=1.0)
         )
-        await store.save(
+        await store.save_artifact(
             result.run_id, "failed1", create_error_message("Error", duration=1.0)
         )
 
@@ -327,17 +337,17 @@ class TestBuildCoreExportOutputs:
         )
 
         store = AsyncInMemoryStore()
-        await store.save(
+        await store.save_artifact(
             result.run_id,
             "art1",
             create_success_message({"data": "test1"}, schema=schema),
         )
-        await store.save(
+        await store.save_artifact(
             result.run_id,
             "art2",
             create_success_message({"data": "test2"}, schema=schema),
         )
-        await store.save(
+        await store.save_artifact(
             result.run_id,
             "art3",
             create_success_message({"data": "test3"}, schema=schema),
@@ -378,7 +388,7 @@ class TestBuildCoreExportOutputs:
         )
 
         store = AsyncInMemoryStore()
-        await store.save(
+        await store.save_artifact(
             result.run_id,
             "art1",
             create_success_message({"data": "test"}, schema=schema),
@@ -425,7 +435,7 @@ class TestBuildCoreExportOutputs:
         )
 
         store = AsyncInMemoryStore()
-        await store.save(
+        await store.save_artifact(
             result.run_id,
             "art1",
             create_success_message({"data": "test"}, schema=schema),

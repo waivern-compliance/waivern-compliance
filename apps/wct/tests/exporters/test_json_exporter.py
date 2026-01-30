@@ -61,7 +61,9 @@ class TestJsonExporterExport:
 
         # Setup store with the artifact referenced in minimal_result
         store = AsyncInMemoryStore()
-        await store.save(minimal_result.run_id, "art1", create_success_message())
+        await store.save_artifact(
+            minimal_result.run_id, "art1", create_success_message()
+        )
 
         exporter = JsonExporter()
         export_result = await exporter.export(minimal_result, minimal_plan, store)
