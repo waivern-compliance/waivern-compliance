@@ -207,7 +207,7 @@ class _OutputFormatter:
         # Load artifact messages for completed and failed artifacts
         messages: dict[str, Message] = {}
         for artifact_id in result.completed | result.failed:
-            messages[artifact_id] = await store.get(result.run_id, artifact_id)
+            messages[artifact_id] = await store.get_artifact(result.run_id, artifact_id)
 
         # Build summary table
         table = Table(

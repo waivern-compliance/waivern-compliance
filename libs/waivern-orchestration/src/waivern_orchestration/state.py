@@ -13,9 +13,6 @@ from typing import Self
 from pydantic import BaseModel, Field
 from waivern_artifact_store.base import ArtifactStore
 
-# Storage key for execution state (under _system/ prefix)
-_STATE_KEY = "_system/state"
-
 
 class ExecutionState(BaseModel):
     """Tracks execution progress for a run.
@@ -28,6 +25,9 @@ class ExecutionState(BaseModel):
 
     State transitions are one-way: not_started → {completed, failed, skipped}
     """
+
+    run_id: str
+    """Unique identifier for this run."""
 
     completed: set[str] = Field(default_factory=set)
     """Artifact IDs that completed successfully."""
@@ -45,10 +45,11 @@ class ExecutionState(BaseModel):
     """Last state save timestamp (UTC)."""
 
     @classmethod
-    def fresh(cls, artifact_ids: set[str]) -> Self:
+    def fresh(cls, run_id: str, artifact_ids: set[str]) -> Self:
         """Create initial state with all artifacts in not_started.
 
         Args:
+            run_id: Unique identifier for this run.
             artifact_ids: Set of artifact IDs to track.
 
         Returns:
@@ -56,6 +57,7 @@ class ExecutionState(BaseModel):
 
         """
         return cls(
+            run_id=run_id,
             completed=set(),
             not_started=artifact_ids.copy(),
             failed=set(),
@@ -137,19 +139,18 @@ class ExecutionState(BaseModel):
             ArtifactNotFoundError: If state does not exist for this run.
 
         """
-        data = await store.get_json(run_id, _STATE_KEY)
+        data = await store.load_execution_state(run_id)
         return cls.model_validate(data)
 
-    async def save(self, store: ArtifactStore, run_id: str) -> None:
+    async def save(self, store: ArtifactStore) -> None:
         """Persist state to store.
 
         Updates last_checkpoint before saving.
 
         Args:
             store: The artifact store to save to.
-            run_id: The run identifier.
 
         """
         self.last_checkpoint = datetime.now(UTC)
         data = self.model_dump(mode="json")
-        await store.save_json(run_id, _STATE_KEY, data)
+        await store.save_execution_state(self.run_id, data)

@@ -18,128 +18,116 @@ from waivern_artifact_store.errors import ArtifactNotFoundError
 class AsyncInMemoryStore(ArtifactStore):
     """In-memory artifact store for testing.
 
-    Stateless singleton that stores artifacts keyed by (run_id, key).
+    Stateless singleton that stores artifacts keyed by (run_id, artifact_id).
     No thread safety is needed since asyncio runs in a single thread.
 
-    This store implements the same `_system` prefix filtering as
-    LocalFilesystemStore for behavioural consistency.
+    Artifacts are stored separately from system metadata for clean semantics.
     """
-
-    # Reserved prefix for system metadata (excluded from list_keys)
-    _SYSTEM_PREFIX = "_system"
 
     def __init__(self) -> None:
         """Initialise in-memory store."""
-        # Storage: run_id -> key -> Message
-        self._storage: dict[str, dict[str, Message]] = {}
-        # JSON storage: run_id -> key -> dict (for system metadata)
-        self._json_storage: dict[str, dict[str, dict[str, JsonValue]]] = {}
+        # Artifact storage: run_id -> artifact_id -> Message
+        self._artifacts: dict[str, dict[str, Message]] = {}
+        # System metadata storage: run_id -> key -> dict
+        self._system_data: dict[str, dict[str, dict[str, JsonValue]]] = {}
 
-    def _get_run_storage(self, run_id: str) -> dict[str, Message]:
-        """Get or create storage dict for a run."""
-        if run_id not in self._storage:
-            self._storage[run_id] = {}
-        return self._storage[run_id]
+    def _get_artifact_storage(self, run_id: str) -> dict[str, Message]:
+        """Get or create artifact storage dict for a run."""
+        if run_id not in self._artifacts:
+            self._artifacts[run_id] = {}
+        return self._artifacts[run_id]
 
-    def _get_json_run_storage(self, run_id: str) -> dict[str, dict[str, JsonValue]]:
-        """Get or create JSON storage dict for a run."""
-        if run_id not in self._json_storage:
-            self._json_storage[run_id] = {}
-        return self._json_storage[run_id]
+    def _get_system_storage(self, run_id: str) -> dict[str, dict[str, JsonValue]]:
+        """Get or create system metadata storage dict for a run."""
+        if run_id not in self._system_data:
+            self._system_data[run_id] = {}
+        return self._system_data[run_id]
 
-    @override
-    async def save(self, run_id: str, key: str, message: Message) -> None:
-        """Store artifact by key.
-
-        Uses upsert semantics - overwrites if key already exists.
-        """
-        self._get_run_storage(run_id)[key] = message
+    # ========================================================================
+    # Artifact Operations
+    # ========================================================================
 
     @override
-    async def get(self, run_id: str, key: str) -> Message:
-        """Retrieve artifact by key.
-
-        Raises:
-            ArtifactNotFoundError: If artifact with key does not exist.
-
-        """
-        run_storage = self._get_run_storage(run_id)
-        if key not in run_storage:
-            raise ArtifactNotFoundError(
-                f"Artifact '{key}' not found in run '{run_id}'."
-            )
-        return run_storage[key]
-
-    @override
-    async def exists(self, run_id: str, key: str) -> bool:
-        """Check if artifact exists."""
-        return key in self._get_run_storage(run_id)
-
-    @override
-    async def delete(self, run_id: str, key: str) -> None:
-        """Delete artifact by key.
-
-        No-op if the key does not exist.
-        """
-        self._get_run_storage(run_id).pop(key, None)
-
-    @override
-    async def list_keys(self, run_id: str, prefix: str = "") -> list[str]:
-        """List all keys for a run, optionally filtered by prefix.
-
-        System files under '_system/' are excluded for consistency
-        with LocalFilesystemStore behaviour.
-        """
-        keys: list[str] = []
-        for key in self._get_run_storage(run_id):
-            # Skip system files
-            if key.startswith(self._SYSTEM_PREFIX):
-                continue
-            # Filter by prefix if provided
-            if not prefix or key.startswith(prefix):
-                keys.append(key)
-        return keys
-
-    @override
-    async def clear(self, run_id: str) -> None:
-        """Remove all artifacts for a run."""
-        if run_id in self._storage:
-            self._storage[run_id].clear()
-        if run_id in self._json_storage:
-            self._json_storage[run_id].clear()
-
-    @override
-    async def save_json(
-        self, run_id: str, key: str, data: dict[str, JsonValue]
+    async def save_artifact(
+        self, run_id: str, artifact_id: str, message: Message
     ) -> None:
-        """Store raw JSON data by key.
-
-        Uses upsert semantics - overwrites if key already exists.
-        """
-        self._get_json_run_storage(run_id)[key] = data
+        """Store artifact by ID."""
+        self._get_artifact_storage(run_id)[artifact_id] = message
 
     @override
-    async def get_json(self, run_id: str, key: str) -> dict[str, JsonValue]:
-        """Retrieve raw JSON data by key.
-
-        Raises:
-            ArtifactNotFoundError: If data with key does not exist.
-
-        """
-        json_storage = self._get_json_run_storage(run_id)
-        if key not in json_storage:
+    async def get_artifact(self, run_id: str, artifact_id: str) -> Message:
+        """Retrieve artifact by ID."""
+        artifacts = self._get_artifact_storage(run_id)
+        if artifact_id not in artifacts:
             raise ArtifactNotFoundError(
-                f"JSON data '{key}' not found in run '{run_id}'."
+                f"Artifact '{artifact_id}' not found in run '{run_id}'."
             )
-        return json_storage[key]
+        return artifacts[artifact_id]
+
+    @override
+    async def artifact_exists(self, run_id: str, artifact_id: str) -> bool:
+        """Check if artifact exists."""
+        return artifact_id in self._get_artifact_storage(run_id)
+
+    @override
+    async def delete_artifact(self, run_id: str, artifact_id: str) -> None:
+        """Delete artifact by ID."""
+        self._get_artifact_storage(run_id).pop(artifact_id, None)
+
+    @override
+    async def list_artifacts(self, run_id: str) -> list[str]:
+        """List all artifact IDs for a run."""
+        return sorted(self._get_artifact_storage(run_id).keys())
+
+    @override
+    async def clear_artifacts(self, run_id: str) -> None:
+        """Remove all artifacts for a run (preserves system metadata)."""
+        if run_id in self._artifacts:
+            self._artifacts[run_id].clear()
+
+    # ========================================================================
+    # System Metadata Operations
+    # ========================================================================
+
+    @override
+    async def save_execution_state(
+        self, run_id: str, state_data: dict[str, JsonValue]
+    ) -> None:
+        """Persist execution state."""
+        self._get_system_storage(run_id)["state"] = state_data
+
+    @override
+    async def load_execution_state(self, run_id: str) -> dict[str, JsonValue]:
+        """Load execution state."""
+        system_data = self._get_system_storage(run_id)
+        if "state" not in system_data:
+            raise ArtifactNotFoundError(
+                f"Execution state not found for run '{run_id}'."
+            )
+        return system_data["state"]
+
+    @override
+    async def save_run_metadata(
+        self, run_id: str, metadata: dict[str, JsonValue]
+    ) -> None:
+        """Persist run metadata."""
+        self._get_system_storage(run_id)["metadata"] = metadata
+
+    @override
+    async def load_run_metadata(self, run_id: str) -> dict[str, JsonValue]:
+        """Load run metadata."""
+        system_data = self._get_system_storage(run_id)
+        if "metadata" not in system_data:
+            raise ArtifactNotFoundError(f"Run metadata not found for run '{run_id}'.")
+        return system_data["metadata"]
+
+    # ========================================================================
+    # Run Enumeration
+    # ========================================================================
 
     @override
     async def list_runs(self) -> list[str]:
-        """List all run IDs in the store.
-
-        Returns run IDs from both message storage and JSON storage,
-        since a run may only have system metadata (JSON) stored.
-        """
+        """List all run IDs in the store."""
         # Combine keys from both storages (a run may exist in either or both)
-        all_run_ids = set(self._storage.keys()) | set(self._json_storage.keys())
+        all_run_ids = set(self._artifacts.keys()) | set(self._system_data.keys())
         return sorted(all_run_ids)

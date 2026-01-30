@@ -197,7 +197,7 @@ class DAGExecutor:
         )
 
         artifact_ids = set(plan.runbook.artifacts.keys())
-        state = ExecutionState.fresh(artifact_ids)
+        state = ExecutionState.fresh(run_id, artifact_ids)
 
         return run_id, start_timestamp, metadata, state
 
@@ -326,16 +326,16 @@ class DAGExecutor:
             message = self._create_error_message_for_exception(
                 artifact_id, result, plan, ctx
             )
-            await ctx.store.save(ctx.run_id, artifact_id, message)
+            await ctx.store.save_artifact(ctx.run_id, artifact_id, message)
             await self._mark_failed_and_skip_dependents(artifact_id, plan, ctx)
         elif not result.is_success:
             # Error message from _produce() - need to save it
-            await ctx.store.save(ctx.run_id, artifact_id, result)
+            await ctx.store.save_artifact(ctx.run_id, artifact_id, result)
             await self._mark_failed_and_skip_dependents(artifact_id, plan, ctx)
         else:
             # Success - message already saved in _produce()
             ctx.state.mark_completed(artifact_id)
-            await ctx.state.save(ctx.store, ctx.run_id)
+            await ctx.state.save(ctx.store)
 
     def _create_error_message_for_exception(
         self,
@@ -369,7 +369,7 @@ class DAGExecutor:
     ) -> None:
         """Mark artifact as failed, persist state, and skip all dependents."""
         ctx.state.mark_failed(artifact_id)
-        await ctx.state.save(ctx.store, ctx.run_id)
+        await ctx.state.save(ctx.store)
         await self._skip_dependents(artifact_id, plan, ctx)
 
     async def _produce(
@@ -430,7 +430,7 @@ class DAGExecutor:
                         )
                     ),
                 )
-                await ctx.store.save(ctx.run_id, artifact_id, message)
+                await ctx.store.save_artifact(ctx.run_id, artifact_id, message)
 
                 logger.debug(
                     "Artifact %s completed successfully (%.2fs)", artifact_id, duration
@@ -480,7 +480,7 @@ class DAGExecutor:
         # Mark all collected dependents as skipped and persist
         if dependents_to_skip:
             ctx.state.mark_skipped(dependents_to_skip)
-            await ctx.state.save(ctx.store, ctx.run_id)
+            await ctx.state.save(ctx.store)
 
     async def _mark_remaining_as_skipped(
         self,
@@ -493,7 +493,7 @@ class DAGExecutor:
         remaining = all_artifacts - completed - ctx.state.skipped - ctx.state.failed
         if remaining:
             ctx.state.mark_skipped(remaining)
-            await ctx.state.save(ctx.store, ctx.run_id)
+            await ctx.state.save(ctx.store)
 
     async def _run_connector(
         self,
@@ -570,7 +570,9 @@ class DAGExecutor:
         input_refs = [inputs] if isinstance(inputs, str) else inputs
 
         # Retrieve input messages from store (async)
-        input_messages = [await ctx.store.get(ctx.run_id, ref) for ref in input_refs]
+        input_messages = [
+            await ctx.store.get_artifact(ctx.run_id, ref) for ref in input_refs
+        ]
 
         if definition.process is not None:
             return await self._run_processor(
@@ -608,7 +610,7 @@ class DAGExecutor:
 
         """
         logger.debug("Reusing artifact '%s' from run '%s'", source_artifact, from_run)
-        return await ctx.store.get(from_run, source_artifact)
+        return await ctx.store.get_artifact(from_run, source_artifact)
 
     def _determine_source(self, definition: ArtifactDefinition) -> str:
         """Determine the source component type for an artifact.

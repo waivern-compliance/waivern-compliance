@@ -149,8 +149,8 @@ class TestResumeValidation:
         await metadata.save(store)
 
         # Also save state so it can be loaded
-        state = ExecutionState.fresh({"data"})
-        await state.save(store, running_run_id)
+        state = ExecutionState.fresh(running_run_id, {"data"})
+        await state.save(store)
 
         executor = DAGExecutor(registry)
 
@@ -425,12 +425,12 @@ class TestResumeExecutionFlow:
         await metadata.save(store)
 
         # State: artifact_a completed, artifact_b not started
-        state = ExecutionState.fresh({"artifact_a", "artifact_b"})
+        state = ExecutionState.fresh(run_id, {"artifact_a", "artifact_b"})
         state.mark_completed("artifact_a")
-        await state.save(store, run_id)
+        await state.save(store)
 
         # Save artifact_a data (simulating it was already produced)
-        await store.save(run_id, "artifact_a", message_a)
+        await store.save_artifact(run_id, "artifact_a", message_a)
 
         executor = DAGExecutor(registry)
 
@@ -488,13 +488,13 @@ class TestResumeExecutionFlow:
         metadata.status = "interrupted"  # Allow resume
         await metadata.save(store)
 
-        state = ExecutionState.fresh({"data"})
+        state = ExecutionState.fresh(run_id, {"data"})
         state.mark_completed("data")
-        await state.save(store, run_id)
+        await state.save(store)
 
         # Save original artifact data
         original_message = create_test_message(original_content)
-        await store.save(run_id, "data", original_message)
+        await store.save_artifact(run_id, "data", original_message)
 
         executor = DAGExecutor(registry)
 
@@ -506,7 +506,7 @@ class TestResumeExecutionFlow:
         )
 
         # Assert - original data should still be there (not overwritten)
-        loaded = await store.get(run_id, "data")
+        loaded = await store.get_artifact(run_id, "data")
         assert loaded.content == original_content
 
     async def test_resume_with_all_completed_is_noop(self, tmp_path: Path) -> None:
@@ -561,12 +561,12 @@ class TestResumeExecutionFlow:
         metadata.status = "interrupted"  # Allow resume (even though all done)
         await metadata.save(store)
 
-        state = ExecutionState.fresh({"data"})
+        state = ExecutionState.fresh(run_id, {"data"})
         state.mark_completed("data")
-        await state.save(store, run_id)
+        await state.save(store)
 
         # Save artifact data
-        await store.save(run_id, "data", message)
+        await store.save_artifact(run_id, "data", message)
 
         executor = DAGExecutor(registry)
 

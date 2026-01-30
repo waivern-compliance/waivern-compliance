@@ -74,7 +74,7 @@ class TestExecutorChildRunbookAliases:
         # Assert - namespaced artifact executes successfully
         assert namespaced_id in result.completed
         store = registry.container.get_service(ArtifactStore)
-        stored = asyncio.run(store.get(result.run_id, namespaced_id))
+        stored = asyncio.run(store.get_artifact(result.run_id, namespaced_id))
         assert stored.is_success
         assert stored.content == message.content
 
@@ -142,7 +142,7 @@ class TestExecutorChildRunbookAliases:
         # Assert - both artifacts execute successfully
         assert {namespaced_source, "analysis"} == result.completed
         store = registry.container.get_service(ArtifactStore)
-        analysis = asyncio.run(store.get(result.run_id, "analysis"))
+        analysis = asyncio.run(store.get_artifact(result.run_id, "analysis"))
         assert analysis.is_success
         assert analysis.content == processed_message.content
 
@@ -192,7 +192,7 @@ class TestExecutorOriginTracking:
         # Assert - parent artifact has origin='parent'
         assert "data" in result.completed
         store = registry.container.get_service(ArtifactStore)
-        stored = asyncio.run(store.get(result.run_id, "data"))
+        stored = asyncio.run(store.get_artifact(result.run_id, "data"))
         assert stored.is_success
         assert stored.execution_origin == "parent"
         assert stored.execution_alias is None
@@ -227,7 +227,7 @@ class TestExecutorOriginTracking:
         # Assert - child artifact has origin='child:analyser'
         assert namespaced_id in result.completed
         store = registry.container.get_service(ArtifactStore)
-        stored = asyncio.run(store.get(result.run_id, namespaced_id))
+        stored = asyncio.run(store.get_artifact(result.run_id, namespaced_id))
         assert stored.is_success
         assert stored.execution_origin == "child:analyser"
 
@@ -268,7 +268,7 @@ class TestExecutorOriginTracking:
         # Assert - artifact has alias field populated
         assert namespaced_id in result.completed
         store = registry.container.get_service(ArtifactStore)
-        stored = asyncio.run(store.get(result.run_id, namespaced_id))
+        stored = asyncio.run(store.get_artifact(result.run_id, namespaced_id))
         assert stored.is_success
         assert stored.execution_alias == "results"
 
@@ -316,11 +316,11 @@ class TestExecutorOriginTracking:
         assert {parent_id, child_id} == result.completed
         store = registry.container.get_service(ArtifactStore)
 
-        parent_msg = asyncio.run(store.get(result.run_id, parent_id))
+        parent_msg = asyncio.run(store.get_artifact(result.run_id, parent_id))
         assert parent_msg.execution_origin == "parent"
         assert parent_msg.execution_alias is None
 
-        child_msg = asyncio.run(store.get(result.run_id, child_id))
+        child_msg = asyncio.run(store.get_artifact(result.run_id, child_id))
         assert child_msg.execution_origin == "child:processor"
         assert child_msg.execution_alias == "processed_results"
 

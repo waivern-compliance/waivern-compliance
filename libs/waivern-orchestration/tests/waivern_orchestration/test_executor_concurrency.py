@@ -153,7 +153,7 @@ class TestDAGExecutorObservability:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - use run_id from result to query the store
-        stored_ids = asyncio.run(store.list_keys(result.run_id))
+        stored_ids = asyncio.run(store.list_artifacts(result.run_id))
         assert "data_a" in stored_ids
         assert "data_b" in stored_ids
 
@@ -210,7 +210,7 @@ class TestDAGExecutorObservability:
 
         # Assert - load artifact from store to check duration
         store = registry.container.get_service(ArtifactStore)
-        stored = asyncio.run(store.get(result.run_id, "data"))
+        stored = asyncio.run(store.get_artifact(result.run_id, "data"))
         duration = stored.execution_duration
         assert duration is not None and duration >= 0
 

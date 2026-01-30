@@ -71,7 +71,7 @@ class TestDAGExecutorHappyPath:
         assert "data" in result.completed
         assert len(result.skipped) == 0
         store = registry.container.get_service(ArtifactStore)
-        stored = asyncio.run(store.get(result.run_id, "data"))
+        stored = asyncio.run(store.get_artifact(result.run_id, "data"))
         assert stored.is_success
         assert stored.content == expected_message.content
 
@@ -177,8 +177,8 @@ class TestDAGExecutorDependencies:
         # Assert - both artifacts completed successfully
         assert {"artifact_a", "artifact_b"} == result.completed
         store = registry.container.get_service(ArtifactStore)
-        stored_a = asyncio.run(store.get(result.run_id, "artifact_a"))
-        stored_b = asyncio.run(store.get(result.run_id, "artifact_b"))
+        stored_a = asyncio.run(store.get_artifact(result.run_id, "artifact_a"))
+        stored_b = asyncio.run(store.get_artifact(result.run_id, "artifact_b"))
         assert stored_a.content == message_a.content
         assert stored_b.content == message_b.content
 
@@ -233,7 +233,7 @@ class TestDAGExecutorFanIn:
         assert {"source_a", "source_b"} == result.completed
         assert "merged" in result.failed
         store = registry.container.get_service(ArtifactStore)
-        merged = asyncio.run(store.get(result.run_id, "merged"))
+        merged = asyncio.run(store.get_artifact(result.run_id, "merged"))
         assert not merged.is_success
         assert merged.execution_error is not None
         assert "not yet implemented" in (merged.execution_error or "")
@@ -288,7 +288,7 @@ class TestDAGExecutorErrorHandling:
         assert "source" in result.failed
         assert "dependent" in result.skipped
         store = registry.container.get_service(ArtifactStore)
-        source_msg = asyncio.run(store.get(result.run_id, "source"))
+        source_msg = asyncio.run(store.get_artifact(result.run_id, "source"))
         assert not source_msg.is_success
         assert source_msg.execution_error is not None
         assert "Connection failed" in (source_msg.execution_error or "")
@@ -353,7 +353,7 @@ class TestDAGExecutorErrorHandling:
         # Assert - should fail with clear error about missing connector
         assert "data" in result.failed
         store = registry.container.get_service(ArtifactStore)
-        data_msg = asyncio.run(store.get(result.run_id, "data"))
+        data_msg = asyncio.run(store.get_artifact(result.run_id, "data"))
         assert not data_msg.is_success
         assert data_msg.execution_error is not None
         assert "nonexistent_connector" in (data_msg.execution_error or "")
@@ -423,7 +423,7 @@ class TestDAGExecutorProcess:
         # Assert
         assert {"source", "findings"} == result.completed
         store = registry.container.get_service(ArtifactStore)
-        findings_msg = asyncio.run(store.get(result.run_id, "findings"))
+        findings_msg = asyncio.run(store.get_artifact(result.run_id, "findings"))
         assert findings_msg.is_success
         assert findings_msg.content == processed_message.content
         mock_processor.process.assert_called_once()
@@ -469,7 +469,7 @@ class TestDAGExecutorProcess:
         assert "source_data" in result.completed
         assert "processed" in result.failed
         store = registry.container.get_service(ArtifactStore)
-        processed_msg = asyncio.run(store.get(result.run_id, "processed"))
+        processed_msg = asyncio.run(store.get_artifact(result.run_id, "processed"))
         assert not processed_msg.is_success
         assert processed_msg.execution_error is not None
         assert "nonexistent_processor" in (processed_msg.execution_error or "")
@@ -510,7 +510,7 @@ class TestDAGExecutorArtifactMetadata:
         # Assert - run_id should be set on the result and match stored artifact
         assert result.run_id is not None
         store = registry.container.get_service(ArtifactStore)
-        stored = asyncio.run(store.get(result.run_id, "data"))
+        stored = asyncio.run(store.get_artifact(result.run_id, "data"))
         assert stored.run_id == result.run_id
 
     def test_stored_artifact_has_source_for_connector(self) -> None:
@@ -539,7 +539,7 @@ class TestDAGExecutorArtifactMetadata:
 
         # Assert - source should be "connector:filesystem"
         store = registry.container.get_service(ArtifactStore)
-        stored = asyncio.run(store.get(result.run_id, "data"))
+        stored = asyncio.run(store.get_artifact(result.run_id, "data"))
         assert stored.source == "connector:filesystem"
 
     def test_stored_artifact_has_source_for_processor(self) -> None:
@@ -596,7 +596,7 @@ class TestDAGExecutorArtifactMetadata:
 
         # Assert - source should be "processor:personal_data"
         store = registry.container.get_service(ArtifactStore)
-        stored = asyncio.run(store.get(result.run_id, "findings"))
+        stored = asyncio.run(store.get_artifact(result.run_id, "findings"))
         assert stored.source == "processor:personal_data"
 
     def test_stored_artifact_has_execution_context(self) -> None:
@@ -625,7 +625,7 @@ class TestDAGExecutorArtifactMetadata:
 
         # Assert - extensions.execution should be populated
         store = registry.container.get_service(ArtifactStore)
-        stored = asyncio.run(store.get(result.run_id, "data"))
+        stored = asyncio.run(store.get_artifact(result.run_id, "data"))
 
         assert stored.extensions is not None
         assert stored.extensions.execution is not None
