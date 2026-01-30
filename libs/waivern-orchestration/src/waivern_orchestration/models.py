@@ -31,6 +31,24 @@ class ExecuteConfig(BaseModel):
     cost_limit: float | None = None
 
 
+class ReuseConfig(BaseModel):
+    """Configuration for reusing an artifact from a previous run.
+
+    Allows copying an artifact's output from a completed run instead of
+    re-executing the production logic. Useful for resuming workflows or
+    reusing expensive computations.
+
+    Attributes:
+        from_run: The run ID to copy the artifact from.
+        artifact: The artifact ID in the source run. Defaults to the current
+            artifact's ID if not specified.
+
+    """
+
+    from_run: str
+    artifact: str | None = None
+
+
 # =============================================================================
 # Runbook Configuration
 # =============================================================================
@@ -119,17 +137,27 @@ class ChildRunbookConfig(BaseModel):
 
 
 class ArtifactDefinition(BaseModel):
-    """Definition of a single artifact in a runbook."""
+    """Definition of a single artifact in a runbook.
+
+    An artifact has exactly one production method:
+    - `source`: Extract data from a connector
+    - `inputs` + `process`: Transform data from other artifacts
+    - `reuse`: Copy from a previous run
+
+    """
 
     # Metadata (optional)
     name: str | None = None
     description: str | None = None
     contact: str | None = None
 
-    # Source: exactly one of source or inputs must be set
+    # Production methods (mutually exclusive)
     source: SourceConfig | None = None
     inputs: str | list[str] | None = None
     process: ProcessConfig | None = None
+    reuse: ReuseConfig | None = None
+    """Reuse artifact from a previous run instead of re-executing."""
+
     merge: Literal["concatenate"] = "concatenate"
 
     # Schema override (optional)
@@ -147,18 +175,43 @@ class ArtifactDefinition(BaseModel):
     """Child runbook directive for composition."""
 
     @model_validator(mode="after")
-    def validate_source_xor_inputs(self) -> Self:
-        """Validate that exactly one of source or inputs is set."""
+    def validate_production_method(self) -> Self:
+        """Validate that exactly one production method is specified.
+
+        Production methods are mutually exclusive:
+        - `reuse`: Copy from previous run (standalone)
+        - `source`: Extract from connector (standalone)
+        - `inputs`: Transform with processor (requires inputs)
+
+        """
+        has_reuse = self.reuse is not None
         has_source = self.source is not None
         has_inputs = self.inputs is not None
 
+        # Reuse is a standalone production method
+        if has_reuse:
+            if has_source:
+                raise ValueError(
+                    "Artifact cannot have both 'reuse' and 'source' - "
+                    "they are mutually exclusive"
+                )
+            if has_inputs:
+                raise ValueError(
+                    "Artifact cannot have both 'reuse' and 'inputs' - "
+                    "they are mutually exclusive"
+                )
+            return self
+
+        # Without reuse, exactly one of source or inputs must be set
         if has_source and has_inputs:
             raise ValueError(
                 "Artifact cannot have both 'source' and 'inputs' - "
                 "they are mutually exclusive"
             )
         if not has_source and not has_inputs:
-            raise ValueError("Artifact must have either 'source' or 'inputs' defined")
+            raise ValueError(
+                "Artifact must have 'source', 'inputs', or 'reuse' defined"
+            )
 
         return self
 
