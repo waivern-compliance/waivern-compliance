@@ -111,15 +111,15 @@ class AsyncInMemoryStore(ArtifactStore):
         self, run_id: str, metadata: dict[str, JsonValue]
     ) -> None:
         """Persist run metadata."""
-        self._get_system_storage(run_id)["metadata"] = metadata
+        self._get_system_storage(run_id)["run"] = metadata
 
     @override
     async def load_run_metadata(self, run_id: str) -> dict[str, JsonValue]:
         """Load run metadata."""
         system_data = self._get_system_storage(run_id)
-        if "metadata" not in system_data:
+        if "run" not in system_data:
             raise ArtifactNotFoundError(f"Run metadata not found for run '{run_id}'.")
-        return system_data["metadata"]
+        return system_data["run"]
 
     # ========================================================================
     # Run Enumeration

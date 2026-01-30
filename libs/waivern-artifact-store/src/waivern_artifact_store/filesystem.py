@@ -17,14 +17,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import override
+from typing import cast, override
 
 import aiofiles
 from waivern_core import JsonValue
 from waivern_core.message import Message
 
 from waivern_artifact_store.base import ArtifactStore
-from waivern_artifact_store.errors import ArtifactNotFoundError
+from waivern_artifact_store.errors import ArtifactNotFoundError, ArtifactStoreError
 
 
 class LocalFilesystemStore(ArtifactStore):
@@ -197,7 +197,12 @@ class LocalFilesystemStore(ArtifactStore):
 
         async with aiofiles.open(file_path) as f:
             content = await f.read()
-        return json.loads(content)  # type: ignore[return-value]
+        data = json.loads(content)
+        if not isinstance(data, dict):
+            raise ArtifactStoreError(
+                f"Invalid execution state format for run '{run_id}': expected dict."
+            )
+        return cast(dict[str, JsonValue], data)
 
     @override
     async def save_run_metadata(
@@ -220,7 +225,12 @@ class LocalFilesystemStore(ArtifactStore):
 
         async with aiofiles.open(file_path) as f:
             content = await f.read()
-        return json.loads(content)  # type: ignore[return-value]
+        data = json.loads(content)
+        if not isinstance(data, dict):
+            raise ArtifactStoreError(
+                f"Invalid run metadata format for run '{run_id}': expected dict."
+            )
+        return cast(dict[str, JsonValue], data)
 
     # ========================================================================
     # Run Enumeration

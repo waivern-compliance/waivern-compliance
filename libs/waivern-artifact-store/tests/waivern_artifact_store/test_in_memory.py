@@ -1,6 +1,7 @@
 """Tests for AsyncInMemoryStore implementation."""
 
 import pytest
+from waivern_core import JsonValue
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
@@ -267,3 +268,239 @@ class TestAsyncInMemoryStoreListRuns:
         run_ids = await store.list_runs()
 
         assert run_ids == []
+
+
+# =============================================================================
+# Execution State Tests
+# =============================================================================
+
+
+class TestAsyncInMemoryStoreSaveExecutionState:
+    """Tests for the save_execution_state() method."""
+
+    async def test_save_execution_state_stores_data_retrievable_by_load(self) -> None:
+        store = AsyncInMemoryStore()
+        state_data: dict[str, JsonValue] = {
+            "run_id": "test-run",
+            "completed": ["artifact_a"],
+            "failed": [],
+            "skipped": [],
+            "not_started": ["artifact_b"],
+        }
+
+        await store.save_execution_state("test-run", state_data)
+
+        loaded = await store.load_execution_state("test-run")
+        assert loaded["run_id"] == "test-run"
+        assert loaded["completed"] == ["artifact_a"]
+
+    async def test_save_execution_state_overwrites_existing(self) -> None:
+        store = AsyncInMemoryStore()
+        original_state: dict[str, JsonValue] = {"completed": [], "status": "running"}
+        updated_state: dict[str, JsonValue] = {
+            "completed": ["a", "b"],
+            "status": "completed",
+        }
+
+        await store.save_execution_state("test-run", original_state)
+        await store.save_execution_state("test-run", updated_state)
+
+        loaded = await store.load_execution_state("test-run")
+        assert loaded["status"] == "completed"
+        assert loaded["completed"] == ["a", "b"]
+
+
+class TestAsyncInMemoryStoreLoadExecutionState:
+    """Tests for the load_execution_state() method."""
+
+    async def test_load_execution_state_returns_saved_data(self) -> None:
+        store = AsyncInMemoryStore()
+        state_data: dict[str, JsonValue] = {
+            "run_id": "test-run",
+            "completed": ["a", "b"],
+            "failed": ["c"],
+            "skipped": ["d"],
+            "not_started": [],
+            "last_checkpoint": "2024-01-15T10:30:00Z",
+        }
+        await store.save_execution_state("test-run", state_data)
+
+        loaded = await store.load_execution_state("test-run")
+
+        assert loaded["run_id"] == "test-run"
+        assert loaded["completed"] == ["a", "b"]
+        assert loaded["failed"] == ["c"]
+        assert loaded["skipped"] == ["d"]
+        assert loaded["last_checkpoint"] == "2024-01-15T10:30:00Z"
+
+    async def test_load_execution_state_raises_not_found_for_missing(self) -> None:
+        store = AsyncInMemoryStore()
+
+        with pytest.raises(ArtifactNotFoundError) as exc_info:
+            await store.load_execution_state("nonexistent-run")
+
+        assert "Execution state not found" in str(exc_info.value)
+
+
+# =============================================================================
+# Run Metadata Tests
+# =============================================================================
+
+
+class TestAsyncInMemoryStoreSaveRunMetadata:
+    """Tests for the save_run_metadata() method."""
+
+    async def test_save_run_metadata_stores_data_retrievable_by_load(self) -> None:
+        store = AsyncInMemoryStore()
+        metadata: dict[str, JsonValue] = {
+            "run_id": "test-run",
+            "runbook_path": "/path/to/runbook.yaml",
+            "runbook_hash": "sha256:abc123",
+            "status": "running",
+            "started_at": "2024-01-15T10:00:00Z",
+        }
+
+        await store.save_run_metadata("test-run", metadata)
+
+        loaded = await store.load_run_metadata("test-run")
+        assert loaded["run_id"] == "test-run"
+        assert loaded["status"] == "running"
+
+    async def test_save_run_metadata_overwrites_existing(self) -> None:
+        store = AsyncInMemoryStore()
+        original: dict[str, JsonValue] = {"status": "running", "completed_at": None}
+        updated: dict[str, JsonValue] = {
+            "status": "completed",
+            "completed_at": "2024-01-15T11:00:00Z",
+        }
+
+        await store.save_run_metadata("test-run", original)
+        await store.save_run_metadata("test-run", updated)
+
+        loaded = await store.load_run_metadata("test-run")
+        assert loaded["status"] == "completed"
+        assert loaded["completed_at"] == "2024-01-15T11:00:00Z"
+
+
+class TestAsyncInMemoryStoreLoadRunMetadata:
+    """Tests for the load_run_metadata() method."""
+
+    async def test_load_run_metadata_returns_saved_data(self) -> None:
+        store = AsyncInMemoryStore()
+        metadata: dict[str, JsonValue] = {
+            "run_id": "test-run",
+            "runbook_path": "/path/to/runbook.yaml",
+            "runbook_hash": "sha256:abc123def456",
+            "status": "completed",
+            "started_at": "2024-01-15T10:00:00Z",
+            "completed_at": "2024-01-15T10:30:00Z",
+        }
+        await store.save_run_metadata("test-run", metadata)
+
+        loaded = await store.load_run_metadata("test-run")
+
+        assert loaded["run_id"] == "test-run"
+        assert loaded["runbook_hash"] == "sha256:abc123def456"
+        assert loaded["status"] == "completed"
+
+    async def test_load_run_metadata_raises_not_found_for_missing(self) -> None:
+        store = AsyncInMemoryStore()
+
+        with pytest.raises(ArtifactNotFoundError) as exc_info:
+            await store.load_run_metadata("nonexistent-run")
+
+        assert "Run metadata not found" in str(exc_info.value)
+
+
+# =============================================================================
+# System Metadata Isolation Tests
+# =============================================================================
+
+
+class TestAsyncInMemoryStoreSystemMetadataIsolation:
+    """Tests for isolation between artifacts and system metadata."""
+
+    async def test_system_metadata_isolated_from_artifacts(self) -> None:
+        """System metadata should not appear in artifact listings."""
+        store = AsyncInMemoryStore()
+
+        # Save both artifacts and system metadata
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save_artifact("test-run", "findings", message)
+        state_data: dict[str, JsonValue] = {"completed": []}
+        metadata: dict[str, JsonValue] = {"status": "running"}
+        await store.save_execution_state("test-run", state_data)
+        await store.save_run_metadata("test-run", metadata)
+
+        # List artifacts should only show artifacts
+        artifact_ids = await store.list_artifacts("test-run")
+
+        assert artifact_ids == ["findings"]
+
+    async def test_clear_artifacts_preserves_system_metadata(self) -> None:
+        """clear_artifacts() should preserve system metadata."""
+        store = AsyncInMemoryStore()
+
+        # Save artifacts and system metadata
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save_artifact("test-run", "findings", message)
+        state_data: dict[str, JsonValue] = {"completed": ["findings"]}
+        metadata: dict[str, JsonValue] = {"status": "completed"}
+        await store.save_execution_state("test-run", state_data)
+        await store.save_run_metadata("test-run", metadata)
+
+        # Clear artifacts
+        await store.clear_artifacts("test-run")
+
+        # Artifacts should be gone, system metadata should remain
+        assert await store.list_artifacts("test-run") == []
+        state = await store.load_execution_state("test-run")
+        assert state["completed"] == ["findings"]
+        metadata = await store.load_run_metadata("test-run")
+        assert metadata["status"] == "completed"
+
+    async def test_system_metadata_isolated_between_runs(self) -> None:
+        """System metadata should be isolated between different runs."""
+        store = AsyncInMemoryStore()
+
+        # Save metadata for two different runs
+        state_1: dict[str, JsonValue] = {"completed": ["a"]}
+        state_2: dict[str, JsonValue] = {"completed": ["b", "c"]}
+        await store.save_execution_state("run-1", state_1)
+        await store.save_execution_state("run-2", state_2)
+
+        # Load and verify isolation
+        state_1 = await store.load_execution_state("run-1")
+        state_2 = await store.load_execution_state("run-2")
+
+        assert state_1["completed"] == ["a"]
+        assert state_2["completed"] == ["b", "c"]
+
+    async def test_list_runs_includes_runs_with_only_system_metadata(self) -> None:
+        """list_runs() should include runs that only have system metadata."""
+        store = AsyncInMemoryStore()
+
+        # Run with only system metadata (no artifacts)
+        state_data: dict[str, JsonValue] = {"completed": []}
+        await store.save_execution_state("run-system-only", state_data)
+
+        # Run with only artifacts
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save_artifact("run-artifacts-only", "findings", message)
+
+        run_ids = await store.list_runs()
+
+        assert "run-system-only" in run_ids
+        assert "run-artifacts-only" in run_ids

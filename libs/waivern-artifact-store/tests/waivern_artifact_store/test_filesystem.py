@@ -4,10 +4,11 @@ import json
 from pathlib import Path
 
 import pytest
+from waivern_core import JsonValue
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
-from waivern_artifact_store.errors import ArtifactNotFoundError
+from waivern_artifact_store.errors import ArtifactNotFoundError, ArtifactStoreError
 from waivern_artifact_store.filesystem import LocalFilesystemStore
 
 # =============================================================================
@@ -378,3 +379,276 @@ class TestLocalFilesystemStoreListRuns:
         run_ids = await store.list_runs()
 
         assert run_ids == []
+
+
+# =============================================================================
+# Execution State Tests
+# =============================================================================
+
+
+class TestLocalFilesystemStoreSaveExecutionState:
+    """Tests for the save_execution_state() method."""
+
+    async def test_save_execution_state_creates_file_in_system_directory(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        state_data: dict[str, JsonValue] = {
+            "run_id": "test-run",
+            "completed": ["artifact_a"],
+            "failed": [],
+            "skipped": [],
+            "not_started": ["artifact_b"],
+        }
+
+        await store.save_execution_state("test-run", state_data)
+
+        expected_path = tmp_path / "runs" / "test-run" / "_system" / "state.json"
+        assert expected_path.exists()
+        with expected_path.open() as f:
+            saved_data = json.load(f)
+        assert saved_data["run_id"] == "test-run"
+        assert saved_data["completed"] == ["artifact_a"]
+
+    async def test_save_execution_state_overwrites_existing(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        original_state: dict[str, JsonValue] = {"completed": [], "status": "running"}
+        updated_state: dict[str, JsonValue] = {
+            "completed": ["a", "b"],
+            "status": "completed",
+        }
+
+        await store.save_execution_state("test-run", original_state)
+        await store.save_execution_state("test-run", updated_state)
+
+        loaded = await store.load_execution_state("test-run")
+        assert loaded["status"] == "completed"
+        assert loaded["completed"] == ["a", "b"]
+
+
+class TestLocalFilesystemStoreLoadExecutionState:
+    """Tests for the load_execution_state() method."""
+
+    async def test_load_execution_state_returns_saved_data(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        state_data: dict[str, JsonValue] = {
+            "run_id": "test-run",
+            "completed": ["a", "b"],
+            "failed": ["c"],
+            "skipped": ["d"],
+            "not_started": [],
+            "last_checkpoint": "2024-01-15T10:30:00Z",
+        }
+        await store.save_execution_state("test-run", state_data)
+
+        loaded = await store.load_execution_state("test-run")
+
+        assert loaded["run_id"] == "test-run"
+        assert loaded["completed"] == ["a", "b"]
+        assert loaded["failed"] == ["c"]
+        assert loaded["skipped"] == ["d"]
+        assert loaded["last_checkpoint"] == "2024-01-15T10:30:00Z"
+
+    async def test_load_execution_state_raises_not_found_for_missing(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        with pytest.raises(ArtifactNotFoundError) as exc_info:
+            await store.load_execution_state("nonexistent-run")
+
+        assert "Execution state not found" in str(exc_info.value)
+
+    async def test_load_execution_state_raises_error_for_invalid_format(
+        self, tmp_path: Path
+    ) -> None:
+        """Loading non-dict JSON should raise ArtifactStoreError."""
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        # Manually create invalid state file (array instead of dict)
+        system_dir = tmp_path / "runs" / "test-run" / "_system"
+        system_dir.mkdir(parents=True)
+        (system_dir / "state.json").write_text('["invalid", "format"]')
+
+        with pytest.raises(ArtifactStoreError) as exc_info:
+            await store.load_execution_state("test-run")
+
+        assert "Invalid execution state format" in str(exc_info.value)
+
+
+# =============================================================================
+# Run Metadata Tests
+# =============================================================================
+
+
+class TestLocalFilesystemStoreSaveRunMetadata:
+    """Tests for the save_run_metadata() method."""
+
+    async def test_save_run_metadata_creates_file_in_system_directory(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        metadata: dict[str, JsonValue] = {
+            "run_id": "test-run",
+            "runbook_path": "/path/to/runbook.yaml",
+            "runbook_hash": "sha256:abc123",
+            "status": "running",
+            "started_at": "2024-01-15T10:00:00Z",
+        }
+
+        await store.save_run_metadata("test-run", metadata)
+
+        expected_path = tmp_path / "runs" / "test-run" / "_system" / "run.json"
+        assert expected_path.exists()
+        with expected_path.open() as f:
+            saved_data = json.load(f)
+        assert saved_data["run_id"] == "test-run"
+        assert saved_data["status"] == "running"
+
+    async def test_save_run_metadata_overwrites_existing(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        original: dict[str, JsonValue] = {"status": "running", "completed_at": None}
+        updated: dict[str, JsonValue] = {
+            "status": "completed",
+            "completed_at": "2024-01-15T11:00:00Z",
+        }
+
+        await store.save_run_metadata("test-run", original)
+        await store.save_run_metadata("test-run", updated)
+
+        loaded = await store.load_run_metadata("test-run")
+        assert loaded["status"] == "completed"
+        assert loaded["completed_at"] == "2024-01-15T11:00:00Z"
+
+
+class TestLocalFilesystemStoreLoadRunMetadata:
+    """Tests for the load_run_metadata() method."""
+
+    async def test_load_run_metadata_returns_saved_data(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        metadata: dict[str, JsonValue] = {
+            "run_id": "test-run",
+            "runbook_path": "/path/to/runbook.yaml",
+            "runbook_hash": "sha256:abc123def456",
+            "status": "completed",
+            "started_at": "2024-01-15T10:00:00Z",
+            "completed_at": "2024-01-15T10:30:00Z",
+        }
+        await store.save_run_metadata("test-run", metadata)
+
+        loaded = await store.load_run_metadata("test-run")
+
+        assert loaded["run_id"] == "test-run"
+        assert loaded["runbook_hash"] == "sha256:abc123def456"
+        assert loaded["status"] == "completed"
+
+    async def test_load_run_metadata_raises_not_found_for_missing(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        with pytest.raises(ArtifactNotFoundError) as exc_info:
+            await store.load_run_metadata("nonexistent-run")
+
+        assert "Run metadata not found" in str(exc_info.value)
+
+    async def test_load_run_metadata_raises_error_for_invalid_format(
+        self, tmp_path: Path
+    ) -> None:
+        """Loading non-dict JSON should raise ArtifactStoreError."""
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        # Manually create invalid metadata file (string instead of dict)
+        system_dir = tmp_path / "runs" / "test-run" / "_system"
+        system_dir.mkdir(parents=True)
+        (system_dir / "run.json").write_text('"just a string"')
+
+        with pytest.raises(ArtifactStoreError) as exc_info:
+            await store.load_run_metadata("test-run")
+
+        assert "Invalid run metadata format" in str(exc_info.value)
+
+
+# =============================================================================
+# System Metadata Isolation Tests
+# =============================================================================
+
+
+class TestLocalFilesystemStoreSystemMetadataIsolation:
+    """Tests for isolation between artifacts and system metadata."""
+
+    async def test_system_metadata_isolated_from_artifacts(
+        self, tmp_path: Path
+    ) -> None:
+        """System metadata should not appear in artifact listings."""
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        # Save both artifacts and system metadata
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save_artifact("test-run", "findings", message)
+        state_data: dict[str, JsonValue] = {"completed": []}
+        metadata: dict[str, JsonValue] = {"status": "running"}
+        await store.save_execution_state("test-run", state_data)
+        await store.save_run_metadata("test-run", metadata)
+
+        # List artifacts should only show artifacts
+        artifact_ids = await store.list_artifacts("test-run")
+
+        assert artifact_ids == ["findings"]
+        assert "state" not in artifact_ids
+        assert "run" not in artifact_ids
+        assert "_system/state" not in artifact_ids
+        assert "_system/run" not in artifact_ids
+
+    async def test_clear_artifacts_preserves_system_metadata_via_api(
+        self, tmp_path: Path
+    ) -> None:
+        """clear_artifacts() should preserve system metadata saved via API."""
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        # Save artifacts and system metadata via API
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save_artifact("test-run", "findings", message)
+        state_data: dict[str, JsonValue] = {"completed": ["findings"]}
+        metadata: dict[str, JsonValue] = {"status": "completed"}
+        await store.save_execution_state("test-run", state_data)
+        await store.save_run_metadata("test-run", metadata)
+
+        # Clear artifacts
+        await store.clear_artifacts("test-run")
+
+        # Artifacts should be gone, system metadata should remain
+        assert await store.list_artifacts("test-run") == []
+        state = await store.load_execution_state("test-run")
+        assert state["completed"] == ["findings"]
+        metadata = await store.load_run_metadata("test-run")
+        assert metadata["status"] == "completed"
+
+    async def test_system_metadata_isolated_between_runs(self, tmp_path: Path) -> None:
+        """System metadata should be isolated between different runs."""
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        # Save metadata for two different runs
+        state_1: dict[str, JsonValue] = {"completed": ["a"]}
+        state_2: dict[str, JsonValue] = {"completed": ["b", "c"]}
+        await store.save_execution_state("run-1", state_1)
+        await store.save_execution_state("run-2", state_2)
+
+        # Load and verify isolation
+        state_1 = await store.load_execution_state("run-1")
+        state_2 = await store.load_execution_state("run-2")
+
+        assert state_1["completed"] == ["a"]
+        assert state_2["completed"] == ["b", "c"]
