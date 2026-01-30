@@ -5,6 +5,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from waivern_artifact_store import ArtifactStore
 from waivern_core import Message
 from waivern_core.schemas import Schema
 
@@ -71,9 +72,11 @@ class TestExecutorChildRunbookAliases:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - namespaced artifact executes successfully
-        assert namespaced_id in result.artifacts
-        assert result.artifacts[namespaced_id].is_success
-        assert result.artifacts[namespaced_id].content == message.content
+        assert namespaced_id in result.completed
+        store = registry.container.get_service(ArtifactStore)
+        stored = asyncio.run(store.get(result.run_id, namespaced_id))
+        assert stored.is_success
+        assert stored.content == message.content
 
     def test_execute_downstream_references_namespaced_artifact(self) -> None:
         """Downstream artifacts can reference namespaced artifact IDs.
@@ -137,9 +140,11 @@ class TestExecutorChildRunbookAliases:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - both artifacts execute successfully
-        assert result.artifacts[namespaced_source].is_success
-        assert result.artifacts["analysis"].is_success
-        assert result.artifacts["analysis"].content == processed_message.content
+        assert {namespaced_source, "analysis"} == result.completed
+        store = registry.container.get_service(ArtifactStore)
+        analysis = asyncio.run(store.get(result.run_id, "analysis"))
+        assert analysis.is_success
+        assert analysis.content == processed_message.content
 
 
 # =============================================================================
@@ -185,9 +190,12 @@ class TestExecutorOriginTracking:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - parent artifact has origin='parent'
-        assert result.artifacts["data"].is_success
-        assert result.artifacts["data"].execution_origin == "parent"
-        assert result.artifacts["data"].execution_alias is None
+        assert "data" in result.completed
+        store = registry.container.get_service(ArtifactStore)
+        stored = asyncio.run(store.get(result.run_id, "data"))
+        assert stored.is_success
+        assert stored.execution_origin == "parent"
+        assert stored.execution_alias is None
 
     def test_execute_artifact_origin_child(self) -> None:
         """Child artifacts have origin='child:{name}' in results."""
@@ -217,8 +225,11 @@ class TestExecutorOriginTracking:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - child artifact has origin='child:analyser'
-        assert result.artifacts[namespaced_id].is_success
-        assert result.artifacts[namespaced_id].execution_origin == "child:analyser"
+        assert namespaced_id in result.completed
+        store = registry.container.get_service(ArtifactStore)
+        stored = asyncio.run(store.get(result.run_id, namespaced_id))
+        assert stored.is_success
+        assert stored.execution_origin == "child:analyser"
 
     def test_execute_artifact_alias_populated(self) -> None:
         """Aliased artifacts have alias field populated in results."""
@@ -255,8 +266,11 @@ class TestExecutorOriginTracking:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - artifact has alias field populated
-        assert result.artifacts[namespaced_id].is_success
-        assert result.artifacts[namespaced_id].execution_alias == "results"
+        assert namespaced_id in result.completed
+        store = registry.container.get_service(ArtifactStore)
+        stored = asyncio.run(store.get(result.run_id, namespaced_id))
+        assert stored.is_success
+        assert stored.execution_alias == "results"
 
     def test_execute_mixed_parent_and_child_artifacts(self) -> None:
         """Execution correctly tracks origin for mixed parent/child artifacts."""
@@ -299,11 +313,16 @@ class TestExecutorOriginTracking:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - parent has origin='parent', child has origin='child:processor'
-        assert result.artifacts[parent_id].execution_origin == "parent"
-        assert result.artifacts[parent_id].execution_alias is None
+        assert {parent_id, child_id} == result.completed
+        store = registry.container.get_service(ArtifactStore)
 
-        assert result.artifacts[child_id].execution_origin == "child:processor"
-        assert result.artifacts[child_id].execution_alias == "processed_results"
+        parent_msg = asyncio.run(store.get(result.run_id, parent_id))
+        assert parent_msg.execution_origin == "parent"
+        assert parent_msg.execution_alias is None
+
+        child_msg = asyncio.run(store.get(result.run_id, child_id))
+        assert child_msg.execution_origin == "child:processor"
+        assert child_msg.execution_alias == "processed_results"
 
 
 # =============================================================================

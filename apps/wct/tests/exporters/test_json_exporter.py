@@ -1,6 +1,9 @@
 """Tests for JSON exporter."""
 
+from waivern_artifact_store.in_memory import AsyncInMemoryStore
 from waivern_orchestration import ExecutionPlan, ExecutionResult
+
+from .conftest import create_success_message
 
 # =============================================================================
 # Exporter Properties
@@ -46,7 +49,7 @@ class TestJsonExporterExport:
 
         assert errors == []
 
-    def test_export_result_is_json_serializable(
+    async def test_export_result_is_json_serializable(
         self,
         minimal_result: ExecutionResult,
         minimal_plan: ExecutionPlan,
@@ -56,8 +59,12 @@ class TestJsonExporterExport:
 
         from wct.exporters.json_exporter import JsonExporter
 
+        # Setup store with the artifact referenced in minimal_result
+        store = AsyncInMemoryStore()
+        await store.save(minimal_result.run_id, "art1", create_success_message())
+
         exporter = JsonExporter()
-        export_result = exporter.export(minimal_result, minimal_plan)
+        export_result = await exporter.export(minimal_result, minimal_plan, store)
 
         json_str = json.dumps(export_result, indent=2)
         assert isinstance(json_str, str)

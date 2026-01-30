@@ -1,7 +1,9 @@
 """Protocol for compliance exporters."""
 
+from collections.abc import Coroutine
 from typing import Any, Protocol, runtime_checkable
 
+from waivern_artifact_store import ArtifactStore
 from waivern_orchestration import ExecutionPlan, ExecutionResult
 
 
@@ -54,15 +56,19 @@ class Exporter(Protocol):
         self,
         result: ExecutionResult,
         plan: ExecutionPlan,
-    ) -> dict[str, Any]:
+        store: ArtifactStore,
+    ) -> Coroutine[Any, Any, dict[str, Any]]:
         """Export execution results to structured format.
 
+        This is an async method that loads artifact data from the store.
+
         Args:
-            result: Execution results with artifact data
+            result: Execution results (summary with artifact IDs)
             plan: Execution plan with runbook metadata
+            store: Artifact store to load artifact data from
 
         Returns:
-            Export dictionary ready for JSON serialisation
+            Coroutine yielding export dictionary ready for JSON serialisation
 
         """
         ...

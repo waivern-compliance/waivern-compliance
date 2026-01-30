@@ -25,9 +25,6 @@ class ComponentNotFoundError(OrchestrationError):
     """Raised when a referenced component type is not found."""
 
 
-# Phase 3: Child runbook errors
-
-
 class InvalidPathError(OrchestrationError):
     """Raised when a child runbook path is invalid (absolute or contains '..')."""
 
@@ -46,3 +43,15 @@ class MissingInputMappingError(OrchestrationError):
 
 class InvalidOutputMappingError(OrchestrationError):
     """Raised when output mapping references non-existent child artifact."""
+
+
+class RunNotFoundError(OrchestrationError):
+    """Raised when attempting to resume a non-existent run."""
+
+
+class RunbookChangedError(OrchestrationError):
+    """Raised when runbook has changed since the original run."""
+
+
+class RunAlreadyActiveError(OrchestrationError):
+    """Raised when attempting to resume a run that is already executing."""

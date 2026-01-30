@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from waivern_core import JsonValue
 from waivern_core.message import Message
 
 
@@ -106,6 +107,58 @@ class ArtifactStore(ABC):
 
         Args:
             run_id: Unique identifier for the run.
+
+        """
+        ...
+
+    # -------------------------------------------------------------------------
+    # JSON Storage (for system metadata like execution state)
+    # -------------------------------------------------------------------------
+
+    @abstractmethod
+    async def save_json(
+        self, run_id: str, key: str, data: dict[str, JsonValue]
+    ) -> None:
+        """Store raw JSON data by key (for system metadata).
+
+        Uses upsert semantics - if the key already exists, it is overwritten.
+
+        Args:
+            run_id: Unique identifier for the run.
+            key: Storage key, supports hierarchical paths
+                (e.g., '_system/state', '_system/run').
+            data: The dictionary data to store.
+
+        """
+        ...
+
+    @abstractmethod
+    async def get_json(self, run_id: str, key: str) -> dict[str, JsonValue]:
+        """Retrieve raw JSON data by key.
+
+        Args:
+            run_id: Unique identifier for the run.
+            key: Storage key to retrieve.
+
+        Returns:
+            The stored dictionary data.
+
+        Raises:
+            ArtifactNotFoundError: If data with key does not exist.
+
+        """
+        ...
+
+    # -------------------------------------------------------------------------
+    # Run Enumeration
+    # -------------------------------------------------------------------------
+
+    @abstractmethod
+    async def list_runs(self) -> list[str]:
+        """List all run IDs in the store.
+
+        Returns:
+            List of run IDs. Empty list if no runs exist.
 
         """
         ...

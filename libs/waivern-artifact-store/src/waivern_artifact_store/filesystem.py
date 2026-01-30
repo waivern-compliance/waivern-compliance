@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import override
 
 import aiofiles
+from waivern_core import JsonValue
 from waivern_core.message import Message
 
 from waivern_artifact_store.base import ArtifactStore
@@ -176,3 +177,49 @@ class LocalFilesystemStore(ArtifactStore):
                     self._SYSTEM_PREFIX
                 ):
                     dir_path.rmdir()
+
+    @override
+    async def save_json(
+        self, run_id: str, key: str, data: dict[str, JsonValue]
+    ) -> None:
+        """Store raw JSON data by key.
+
+        Creates parent directories if they don't exist.
+        Uses upsert semantics - overwrites if key already exists.
+        """
+        file_path = self._key_to_path(run_id, key)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        async with aiofiles.open(file_path, "w") as f:
+            await f.write(json.dumps(data, indent=2))
+
+    @override
+    async def get_json(self, run_id: str, key: str) -> dict[str, JsonValue]:
+        """Retrieve raw JSON data by key.
+
+        Raises:
+            ArtifactNotFoundError: If data with key does not exist.
+
+        """
+        file_path = self._key_to_path(run_id, key)
+
+        if not file_path.exists():
+            raise ArtifactNotFoundError(
+                f"JSON data '{key}' not found in run '{run_id}'."
+            )
+
+        async with aiofiles.open(file_path) as f:
+            content = await f.read()
+        return json.loads(content)
+
+    @override
+    async def list_runs(self) -> list[str]:
+        """List all run IDs in the store.
+
+        Returns all subdirectory names under {base_path}/runs/.
+        """
+        runs_dir = self._base_path / "runs"
+        if not runs_dir.exists():
+            return []
+
+        return sorted(d.name for d in runs_dir.iterdir() if d.is_dir())

@@ -24,6 +24,7 @@ from wct.cli import (
     list_exporters_command,
     list_processors_command,
     list_rulesets_command,
+    list_runs_command,
     validate_runbook_command,
 )
 
@@ -74,6 +75,14 @@ def run(  # noqa: PLR0913 - CLI entry point with many options
             rich_help_panel="Output",
         ),
     ] = None,
+    resume: Annotated[
+        str | None,
+        typer.Option(
+            "--resume",
+            help="Resume a previous run from its ID (UUID). Skips completed artifacts.",
+            rich_help_panel="Execution",
+        ),
+    ] = None,
     verbose: Annotated[
         bool,
         typer.Option(
@@ -115,7 +124,9 @@ def run(  # noqa: PLR0913 - CLI entry point with many options
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output = Path(f"{timestamp}_analysis_results.json")
 
-    execute_runbook_command(runbook, output_dir, output, verbose, log_level, exporter)
+    execute_runbook_command(
+        runbook, output_dir, output, verbose, log_level, exporter, resume
+    )
 
 
 @app.command(name="connectors")
@@ -176,6 +187,28 @@ def list_available_rulesets(
 ) -> None:
     """List available (built-in & registered) rulesets."""
     list_rulesets_command(log_level)
+
+
+@app.command(name="runs")
+def list_runs(
+    status: Annotated[
+        str | None,
+        typer.Option(
+            "--status",
+            help="Filter runs by status (running, completed, failed, interrupted)",
+        ),
+    ] = None,
+    log_level: Annotated[
+        str,
+        typer.Option(
+            "--log-level",
+            help="Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+            case_sensitive=False,
+        ),
+    ] = "INFO",
+) -> None:
+    """List recorded execution runs."""
+    list_runs_command(log_level, status)
 
 
 @app.command(name="validate-runbook")

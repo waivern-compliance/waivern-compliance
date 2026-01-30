@@ -3,7 +3,10 @@
 from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
-from waivern_core import Message
+
+# =============================================================================
+# Artifact Configuration
+# =============================================================================
 
 
 class SourceConfig(BaseModel):
@@ -28,6 +31,28 @@ class ExecuteConfig(BaseModel):
     cost_limit: float | None = None
 
 
+class ReuseConfig(BaseModel):
+    """Configuration for reusing an artifact from a previous run.
+
+    Allows copying an artifact's output from a completed run instead of
+    re-executing the production logic. Useful for resuming workflows or
+    reusing expensive computations.
+
+    Attributes:
+        from_run: The run ID to copy the artifact from.
+        artifact: The artifact ID in the source run to copy.
+
+    """
+
+    from_run: str
+    artifact: str
+
+
+# =============================================================================
+# Runbook Configuration
+# =============================================================================
+
+
 class RunbookConfig(BaseModel):
     """Optional execution configuration for a runbook."""
 
@@ -37,6 +62,11 @@ class RunbookConfig(BaseModel):
     cost_limit: float | None = None
     template_paths: list[str] = Field(default_factory=list)
     """Directories to search for child runbooks."""
+
+
+# =============================================================================
+# Child Runbook Support
+# =============================================================================
 
 
 class RunbookInputDeclaration(BaseModel):
@@ -100,18 +130,33 @@ class ChildRunbookConfig(BaseModel):
         return self
 
 
+# =============================================================================
+# Core Models
+# =============================================================================
+
+
 class ArtifactDefinition(BaseModel):
-    """Definition of a single artifact in a runbook."""
+    """Definition of a single artifact in a runbook.
+
+    An artifact has exactly one production method:
+    - `source`: Extract data from a connector
+    - `inputs` + `process`: Transform data from other artifacts
+    - `reuse`: Copy from a previous run
+
+    """
 
     # Metadata (optional)
     name: str | None = None
     description: str | None = None
     contact: str | None = None
 
-    # Source: exactly one of source or inputs must be set
+    # Production methods (mutually exclusive)
     source: SourceConfig | None = None
     inputs: str | list[str] | None = None
     process: ProcessConfig | None = None
+    reuse: ReuseConfig | None = None
+    """Reuse artifact from a previous run instead of re-executing."""
+
     merge: Literal["concatenate"] = "concatenate"
 
     # Schema override (optional)
@@ -129,18 +174,43 @@ class ArtifactDefinition(BaseModel):
     """Child runbook directive for composition."""
 
     @model_validator(mode="after")
-    def validate_source_xor_inputs(self) -> Self:
-        """Validate that exactly one of source or inputs is set."""
+    def validate_production_method(self) -> Self:
+        """Validate that exactly one production method is specified.
+
+        Production methods are mutually exclusive:
+        - `reuse`: Copy from previous run (standalone)
+        - `source`: Extract from connector (standalone)
+        - `inputs`: Transform with processor (requires inputs)
+
+        """
+        has_reuse = self.reuse is not None
         has_source = self.source is not None
         has_inputs = self.inputs is not None
 
+        # Reuse is a standalone production method
+        if has_reuse:
+            if has_source:
+                raise ValueError(
+                    "Artifact cannot have both 'reuse' and 'source' - "
+                    "they are mutually exclusive"
+                )
+            if has_inputs:
+                raise ValueError(
+                    "Artifact cannot have both 'reuse' and 'inputs' - "
+                    "they are mutually exclusive"
+                )
+            return self
+
+        # Without reuse, exactly one of source or inputs must be set
         if has_source and has_inputs:
             raise ValueError(
                 "Artifact cannot have both 'source' and 'inputs' - "
                 "they are mutually exclusive"
             )
         if not has_source and not has_inputs:
-            raise ValueError("Artifact must have either 'source' or 'inputs' defined")
+            raise ValueError(
+                "Artifact must have 'source', 'inputs', or 'reuse' defined"
+            )
 
         return self
 
@@ -198,17 +268,33 @@ class Runbook(BaseModel):
         return self
 
 
+# =============================================================================
+# Execution Results
+# =============================================================================
+
+
 class ExecutionResult(BaseModel):
     """Result of executing a complete runbook.
 
-    Each artifact that executed (success or failure) is represented as a Message
-    with execution metadata in extensions.execution. Failed artifacts have
-    status="error" and empty content. Skipped artifacts are tracked separately.
+    This is a summary of the execution outcome. Artifact data is stored in the
+    ArtifactStore and can be loaded using the run_id.
+
+    Attributes:
+        run_id: Unique identifier for this run, used to retrieve artifacts from store.
+        start_timestamp: ISO8601 timestamp when execution started.
+        completed: Artifact IDs that completed successfully.
+        failed: Artifact IDs that failed during execution.
+        skipped: Artifact IDs skipped due to upstream failures or timeout.
+        total_duration_seconds: Total execution time.
+
     """
 
     run_id: str = Field(..., description="Unique run identifier (UUID)")
     start_timestamp: str = Field(..., description="ISO8601 timestamp with timezone")
-    artifacts: dict[str, Message] = Field(default_factory=dict)
-    """Mapping from artifact_id to Message with extensions.execution populated."""
+    completed: set[str] = Field(default_factory=set)
+    """Artifact IDs that completed successfully."""
+    failed: set[str] = Field(default_factory=set)
+    """Artifact IDs that failed during execution."""
     skipped: set[str] = Field(default_factory=set)
+    """Artifact IDs skipped due to upstream failures or timeout."""
     total_duration_seconds: float

@@ -19,8 +19,6 @@ from waivern_orchestration import (
     SourceConfig,
 )
 
-from .test_helpers import create_message_with_execution
-
 # =============================================================================
 # Artifact Definition Tests
 # =============================================================================
@@ -246,28 +244,27 @@ class TestRunbook:
 
 
 class TestExecutionResult:
-    """Tests for runbook execution result."""
+    """Tests for runbook execution result.
+
+    Note: ExecutionResult is a summary of execution outcome. Artifact data
+    is stored in ArtifactStore and retrieved using the run_id.
+    """
 
     def test_execution_result_fields(self) -> None:
         """ExecutionResult should have all required fields."""
-        test_message = create_message_with_execution(
-            content={"data": "test"},
-            status="success",
-            duration=1.0,
-        )
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={"data": test_message},
+            completed={"data", "processed"},
+            failed={"broken"},
             skipped={"optional_step"},
             total_duration_seconds=5.5,
         )
         assert result.run_id == "123e4567-e89b-12d3-a456-426614174000"
         assert result.start_timestamp == "2024-01-15T10:30:00+00:00"
-        assert "data" in result.artifacts
-        assert result.artifacts["data"].extensions is not None
-        assert result.artifacts["data"].extensions.execution is not None
-        assert result.artifacts["data"].extensions.execution.status == "success"
+        assert "data" in result.completed
+        assert "processed" in result.completed
+        assert "broken" in result.failed
         assert "optional_step" in result.skipped
         assert result.total_duration_seconds == 5.5
 
