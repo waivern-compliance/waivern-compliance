@@ -14,11 +14,18 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
+from pathlib import Path
 
 from waivern_artifact_store.base import ArtifactStore
+from waivern_artifact_store.errors import ArtifactNotFoundError
 from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 from waivern_core.services import ComponentRegistry
 
+from waivern_orchestration.errors import (
+    RunAlreadyActiveError,
+    RunbookChangedError,
+    RunNotFoundError,
+)
 from waivern_orchestration.models import (
     ArtifactDefinition,
     ExecutionResult,
@@ -26,6 +33,7 @@ from waivern_orchestration.models import (
     SourceConfig,
 )
 from waivern_orchestration.planner import ExecutionPlan
+from waivern_orchestration.run_metadata import RunMetadata, compute_runbook_hash
 from waivern_orchestration.state import ExecutionState
 from waivern_orchestration.utils import get_origin_from_artifact_id
 
@@ -55,34 +63,49 @@ class DAGExecutor:
         """
         self._registry = registry
 
-    async def execute(self, plan: ExecutionPlan) -> ExecutionResult:
+    async def execute(
+        self,
+        plan: ExecutionPlan,
+        *,
+        runbook_path: Path | None = None,
+        resume_run_id: str | None = None,
+    ) -> ExecutionResult:
         """Execute artifacts in parallel according to the DAG.
 
         Args:
             plan: Validated ExecutionPlan from Planner.
+            runbook_path: Path to runbook file (required for resume validation).
+            resume_run_id: If provided, resume from this existing run.
 
         Returns:
             ExecutionResult containing artifact results and skipped artifacts.
 
+        Raises:
+            RunNotFoundError: If resume_run_id doesn't exist.
+            RunbookChangedError: If runbook has changed since the original run.
+            RunAlreadyActiveError: If the run is already executing.
+
         """
-        # Generate run metadata at execution start
-        run_id = str(uuid.uuid4())
-        start_timestamp = datetime.now(UTC).isoformat()
         start_time = time.monotonic()
         config = plan.runbook.config
 
         # Get ArtifactStore from container (singleton - shared with exporter)
         store = self._registry.container.get_service(ArtifactStore)
 
-        # Create fresh execution state tracking all artifacts
-        artifact_ids = set(plan.runbook.artifacts.keys())
-        state = ExecutionState.fresh(artifact_ids)
+        # Initialise run metadata and state (new or resume)
+        run_id, start_timestamp, metadata, state = await self._initialise_run(
+            plan, store, runbook_path, resume_run_id
+        )
+
+        # Save metadata with status='running' before starting execution
+        await metadata.save(store)
 
         # Create thread pool for sync->async bridging
         logger.debug(
             "Creating ThreadPoolExecutor with max_workers=%d", config.max_concurrency
         )
 
+        execution_failed = False
         with ThreadPoolExecutor(max_workers=config.max_concurrency) as thread_pool:
             ctx = _ExecutionContext(
                 run_id=run_id,
@@ -100,7 +123,17 @@ class DAGExecutor:
                 await self._mark_remaining_as_skipped(plan, ctx)
                 logger.warning("Execution timed out after %d seconds", config.timeout)
 
+            # Determine final status
+            execution_failed = len(ctx.state.failed) > 0
+
         logger.debug("ThreadPoolExecutor shutdown complete")
+
+        # Update and save run metadata
+        if execution_failed:
+            metadata.mark_failed()
+        else:
+            metadata.mark_completed()
+        await metadata.save(store)
 
         total_duration = time.monotonic() - start_time
         return ExecutionResult(
@@ -112,6 +145,111 @@ class DAGExecutor:
             total_duration_seconds=total_duration,
         )
 
+    async def _initialise_run(
+        self,
+        plan: ExecutionPlan,
+        store: ArtifactStore,
+        runbook_path: Path | None,
+        resume_run_id: str | None,
+    ) -> tuple[str, str, RunMetadata, ExecutionState]:
+        """Initialise run metadata and state for new or resumed run.
+
+        Args:
+            plan: The execution plan.
+            store: The artifact store.
+            runbook_path: Path to runbook file (for hash computation).
+            resume_run_id: If provided, resume from this existing run.
+
+        Returns:
+            Tuple of (run_id, start_timestamp, metadata, state).
+
+        Raises:
+            RunNotFoundError: If resume_run_id doesn't exist.
+            RunbookChangedError: If runbook has changed since the original run.
+            RunAlreadyActiveError: If the run is already executing.
+
+        """
+        if resume_run_id is not None:
+            return await self._resume_run(plan, store, runbook_path, resume_run_id)
+        else:
+            return self._start_new_run(plan, store, runbook_path)
+
+    def _start_new_run(
+        self,
+        plan: ExecutionPlan,
+        store: ArtifactStore,
+        runbook_path: Path | None,
+    ) -> tuple[str, str, RunMetadata, ExecutionState]:
+        """Start a new run with fresh metadata and state."""
+        run_id = str(uuid.uuid4())
+        start_timestamp = datetime.now(UTC).isoformat()
+
+        # Compute runbook hash if path provided
+        runbook_hash = ""
+        if runbook_path is not None:
+            runbook_hash = compute_runbook_hash(runbook_path)
+
+        metadata = RunMetadata.fresh(
+            run_id=run_id,
+            runbook_path=runbook_path or Path("."),
+            runbook_hash=runbook_hash,
+        )
+
+        artifact_ids = set(plan.runbook.artifacts.keys())
+        state = ExecutionState.fresh(artifact_ids)
+
+        return run_id, start_timestamp, metadata, state
+
+    async def _resume_run(
+        self,
+        plan: ExecutionPlan,
+        store: ArtifactStore,
+        runbook_path: Path | None,
+        resume_run_id: str,
+    ) -> tuple[str, str, RunMetadata, ExecutionState]:
+        """Resume an existing run, validating metadata.
+
+        Raises:
+            ValueError: If runbook_path is not provided (required for resume).
+            RunNotFoundError: If the run doesn't exist.
+            RunbookChangedError: If runbook has changed.
+            RunAlreadyActiveError: If run is already executing.
+
+        """
+        # Runbook path is required for resume to validate hash
+        if runbook_path is None:
+            raise ValueError("runbook_path is required when resuming a run")
+
+        # Load existing metadata
+        try:
+            metadata = await RunMetadata.load(store, resume_run_id)
+        except ArtifactNotFoundError as e:
+            raise RunNotFoundError(
+                f"Cannot resume: run '{resume_run_id}' not found"
+            ) from e
+
+        # Validate runbook hasn't changed
+        current_hash = compute_runbook_hash(runbook_path)
+        if metadata.runbook_hash and current_hash != metadata.runbook_hash:
+            raise RunbookChangedError(
+                f"Runbook has changed since run {resume_run_id} was started.\n"
+                f"Original hash: {metadata.runbook_hash}\n"
+                f"Current hash:  {current_hash}\n"
+                f"Start a new run instead."
+            )
+
+        # Check not already running
+        if metadata.status == "running":
+            raise RunAlreadyActiveError(f"Run {resume_run_id} is already in progress")
+
+        # Load existing state
+        state = await ExecutionState.load(store, resume_run_id)
+
+        # Update metadata status back to running
+        metadata.status = "running"
+
+        return resume_run_id, metadata.started_at.isoformat(), metadata, state
+
     async def _execute_dag(
         self,
         plan: ExecutionPlan,
@@ -122,12 +260,12 @@ class DAGExecutor:
         sorter = plan.dag.create_sorter()
 
         while sorter.is_active():
-            ready, skipped_in_batch = self._partition_ready_artifacts(
+            ready, already_done = self._partition_ready_artifacts(
                 list(sorter.get_ready()), ctx
             )
 
-            # Mark skipped artifacts as done immediately so sorter can progress
-            for aid in skipped_in_batch:
+            # Mark already-done artifacts (completed or skipped) as done in sorter
+            for aid in already_done:
                 sorter.done(aid)
 
             if not ready:
@@ -149,19 +287,24 @@ class DAGExecutor:
         all_ready: list[str],
         ctx: _ExecutionContext,
     ) -> tuple[list[str], list[str]]:
-        """Partition ready artifacts into executable and already-skipped.
+        """Partition ready artifacts into executable and already-done.
+
+        Artifacts are considered 'already done' if they are in:
+        - state.completed (already executed successfully, e.g., from resume)
+        - state.skipped (skipped due to upstream failure)
 
         Returns:
-            Tuple of (ready_to_execute, already_skipped).
+            Tuple of (ready_to_execute, already_done).
 
         """
-        ready = [aid for aid in all_ready if aid not in ctx.state.skipped]
-        skipped = [aid for aid in all_ready if aid in ctx.state.skipped]
+        already_done = ctx.state.completed | ctx.state.skipped
+        ready = [aid for aid in all_ready if aid not in already_done]
+        done = [aid for aid in all_ready if aid in already_done]
 
-        if skipped:
-            logger.debug("Marking skipped artifacts as done: %s", skipped)
+        if done:
+            logger.debug("Skipping already-done artifacts: %s", done)
 
-        return ready, skipped
+        return ready, done
 
     async def _handle_artifact_result(
         self,
