@@ -40,13 +40,12 @@ class ReuseConfig(BaseModel):
 
     Attributes:
         from_run: The run ID to copy the artifact from.
-        artifact: The artifact ID in the source run. Defaults to the current
-            artifact's ID if not specified.
+        artifact: The artifact ID in the source run to copy.
 
     """
 
     from_run: str
-    artifact: str | None = None
+    artifact: str
 
 
 # =============================================================================

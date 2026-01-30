@@ -30,6 +30,7 @@ from waivern_orchestration.models import (
     ArtifactDefinition,
     ExecutionResult,
     ProcessConfig,
+    ReuseConfig,
     SourceConfig,
 )
 from waivern_orchestration.planner import ExecutionPlan
@@ -397,17 +398,19 @@ class DAGExecutor:
 
         async with ctx.semaphore:
             try:
-                if definition.source is not None:
-                    message = await self._run_connector(
-                        definition.source, output_schema, ctx.thread_pool
-                    )
-                else:
-                    # Derived artifact - get inputs from store
-                    message = await self._process_from_inputs(
-                        definition,
-                        output_schema,
-                        ctx,
-                    )
+                match definition:
+                    case ArtifactDefinition(reuse=ReuseConfig() as reuse):
+                        message = await self._reuse_from_previous_run(
+                            reuse.from_run, reuse.artifact, ctx
+                        )
+                    case ArtifactDefinition(source=SourceConfig() as source):
+                        message = await self._run_connector(
+                            source, output_schema, ctx.thread_pool
+                        )
+                    case _:
+                        message = await self._process_from_inputs(
+                            definition, output_schema, ctx
+                        )
 
                 # Determine source component type
                 source = self._determine_source(definition)
@@ -584,10 +587,36 @@ class DAGExecutor:
         # Fan-in: merge messages - deferred to Phase 2
         raise NotImplementedError("Fan-in message merge not yet implemented")
 
+    async def _reuse_from_previous_run(
+        self,
+        from_run: str,
+        source_artifact: str,
+        ctx: _ExecutionContext,
+    ) -> Message:
+        """Load an artifact from a previous run for reuse.
+
+        Args:
+            from_run: The run ID to load the artifact from.
+            source_artifact: The artifact ID in the source run.
+            ctx: The execution context.
+
+        Returns:
+            The loaded message (metadata will be updated by caller).
+
+        Raises:
+            ArtifactNotFoundError: If the artifact doesn't exist in the source run.
+
+        """
+        logger.debug("Reusing artifact '%s' from run '%s'", source_artifact, from_run)
+        return await ctx.store.get(from_run, source_artifact)
+
     def _determine_source(self, definition: ArtifactDefinition) -> str:
         """Determine the source component type for an artifact.
 
-        Returns a string in the format 'connector:{type}' or 'processor:{type}'.
+        Returns a string identifying how the artifact was produced:
+        - 'connector:{type}' for source artifacts
+        - 'processor:{type}' for processed artifacts
+        - 'reuse:{run_id}/{artifact_id}' for reused artifacts
 
         Args:
             definition: The artifact definition.
@@ -596,12 +625,15 @@ class DAGExecutor:
             Source identifier string.
 
         """
-        if definition.source is not None:
-            return f"connector:{definition.source.type}"
-        elif definition.process is not None:
-            return f"processor:{definition.process.type}"
-        else:
-            return "unknown"
+        match definition:
+            case ArtifactDefinition(reuse=ReuseConfig() as reuse):
+                return f"reuse:{reuse.from_run}/{reuse.artifact}"
+            case ArtifactDefinition(source=SourceConfig() as source):
+                return f"connector:{source.type}"
+            case ArtifactDefinition(process=ProcessConfig() as process):
+                return f"processor:{process.type}"
+            case _:
+                return "unknown"
 
     def _create_error_message(
         self,
