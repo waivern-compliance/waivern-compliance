@@ -3,7 +3,10 @@
 from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
-from waivern_core import Message
+
+# =============================================================================
+# Artifact Configuration
+# =============================================================================
 
 
 class SourceConfig(BaseModel):
@@ -28,6 +31,11 @@ class ExecuteConfig(BaseModel):
     cost_limit: float | None = None
 
 
+# =============================================================================
+# Runbook Configuration
+# =============================================================================
+
+
 class RunbookConfig(BaseModel):
     """Optional execution configuration for a runbook."""
 
@@ -37,6 +45,11 @@ class RunbookConfig(BaseModel):
     cost_limit: float | None = None
     template_paths: list[str] = Field(default_factory=list)
     """Directories to search for child runbooks."""
+
+
+# =============================================================================
+# Child Runbook Support
+# =============================================================================
 
 
 class RunbookInputDeclaration(BaseModel):
@@ -98,6 +111,11 @@ class ChildRunbookConfig(BaseModel):
         if self.output is not None and self.output_mapping is not None:
             raise ValueError("Cannot specify both 'output' and 'output_mapping'")
         return self
+
+
+# =============================================================================
+# Core Models
+# =============================================================================
 
 
 class ArtifactDefinition(BaseModel):
@@ -198,17 +216,33 @@ class Runbook(BaseModel):
         return self
 
 
+# =============================================================================
+# Execution Results
+# =============================================================================
+
+
 class ExecutionResult(BaseModel):
     """Result of executing a complete runbook.
 
-    Each artifact that executed (success or failure) is represented as a Message
-    with execution metadata in extensions.execution. Failed artifacts have
-    status="error" and empty content. Skipped artifacts are tracked separately.
+    This is a summary of the execution outcome. Artifact data is stored in the
+    ArtifactStore and can be loaded using the run_id.
+
+    Attributes:
+        run_id: Unique identifier for this run, used to retrieve artifacts from store.
+        start_timestamp: ISO8601 timestamp when execution started.
+        completed: Artifact IDs that completed successfully.
+        failed: Artifact IDs that failed during execution.
+        skipped: Artifact IDs skipped due to upstream failures or timeout.
+        total_duration_seconds: Total execution time.
+
     """
 
     run_id: str = Field(..., description="Unique run identifier (UUID)")
     start_timestamp: str = Field(..., description="ISO8601 timestamp with timezone")
-    artifacts: dict[str, Message] = Field(default_factory=dict)
-    """Mapping from artifact_id to Message with extensions.execution populated."""
+    completed: set[str] = Field(default_factory=set)
+    """Artifact IDs that completed successfully."""
+    failed: set[str] = Field(default_factory=set)
+    """Artifact IDs that failed during execution."""
     skipped: set[str] = Field(default_factory=set)
+    """Artifact IDs skipped due to upstream failures or timeout."""
     total_duration_seconds: float

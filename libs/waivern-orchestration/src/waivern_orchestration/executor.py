@@ -12,7 +12,7 @@ import logging
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 from waivern_artifact_store.base import ArtifactStore
@@ -41,7 +41,6 @@ class _ExecutionContext:
     state: ExecutionState
     semaphore: asyncio.Semaphore
     thread_pool: ThreadPoolExecutor
-    results: dict[str, Message] = field(default_factory=dict)
 
 
 class DAGExecutor:
@@ -72,7 +71,7 @@ class DAGExecutor:
         start_time = time.monotonic()
         config = plan.runbook.config
 
-        # Get fresh ArtifactStore from container (requires transient lifetime)
+        # Get ArtifactStore from container (singleton - shared with exporter)
         store = self._registry.container.get_service(ArtifactStore)
 
         # Create fresh execution state tracking all artifacts
@@ -83,6 +82,7 @@ class DAGExecutor:
         logger.debug(
             "Creating ThreadPoolExecutor with max_workers=%d", config.max_concurrency
         )
+
         with ThreadPoolExecutor(max_workers=config.max_concurrency) as thread_pool:
             ctx = _ExecutionContext(
                 run_id=run_id,
@@ -101,11 +101,13 @@ class DAGExecutor:
                 logger.warning("Execution timed out after %d seconds", config.timeout)
 
         logger.debug("ThreadPoolExecutor shutdown complete")
+
         total_duration = time.monotonic() - start_time
         return ExecutionResult(
             run_id=run_id,
             start_timestamp=start_timestamp,
-            artifacts=ctx.results,
+            completed=ctx.state.completed,
+            failed=ctx.state.failed,
             skipped=ctx.state.skipped,
             total_duration_seconds=total_duration,
         )
@@ -116,7 +118,7 @@ class DAGExecutor:
         ctx: _ExecutionContext,
     ) -> None:
         """Execute artifacts in topological order with parallel batches."""
-        logger.debug("Starting DAG execution")
+        logger.debug("Starting DAG execution...")
         sorter = plan.dag.create_sorter()
 
         while sorter.is_active():
@@ -140,7 +142,7 @@ class DAGExecutor:
                 await self._handle_artifact_result(aid, result, plan, ctx)
                 sorter.done(aid)
 
-        logger.debug("DAG execution complete")
+        logger.debug("DAG execution complete.")
 
     def _partition_ready_artifacts(
         self,
@@ -170,22 +172,24 @@ class DAGExecutor:
     ) -> None:
         """Handle the result of producing an artifact.
 
-        Updates ctx.results with the message and persists state transitions.
-        On failure, skips all dependent artifacts.
+        Persists state transitions. On failure, skips all dependent artifacts.
+        Success messages are saved in _produce(). Error messages from exceptions
+        caught in _produce() need to be saved here.
 
         """
         if isinstance(result, BaseException):
+            # Exception during production (from asyncio.gather) - create and save
             message = self._create_error_message_for_exception(
                 artifact_id, result, plan, ctx
             )
-            ctx.results[artifact_id] = message
+            await ctx.store.save(ctx.run_id, artifact_id, message)
             await self._mark_failed_and_skip_dependents(artifact_id, plan, ctx)
         elif not result.is_success:
-            # Artifact returned an error message (status != "success")
-            ctx.results[artifact_id] = result
+            # Error message from _produce() - need to save it
+            await ctx.store.save(ctx.run_id, artifact_id, result)
             await self._mark_failed_and_skip_dependents(artifact_id, plan, ctx)
         else:
-            ctx.results[artifact_id] = result
+            # Success - message already saved in _produce()
             ctx.state.mark_completed(artifact_id)
             await ctx.state.save(ctx.store, ctx.run_id)
 
@@ -206,8 +210,8 @@ class DAGExecutor:
                 status="error",
                 error=str(exception),
                 duration_seconds=0.0,
-                origin=self._determine_origin(artifact_id),
-                alias=self._find_alias(artifact_id, plan),
+                origin=get_origin_from_artifact_id(artifact_id),
+                alias=plan.reversed_aliases.get(artifact_id),
             ),
             run_id=ctx.run_id,
             source=self._determine_source(definition),
@@ -242,8 +246,8 @@ class DAGExecutor:
         definition = plan.runbook.artifacts[artifact_id]
 
         # Determine origin and alias for this artifact
-        origin = self._determine_origin(artifact_id)
-        alias = self._find_alias(artifact_id, plan)
+        origin = get_origin_from_artifact_id(artifact_id)
+        alias = plan.reversed_aliases.get(artifact_id)
 
         # Get schemas from pre-resolved schemas
         _input_schema, output_schema = plan.artifact_schemas[artifact_id]
@@ -256,7 +260,7 @@ class DAGExecutor:
                     )
                 else:
                     # Derived artifact - get inputs from store
-                    message = await self._produce_derived(
+                    message = await self._process_from_inputs(
                         definition,
                         output_schema,
                         ctx,
@@ -392,7 +396,7 @@ class DAGExecutor:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(thread_pool, sync_process)
 
-    async def _produce_derived(
+    async def _process_from_inputs(
         self,
         definition: ArtifactDefinition,
         output_schema: Schema,
@@ -412,7 +416,10 @@ class DAGExecutor:
         # Get input artifact IDs
         inputs = definition.inputs
         if inputs is None:
-            raise ValueError("Derived artifact has no inputs")
+            # Should never happen - Planner validates this
+            raise ValueError(
+                "Bug: derived artifact has no inputs (Planner should have caught this)"
+            )
 
         input_refs = [inputs] if isinstance(inputs, str) else inputs
 
@@ -433,36 +440,6 @@ class DAGExecutor:
 
         # Fan-in: merge messages - deferred to Phase 2
         raise NotImplementedError("Fan-in message merge not yet implemented")
-
-    def _determine_origin(self, artifact_id: str) -> str:
-        """Determine the origin of an artifact based on its ID.
-
-        Delegates to the shared utility function to ensure consistent
-        namespace parsing across the codebase.
-
-        Args:
-            artifact_id: The artifact ID to check.
-
-        Returns:
-            'parent' for regular artifacts, 'child:{runbook_name}' for namespaced.
-
-        """
-        return get_origin_from_artifact_id(artifact_id)
-
-    def _find_alias(self, artifact_id: str, plan: ExecutionPlan) -> str | None:
-        """Find the alias name for an artifact if one exists.
-
-        Uses the pre-computed reversed_aliases dict for O(1) lookup.
-
-        Args:
-            artifact_id: The artifact ID to find an alias for.
-            plan: The execution plan containing aliases.
-
-        Returns:
-            The alias name if found, None otherwise.
-
-        """
-        return plan.reversed_aliases.get(artifact_id)
 
     def _determine_source(self, definition: ArtifactDefinition) -> str:
         """Determine the source component type for an artifact.

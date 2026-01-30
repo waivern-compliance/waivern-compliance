@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from waivern_artifact_store import ArtifactStore
 from waivern_orchestration import ExecutionPlan, ExecutionResult
 
 from wct.exporters.core import build_core_export
@@ -44,20 +45,22 @@ class JsonExporter:
         """
         return []
 
-    def export(
+    async def export(
         self,
         result: ExecutionResult,
         plan: ExecutionPlan,
+        store: ArtifactStore,
     ) -> dict[str, Any]:
         """Export execution results to JSON-serializable dictionary.
 
         Args:
             result: Execution results with artifact data
             plan: Execution plan with runbook metadata
+            store: Artifact store to load artifact messages
 
         Returns:
             Dictionary with CoreExport structure, ready for JSON serialization
 
         """
-        core_export = build_core_export(result, plan)
+        core_export = await build_core_export(result, plan, store)
         return core_export.model_dump()

@@ -14,6 +14,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
 from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
+from waivern_core import Message
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 from waivern_llm import BaseLLMService
@@ -98,9 +99,9 @@ def _build_service_container() -> ServiceContainer:
         ServiceDescriptor(BaseLLMService, LLMServiceFactory(), "singleton")
     )
 
-    # Register ArtifactStore as transient (fresh store per execution)
+    # Register ArtifactStore as singleton (shared between executor and exporter)
     container.register(
-        ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(), "transient")
+        ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(), "singleton")
     )
 
     logger.debug("ServiceContainer configured with LLM and ArtifactStore services")
@@ -131,21 +132,82 @@ class _OutputFormatter:
             f"{output_schema.name}/{output_schema.version}" if output_schema else "N/A"
         )
 
-    def format_execution_result(
+    def _print_error_details(
+        self, failed_ids: set[str], messages: dict[str, Message]
+    ) -> None:
+        """Print error panels for failed artifacts.
+
+        Args:
+            failed_ids: Set of failed artifact IDs.
+            messages: Loaded artifact messages keyed by artifact ID.
+
+        """
+        if not failed_ids:
+            return
+        console.print("\n[bold red]❌ Failed Artifact Details:[/bold red]")
+        for artifact_id in failed_ids:
+            error_text = messages[artifact_id].execution_error or "Unknown error"
+            error_panel = Panel(
+                f"[red]{error_text}[/red]",
+                title=f"Error in {artifact_id}",
+                border_style="red",
+            )
+            console.print(error_panel)
+            logger.error("Artifact %s failed: %s", artifact_id, error_text)
+
+    def _print_verbose_details(
+        self,
+        completed_ids: set[str],
+        messages: dict[str, Message],
+        plan: ExecutionPlan,
+    ) -> None:
+        """Print verbose details for successful artifacts.
+
+        Args:
+            completed_ids: Set of completed artifact IDs.
+            messages: Loaded artifact messages keyed by artifact ID.
+            plan: ExecutionPlan with artifact definitions.
+
+        """
+        if not completed_ids:
+            return
+        console.print("\n[bold green]✅ Successful Artifact Details:[/bold green]")
+        for artifact_id in completed_ids:
+            message = messages[artifact_id]
+            definition = plan.runbook.artifacts.get(artifact_id)
+            tree = Tree(f"[bold green]{artifact_id}[/bold green]")
+            if definition and definition.name:
+                tree.add(f"Name: [white]{definition.name}[/white]")
+            if definition and definition.description:
+                tree.add(f"Description: [white]{definition.description}[/white]")
+            duration = message.execution_duration or 0.0
+            tree.add(f"Duration: [blue]{duration:.2f}s[/blue]")
+            console.print(tree)
+
+    async def format_execution_result(
         self,
         result: ExecutionResult,
         plan: ExecutionPlan,
+        store: ArtifactStore,
         verbose: bool = False,
     ) -> None:
         """Format and print execution results.
 
+        Loads artifact data from store to display duration and error details.
+
         Args:
             result: ExecutionResult from DAGExecutor.
             plan: ExecutionPlan with artifact definitions.
+            store: Artifact store to load artifact data from.
             verbose: Show detailed information.
 
         """
-        # Create summary table
+        # Load artifact messages for completed and failed artifacts
+        messages: dict[str, Message] = {}
+        for artifact_id in result.completed | result.failed:
+            messages[artifact_id] = await store.get(result.run_id, artifact_id)
+
+        # Build summary table
         table = Table(
             title="📊 Execution Results Summary",
             show_header=True,
@@ -157,19 +219,21 @@ class _OutputFormatter:
         if verbose:
             table.add_column("Schema", style="yellow")
 
-        for artifact_id, message in result.artifacts.items():
-            status = self.STATUS_SUCCESS if message.is_success else self.STATUS_FAILED
-            duration = message.execution_duration or 0.0
-            row = [
-                artifact_id,
-                status,
-                f"{duration:.2f}s",
-            ]
+        # Add rows for each category
+        for artifact_id in result.completed:
+            duration = messages[artifact_id].execution_duration or 0.0
+            row = [artifact_id, self.STATUS_SUCCESS, f"{duration:.2f}s"]
             if verbose:
                 row.append(self._get_schema_text(plan, artifact_id))
             table.add_row(*row)
 
-        # Show skipped artifacts
+        for artifact_id in result.failed:
+            duration = messages[artifact_id].execution_duration or 0.0
+            row = [artifact_id, self.STATUS_FAILED, f"{duration:.2f}s"]
+            if verbose:
+                row.append(self._get_schema_text(plan, artifact_id))
+            table.add_row(*row)
+
         for artifact_id in result.skipped:
             row = [artifact_id, self.STATUS_SKIPPED, "-"]
             if verbose:
@@ -178,44 +242,10 @@ class _OutputFormatter:
 
         console.print(table)
 
-        # Show detailed error information for failed results
-        failed_results = [
-            (aid, msg) for aid, msg in result.artifacts.items() if not msg.is_success
-        ]
-        if failed_results:
-            console.print("\n[bold red]❌ Failed Artifact Details:[/bold red]")
-            for artifact_id, message in failed_results:
-                error_panel = Panel(
-                    f"[red]{message.execution_error}[/red]",
-                    title=f"Error in {artifact_id}",
-                    border_style="red",
-                )
-                console.print(error_panel)
-                logger.error(
-                    "Artifact %s failed: %s", artifact_id, message.execution_error
-                )
-
-        # Show successful results in verbose mode
+        # Print details
+        self._print_error_details(result.failed, messages)
         if verbose:
-            successful_results = [
-                (aid, msg) for aid, msg in result.artifacts.items() if msg.is_success
-            ]
-            if successful_results:
-                console.print(
-                    "\n[bold green]✅ Successful Artifact Details:[/bold green]"
-                )
-                for artifact_id, message in successful_results:
-                    definition = plan.runbook.artifacts.get(artifact_id)
-                    tree = Tree(f"[bold green]{artifact_id}[/bold green]")
-                    if definition and definition.name:
-                        tree.add(f"Name: [white]{definition.name}[/white]")
-                    if definition and definition.description:
-                        tree.add(
-                            f"Description: [white]{definition.description}[/white]"
-                        )
-                    duration = message.execution_duration or 0.0
-                    tree.add(f"Duration: [blue]{duration:.2f}s[/blue]")
-                    console.print(tree)
+            self._print_verbose_details(result.completed, messages, plan)
 
     def format_component_list[T](
         self, components: dict[str, ComponentFactory[T]], component_type: str
@@ -383,13 +413,14 @@ class _OutputFormatter:
             output_path: Final output file path.
 
         """
-        succeeded = sum(1 for msg in result.artifacts.values() if msg.is_success)
-        failed = sum(1 for msg in result.artifacts.values() if not msg.is_success)
+        succeeded = len(result.completed)
+        failed = len(result.failed)
         skipped = len(result.skipped)
+        total = succeeded + failed + skipped
 
         completion_panel = Panel(
             f"[bold green]✅ Execution Complete[/bold green]\n\n"
-            f"[bold]Total Artifacts:[/bold] {len(result.artifacts) + skipped}\n"
+            f"[bold]Total Artifacts:[/bold] {total}\n"
             f"[bold]Succeeded:[/bold] {succeeded}\n"
             f"[bold]Failed:[/bold] {failed}\n"
             f"[bold]Skipped:[/bold] {skipped}\n"
@@ -463,9 +494,10 @@ def _execute_plan(plan: ExecutionPlan, registry: ComponentRegistry) -> Execution
     executor = DAGExecutor(registry)
     try:
         result = asyncio.run(executor.execute(plan))
+        total = len(result.completed) + len(result.failed) + len(result.skipped)
         logger.info(
             "Execution completed: %d artifacts, %.2fs",
-            len(result.artifacts),
+            total,
             result.total_duration_seconds,
         )
         return result
@@ -481,8 +513,8 @@ def _execute_plan(plan: ExecutionPlan, registry: ComponentRegistry) -> Execution
 def _export_results(
     result: ExecutionResult,
     plan: ExecutionPlan,
-    registry: ComponentRegistry,
     output_path: Path,
+    store: ArtifactStore,
     exporter_override: str | None = None,
 ) -> None:
     """Export execution results to file.
@@ -490,8 +522,8 @@ def _export_results(
     Args:
         result: Execution result with artifact outcomes.
         plan: Execution plan with runbook metadata.
-        registry: Component registry for factory lookup.
         output_path: Path to save JSON output.
+        store: Artifact store to load artifact data from.
         exporter_override: Manual exporter selection (overrides auto-detection).
 
     Raises:
@@ -516,9 +548,9 @@ def _export_results(
             original_error=e,
         ) from e
 
-    # Export to file
+    # Export to file (exporter.export is async)
     try:
-        export_data = exporter.export(result, plan)
+        export_data = asyncio.run(exporter.export(result, plan, store))
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with output_path.open("w", encoding="utf-8") as f:
             json.dump(export_data, f, indent=2, default=str)
@@ -562,13 +594,14 @@ def execute_runbook_command(  # noqa: PLR0913 - Matches CLI entry point signatur
         plan = _plan_runbook(runbook_path, registry)
         result = _execute_plan(plan, registry)
 
-        # Display results
+        # Display results (load artifact data from store for duration/errors)
+        store = registry.container.get_service(ArtifactStore)
         formatter.show_execution_completion()
-        formatter.format_execution_result(result, plan, verbose)
+        asyncio.run(formatter.format_execution_result(result, plan, store, verbose))
 
         # Export results
         final_output_path = output if output.is_absolute() else output_dir / output
-        _export_results(result, plan, registry, final_output_path, exporter_override)
+        _export_results(result, plan, final_output_path, store, exporter_override)
         formatter.show_file_save_success(final_output_path)
         formatter.show_completion_summary(result, final_output_path)
 

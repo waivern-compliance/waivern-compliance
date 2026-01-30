@@ -4,6 +4,7 @@ from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from waivern_artifact_store.in_memory import AsyncInMemoryStore
 from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 from waivern_orchestration import (
     ArtifactDefinition,
@@ -112,7 +113,8 @@ def empty_result() -> ExecutionResult:
     return ExecutionResult(
         run_id="123e4567-e89b-12d3-a456-426614174000",
         start_timestamp="2024-01-15T10:30:00+00:00",
-        artifacts={},
+        completed=set(),
+        failed=set(),
         skipped=set(),
         total_duration_seconds=0.0,
     )
@@ -121,11 +123,33 @@ def empty_result() -> ExecutionResult:
 @pytest.fixture
 def minimal_result() -> ExecutionResult:
     """Create a minimal valid execution result with one successful artifact."""
-    message = create_success_message()
     return ExecutionResult(
         run_id="test-id",
         start_timestamp="2025-01-01T00:00:00+00:00",
-        artifacts={"art1": message},
+        completed={"art1"},
+        failed=set(),
         skipped=set(),
         total_duration_seconds=1.0,
     )
+
+
+# =============================================================================
+# Store Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def empty_store() -> AsyncInMemoryStore:
+    """Create an empty in-memory store for testing."""
+    return AsyncInMemoryStore()
+
+
+@pytest.fixture
+def minimal_store(minimal_result: ExecutionResult) -> AsyncInMemoryStore:
+    """Create a store with a minimal artifact for testing."""
+    import asyncio
+
+    store = AsyncInMemoryStore()
+    message = create_success_message()
+    asyncio.run(store.save(minimal_result.run_id, "art1", message))
+    return store

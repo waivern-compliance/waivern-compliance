@@ -3,6 +3,7 @@
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+from waivern_artifact_store import ArtifactStore
 from waivern_orchestration import ExecutionPlan, ExecutionResult
 
 
@@ -97,7 +98,7 @@ def _calculate_status(
         Status string: "failed" if any failures, "partial" if skipped, else "completed".
 
     """
-    has_failures = any(not msg.is_success for msg in result.artifacts.values())
+    has_failures = len(result.failed) > 0
     has_skipped = len(result.skipped) > 0
 
     if has_failures:
@@ -108,21 +109,29 @@ def _calculate_status(
         return "completed"
 
 
-def _build_error_entries(result: ExecutionResult) -> list[ErrorEntry]:
+async def _build_error_entries(
+    result: ExecutionResult, store: ArtifactStore
+) -> list[ErrorEntry]:
     """Build error entries from failed artifacts.
 
     Args:
         result: Execution result with artifact outcomes.
+        store: Artifact store to load failed artifact messages.
 
     Returns:
         List of ErrorEntry for failed artifacts.
 
     """
-    return [
-        ErrorEntry(artifact_id=art_id, error=msg.execution_error or "Unknown error")
-        for art_id, msg in result.artifacts.items()
-        if not msg.is_success
-    ]
+    entries: list[ErrorEntry] = []
+    for art_id in result.failed:
+        message = await store.get(result.run_id, art_id)
+        entries.append(
+            ErrorEntry(
+                artifact_id=art_id,
+                error=message.execution_error or "Unknown error",
+            )
+        )
+    return entries
 
 
 def _build_skipped_list(result: ExecutionResult) -> list[str]:
@@ -148,10 +157,10 @@ def _calculate_summary(result: ExecutionResult) -> SummaryInfo:
         Summary statistics for the execution.
 
     """
-    succeeded = sum(1 for msg in result.artifacts.values() if msg.is_success)
-    failed = sum(1 for msg in result.artifacts.values() if not msg.is_success)
+    succeeded = len(result.completed)
+    failed = len(result.failed)
     skipped = len(result.skipped)
-    total = len(result.artifacts) + skipped
+    total = succeeded + failed + skipped
 
     return SummaryInfo(
         total=total,
@@ -161,14 +170,15 @@ def _calculate_summary(result: ExecutionResult) -> SummaryInfo:
     )
 
 
-def _build_output_entries(
-    result: ExecutionResult, plan: ExecutionPlan
+async def _build_output_entries(
+    result: ExecutionResult, plan: ExecutionPlan, store: ArtifactStore
 ) -> list[OutputEntry]:
     """Build output entries for artifacts marked output:true.
 
     Args:
         result: Execution result with artifact outcomes.
         plan: Execution plan with runbook and schemas.
+        store: Artifact store to load artifact messages.
 
     Returns:
         List of OutputEntry for artifacts marked for output.
@@ -176,11 +186,14 @@ def _build_output_entries(
     """
     outputs: list[OutputEntry] = []
 
-    for art_id, message in result.artifacts.items():
-        # Only include successful artifacts marked output:true
+    for art_id in result.completed:
+        # Only include artifacts marked output:true
         artifact_def = plan.runbook.artifacts.get(art_id)
-        if not artifact_def or not artifact_def.output or not message.is_success:
+        if not artifact_def or not artifact_def.output:
             continue
+
+        # Load artifact message from store
+        message = await store.get(result.run_id, art_id)
 
         # Get schema info from plan
         _, output_schema = plan.artifact_schemas.get(art_id, (None, None))
@@ -206,12 +219,15 @@ def _build_output_entries(
     return outputs
 
 
-def build_core_export(result: ExecutionResult, plan: ExecutionPlan) -> CoreExport:
+async def build_core_export(
+    result: ExecutionResult, plan: ExecutionPlan, store: ArtifactStore
+) -> CoreExport:
     """Build core export format shared by all exporters.
 
     Args:
         result: Execution result with artifact outcomes.
         plan: Execution plan with runbook metadata.
+        store: Artifact store to load artifact messages.
 
     Returns:
         Validated CoreExport model with standard structure.
@@ -231,7 +247,7 @@ def build_core_export(result: ExecutionResult, plan: ExecutionPlan) -> CoreExpor
             contact=plan.runbook.contact,
         ),
         summary=_calculate_summary(result),
-        errors=_build_error_entries(result),
+        errors=await _build_error_entries(result, store),
         skipped=_build_skipped_list(result),
-        outputs=_build_output_entries(result, plan),
+        outputs=await _build_output_entries(result, plan, store),
     )

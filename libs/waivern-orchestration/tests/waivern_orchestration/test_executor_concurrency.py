@@ -96,8 +96,8 @@ class TestDAGExecutorConcurrency:
         result = asyncio.run(executor.execute(plan))
 
         # Assert - all completed and concurrency was limited
-        assert len(result.artifacts) == 5
-        assert all(msg.is_success for msg in result.artifacts.values())
+        assert len(result.completed) == 5
+        assert len(result.failed) == 0
         assert max_concurrent_observed <= 2, (
             f"Expected max 2 concurrent, but observed {max_concurrent_observed}"
         )
@@ -208,8 +208,10 @@ class TestDAGExecutorObservability:
         # Act
         result = asyncio.run(executor.execute(plan))
 
-        # Assert
-        duration = result.artifacts["data"].execution_duration
+        # Assert - load artifact from store to check duration
+        store = registry.container.get_service(ArtifactStore)
+        stored = asyncio.run(store.get(result.run_id, "data"))
+        duration = stored.execution_duration
         assert duration is not None and duration >= 0
 
     def test_execution_result_contains_valid_run_id(self) -> None:
@@ -329,5 +331,5 @@ class TestDAGExecutorTimeout:
         assert len(result.skipped) > 0, (
             "Some artifacts should be skipped due to timeout"
         )
-        total = len(result.artifacts) + len(result.skipped)
+        total = len(result.completed) + len(result.failed) + len(result.skipped)
         assert total == 5, "All artifacts should be accounted for"

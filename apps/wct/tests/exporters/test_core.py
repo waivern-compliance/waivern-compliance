@@ -2,6 +2,7 @@
 
 from unittest.mock import Mock
 
+from waivern_artifact_store.in_memory import AsyncInMemoryStore
 from waivern_core import Schema
 from waivern_orchestration import ExecutionPlan, ExecutionResult, Runbook
 
@@ -15,13 +16,14 @@ from .conftest import create_error_message, create_success_message
 class TestBuildCoreExport:
     """Test suite for build_core_export()."""
 
-    def test_returns_basic_export_structure(
+    async def test_returns_basic_export_structure(
         self, empty_plan: ExecutionPlan, empty_result: ExecutionResult
     ) -> None:
         """Verifies all required top-level keys exist."""
         from wct.exporters.core import build_core_export
 
-        export = build_core_export(empty_result, empty_plan)
+        store = AsyncInMemoryStore()
+        export = await build_core_export(empty_result, empty_plan, store)
         export_dict = export.model_dump(by_alias=True)
 
         assert "format_version" in export_dict
@@ -32,13 +34,14 @@ class TestBuildCoreExport:
         assert "errors" in export_dict
         assert "skipped" in export_dict
 
-    def test_format_version_is_2_0_0(
+    async def test_format_version_is_2_0_0(
         self, empty_plan: ExecutionPlan, empty_result: ExecutionResult
     ) -> None:
         """Verifies format_version field is 2.0.0."""
         from wct.exporters.core import build_core_export
 
-        export = build_core_export(empty_result, empty_plan)
+        store = AsyncInMemoryStore()
+        export = await build_core_export(empty_result, empty_plan, store)
 
         assert export.format_version == "2.0.0"
 
@@ -51,7 +54,7 @@ class TestBuildCoreExport:
 class TestBuildCoreExportRunMetadata:
     """Tests for run metadata (ID, timestamp) in exports."""
 
-    def test_run_id_is_valid_uuid(
+    async def test_run_id_is_valid_uuid(
         self, empty_plan: ExecutionPlan, empty_result: ExecutionResult
     ) -> None:
         """Verifies run.id can be parsed as UUID."""
@@ -59,12 +62,13 @@ class TestBuildCoreExportRunMetadata:
 
         from wct.exporters.core import build_core_export
 
-        export = build_core_export(empty_result, empty_plan)
+        store = AsyncInMemoryStore()
+        export = await build_core_export(empty_result, empty_plan, store)
 
         uuid_obj = UUID(export.run.id)
         assert str(uuid_obj) == export.run.id
 
-    def test_timestamp_is_iso8601_with_timezone(
+    async def test_timestamp_is_iso8601_with_timezone(
         self, empty_plan: ExecutionPlan, empty_result: ExecutionResult
     ) -> None:
         """Verifies run.timestamp is ISO8601 format with timezone."""
@@ -72,7 +76,8 @@ class TestBuildCoreExportRunMetadata:
 
         from wct.exporters.core import build_core_export
 
-        export = build_core_export(empty_result, empty_plan)
+        store = AsyncInMemoryStore()
+        export = await build_core_export(empty_result, empty_plan, store)
 
         # Assert - can parse as ISO8601 with timezone
         timestamp = datetime.fromisoformat(export.run.timestamp)
@@ -87,7 +92,9 @@ class TestBuildCoreExportRunMetadata:
 class TestBuildCoreExportStatus:
     """Tests for run status determination in exports."""
 
-    def test_completed_status_when_all_succeed(self, empty_runbook: Runbook) -> None:
+    async def test_completed_status_when_all_succeed(
+        self, empty_runbook: Runbook
+    ) -> None:
         """Status is completed when all artifacts succeed."""
         from wct.exporters.core import build_core_export
 
@@ -95,19 +102,21 @@ class TestBuildCoreExportStatus:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={
-                "art1": create_success_message(duration=1.0),
-                "art2": create_success_message(duration=2.0),
-            },
+            completed={"art1", "art2"},
+            failed=set(),
             skipped=set(),
             total_duration_seconds=3.0,
         )
 
-        export = build_core_export(result, plan)
+        store = AsyncInMemoryStore()
+        await store.save(result.run_id, "art1", create_success_message(duration=1.0))
+        await store.save(result.run_id, "art2", create_success_message(duration=2.0))
+
+        export = await build_core_export(result, plan, store)
 
         assert export.run.status == "completed"
 
-    def test_failed_status_when_any_fail(self, empty_runbook: Runbook) -> None:
+    async def test_failed_status_when_any_fail(self, empty_runbook: Runbook) -> None:
         """Status is failed when any artifact fails."""
         from wct.exporters.core import build_core_export
 
@@ -115,19 +124,25 @@ class TestBuildCoreExportStatus:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={
-                "art1": create_success_message(duration=1.0),
-                "art2": create_error_message("Something went wrong", duration=2.0),
-            },
+            completed={"art1"},
+            failed={"art2"},
             skipped=set(),
             total_duration_seconds=3.0,
         )
 
-        export = build_core_export(result, plan)
+        store = AsyncInMemoryStore()
+        await store.save(result.run_id, "art1", create_success_message(duration=1.0))
+        await store.save(
+            result.run_id,
+            "art2",
+            create_error_message("Something went wrong", duration=2.0),
+        )
+
+        export = await build_core_export(result, plan, store)
 
         assert export.run.status == "failed"
 
-    def test_partial_status_when_artifacts_skipped(
+    async def test_partial_status_when_artifacts_skipped(
         self, empty_runbook: Runbook
     ) -> None:
         """Status is partial when artifacts skipped but none failed."""
@@ -137,12 +152,16 @@ class TestBuildCoreExportStatus:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={"art1": create_success_message(duration=1.0)},
+            completed={"art1"},
+            failed=set(),
             skipped={"art2", "art3"},
             total_duration_seconds=1.0,
         )
 
-        export = build_core_export(result, plan)
+        store = AsyncInMemoryStore()
+        await store.save(result.run_id, "art1", create_success_message(duration=1.0))
+
+        export = await build_core_export(result, plan, store)
 
         assert export.run.status == "partial"
 
@@ -155,7 +174,7 @@ class TestBuildCoreExportStatus:
 class TestBuildCoreExportErrorsAndSkipped:
     """Tests for errors and skipped lists in exports."""
 
-    def test_errors_list_contains_failed_artifacts(
+    async def test_errors_list_contains_failed_artifacts(
         self, empty_runbook: Runbook
     ) -> None:
         """Errors list includes artifact_id and error message for failures."""
@@ -165,17 +184,25 @@ class TestBuildCoreExportErrorsAndSkipped:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={
-                "art1": create_error_message(
-                    "Database connection failed", duration=1.0
-                ),
-                "art2": create_error_message("Timeout exceeded", duration=2.0),
-            },
+            completed=set(),
+            failed={"art1", "art2"},
             skipped=set(),
             total_duration_seconds=3.0,
         )
 
-        export = build_core_export(result, plan)
+        store = AsyncInMemoryStore()
+        await store.save(
+            result.run_id,
+            "art1",
+            create_error_message("Database connection failed", duration=1.0),
+        )
+        await store.save(
+            result.run_id,
+            "art2",
+            create_error_message("Timeout exceeded", duration=2.0),
+        )
+
+        export = await build_core_export(result, plan, store)
 
         assert len(export.errors) == 2
         error_ids = {err.artifact_id for err in export.errors}
@@ -183,7 +210,7 @@ class TestBuildCoreExportErrorsAndSkipped:
         art1_error = next(err for err in export.errors if err.artifact_id == "art1")
         assert art1_error.error == "Database connection failed"
 
-    def test_skipped_list_contains_skipped_artifact_ids(
+    async def test_skipped_list_contains_skipped_artifact_ids(
         self, empty_runbook: Runbook
     ) -> None:
         """Skipped list contains IDs of skipped artifacts."""
@@ -193,12 +220,16 @@ class TestBuildCoreExportErrorsAndSkipped:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={"art1": create_success_message(duration=1.0)},
+            completed={"art1"},
+            failed=set(),
             skipped={"art2", "art3", "art4"},
             total_duration_seconds=1.0,
         )
 
-        export = build_core_export(result, plan)
+        store = AsyncInMemoryStore()
+        await store.save(result.run_id, "art1", create_success_message(duration=1.0))
+
+        export = await build_core_export(result, plan, store)
 
         assert len(export.skipped) == 3
         assert set(export.skipped) == {"art2", "art3", "art4"}
@@ -212,7 +243,7 @@ class TestBuildCoreExportErrorsAndSkipped:
 class TestBuildCoreExportSummary:
     """Tests for summary statistics in exports."""
 
-    def test_summary_counts_are_accurate(self, empty_runbook: Runbook) -> None:
+    async def test_summary_counts_are_accurate(self, empty_runbook: Runbook) -> None:
         """Summary total/succeeded/failed/skipped counts match reality."""
         from wct.exporters.core import build_core_export
 
@@ -220,18 +251,26 @@ class TestBuildCoreExportSummary:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={
-                "success1": create_success_message(duration=1.0),
-                "success2": create_success_message(duration=1.0),
-                "failed1": create_error_message("Error", duration=1.0),
-            },
+            completed={"success1", "success2"},
+            failed={"failed1"},
             skipped={"skipped1", "skipped2"},
             total_duration_seconds=3.0,
         )
 
-        export = build_core_export(result, plan)
+        store = AsyncInMemoryStore()
+        await store.save(
+            result.run_id, "success1", create_success_message(duration=1.0)
+        )
+        await store.save(
+            result.run_id, "success2", create_success_message(duration=1.0)
+        )
+        await store.save(
+            result.run_id, "failed1", create_error_message("Error", duration=1.0)
+        )
 
-        assert export.summary.total == 5  # 3 artifacts + 2 skipped
+        export = await build_core_export(result, plan, store)
+
+        assert export.summary.total == 5  # 2 completed + 1 failed + 2 skipped
         assert export.summary.succeeded == 2
         assert export.summary.failed == 1
         assert export.summary.skipped == 2
@@ -245,7 +284,7 @@ class TestBuildCoreExportSummary:
 class TestBuildCoreExportOutputs:
     """Tests for output entries in exports."""
 
-    def test_outputs_only_include_artifacts_with_output_true(self) -> None:
+    async def test_outputs_only_include_artifacts_with_output_true(self) -> None:
         """Only artifacts marked output:true appear in outputs list."""
         from waivern_orchestration import ArtifactDefinition, SourceConfig
 
@@ -281,23 +320,37 @@ class TestBuildCoreExportOutputs:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={
-                "art1": create_success_message({"data": "test1"}, schema=schema),
-                "art2": create_success_message({"data": "test2"}, schema=schema),
-                "art3": create_success_message({"data": "test3"}, schema=schema),
-            },
+            completed={"art1", "art2", "art3"},
+            failed=set(),
             skipped=set(),
             total_duration_seconds=3.0,
         )
 
+        store = AsyncInMemoryStore()
+        await store.save(
+            result.run_id,
+            "art1",
+            create_success_message({"data": "test1"}, schema=schema),
+        )
+        await store.save(
+            result.run_id,
+            "art2",
+            create_success_message({"data": "test2"}, schema=schema),
+        )
+        await store.save(
+            result.run_id,
+            "art3",
+            create_success_message({"data": "test3"}, schema=schema),
+        )
+
         # Act
-        export = build_core_export(result, plan)
+        export = await build_core_export(result, plan, store)
 
         # Assert - only art1 should be in outputs
         assert len(export.outputs) == 1
         assert export.outputs[0].artifact_id == "art1"
 
-    def test_output_entry_includes_schema_info(self) -> None:
+    async def test_output_entry_includes_schema_info(self) -> None:
         """Output entries include schema name/version when available."""
         from waivern_orchestration import ArtifactDefinition, SourceConfig
 
@@ -318,13 +371,21 @@ class TestBuildCoreExportOutputs:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={"art1": create_success_message({"data": "test"}, schema=schema)},
+            completed={"art1"},
+            failed=set(),
             skipped=set(),
             total_duration_seconds=1.0,
         )
 
+        store = AsyncInMemoryStore()
+        await store.save(
+            result.run_id,
+            "art1",
+            create_success_message({"data": "test"}, schema=schema),
+        )
+
         # Act
-        export = build_core_export(result, plan)
+        export = await build_core_export(result, plan, store)
 
         # Assert - output entry should include schema info
         assert len(export.outputs) == 1
@@ -332,7 +393,7 @@ class TestBuildCoreExportOutputs:
         assert export.outputs[0].output_schema.name == "my_schema"
         assert export.outputs[0].output_schema.version == "2.1.0"
 
-    def test_output_entry_includes_artifact_metadata(self) -> None:
+    async def test_output_entry_includes_artifact_metadata(self) -> None:
         """Output entries include name/description/contact when present."""
         from waivern_orchestration import ArtifactDefinition, SourceConfig
 
@@ -357,13 +418,21 @@ class TestBuildCoreExportOutputs:
         result = ExecutionResult(
             run_id="123e4567-e89b-12d3-a456-426614174000",
             start_timestamp="2024-01-15T10:30:00+00:00",
-            artifacts={"art1": create_success_message({"data": "test"}, schema=schema)},
+            completed={"art1"},
+            failed=set(),
             skipped=set(),
             total_duration_seconds=1.0,
         )
 
+        store = AsyncInMemoryStore()
+        await store.save(
+            result.run_id,
+            "art1",
+            create_success_message({"data": "test"}, schema=schema),
+        )
+
         # Act
-        export = build_core_export(result, plan)
+        export = await build_core_export(result, plan, store)
 
         # Assert - output entry should include artifact metadata
         assert len(export.outputs) == 1
@@ -380,7 +449,7 @@ class TestBuildCoreExportOutputs:
 class TestBuildCoreExportRunbookMetadata:
     """Tests for runbook metadata in exports."""
 
-    def test_runbook_contact_omitted_when_not_present(
+    async def test_runbook_contact_omitted_when_not_present(
         self, empty_result: ExecutionResult
     ) -> None:
         """Runbook.contact not in export when runbook has no contact."""
@@ -389,7 +458,8 @@ class TestBuildCoreExportRunbookMetadata:
         runbook = Runbook(name="Test", description="Test", artifacts={}, contact=None)
         plan = ExecutionPlan(runbook=runbook, dag=Mock(), artifact_schemas={})
 
-        export = build_core_export(empty_result, plan)
+        store = AsyncInMemoryStore()
+        export = await build_core_export(empty_result, plan, store)
         export_dict = export.model_dump(by_alias=True, exclude_none=True)
 
         assert "contact" not in export_dict["runbook"]
