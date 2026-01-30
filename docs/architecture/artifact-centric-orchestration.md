@@ -1,8 +1,8 @@
 # Artifact-Centric Orchestration Architecture
 
 - **Status:** Implemented
-- **Last Updated:** 2025-12-30
-- **Related:** [Child Runbook Composition](child-runbook-composition.md)
+- **Last Updated:** 2026-01-30
+- **Related:** [Child Runbook Composition](child-runbook-composition.md), [Execution Persistence](../future-plans/execution-persistence.md)
 
 ## Overview
 
@@ -11,7 +11,7 @@ The artifact-centric orchestration system uses a unified artifact model with DAG
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────┐
 │  Architecture                                                │
 │                                                              │
 │  Runbook (1 section)      Planner           Executor         │
@@ -20,7 +20,7 @@ The artifact-centric orchestration system uses a unified artifact model with DAG
 │        b: inputs: a       ├── build DAG     └── fan-in       │
 │        c: inputs: [a,b]   ├── validate                       │
 │        d: child_runbook   └── ExecutionPlan                  │
-└─────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ## Package Structure
@@ -55,6 +55,11 @@ class ProcessConfig(BaseModel):
     type: str                           # e.g., "personal_data"
     properties: dict[str, Any] = {}
 
+class ReuseConfig(BaseModel):
+    """Configuration for reusing artifact from previous run."""
+    from_run: str                       # Run ID (UUID) to copy from
+    artifact: str                       # Artifact ID in the source run
+
 class ChildRunbookConfig(BaseModel):
     """Configuration for child runbook composition."""
     path: str                           # Relative path to child runbook
@@ -76,9 +81,10 @@ class ArtifactDefinition(BaseModel):
     description: str | None = None      # What this artifact represents
     contact: str | None = None          # Responsible party
 
-    # Data source (mutually exclusive with inputs)
-    source: SourceConfig | None = None
-    inputs: str | list[str] | None = None
+    # Production method (mutually exclusive: exactly one required)
+    source: SourceConfig | None = None      # Extract from connector
+    inputs: str | list[str] | None = None   # Transform from other artifacts
+    reuse: ReuseConfig | None = None        # Copy from previous run
 
     # Processing
     process: ProcessConfig | None = None
@@ -93,8 +99,8 @@ class ArtifactDefinition(BaseModel):
     optional: bool = False              # Skip dependents on failure
 
     @model_validator
-    def validate_artifact_type(self) -> Self:
-        # source XOR inputs (not both, not neither for non-child artifacts)
+    def validate_production_method(self) -> Self:
+        # Exactly one of: source, inputs, or reuse
         # child_runbook cannot combine with source or process
         ...
 ```
@@ -285,6 +291,64 @@ class ArtifactStore(ABC):
 
 See [Artifact Store Architecture](../../libs/waivern-artifact-store/docs/architecture.md) for detailed documentation.
 
+## State Persistence & Resume
+
+The executor persists execution state to enable resuming failed runs and reusing artifacts.
+
+### Storage Structure
+
+```
+.waivern/runs/{run_id}/
+├── _system/
+│   ├── run.json      # Run metadata (runbook path, hash, timestamps, status)
+│   └── state.json    # Execution state (completed, not_started, failed, skipped)
+├── source_data.json  # Artifacts stored at root level
+└── findings.json
+```
+
+### ExecutionState
+
+Tracks per-artifact progress during execution:
+
+```python
+class ExecutionState(BaseModel):
+    completed: set[str]      # Artifacts that completed successfully
+    not_started: set[str]    # Artifacts not yet started
+    failed: set[str]         # Artifacts that failed
+    skipped: set[str]        # Artifacts skipped due to upstream failure
+    last_checkpoint: datetime
+```
+
+State is saved after each artifact completes, minimising lost progress on crash.
+
+### Resume Flow
+
+```
+1. Load RunMetadata and validate:
+   ├─ Runbook hash matches (prevents resuming modified runbook)
+   └─ Status is not "running" (prevents concurrent execution)
+
+2. Load ExecutionState
+   └─ Completed artifacts are marked done() in sorter without re-execution
+
+3. Execute remaining artifacts normally
+   └─ State saved after each completion
+```
+
+### Artifact Reuse
+
+Artifacts can be reused from previous runs via the `reuse` directive:
+
+```yaml
+artifacts:
+  db_schema:
+    reuse:
+      from_run: "550e8400-e29b-41d4-a716-446655440000"
+      artifact: "db_schema"
+```
+
+This copies the artifact from the source run into the current run.
+
 ## Schema Resolution
 
 The Planner validates schema compatibility upfront using discovered component factories:
@@ -353,7 +417,7 @@ artifacts:
     inputs: findings
     process:
       type: llm_enricher
-    optional: true  # Skip dependents on failure
+    optional: true # Skip dependents on failure
 ```
 
 When an `optional: true` artifact fails:

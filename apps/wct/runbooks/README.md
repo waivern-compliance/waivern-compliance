@@ -5,15 +5,15 @@ Runbooks define compliance analysis pipelines using an artifact-centric format. 
 ## Runbook Structure
 
 ```yaml
-name: str                    # Required: Runbook name
-description: str             # Required: What this runbook analyses
-contact: str                 # Optional: Contact person
+name: str # Required: Runbook name
+description: str # Required: What this runbook analyses
+contact: str # Optional: Contact person
 
-config:                      # Optional: Execution settings
-  timeout: int               # Total timeout in seconds
-  max_concurrency: int       # Parallel artifacts (default: 10)
+config: # Optional: Execution settings
+  timeout: int # Total timeout in seconds
+  max_concurrency: int # Parallel artifacts (default: 10)
 
-artifacts:                   # Required: Artifact definitions
+artifacts: # Required: Artifact definitions
   <artifact_id>:
     # ... artifact definition
 ```
@@ -36,6 +36,7 @@ artifacts:
 ```
 
 **Fields:**
+
 - `source.type`: Connector type (e.g., `mysql`, `sqlite`, `filesystem`)
 - `source.properties`: Connector-specific configuration
 
@@ -63,10 +64,11 @@ artifacts:
     inputs: personal_data_indicators
     process:
       type: "gdpr_personal_data_classifier"
-    output: true                    # Include in final output
+    output: true # Include in final output
 ```
 
 **Fields:**
+
 - `inputs`: Single artifact ID or list of IDs (fan-in)
 - `process.type`: Processor type (e.g., `personal_data`, `gdpr_personal_data_classifier`, `data_subject`)
 - `process.properties`: Processor-specific configuration
@@ -84,9 +86,36 @@ artifacts:
       - filesystem_findings
     process:
       type: "personal_data"
-    merge: "concatenate"           # Only strategy supported
+    merge: "concatenate" # Only strategy supported
     output: true
 ```
+
+### Reused Artifacts
+
+Reuse artifacts from a previous run instead of re-executing:
+
+```yaml
+artifacts:
+  # Reuse expensive database extraction from a previous run
+  db_schema:
+    reuse:
+      from_run: "550e8400-e29b-41d4-a716-446655440000"
+      artifact: "db_schema"
+
+  # Process the reused data with updated analysis
+  findings:
+    inputs: db_schema
+    process:
+      type: "personal_data"
+    output: true
+```
+
+**Fields:**
+
+- `reuse.from_run`: Run ID (UUID) to copy from
+- `reuse.artifact`: Artifact ID in the source run
+
+**Note:** `reuse` is mutually exclusive with `source` and `inputs`. Use `wct runs` to find run IDs.
 
 ## Pipeline Execution
 
@@ -119,6 +148,7 @@ artifacts:
 ```
 
 **Execution flow:**
+
 1. `php_files` extracts files (source artifact)
 2. `php_source_code` parses files (waits for step 1)
 3. `processing_purposes` analyses code (waits for step 2)
@@ -132,6 +162,7 @@ Independent artifacts execute in parallel automatically.
 #### `samples/file_content_analysis.yaml`
 
 Simple demonstration runbook showing:
+
 - Personal data detection and GDPR classification
 - Basic file content analysis using personal_data analyser
 - Ideal for learning WCT basics
@@ -139,6 +170,7 @@ Simple demonstration runbook showing:
 #### `samples/LAMP_stack.yaml`
 
 Comprehensive example demonstrating:
+
 - Multiple source artifacts (MySQL, filesystem)
 - Pipeline execution: Filesystem → SourceCode → ProcessingPurpose
 - Fan-out pattern (one source, multiple analysers)
@@ -151,23 +183,28 @@ Lightweight version of LAMP_stack without MySQL dependency.
 #### `samples/mongodb-personal-data.yaml`
 
 MongoDB database analysis demonstrating:
+
 - MongoDB connector for document database extraction
 - Personal data and data subject detection in NoSQL data
 - Healthcare domain sample data
 
 **Prerequisites:**
+
 1. Start MongoDB (e.g., via Docker):
+
    ```bash
    docker run -d --name mongodb -p 27017:27017 mongo:latest
    ```
 
 2. Configure environment variables in `apps/wct/.env`:
+
    ```bash
    MONGODB_URI=mongodb://localhost:27017
    MONGODB_DATABASE=waivern_healthcare
    ```
 
 3. Seed the database with sample healthcare data:
+
    ```bash
    uv run python -m waivern_mongodb.scripts.seed_healthcare
    ```
@@ -193,6 +230,27 @@ uv run wct run runbooks/samples/LAMP_stack.yaml -v
 uv run wct run runbooks/samples/file_content_analysis.yaml --log-level DEBUG
 ```
 
+### Resuming Runs
+
+Resume a failed or interrupted run to skip already-completed artifacts:
+
+```bash
+# List recorded runs to find the run ID
+uv run wct runs
+
+# Filter by status
+uv run wct runs --status failed
+
+# Resume from a specific run
+uv run wct run runbooks/samples/LAMP_stack.yaml --resume <run-id>
+```
+
+**Resume behaviour:**
+
+- Skips artifacts that completed in the original run
+- Validates that the runbook hasn't changed (same hash)
+- Prevents concurrent execution of the same run
+
 ## IDE Support
 
 Generate JSON Schema for autocomplete and validation:
@@ -207,51 +265,51 @@ This enables real-time validation in VS Code, PyCharm, and other IDEs.
 
 ### Runbook Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Runbook name |
-| `description` | string | Yes | What this runbook analyses |
-| `contact` | string | No | Contact person (e.g., "Name <email>") |
-| `config` | object | No | Execution configuration |
-| `artifacts` | object | Yes | Artifact definitions |
+| Field         | Type   | Required | Description                           |
+| ------------- | ------ | -------- | ------------------------------------- |
+| `name`        | string | Yes      | Runbook name                          |
+| `description` | string | Yes      | What this runbook analyses            |
+| `contact`     | string | No       | Contact person (e.g., "Name <email>") |
+| `config`      | object | No       | Execution configuration               |
+| `artifacts`   | object | Yes      | Artifact definitions                  |
 
 ### Config Fields
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `timeout` | int | None | Total execution timeout (seconds) |
-| `max_concurrency` | int | 10 | Maximum parallel artifacts |
+| Field             | Type | Default | Description                       |
+| ----------------- | ---- | ------- | --------------------------------- |
+| `timeout`         | int  | None    | Total execution timeout (seconds) |
+| `max_concurrency` | int  | 10      | Maximum parallel artifacts        |
 
 ### Artifact Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | No | Human-readable name |
-| `description` | string | No | What this artifact produces |
-| `contact` | string | No | Responsible person |
-| `source` | object | * | Data extraction config (source artifacts) |
-| `inputs` | string/list | * | Upstream artifact(s) (derived artifacts) |
-| `process` | object | ** | Processor config (derived artifacts) |
-| `merge` | string | No | Fan-in merge strategy ("concatenate") |
-| `output` | bool | No | Include in final output (default: false) |
-| `optional` | bool | No | Continue on failure (default: false) |
+| Field         | Type        | Required | Description                               |
+| ------------- | ----------- | -------- | ----------------------------------------- |
+| `name`        | string      | No       | Human-readable name                       |
+| `description` | string      | No       | What this artifact produces               |
+| `contact`     | string      | No       | Responsible person                        |
+| `source`      | object      | \*       | Data extraction config (source artifacts) |
+| `inputs`      | string/list | \*       | Upstream artifact(s) (derived artifacts)  |
+| `process`     | object      | \*\*     | Processor config (derived artifacts)      |
+| `merge`       | string      | No       | Fan-in merge strategy ("concatenate")     |
+| `output`      | bool        | No       | Include in final output (default: false)  |
+| `optional`    | bool        | No       | Continue on failure (default: false)      |
 
 \* Either `source` or `inputs` required (mutually exclusive)
-\** Required when `inputs` is specified
+\*\* Required when `inputs` is specified
 
 ### Source Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `type` | string | Yes | Connector type |
-| `properties` | object | No | Connector configuration |
+| Field        | Type   | Required | Description             |
+| ------------ | ------ | -------- | ----------------------- |
+| `type`       | string | Yes      | Connector type          |
+| `properties` | object | No       | Connector configuration |
 
 ### Process Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `type` | string | Yes | Processor type |
-| `properties` | object | No | Processor configuration |
+| Field        | Type   | Required | Description             |
+| ------------ | ------ | -------- | ----------------------- |
+| `type`       | string | Yes      | Processor type          |
+| `properties` | object | No       | Processor configuration |
 
 ## Available Components
 

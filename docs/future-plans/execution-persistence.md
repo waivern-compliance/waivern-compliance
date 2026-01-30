@@ -1,29 +1,52 @@
 # Execution Persistence
 
-- **Status:** Partially Implemented
-- **Last Updated:** 2026-01-28
-- **Related:** [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md), [Persistent Artifact Store Design](../../.local/plans/persistent-artifact-store-design.md)
+- **Status:** Implemented
+- **Last Updated:** 2026-01-30
+- **Related:** [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md)
 
-## Problem
+## Overview
 
-Currently execution results and artifacts exist only in memory. When the process exits, everything is lost. This prevents:
+Execution persistence enables artifact storage, state tracking, and run resumption. All execution data is persisted to the `ArtifactStore`, allowing runs to be inspected, resumed, and reused.
 
-- Artifact inspection after execution
-- Audit trails
-- SaaS deployment (users need to access their run history)
+## Storage Structure
 
-## Solution
+```
+.waivern/runs/{run_id}/
+├── _system/
+│   ├── run.json              # Run metadata (runbook, timestamps, status)
+│   └── state.json            # Execution state (completed, not_started, failed)
+│
+├── source_data.json          # Artifacts (key = artifact_id)
+├── findings.json
+└── validated_findings.json
+```
 
-Separate stores with run ID as correlation key:
+### Run Metadata (`_system/run.json`)
 
-| Store            | Purpose            | Data                                           | Status         |
-| ---------------- | ------------------ | ---------------------------------------------- | -------------- |
-| `ArtifactStore`  | Produced data      | `Message` objects (schema-validated artifacts) | ✅ Implemented |
-| `ExecutionStore` | Execution metadata | `ExecutionResult` (status, timing, errors)     | ⏳ Future      |
+```json
+{
+  "run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "runbook_path": "./runbooks/gdpr-analysis.yaml",
+  "runbook_hash": "sha256:abc123...",
+  "started_at": "2024-01-15T10:30:00Z",
+  "completed_at": "2024-01-15T10:35:00Z",
+  "status": "completed"
+}
+```
 
-## Current Implementation
+### Execution State (`_system/state.json`)
 
-The `ArtifactStore` interface is now fully implemented with async, stateless design:
+```json
+{
+  "completed": ["source_data", "findings"],
+  "not_started": [],
+  "failed": [],
+  "skipped": [],
+  "last_checkpoint": "2024-01-15T10:32:00Z"
+}
+```
+
+## ArtifactStore Interface
 
 ```python
 class ArtifactStore(ABC):
@@ -34,7 +57,10 @@ class ArtifactStore(ABC):
     async def exists(self, run_id: str, key: str) -> bool: ...
     async def delete(self, run_id: str, key: str) -> None: ...
     async def list_keys(self, run_id: str, prefix: str = "") -> list[str]: ...
+    async def list_runs(self) -> list[str]: ...
     async def clear(self, run_id: str) -> None: ...
+    async def save_json(self, run_id: str, key: str, data: dict) -> None: ...
+    async def get_json(self, run_id: str, key: str) -> dict: ...
 ```
 
 **Available backends:**
@@ -42,52 +68,61 @@ class ArtifactStore(ABC):
 - `AsyncInMemoryStore` - For testing
 - `LocalFilesystemStore` - For local persistence
 
-**Filesystem layout:**
+## Features
 
+### Resume from Failure
+
+Resume a failed or interrupted run, skipping already-completed artifacts:
+
+```bash
+# List recorded runs
+wct runs
+wct runs --status failed
+
+# Resume a specific run
+wct run analysis.yaml --resume <run-id>
 ```
-.waivern/runs/{run_id}/
-├── _system/                 # Reserved for system metadata
-│   └── state.json           # (future) execution state
-├── artifacts/
-│   ├── source_data.json
-│   └── findings.json
-└── llm_cache/               # (future) LLM response cache
-    └── {hash}.json
+
+**Validation on resume:**
+
+- Runbook hash must match (prevents resuming with modified runbook)
+- Run must not be in "running" status (prevents concurrent execution)
+
+### Artifact Reuse
+
+Reuse artifacts from previous runs in new runbooks:
+
+```yaml
+artifacts:
+  db_schema:
+    reuse:
+      from_run: "550e8400-e29b-41d4-a716-446655440000"
+      artifact: "db_schema"
+
+  findings:
+    inputs: db_schema
+    process:
+      type: personal_data
+    output: true
 ```
 
 ## Deployment Models
 
-| Deployment | ArtifactStore        | ExecutionStore (future)    |
-| ---------- | -------------------- | -------------------------- |
-| Local/CLI  | LocalFilesystemStore | FileSystemExecutionStore   |
-| SaaS       | RemoteHttpStore      | PostgreSQL (tenant-scoped) |
+| Deployment | ArtifactStore            |
+| ---------- | ------------------------ |
+| Local/CLI  | LocalFilesystemStore     |
+| SaaS       | RemoteHttpStore (future) |
 
-## Enables
+## Implementation Status
 
-- **`wct inspect`** - View artifacts without re-execution (future)
-- **Exporters** - Read from stores, produce JSON/reports/API responses
-- **SaaS** - Users access run history from centralised store
-- **Audit** - All executions persisted with metadata
-
-## Flow
-
-```
-Runbook → Planner → DAGExecutor → ArtifactStore
-                                        ↓
-                                    Exporter(s)
-                                        ↓
-                               JSON / Report / API
-```
-
-## Implementation Progress
-
-| Step | Description                                           | Status    |
-| ---- | ----------------------------------------------------- | --------- |
-| 1    | Add `run_id` parameter to `ArtifactStore` interface   | ✅ Done   |
-| 2    | Add `LocalFilesystemStore` implementation             | ✅ Done   |
-| 3    | DAGExecutor generates run ID, passes to stores        | ✅ Done   |
-| 4    | Add `ExecutionStore` interface                        | ⏳ Future |
-| 5    | Implement `wct inspect` reading from persisted stores | ⏳ Future |
-| 6    | Add exporter abstraction for output formatting        | ⏳ Future |
-
-See [Persistent Artifact Store Design](../../.local/plans/persistent-artifact-store-design.md) for the complete implementation plan.
+| Feature                                    | Status         |
+| ------------------------------------------ | -------------- |
+| `ArtifactStore` interface with run scoping | ✅ Implemented |
+| `LocalFilesystemStore` implementation      | ✅ Implemented |
+| `ExecutionState` model and persistence     | ✅ Implemented |
+| `RunMetadata` model and persistence        | ✅ Implemented |
+| Resume capability (`--resume` flag)        | ✅ Implemented |
+| `wct runs` command                         | ✅ Implemented |
+| Artifact reuse (`reuse` config)            | ✅ Implemented |
+| `wct inspect` command                      | ⏳ Future      |
+| Run cleanup/retention policies             | ⏳ Future      |
