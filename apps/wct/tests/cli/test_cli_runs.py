@@ -1,6 +1,7 @@
 """CLI tests for 'wct runs' command."""
 
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -67,10 +68,14 @@ class TestWCTRunsCommand:
             f"STDOUT: {result.stdout}\n"
             f"STDERR: {result.stderr}"
         )
-        # Should show the run we just created
-        assert "Recorded Runs" in result.stdout or "run" in result.stdout.lower()
-        # Should show status
-        assert "completed" in result.stdout.lower()
+        # Table title should be present
+        assert "Recorded Runs" in result.stdout
+        # Should show a truncated UUID pattern (8 chars + ...)
+        assert re.search(r"[a-f0-9]{8}\.\.\.", result.stdout), (
+            "Expected truncated run ID (UUID pattern) in output"
+        )
+        # Status column should show 'completed'
+        assert "completed" in result.stdout
 
     def test_runs_command_filters_by_status(
         self, tmp_path: Path, store_env: dict[str, str]
@@ -124,14 +129,12 @@ class TestWCTRunsCommand:
 
         # Assert - completed filter shows the run
         assert result_completed.returncode == 0
-        assert "completed" in result_completed.stdout.lower()
+        assert "Recorded Runs" in result_completed.stdout
+        assert "completed" in result_completed.stdout
 
-        # Assert - failed filter shows no runs
+        # Assert - failed filter shows no runs (specific message)
         assert result_failed.returncode == 0
-        assert "No runs with status 'failed'" in result_failed.stdout or (
-            "failed" not in result_failed.stdout.lower()
-            or "0 run" in result_failed.stdout.lower()
-        )
+        assert "No runs with status 'failed'" in result_failed.stdout
 
     def test_runs_command_shows_message_when_no_runs(
         self, store_env: dict[str, str]
@@ -153,5 +156,5 @@ class TestWCTRunsCommand:
             f"STDOUT: {result.stdout}\n"
             f"STDERR: {result.stderr}"
         )
-        # Should show informative message about no runs
-        assert "No runs recorded" in result.stdout or "no runs" in result.stdout.lower()
+        # Should show the specific "no runs" message
+        assert "No runs recorded" in result.stdout
