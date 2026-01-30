@@ -148,3 +148,17 @@ class ArtifactStore(ABC):
 
         """
         ...
+
+    # -------------------------------------------------------------------------
+    # Run Enumeration
+    # -------------------------------------------------------------------------
+
+    @abstractmethod
+    async def list_runs(self) -> list[str]:
+        """List all run IDs in the store.
+
+        Returns:
+            List of run IDs. Empty list if no runs exist.
+
+        """
+        ...

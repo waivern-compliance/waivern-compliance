@@ -211,3 +211,15 @@ class LocalFilesystemStore(ArtifactStore):
         async with aiofiles.open(file_path) as f:
             content = await f.read()
         return json.loads(content)
+
+    @override
+    async def list_runs(self) -> list[str]:
+        """List all run IDs in the store.
+
+        Returns all subdirectory names under {base_path}/runs/.
+        """
+        runs_dir = self._base_path / "runs"
+        if not runs_dir.exists():
+            return []
+
+        return sorted(d.name for d in runs_dir.iterdir() if d.is_dir())

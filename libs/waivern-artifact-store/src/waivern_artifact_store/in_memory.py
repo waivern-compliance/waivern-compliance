@@ -132,3 +132,14 @@ class AsyncInMemoryStore(ArtifactStore):
                 f"JSON data '{key}' not found in run '{run_id}'."
             )
         return json_storage[key]
+
+    @override
+    async def list_runs(self) -> list[str]:
+        """List all run IDs in the store.
+
+        Returns run IDs from both message storage and JSON storage,
+        since a run may only have system metadata (JSON) stored.
+        """
+        # Combine keys from both storages (a run may exist in either or both)
+        all_run_ids = set(self._storage.keys()) | set(self._json_storage.keys())
+        return sorted(all_run_ids)

@@ -27,6 +27,8 @@ from waivern_orchestration import (
     Planner,
     RunbookSchemaGenerator,
 )
+from waivern_orchestration.run_metadata import RunMetadata
+from waivern_orchestration.state import ExecutionState
 from waivern_rulesets.core.registry import RulesetRegistry
 
 from wct.exporters.json_exporter import JsonExporter
@@ -477,12 +479,19 @@ def _plan_runbook(runbook_path: Path, registry: ComponentRegistry) -> ExecutionP
         ) from e
 
 
-def _execute_plan(plan: ExecutionPlan, registry: ComponentRegistry) -> ExecutionResult:
+def _execute_plan(
+    plan: ExecutionPlan,
+    registry: ComponentRegistry,
+    runbook_path: Path,
+    resume_run_id: str | None = None,
+) -> ExecutionResult:
     """Execute runbook plan.
 
     Args:
         plan: Execution plan with artifact definitions.
         registry: Component registry for factory lookup.
+        runbook_path: Path to the runbook file (required for resume validation).
+        resume_run_id: If provided, resume from this existing run.
 
     Returns:
         Execution result with artifact outcomes.
@@ -493,7 +502,13 @@ def _execute_plan(plan: ExecutionPlan, registry: ComponentRegistry) -> Execution
     """
     executor = DAGExecutor(registry)
     try:
-        result = asyncio.run(executor.execute(plan))
+        result = asyncio.run(
+            executor.execute(
+                plan,
+                runbook_path=runbook_path,
+                resume_run_id=resume_run_id,
+            )
+        )
         total = len(result.completed) + len(result.failed) + len(result.skipped)
         logger.info(
             "Execution completed: %d artifacts, %.2fs",
@@ -568,6 +583,7 @@ def execute_runbook_command(  # noqa: PLR0913 - Matches CLI entry point signatur
     verbose: bool = False,
     log_level: str = "INFO",
     exporter_override: str | None = None,
+    resume_run_id: str | None = None,
 ) -> None:
     """CLI command implementation for running analyses.
 
@@ -578,6 +594,7 @@ def execute_runbook_command(  # noqa: PLR0913 - Matches CLI entry point signatur
         verbose: Enable verbose output
         log_level: Logging level
         exporter_override: Manual exporter selection (overrides auto-detection)
+        resume_run_id: If provided, resume from this existing run
 
     """
     effective_log_level = "DEBUG" if verbose else log_level
@@ -592,7 +609,7 @@ def execute_runbook_command(  # noqa: PLR0913 - Matches CLI entry point signatur
 
         # Plan and execute
         plan = _plan_runbook(runbook_path, registry)
-        result = _execute_plan(plan, registry)
+        result = _execute_plan(plan, registry, runbook_path, resume_run_id)
 
         # Display results (load artifact data from store for duration/errors)
         store = registry.container.get_service(ArtifactStore)
@@ -896,6 +913,135 @@ def _detect_exporter(plan: ExecutionPlan) -> str:
         return "json"
 
     return _framework_to_exporter(framework)
+
+
+def list_runs_command(
+    log_level: str = "INFO", status_filter: str | None = None
+) -> None:
+    """CLI command implementation for listing runs.
+
+    Args:
+        log_level: Logging level
+        status_filter: Optional status to filter by (running, completed, failed, interrupted)
+
+    """
+    setup_logging(level=log_level)
+
+    try:
+        # Get artifact store
+        store = ArtifactStoreFactory().create()
+        if store is None:
+            raise CLIError(
+                "Artifact store not configured. Check WAIVERN_STORE_TYPE environment variable.",
+                command="runs",
+            )
+
+        # Get all run IDs
+        run_ids = asyncio.run(store.list_runs())
+
+        if not run_ids:
+            info_panel = Panel(
+                "[yellow]No runs recorded.[/yellow]\n\n"
+                "Execute a runbook with 'wct run <runbook.yaml>' to create a run.",
+                title="📋 Runs",
+                border_style="yellow",
+            )
+            console.print(info_panel)
+            return
+
+        # Load metadata for each run and collect data
+        runs_data: list[dict[str, str | int]] = []
+        for run_id in run_ids:
+            try:
+                metadata = asyncio.run(RunMetadata.load(store, run_id))
+                state = asyncio.run(ExecutionState.load(store, run_id))
+
+                # Apply status filter
+                if status_filter and metadata.status != status_filter:
+                    continue
+
+                runs_data.append(
+                    {
+                        "run_id": run_id[:8] + "...",  # Truncate UUID for display
+                        "full_run_id": run_id,
+                        "status": metadata.status,
+                        "runbook": metadata.runbook_path,
+                        "started_at": metadata.started_at.strftime("%Y-%m-%d %H:%M:%S"),
+                        "completed": len(state.completed),
+                        "failed": len(state.failed),
+                        "skipped": len(state.skipped),
+                    }
+                )
+            except Exception:
+                # Skip runs with corrupt/missing metadata
+                logger.debug("Skipping run %s - metadata not found", run_id)
+                continue
+
+        # Sort by started_at descending (most recent first)
+        runs_data.sort(key=lambda x: x["started_at"], reverse=True)
+
+        if not runs_data:
+            if status_filter:
+                console.print(
+                    f"[yellow]No runs with status '{status_filter}' found.[/yellow]"
+                )
+            else:
+                console.print("[yellow]No runs found.[/yellow]")
+            return
+
+        # Build table
+        table = Table(
+            title="📋 Recorded Runs",
+            show_header=True,
+            header_style="bold magenta",
+        )
+        table.add_column("Run ID", style="cyan", no_wrap=True)
+        table.add_column("Status", style="white")
+        table.add_column("Runbook", style="dim")
+        table.add_column("Started", style="blue")
+        table.add_column("✓", style="green", justify="right")
+        table.add_column("✗", style="red", justify="right")
+        table.add_column("⊘", style="yellow", justify="right")
+
+        status_styles = {
+            "running": "[blue]running[/blue]",
+            "completed": "[green]completed[/green]",
+            "failed": "[red]failed[/red]",
+            "interrupted": "[yellow]interrupted[/yellow]",
+        }
+
+        for run in runs_data:
+            status_text = status_styles.get(str(run["status"]), str(run["status"]))
+            table.add_row(
+                str(run["run_id"]),
+                status_text,
+                str(run["runbook"]),
+                str(run["started_at"]),
+                str(run["completed"]),
+                str(run["failed"]),
+                str(run["skipped"]),
+            )
+
+        console.print(table)
+        console.print(
+            f"\n[dim]Showing {len(runs_data)} run(s). "
+            "Use the full run ID with --resume to continue a run.[/dim]"
+        )
+
+    except Exception as e:
+        logger.error("Failed to list runs: %s", e)
+        cli_error = CLIError(
+            f"Unable to list runs: {e}",
+            command="runs",
+            original_error=e,
+        )
+        error_panel = Panel(
+            f"[red]{cli_error}[/red]",
+            title="❌ Failed to list runs",
+            border_style="red",
+        )
+        console.print(error_panel)
+        raise typer.Exit(1) from cli_error
 
 
 def generate_schema_command(output_path: Path, log_level: str = "INFO") -> None:
