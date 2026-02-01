@@ -9,6 +9,12 @@ Key concepts:
 - Unified cache handles both sync responses and async batch tracking
 """
 
+from waivern_llm.v2.batch_planner import (
+    BatchPlan,
+    BatchPlanner,
+    PlannedBatch,
+    SkippedGroup,
+)
 from waivern_llm.v2.token_estimation import (
     OUTPUT_RATIO,
     PROMPT_OVERHEAD_TOKENS,
@@ -31,6 +37,11 @@ __all__ = [
     "BatchingMode",
     "PromptBuilder",
     "SkipReason",
+    # Batch planning
+    "BatchPlanner",
+    "BatchPlan",
+    "PlannedBatch",
+    "SkippedGroup",
     # Token estimation
     "estimate_tokens",
     "get_model_context_window",
