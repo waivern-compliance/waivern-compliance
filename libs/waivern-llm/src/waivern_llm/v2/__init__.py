@@ -15,7 +15,12 @@ from waivern_llm.v2.batch_planner import (
     PlannedBatch,
     SkippedGroup,
 )
-from waivern_llm.v2.providers import LLMProvider
+from waivern_llm.v2.providers import (
+    AnthropicProvider,
+    GoogleProvider,
+    LLMProvider,
+    OpenAIProvider,
+)
 from waivern_llm.v2.token_estimation import (
     OUTPUT_RATIO,
     PROMPT_OVERHEAD_TOKENS,
@@ -40,6 +45,9 @@ __all__ = [
     "SkipReason",
     # Providers
     "LLMProvider",
+    "AnthropicProvider",
+    "OpenAIProvider",
+    "GoogleProvider",
     # Batch planning
     "BatchPlanner",
     "BatchPlan",
