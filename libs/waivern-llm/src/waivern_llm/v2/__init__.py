@@ -15,6 +15,7 @@ from waivern_llm.v2.batch_planner import (
     PlannedBatch,
     SkippedGroup,
 )
+from waivern_llm.v2.providers import LLMProvider
 from waivern_llm.v2.token_estimation import (
     OUTPUT_RATIO,
     PROMPT_OVERHEAD_TOKENS,
@@ -37,6 +38,8 @@ __all__ = [
     "BatchingMode",
     "PromptBuilder",
     "SkipReason",
+    # Providers
+    "LLMProvider",
     # Batch planning
     "BatchPlanner",
     "BatchPlan",
