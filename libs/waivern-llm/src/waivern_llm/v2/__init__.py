@@ -15,6 +15,7 @@ from waivern_llm.v2.batch_planner import (
     PlannedBatch,
     SkippedGroup,
 )
+from waivern_llm.v2.cache import CacheEntry, LLMResponseCache
 from waivern_llm.v2.providers import (
     AnthropicProvider,
     GoogleProvider,
@@ -48,6 +49,9 @@ __all__ = [
     "AnthropicProvider",
     "OpenAIProvider",
     "GoogleProvider",
+    # Cache
+    "CacheEntry",
+    "LLMResponseCache",
     # Batch planning
     "BatchPlanner",
     "BatchPlan",

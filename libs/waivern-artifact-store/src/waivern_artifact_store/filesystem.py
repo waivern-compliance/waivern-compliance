@@ -38,6 +38,7 @@ class LocalFilesystemStore(ArtifactStore):
     # Internal storage prefixes
     _ARTIFACTS_PREFIX = "artifacts"
     _SYSTEM_PREFIX = "_system"
+    _LLM_CACHE_PREFIX = "llm_cache"
 
     # System file keys
     _STATE_KEY = f"{_SYSTEM_PREFIX}/state"
@@ -86,6 +87,10 @@ class LocalFilesystemStore(ArtifactStore):
     def _artifact_key(self, artifact_id: str) -> str:
         """Convert artifact ID to internal storage key."""
         return f"{self._ARTIFACTS_PREFIX}/{artifact_id}"
+
+    def _cache_key(self, key: str) -> str:
+        """Convert cache key to internal storage key."""
+        return f"{self._LLM_CACHE_PREFIX}/{key}"
 
     # ========================================================================
     # Artifact Operations
@@ -244,3 +249,49 @@ class LocalFilesystemStore(ArtifactStore):
             return []
 
         return sorted(d.name for d in runs_dir.iterdir() if d.is_dir())
+
+    # ========================================================================
+    # LLM Cache Operations
+    # ========================================================================
+
+    async def cache_get(self, run_id: str, key: str) -> dict[str, JsonValue] | None:
+        """Retrieve a cache entry by key."""
+        file_path = self._key_to_path(run_id, self._cache_key(key))
+
+        if not file_path.exists():
+            return None
+
+        async with aiofiles.open(file_path) as f:
+            content = await f.read()
+        data = json.loads(content)
+        return cast(dict[str, JsonValue], data)
+
+    async def cache_set(
+        self, run_id: str, key: str, entry: dict[str, JsonValue]
+    ) -> None:
+        """Store a cache entry (upsert semantics)."""
+        file_path = self._key_to_path(run_id, self._cache_key(key))
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        async with aiofiles.open(file_path, "w") as f:
+            await f.write(json.dumps(entry, indent=2))
+
+    async def cache_delete(self, run_id: str, key: str) -> None:
+        """Delete a cache entry by key (no-op if not found)."""
+        file_path = self._key_to_path(run_id, self._cache_key(key))
+        if file_path.exists():
+            file_path.unlink()
+
+    async def cache_clear(self, run_id: str) -> None:
+        """Delete all cache entries for a run."""
+        cache_dir = self._run_dir(run_id) / self._LLM_CACHE_PREFIX
+        if not cache_dir.exists():
+            return
+
+        # Delete all cache files
+        for file_path in cache_dir.rglob("*.json"):
+            file_path.unlink()
+
+        # Remove cache directory if empty
+        if cache_dir.exists() and not any(cache_dir.iterdir()):
+            cache_dir.rmdir()
