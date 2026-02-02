@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock
 from pydantic import BaseModel
 from waivern_artifact_store.in_memory import AsyncInMemoryStore
 
-from waivern_llm.v2.cache import LLMResponseCache
+from waivern_llm.v2.cache import CacheEntry
 from waivern_llm.v2.service import DefaultLLMService
 from waivern_llm.v2.types import BatchingMode, ItemGroup, SkipReason
 
@@ -91,11 +91,10 @@ class TestDefaultLLMServiceCountBasedMode:
         """COUNT_BASED mode should pass content=None to prompt builder."""
         # Arrange
         store = AsyncInMemoryStore()
-        cache = LLMResponseCache(store, "test-run")
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache=cache, batch_size=50)
+        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
 
         group = _create_group(content="some content", item_count=2)
 
@@ -105,6 +104,7 @@ class TestDefaultLLMServiceCountBasedMode:
             prompt_builder=prompt_builder,
             response_model=MockResponse,
             batching_mode=BatchingMode.COUNT_BASED,
+            run_id="test-run",
         )
 
         # Assert - prompt builder should be called with content=None
@@ -116,12 +116,11 @@ class TestDefaultLLMServiceCountBasedMode:
         """Should return one response per batch processed."""
         # Arrange
         store = AsyncInMemoryStore()
-        cache = LLMResponseCache(store, "test-run")
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
         # batch_size=2 means 5 items should produce 3 batches
-        service = DefaultLLMService(provider=provider, cache=cache, batch_size=2)
+        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=2)
 
         group = _create_group(content="some content", item_count=5)
 
@@ -131,6 +130,7 @@ class TestDefaultLLMServiceCountBasedMode:
             prompt_builder=prompt_builder,
             response_model=MockResponse,
             batching_mode=BatchingMode.COUNT_BASED,
+            run_id="test-run",
         )
 
         # Assert - should have 3 responses (5 items / 2 per batch = 3 batches)
@@ -150,11 +150,10 @@ class TestDefaultLLMServiceExtendedContextMode:
         """EXTENDED_CONTEXT mode should pass group content to prompt builder."""
         # Arrange
         store = AsyncInMemoryStore()
-        cache = LLMResponseCache(store, "test-run")
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache=cache, batch_size=50)
+        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
 
         group = _create_group(content="file content here", item_count=2)
 
@@ -164,6 +163,7 @@ class TestDefaultLLMServiceExtendedContextMode:
             prompt_builder=prompt_builder,
             response_model=MockResponse,
             batching_mode=BatchingMode.EXTENDED_CONTEXT,
+            run_id="test-run",
         )
 
         # Assert - prompt builder should be called with the content
@@ -175,12 +175,11 @@ class TestDefaultLLMServiceExtendedContextMode:
         """Should return one response per batch of groups."""
         # Arrange
         store = AsyncInMemoryStore()
-        cache = LLMResponseCache(store, "test-run")
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
         # Small max_payload forces groups into separate batches
-        service = DefaultLLMService(provider=provider, cache=cache, batch_size=50)
+        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
 
         # Two groups that should each become their own batch
         # (content is small enough to fit individually but creates separate batches)
@@ -193,6 +192,7 @@ class TestDefaultLLMServiceExtendedContextMode:
             prompt_builder=prompt_builder,
             response_model=MockResponse,
             batching_mode=BatchingMode.EXTENDED_CONTEXT,
+            run_id="test-run",
         )
 
         # Assert - both groups fit in one batch (small content)
@@ -213,11 +213,10 @@ class TestDefaultLLMServiceCaching:
         """Cache miss should invoke the LLM provider."""
         # Arrange
         store = AsyncInMemoryStore()
-        cache = LLMResponseCache(store, "test-run")
         response = MockResponse(valid=True, reason="from provider")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache=cache, batch_size=50)
+        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
 
         group = _create_group(content="test content", item_count=1)
 
@@ -227,6 +226,7 @@ class TestDefaultLLMServiceCaching:
             prompt_builder=prompt_builder,
             response_model=MockResponse,
             batching_mode=BatchingMode.EXTENDED_CONTEXT,
+            run_id="test-run",
         )
 
         # Assert - provider should have been called
@@ -238,7 +238,6 @@ class TestDefaultLLMServiceCaching:
         """Retry after failure should use cached results from successful batches."""
         # Arrange
         store = AsyncInMemoryStore()
-        cache = LLMResponseCache(store, "test-run")
 
         response = MockResponse(valid=True, reason="from provider")
         provider = Mock()
@@ -270,7 +269,7 @@ class TestDefaultLLMServiceCaching:
         prompt_builder = Mock()
         prompt_builder.build_prompt = Mock(side_effect=build_prompt_side_effect)
 
-        service = DefaultLLMService(provider=provider, cache=cache, batch_size=1)
+        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=1)
 
         # Two items that will become two batches (batch_size=1, COUNT_BASED flattens)
         group = _create_group(content=None, item_count=2)
@@ -282,6 +281,7 @@ class TestDefaultLLMServiceCaching:
                 prompt_builder=prompt_builder,
                 response_model=MockResponse,
                 batching_mode=BatchingMode.COUNT_BASED,
+                run_id="test-run",
             )
         except RuntimeError:
             pass  # Expected
@@ -301,6 +301,7 @@ class TestDefaultLLMServiceCaching:
             prompt_builder=prompt_builder,
             response_model=MockResponse,
             batching_mode=BatchingMode.COUNT_BASED,
+            run_id="test-run",
         )
 
         # Assert - provider should only be called once (for second batch)
@@ -312,11 +313,10 @@ class TestDefaultLLMServiceCaching:
         """Should clear cache after complete() returns successfully."""
         # Arrange
         store = AsyncInMemoryStore()
-        cache = LLMResponseCache(store, "test-run")
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache=cache, batch_size=50)
+        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
 
         group = _create_group(content="test content", item_count=1)
 
@@ -326,12 +326,13 @@ class TestDefaultLLMServiceCaching:
             prompt_builder=prompt_builder,
             response_model=MockResponse,
             batching_mode=BatchingMode.EXTENDED_CONTEXT,
+            run_id="test-run",
         )
 
         # Assert - cache should be empty after successful completion
         # Try to get any cached entry - should be None
-        cache_key = cache.compute_key("test prompt", "test-model", "MockResponse")
-        cached = await cache.get(cache_key)
+        cache_key = CacheEntry.compute_key("test prompt", "test-model", "MockResponse")
+        cached = await store.cache_get("test-run", cache_key)
         assert cached is None
 
 
@@ -347,11 +348,10 @@ class TestDefaultLLMServiceSkippedFindings:
         """Skipped findings should be returned with reasons."""
         # Arrange
         store = AsyncInMemoryStore()
-        cache = LLMResponseCache(store, "test-run")
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache=cache, batch_size=50)
+        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
 
         # Valid group with content
         valid_group = _create_group(content="valid content", item_count=2)
@@ -364,6 +364,7 @@ class TestDefaultLLMServiceSkippedFindings:
             prompt_builder=prompt_builder,
             response_model=MockResponse,
             batching_mode=BatchingMode.EXTENDED_CONTEXT,
+            run_id="test-run",
         )
 
         # Assert - only valid group should produce a response
@@ -389,7 +390,6 @@ class TestDefaultLLMServiceErrorHandling:
 
         # Arrange
         store = AsyncInMemoryStore()
-        cache = LLMResponseCache(store, "test-run")
         provider = Mock()
         provider.model_name = "test-model"
         provider.context_window = 100_000
@@ -397,7 +397,7 @@ class TestDefaultLLMServiceErrorHandling:
             side_effect=RuntimeError("Provider failed")
         )
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache=cache, batch_size=50)
+        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
 
         group = _create_group(content="test content", item_count=1)
 
@@ -408,4 +408,5 @@ class TestDefaultLLMServiceErrorHandling:
                 prompt_builder=prompt_builder,
                 response_model=MockResponse,
                 batching_mode=BatchingMode.EXTENDED_CONTEXT,
+                run_id="test-run",
             )

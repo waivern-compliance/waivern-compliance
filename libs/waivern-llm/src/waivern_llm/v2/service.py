@@ -13,13 +13,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from pydantic import BaseModel
 from waivern_core import Finding
 
 from waivern_llm.v2.batch_planner import BatchPlanner
-from waivern_llm.v2.cache import CacheEntry, LLMResponseCache
+from waivern_llm.v2.cache import CacheEntry
 from waivern_llm.v2.providers.protocol import LLMProvider
 from waivern_llm.v2.token_estimation import calculate_max_payload_tokens
 from waivern_llm.v2.types import (
@@ -28,6 +28,9 @@ from waivern_llm.v2.types import (
     LLMCompletionResult,
     PromptBuilder,
 )
+
+if TYPE_CHECKING:
+    from waivern_artifact_store.llm_cache import LLMCache
 
 
 class LLMService(ABC):
@@ -59,6 +62,7 @@ class LLMService(ABC):
         prompt_builder: PromptBuilder[T],
         response_model: type[R],
         batching_mode: BatchingMode = BatchingMode.COUNT_BASED,
+        run_id: str,
     ) -> LLMCompletionResult[T, R]:
         """Process groups of findings and return structured responses.
 
@@ -79,6 +83,7 @@ class LLMService(ABC):
             batching_mode: How to batch items. COUNT_BASED flattens all items
                 and splits by count. EXTENDED_CONTEXT keeps groups intact
                 and bin-packs by tokens. Defaults to COUNT_BASED.
+            run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             LLMCompletionResult containing:
@@ -106,19 +111,19 @@ class DefaultLLMService(LLMService):
     def __init__(
         self,
         provider: LLMProvider,
-        cache: LLMResponseCache,
+        cache_store: LLMCache,
         batch_size: int = 50,
     ) -> None:
         """Initialise the service.
 
         Args:
             provider: LLM provider for making structured calls.
-            cache: Response cache for deduplication.
+            cache_store: LLMCache protocol implementation for response caching.
             batch_size: Maximum items per batch in COUNT_BASED mode.
 
         """
         self._provider = provider
-        self._cache = cache
+        self._cache_store = cache_store
         self._batch_size = batch_size
 
     @override
@@ -129,6 +134,7 @@ class DefaultLLMService(LLMService):
         prompt_builder: PromptBuilder[T],
         response_model: type[R],
         batching_mode: BatchingMode = BatchingMode.COUNT_BASED,
+        run_id: str,
     ) -> LLMCompletionResult[T, R]:
         """Process groups of findings and return structured responses."""
         # Create batch planner with provider's context window
@@ -156,35 +162,37 @@ class DefaultLLMService(LLMService):
             prompt = prompt_builder.build_prompt(all_items, content=content)
 
             # Check cache first
-            cache_key = self._cache.compute_key(
+            cache_key = CacheEntry.compute_key(
                 prompt=prompt,
                 model=self._provider.model_name,
                 response_model=response_model.__name__,
             )
-            cached = await self._cache.get(cache_key)
+            cached_data = await self._cache_store.cache_get(run_id, cache_key)
 
-            if cached is not None and cached.status == "completed" and cached.response:
-                # Cache hit - parse and use cached response
-                response = response_model.model_validate(cached.response)
-            else:
-                # Cache miss - call provider
-                response = await self._provider.invoke_structured(
-                    prompt, response_model
-                )
+            if cached_data is not None:
+                cached = CacheEntry.model_validate(cached_data)
+                if cached.status == "completed" and cached.response:
+                    # Cache hit - parse and use cached response
+                    response = response_model.model_validate(cached.response)
+                    responses.append(response)
+                    continue
 
-                # Store in cache
-                entry = CacheEntry(
-                    status="completed",
-                    response=response.model_dump(),
-                    batch_id=None,
-                    model_name=self._provider.model_name,
-                    response_model_name=response_model.__name__,
-                )
-                await self._cache.set(cache_key, entry)
+            # Cache miss - call provider
+            response = await self._provider.invoke_structured(prompt, response_model)
+
+            # Store in cache
+            entry = CacheEntry(
+                status="completed",
+                response=response.model_dump(),
+                batch_id=None,
+                model_name=self._provider.model_name,
+                response_model_name=response_model.__name__,
+            )
+            await self._cache_store.cache_set(run_id, cache_key, entry.model_dump())
 
             responses.append(response)
 
         # Clean up cache after successful completion (Design Decision #9)
-        await self._cache.clear()
+        await self._cache_store.cache_clear(run_id)
 
         return LLMCompletionResult(responses=responses, skipped=plan.skipped)
