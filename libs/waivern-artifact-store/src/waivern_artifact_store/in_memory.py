@@ -30,6 +30,8 @@ class AsyncInMemoryStore(ArtifactStore):
         self._artifacts: dict[str, dict[str, Message]] = {}
         # System metadata storage: run_id -> key -> dict
         self._system_data: dict[str, dict[str, dict[str, JsonValue]]] = {}
+        # LLM cache storage: run_id -> key -> entry
+        self._llm_cache: dict[str, dict[str, dict[str, JsonValue]]] = {}
 
     def _get_artifact_storage(self, run_id: str) -> dict[str, Message]:
         """Get or create artifact storage dict for a run."""
@@ -42,6 +44,12 @@ class AsyncInMemoryStore(ArtifactStore):
         if run_id not in self._system_data:
             self._system_data[run_id] = {}
         return self._system_data[run_id]
+
+    def _get_cache_storage(self, run_id: str) -> dict[str, dict[str, JsonValue]]:
+        """Get or create LLM cache storage dict for a run."""
+        if run_id not in self._llm_cache:
+            self._llm_cache[run_id] = {}
+        return self._llm_cache[run_id]
 
     # ========================================================================
     # Artifact Operations
@@ -131,3 +139,27 @@ class AsyncInMemoryStore(ArtifactStore):
         # Combine keys from both storages (a run may exist in either or both)
         all_run_ids = set(self._artifacts.keys()) | set(self._system_data.keys())
         return sorted(all_run_ids)
+
+    # ========================================================================
+    # LLM Cache Operations
+    # ========================================================================
+
+    async def cache_get(self, run_id: str, key: str) -> dict[str, JsonValue] | None:
+        """Retrieve a cache entry by key."""
+        cache = self._get_cache_storage(run_id)
+        return cache.get(key)
+
+    async def cache_set(
+        self, run_id: str, key: str, entry: dict[str, JsonValue]
+    ) -> None:
+        """Store a cache entry (upsert semantics)."""
+        self._get_cache_storage(run_id)[key] = entry
+
+    async def cache_delete(self, run_id: str, key: str) -> None:
+        """Delete a cache entry by key (no-op if not found)."""
+        self._get_cache_storage(run_id).pop(key, None)
+
+    async def cache_clear(self, run_id: str) -> None:
+        """Delete all cache entries for a run."""
+        if run_id in self._llm_cache:
+            self._llm_cache[run_id].clear()

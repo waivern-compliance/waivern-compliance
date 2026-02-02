@@ -652,3 +652,176 @@ class TestLocalFilesystemStoreSystemMetadataIsolation:
 
         assert state_1["completed"] == ["a"]
         assert state_2["completed"] == ["b", "c"]
+
+
+# =============================================================================
+# LLM Cache Tests
+# =============================================================================
+
+
+class TestLocalFilesystemStoreCacheSet:
+    """Tests for the cache_set() method."""
+
+    async def test_cache_set_creates_file_in_llm_cache_subdirectory(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        entry: dict[str, JsonValue] = {
+            "status": "completed",
+            "response": {"result": "test-value"},
+        }
+
+        await store.cache_set("test-run", "abc123", entry)
+
+        expected_path = tmp_path / "runs" / "test-run" / "llm_cache" / "abc123.json"
+        assert expected_path.exists()
+        with expected_path.open() as f:
+            saved_data = json.load(f)
+        assert saved_data["status"] == "completed"
+        assert saved_data["response"] == {"result": "test-value"}
+
+    async def test_cache_set_stores_entry_retrievable_by_cache_get(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        entry: dict[str, JsonValue] = {
+            "status": "completed",
+            "response": {"result": "test-value"},
+            "model_name": "claude-sonnet-4-5",
+        }
+
+        await store.cache_set("test-run", "key1", entry)
+
+        retrieved = await store.cache_get("test-run", "key1")
+        assert retrieved is not None
+        assert retrieved["status"] == "completed"
+        assert retrieved["model_name"] == "claude-sonnet-4-5"
+
+    async def test_cache_set_overwrites_existing_entry(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        original: dict[str, JsonValue] = {"status": "pending", "response": None}
+        updated: dict[str, JsonValue] = {
+            "status": "completed",
+            "response": {"result": "done"},
+        }
+
+        await store.cache_set("test-run", "key1", original)
+        await store.cache_set("test-run", "key1", updated)
+
+        retrieved = await store.cache_get("test-run", "key1")
+        assert retrieved is not None
+        assert retrieved["status"] == "completed"
+
+
+class TestLocalFilesystemStoreCacheGet:
+    """Tests for the cache_get() method."""
+
+    async def test_cache_get_returns_none_for_missing_entry(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        result = await store.cache_get("test-run", "nonexistent")
+
+        assert result is None
+
+
+class TestLocalFilesystemStoreCacheDelete:
+    """Tests for the cache_delete() method."""
+
+    async def test_cache_delete_removes_entry(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        entry: dict[str, JsonValue] = {"status": "completed"}
+        await store.cache_set("test-run", "key1", entry)
+        assert await store.cache_get("test-run", "key1") is not None
+
+        await store.cache_delete("test-run", "key1")
+
+        assert await store.cache_get("test-run", "key1") is None
+
+    async def test_cache_delete_does_not_raise_for_missing(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        # Should not raise any exception
+        await store.cache_delete("test-run", "nonexistent")
+
+
+class TestLocalFilesystemStoreCacheClear:
+    """Tests for the cache_clear() method."""
+
+    async def test_cache_clear_removes_all_cache_entries(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        for key in ["key1", "key2", "key3"]:
+            entry: dict[str, JsonValue] = {"status": "completed", "key": key}
+            await store.cache_set("test-run", key, entry)
+
+        await store.cache_clear("test-run")
+
+        assert await store.cache_get("test-run", "key1") is None
+        assert await store.cache_get("test-run", "key2") is None
+        assert await store.cache_get("test-run", "key3") is None
+
+    async def test_cache_clear_does_not_affect_artifacts(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        # Save an artifact
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save_artifact("test-run", "findings", message)
+        # Save a cache entry
+        entry: dict[str, JsonValue] = {"status": "completed"}
+        await store.cache_set("test-run", "cache-key", entry)
+
+        await store.cache_clear("test-run")
+
+        # Artifact should still exist
+        assert await store.artifact_exists("test-run", "findings")
+        # Cache should be cleared
+        assert await store.cache_get("test-run", "cache-key") is None
+
+    async def test_cache_clear_does_not_affect_system_metadata(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        # Save system metadata
+        state_data: dict[str, JsonValue] = {"completed": ["a"]}
+        metadata: dict[str, JsonValue] = {"status": "running"}
+        await store.save_execution_state("test-run", state_data)
+        await store.save_run_metadata("test-run", metadata)
+        # Save a cache entry
+        entry: dict[str, JsonValue] = {"status": "completed"}
+        await store.cache_set("test-run", "cache-key", entry)
+
+        await store.cache_clear("test-run")
+
+        # System metadata should still exist
+        state = await store.load_execution_state("test-run")
+        assert state["completed"] == ["a"]
+        run_meta = await store.load_run_metadata("test-run")
+        assert run_meta["status"] == "running"
+        # Cache should be cleared
+        assert await store.cache_get("test-run", "cache-key") is None
+
+
+class TestLocalFilesystemStoreCacheIsolation:
+    """Tests for cache isolation between runs."""
+
+    async def test_cache_entries_isolated_between_runs(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        entry_run1: dict[str, JsonValue] = {"status": "completed", "run": "1"}
+        entry_run2: dict[str, JsonValue] = {"status": "pending", "run": "2"}
+
+        await store.cache_set("run-1", "same-key", entry_run1)
+        await store.cache_set("run-2", "same-key", entry_run2)
+
+        retrieved_run1 = await store.cache_get("run-1", "same-key")
+        retrieved_run2 = await store.cache_get("run-2", "same-key")
+
+        assert retrieved_run1 is not None
+        assert retrieved_run1["run"] == "1"
+        assert retrieved_run2 is not None
+        assert retrieved_run2["run"] == "2"

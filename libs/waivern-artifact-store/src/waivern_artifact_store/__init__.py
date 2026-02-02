@@ -11,10 +11,13 @@ from waivern_artifact_store.configuration import (
 )
 from waivern_artifact_store.errors import ArtifactNotFoundError, ArtifactStoreError
 from waivern_artifact_store.factory import ArtifactStoreFactory
+from waivern_artifact_store.llm_cache import LLMCache
 
 __all__ = [
     # Async interface
     "ArtifactStore",
+    # Protocols
+    "LLMCache",
     # Configuration
     "ArtifactStoreConfiguration",
     "ArtifactStoreFactory",
