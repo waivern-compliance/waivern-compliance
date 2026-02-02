@@ -10,18 +10,7 @@ from dataclasses import dataclass
 from waivern_core import Finding
 
 from waivern_llm.v2.token_estimation import TOKENS_PER_FINDING, estimate_tokens
-from waivern_llm.v2.types import BatchingMode, ItemGroup, SkipReason
-
-
-@dataclass(frozen=True)
-class SkippedGroup[T: Finding]:
-    """A group that was skipped during batch planning."""
-
-    group: ItemGroup[T]
-    """The group that was skipped."""
-
-    reason: SkipReason
-    """Why the group was skipped."""
+from waivern_llm.v2.types import BatchingMode, ItemGroup, SkippedFinding, SkipReason
 
 
 @dataclass(frozen=True)
@@ -37,13 +26,23 @@ class PlannedBatch[T: Finding]:
 
 @dataclass(frozen=True)
 class BatchPlan[T: Finding]:
-    """Complete batch plan for LLM processing."""
+    """Complete batch plan for LLM processing.
+
+    DESIGN NOTE: skipped is a FLAT list of individual findings, not grouped.
+    This is intentional - the group structure is an internal batching concern.
+    Callers only need to know which findings were skipped and why, not which
+    group they came from. Don't add a SkippedGroup type - it's over-engineering.
+    """
 
     batches: list[PlannedBatch[T]]
     """Planned batches ready for processing."""
 
-    skipped: list[SkippedGroup[T]]
-    """Groups that were skipped with reasons."""
+    skipped: list[SkippedFinding[T]]
+    """Individual findings that were skipped with reasons.
+
+    Flattened from skipped groups - the group structure is not preserved.
+    This is intentional. See class docstring for rationale.
+    """
 
 
 class BatchPlanner:
@@ -106,16 +105,17 @@ class BatchPlanner:
         if not groups:
             return BatchPlan(batches=[], skipped=[])
 
-        skipped: list[SkippedGroup[T]] = []
+        skipped: list[SkippedFinding[T]] = []
 
         # Calculate token estimates for each group, handling edge cases
         group_tokens: list[tuple[ItemGroup[T], int]] = []
         for group in groups:
             # Extended context requires content
             if group.content is None:
-                skipped.append(
-                    SkippedGroup(group=group, reason=SkipReason.MISSING_CONTENT)
-                )
+                for item in group.items:
+                    skipped.append(
+                        SkippedFinding(finding=item, reason=SkipReason.MISSING_CONTENT)
+                    )
                 continue
 
             content_tokens = estimate_tokens(group.content)
@@ -124,7 +124,10 @@ class BatchPlanner:
 
             # Check if group exceeds maximum
             if total_tokens > self._max_payload_tokens:
-                skipped.append(SkippedGroup(group=group, reason=SkipReason.OVERSIZED))
+                for item in group.items:
+                    skipped.append(
+                        SkippedFinding(finding=item, reason=SkipReason.OVERSIZED)
+                    )
                 continue
 
             group_tokens.append((group, total_tokens))

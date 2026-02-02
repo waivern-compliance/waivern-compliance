@@ -13,7 +13,6 @@ from waivern_llm.v2.batch_planner import (
     BatchPlan,
     BatchPlanner,
     PlannedBatch,
-    SkippedGroup,
 )
 from waivern_llm.v2.cache import CacheEntry, LLMResponseCache
 from waivern_llm.v2.providers import (
@@ -34,7 +33,9 @@ from waivern_llm.v2.token_estimation import (
 from waivern_llm.v2.types import (
     BatchingMode,
     ItemGroup,
+    LLMCompletionResult,
     PromptBuilder,
+    SkippedFinding,
     SkipReason,
 )
 
@@ -44,6 +45,8 @@ __all__ = [
     "BatchingMode",
     "PromptBuilder",
     "SkipReason",
+    "SkippedFinding",
+    "LLMCompletionResult",
     # Providers
     "LLMProvider",
     "AnthropicProvider",
@@ -56,7 +59,6 @@ __all__ = [
     "BatchPlanner",
     "BatchPlan",
     "PlannedBatch",
-    "SkippedGroup",
     # Token estimation
     "estimate_tokens",
     "get_model_context_window",

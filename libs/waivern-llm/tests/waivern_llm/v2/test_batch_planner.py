@@ -134,7 +134,7 @@ class TestExtendedContextEdgeCases:
     """Tests for EXTENDED_CONTEXT mode edge cases."""
 
     def test_oversized_group_skipped_with_reason(self) -> None:
-        """Group exceeding max_payload_tokens should be skipped with OVERSIZED."""
+        """Findings in oversized group should be skipped with OVERSIZED."""
         # Group with ~25,000 tokens (100,000 chars × 0.25)
         oversized = _create_group(content="x" * 100_000, item_count=1, group_id="huge")
         planner = BatchPlanner(max_payload_tokens=10_000)
@@ -143,11 +143,11 @@ class TestExtendedContextEdgeCases:
 
         assert len(plan.batches) == 0
         assert len(plan.skipped) == 1
-        assert plan.skipped[0].group == oversized
+        assert plan.skipped[0].finding == oversized.items[0]
         assert plan.skipped[0].reason == SkipReason.OVERSIZED
 
     def test_missing_content_skipped_with_reason(self) -> None:
-        """Group with content=None should be skipped with MISSING_CONTENT."""
+        """Findings in group with content=None should be skipped with MISSING_CONTENT."""
         # Group without content (extended context requires content)
         no_content = _create_group(content=None, item_count=2, group_id="no-content")
         planner = BatchPlanner(max_payload_tokens=10_000)
@@ -155,9 +155,12 @@ class TestExtendedContextEdgeCases:
         plan = planner.plan([no_content], mode=BatchingMode.EXTENDED_CONTEXT)
 
         assert len(plan.batches) == 0
-        assert len(plan.skipped) == 1
-        assert plan.skipped[0].group == no_content
+        # All 2 findings in the group should be skipped
+        assert len(plan.skipped) == 2
+        assert plan.skipped[0].finding == no_content.items[0]
         assert plan.skipped[0].reason == SkipReason.MISSING_CONTENT
+        assert plan.skipped[1].finding == no_content.items[1]
+        assert plan.skipped[1].reason == SkipReason.MISSING_CONTENT
 
     def test_empty_groups_returns_empty_plan(self) -> None:
         """Empty input should return empty batches and empty skipped."""
@@ -185,11 +188,15 @@ class TestExtendedContextEdgeCases:
         assert len(plan.batches) == 1
         assert plan.batches[0].groups == [valid]
 
-        # Invalid groups should be skipped with correct reasons
+        # Findings from invalid groups should be skipped with correct reasons
         assert len(plan.skipped) == 2
-        skipped_by_id = {s.group.group_id: s for s in plan.skipped}
-        assert skipped_by_id["oversized"].reason == SkipReason.OVERSIZED
-        assert skipped_by_id["no-content"].reason == SkipReason.MISSING_CONTENT
+        # Map by finding object identity
+        skipped_by_finding = {id(s.finding): s for s in plan.skipped}
+        assert skipped_by_finding[id(oversized.items[0])].reason == SkipReason.OVERSIZED
+        assert (
+            skipped_by_finding[id(no_content.items[0])].reason
+            == SkipReason.MISSING_CONTENT
+        )
 
 
 # =============================================================================
