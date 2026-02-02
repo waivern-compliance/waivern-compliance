@@ -15,12 +15,14 @@ from waivern_llm.v2.batch_planner import (
     PlannedBatch,
 )
 from waivern_llm.v2.cache import CacheEntry
+from waivern_llm.v2.factory import LLMServiceFactory
 from waivern_llm.v2.providers import (
     AnthropicProvider,
     GoogleProvider,
     LLMProvider,
     OpenAIProvider,
 )
+from waivern_llm.v2.service import DefaultLLMService, LLMService
 from waivern_llm.v2.token_estimation import (
     OUTPUT_RATIO,
     PROMPT_OVERHEAD_TOKENS,
@@ -47,6 +49,10 @@ __all__ = [
     "SkipReason",
     "SkippedFinding",
     "LLMCompletionResult",
+    # Service
+    "LLMService",
+    "DefaultLLMService",
+    "LLMServiceFactory",
     # Providers
     "LLMProvider",
     "AnthropicProvider",
