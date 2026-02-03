@@ -5,14 +5,16 @@ for data subject indicators.
 """
 
 from collections.abc import Sequence
+from typing import override
+
+from waivern_llm.v2 import PromptBuilder
 
 from waivern_data_subject_analyser.schemas.types import DataSubjectIndicatorModel
 
 
-class DataSubjectPromptBuilder:
+class DataSubjectPromptBuilder(PromptBuilder[DataSubjectIndicatorModel]):
     """Builds validation prompts for data subject indicators.
 
-    Implements the PromptBuilder[DataSubjectIndicatorModel] protocol.
     Uses COUNT_BASED batching mode, so the content parameter is ignored.
     """
 
@@ -25,6 +27,7 @@ class DataSubjectPromptBuilder:
         """
         self._validation_mode = validation_mode
 
+    @override
     def build_prompt(
         self,
         items: Sequence[DataSubjectIndicatorModel],

@@ -72,9 +72,9 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
             run_id="test-run-id",  # Set by executor in production
         )
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # LLM Service Interaction
-    # -------------------------------------------------------------------------
+    # =========================================================================
 
     def test_llm_validation_enabled_calls_llm_service_when_findings_exist(
         self,
@@ -124,9 +124,9 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
         mock_llm_service.complete.assert_not_called()
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # Finding Filtering
-    # -------------------------------------------------------------------------
+    # =========================================================================
 
     def test_llm_validation_filters_out_false_positives(
         self,
@@ -202,9 +202,9 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
                 .get("personal_data_llm_validated")
             ), "All kept findings should be marked as validated"
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # Graceful Degradation
-    # -------------------------------------------------------------------------
+    # =========================================================================
 
     def test_llm_validation_unavailable_service_returns_original_findings(
         self,
@@ -259,9 +259,9 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
         assert metadata["validation_summary"]["all_succeeded"] is False
         assert metadata["validation_summary"]["skipped_count"] > 0
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # Edge Cases
-    # -------------------------------------------------------------------------
+    # =========================================================================
 
     def test_no_findings_skips_llm_validation(
         self,
@@ -287,6 +287,7 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
             id="test_no_patterns",
             content=test_data.model_dump(exclude_none=True),
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",  # Required for v2 strategies
         )
 
         config = PersonalDataAnalyserConfig.from_properties(properties)

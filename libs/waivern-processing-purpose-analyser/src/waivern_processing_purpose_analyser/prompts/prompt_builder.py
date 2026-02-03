@@ -5,16 +5,18 @@ for processing purpose indicators.
 """
 
 from collections.abc import Sequence
+from typing import override
+
+from waivern_llm.v2 import PromptBuilder
 
 from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeIndicatorModel,
 )
 
 
-class ProcessingPurposePromptBuilder:
+class ProcessingPurposePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorModel]):
     """Builds validation prompts for processing purpose indicators.
 
-    Implements the PromptBuilder[ProcessingPurposeIndicatorModel] protocol.
     Uses COUNT_BASED batching mode, so the content parameter is ignored.
     """
 
@@ -33,6 +35,7 @@ class ProcessingPurposePromptBuilder:
         self._validation_mode = validation_mode
         self._sensitive_purposes = sensitive_purposes
 
+    @override
     def build_prompt(
         self,
         items: Sequence[ProcessingPurposeIndicatorModel],

@@ -5,14 +5,16 @@ for personal data indicators.
 """
 
 from collections.abc import Sequence
+from typing import override
+
+from waivern_llm.v2 import PromptBuilder
 
 from waivern_personal_data_analyser.schemas.types import PersonalDataIndicatorModel
 
 
-class PersonalDataPromptBuilder:
+class PersonalDataPromptBuilder(PromptBuilder[PersonalDataIndicatorModel]):
     """Builds validation prompts for personal data indicators.
 
-    Implements the PromptBuilder[PersonalDataIndicatorModel] protocol.
     Uses COUNT_BASED batching mode, so the content parameter is ignored.
     """
 
@@ -25,6 +27,7 @@ class PersonalDataPromptBuilder:
         """
         self._validation_mode = validation_mode
 
+    @override
     def build_prompt(
         self,
         items: Sequence[PersonalDataIndicatorModel],
