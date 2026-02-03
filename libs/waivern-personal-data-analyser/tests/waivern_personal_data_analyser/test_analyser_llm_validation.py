@@ -4,8 +4,7 @@ These tests verify the expected behaviour of LLM validation integration
 in the analyser's public API using mocked LLM service.
 """
 
-import re
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from waivern_analysers_shared.llm_validation.models import (
@@ -19,16 +18,11 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm import BaseLLMService
+from waivern_llm.v2 import ItemGroup, LLMCompletionResult, LLMService
 
 from waivern_personal_data_analyser.analyser import PersonalDataAnalyser
+from waivern_personal_data_analyser.schemas.types import PersonalDataIndicatorModel
 from waivern_personal_data_analyser.types import PersonalDataAnalyserConfig
-
-
-def _extract_finding_ids_from_prompt(prompt: str) -> list[str]:
-    """Extract finding IDs from the validation prompt."""
-    pattern = r"Finding \[([a-f0-9-]+)\]:"
-    return re.findall(pattern, prompt)
 
 
 class TestPersonalDataAnalyserLLMValidationBehaviour:
@@ -37,7 +31,9 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
         """Create mock LLM service."""
-        return Mock(spec=BaseLLMService)
+        service = Mock(spec=LLMService)
+        service.complete = AsyncMock()
+        return service
 
     @pytest.fixture
     def mock_llm_service_unavailable(self) -> None:
@@ -73,6 +69,7 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
             id="test",
             content=test_data.model_dump(exclude_none=True),
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",  # Set by executor in production
         )
 
     # -------------------------------------------------------------------------
@@ -88,24 +85,10 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
-        def mock_llm_response(
-            prompt: str, _response_model: type
-        ) -> LLMValidationResponseModel:
-            finding_ids = _extract_finding_ids_from_prompt(prompt)
-            return LLMValidationResponseModel(
-                results=[
-                    LLMValidationResultModel(
-                        finding_id=fid,
-                        validation_result="TRUE_POSITIVE",
-                        confidence=0.9,
-                        reasoning="Valid personal data",
-                        recommended_action="keep",
-                    )
-                    for fid in finding_ids
-                ]
-            )
-
-        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[LLMValidationResponseModel(results=[])],
+            skipped=[],
+        )
 
         config = PersonalDataAnalyserConfig.from_properties(properties)
         analyser = PersonalDataAnalyser(config, mock_llm_service)
@@ -117,9 +100,7 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
         )
 
         # Assert
-        mock_llm_service.invoke_with_structured_output.assert_called_once()
-        call_args = mock_llm_service.invoke_with_structured_output.call_args
-        assert "VALIDATION" in call_args[0][0] or "Validate" in call_args[0][0]
+        mock_llm_service.complete.assert_called_once()
 
     def test_llm_validation_disabled_skips_validation(
         self,
@@ -140,7 +121,7 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
         )
 
         # Assert
-        mock_llm_service.invoke_with_structured_output.assert_not_called()
+        mock_llm_service.complete.assert_not_called()
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
 
     # -------------------------------------------------------------------------
@@ -156,32 +137,44 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
-        def mock_llm_response(
-            prompt: str, _response_model: type
-        ) -> LLMValidationResponseModel:
-            finding_ids = _extract_finding_ids_from_prompt(prompt)
+        # We need to capture the call to get finding IDs from the prompt
+        async def mock_complete(
+            groups: list[ItemGroup[PersonalDataIndicatorModel]], **_kwargs: object
+        ) -> LLMCompletionResult[
+            PersonalDataIndicatorModel, LLMValidationResponseModel
+        ]:
+            # Extract finding IDs from items
+            finding_ids = [f.id for g in groups for f in g.items]
             if len(finding_ids) >= 2:
-                return LLMValidationResponseModel(
-                    results=[
-                        LLMValidationResultModel(
-                            finding_id=finding_ids[0],
-                            validation_result="FALSE_POSITIVE",
-                            confidence=0.95,
-                            reasoning="Test data email pattern",
-                            recommended_action="discard",
-                        ),
-                        LLMValidationResultModel(
-                            finding_id=finding_ids[1],
-                            validation_result="TRUE_POSITIVE",
-                            confidence=0.9,
-                            reasoning="Actual phone number",
-                            recommended_action="keep",
-                        ),
-                    ]
+                return LLMCompletionResult(
+                    responses=[
+                        LLMValidationResponseModel(
+                            results=[
+                                LLMValidationResultModel(
+                                    finding_id=finding_ids[0],
+                                    validation_result="FALSE_POSITIVE",
+                                    confidence=0.95,
+                                    reasoning="Test data email pattern",
+                                    recommended_action="discard",
+                                ),
+                                LLMValidationResultModel(
+                                    finding_id=finding_ids[1],
+                                    validation_result="TRUE_POSITIVE",
+                                    confidence=0.9,
+                                    reasoning="Actual phone number",
+                                    recommended_action="keep",
+                                ),
+                            ]
+                        )
+                    ],
+                    skipped=[],
                 )
-            return LLMValidationResponseModel(results=[])
+            return LLMCompletionResult(
+                responses=[LLMValidationResponseModel(results=[])],
+                skipped=[],
+            )
 
-        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        mock_llm_service.complete.side_effect = mock_complete
 
         config = PersonalDataAnalyserConfig.from_properties(properties)
         analyser = PersonalDataAnalyser(config, mock_llm_service)
@@ -244,9 +237,7 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
         """Test that LLM service errors return original findings with failure status."""
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": True}}
-        mock_llm_service.invoke_with_structured_output.side_effect = Exception(
-            "LLM service error"
-        )
+        mock_llm_service.complete.side_effect = Exception("LLM service error")
 
         config = PersonalDataAnalyserConfig.from_properties(properties)
         analyser = PersonalDataAnalyser(config, mock_llm_service)
@@ -308,5 +299,5 @@ class TestPersonalDataAnalyserLLMValidationBehaviour:
         )
 
         # Assert
-        mock_llm_service.invoke_with_structured_output.assert_not_called()
+        mock_llm_service.complete.assert_not_called()
         assert "validation_summary" not in result.content.get("analysis_metadata", {})

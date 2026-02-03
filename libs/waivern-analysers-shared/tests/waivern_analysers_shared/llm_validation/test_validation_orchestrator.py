@@ -19,6 +19,7 @@ from waivern_llm import BaseLLMService
 from waivern_analysers_shared.llm_validation.models import (
     LLMValidationOutcome,
     SkippedFinding,
+    SkipReason,
 )
 from waivern_analysers_shared.llm_validation.sampling import SamplingResult
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
@@ -188,7 +189,7 @@ class TestNoGroupingMode:
 
         # Assert - LLM strategy called directly with all findings
         mock_llm_strategy.validate_findings.assert_called_once_with(
-            findings, config, llm_service
+            findings, config, llm_service, None
         )
         # Results mapped directly from LLMValidationOutcome
         assert result.kept_findings == [findings[0]]
@@ -455,7 +456,7 @@ class TestSkippedSamplesHandling:
             llm_validated_kept=[findings[0]],  # One TRUE_POSITIVE
             llm_validated_removed=[],
             llm_not_flagged=[],
-            skipped=[SkippedFinding(findings[1], "oversized_source")],  # One skipped
+            skipped=[SkippedFinding(findings[1], SkipReason.OVERSIZED)],  # One skipped
         )
 
         orchestrator = ValidationOrchestrator(
@@ -489,7 +490,7 @@ class TestSkippedSamplesHandling:
             llm_validated_kept=[],
             llm_validated_removed=[],
             llm_not_flagged=[],
-            skipped=[SkippedFinding(findings[0], "oversized_source")],
+            skipped=[SkippedFinding(findings[0], SkipReason.OVERSIZED)],
         )
 
         orchestrator = ValidationOrchestrator(
@@ -515,7 +516,7 @@ class TestSkippedSamplesHandling:
             non_sampled={"GroupA": []},
         )
         mock_llm_strategy = Mock()
-        skipped_finding = SkippedFinding(findings[1], "oversized_source")
+        skipped_finding = SkippedFinding(findings[1], SkipReason.OVERSIZED)
         mock_llm_strategy.validate_findings.return_value = LLMValidationOutcome(
             llm_validated_kept=[findings[0]],
             llm_validated_removed=[],
@@ -535,7 +536,7 @@ class TestSkippedSamplesHandling:
         # Assert - skipped_samples populated
         assert len(result.skipped_samples) == 1
         assert result.skipped_samples[0].finding.id == "2"
-        assert result.skipped_samples[0].reason == "oversized_source"
+        assert result.skipped_samples[0].reason == SkipReason.OVERSIZED
 
 
 # =============================================================================
@@ -729,7 +730,9 @@ class TestMarkerCallback:
             llm_validated_kept=[findings[0]],
             llm_validated_removed=[],
             llm_not_flagged=[],
-            skipped=[SkippedFinding(finding=findings[1], reason="error")],
+            skipped=[
+                SkippedFinding(finding=findings[1], reason=SkipReason.BATCH_ERROR)
+            ],
         )
 
         orchestrator = ValidationOrchestrator(llm_strategy=mock_llm_strategy)
@@ -831,7 +834,7 @@ class TestFallbackValidation:
             llm_validated_kept=[findings[0]],
             llm_validated_removed=[],
             llm_not_flagged=[],
-            skipped=[SkippedFinding(findings[1], "oversized_source")],
+            skipped=[SkippedFinding(findings[1], SkipReason.OVERSIZED)],
         )
 
         mock_fallback_strategy = Mock()
@@ -888,8 +891,8 @@ class TestFallbackValidation:
         mock_fallback_strategy.validate_findings.assert_not_called()
 
     def test_fallback_not_called_for_batch_error_skips(self) -> None:
-        """Findings skipped with batch_error are NOT sent to fallback."""
-        # Arrange: Primary skips finding due to batch_error (LLM API failure)
+        """Findings skipped with SkipReason.BATCH_ERROR are NOT sent to fallback."""
+        # Arrange: Primary skips finding due to SkipReason.BATCH_ERROR (LLM API failure)
         findings = [make_finding("1", "A")]
 
         mock_primary_strategy = Mock()
@@ -897,7 +900,9 @@ class TestFallbackValidation:
             llm_validated_kept=[],
             llm_validated_removed=[],
             llm_not_flagged=[],
-            skipped=[SkippedFinding(findings[0], "batch_error")],  # NOT eligible
+            skipped=[
+                SkippedFinding(findings[0], SkipReason.BATCH_ERROR)
+            ],  # NOT eligible
         )
 
         mock_fallback_strategy = Mock()
@@ -910,11 +915,11 @@ class TestFallbackValidation:
         # Act
         result = orchestrator.validate(findings, make_config(), make_llm_service())
 
-        # Assert - fallback should NOT be called (batch_error not eligible)
+        # Assert - fallback should NOT be called (SkipReason.BATCH_ERROR not eligible)
         mock_fallback_strategy.validate_findings.assert_not_called()
         # Finding remains skipped
         assert len(result.skipped_samples) == 1
-        assert result.skipped_samples[0].reason == "batch_error"
+        assert result.skipped_samples[0].reason == SkipReason.BATCH_ERROR
 
     def test_fallback_merges_kept_and_removed_correctly(self) -> None:
         """Fallback results correctly categorised as kept or removed."""
@@ -931,8 +936,8 @@ class TestFallbackValidation:
             llm_validated_removed=[],
             llm_not_flagged=[],
             skipped=[
-                SkippedFinding(findings[1], "oversized_source"),
-                SkippedFinding(findings[2], "oversized_source"),
+                SkippedFinding(findings[1], SkipReason.OVERSIZED),
+                SkippedFinding(findings[2], SkipReason.OVERSIZED),
             ],
         )
 
@@ -969,7 +974,7 @@ class TestFallbackValidation:
             llm_validated_kept=[],
             llm_validated_removed=[],
             llm_not_flagged=[],
-            skipped=[SkippedFinding(findings[0], "oversized_source")],
+            skipped=[SkippedFinding(findings[0], SkipReason.OVERSIZED)],
         )
 
         mock_fallback_strategy = Mock()
@@ -977,7 +982,9 @@ class TestFallbackValidation:
             llm_validated_kept=[],
             llm_validated_removed=[],
             llm_not_flagged=[],
-            skipped=[SkippedFinding(findings[0], "batch_error")],  # Fallback also fails
+            skipped=[
+                SkippedFinding(findings[0], SkipReason.BATCH_ERROR)
+            ],  # Fallback also fails
         )
 
         orchestrator = ValidationOrchestrator(
@@ -991,7 +998,9 @@ class TestFallbackValidation:
         # Assert - finding remains skipped (with fallback's reason)
         assert len(result.skipped_samples) == 1
         assert result.skipped_samples[0].finding.id == "1"
-        assert result.skipped_samples[0].reason == "batch_error"  # Fallback's reason
+        assert (
+            result.skipped_samples[0].reason == SkipReason.BATCH_ERROR
+        )  # Fallback's reason
         # Finding is still kept (conservative - skipped findings are kept)
         assert len(result.kept_findings) == 0  # Without grouping, skipped not in kept
         assert result.all_succeeded is False
@@ -1020,7 +1029,7 @@ class TestFallbackValidation:
             llm_validated_kept=[],
             llm_validated_removed=[findings[1]],  # FP
             llm_not_flagged=[],
-            skipped=[SkippedFinding(findings[0], "oversized_source")],
+            skipped=[SkippedFinding(findings[0], SkipReason.OVERSIZED)],
         )
 
         mock_fallback_strategy = Mock()
@@ -1065,7 +1074,7 @@ class TestFallbackValidation:
             llm_validated_kept=[findings[0]],  # Primary validates
             llm_validated_removed=[],
             llm_not_flagged=[],
-            skipped=[SkippedFinding(findings[1], "oversized_source")],
+            skipped=[SkippedFinding(findings[1], SkipReason.OVERSIZED)],
         )
 
         mock_fallback_strategy = Mock()
@@ -1093,9 +1102,9 @@ class TestFallbackValidation:
         """Only findings with eligible skip reasons are sent to fallback."""
         # Arrange: Mix of eligible and ineligible skip reasons
         findings = [
-            make_finding("1", "A"),  # oversized_source - eligible
-            make_finding("2", "A"),  # missing_content - eligible
-            make_finding("3", "A"),  # batch_error - NOT eligible
+            make_finding("1", "A"),  # SkipReason.OVERSIZED - eligible
+            make_finding("2", "A"),  # SkipReason.MISSING_CONTENT - eligible
+            make_finding("3", "A"),  # SkipReason.BATCH_ERROR - NOT eligible
         ]
 
         mock_primary_strategy = Mock()
@@ -1104,9 +1113,9 @@ class TestFallbackValidation:
             llm_validated_removed=[],
             llm_not_flagged=[],
             skipped=[
-                SkippedFinding(findings[0], "oversized_source"),
-                SkippedFinding(findings[1], "missing_content"),
-                SkippedFinding(findings[2], "batch_error"),
+                SkippedFinding(findings[0], SkipReason.OVERSIZED),
+                SkippedFinding(findings[1], SkipReason.MISSING_CONTENT),
+                SkippedFinding(findings[2], SkipReason.BATCH_ERROR),
             ],
         )
 
@@ -1132,10 +1141,10 @@ class TestFallbackValidation:
         assert len(fallback_call_args) == 2
         assert set(f.id for f in fallback_call_args) == {"1", "2"}
 
-        # batch_error finding remains skipped
+        # SkipReason.BATCH_ERROR finding remains skipped
         assert len(result.skipped_samples) == 1
         assert result.skipped_samples[0].finding.id == "3"
-        assert result.skipped_samples[0].reason == "batch_error"
+        assert result.skipped_samples[0].reason == SkipReason.BATCH_ERROR
 
         # Eligible findings are now kept
         assert len(result.kept_findings) == 2

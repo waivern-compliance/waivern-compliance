@@ -5,12 +5,19 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+# TODO: Post-migration cleanup (once all processors use LLMService v2):
+#   Review whether BatchingConfig is still needed. LLMService v2 handles
+#   batching internally and doesn't use this config. Consider removing
+#   or moving to LLMServiceConfiguration if batch_size needs to be configurable.
 class BatchingConfig(BaseModel):
     """Configuration for token-aware batching.
 
     Only exposes model_context_window as configurable.
     Other parameters (output_ratio, safety_buffer, prompt_overhead) are
     constants in token_estimation.py since they're implementation details.
+
+    Note: Only used by v1 strategies (ExtendedContextStrategy). LLMService v2
+    handles batching internally.
     """
 
     model_context_window: int | None = Field(
@@ -27,6 +34,9 @@ class LLMValidationConfig(BaseModel):
         description="Whether to enable LLM-based validation to filter false positives",
     )
 
+    # TODO: Post-migration cleanup - only used by v1 strategies. LLMService v2
+    #   uses batch_size from its constructor. Consider removing or threading
+    #   to LLMServiceFactory.
     llm_batch_size: int = Field(
         default=50, ge=1, le=200, description="Batch size for LLM processing"
     )
@@ -35,6 +45,8 @@ class LLMValidationConfig(BaseModel):
         default="standard", description="LLM validation mode"
     )
 
+    # TODO: Post-migration cleanup - only used by v1 ExtendedContextStrategy.
+    #   See BatchingConfig TODO for details.
     batching: BatchingConfig = Field(
         default_factory=BatchingConfig,
         description="Token-aware batching configuration for extended context validation",

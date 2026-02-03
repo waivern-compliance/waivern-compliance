@@ -40,11 +40,11 @@ from waivern_analysers_shared.types import LLMValidationConfig
 from .decision_engine import ValidationDecisionEngine
 from .default_strategy import DefaultLLMValidationStrategy
 from .models import (
-    SKIP_REASON_BATCH_ERROR,
     LLMValidationOutcome,
     LLMValidationResponseModel,
     LLMValidationResultModel,
     SkippedFinding,
+    SkipReason,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,6 +59,9 @@ class _FilteringBatchResult[T]:
     not_flagged: list[T] = field(default_factory=list)
 
 
+# TODO: Post-migration cleanup (once all processors use LLMService v2):
+#   Review whether this v1 strategy is still needed. v2 strategies use
+#   LLMService (constructor-injected) instead of BaseLLMService (parameter).
 class FilteringLLMValidationStrategy[TFinding: Finding](
     DefaultLLMValidationStrategy[
         TFinding,
@@ -170,7 +173,7 @@ class FilteringLLMValidationStrategy[TFinding: Finding](
         # Failed batches become skipped findings
         for failed_batch in failed_batches:
             all_skipped.extend(
-                SkippedFinding(finding=f, reason=SKIP_REASON_BATCH_ERROR)
+                SkippedFinding(finding=f, reason=SkipReason.BATCH_ERROR)
                 for f in failed_batch
             )
 
@@ -209,7 +212,7 @@ class FilteringLLMValidationStrategy[TFinding: Finding](
             llm_validated_removed=[],
             llm_not_flagged=[],
             skipped=[
-                SkippedFinding(finding=f, reason=SKIP_REASON_BATCH_ERROR)
+                SkippedFinding(finding=f, reason=SkipReason.BATCH_ERROR)
                 for f in findings
             ],
         )

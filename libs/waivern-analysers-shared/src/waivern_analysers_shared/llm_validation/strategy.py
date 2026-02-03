@@ -28,12 +28,16 @@ class LLMValidationStrategy[TFinding: Finding, TResult](ABC):
         satisfies the ``Finding`` protocol regardless of its metadata type parameter.
     """
 
+    # TODO: Post-migration cleanup (once all processors use LLMService v2):
+    #   1. Remove llm_service parameter - strategies now receive LLMService via constructor
+    #   2. Make run_id required (remove None default) - all callers now provide it
     @abstractmethod
     def validate_findings(
         self,
         findings: list[TFinding],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
+        run_id: str | None = None,
     ) -> TResult:
         """Validate findings using LLM.
 
@@ -41,6 +45,7 @@ class LLMValidationStrategy[TFinding: Finding, TResult](ABC):
             findings: List of findings to validate.
             config: LLM validation configuration.
             llm_service: LLM service instance.
+            run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             Strategy-specific result type.

@@ -1,16 +1,46 @@
-"""Shared models and constants for LLM validation."""
+"""Shared models and constants for LLM validation.
+
+This module defines the result types for the LLM validation layer stack:
+
+    LLM Response Models     → What the LLM returns (Pydantic for parsing)
+    Strategy Results        → What strategies return to orchestrator
+    Orchestration Results   → What orchestrator returns to caller
+
+"""
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, Field
+from waivern_core import Finding
+from waivern_llm.v2 import SkippedFinding, SkipReason
 
-# Type alias for validation results
+__all__ = [
+    "FALLBACK_ELIGIBLE_SKIP_REASONS",
+    "LLMValidationOutcome",
+    "LLMValidationResponseModel",
+    "LLMValidationResultModel",
+    "RecommendedActionType",
+    "RemovedGroup",
+    "SkippedFinding",
+    "SkipReason",
+    "ValidationResult",
+    "ValidationResultType",
+]
+
+
+# =============================================================================
+# Type Aliases and Constants
+# =============================================================================
+
 ValidationResultType = Literal["TRUE_POSITIVE", "FALSE_POSITIVE"]
-
-# Type alias for recommended actions
 RecommendedActionType = Literal["keep", "discard", "flag_for_review"]
+
+
+# =============================================================================
+# LLM Response Models (Pydantic for structured output parsing)
+# =============================================================================
 
 
 class LLMValidationResultModel(BaseModel):
@@ -54,41 +84,20 @@ class LLMValidationResponseModel(BaseModel):
     )
 
 
-# Skip reasons and skipped finding type (used by both strategy and orchestrator)
-
-
-@dataclass
-class SkippedFinding[T]:
-    """A finding that was skipped during LLM validation.
-
-    Type parameter T is the finding type.
-    """
-
-    finding: T
-    """The finding that was skipped."""
-
-    reason: str
-    """Why validation was skipped (e.g., 'oversized_source', 'missing_content')."""
-
-
-# Standard skip reasons
-SKIP_REASON_OVERSIZED = "oversized_source"
-SKIP_REASON_MISSING_CONTENT = "missing_content"
-SKIP_REASON_NO_SOURCE = "no_source"
-SKIP_REASON_BATCH_ERROR = "batch_error"
-
 # Skip reasons eligible for fallback validation
-# batch_error is NOT included - LLM API failure means retrying likely fails again
-FALLBACK_ELIGIBLE_SKIP_REASONS: frozenset[str] = frozenset(
+# BATCH_ERROR is NOT included - LLM API failure means retrying likely fails again
+FALLBACK_ELIGIBLE_SKIP_REASONS: frozenset[SkipReason] = frozenset(
     {
-        SKIP_REASON_OVERSIZED,
-        SKIP_REASON_MISSING_CONTENT,
-        SKIP_REASON_NO_SOURCE,
+        SkipReason.OVERSIZED,
+        SkipReason.MISSING_CONTENT,
+        SkipReason.MISSING_SOURCE,
     }
 )
 
 
-# Orchestration result types
+# =============================================================================
+# Orchestration Results (returned by ValidationOrchestrator)
+# =============================================================================
 
 
 @dataclass
@@ -119,13 +128,13 @@ class RemovedGroup:
 
 
 @dataclass
-class ValidationResult[T]:
+class ValidationResult[T: Finding]:
     """Result of validation orchestration.
 
     Contains the kept findings, removed items, and metadata about
     the validation process.
 
-    Type parameter T is the finding type.
+    Type parameter T is the finding type, bound to Finding protocol.
     """
 
     kept_findings: list[T]
@@ -138,10 +147,10 @@ class ValidationResult[T]:
     """
 
     removed_findings: list[T]
-    """Individual findings removed (present in all modes)."""
+    """Individual findings marked FALSE_POSITIVE by LLM."""
 
     removed_groups: list[RemovedGroup]
-    """Groups removed (only populated when grouping is enabled)."""
+    """Groups removed entirely (only when grouping is enabled)."""
 
     samples_validated: int
     """Total number of samples sent to LLM for validation."""
@@ -156,18 +165,20 @@ class ValidationResult[T]:
     """
 
 
-# Strategy-level result types
+# =============================================================================
+# Strategy Results (returned by LLMValidationStrategy implementations)
+# =============================================================================
 
 
 @dataclass
-class LLMValidationOutcome[T]:
+class LLMValidationOutcome[T: Finding]:
     """Result of LLM validation strategy with full transparency.
 
     Provides detailed breakdown of what happened to each finding during
     validation, enabling callers to make informed decisions about fallback
     handling and reporting.
 
-    Type parameter T is the finding type.
+    Type parameter T is the finding type, bound to Finding protocol.
     """
 
     llm_validated_kept: list[T]
@@ -192,18 +203,13 @@ class LLMValidationOutcome[T]:
         )
 
     @property
-    def all_findings_validated(self) -> bool:
-        """Whether all findings went through LLM validation."""
-        return len(self.skipped) == 0
-
-    @property
     def validation_succeeded(self) -> bool:
-        """Whether validation completed without errors.
+        """Whether validation completed without errors (no skipped findings).
 
-        Note: This is True even if some findings were removed as FALSE_POSITIVE.
-        It only returns False if there were skipped findings or errors.
+        Note: Returns True even if findings were removed as FALSE_POSITIVE.
+        Only returns False when findings couldn't be validated (skipped).
         """
-        return self.all_findings_validated
+        return len(self.skipped) == 0
 
     def with_marked_findings(
         self,

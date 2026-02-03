@@ -27,7 +27,7 @@ from waivern_core import (
 )
 from waivern_core.services import ServiceContainer, ServiceDescriptor
 from waivern_core.services.protocols import ServiceFactory
-from waivern_llm import BaseLLMService
+from waivern_llm.v2 import LLMService
 
 from waivern_personal_data_analyser import PersonalDataAnalyser
 from waivern_personal_data_analyser.factory import PersonalDataAnalyserFactory
@@ -51,10 +51,10 @@ class TestPersonalDataAnalyserFactory(
         This fixture is required by ComponentFactoryContractTests.
         """
         container = ServiceContainer()
-        llm_service = Mock(spec=BaseLLMService)
+        llm_service = Mock(spec=LLMService)
         llm_service_factory = Mock(spec=ServiceFactory)
         llm_service_factory.create.return_value = llm_service
-        container.register(ServiceDescriptor(BaseLLMService, llm_service_factory))
+        container.register(ServiceDescriptor(LLMService, llm_service_factory))
         return PersonalDataAnalyserFactory(container)
 
     @pytest.fixture
@@ -94,14 +94,14 @@ class TestPersonalDataAnalyserFactory(
         assert result is False
 
     def test_get_service_dependencies_declares_llm_service(self) -> None:
-        """Test that factory declares BaseLLMService dependency."""
+        """Test that factory declares LLMService dependency."""
         container = ServiceContainer()
         factory = PersonalDataAnalyserFactory(container)
 
         deps = factory.get_service_dependencies()
 
         assert "llm_service" in deps
-        assert deps["llm_service"] is BaseLLMService
+        assert deps["llm_service"] is LLMService
 
     def test_can_create_returns_false_for_nonexistent_ruleset(self) -> None:
         """Test that can_create returns False when ruleset doesn't exist."""

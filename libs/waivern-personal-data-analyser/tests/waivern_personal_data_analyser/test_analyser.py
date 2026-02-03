@@ -97,6 +97,7 @@ class TestPersonalDataAnalyser:
             id="test_input",
             content=sample_input_data,
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",  # Set by executor in production
         )
 
     @pytest.fixture

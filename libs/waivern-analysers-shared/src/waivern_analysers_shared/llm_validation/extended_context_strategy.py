@@ -55,14 +55,11 @@ from waivern_analysers_shared.types import LLMValidationConfig
 
 from .decision_engine import ValidationDecisionEngine
 from .models import (
-    SKIP_REASON_BATCH_ERROR,
-    SKIP_REASON_MISSING_CONTENT,
-    SKIP_REASON_NO_SOURCE,
-    SKIP_REASON_OVERSIZED,
     LLMValidationOutcome,
     LLMValidationResponseModel,
     LLMValidationResultModel,
     SkippedFinding,
+    SkipReason,
 )
 from .protocols import SourceProvider
 from .strategy import LLMValidationStrategy
@@ -161,6 +158,9 @@ class _BatchBuilder:
         return self._batches
 
 
+# TODO: Post-migration cleanup (once all processors use LLMService v2):
+#   Review whether this v1 strategy is still needed. v2 strategies use
+#   LLMService (constructor-injected) instead of BaseLLMService (parameter).
 class ExtendedContextLLMValidationStrategy[T: Finding](
     LLMValidationStrategy[T, LLMValidationOutcome[T]], ABC
 ):
@@ -219,6 +219,7 @@ class ExtendedContextLLMValidationStrategy[T: Finding](
         findings: list[T],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
+        run_id: str | None = None,
     ) -> LLMValidationOutcome[T]:
         """Validate findings using source-based batching with full content.
 
@@ -229,11 +230,13 @@ class ExtendedContextLLMValidationStrategy[T: Finding](
             findings: List of findings to validate.
             config: LLM validation configuration.
             llm_service: LLM service instance.
+            run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             LLMValidationOutcome with detailed breakdown of validation results.
 
         """
+        del run_id  # Unused in extended context strategy - uses BaseLLMService
         if not findings:
             logger.debug("No findings to validate")
             return LLMValidationOutcome(
@@ -275,7 +278,7 @@ class ExtendedContextLLMValidationStrategy[T: Finding](
                 )
                 for finding in findings_by_source[source_id]:
                     outcome.skipped.append(
-                        SkippedFinding(finding=finding, reason=SKIP_REASON_OVERSIZED)
+                        SkippedFinding(finding=finding, reason=SkipReason.OVERSIZED)
                     )
 
             # Handle missing content sources (skipped with reason)
@@ -286,7 +289,7 @@ class ExtendedContextLLMValidationStrategy[T: Finding](
                 for finding in findings_by_source[source_id]:
                     outcome.skipped.append(
                         SkippedFinding(
-                            finding=finding, reason=SKIP_REASON_MISSING_CONTENT
+                            finding=finding, reason=SkipReason.MISSING_CONTENT
                         )
                     )
 
@@ -295,7 +298,9 @@ class ExtendedContextLLMValidationStrategy[T: Finding](
                 logger.warning("Findings without source metadata, marking as skipped")
                 for finding in findings_by_source[source_id]:
                     outcome.skipped.append(
-                        SkippedFinding(finding=finding, reason=SKIP_REASON_NO_SOURCE)
+                        SkippedFinding(
+                            finding=finding, reason=SkipReason.MISSING_SOURCE
+                        )
                     )
 
             logger.debug(
@@ -318,7 +323,7 @@ class ExtendedContextLLMValidationStrategy[T: Finding](
                 llm_validated_removed=[],
                 llm_not_flagged=[],
                 skipped=[
-                    SkippedFinding(finding=f, reason=SKIP_REASON_BATCH_ERROR)
+                    SkippedFinding(finding=f, reason=SkipReason.BATCH_ERROR)
                     for f in findings
                 ],
             )
@@ -497,7 +502,7 @@ class ExtendedContextLLMValidationStrategy[T: Finding](
                 # Batch error - all findings in this batch are skipped
                 for source_id in batch.sources:
                     all_skipped.extend(
-                        SkippedFinding(finding=f, reason=SKIP_REASON_BATCH_ERROR)
+                        SkippedFinding(finding=f, reason=SkipReason.BATCH_ERROR)
                         for f in findings_by_source[source_id]
                     )
 

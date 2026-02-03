@@ -42,6 +42,9 @@ from .strategy import LLMValidationStrategy
 logger = logging.getLogger(__name__)
 
 
+# TODO: Post-migration cleanup (once all processors use LLMService v2):
+#   Review whether this v1 strategy is still needed. v2 strategies use
+#   LLMService (constructor-injected) instead of BaseLLMService (parameter).
 class DefaultLLMValidationStrategy[
     TFinding: Finding,
     TResult,
@@ -74,6 +77,7 @@ class DefaultLLMValidationStrategy[
         findings: list[TFinding],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,
+        run_id: str | None = None,
     ) -> TResult:
         """Validate findings using LLM with count-based batching.
 
@@ -91,11 +95,13 @@ class DefaultLLMValidationStrategy[
             findings: List of findings to validate.
             config: Configuration including batch_size, validation_mode, etc.
             llm_service: LLM service instance.
+            run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             Strategy-specific result type.
 
         """
+        del run_id  # Unused in default strategy - uses BaseLLMService
         try:
             return self._process_findings_in_batches(findings, config, llm_service)
 

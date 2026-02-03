@@ -1,6 +1,7 @@
 """LLM validation utilities for analysers."""
 
 from waivern_analysers_shared.llm_validation.decision_engine import (
+    GroupDecision,
     ValidationDecisionEngine,
 )
 from waivern_analysers_shared.llm_validation.default_strategy import (
@@ -24,16 +25,13 @@ from waivern_analysers_shared.llm_validation.grouping import (
 )
 from waivern_analysers_shared.llm_validation.models import (
     FALLBACK_ELIGIBLE_SKIP_REASONS,
-    SKIP_REASON_BATCH_ERROR,
-    SKIP_REASON_MISSING_CONTENT,
-    SKIP_REASON_NO_SOURCE,
-    SKIP_REASON_OVERSIZED,
     LLMValidationOutcome,
     LLMValidationResponseModel,
     LLMValidationResultModel,
     RecommendedActionType,
     RemovedGroup,
     SkippedFinding,
+    SkipReason,
     ValidationResult,
     ValidationResultType,
 )
@@ -56,6 +54,7 @@ __all__ = [
     "FileContentProvider",
     "FileInfo",
     # Validation decision
+    "GroupDecision",
     "ValidationDecisionEngine",
     # Grouping strategies
     "ConcernGroupingStrategy",
@@ -72,11 +71,8 @@ __all__ = [
     "LLMValidationResultModel",
     "RecommendedActionType",
     "RemovedGroup",
-    "SKIP_REASON_BATCH_ERROR",
-    "SKIP_REASON_MISSING_CONTENT",
-    "SKIP_REASON_NO_SOURCE",
-    "SKIP_REASON_OVERSIZED",
     "SkippedFinding",
+    "SkipReason",
     "ValidationResult",
     "ValidationResultType",
     # Protocols

@@ -24,6 +24,7 @@ from waivern_analysers_shared.llm_validation.extended_context_strategy import (
 from waivern_analysers_shared.llm_validation.models import (
     LLMValidationResponseModel,
     LLMValidationResultModel,
+    SkipReason,
 )
 from waivern_analysers_shared.llm_validation.protocols import SourceProvider
 from waivern_analysers_shared.types import BatchingConfig, LLMValidationConfig
@@ -102,6 +103,11 @@ def _create_config() -> LLMValidationConfig:
         llm_validation_mode="standard",
         batching=BatchingConfig(model_context_window=100000),
     )
+
+
+# =============================================================================
+# Core Validation Behaviour
+# =============================================================================
 
 
 class TestValidateFindings:
@@ -276,6 +282,11 @@ class TestValidateFindings:
         assert len(outcome.llm_not_flagged) == 2
 
 
+# =============================================================================
+# Source-Based Grouping
+# =============================================================================
+
+
 class TestSourceGrouping:
     """Tests for source-based grouping behaviour."""
 
@@ -358,7 +369,12 @@ class TestSourceGrouping:
         assert result_purposes == {"FromAvailable", "FromMissing"}
         # Check skipped has the missing content finding
         assert len(outcome.skipped) == 1
-        assert outcome.skipped[0].reason == "missing_content"
+        assert outcome.skipped[0].reason == SkipReason.MISSING_CONTENT
+
+
+# =============================================================================
+# Token-Aware Batching
+# =============================================================================
 
 
 class TestTokenAwareBatching:
@@ -415,7 +431,12 @@ class TestTokenAwareBatching:
         assert result_purposes == {"FromHuge", "FromSmall"}
         # Check skipped has the oversized finding
         assert len(outcome.skipped) == 1
-        assert outcome.skipped[0].reason == "oversized_source"
+        assert outcome.skipped[0].reason == SkipReason.OVERSIZED
+
+
+# =============================================================================
+# Prompt Generation
+# =============================================================================
 
 
 class TestPromptGeneration:
