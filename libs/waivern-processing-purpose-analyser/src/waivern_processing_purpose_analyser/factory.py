@@ -5,7 +5,7 @@ from typing import override
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
-from waivern_llm import BaseLLMService
+from waivern_llm.v2 import LLMService
 from waivern_rulesets import ProcessingPurposeRule
 
 from .analyser import ProcessingPurposeAnalyser
@@ -55,7 +55,7 @@ class ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyse
 
         # Safe to resolve - can_create() already validated availability
         llm_service = (
-            self._container.get_service(BaseLLMService)
+            self._container.get_service(LLMService)
             if analyser_config.llm_validation.enable_llm_validation
             else None
         )
@@ -98,7 +98,7 @@ class ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyse
         # If LLM validation enabled, must have LLM service available in container
         if analyser_config.llm_validation.enable_llm_validation:
             try:
-                self._container.get_service(BaseLLMService)
+                self._container.get_service(LLMService)
             except (ValueError, KeyError):
                 return False
 
@@ -116,9 +116,9 @@ class ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyse
 
         Returns:
             Dictionary mapping dependency names to their types:
-            - "llm_service": BaseLLMService (optional)
+            - "llm_service": LLMService (optional)
 
         """
         return {
-            "llm_service": BaseLLMService,
+            "llm_service": LLMService,
         }

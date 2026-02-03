@@ -9,7 +9,7 @@ from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import BaseLLMService
+from waivern_llm.v2 import LLMService
 from waivern_source_code_analyser import SourceCodeDataModel
 
 from .result_builder import ProcessingPurposeResultBuilder
@@ -30,7 +30,7 @@ class ProcessingPurposeAnalyser(Analyser):
     def __init__(
         self,
         config: ProcessingPurposeAnalyserConfig,
-        llm_service: BaseLLMService | None = None,
+        llm_service: LLMService | None = None,
     ) -> None:
         """Initialise the processing purpose analyser with dependency injection.
 
@@ -128,6 +128,9 @@ class ProcessingPurposeAnalyser(Analyser):
             message_findings = handler.analyse(input_data)
             findings.extend(message_findings)
 
+        # Extract run_id from inputs (set by executor, used for cache scoping)
+        run_id = inputs[0].run_id
+
         # Apply LLM validation if enabled
         validation_result: ValidationResult[ProcessingPurposeIndicatorModel] | None = (
             None
@@ -135,7 +138,7 @@ class ProcessingPurposeAnalyser(Analyser):
         final_findings = findings
         if self._config.llm_validation.enable_llm_validation:
             validated_findings, _, validation_result = self._validate_findings(
-                findings, inputs
+                findings, inputs, run_id=run_id
             )
             final_findings = validated_findings
 
@@ -168,6 +171,7 @@ class ProcessingPurposeAnalyser(Analyser):
         self,
         findings: list[ProcessingPurposeIndicatorModel],
         input_messages: list[Message],
+        run_id: str | None = None,
     ) -> tuple[
         list[ProcessingPurposeIndicatorModel],
         bool,
@@ -183,6 +187,7 @@ class ProcessingPurposeAnalyser(Analyser):
         Args:
             findings: List of findings to validate.
             input_messages: Input messages for context (fan-in supported).
+            run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             Tuple of (validated findings, validation applied, validation result).
@@ -212,12 +217,16 @@ class ProcessingPurposeAnalyser(Analyser):
                 self._config.llm_validation,
                 input_schema.name,
                 source_contents,
+                llm_service=self._llm_service,
             )
+            # TODO: Post-migration cleanup (once all processors use LLMService):
+            #   Remove the None argument - orchestrator.validate() won't need llm_service param
             result = orchestrator.validate(
                 findings,
                 self._config.llm_validation,
-                self._llm_service,
+                None,  # type: ignore[arg-type]  # Strategy uses constructor-injected service
                 marker=self._mark_finding_validated,
+                run_id=run_id,
             )
 
             logger.info(

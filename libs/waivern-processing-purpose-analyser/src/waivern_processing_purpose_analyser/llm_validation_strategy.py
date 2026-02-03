@@ -1,4 +1,4 @@
-"""LLM validation strategy for data subject analysis."""
+"""LLM validation strategy for processing purpose analysis."""
 
 import asyncio
 import logging
@@ -22,18 +22,19 @@ from waivern_llm.v2 import (
     SkipReason,
 )
 
-from .prompts.prompt_builder import DataSubjectPromptBuilder
-from .schemas.types import DataSubjectIndicatorModel
+from .prompts.prompt_builder import ProcessingPurposePromptBuilder
+from .schemas.types import ProcessingPurposeIndicatorModel
 
 logger = logging.getLogger(__name__)
 
 
-class DataSubjectValidationStrategy(
+class ProcessingPurposeValidationStrategy(
     LLMValidationStrategy[
-        DataSubjectIndicatorModel, LLMValidationOutcome[DataSubjectIndicatorModel]
+        ProcessingPurposeIndicatorModel,
+        LLMValidationOutcome[ProcessingPurposeIndicatorModel],
     ]
 ):
-    """LLM validation strategy for data subject indicators.
+    """LLM validation strategy for processing purpose indicators.
 
     Uses LLMService to validate findings, categorising them as
     TRUE_POSITIVE (keep) or FALSE_POSITIVE (remove).
@@ -54,11 +55,11 @@ class DataSubjectValidationStrategy(
     @override
     def validate_findings(
         self,
-        findings: list[DataSubjectIndicatorModel],
+        findings: list[ProcessingPurposeIndicatorModel],
         config: LLMValidationConfig,
         llm_service: BaseLLMService,  # Interface compat - ignored
         run_id: str | None = None,
-    ) -> LLMValidationOutcome[DataSubjectIndicatorModel]:
+    ) -> LLMValidationOutcome[ProcessingPurposeIndicatorModel]:
         """Validate findings using LLM service.
 
         Args:
@@ -92,13 +93,13 @@ class DataSubjectValidationStrategy(
 
     async def _validate_async(
         self,
-        findings: list[DataSubjectIndicatorModel],
+        findings: list[ProcessingPurposeIndicatorModel],
         config: LLMValidationConfig,
         run_id: str,
-    ) -> LLMValidationOutcome[DataSubjectIndicatorModel]:
+    ) -> LLMValidationOutcome[ProcessingPurposeIndicatorModel]:
         """Async validation implementation."""
         groups = [ItemGroup(items=findings, content=None)]
-        prompt_builder = DataSubjectPromptBuilder(
+        prompt_builder = ProcessingPurposePromptBuilder(
             validation_mode=config.llm_validation_mode
         )
 
@@ -114,10 +115,10 @@ class DataSubjectValidationStrategy(
 
     def _map_to_outcome(
         self,
-        findings: list[DataSubjectIndicatorModel],
+        findings: list[ProcessingPurposeIndicatorModel],
         responses: list[LLMValidationResponseModel],
-        skipped: list[SkippedFinding[DataSubjectIndicatorModel]],
-    ) -> LLMValidationOutcome[DataSubjectIndicatorModel]:
+        skipped: list[SkippedFinding[ProcessingPurposeIndicatorModel]],
+    ) -> LLMValidationOutcome[ProcessingPurposeIndicatorModel]:
         """Map LLM responses to validation outcome."""
         findings_by_id = {f.id: f for f in findings}
 
@@ -136,15 +137,15 @@ class DataSubjectValidationStrategy(
     def _categorise_by_responses(
         self,
         responses: list[LLMValidationResponseModel],
-        findings_by_id: dict[str, DataSubjectIndicatorModel],
+        findings_by_id: dict[str, ProcessingPurposeIndicatorModel],
     ) -> tuple[
-        list[DataSubjectIndicatorModel],
-        list[DataSubjectIndicatorModel],
+        list[ProcessingPurposeIndicatorModel],
+        list[ProcessingPurposeIndicatorModel],
         set[str],
     ]:
         """Categorise findings based on LLM responses."""
-        kept: list[DataSubjectIndicatorModel] = []
-        removed: list[DataSubjectIndicatorModel] = []
+        kept: list[ProcessingPurposeIndicatorModel] = []
+        removed: list[ProcessingPurposeIndicatorModel] = []
         processed_ids: set[str] = set()
 
         for response in responses:
@@ -166,10 +167,10 @@ class DataSubjectValidationStrategy(
 
     def _get_not_flagged(
         self,
-        findings_by_id: dict[str, DataSubjectIndicatorModel],
+        findings_by_id: dict[str, ProcessingPurposeIndicatorModel],
         processed_ids: set[str],
-        skipped: list[SkippedFinding[DataSubjectIndicatorModel]],
-    ) -> list[DataSubjectIndicatorModel]:
+        skipped: list[SkippedFinding[ProcessingPurposeIndicatorModel]],
+    ) -> list[ProcessingPurposeIndicatorModel]:
         """Get findings not flagged by LLM (kept via fail-safe)."""
         skipped_ids = {s.finding.id for s in skipped}
         not_flagged_ids = set(findings_by_id.keys()) - processed_ids - skipped_ids
@@ -184,8 +185,8 @@ class DataSubjectValidationStrategy(
 
     def _handle_total_failure(
         self,
-        findings: list[DataSubjectIndicatorModel],
-    ) -> LLMValidationOutcome[DataSubjectIndicatorModel]:
+        findings: list[ProcessingPurposeIndicatorModel],
+    ) -> LLMValidationOutcome[ProcessingPurposeIndicatorModel]:
         """Handle total validation failure."""
         return LLMValidationOutcome(
             llm_validated_kept=[],

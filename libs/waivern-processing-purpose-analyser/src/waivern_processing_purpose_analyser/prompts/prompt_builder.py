@@ -1,59 +1,69 @@
-"""LLM validation prompts for processing purpose indicator validation.
+"""PromptBuilder for processing purpose validation.
 
-TODO: Refactor to use separate prompt strategies for different source types
-(database, source_code, filesystem) when adding more connector types.
-Currently this single prompt handles all source types with combined guidance.
+Implements the PromptBuilder protocol for generating validation prompts
+for processing purpose indicators.
 """
 
-from waivern_processing_purpose_analyser.schemas import (
+from collections.abc import Sequence
+
+from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeIndicatorModel,
 )
 
 
-def get_processing_purpose_validation_prompt(
-    findings: list[ProcessingPurposeIndicatorModel],
-    validation_mode: str = "standard",
-    sensitive_purposes: list[str] | None = None,
-) -> str:
-    """Generate validation prompt for processing purpose indicators.
+class ProcessingPurposePromptBuilder:
+    """Builds validation prompts for processing purpose indicators.
 
-    This prompt is designed to help LLMs distinguish between actual business
-    processing activities and false positives (documentation, examples, code comments).
-    Handles both single findings (as a list of 1) and multiple findings efficiently.
-
-    Args:
-        findings: List of processing purpose indicators to validate
-        validation_mode: "standard" or "conservative" validation approach
-        sensitive_purposes: List of purposes considered privacy-sensitive (optional)
-
-    Returns:
-        Formatted validation prompt for the LLM
-
+    Implements the PromptBuilder[ProcessingPurposeIndicatorModel] protocol.
+    Uses COUNT_BASED batching mode, so the content parameter is ignored.
     """
-    if not findings:
-        raise ValueError("At least one finding must be provided")
 
-    is_conservative = validation_mode == "conservative"
+    def __init__(
+        self,
+        validation_mode: str = "standard",
+        sensitive_purposes: list[str] | None = None,
+    ) -> None:
+        """Initialise prompt builder.
 
-    # Build findings block
-    findings_to_validate = _build_findings_to_validate(findings)
+        Args:
+            validation_mode: Validation mode ("standard" or "conservative").
+            sensitive_purposes: List of purposes considered privacy-sensitive.
 
-    # Build validation approach section
-    validation_approach = _get_validation_approach(
-        validation_mode, findings, sensitive_purposes
-    )
+        """
+        self._validation_mode = validation_mode
+        self._sensitive_purposes = sensitive_purposes
 
-    # Build category guidance
-    category_guidance = _get_category_guidance_summary()
+    def build_prompt(
+        self,
+        items: Sequence[ProcessingPurposeIndicatorModel],
+        content: str | None = None,
+    ) -> str:
+        """Build validation prompt for the given findings.
 
-    # Build response format
-    response_format = _get_response_format(len(findings), is_conservative)
+        Args:
+            items: Findings to validate.
+            content: Ignored - COUNT_BASED mode doesn't use shared content.
 
-    return f"""
-You are an expert data processing analyst. Validate processing purpose indicators to identify false positives.
+        Returns:
+            Complete prompt string for LLM validation.
+
+        Raises:
+            ValueError: If items is empty.
+
+        """
+        if not items:
+            raise ValueError("At least one finding must be provided")
+
+        findings_block = self._build_findings_block(items)
+        finding_count = len(items)
+        validation_approach = self._get_validation_approach(items)
+        category_guidance = self._get_category_guidance()
+        response_format = self._get_response_format(finding_count)
+
+        return f"""You are an expert data processing analyst. Validate processing purpose indicators to identify false positives.
 
 **FINDINGS TO VALIDATE:**
-{findings_to_validate}
+{findings_block}
 
 **VALIDATION TASK:**
 For each finding, determine if it represents actual business processing (TRUE_POSITIVE) or a false positive (FALSE_POSITIVE).
@@ -81,7 +91,7 @@ For source code findings, infer context from file paths in evidence:
 - Example/sample files (`*.example.*`, `sample/*`, `examples/*`): Usually FALSE_POSITIVE
 - Production code (`src/*`, `lib/*`, `app/*`): Requires deeper analysis
 - Config templates (`*.template.*`, `*.sample.*`): Usually FALSE_POSITIVE
-- Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE (library docs/examples, not application code)
+- Vendor/dependencies (`node_modules/*`, `vendor/*`): Usually FALSE_POSITIVE (library docs/examples)
 
 **DATABASE - SOURCE METADATA INTERPRETATION:**
 For database findings, parse the source field format:
@@ -155,61 +165,54 @@ Finding:
 
 {response_format}"""
 
+    def _build_findings_block(
+        self, items: Sequence[ProcessingPurposeIndicatorModel]
+    ) -> str:
+        """Build formatted findings block for the prompt."""
+        findings_parts: list[str] = []
 
-def _build_findings_to_validate(findings: list[ProcessingPurposeIndicatorModel]) -> str:
-    """Build formatted findings block for the prompt.
+        for finding in items:
+            evidence_text = (
+                "\n  ".join(f"- {e.content}" for e in finding.evidence)
+                if finding.evidence
+                else "No evidence"
+            )
+            source = finding.metadata.source if finding.metadata else "Unknown"
+            patterns = ", ".join(
+                f"{p.pattern} (×{p.match_count})" for p in finding.matched_patterns
+            )
 
-    Args:
-        findings: List of processing purpose findings
-
-    Returns:
-        Formatted findings block string
-
-    """
-    findings_text: list[str] = []
-    for finding in findings:
-        evidence_text = (
-            "\n  ".join(f"- {evidence.content}" for evidence in finding.evidence)
-            if finding.evidence
-            else "No evidence"
-        )
-
-        source = finding.metadata.source if finding.metadata else "Unknown"
-
-        findings_text.append(f"""
+            findings_parts.append(f"""
 Finding [{finding.id}]:
   Purpose: {finding.purpose}
-  Patterns: {", ".join(f"{p.pattern} (×{p.match_count})" for p in finding.matched_patterns)}
+  Patterns: {patterns}
   Source: {source}
   Evidence:
   {evidence_text}""")
 
-    return "\n".join(findings_text)
+        return "\n".join(findings_parts)
 
+    def _get_validation_approach(
+        self, items: Sequence[ProcessingPurposeIndicatorModel]
+    ) -> str:
+        """Get validation approach section based on mode and findings."""
+        if self._validation_mode == "conservative":
+            # Check if any findings have sensitive purposes
+            sensitive_findings = [
+                f
+                for f in items
+                if self._sensitive_purposes and f.purpose in self._sensitive_purposes
+            ]
 
-def _get_validation_approach(
-    validation_mode: str,
-    findings: list[ProcessingPurposeIndicatorModel],
-    sensitive_purposes: list[str] | None = None,
-) -> str:
-    """Get validation approach section based on mode and findings."""
-    if validation_mode == "conservative":
-        # Check if any findings have sensitive purposes
-        sensitive_purpose_findings = [
-            f
-            for f in findings
-            if sensitive_purposes and f.purpose in sensitive_purposes
-        ]
+            warnings: list[str] = []
+            if sensitive_findings:
+                warnings.append(
+                    "⚠️ PRIVACY SENSITIVE purposes detected - conservative approach required"
+                )
 
-        warnings: list[str] = []
-        if sensitive_purpose_findings:
-            warnings.append(
-                "⚠️ PRIVACY SENSITIVE purposes detected - conservative approach required"
-            )
+            warning_text = "\n".join(f"**{w}**" for w in warnings) if warnings else ""
 
-        warning_text = "\n".join(f"**{w}**" for w in warnings) if warnings else ""
-
-        return f"""
+            return f"""
 **CONSERVATIVE VALIDATION MODE:**
 {warning_text}
 - Only mark as FALSE_POSITIVE if very confident it's not actual business processing
@@ -218,30 +221,31 @@ def _get_validation_approach(
 - Err on the side of thorough detection
 - Prioritise completeness over false positive reduction"""
 
-    else:  # standard mode
+        # Standard mode
         return """
 **STANDARD VALIDATION MODE:**
 - Balance false positive reduction with compliance requirements
 - Apply context-aware assessment considering the processing purpose
 - Focus on clear business context indicators"""
 
-
-def _get_category_guidance_summary() -> str:
-    """Get consolidated purpose-specific guidance."""
-    return """
+    def _get_category_guidance(self) -> str:
+        """Get consolidated purpose-specific guidance."""
+        return """
 - AI/ML purposes: Distinguish actual model training/testing from tutorials or documentation
 - Marketing purposes: High false positive rate from examples; validate actual campaign/targeting code
 - Payment/Billing: Usually true positives in production code; watch for test card numbers
 - Analytics purposes: Distinguish actual tracking implementation from documentation
 - Security purposes: Generally legitimate in business context, rarely false positives"""
 
+    def _get_response_format(self, finding_count: int) -> str:
+        """Get array response format - only FALSE_POSITIVE findings should be returned."""
+        is_conservative = self._validation_mode == "conservative"
+        action_options = (
+            '"discard" | "flag_for_review"' if is_conservative else '"discard"'
+        )
+        reasoning_length = "max 150 words" if is_conservative else "max 120 words"
 
-def _get_response_format(finding_count: int, is_conservative: bool) -> str:
-    """Get array response format - only FALSE_POSITIVE findings should be returned."""
-    action_options = '"discard" | "flag_for_review"' if is_conservative else '"discard"'
-    reasoning_length = "max 150 words" if is_conservative else "max 120 words"
-
-    return f"""**RESPONSE FORMAT:**
+        return f"""**RESPONSE FORMAT:**
 Respond with valid JSON array only (no markdown formatting).
 IMPORTANT: Only return findings you identify as FALSE_POSITIVE. Do not include TRUE_POSITIVE findings.
 Echo back the exact finding_id from each Finding [...] header - do not modify it.

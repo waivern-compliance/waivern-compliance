@@ -6,9 +6,7 @@ Tests verify the PromptBuilder protocol implementation for personal data validat
 import pytest
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 
-from waivern_personal_data_analyser.prompts.prompt_builder import (
-    PersonalDataPromptBuilder,
-)
+from waivern_personal_data_analyser.prompts import PersonalDataPromptBuilder
 from waivern_personal_data_analyser.schemas.types import (
     PersonalDataIndicatorMetadata,
     PersonalDataIndicatorModel,

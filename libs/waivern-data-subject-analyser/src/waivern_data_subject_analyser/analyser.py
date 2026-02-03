@@ -200,7 +200,7 @@ class DataSubjectAnalyser(Analyser):
             orchestrator = create_validation_orchestrator(
                 self._config.llm_validation, self._llm_service
             )
-            # TODO: Post-migration cleanup (once all processors use LLMService v2):
+            # TODO: Post-migration cleanup (once all processors use LLMService):
             #   Remove the None argument - orchestrator.validate() won't need llm_service param
             result = orchestrator.validate(
                 findings,
