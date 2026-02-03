@@ -1,7 +1,7 @@
-"""Tests for ProcessingPurposeValidationStrategy.
+"""Tests for LLM validation strategies.
 
-Tests verify the strategy correctly uses LLMService to validate findings
-and maps responses to LLMValidationOutcome.
+Tests verify the strategies correctly use LLMService to validate findings
+and map responses to LLMValidationOutcome.
 """
 
 from unittest.mock import AsyncMock, Mock
@@ -18,16 +18,26 @@ from waivern_llm.v2 import (
     ItemGroup,
     LLMCompletionResult,
     LLMService,
+    SkippedFinding,
     SkipReason,
 )
 
 from waivern_processing_purpose_analyser.llm_validation_strategy import (
     ProcessingPurposeValidationStrategy,
 )
-from waivern_processing_purpose_analyser.prompts import ProcessingPurposePromptBuilder
+from waivern_processing_purpose_analyser.prompts import (
+    ProcessingPurposePromptBuilder,
+    SourceCodePromptBuilder,
+)
 from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeIndicatorMetadata,
     ProcessingPurposeIndicatorModel,
+)
+from waivern_processing_purpose_analyser.validation.extended_context_strategy import (
+    SourceCodeValidationStrategy,
+)
+from waivern_processing_purpose_analyser.validation.providers import (
+    SourceCodeSourceProvider,
 )
 
 
@@ -268,3 +278,316 @@ class TestProcessingPurposeValidationStrategy:
         assert skipped_ids == {sample_findings[0].id, sample_findings[1].id}
         for skipped in outcome.skipped:
             assert skipped.reason == SkipReason.BATCH_ERROR
+
+
+class TestSourceCodeValidationStrategy:
+    """Test suite for SourceCodeValidationStrategy.
+
+    Tests verify the strategy correctly uses LLMService with EXTENDED_CONTEXT
+    batching mode and groups findings by source file.
+    """
+
+    @pytest.fixture
+    def mock_llm_service(self) -> Mock:
+        """Create mock LLMService."""
+        service = Mock(spec=LLMService)
+        service.complete = AsyncMock()
+        return service
+
+    @pytest.fixture
+    def source_contents(self) -> dict[str, str]:
+        """Map of source file paths to content."""
+        return {
+            "/src/PaymentService.php": "<?php class PaymentService { }",
+            "/src/AnalyticsService.php": "<?php class AnalyticsService { }",
+        }
+
+    @pytest.fixture
+    def source_provider(
+        self, source_contents: dict[str, str]
+    ) -> SourceCodeSourceProvider:
+        """Create SourceCodeSourceProvider with test content."""
+        return SourceCodeSourceProvider(source_contents)
+
+    @pytest.fixture
+    def config(self) -> LLMValidationConfig:
+        """Create standard LLM configuration."""
+        return LLMValidationConfig(
+            enable_llm_validation=True,
+            llm_batch_size=10,
+            llm_validation_mode="standard",
+        )
+
+    @pytest.fixture
+    def sample_findings(self) -> list[ProcessingPurposeIndicatorModel]:
+        """Create sample findings from different source files."""
+        return [
+            _make_finding(
+                "Payment Processing",
+                "payment",
+                "/src/PaymentService.php",
+            ),
+            _make_finding(
+                "User Analytics",
+                "analytics",
+                "/src/AnalyticsService.php",
+            ),
+        ]
+
+    # =========================================================================
+    # Core Validation Behaviour
+    # =========================================================================
+
+    def test_calls_llm_service_complete_with_correct_args(
+        self,
+        mock_llm_service: Mock,
+        source_provider: SourceCodeSourceProvider,
+        config: LLMValidationConfig,
+        sample_findings: list[ProcessingPurposeIndicatorModel],
+    ) -> None:
+        """Strategy calls LLMService.complete() with EXTENDED_CONTEXT mode."""
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[LLMValidationResponseModel(results=[])],
+            skipped=[],
+        )
+        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
+
+        strategy.validate_findings(sample_findings, config, Mock(), run_id="test-run")
+
+        mock_llm_service.complete.assert_called_once()
+        call_kwargs = mock_llm_service.complete.call_args.kwargs
+
+        # Verify groups - one per source file
+        groups = mock_llm_service.complete.call_args.args[0]
+        assert len(groups) == 2  # Two different source files
+
+        # Verify other args
+        assert isinstance(call_kwargs["prompt_builder"], SourceCodePromptBuilder)
+        assert call_kwargs["response_model"] == LLMValidationResponseModel
+        assert call_kwargs["batching_mode"] == BatchingMode.EXTENDED_CONTEXT
+        assert call_kwargs["run_id"] == "test-run"
+
+    def test_raises_error_when_run_id_not_provided(
+        self,
+        mock_llm_service: Mock,
+        source_provider: SourceCodeSourceProvider,
+        config: LLMValidationConfig,
+    ) -> None:
+        """Strategy raises ValueError if run_id is not provided."""
+        findings = [_make_finding("Payment Processing", "payment", "/src/test.php")]
+        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
+
+        with pytest.raises(ValueError, match="run_id is required"):
+            strategy.validate_findings(findings, config, Mock())  # No run_id
+
+    def test_creates_groups_by_source_file(
+        self,
+        mock_llm_service: Mock,
+        source_provider: SourceCodeSourceProvider,
+        config: LLMValidationConfig,
+    ) -> None:
+        """Strategy creates one ItemGroup per source file with content."""
+        # Two findings from the same source file
+        findings = [
+            _make_finding("Payment Processing", "payment", "/src/PaymentService.php"),
+            _make_finding("Billing", "billing", "/src/PaymentService.php"),
+        ]
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[LLMValidationResponseModel(results=[])],
+            skipped=[],
+        )
+        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
+
+        strategy.validate_findings(findings, config, Mock(), run_id="test-run")
+
+        # Verify single group created (same source file)
+        groups = mock_llm_service.complete.call_args.args[0]
+        assert len(groups) == 1
+        assert len(groups[0].items) == 2  # Both findings in same group
+        assert groups[0].content == "<?php class PaymentService { }"
+
+    # =========================================================================
+    # Response Mapping
+    # =========================================================================
+
+    def test_maps_true_positive_to_kept_findings(
+        self,
+        mock_llm_service: Mock,
+        source_provider: SourceCodeSourceProvider,
+        config: LLMValidationConfig,
+        sample_findings: list[ProcessingPurposeIndicatorModel],
+    ) -> None:
+        """Findings marked TRUE_POSITIVE are in llm_validated_kept."""
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=sample_findings[0].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid payment processing",
+                            recommended_action="keep",
+                        ),
+                        LLMValidationResultModel(
+                            finding_id=sample_findings[1].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.85,
+                            reasoning="Valid analytics tracking",
+                            recommended_action="keep",
+                        ),
+                    ]
+                )
+            ],
+            skipped=[],
+        )
+        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
+
+        outcome = strategy.validate_findings(
+            sample_findings, config, Mock(), run_id="test-run"
+        )
+
+        assert len(outcome.llm_validated_kept) == 2
+        assert outcome.llm_validated_removed == []
+        assert outcome.llm_not_flagged == []
+        kept_ids = {f.id for f in outcome.llm_validated_kept}
+        assert kept_ids == {sample_findings[0].id, sample_findings[1].id}
+
+    def test_filters_out_false_positive_findings(
+        self,
+        mock_llm_service: Mock,
+        source_provider: SourceCodeSourceProvider,
+        config: LLMValidationConfig,
+        sample_findings: list[ProcessingPurposeIndicatorModel],
+    ) -> None:
+        """Findings marked FALSE_POSITIVE by LLM are removed."""
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=sample_findings[0].id,
+                            validation_result="FALSE_POSITIVE",
+                            confidence=0.95,
+                            reasoning="Test fixture data",
+                            recommended_action="discard",
+                        ),
+                        LLMValidationResultModel(
+                            finding_id=sample_findings[1].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid analytics tracking",
+                            recommended_action="keep",
+                        ),
+                    ]
+                )
+            ],
+            skipped=[],
+        )
+        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
+
+        outcome = strategy.validate_findings(
+            sample_findings, config, Mock(), run_id="test-run"
+        )
+
+        assert len(outcome.llm_validated_kept) == 1
+        assert outcome.llm_validated_kept[0].id == sample_findings[1].id
+        assert len(outcome.llm_validated_removed) == 1
+        assert outcome.llm_validated_removed[0].id == sample_findings[0].id
+
+    def test_keeps_findings_not_flagged_by_llm(
+        self,
+        mock_llm_service: Mock,
+        source_provider: SourceCodeSourceProvider,
+        config: LLMValidationConfig,
+        sample_findings: list[ProcessingPurposeIndicatorModel],
+    ) -> None:
+        """Findings not mentioned in LLM response are kept (fail-safe)."""
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[LLMValidationResponseModel(results=[])],
+            skipped=[],
+        )
+        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
+
+        outcome = strategy.validate_findings(
+            sample_findings, config, Mock(), run_id="test-run"
+        )
+
+        # Both findings kept via fail-safe (not_flagged)
+        assert outcome.llm_validated_kept == []
+        assert outcome.llm_validated_removed == []
+        assert len(outcome.llm_not_flagged) == 2
+        not_flagged_ids = {f.id for f in outcome.llm_not_flagged}
+        assert not_flagged_ids == {sample_findings[0].id, sample_findings[1].id}
+
+    # =========================================================================
+    # Error Handling
+    # =========================================================================
+
+    def test_total_failure_returns_all_skipped(
+        self,
+        mock_llm_service: Mock,
+        source_provider: SourceCodeSourceProvider,
+        config: LLMValidationConfig,
+        sample_findings: list[ProcessingPurposeIndicatorModel],
+    ) -> None:
+        """Exception from LLMService returns all findings as skipped with BATCH_ERROR."""
+        mock_llm_service.complete.side_effect = Exception("LLM API unavailable")
+        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
+
+        outcome = strategy.validate_findings(
+            sample_findings, config, Mock(), run_id="test-run"
+        )
+
+        # All findings should be skipped with BATCH_ERROR reason
+        assert outcome.llm_validated_kept == []
+        assert outcome.llm_validated_removed == []
+        assert outcome.llm_not_flagged == []
+        assert len(outcome.skipped) == 2
+        skipped_ids = {s.finding.id for s in outcome.skipped}
+        assert skipped_ids == {sample_findings[0].id, sample_findings[1].id}
+        for skipped in outcome.skipped:
+            assert skipped.reason == SkipReason.BATCH_ERROR
+
+    def test_skipped_findings_passed_through(
+        self,
+        mock_llm_service: Mock,
+        source_provider: SourceCodeSourceProvider,
+        config: LLMValidationConfig,
+        sample_findings: list[ProcessingPurposeIndicatorModel],
+    ) -> None:
+        """Skipped findings from LLMCompletionResult appear in outcome."""
+        # First finding is processed, second is skipped by BatchPlanner
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=sample_findings[0].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid payment processing",
+                            recommended_action="keep",
+                        ),
+                    ]
+                )
+            ],
+            skipped=[
+                SkippedFinding(
+                    finding=sample_findings[1],
+                    reason=SkipReason.MISSING_CONTENT,
+                )
+            ],
+        )
+        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
+
+        outcome = strategy.validate_findings(
+            sample_findings, config, Mock(), run_id="test-run"
+        )
+
+        # First finding kept, second skipped
+        assert len(outcome.llm_validated_kept) == 1
+        assert outcome.llm_validated_kept[0].id == sample_findings[0].id
+        assert len(outcome.skipped) == 1
+        assert outcome.skipped[0].finding.id == sample_findings[1].id
+        assert outcome.skipped[0].reason == SkipReason.MISSING_CONTENT

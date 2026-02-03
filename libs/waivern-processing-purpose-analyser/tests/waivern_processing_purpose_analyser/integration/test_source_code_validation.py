@@ -2,14 +2,10 @@
 
 Verifies the SourceCodeValidationStrategy is exercised correctly when
 processing source_code schema input with LLM validation enabled.
-
-NOTE: These tests are temporarily disabled (xfail) until Step 13b migrates
-the SourceCodeValidationStrategy to LLMService. The source_code validation
-path still uses the v1 BaseLLMService internally.
 """
 
 import re
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from waivern_analysers_shared.llm_validation import (
@@ -18,7 +14,7 @@ from waivern_analysers_shared.llm_validation import (
 )
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import BaseLLMService
+from waivern_llm.v2 import LLMCompletionResult, LLMService
 
 from waivern_processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
@@ -41,9 +37,9 @@ class TestSourceCodeSchemaLLMValidation:
 
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
-        """Create mock LLM service with model_name for token estimation."""
-        mock = Mock(spec=BaseLLMService)
-        mock.model_name = "claude-3-5-sonnet"  # Required for token window lookup
+        """Create mock LLM service."""
+        mock = Mock(spec=LLMService)
+        mock.complete = AsyncMock()
         return mock
 
     @pytest.fixture
@@ -89,12 +85,9 @@ class PaymentService {
             id="test_source_code",
             content=content,
             schema=Schema("source_code", "1.0.0"),
+            run_id="test-run-123",
         )
 
-    # TODO: Step 13b - Remove xfail after migrating SourceCodeValidationStrategy to LLMService
-    @pytest.mark.xfail(
-        reason="Step 13b: source_code validation not yet migrated to LLMService"
-    )
     def test_source_code_validation_includes_file_content_in_prompt(
         self,
         mock_llm_service: Mock,
@@ -114,14 +107,20 @@ class PaymentService {
             }
         )
 
-        captured_prompt: str = ""
+        captured_prompts: list[str] = []
 
-        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
-            nonlocal captured_prompt
-            captured_prompt = prompt
-            return LLMValidationResponseModel(results=[])
+        async def mock_llm_complete(groups, **kwargs):
+            # Capture prompt from prompt_builder
+            prompt_builder = kwargs["prompt_builder"]
+            for group in groups:
+                prompt = prompt_builder.build_prompt(group.items, content=group.content)
+                captured_prompts.append(prompt)
+            return LLMCompletionResult(
+                responses=[LLMValidationResponseModel(results=[])],
+                skipped=[],
+            )
 
-        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        mock_llm_service.complete.side_effect = mock_llm_complete
 
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 
@@ -132,23 +131,20 @@ class PaymentService {
         )
 
         # Assert - prompt should contain file content (SourceCodeValidationStrategy)
-        assert mock_llm_service.invoke_with_structured_output.called, (
+        assert mock_llm_service.complete.called, (
             "LLM service should be called for validation"
         )
-        assert "PaymentService.php" in captured_prompt, (
-            "Prompt should include file path"
-        )
-        assert "processPayment" in captured_prompt, (
+        assert len(captured_prompts) > 0, "Should have captured at least one prompt"
+
+        prompt = captured_prompts[0]
+        assert "PaymentService.php" in prompt, "Prompt should include file path"
+        assert "processPayment" in prompt, (
             "Prompt should include file content (method name)"
         )
-        assert "refundTransaction" in captured_prompt, (
+        assert "refundTransaction" in prompt, (
             "Prompt should include file content (method name)"
         )
 
-    # TODO: Step 13b - Remove xfail after migrating SourceCodeValidationStrategy to LLMService
-    @pytest.mark.xfail(
-        reason="Step 13b: source_code validation not yet migrated to LLMService"
-    )
     def test_source_code_validation_filters_false_positives(
         self,
         mock_llm_service: Mock,
@@ -164,33 +160,42 @@ class PaymentService {
             }
         )
 
-        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
-            finding_ids = _extract_finding_ids_from_prompt(prompt)
-            if not finding_ids:
-                return LLMValidationResponseModel(results=[])
-            # Mark first finding as false positive, keep rest
-            results = [
-                LLMValidationResultModel(
-                    finding_id=finding_ids[0],
-                    validation_result="FALSE_POSITIVE",
-                    confidence=0.9,
-                    reasoning="Comment only, not actual processing",
-                    recommended_action="discard",
-                )
-            ]
-            for fid in finding_ids[1:]:
+        async def mock_llm_complete(groups, **kwargs):
+            prompt_builder = kwargs["prompt_builder"]
+            results: list[LLMValidationResultModel] = []
+
+            for group in groups:
+                prompt = prompt_builder.build_prompt(group.items, content=group.content)
+                finding_ids = _extract_finding_ids_from_prompt(prompt)
+                if not finding_ids:
+                    continue
+                # Mark first finding as false positive, keep rest
                 results.append(
                     LLMValidationResultModel(
-                        finding_id=fid,
-                        validation_result="TRUE_POSITIVE",
-                        confidence=0.85,
-                        reasoning="Actual payment processing",
-                        recommended_action="keep",
+                        finding_id=finding_ids[0],
+                        validation_result="FALSE_POSITIVE",
+                        confidence=0.9,
+                        reasoning="Comment only, not actual processing",
+                        recommended_action="discard",
                     )
                 )
-            return LLMValidationResponseModel(results=results)
+                for fid in finding_ids[1:]:
+                    results.append(
+                        LLMValidationResultModel(
+                            finding_id=fid,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.85,
+                            reasoning="Actual payment processing",
+                            recommended_action="keep",
+                        )
+                    )
 
-        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+            return LLMCompletionResult(
+                responses=[LLMValidationResponseModel(results=results)],
+                skipped=[],
+            )
+
+        mock_llm_service.complete.side_effect = mock_llm_complete
 
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
 

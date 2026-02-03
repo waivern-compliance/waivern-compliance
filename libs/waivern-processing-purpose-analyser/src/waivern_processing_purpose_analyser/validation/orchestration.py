@@ -8,8 +8,8 @@ Architecture notes:
     This factory makes two types of decisions:
 
     1. **LLM Strategy Selection** (design-time, schema-dependent):
-       - source_code schema + content available → ExtendedContextLLMValidationStrategy
-       - Otherwise → simple finding-based strategy
+       - source_code schema + content available → SourceCodeValidationStrategy (EXTENDED_CONTEXT)
+       - Otherwise → ProcessingPurposeValidationStrategy (COUNT_BASED, evidence-only)
        This is determined by the input schema, not runtime configuration.
 
     2. **Grouping vs Sampling** (separate concerns):
@@ -28,8 +28,8 @@ Testing rationale:
 
     1. It contains only simple wiring logic (no runtime behaviour to test)
     2. The components it assembles are tested independently:
-       - ProcessingPurposeValidationStrategy: inline, follows tested pattern
-       - SourceCodeValidationStrategy: tested in test_extended_context_strategy.py
+       - ProcessingPurposeValidationStrategy: tested in test_llm_validation_strategy.py
+       - SourceCodeValidationStrategy: tested in test_llm_validation_strategy.py
        - ValidationOrchestrator: tested in waivern-analysers-shared
        - ConcernGroupingStrategy/RandomSamplingStrategy: tested in waivern-analysers-shared
     3. The complete validation flow is verified by integration tests
@@ -38,11 +38,8 @@ Testing rationale:
     handling, validation), you SHOULD add tests for that behaviour.
 """
 
-from typing import override
-
 from waivern_analysers_shared.llm_validation import (
     ConcernGroupingStrategy,
-    FilteringLLMValidationStrategy,
     LLMValidationStrategy,
     RandomSamplingStrategy,
     ValidationOrchestrator,
@@ -53,9 +50,6 @@ from waivern_llm.v2 import LLMService
 from waivern_processing_purpose_analyser.llm_validation_strategy import (
     ProcessingPurposeValidationStrategy,
 )
-from waivern_processing_purpose_analyser.prompts.prompt_builder import (
-    ProcessingPurposePromptBuilder,
-)
 from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeIndicatorModel,
 )
@@ -65,35 +59,6 @@ from .providers import (
     ProcessingPurposeConcernProvider,
     SourceCodeSourceProvider,
 )
-
-
-class _LegacyProcessingPurposeValidationStrategy(
-    FilteringLLMValidationStrategy[ProcessingPurposeIndicatorModel]
-):
-    """Legacy finding-based validation strategy for processing purposes.
-
-    Uses the filtering paradigm (v1) to validate processing purpose findings,
-    categorising them as TRUE_POSITIVE (keep) or FALSE_POSITIVE (remove).
-
-    This is used as fallback for source_code schema until Step 13b migrates
-    extended context validation. For standard_input schema, use the v2
-    ProcessingPurposeValidationStrategy instead.
-
-    TODO: Post-migration cleanup (Step 13b):
-        Remove this class after SourceCodeValidationStrategy is migrated to v2.
-    """
-
-    @override
-    def get_validation_prompt(
-        self,
-        findings_batch: list[ProcessingPurposeIndicatorModel],
-        config: LLMValidationConfig,
-    ) -> str:
-        """Generate validation prompt for processing purpose findings."""
-        builder = ProcessingPurposePromptBuilder(
-            validation_mode=config.llm_validation_mode
-        )
-        return builder.build_prompt(findings_batch)
 
 
 def create_validation_orchestrator(
@@ -108,36 +73,37 @@ def create_validation_orchestrator(
         config: LLM validation configuration.
         input_schema_name: Name of the input schema (e.g., "source_code", "standard_input").
         source_contents: Map of file paths to content (for source_code schema).
-        llm_service: LLM service instance for v2 validation (standard_input schema).
+        llm_service: LLM service instance for validation.
 
     Returns:
         Configured ValidationOrchestrator instance.
 
+    Raises:
+        ValueError: If llm_service is not provided.
+
     """
+    if llm_service is None:
+        raise ValueError("llm_service is required for validation")
+
     # LLM Strategy: Design-time decision based on input schema
-    # - standard_input: Use v2 ProcessingPurposeValidationStrategy (if llm_service available)
-    # - source_code: Use v1 SourceCodeValidationStrategy (migrated in Step 13b)
+    # - source_code: SourceCodeValidationStrategy (EXTENDED_CONTEXT batching)
+    # - standard_input: ProcessingPurposeValidationStrategy (COUNT_BASED batching)
     llm_strategy: LLMValidationStrategy[ProcessingPurposeIndicatorModel, object]
     fallback_strategy: (
-        FilteringLLMValidationStrategy[ProcessingPurposeIndicatorModel] | None
+        LLMValidationStrategy[ProcessingPurposeIndicatorModel, object] | None
     ) = None
 
     if input_schema_name == "source_code" and source_contents:
-        # Extended context strategy (v1 - migrated in Step 13b)
+        # Extended context strategy - uses full file content for validation
         source_provider = SourceCodeSourceProvider(source_contents)
-        llm_strategy = SourceCodeValidationStrategy(source_provider)
+        llm_strategy = SourceCodeValidationStrategy(llm_service, source_provider)
         # Fallback to evidence-only strategy for findings that can't be validated
         # with extended context (e.g., oversized sources, missing content)
-        # TODO: Post-migration cleanup (Step 13b):
-        #   Replace with v2 ProcessingPurposeValidationStrategy as fallback
-        fallback_strategy = _LegacyProcessingPurposeValidationStrategy()
-    elif llm_service:
-        # Standard input with v2 service available - use v2 strategy
+        fallback_strategy = ProcessingPurposeValidationStrategy(llm_service)
+    else:
+        # Standard input - use evidence-only strategy
         llm_strategy = ProcessingPurposeValidationStrategy(llm_service)
         # No fallback needed - already using evidence-only strategy
-    else:
-        # Fallback to v1 strategy when no llm_service provided
-        llm_strategy = _LegacyProcessingPurposeValidationStrategy()
 
     # Grouping: Design-time decision
     # ProcessingPurposeAnalyser groups findings by purpose (e.g., "Payment Processing",
