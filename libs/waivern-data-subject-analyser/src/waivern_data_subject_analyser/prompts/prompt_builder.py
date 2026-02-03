@@ -1,33 +1,59 @@
-"""LLM validation prompts for data subject findings validation."""
+"""PromptBuilder for data subject validation.
 
-from waivern_data_subject_analyser.schemas import DataSubjectIndicatorModel
+Implements the PromptBuilder protocol for generating validation prompts
+for data subject indicators.
+"""
+
+from collections.abc import Sequence
+
+from waivern_data_subject_analyser.schemas.types import DataSubjectIndicatorModel
 
 
-def get_data_subject_validation_prompt(
-    findings: list[DataSubjectIndicatorModel],
-    validation_mode: str = "standard",
-) -> str:
-    """Generate validation prompt for data subject findings.
+class DataSubjectPromptBuilder:
+    """Builds validation prompts for data subject indicators.
 
-    Args:
-        findings: List of data subject findings to validate
-        validation_mode: "standard" or "conservative" validation approach
-
-    Returns:
-        Formatted validation prompt for the LLM
-
+    Implements the PromptBuilder[DataSubjectIndicatorModel] protocol.
+    Uses COUNT_BASED batching mode, so the content parameter is ignored.
     """
-    if not findings:
-        raise ValueError("At least one finding must be provided")
 
-    findings_text = _build_findings_block(findings)
-    category_guidance = _get_category_guidance()
-    response_format = _get_response_format(len(findings))
+    def __init__(self, validation_mode: str = "standard") -> None:
+        """Initialise prompt builder.
 
-    return f"""You are an expert data protection analyst. Validate data subject findings to identify false positives.
+        Args:
+            validation_mode: Validation mode ("standard" or "conservative").
+
+        """
+        self._validation_mode = validation_mode
+
+    def build_prompt(
+        self,
+        items: Sequence[DataSubjectIndicatorModel],
+        content: str | None = None,
+    ) -> str:
+        """Build validation prompt for the given findings.
+
+        Args:
+            items: Findings to validate.
+            content: Ignored - COUNT_BASED mode doesn't use shared content.
+
+        Returns:
+            Complete prompt string for LLM validation.
+
+        Raises:
+            ValueError: If items is empty.
+
+        """
+        if not items:
+            raise ValueError("At least one finding must be provided")
+
+        findings_block = self._build_findings_block(items)
+        finding_count = len(items)
+        category_guidance = self._get_category_guidance()
+
+        return f"""You are an expert data protection analyst. Validate data subject findings to identify false positives.
 
 **FINDINGS TO VALIDATE:**
-{findings_text}
+{findings_block}
 
 **TASK:**
 For each finding, determine if it represents an actual data subject indicator (TRUE_POSITIVE) or a false positive (FALSE_POSITIVE).
@@ -126,47 +152,7 @@ Finding:
 ```
 → TRUE_POSITIVE: Database migration creating actual employee table
 
-{response_format}"""
-
-
-def _build_findings_block(findings: list[DataSubjectIndicatorModel]) -> str:
-    """Build formatted findings block for the prompt."""
-    findings_text: list[str] = []
-
-    for finding in findings:
-        evidence_text = (
-            "\n  ".join(f"- {evidence.content}" for evidence in finding.evidence)
-            if finding.evidence
-            else "No evidence"
-        )
-
-        source = finding.metadata.source if finding.metadata else "Unknown"
-
-        findings_text.append(f"""
-Finding [{finding.id}]:
-  Subject Category: {finding.subject_category}
-  Patterns: {", ".join(f"{p.pattern} (×{p.match_count})" for p in finding.matched_patterns)}
-  Source: {source}
-  Evidence:
-  {evidence_text}""")
-
-    return "\n".join(findings_text)
-
-
-def _get_category_guidance() -> str:
-    """Get category-specific guidance for data subject validation."""
-    return """
-- Customer, Client: Core business subjects - validate source context carefully
-- Employee, Staff, Worker: Internal subjects - check HR system vs documentation
-- Patient, Healthcare: Sensitive subjects (health data) - conservative validation required
-- Subscriber, Member: Marketing/service subjects - check for actual subscription data
-- Student, Learner: Educational subjects - validate educational context
-- Citizen, Resident: Government/public sector subjects - conservative validation required"""
-
-
-def _get_response_format(finding_count: int) -> str:
-    """Get response format section for the prompt."""
-    return f"""**RESPONSE FORMAT:**
+**RESPONSE FORMAT:**
 Respond with valid JSON array only (no markdown formatting).
 IMPORTANT: Only return findings you identify as FALSE_POSITIVE or that need human review.
 Do not include clear TRUE_POSITIVE findings.
@@ -185,3 +171,38 @@ Echo back the exact finding_id from each Finding [...] header - do not modify it
 Use "flag_for_review" when uncertain and human review is recommended.
 
 Review all {finding_count} findings. Return FALSE_POSITIVE findings and uncertain ones needing review (empty array if none):"""
+
+    def _build_findings_block(self, items: Sequence[DataSubjectIndicatorModel]) -> str:
+        """Build formatted findings block for the prompt."""
+        findings_parts: list[str] = []
+
+        for finding in items:
+            evidence_text = (
+                "\n  ".join(f"- {e.content}" for e in finding.evidence)
+                if finding.evidence
+                else "No evidence"
+            )
+            source = finding.metadata.source if finding.metadata else "Unknown"
+            patterns = ", ".join(
+                f"{p.pattern} (×{p.match_count})" for p in finding.matched_patterns
+            )
+
+            findings_parts.append(f"""
+Finding [{finding.id}]:
+  Subject Category: {finding.subject_category}
+  Patterns: {patterns}
+  Source: {source}
+  Evidence:
+  {evidence_text}""")
+
+        return "\n".join(findings_parts)
+
+    def _get_category_guidance(self) -> str:
+        """Get category-specific guidance for data subject validation."""
+        return """
+- Customer, Client: Core business subjects - validate source context carefully
+- Employee, Staff, Worker: Internal subjects - check HR system vs documentation
+- Patient, Healthcare: Sensitive subjects (health data) - conservative validation required
+- Subscriber, Member: Marketing/service subjects - check for actual subscription data
+- Student, Learner: Educational subjects - validate educational context
+- Citizen, Resident: Government/public sector subjects - conservative validation required"""

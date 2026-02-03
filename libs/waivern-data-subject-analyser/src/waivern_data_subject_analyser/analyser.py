@@ -9,7 +9,7 @@ from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import BaseLLMService
+from waivern_llm.v2 import LLMService
 
 from .result_builder import DataSubjectResultBuilder
 from .schemas.types import DataSubjectIndicatorModel
@@ -29,7 +29,7 @@ class DataSubjectAnalyser(Analyser):
     def __init__(
         self,
         config: DataSubjectAnalyserConfig,
-        llm_service: BaseLLMService | None = None,
+        llm_service: LLMService | None = None,
     ) -> None:
         """Initialise the data subject analyser with configuration and dependencies.
 
@@ -127,12 +127,15 @@ class DataSubjectAnalyser(Analyser):
             message_indicators = handler.analyse(input_data)
             indicators.extend(message_indicators)
 
+        # Extract run_id from inputs (set by executor, used for cache scoping)
+        run_id = inputs[0].run_id
+
         # Apply LLM validation if enabled
         validation_result: ValidationResult[DataSubjectIndicatorModel] | None = None
         final_findings = indicators
         if self._config.llm_validation.enable_llm_validation:
             validated_findings, _, validation_result = self._validate_findings(
-                indicators
+                indicators, run_id=run_id
             )
             final_findings = validated_findings
 
@@ -164,6 +167,7 @@ class DataSubjectAnalyser(Analyser):
     def _validate_findings(
         self,
         findings: list[DataSubjectIndicatorModel],
+        run_id: str | None = None,
     ) -> tuple[
         list[DataSubjectIndicatorModel],
         bool,
@@ -177,6 +181,7 @@ class DataSubjectAnalyser(Analyser):
 
         Args:
             findings: List of findings to validate.
+            run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             Tuple of (validated findings, validation applied, validation result).
@@ -192,12 +197,17 @@ class DataSubjectAnalyser(Analyser):
         try:
             # Create orchestrator and validate with marker callback
             # Marker is applied at strategy level to only mark actually-validated findings
-            orchestrator = create_validation_orchestrator(self._config.llm_validation)
+            orchestrator = create_validation_orchestrator(
+                self._config.llm_validation, self._llm_service
+            )
+            # TODO: Post-migration cleanup (once all processors use LLMService v2):
+            #   Remove the None argument - orchestrator.validate() won't need llm_service param
             result = orchestrator.validate(
                 findings,
                 self._config.llm_validation,
-                self._llm_service,
+                None,  # type: ignore[arg-type]  # Strategy uses constructor-injected service
                 marker=self._mark_finding_validated,
+                run_id=run_id,
             )
 
             logger.info(

@@ -5,7 +5,7 @@ in the analyser's public API using mocked LLM service.
 """
 
 import re
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from waivern_analysers_shared.llm_validation.models import (
@@ -19,7 +19,7 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm import BaseLLMService
+from waivern_llm.v2 import LLMCompletionResult, LLMService
 
 from waivern_data_subject_analyser.analyser import DataSubjectAnalyser
 from waivern_data_subject_analyser.types import DataSubjectAnalyserConfig
@@ -37,7 +37,9 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
         """Create mock LLM service."""
-        return Mock(spec=BaseLLMService)
+        service = Mock(spec=LLMService)
+        service.complete = AsyncMock()
+        return service
 
     @pytest.fixture
     def mock_llm_service_unavailable(self) -> None:
@@ -70,11 +72,12 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
             id="test",
             content=test_data.model_dump(exclude_none=True),
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",  # Required for v2 strategies
         )
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # LLM Service Interaction
-    # -------------------------------------------------------------------------
+    # =========================================================================
 
     def test_llm_validation_enabled_calls_llm_service_when_findings_exist(
         self,
@@ -85,22 +88,33 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
-        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
+        def mock_complete(*args, **kwargs):
+            prompt_builder = kwargs.get("prompt_builder")
+            assert prompt_builder is not None
+            # Build prompt to extract finding IDs
+            groups = args[0]
+            items = groups[0].items
+            prompt = prompt_builder.build_prompt(items)
             finding_ids = _extract_finding_ids_from_prompt(prompt)
-            return LLMValidationResponseModel(
-                results=[
-                    LLMValidationResultModel(
-                        finding_id=fid,
-                        validation_result="TRUE_POSITIVE",
-                        confidence=0.9,
-                        reasoning="Valid data subject indicator",
-                        recommended_action="keep",
+            return LLMCompletionResult(
+                responses=[
+                    LLMValidationResponseModel(
+                        results=[
+                            LLMValidationResultModel(
+                                finding_id=fid,
+                                validation_result="TRUE_POSITIVE",
+                                confidence=0.9,
+                                reasoning="Valid data subject indicator",
+                                recommended_action="keep",
+                            )
+                            for fid in finding_ids
+                        ]
                     )
-                    for fid in finding_ids
-                ]
+                ],
+                skipped=[],
             )
 
-        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        mock_llm_service.complete.side_effect = mock_complete
 
         config = DataSubjectAnalyserConfig.from_properties(properties)
         analyser = DataSubjectAnalyser(config, mock_llm_service)
@@ -112,11 +126,7 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
         )
 
         # Assert
-        mock_llm_service.invoke_with_structured_output.assert_called_once()
-        call_args = mock_llm_service.invoke_with_structured_output.call_args
-        # Check prompt contains key validation elements
-        prompt = call_args[0][0]
-        assert "TASK:" in prompt or "Validate" in prompt
+        mock_llm_service.complete.assert_called_once()
 
     def test_llm_validation_disabled_skips_validation(
         self,
@@ -137,12 +147,12 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
         )
 
         # Assert
-        mock_llm_service.invoke_with_structured_output.assert_not_called()
+        mock_llm_service.complete.assert_not_called()
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # Finding Filtering
-    # -------------------------------------------------------------------------
+    # =========================================================================
 
     def test_llm_validation_filters_out_false_positives(
         self,
@@ -153,28 +163,38 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
-        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
+        def mock_complete(*args, **kwargs):
+            prompt_builder = kwargs.get("prompt_builder")
+            assert prompt_builder is not None
+            groups = args[0]
+            items = groups[0].items
+            prompt = prompt_builder.build_prompt(items)
             finding_ids = _extract_finding_ids_from_prompt(prompt)
-            return LLMValidationResponseModel(
-                results=[
-                    LLMValidationResultModel(
-                        finding_id=finding_ids[0],
-                        validation_result="FALSE_POSITIVE",
-                        confidence=0.95,
-                        reasoning="Comment reference, not actual data subject",
-                        recommended_action="discard",
-                    ),
-                    LLMValidationResultModel(
-                        finding_id=finding_ids[1],
-                        validation_result="TRUE_POSITIVE",
-                        confidence=0.9,
-                        reasoning="Actual data subject indicator",
-                        recommended_action="keep",
-                    ),
-                ]
+            return LLMCompletionResult(
+                responses=[
+                    LLMValidationResponseModel(
+                        results=[
+                            LLMValidationResultModel(
+                                finding_id=finding_ids[0],
+                                validation_result="FALSE_POSITIVE",
+                                confidence=0.95,
+                                reasoning="Comment reference, not actual data subject",
+                                recommended_action="discard",
+                            ),
+                            LLMValidationResultModel(
+                                finding_id=finding_ids[1],
+                                validation_result="TRUE_POSITIVE",
+                                confidence=0.9,
+                                reasoning="Actual data subject indicator",
+                                recommended_action="keep",
+                            ),
+                        ]
+                    )
+                ],
+                skipped=[],
             )
 
-        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        mock_llm_service.complete.side_effect = mock_complete
 
         config = DataSubjectAnalyserConfig.from_properties(properties)
         analyser = DataSubjectAnalyser(config, mock_llm_service)
@@ -202,9 +222,9 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
                 .get("data_subject_llm_validated")
             ), "All kept findings should be marked as validated"
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # Graceful Degradation
-    # -------------------------------------------------------------------------
+    # =========================================================================
 
     def test_llm_validation_unavailable_service_returns_original_findings(
         self,
@@ -237,9 +257,7 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
         """Test that LLM service errors return original findings with failure status."""
         # Arrange
         properties = {"llm_validation": {"enable_llm_validation": True}}
-        mock_llm_service.invoke_with_structured_output.side_effect = Exception(
-            "LLM service error"
-        )
+        mock_llm_service.complete.side_effect = Exception("LLM service error")
 
         config = DataSubjectAnalyserConfig.from_properties(properties)
         analyser = DataSubjectAnalyser(config, mock_llm_service)
@@ -261,9 +279,9 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
         assert metadata["validation_summary"]["all_succeeded"] is False
         assert metadata["validation_summary"]["skipped_count"] > 0
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # Edge Cases
-    # -------------------------------------------------------------------------
+    # =========================================================================
 
     def test_no_findings_skips_llm_validation(
         self,
@@ -289,6 +307,7 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
             id="test_no_patterns",
             content=test_data.model_dump(exclude_none=True),
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",  # Required for v2 strategies
         )
 
         config = DataSubjectAnalyserConfig.from_properties(properties)
@@ -301,7 +320,7 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
         )
 
         # Assert
-        mock_llm_service.invoke_with_structured_output.assert_not_called()
+        mock_llm_service.complete.assert_not_called()
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
 
     def test_validation_metadata_includes_removed_categories(
@@ -314,22 +333,32 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
         properties = {"llm_validation": {"enable_llm_validation": True}}
 
         # Mark ALL findings as false positives to trigger group removal
-        def mock_llm_response(prompt: str, _schema: type) -> LLMValidationResponseModel:
+        def mock_complete(*args, **kwargs):
+            prompt_builder = kwargs.get("prompt_builder")
+            assert prompt_builder is not None
+            groups = args[0]
+            items = groups[0].items
+            prompt = prompt_builder.build_prompt(items)
             finding_ids = _extract_finding_ids_from_prompt(prompt)
-            return LLMValidationResponseModel(
-                results=[
-                    LLMValidationResultModel(
-                        finding_id=fid,
-                        validation_result="FALSE_POSITIVE",
-                        confidence=0.95,
-                        reasoning="Not a real data subject indicator",
-                        recommended_action="discard",
+            return LLMCompletionResult(
+                responses=[
+                    LLMValidationResponseModel(
+                        results=[
+                            LLMValidationResultModel(
+                                finding_id=fid,
+                                validation_result="FALSE_POSITIVE",
+                                confidence=0.95,
+                                reasoning="Not a real data subject indicator",
+                                recommended_action="discard",
+                            )
+                            for fid in finding_ids
+                        ]
                     )
-                    for fid in finding_ids
-                ]
+                ],
+                skipped=[],
             )
 
-        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        mock_llm_service.complete.side_effect = mock_complete
 
         config = DataSubjectAnalyserConfig.from_properties(properties)
         analyser = DataSubjectAnalyser(config, mock_llm_service)

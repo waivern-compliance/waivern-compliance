@@ -48,6 +48,9 @@ class PersonalDataValidationStrategy(
         """
         self._llm_service = llm_service
 
+    # TODO: Post-migration cleanup (once all processors use LLMService):
+    #   1. Remove llm_service parameter - strategies now receive LLMService via constructor
+    #   2. Make run_id required (remove None default) - all callers now provide it
     @override
     def validate_findings(
         self,

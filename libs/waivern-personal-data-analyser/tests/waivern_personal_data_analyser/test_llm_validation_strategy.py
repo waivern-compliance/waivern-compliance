@@ -94,6 +94,7 @@ class TestPersonalDataValidationStrategy:
         assert isinstance(call_kwargs["prompt_builder"], PersonalDataPromptBuilder)
         assert call_kwargs["response_model"] == LLMValidationResponseModel
         assert call_kwargs["batching_mode"] == BatchingMode.COUNT_BASED
+        assert call_kwargs["run_id"] == "test-run"
 
     def test_raises_error_when_run_id_not_provided(
         self,
