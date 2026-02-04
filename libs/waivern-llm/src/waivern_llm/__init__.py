@@ -3,10 +3,66 @@
 This module provides the LLM service interface that handles batching internally,
 moving this responsibility from processors/analysers to the LLM service layer.
 
-Key concepts:
-- Processors decide what to group (domain logic)
-- LLM Service decides how to batch (token-aware bin-packing)
-- Unified cache handles both sync responses and async batch tracking
+Architecture
+------------
+
+The LLM service separates concerns between processors and the service layer:
+
+**Processor responsibilities** (domain logic):
+- What to group by (source files, categories, etc.)
+- What content to include with each group
+- Batching mode selection (COUNT_BASED vs EXTENDED_CONTEXT)
+- Prompt building via PromptBuilder protocol
+
+**LLM Service responsibilities** (infrastructure):
+- Token estimation (model-specific)
+- Batch size calculation (based on context window)
+- Bin-packing algorithm (optimisation detail)
+- Response caching (scoped by run_id)
+
+Usage Pattern
+-------------
+
+1. Create ItemGroup(s) with findings and optional content::
+
+    groups = [ItemGroup(items=findings, content=source_content)]
+
+2. Implement PromptBuilder for your domain::
+
+    class MyPromptBuilder(PromptBuilder[MyFinding]):
+        def build_prompt(self, items, content=None) -> str: ...
+
+3. Call LLMService.complete()::
+
+    result = await llm_service.complete(
+        groups,
+        prompt_builder=MyPromptBuilder(),
+        response_model=MyResponseModel,
+        batching_mode=BatchingMode.COUNT_BASED,
+        run_id=run_id,
+    )
+
+4. Handle results and skipped findings::
+
+    for response in result.responses: ...
+    for skipped in result.skipped: ...
+
+Batching Modes
+--------------
+
+- **COUNT_BASED**: Flattens all items, splits by count. Use for evidence-only
+  validation where source content doesn't help.
+
+- **EXTENDED_CONTEXT**: Keeps groups intact, bin-packs by tokens. Use when
+  source file content helps validation (e.g., validating findings against
+  the original source code).
+
+Caching
+-------
+
+The LLMService caches responses per run_id. Cache keys are computed from
+prompt + model + response_model. Cache is cleared after successful completion
+(temporary working storage, not permanent state).
 """
 
 __version__ = "0.1.0"

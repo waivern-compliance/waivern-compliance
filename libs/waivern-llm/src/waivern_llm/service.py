@@ -7,6 +7,33 @@ Key design principles:
 - Processors decide what to group (domain logic)
 - LLM Service decides how to batch (token-aware bin-packing)
 - Unified cache handles both sync responses and async batch tracking
+
+Caching Architecture
+--------------------
+
+The cache uses a unified mechanism for both sync and async modes::
+
+    SYNC MODE (current):
+      prompt → SHA256(prompt|model|response_model) → cache miss → call LLM → cache(completed)
+
+    ASYNC MODE (future Batch API):
+      prompt → SHA256 → cache miss → submit batch → cache(pending, batch_id)
+      ... later (poller) ...
+      batch complete → cache(completed)
+
+    RESUME (both modes):
+      prompt → SHA256 → cache hit (completed) → return cached
+      prompt → SHA256 → cache hit (pending) → skip (async in progress)
+      prompt → SHA256 → cache miss → reprocess (data changed or new)
+
+Cache is scoped by ``run_id`` to isolate concurrent executions. The cache key
+includes prompt, model name, and response model name so that:
+- Same prompt with different models caches separately
+- Same prompt with different response schemas caches separately
+
+Cache entries are **cleared after successful completion** - the cache is
+temporary working storage for resumability, not permanent state. Artifacts
+(the actual findings and results) are the permanent record.
 """
 
 from __future__ import annotations
@@ -192,7 +219,9 @@ class DefaultLLMService(LLMService):
 
             responses.append(response)
 
-        # Clean up cache after successful completion (Design Decision #9)
+        # Clean up cache after successful completion.
+        # Cache is temporary working storage for resumability, not permanent state.
+        # Artifacts (findings, results) are the permanent record.
         await self._cache_store.cache_clear(run_id)
 
         return LLMCompletionResult(responses=responses, skipped=plan.skipped)
