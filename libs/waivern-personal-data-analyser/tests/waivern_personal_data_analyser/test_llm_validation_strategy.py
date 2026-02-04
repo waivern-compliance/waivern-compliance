@@ -1,11 +1,10 @@
 """Tests for PersonalDataValidationStrategy.
 
-These tests verify behaviour specific to the PersonalDataValidationStrategy.
-Base class behaviour (batching, error handling) is tested in
-waivern_analysers_shared/llm_validation/test_default_strategy.py.
+Tests verify the strategy correctly uses LLMService to validate findings
+and maps responses to LLMValidationOutcome.
 """
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from waivern_analysers_shared.llm_validation.models import (
@@ -14,11 +13,18 @@ from waivern_analysers_shared.llm_validation.models import (
 )
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
-from waivern_llm import AnthropicLLMService
+from waivern_llm import (
+    BatchingMode,
+    ItemGroup,
+    LLMCompletionResult,
+    LLMService,
+    SkipReason,
+)
 
 from waivern_personal_data_analyser.llm_validation_strategy import (
     PersonalDataValidationStrategy,
 )
+from waivern_personal_data_analyser.prompts import PersonalDataPromptBuilder
 from waivern_personal_data_analyser.schemas.types import (
     PersonalDataIndicatorMetadata,
     PersonalDataIndicatorModel,
@@ -39,143 +45,199 @@ def _make_finding(
     )
 
 
-def _make_result(
-    finding_id: str,
-    *,
-    is_false_positive: bool = False,
-) -> LLMValidationResultModel:
-    """Create a validation result. Defaults to TRUE_POSITIVE."""
-    return LLMValidationResultModel(
-        finding_id=finding_id,
-        validation_result="FALSE_POSITIVE" if is_false_positive else "TRUE_POSITIVE",
-        confidence=0.9,
-        reasoning="Example" if is_false_positive else "Valid",
-        recommended_action="discard" if is_false_positive else "keep",
-    )
-
-
-def _make_response(
-    results: list[LLMValidationResultModel],
-) -> LLMValidationResponseModel:
-    """Wrap results in a response model."""
-    return LLMValidationResponseModel(results=results)
-
-
 class TestPersonalDataValidationStrategy:
-    """Test suite for PersonalDataValidationStrategy-specific behaviour."""
+    """Test suite for PersonalDataValidationStrategy."""
 
     @pytest.fixture
-    def strategy(self) -> PersonalDataValidationStrategy:
-        """Create strategy instance."""
-        return PersonalDataValidationStrategy()
+    def mock_llm_service(self) -> Mock:
+        """Create mock LLMService."""
+        service = Mock(spec=LLMService)
+        service.complete = AsyncMock()
+        return service
 
     @pytest.fixture
     def config(self) -> LLMValidationConfig:
         """Create standard LLM configuration."""
         return LLMValidationConfig(
             enable_llm_validation=True,
-            llm_batch_size=10,
             llm_validation_mode="standard",
         )
-
-    @pytest.fixture
-    def llm_service(self) -> Mock:
-        """Create mock LLM service."""
-        return Mock(spec=AnthropicLLMService)
 
     @pytest.fixture
     def sample_findings(self) -> list[PersonalDataIndicatorModel]:
         """Create two sample findings for testing."""
         return [
-            _make_finding("email", "test@example.com", "contact_form.php"),
-            _make_finding("phone", "123-456-7890", "customer_db"),
+            _make_finding(
+                "email", "test@example.com", "mysql_database_(prod)_table_(users)"
+            ),
+            _make_finding(
+                "phone", "123-456-7890", "mysql_database_(prod)_table_(contacts)"
+            ),
         ]
 
-    def test_keeps_true_positive_findings(
+    # =========================================================================
+    # Core Validation Behaviour
+    # =========================================================================
+
+    def test_calls_llm_service_complete_with_correct_args(
         self,
-        strategy: PersonalDataValidationStrategy,
+        mock_llm_service: Mock,
         config: LLMValidationConfig,
-        llm_service: Mock,
+    ) -> None:
+        """Strategy calls LLMService.complete() with ItemGroup, prompt_builder, BatchingMode."""
+        findings = [_make_finding("email"), _make_finding("phone")]
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[LLMValidationResponseModel(results=[])],
+            skipped=[],
+        )
+        strategy = PersonalDataValidationStrategy(mock_llm_service)
+
+        strategy.validate_findings(findings, config, "test-run")
+
+        mock_llm_service.complete.assert_called_once()
+        call_kwargs = mock_llm_service.complete.call_args.kwargs
+
+        # Verify ItemGroup
+        groups = mock_llm_service.complete.call_args.args[0]
+        assert len(groups) == 1
+        assert isinstance(groups[0], ItemGroup)
+        assert len(groups[0].items) == 2
+
+        # Verify other args
+        assert isinstance(call_kwargs["prompt_builder"], PersonalDataPromptBuilder)
+        assert call_kwargs["response_model"] == LLMValidationResponseModel
+        assert call_kwargs["batching_mode"] == BatchingMode.COUNT_BASED
+        assert call_kwargs["run_id"] == "test-run"
+
+    # =========================================================================
+    # Response Mapping
+    # =========================================================================
+
+    def test_maps_true_positive_to_kept_findings(
+        self,
+        mock_llm_service: Mock,
+        config: LLMValidationConfig,
         sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
-        """Findings marked TRUE_POSITIVE are kept."""
-        llm_service.invoke_with_structured_output.return_value = _make_response(
-            [
-                _make_result(sample_findings[0].id),
-                _make_result(sample_findings[1].id),
-            ]
+        """Findings marked TRUE_POSITIVE are in llm_validated_kept."""
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=sample_findings[0].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid email",
+                            recommended_action="keep",
+                        ),
+                        LLMValidationResultModel(
+                            finding_id=sample_findings[1].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.85,
+                            reasoning="Valid phone",
+                            recommended_action="keep",
+                        ),
+                    ]
+                )
+            ],
+            skipped=[],
         )
+        strategy = PersonalDataValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(sample_findings, config, llm_service)
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
-        assert len(outcome.kept_findings) == 2
-        assert outcome.kept_findings[0].category == "email"
-        assert outcome.kept_findings[1].category == "phone"
-        assert outcome.validation_succeeded is True
+        assert len(outcome.llm_validated_kept) == 2
+        assert outcome.llm_validated_removed == []
+        assert outcome.llm_not_flagged == []
+        kept_ids = {f.id for f in outcome.llm_validated_kept}
+        assert kept_ids == {sample_findings[0].id, sample_findings[1].id}
 
     def test_filters_out_false_positive_findings(
         self,
-        strategy: PersonalDataValidationStrategy,
+        mock_llm_service: Mock,
         config: LLMValidationConfig,
-        llm_service: Mock,
         sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
-        """Findings marked FALSE_POSITIVE are removed."""
-        llm_service.invoke_with_structured_output.return_value = _make_response(
-            [
-                _make_result(sample_findings[0].id, is_false_positive=True),
-                _make_result(sample_findings[1].id),
-            ]
+        """Findings marked FALSE_POSITIVE by LLM are removed."""
+        # LLM marks first finding as FALSE_POSITIVE, second as TRUE_POSITIVE
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[
+                LLMValidationResponseModel(
+                    results=[
+                        LLMValidationResultModel(
+                            finding_id=sample_findings[0].id,
+                            validation_result="FALSE_POSITIVE",
+                            confidence=0.95,
+                            reasoning="Example data in documentation",
+                            recommended_action="discard",
+                        ),
+                        LLMValidationResultModel(
+                            finding_id=sample_findings[1].id,
+                            validation_result="TRUE_POSITIVE",
+                            confidence=0.9,
+                            reasoning="Valid phone",
+                            recommended_action="keep",
+                        ),
+                    ]
+                )
+            ],
+            skipped=[],
         )
+        strategy = PersonalDataValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(sample_findings, config, llm_service)
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
-        assert len(outcome.kept_findings) == 1
-        assert outcome.kept_findings[0].category == "phone"
-        assert outcome.validation_succeeded is True
+        assert len(outcome.llm_validated_kept) == 1
+        assert outcome.llm_validated_kept[0].id == sample_findings[1].id
         assert len(outcome.llm_validated_removed) == 1
+        assert outcome.llm_validated_removed[0].id == sample_findings[0].id
 
     def test_keeps_findings_not_flagged_by_llm(
         self,
-        strategy: PersonalDataValidationStrategy,
+        mock_llm_service: Mock,
         config: LLMValidationConfig,
-        llm_service: Mock,
         sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
-        """Findings omitted from LLM response are kept (fail-safe)."""
-        # LLM only returns result for first finding
-        llm_service.invoke_with_structured_output.return_value = _make_response(
-            [_make_result(sample_findings[0].id)]
+        """Findings not mentioned in LLM response are kept (fail-safe)."""
+        # LLM returns empty response - no findings flagged
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[LLMValidationResponseModel(results=[])],
+            skipped=[],
         )
+        strategy = PersonalDataValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(sample_findings, config, llm_service)
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
-        # Both kept - second one wasn't flagged as false positive
-        assert len(outcome.kept_findings) == 2
-        assert {f.category for f in outcome.kept_findings} == {"email", "phone"}
-        assert outcome.validation_succeeded is True
-        assert len(outcome.llm_not_flagged) == 1
+        # Both findings kept via fail-safe (not_flagged)
+        assert outcome.llm_validated_kept == []
+        assert outcome.llm_validated_removed == []
+        assert len(outcome.llm_not_flagged) == 2
+        not_flagged_ids = {f.id for f in outcome.llm_not_flagged}
+        assert not_flagged_ids == {sample_findings[0].id, sample_findings[1].id}
 
-    def test_generates_prompt_with_finding_details(
+    # =========================================================================
+    # Error Handling
+    # =========================================================================
+
+    def test_total_failure_returns_all_skipped(
         self,
-        strategy: PersonalDataValidationStrategy,
+        mock_llm_service: Mock,
         config: LLMValidationConfig,
-        llm_service: Mock,
         sample_findings: list[PersonalDataIndicatorModel],
     ) -> None:
-        """Prompt includes finding IDs, categories, and evidence."""
-        llm_service.invoke_with_structured_output.return_value = _make_response([])
+        """Exception from LLMService returns all findings as skipped with BATCH_ERROR."""
+        mock_llm_service.complete.side_effect = Exception("LLM API unavailable")
+        strategy = PersonalDataValidationStrategy(mock_llm_service)
 
-        strategy.validate_findings(sample_findings, config, llm_service)
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
-        # Verify prompt was generated with finding details
-        call_args = llm_service.invoke_with_structured_output.call_args
-        prompt = call_args[0][0]
-
-        # Should include finding IDs for response matching
-        assert sample_findings[0].id in prompt
-        assert sample_findings[1].id in prompt
-
-        # Should include categories
-        assert "email" in prompt
-        assert "phone" in prompt
+        # All findings should be skipped with BATCH_ERROR reason
+        assert outcome.llm_validated_kept == []
+        assert outcome.llm_validated_removed == []
+        assert outcome.llm_not_flagged == []
+        assert len(outcome.skipped) == 2
+        skipped_ids = {s.finding.id for s in outcome.skipped}
+        assert skipped_ids == {sample_findings[0].id, sample_findings[1].id}
+        for skipped in outcome.skipped:
+            assert skipped.reason == SkipReason.BATCH_ERROR

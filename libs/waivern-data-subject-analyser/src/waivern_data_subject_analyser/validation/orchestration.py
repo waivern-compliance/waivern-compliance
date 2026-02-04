@@ -40,6 +40,7 @@ from waivern_analysers_shared.llm_validation import (
     ValidationOrchestrator,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
+from waivern_llm import LLMService
 
 from waivern_data_subject_analyser.llm_validation_strategy import (
     DataSubjectValidationStrategy,
@@ -51,6 +52,7 @@ from .providers import DataSubjectConcernProvider
 
 def create_validation_orchestrator(
     config: LLMValidationConfig,
+    llm_service: LLMService,
 ) -> ValidationOrchestrator[DataSubjectIndicatorModel]:
     """Create orchestrator configured for data subject validation.
 
@@ -60,12 +62,13 @@ def create_validation_orchestrator(
 
     Args:
         config: LLM validation configuration.
+        llm_service: LLM service instance for validation calls.
 
     Returns:
         Configured ValidationOrchestrator instance.
 
     """
-    llm_strategy = DataSubjectValidationStrategy()
+    llm_strategy = DataSubjectValidationStrategy(llm_service)
 
     # Grouping: Design-time decision
     # DataSubjectAnalyser groups findings by subject_category (e.g., "Customer",

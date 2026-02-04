@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 
 from waivern_core import Finding
-from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.types import LLMValidationConfig
 
@@ -33,14 +32,14 @@ class LLMValidationStrategy[TFinding: Finding, TResult](ABC):
         self,
         findings: list[TFinding],
         config: LLMValidationConfig,
-        llm_service: BaseLLMService,
+        run_id: str,
     ) -> TResult:
         """Validate findings using LLM.
 
         Args:
             findings: List of findings to validate.
             config: LLM validation configuration.
-            llm_service: LLM service instance.
+            run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             Strategy-specific result type.

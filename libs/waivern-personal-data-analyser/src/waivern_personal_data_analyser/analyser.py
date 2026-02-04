@@ -14,7 +14,7 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm import BaseLLMService
+from waivern_llm import LLMService
 
 from .pattern_matcher import PersonalDataPatternMatcher
 from .result_builder import PersonalDataResultBuilder
@@ -36,13 +36,13 @@ class PersonalDataAnalyser(Analyser):
     def __init__(
         self,
         config: PersonalDataAnalyserConfig,
-        llm_service: BaseLLMService | None = None,
+        llm_service: LLMService | None = None,
     ) -> None:
         """Initialise the analyser with dependency injection.
 
         Args:
             config: Validated configuration object
-            llm_service: Optional LLM service for validation (injected by factory)
+            llm_service: LLM service for validation (injected by factory)
 
         """
         self._config = config
@@ -160,11 +160,16 @@ class PersonalDataAnalyser(Analyser):
         data_items = self._merge_input_data_items(inputs)
         findings = self._find_patterns_in_data_items(data_items)
 
+        # Extract run_id from inputs (set by executor, used for cache scoping)
+        run_id = inputs[0].run_id
+
         # Apply LLM validation if enabled
         validation_result: ValidationResult[PersonalDataIndicatorModel] | None = None
         final_findings = findings
         if self._config.llm_validation.enable_llm_validation:
-            validated_findings, _, validation_result = self._validate_findings(findings)
+            validated_findings, _, validation_result = self._validate_findings(
+                findings, run_id=run_id
+            )
             final_findings = validated_findings
 
         # Build and return output message
@@ -177,6 +182,7 @@ class PersonalDataAnalyser(Analyser):
     def _validate_findings(
         self,
         findings: list[PersonalDataIndicatorModel],
+        run_id: str | None = None,
     ) -> tuple[
         list[PersonalDataIndicatorModel],
         bool,
@@ -190,6 +196,7 @@ class PersonalDataAnalyser(Analyser):
 
         Args:
             findings: List of findings to validate.
+            run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             Tuple of (validated findings, validation applied, validation result).
@@ -202,14 +209,20 @@ class PersonalDataAnalyser(Analyser):
             logger.warning("LLM service unavailable, returning original findings")
             return findings, False, None
 
+        if run_id is None:
+            logger.warning("run_id is required for LLM validation, skipping")
+            return findings, False, None
+
         try:
             # Create orchestrator and validate with marker callback
             # Marker is applied at strategy level to only mark actually-validated findings
-            orchestrator = create_validation_orchestrator(self._config.llm_validation)
+            orchestrator = create_validation_orchestrator(
+                self._config.llm_validation, self._llm_service
+            )
             result = orchestrator.validate(
                 findings,
                 self._config.llm_validation,
-                self._llm_service,
+                run_id,
                 marker=self._mark_finding_validated,
             )
 

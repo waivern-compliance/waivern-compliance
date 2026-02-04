@@ -1,12 +1,22 @@
-"""Unified validation decision engine for LLM validation results."""
+"""Unified validation decision engine for LLM validation results.
+
+Centralises all decision logic for LLM validation:
+- Individual finding decisions (keep/remove based on LLM result)
+- Group-level decisions (remove group, keep partial, keep all)
+"""
 
 import logging
+from typing import Literal
 
 from waivern_core import Finding
 
 from .models import LLMValidationResultModel
 
 logger = logging.getLogger(__name__)
+
+
+# Type alias for group decision outcomes
+GroupDecision = Literal["remove_group", "keep_partial", "keep_all"]
 
 
 class ValidationDecisionEngine:
@@ -69,3 +79,34 @@ class ValidationDecisionEngine:
             f"Finding '{finding}': "
             f"{result.validation_result} (confidence: {result.confidence:.2f}) - {result.reasoning}"
         )
+
+    # -------------------------------------------------------------------------
+    # Group-Level Decisions
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def classify_group(kept_count: int, removed_count: int) -> GroupDecision:
+        """Classify a group based on validation results of its samples.
+
+        Decision logic:
+        - No validated samples → keep_all (conservative, nothing to base decision on)
+        - All validated samples FALSE_POSITIVE → remove_group (Case A)
+        - Mixed results → keep_partial (Case B/C: keep group, remove only FPs)
+
+        Args:
+            kept_count: Number of samples marked TRUE_POSITIVE or not flagged.
+            removed_count: Number of samples marked FALSE_POSITIVE.
+
+        Returns:
+            GroupDecision indicating what action to take on the group.
+
+        """
+        total_validated = kept_count + removed_count
+
+        if total_validated == 0:
+            return "keep_all"
+
+        if removed_count == total_validated:
+            return "remove_group"
+
+        return "keep_partial"

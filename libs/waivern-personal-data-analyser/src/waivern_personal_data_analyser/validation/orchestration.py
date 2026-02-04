@@ -38,6 +38,7 @@ from waivern_analysers_shared.llm_validation import (
     ValidationOrchestrator,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
+from waivern_llm import LLMService
 
 from waivern_personal_data_analyser.llm_validation_strategy import (
     PersonalDataValidationStrategy,
@@ -49,6 +50,7 @@ from .providers import PersonalDataConcernProvider
 
 def create_validation_orchestrator(
     config: LLMValidationConfig,
+    llm_service: LLMService,
 ) -> ValidationOrchestrator[PersonalDataIndicatorModel]:
     """Create orchestrator configured for personal data validation.
 
@@ -57,12 +59,13 @@ def create_validation_orchestrator(
 
     Args:
         config: LLM validation configuration.
+        llm_service: LLM service instance for validation calls.
 
     Returns:
         Configured ValidationOrchestrator instance.
 
     """
-    llm_strategy = PersonalDataValidationStrategy()
+    llm_strategy = PersonalDataValidationStrategy(llm_service)
 
     # Grouping: Design-time decision
     # PersonalDataAnalyser groups findings by category (e.g., "email", "phone",

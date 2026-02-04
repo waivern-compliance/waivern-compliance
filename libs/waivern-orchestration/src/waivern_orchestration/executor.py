@@ -3,6 +3,51 @@
 The DAGExecutor executes artifacts in parallel using asyncio, respecting
 dependency ordering from the ExecutionDAG. Sync components (connectors,
 processors) are bridged to async via ThreadPoolExecutor.
+
+Resume Capability
+-----------------
+
+The executor supports resuming failed or interrupted runs::
+
+    result = await executor.execute(plan, runbook_path=path, resume_run_id="...")
+
+Execution Flow
+~~~~~~~~~~~~~~
+
+::
+
+    1. Start/Resume run
+       ├─ New run: Create fresh ExecutionState and RunMetadata
+       └─ Resume: Load existing state, validate runbook hash and status
+
+    2. Run DAG sorter - sorter handles dependencies:
+       ├─ sorter.get_ready() returns artifacts whose deps are satisfied
+       ├─ For each ready artifact:
+       │   ├─ If in state.completed → sorter.done(id), skip execution
+       │   ├─ If not completed → execute, then state.mark_completed(id)
+       │   └─ On failure: state.mark_failed(id), skip dependents
+       └─ Save state after each artifact completes
+
+    3. On completion/failure:
+       └─ Update RunMetadata status and save
+
+Design Decisions
+~~~~~~~~~~~~~~~~
+
+**Runbook hash verification**: On resume, the current runbook's SHA-256 hash
+must match the original. Any runbook modification requires a fresh run - this
+prevents subtle bugs from partially-executed modified runbooks.
+
+**Concurrent execution prevention**: ``status: "running"`` in run metadata acts
+as a lock. Attempting to resume an already-running run raises ``RunAlreadyActiveError``.
+
+**State persistence granularity**: State is saved after each artifact (not per-batch)
+to minimise lost progress on crash. The trade-off is more I/O, but artifacts
+typically take seconds to minutes, making this acceptable.
+
+**Store as single source of truth**: ``ExecutionResult`` contains only artifact IDs,
+not artifact content. Consumers load artifacts from the store using ``run_id``.
+This avoids memory duplication and ensures the store is always authoritative.
 """
 
 from __future__ import annotations

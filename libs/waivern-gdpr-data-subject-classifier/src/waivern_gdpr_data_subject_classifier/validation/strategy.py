@@ -13,43 +13,40 @@ Flow
     │                   RiskModifierValidationStrategy                        │
     ├─────────────────────────────────────────────────────────────────────────┤
     │                                                                         │
-    │  Findings ──► Batch by count ──► For each batch:                        │
-    │                     │                    │                              │
-    │                     │                    └──► _validate_batch()         │
-    │                     │                         • Generate prompt         │
-    │                     │                         • Call LLM                │
-    │                     │                         • Parse response          │
-    │                     │                                                   │
-    │                     └──► _aggregate_batch_results()                     │
-    │                              • Group by category                        │
-    │                              • Union modifiers                          │
-    │                              • Average confidence                       │
-    │                                        │                                │
-    │                                        └──► RiskModifierValidationResult│
+    │  Findings ──► Create ItemGroup ──► LLMService.complete()                │
+    │                                           │                             │
+    │                                           └──► Parse responses          │
+    │                                                      │                  │
+    │                                                      └──► Aggregate     │
+    │                                                           by category   │
+    │                                                              │          │
+    │                                              RiskModifierValidationResult│
     │                                                                         │
     └─────────────────────────────────────────────────────────────────────────┘
 
-Unlike FilteringLLMValidationStrategy (keep/remove), this strategy **enriches**
-findings with risk modifiers at the category level.
+Unlike filtering strategies (keep/remove), this strategy **enriches** findings
+with risk modifiers at the category level.
+
+Implements the EnrichmentStrategy protocol from waivern-analysers-shared.
 """
 
+import asyncio
 import logging
 from collections import defaultdict
-from typing import override
 
-from waivern_analysers_shared.llm_validation import DefaultLLMValidationStrategy
-from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_llm import BaseLLMService
+from waivern_llm import (
+    BatchingMode,
+    ItemGroup,
+    LLMService,
+    SkippedFinding,
+)
 from waivern_rulesets import RiskModifier
 
-from waivern_gdpr_data_subject_classifier.prompts.risk_modifier_validation import (
-    get_risk_modifier_validation_prompt,
-)
+from waivern_gdpr_data_subject_classifier.prompts import RiskModifierPromptBuilder
 from waivern_gdpr_data_subject_classifier.schemas import GDPRDataSubjectFindingModel
 
 from .models import (
     CategoryRiskModifierResult,
-    RiskModifierBatchResult,
     RiskModifierValidationResponseModel,
     RiskModifierValidationResult,
 )
@@ -57,117 +54,96 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-class RiskModifierValidationStrategy(
-    DefaultLLMValidationStrategy[
-        GDPRDataSubjectFindingModel,
-        RiskModifierValidationResult,
-        RiskModifierBatchResult,
-    ]
-):
+class RiskModifierValidationStrategy:
     """LLM validation strategy for detecting risk modifiers.
 
-    Implements the enrichment paradigm where the LLM identifies risk modifiers
-    (e.g., minor, vulnerable_individual) for data subject findings. Results
-    are aggregated at the category level using union semantics.
+    Implements the EnrichmentStrategy protocol where the LLM identifies
+    risk modifiers (e.g., minor, vulnerable_individual) for data subject
+    findings. Results are aggregated at the category level using union
+    semantics.
 
-    Args:
-        available_modifiers: List of risk modifiers from the ruleset.
-
+    The strategy receives LLMService via constructor injection and calls
+    `enrich()` to detect risk modifiers.
     """
 
-    def __init__(self, available_modifiers: list[RiskModifier]) -> None:
-        """Initialise strategy with available modifiers.
+    def __init__(
+        self,
+        available_modifiers: list[RiskModifier],
+        llm_service: LLMService,
+    ) -> None:
+        """Initialise strategy with available modifiers and LLM service.
 
         Args:
             available_modifiers: List of risk modifiers from the ruleset
                 that the LLM should look for.
+            llm_service: LLMService instance for making validation calls.
 
         """
         self._available_modifiers = available_modifiers
+        self._llm_service = llm_service
+        self._prompt_builder = RiskModifierPromptBuilder(available_modifiers)
 
-    # -------------------------------------------------------------------------
-    # Batch Validation
-    # -------------------------------------------------------------------------
-
-    @override
-    def _validate_batch(
+    def enrich(
         self,
-        findings_batch: list[GDPRDataSubjectFindingModel],
-        config: LLMValidationConfig,
-        llm_service: BaseLLMService,
-    ) -> RiskModifierBatchResult:
-        """Validate a batch of findings for risk modifiers.
+        findings: list[GDPRDataSubjectFindingModel],
+        run_id: str,
+    ) -> RiskModifierValidationResult:
+        """Enrich findings with risk modifiers using LLM.
 
-        1. Generate prompt using the risk modifier validation prompt
-        2. Call LLM with RiskModifierValidationResponseModel
-        3. Parse response into batch result
+        Orchestrates the enrichment flow:
+        1. Wrap findings in ItemGroup for LLMService
+        2. Call LLMService.complete() with prompt builder
+        3. Parse responses and aggregate by category
+        4. Handle skipped findings gracefully
 
         Args:
-            findings_batch: Batch of findings to validate.
-            config: LLM validation configuration.
-            llm_service: LLM service instance.
+            findings: Findings to enrich.
+            run_id: Run ID for cache scoping.
 
         Returns:
-            Batch result with modifiers, confidences, and categories per finding.
+            RiskModifierValidationResult with category-level modifiers.
 
         """
-        prompt = get_risk_modifier_validation_prompt(
-            findings_batch, self._available_modifiers
-        )
+        if not findings:
+            return RiskModifierValidationResult(
+                category_results=[],
+                total_findings=0,
+                total_sampled=0,
+                validation_succeeded=True,
+            )
 
-        logger.debug(
-            f"Validating batch of {len(findings_batch)} findings for risk modifiers"
-        )
-        response = llm_service.invoke_with_structured_output(
-            prompt, RiskModifierValidationResponseModel
-        )
-        logger.debug(f"Received {len(response.results)} risk modifier results")
+        try:
+            return asyncio.run(self._enrich_async(findings, run_id))
+        except Exception as e:
+            logger.error(f"LLM enrichment failed: {e}")
+            return self._handle_total_failure(findings)
 
-        return self._parse_batch_response(findings_batch, response)
-
-    def _parse_batch_response(
+    async def _enrich_async(
         self,
-        findings_batch: list[GDPRDataSubjectFindingModel],
-        response: RiskModifierValidationResponseModel,
-    ) -> RiskModifierBatchResult:
-        """Parse LLM response into batch result."""
-        # Build lookup from finding ID to finding
-        id_to_finding = {f.id: f for f in findings_batch}
-
-        finding_modifiers: dict[str, list[str]] = {}
-        finding_confidences: dict[str, float] = {}
-        finding_categories: dict[str, str] = {}
-
-        # Record categories for all findings in batch
-        for finding in findings_batch:
-            finding_categories[finding.id] = finding.data_subject_category
-
-        # Extract modifiers from LLM response
-        for result in response.results:
-            if result.finding_id not in id_to_finding:
-                logger.warning(f"Unknown finding_id from LLM: {result.finding_id}")
-                continue
-
-            finding_modifiers[result.finding_id] = result.risk_modifiers
-            finding_confidences[result.finding_id] = result.confidence
-
-        return RiskModifierBatchResult(
-            finding_modifiers=finding_modifiers,
-            finding_confidences=finding_confidences,
-            finding_categories=finding_categories,
-        )
-
-    # -------------------------------------------------------------------------
-    # Result Aggregation
-    # -------------------------------------------------------------------------
-
-    @override
-    def _aggregate_batch_results(
-        self,
-        batch_results: list[RiskModifierBatchResult],
-        failed_batches: list[list[GDPRDataSubjectFindingModel]],
+        findings: list[GDPRDataSubjectFindingModel],
+        run_id: str,
     ) -> RiskModifierValidationResult:
-        """Aggregate batch results into category-level results.
+        """Async enrichment implementation."""
+        # Wrap findings in a single ItemGroup (no content needed for COUNT_BASED)
+        groups = [ItemGroup(items=findings, content=None)]
+
+        result = await self._llm_service.complete(
+            groups,
+            prompt_builder=self._prompt_builder,
+            response_model=RiskModifierValidationResponseModel,
+            batching_mode=BatchingMode.COUNT_BASED,
+            run_id=run_id,
+        )
+
+        return self._aggregate_results(findings, result.responses, result.skipped)
+
+    def _aggregate_results(
+        self,
+        findings: list[GDPRDataSubjectFindingModel],
+        responses: list[RiskModifierValidationResponseModel],
+        skipped: list[SkippedFinding[GDPRDataSubjectFindingModel]],
+    ) -> RiskModifierValidationResult:
+        """Aggregate LLM responses into category-level results.
 
         Groups findings by category and aggregates:
         - Modifiers: union of all modifiers in category
@@ -175,29 +151,34 @@ class RiskModifierValidationStrategy(
         - Count: number of findings per category
 
         Args:
-            batch_results: Results from successful batches.
-            failed_batches: Findings from batches that failed LLM validation.
+            findings: All findings that were sent for enrichment.
+            responses: Responses from successful LLM calls.
+            skipped: Findings that could not be processed.
 
         Returns:
             Aggregated result with category-level risk modifiers.
 
         """
+        # Build lookup from finding ID to finding
+        findings_by_id = {f.id: f for f in findings}
+
         # Accumulators for category-level aggregation
         category_modifiers: dict[str, set[str]] = defaultdict(set)
         category_confidences: dict[str, list[float]] = defaultdict(list)
         category_counts: dict[str, int] = defaultdict(int)
 
-        # Aggregate from successful batches
-        for batch in batch_results:
-            for finding_id, modifiers in batch.finding_modifiers.items():
-                category = batch.finding_categories[finding_id]
-                category_modifiers[category].update(modifiers)
-                category_counts[category] += 1
+        # Process all responses
+        for response in responses:
+            for result in response.results:
+                finding = findings_by_id.get(result.finding_id)
+                if finding is None:
+                    logger.warning(f"Unknown finding_id from LLM: {result.finding_id}")
+                    continue
 
-                if finding_id in batch.finding_confidences:
-                    category_confidences[category].append(
-                        batch.finding_confidences[finding_id]
-                    )
+                category = finding.data_subject_category
+                category_modifiers[category].update(result.risk_modifiers)
+                category_confidences[category].append(result.confidence)
+                category_counts[category] += 1
 
         # Build category results
         category_results = [
@@ -215,22 +196,18 @@ class RiskModifierValidationStrategy(
         ]
 
         total_sampled = sum(category_counts.values())
-        total_failed = sum(len(batch) for batch in failed_batches)
+        has_skipped = len(skipped) > 0
 
         return RiskModifierValidationResult(
             category_results=category_results,
-            total_findings=total_sampled + total_failed,
+            total_findings=len(findings),
             total_sampled=total_sampled,
-            validation_succeeded=len(failed_batches) == 0,
+            validation_succeeded=not has_skipped,
         )
 
-    # -------------------------------------------------------------------------
-    # Failure Handling
-    # -------------------------------------------------------------------------
-
-    @override
     def _handle_total_failure(
-        self, findings: list[GDPRDataSubjectFindingModel]
+        self,
+        findings: list[GDPRDataSubjectFindingModel],
     ) -> RiskModifierValidationResult:
         """Handle total validation failure.
 
@@ -238,7 +215,7 @@ class RiskModifierValidationStrategy(
         Returns a fail-safe result with no modifiers detected.
 
         Args:
-            findings: All findings that were to be validated.
+            findings: All findings that were to be enriched.
 
         Returns:
             Empty result with validation_succeeded=False.

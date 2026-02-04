@@ -3,10 +3,12 @@
 Verifies the output schema has the expected fields for client deliverables.
 """
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
-from waivern_analysers_shared.llm_validation import LLMValidationResponseModel
+from waivern_analysers_shared.llm_validation.models import (
+    LLMValidationResponseModel,
+)
 from waivern_core.message import Message
 from waivern_core.schemas import (
     BaseMetadata,
@@ -14,7 +16,7 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm import BaseLLMService
+from waivern_llm import LLMCompletionResult, LLMService
 
 from waivern_processing_purpose_analyser import (
     ProcessingPurposeAnalyser,
@@ -28,7 +30,9 @@ class TestSamplingOutputStructure:
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
         """Create mock LLM service."""
-        return Mock(spec=BaseLLMService)
+        service = Mock(spec=LLMService)
+        service.complete = AsyncMock()
+        return service
 
     @pytest.fixture
     def test_message_with_multiple_purposes(self) -> Message:
@@ -75,6 +79,7 @@ class TestSamplingOutputStructure:
             id="sampling_test",
             content=test_data.model_dump(exclude_none=True),
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-sampling-run",
         )
 
     def test_output_has_purposes_list_in_summary(
@@ -96,9 +101,10 @@ class TestSamplingOutputStructure:
             }
         )
 
-        # Mock LLM to return empty false_positives (all true positives)
-        mock_llm_service.invoke_with_structured_output.return_value = (
-            LLMValidationResponseModel(results=[])
+        # Mock LLM to return empty results (all true positives)
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[LLMValidationResponseModel(results=[])],
+            skipped=[],
         )
 
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
@@ -139,8 +145,9 @@ class TestSamplingOutputStructure:
             }
         )
 
-        mock_llm_service.invoke_with_structured_output.return_value = (
-            LLMValidationResponseModel(results=[])
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[LLMValidationResponseModel(results=[])],
+            skipped=[],
         )
 
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
@@ -183,8 +190,9 @@ class TestSamplingOutputStructure:
         )
 
         # Mock LLM to return empty results (all findings are true positives)
-        mock_llm_service.invoke_with_structured_output.return_value = (
-            LLMValidationResponseModel(results=[])
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[LLMValidationResponseModel(results=[])],
+            skipped=[],
         )
 
         analyser = ProcessingPurposeAnalyser(config, mock_llm_service)

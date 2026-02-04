@@ -9,15 +9,16 @@ Key behaviour difference:
 - LLM path: Category-level detection → apply to ALL findings in that category
 """
 
-import re
-from unittest.mock import Mock
+from collections.abc import Sequence
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import BaseLLMService
+from waivern_llm import ItemGroup, LLMCompletionResult, LLMService
 
 from waivern_gdpr_data_subject_classifier.classifier import GDPRDataSubjectClassifier
+from waivern_gdpr_data_subject_classifier.schemas import GDPRDataSubjectFindingModel
 from waivern_gdpr_data_subject_classifier.types import GDPRDataSubjectClassifierConfig
 from waivern_gdpr_data_subject_classifier.validation.models import (
     RiskModifierResultModel,
@@ -30,8 +31,10 @@ class TestGDPRDataSubjectClassifierLLMValidation:
 
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
-        """Create mock LLM service."""
-        return Mock(spec=BaseLLMService)
+        """Create mock LLM service with async complete method."""
+        service = Mock(spec=LLMService)
+        service.complete = AsyncMock()
+        return service
 
     @pytest.fixture
     def input_message_with_findings(self) -> Message:
@@ -64,6 +67,7 @@ class TestGDPRDataSubjectClassifierLLMValidation:
                 ]
             },
             schema=Schema("data_subject_indicator", "1.0.0"),
+            run_id="test-run-id",
         )
 
     @pytest.fixture
@@ -100,10 +104,11 @@ class TestGDPRDataSubjectClassifierLLMValidation:
                 ]
             },
             schema=Schema("data_subject_indicator", "1.0.0"),
+            run_id="test-run-id",
         )
 
     # -------------------------------------------------------------------------
-    # Test Stubs - To be implemented
+    # LLM Validation Tests
     # -------------------------------------------------------------------------
 
     def test_process_uses_regex_when_llm_disabled(
@@ -113,7 +118,7 @@ class TestGDPRDataSubjectClassifierLLMValidation:
     ) -> None:
         """When LLM validation disabled, uses regex-based risk detection per-finding.
 
-        The first finding has "8-year-old" which should match the 'minor' pattern.
+        The first finding has "child" which should match the 'minor' pattern.
         LLM service should NOT be called.
         """
         # Arrange: LLM validation disabled
@@ -131,7 +136,7 @@ class TestGDPRDataSubjectClassifierLLMValidation:
         )
 
         # Assert: LLM not called
-        mock_llm_service.invoke_with_structured_output.assert_not_called()
+        mock_llm_service.complete.assert_not_called()
 
         # Assert: Regex-based detection found 'minor' in the healthcare finding
         # Note: "patient" indicator category maps to "healthcare" data_subject_category
@@ -153,17 +158,20 @@ class TestGDPRDataSubjectClassifierLLMValidation:
         )
 
         # Mock LLM to return category-level modifiers
-        mock_llm_service.invoke_with_structured_output.return_value = (
-            RiskModifierValidationResponseModel(
-                results=[
-                    RiskModifierResultModel(
-                        finding_id="any-id",  # Will be matched by strategy
-                        risk_modifiers=["minor"],
-                        confidence=0.9,
-                        reasoning="Test reasoning",
-                    )
-                ]
-            )
+        mock_llm_service.complete.return_value = LLMCompletionResult(
+            responses=[
+                RiskModifierValidationResponseModel(
+                    results=[
+                        RiskModifierResultModel(
+                            finding_id="any-id",  # Will be matched by strategy
+                            risk_modifiers=["minor"],
+                            confidence=0.9,
+                            reasoning="Test reasoning",
+                        )
+                    ]
+                )
+            ],
+            skipped=[],
         )
 
         classifier = GDPRDataSubjectClassifier(
@@ -177,7 +185,7 @@ class TestGDPRDataSubjectClassifierLLMValidation:
         )
 
         # Assert: LLM service was called (via strategy)
-        mock_llm_service.invoke_with_structured_output.assert_called()
+        mock_llm_service.complete.assert_called()
 
     def test_process_applies_category_level_modifiers_from_llm(
         self,
@@ -195,23 +203,35 @@ class TestGDPRDataSubjectClassifierLLMValidation:
             {"llm_validation": {"enable_llm_validation": True}}
         )
 
-        def mock_llm_response(
-            prompt: str, _response_model: type
-        ) -> RiskModifierValidationResponseModel:
-            # Extract finding IDs from prompt and return modifiers for first one
-            finding_ids = re.findall(r"Finding \[([a-f0-9-]+)\]:", prompt)
-            return RiskModifierValidationResponseModel(
-                results=[
+        # We need to capture finding IDs dynamically since they're UUID-generated
+        # The strategy will call complete() with ItemGroups containing findings
+        def mock_complete_response(
+            groups: Sequence[ItemGroup[GDPRDataSubjectFindingModel]],
+            **_kwargs: object,
+        ) -> LLMCompletionResult[
+            GDPRDataSubjectFindingModel, RiskModifierValidationResponseModel
+        ]:
+            # Extract findings from the ItemGroup to get their IDs
+            finding_ids = [item.id for group in groups for item in group.items]
+
+            # Return modifiers for at least one finding per category
+            results: list[RiskModifierResultModel] = []
+            if finding_ids:
+                results.append(
                     RiskModifierResultModel(
-                        finding_id=finding_ids[0] if finding_ids else "unknown",
-                        risk_modifiers=["minor"],  # LLM detects minor
+                        finding_id=finding_ids[0],
+                        risk_modifiers=["minor"],
                         confidence=0.9,
                         reasoning="Child patient detected",
                     )
-                ]
+                )
+
+            return LLMCompletionResult(
+                responses=[RiskModifierValidationResponseModel(results=results)],
+                skipped=[],
             )
 
-        mock_llm_service.invoke_with_structured_output.side_effect = mock_llm_response
+        mock_llm_service.complete.side_effect = mock_complete_response
 
         classifier = GDPRDataSubjectClassifier(
             config=config, llm_service=mock_llm_service
@@ -251,9 +271,7 @@ class TestGDPRDataSubjectClassifierLLMValidation:
         )
 
         # LLM service throws exception
-        mock_llm_service.invoke_with_structured_output.side_effect = Exception(
-            "LLM service unavailable"
-        )
+        mock_llm_service.complete.side_effect = Exception("LLM service unavailable")
 
         classifier = GDPRDataSubjectClassifier(
             config=config, llm_service=mock_llm_service

@@ -25,6 +25,11 @@ def _create_test_finding(
     )
 
 
+# =============================================================================
+# Individual Finding Decisions
+# =============================================================================
+
+
 class TestValidationDecisionEngine:
     """Test validation decision engine logic."""
 
@@ -87,3 +92,52 @@ class TestValidationDecisionEngine:
 
             actual = ValidationDecisionEngine.should_keep_finding(result, finding)
             assert actual == expected, f"Action '{action}' should result in {expected}"
+
+
+# =============================================================================
+# Group-Level Decisions
+# =============================================================================
+
+
+class TestGroupClassification:
+    """Test group-level classification logic."""
+
+    def test_classify_group_returns_keep_all_when_no_validated_samples(self) -> None:
+        """Test that groups with no validated samples are kept entirely."""
+        assert (
+            ValidationDecisionEngine.classify_group(kept_count=0, removed_count=0)
+            == "keep_all"
+        )
+
+    def test_classify_group_returns_remove_group_when_all_false_positive(self) -> None:
+        """Test that groups where all validated samples are FALSE_POSITIVE are removed."""
+        assert (
+            ValidationDecisionEngine.classify_group(kept_count=0, removed_count=3)
+            == "remove_group"
+        )
+        assert (
+            ValidationDecisionEngine.classify_group(kept_count=0, removed_count=1)
+            == "remove_group"
+        )
+
+    def test_classify_group_returns_keep_partial_when_mixed_results(self) -> None:
+        """Test that groups with mixed results keep the group but remove FPs."""
+        assert (
+            ValidationDecisionEngine.classify_group(kept_count=2, removed_count=1)
+            == "keep_partial"
+        )
+        assert (
+            ValidationDecisionEngine.classify_group(kept_count=1, removed_count=2)
+            == "keep_partial"
+        )
+
+    def test_classify_group_returns_keep_partial_when_all_true_positive(self) -> None:
+        """Test that groups with all TRUE_POSITIVE samples keep the group."""
+        assert (
+            ValidationDecisionEngine.classify_group(kept_count=3, removed_count=0)
+            == "keep_partial"
+        )
+        assert (
+            ValidationDecisionEngine.classify_group(kept_count=1, removed_count=0)
+            == "keep_partial"
+        )

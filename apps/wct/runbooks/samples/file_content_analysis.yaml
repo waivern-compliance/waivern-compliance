@@ -3,7 +3,6 @@ description: >
   Analyse file content for personal data.
   This is a sample runbook to demonstrate how the system works.
 contact: "Paul Smith (HR) <paul.smith@company.co.uk>"
-
 artifacts:
   # Source artifact - extracts file content
   file_content:
@@ -14,7 +13,7 @@ artifacts:
       properties:
         path: "./libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock_lite"
         exclude_patterns: ["*.pyc", "__pycache__"]
-        max_files: 100
+        max_files: 50
 
   # Personal data analysis pipeline
   personal_data_indicators:
@@ -32,6 +31,7 @@ artifacts:
           enable_llm_validation: false
           llm_batch_size: 50
           llm_validation_mode: "standard"
+    output: true
 
   gdpr_personal_data:
     name: "GDPR Personal Data Classification"

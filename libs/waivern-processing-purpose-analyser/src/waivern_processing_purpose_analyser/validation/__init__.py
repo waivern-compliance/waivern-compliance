@@ -9,10 +9,7 @@ Naming convention:
 """
 
 from .extended_context_strategy import SourceCodeValidationStrategy
-from .orchestration import (
-    ProcessingPurposeValidationStrategy,
-    create_validation_orchestrator,
-)
+from .orchestration import create_validation_orchestrator
 from .providers import (
     ProcessingPurposeConcernProvider,
     SourceCodeSourceProvider,
@@ -24,7 +21,6 @@ __all__ = [
     "SourceCodeValidationStrategy",
     # Domain-specific (all schemas)
     "ProcessingPurposeConcernProvider",
-    "ProcessingPurposeValidationStrategy",
     # Factory
     "create_validation_orchestrator",
 ]

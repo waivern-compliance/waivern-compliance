@@ -8,7 +8,7 @@ from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
-from waivern_llm import BaseLLMService
+from waivern_llm import LLMService
 from waivern_rulesets import (
     GDPRDataSubjectClassificationRule,
     RiskModifiers,
@@ -90,7 +90,7 @@ class GDPRDataSubjectClassifier(Classifier):
     def __init__(
         self,
         config: GDPRDataSubjectClassifierConfig | None = None,
-        llm_service: BaseLLMService | None = None,
+        llm_service: LLMService | None = None,
     ) -> None:
         """Initialise the classifier.
 
@@ -121,7 +121,8 @@ class GDPRDataSubjectClassifier(Classifier):
             RiskModifierValidationStrategy(
                 available_modifiers=list(
                     risk_modifiers.risk_increasing + risk_modifiers.risk_decreasing
-                )
+                ),
+                llm_service=llm_service,
             )
             if config.llm_validation.enable_llm_validation and llm_service
             else None
@@ -195,6 +196,9 @@ class GDPRDataSubjectClassifier(Classifier):
                 "Received empty inputs list."
             )
 
+        # Extract run_id from inputs (set by executor, used for cache scoping)
+        run_id = inputs[0].run_id
+
         # Step 1: Aggregate findings from all input messages (fan-in support)
         input_findings: list[dict[str, object]] = []
         for input_message in inputs:
@@ -208,7 +212,7 @@ class GDPRDataSubjectClassifier(Classifier):
 
         # Step 3: Detect risk modifiers
         classified_findings, validation_result = self._apply_risk_modifiers(
-            classified_findings
+            classified_findings, run_id=run_id
         )
 
         # Step 4: Build and return output message
@@ -322,6 +326,7 @@ class GDPRDataSubjectClassifier(Classifier):
     def _apply_risk_modifiers(
         self,
         findings: list[GDPRDataSubjectFindingModel],
+        run_id: str | None = None,
     ) -> tuple[list[GDPRDataSubjectFindingModel], RiskModifierValidationResult | None]:
         """Apply risk modifiers to findings via LLM or regex fallback.
 
@@ -331,38 +336,38 @@ class GDPRDataSubjectClassifier(Classifier):
 
         Args:
             findings: Classified findings without risk modifiers.
+            run_id: Unique identifier for the current run, used for cache scoping.
+                    If None, falls back to regex path.
 
         Returns:
             Tuple of (findings with risk modifiers applied, validation result or None).
 
         """
-        if self._validation_strategy and self._llm_service:
-            return self._apply_risk_modifiers_via_llm(findings)
+        if self._validation_strategy and self._llm_service and run_id is not None:
+            return self._apply_risk_modifiers_via_llm(findings, run_id=run_id)
         return self._apply_risk_modifiers_via_regex(findings), None
 
     def _apply_risk_modifiers_via_llm(
         self,
         findings: list[GDPRDataSubjectFindingModel],
+        run_id: str,
     ) -> tuple[list[GDPRDataSubjectFindingModel], RiskModifierValidationResult | None]:
         """Apply risk modifiers using LLM validation at category level.
 
         Args:
             findings: Classified findings without risk modifiers.
+            run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             Tuple of (findings with category-level risk modifiers, validation result).
 
         """
         # Type narrowing handled by caller check, but be explicit for type checker
-        if self._validation_strategy is None or self._llm_service is None:
+        if self._validation_strategy is None:
             return self._apply_risk_modifiers_via_regex(findings), None
 
-        # Call LLM validation strategy
-        result = self._validation_strategy.validate_findings(
-            findings,
-            self._config.llm_validation,
-            self._llm_service,
-        )
+        # Call LLM enrichment strategy
+        result = self._validation_strategy.enrich(findings, run_id=run_id)
 
         # If validation failed, fall back to regex
         if not result.validation_succeeded or not result.category_results:

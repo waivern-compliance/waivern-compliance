@@ -40,12 +40,12 @@ class ServiceFactory[T](Protocol):
         ```python
         from waivern_core.services import BaseServiceConfiguration
 
-        class LLMServiceConfiguration(BaseServiceConfiguration):
-            provider: str
+        class MyServiceConfiguration(BaseServiceConfiguration):
+            endpoint: str
             api_key: str
 
-        class LLMServiceFactory:
-            def __init__(self, config: LLMServiceConfiguration | None = None):
+        class MyServiceFactory:
+            def __init__(self, config: MyServiceConfiguration | None = None):
                 self._config = config  # Optional - can be None
 
             def can_create(self) -> bool:
@@ -53,11 +53,11 @@ class ServiceFactory[T](Protocol):
                 config = self._config or self._try_config_from_env()
                 return config is not None
 
-            def create(self) -> BaseLLMService | None:
+            def create(self) -> MyService | None:
                 config = self._config or self._try_config_from_env()
                 if not config:
                     return None
-                return BaseLLMService(config.provider, config.api_key)
+                return MyService(config.endpoint, config.api_key)
         ```
 
     """
@@ -150,12 +150,12 @@ class ServiceProvider(Protocol):
 
         Example:
             ```python
-            llm_service = provider.get_service(BaseLLMService)
-            if llm_service:
-                result = llm_service.invoke(prompt)
+            cache_service = provider.get_service(CacheService)
+            if cache_service:
+                result = cache_service.get(key)
             else:
-                # Fall back to non-LLM analysis
-                result = pattern_match_only(text)
+                # Fall back to uncached retrieval
+                result = fetch_directly(key)
             ```
 
         """
@@ -176,9 +176,9 @@ class ServiceProvider(Protocol):
 
         Example:
             ```python
-            if provider.is_available(BaseLLMService):
-                llm_service = provider.get_service(BaseLLMService)
-                result = llm_service.invoke(prompt)
+            if provider.is_available(CacheService):
+                cache = provider.get_service(CacheService)
+                result = cache.get(key)
             ```
 
         """

@@ -17,8 +17,7 @@ from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
 from waivern_core import Message
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
-from waivern_llm import BaseLLMService
-from waivern_llm.di import LLMServiceFactory
+from waivern_llm import LLMService, LLMServiceFactory
 from waivern_orchestration import (
     DAGExecutor,
     ExecutionPlan,
@@ -87,8 +86,8 @@ def _build_service_container() -> ServiceContainer:
     """Build a ServiceContainer with required services.
 
     Creates and configures a ServiceContainer with:
-    - LLMService (singleton) - for LLM-based analysis
-    - ArtifactStore (transient) - fresh store per execution
+    - LLMService (singleton) - shared across components
+    - ArtifactStore (singleton) - shared between executor and exporter
 
     Returns:
         Configured ServiceContainer.
@@ -98,7 +97,7 @@ def _build_service_container() -> ServiceContainer:
 
     # Register LLM service as singleton (shared across components)
     container.register(
-        ServiceDescriptor(BaseLLMService, LLMServiceFactory(), "singleton")
+        ServiceDescriptor(LLMService, LLMServiceFactory(container), "singleton")
     )
 
     # Register ArtifactStore as singleton (shared between executor and exporter)

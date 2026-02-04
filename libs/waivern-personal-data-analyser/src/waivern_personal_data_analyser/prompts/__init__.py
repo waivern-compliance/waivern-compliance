@@ -1,11 +1,9 @@
-"""LLM validation prompts for personal data analysis.
+"""LLM validation prompts for personal data findings."""
 
-This module contains prompt templates used for LLM-based validation
-of personal data findings to filter false positives.
-"""
-
-from .personal_data_validation import get_personal_data_validation_prompt
+from waivern_personal_data_analyser.prompts.prompt_builder import (
+    PersonalDataPromptBuilder,
+)
 
 __all__ = [
-    "get_personal_data_validation_prompt",
+    "PersonalDataPromptBuilder",
 ]

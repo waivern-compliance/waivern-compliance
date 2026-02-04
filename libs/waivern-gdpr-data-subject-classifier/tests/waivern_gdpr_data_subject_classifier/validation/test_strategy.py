@@ -1,21 +1,19 @@
 """Tests for RiskModifierValidationStrategy.
 
-Tests focus on the NEW behaviour specific to this strategy:
+Tests focus on the behaviour specific to this strategy:
 - Category-level aggregation of modifiers
 - Union semantics for combining modifiers
 - Average confidence calculation
 - Failure handling
 
-Base class behaviours (batching, error routing) are already tested in
-waivern-analysers-shared and are NOT re-tested here.
+LLMService batching and caching are tested in waivern-llm and NOT re-tested here.
 """
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
-from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
-from waivern_llm import BaseLLMService
+from waivern_llm import LLMCompletionResult, LLMService, SkippedFinding, SkipReason
 from waivern_rulesets import RiskModifier
 
 from waivern_gdpr_data_subject_classifier.schemas import (
@@ -70,6 +68,19 @@ def make_response(
     return RiskModifierValidationResponseModel(results=results)
 
 
+def make_completion_result(
+    responses: list[RiskModifierValidationResponseModel],
+    skipped: list[SkippedFinding[GDPRDataSubjectFindingModel]] | None = None,
+) -> LLMCompletionResult[
+    GDPRDataSubjectFindingModel, RiskModifierValidationResponseModel
+]:
+    """Create an LLMCompletionResult for testing."""
+    return LLMCompletionResult(
+        responses=responses,
+        skipped=skipped or [],
+    )
+
+
 class TestRiskModifierValidationStrategy:
     """Test suite for RiskModifierValidationStrategy."""
 
@@ -90,25 +101,28 @@ class TestRiskModifierValidationStrategy:
         ]
 
     @pytest.fixture
-    def strategy(
-        self, available_modifiers: list[RiskModifier]
-    ) -> RiskModifierValidationStrategy:
-        """Create strategy instance with test modifiers."""
-        return RiskModifierValidationStrategy(available_modifiers=available_modifiers)
+    def llm_service(self) -> Mock:
+        """Create mock LLM service with async complete method."""
+        mock = Mock(spec=LLMService)
+        mock.complete = AsyncMock()
+        return mock
 
     @pytest.fixture
-    def config(self) -> LLMValidationConfig:
-        """Create standard LLM configuration."""
-        return LLMValidationConfig(
-            enable_llm_validation=True,
-            llm_batch_size=10,
-            llm_validation_mode="standard",
+    def strategy(
+        self,
+        available_modifiers: list[RiskModifier],
+        llm_service: Mock,
+    ) -> RiskModifierValidationStrategy:
+        """Create strategy instance with LLMService injected."""
+        return RiskModifierValidationStrategy(
+            available_modifiers=available_modifiers,
+            llm_service=llm_service,
         )
 
     @pytest.fixture
-    def llm_service(self) -> Mock:
-        """Create mock LLM service."""
-        return Mock(spec=BaseLLMService)
+    def run_id(self) -> str:
+        """Provide a test run ID for cache scoping."""
+        return "test-run-123"
 
     # -------------------------------------------------------------------------
     # Category-Level Aggregation
@@ -117,8 +131,8 @@ class TestRiskModifierValidationStrategy:
     def test_aggregates_modifiers_by_category(
         self,
         strategy: RiskModifierValidationStrategy,
-        config: LLMValidationConfig,
         llm_service: Mock,
+        run_id: str,
     ) -> None:
         """Findings from different categories produce separate CategoryRiskModifierResult entries."""
         # Arrange: Two findings from different categories
@@ -132,17 +146,25 @@ class TestRiskModifierValidationStrategy:
         ]
 
         # LLM returns modifiers for each finding
-        llm_service.invoke_with_structured_output.return_value = make_response(
-            [
-                make_llm_result("finding-1", modifiers=["minor"], confidence=0.9),
-                make_llm_result(
-                    "finding-2", modifiers=["vulnerable_individual"], confidence=0.8
-                ),
+        llm_service.complete.return_value = make_completion_result(
+            responses=[
+                make_response(
+                    [
+                        make_llm_result(
+                            "finding-1", modifiers=["minor"], confidence=0.9
+                        ),
+                        make_llm_result(
+                            "finding-2",
+                            modifiers=["vulnerable_individual"],
+                            confidence=0.8,
+                        ),
+                    ]
+                )
             ]
         )
 
         # Act
-        result = strategy.validate_findings(findings, config, llm_service)
+        result = strategy.enrich(findings, run_id)
 
         # Assert: Two separate category results
         assert len(result.category_results) == 2
@@ -163,8 +185,8 @@ class TestRiskModifierValidationStrategy:
     def test_combines_modifiers_as_union_within_category(
         self,
         strategy: RiskModifierValidationStrategy,
-        config: LLMValidationConfig,
         llm_service: Mock,
+        run_id: str,
     ) -> None:
         """Multiple findings in same category produce union of modifiers, not duplicates."""
         # Arrange: Three findings in same category with overlapping modifiers
@@ -181,18 +203,24 @@ class TestRiskModifierValidationStrategy:
         ]
 
         # LLM returns different modifiers for each, with some overlap
-        llm_service.invoke_with_structured_output.return_value = make_response(
-            [
-                make_llm_result("finding-1", modifiers=["minor"]),
-                make_llm_result("finding-2", modifiers=["vulnerable_individual"]),
-                make_llm_result(
-                    "finding-3", modifiers=["minor", "vulnerable_individual"]
-                ),  # Both
+        llm_service.complete.return_value = make_completion_result(
+            responses=[
+                make_response(
+                    [
+                        make_llm_result("finding-1", modifiers=["minor"]),
+                        make_llm_result(
+                            "finding-2", modifiers=["vulnerable_individual"]
+                        ),
+                        make_llm_result(
+                            "finding-3", modifiers=["minor", "vulnerable_individual"]
+                        ),
+                    ]
+                )
             ]
         )
 
         # Act
-        result = strategy.validate_findings(findings, config, llm_service)
+        result = strategy.enrich(findings, run_id)
 
         # Assert: Single category with union of all modifiers (no duplicates, sorted)
         assert len(result.category_results) == 1
@@ -205,8 +233,8 @@ class TestRiskModifierValidationStrategy:
     def test_calculates_average_confidence_per_category(
         self,
         strategy: RiskModifierValidationStrategy,
-        config: LLMValidationConfig,
         llm_service: Mock,
+        run_id: str,
     ) -> None:
         """Category confidence is the average of all finding confidences in that category."""
         # Arrange: Two findings in same category with different confidences
@@ -216,15 +244,23 @@ class TestRiskModifierValidationStrategy:
         ]
 
         # LLM returns different confidence scores: 0.8 and 0.6 → average = 0.7
-        llm_service.invoke_with_structured_output.return_value = make_response(
-            [
-                make_llm_result("finding-1", modifiers=["minor"], confidence=0.8),
-                make_llm_result("finding-2", modifiers=["minor"], confidence=0.6),
+        llm_service.complete.return_value = make_completion_result(
+            responses=[
+                make_response(
+                    [
+                        make_llm_result(
+                            "finding-1", modifiers=["minor"], confidence=0.8
+                        ),
+                        make_llm_result(
+                            "finding-2", modifiers=["minor"], confidence=0.6
+                        ),
+                    ]
+                )
             ]
         )
 
         # Act
-        result = strategy.validate_findings(findings, config, llm_service)
+        result = strategy.enrich(findings, run_id)
 
         # Assert: Confidence is average of 0.8 and 0.6
         assert len(result.category_results) == 1
@@ -234,50 +270,56 @@ class TestRiskModifierValidationStrategy:
     # Failure Handling
     # -------------------------------------------------------------------------
 
-    def test_marks_validation_failed_when_any_batch_fails(
+    def test_handles_skipped_findings_gracefully(
         self,
         strategy: RiskModifierValidationStrategy,
-        config: LLMValidationConfig,
         llm_service: Mock,
+        run_id: str,
     ) -> None:
-        """When some batches fail, validation_succeeded is False and counts are correct."""
-        # Arrange: 4 findings with batch_size=2 → 2 batches
+        """When LLMService returns skipped findings, aggregate what was processed."""
+        # Arrange: 4 findings - 2 will be processed, 2 will be skipped
         findings = [
             make_finding("finding-1", category="patient"),
             make_finding("finding-2", category="patient"),
             make_finding("finding-3", category="employee"),
             make_finding("finding-4", category="employee"),
         ]
-        config.llm_batch_size = 2
 
-        # First batch succeeds, second batch fails
-        llm_service.invoke_with_structured_output.side_effect = [
-            make_response(
-                [
-                    make_llm_result("finding-1", modifiers=["minor"], confidence=0.9),
-                    make_llm_result("finding-2", modifiers=[], confidence=0.8),
-                ]
-            ),
-            Exception("LLM service unavailable"),
-        ]
+        # LLMService returns partial results + skipped findings
+        llm_service.complete.return_value = make_completion_result(
+            responses=[
+                make_response(
+                    [
+                        make_llm_result(
+                            "finding-1", modifiers=["minor"], confidence=0.9
+                        ),
+                        make_llm_result("finding-2", modifiers=[], confidence=0.8),
+                    ]
+                )
+            ],
+            skipped=[
+                SkippedFinding(finding=findings[2], reason=SkipReason.BATCH_ERROR),
+                SkippedFinding(finding=findings[3], reason=SkipReason.BATCH_ERROR),
+            ],
+        )
 
         # Act
-        result = strategy.validate_findings(findings, config, llm_service)
+        result = strategy.enrich(findings, run_id)
 
-        # Assert: Partial success
+        # Assert: Partial success - processed findings aggregated, validation marked failed
         assert result.validation_succeeded is False
-        assert result.total_findings == 4  # All findings counted
-        assert result.total_sampled == 2  # Only first batch sampled
+        assert result.total_findings == 4
+        assert result.total_sampled == 2  # Only processed findings counted
 
-        # First batch results still present
+        # First two findings (patient category) still present
         assert len(result.category_results) == 1
         assert result.category_results[0].category == "patient"
 
     def test_returns_fail_safe_result_on_total_failure(
         self,
         strategy: RiskModifierValidationStrategy,
-        config: LLMValidationConfig,
         llm_service: Mock,
+        run_id: str,
     ) -> None:
         """Complete failure returns empty category_results with validation_succeeded=False."""
         # Arrange: Findings that will all fail
@@ -286,13 +328,11 @@ class TestRiskModifierValidationStrategy:
             make_finding("finding-2", category="employee"),
         ]
 
-        # LLM fails for all batches
-        llm_service.invoke_with_structured_output.side_effect = Exception(
-            "LLM service unavailable"
-        )
+        # LLM service raises exception
+        llm_service.complete.side_effect = Exception("LLM service unavailable")
 
         # Act
-        result = strategy.validate_findings(findings, config, llm_service)
+        result = strategy.enrich(findings, run_id)
 
         # Assert: Fail-safe result
         assert result.validation_succeeded is False

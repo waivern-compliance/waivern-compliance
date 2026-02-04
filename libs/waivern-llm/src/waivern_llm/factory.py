@@ -1,128 +1,173 @@
-"""LLM service factory."""
+"""LLM Service factory for dependency injection integration.
+
+This module provides a DI-compatible factory that creates LLMService instances
+with the appropriate provider and cache store, resolving dependencies lazily
+from the ServiceContainer.
+"""
 
 from __future__ import annotations
 
-import os
+import logging
+from typing import TYPE_CHECKING, cast
 
-from waivern_llm.anthropic import AnthropicLLMService
-from waivern_llm.base import BaseLLMService
-from waivern_llm.errors import LLMConfigurationError
-from waivern_llm.google import GoogleLLMService
-from waivern_llm.model_capabilities import ModelCapabilities
-from waivern_llm.openai import OpenAILLMService
+from pydantic import ValidationError
+from waivern_artifact_store.base import ArtifactStore
+from waivern_artifact_store.llm_cache import LLMCache
+
+from waivern_llm.di.configuration import LLMServiceConfiguration
+from waivern_llm.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
+from waivern_llm.service import DefaultLLMService, LLMService
+
+if TYPE_CHECKING:
+    from waivern_core.services import ServiceContainer
+
+logger = logging.getLogger(__name__)
 
 
 class LLMServiceFactory:
-    """Factory for creating LLM service instances."""
+    """Factory for creating LLMService instances with DI support.
 
-    @staticmethod
-    def create_service(
-        model_name: str | None = None,
-        api_key: str | None = None,
-        capabilities: ModelCapabilities | None = None,
-    ) -> BaseLLMService:
-        """Create an LLM service instance based on LLM_PROVIDER environment variable.
+    This factory implements the ServiceFactory[LLMService] protocol,
+    resolving dependencies lazily from the ServiceContainer.
 
-        This method automatically selects the appropriate LLM provider based on the
-        LLM_PROVIDER environment variable. If not set, defaults to Anthropic.
+    The factory accepts the container at construction and resolves
+    ArtifactStore (for caching) in create(), enabling registration
+    order independence.
 
-        Args:
-            model_name: Optional model name (uses provider-specific env var or default if not provided)
-            api_key: Optional API key (uses provider-specific env var if not provided)
-            capabilities: Optional model capabilities override. If None, auto-detected from model name.
+    Example:
+        ```python
+        from waivern_core.services import ServiceContainer, ServiceDescriptor
+        from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
+        from waivern_llm import LLMService, LLMServiceFactory
 
-        Returns:
-            Configured LLM service instance (AnthropicLLMService or OpenAILLMService)
+        container = ServiceContainer()
 
-        Raises:
-            LLMConfigurationError: If LLM_PROVIDER specifies an unsupported provider
-
-        """
-        provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
-
-        if provider == "anthropic":
-            return LLMServiceFactory.create_anthropic_service(
-                model_name=model_name, api_key=api_key, capabilities=capabilities
-            )
-        elif provider == "openai":
-            return LLMServiceFactory.create_openai_service(
-                model_name=model_name, api_key=api_key, capabilities=capabilities
-            )
-        elif provider == "google":
-            return LLMServiceFactory.create_google_service(
-                model_name=model_name, api_key=api_key, capabilities=capabilities
-            )
-        else:
-            raise LLMConfigurationError(
-                f"Unsupported LLM provider: '{provider}'. "
-                f"Supported providers: 'anthropic', 'openai', 'google'. "
-                f"Set LLM_PROVIDER environment variable to one of the supported providers."
-            )
-
-    @staticmethod
-    def create_anthropic_service(
-        model_name: str | None = None,
-        api_key: str | None = None,
-        capabilities: ModelCapabilities | None = None,
-    ) -> AnthropicLLMService:
-        """Create an Anthropic LLM service instance.
-
-        Args:
-            model_name: The Anthropic model to use (uses ANTHROPIC_MODEL env var or default if not provided)
-            api_key: Optional API key (uses ANTHROPIC_API_KEY env var if not provided)
-            capabilities: Optional model capabilities override. If None, auto-detected from model name.
-
-        Returns:
-            Configured AnthropicLLMService instance
-
-        """
-        return AnthropicLLMService(
-            model_name=model_name, api_key=api_key, capabilities=capabilities
+        # Order doesn't matter
+        container.register(
+            ServiceDescriptor(LLMService, LLMServiceFactory(container), "singleton")
+        )
+        container.register(
+            ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(), "singleton")
         )
 
-    @staticmethod
-    def create_openai_service(
-        model_name: str | None = None,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        capabilities: ModelCapabilities | None = None,
-    ) -> OpenAILLMService:
-        """Create an OpenAI LLM service instance.
+        # Resolution happens lazily
+        service = container.get_service(LLMService)
+        ```
+
+    """
+
+    def __init__(
+        self,
+        container: ServiceContainer,
+        config: LLMServiceConfiguration | None = None,
+    ) -> None:
+        """Initialise factory with container and optional configuration.
 
         Args:
-            model_name: The OpenAI model to use (uses OPENAI_MODEL env var or default if not provided)
-            api_key: Optional API key (uses OPENAI_API_KEY env var if not provided)
-            base_url: Optional base URL for OpenAI-compatible APIs (e.g., local LLMs)
-            capabilities: Optional model capabilities override. If None, auto-detected from model name.
-
-        Returns:
-            Configured OpenAILLMService instance
+            container: ServiceContainer for resolving dependencies.
+            config: Optional explicit configuration. If None, will attempt
+                   to create configuration from environment variables.
 
         """
-        return OpenAILLMService(
-            model_name=model_name,
-            api_key=api_key,
-            base_url=base_url,
-            capabilities=capabilities,
-        )
+        self._container = container
+        self._config = config
 
-    @staticmethod
-    def create_google_service(
-        model_name: str | None = None,
-        api_key: str | None = None,
-        capabilities: ModelCapabilities | None = None,
-    ) -> GoogleLLMService:
-        """Create a Google LLM service instance.
+    def _get_config(self) -> LLMServiceConfiguration | None:
+        """Get configuration, either from constructor or environment.
+
+        Returns:
+            Configuration instance, or None if configuration is invalid.
+
+        """
+        if self._config:
+            return self._config
+
+        try:
+            return LLMServiceConfiguration.from_properties({})
+        except ValidationError as e:
+            logger.debug(f"Cannot create configuration from environment: {e}")
+            return None
+
+    def can_create(self) -> bool:
+        """Check if LLM service can be created.
+
+        Validates:
+        1. Configuration is valid (provider and API key available)
+        2. ArtifactStore dependency can be resolved from container
+
+        Returns:
+            True if service can be created, False otherwise.
+
+        """
+        if self._get_config() is None:
+            return False
+
+        # Check dependency availability
+        try:
+            self._container.get_service(ArtifactStore)
+            return True
+        except (KeyError, ValueError):
+            logger.debug("Cannot create LLM service - ArtifactStore not available")
+            return False
+
+    def create(self) -> LLMService | None:
+        """Create an LLMService instance.
+
+        Resolves ArtifactStore from the container for caching, creates
+        the appropriate provider based on configuration, and returns
+        a DefaultLLMService.
+
+        Returns:
+            LLMService instance, or None if service unavailable.
+
+        """
+        config = self._get_config()
+        if not config:
+            logger.debug("Cannot create LLM service - configuration invalid")
+            return None
+
+        try:
+            # Resolve cache store from container (lazy resolution)
+            # ArtifactStore implementations also satisfy LLMCache protocol
+            artifact_store = self._container.get_service(ArtifactStore)
+            cache_store = cast(LLMCache, artifact_store)
+
+            # Create provider based on configuration
+            provider = self._create_provider(config)
+
+            logger.info(
+                f"LLM service created (provider={config.provider}, "
+                f"model={config.model or 'default'})"
+            )
+
+            return DefaultLLMService(provider=provider, cache_store=cache_store)
+
+        except Exception as e:
+            logger.warning(f"Failed to create LLM service: {e}")
+            return None
+
+    def _create_provider(
+        self, config: LLMServiceConfiguration
+    ) -> AnthropicProvider | OpenAIProvider | GoogleProvider:
+        """Create the appropriate LLM provider based on configuration.
 
         Args:
-            model_name: The Google model to use (uses GOOGLE_MODEL env var or default if not provided)
-            api_key: Optional API key (uses GOOGLE_API_KEY env var if not provided)
-            capabilities: Optional model capabilities override. If None, auto-detected from model name.
+            config: Validated LLM service configuration.
 
         Returns:
-            Configured GoogleLLMService instance
+            LLMProvider instance for the configured provider.
 
         """
-        return GoogleLLMService(
-            model_name=model_name, api_key=api_key, capabilities=capabilities
-        )
+        match config.provider:
+            case "anthropic":
+                return AnthropicProvider(api_key=config.api_key, model=config.model)
+            case "openai":
+                return OpenAIProvider(
+                    api_key=config.api_key, model=config.model, base_url=config.base_url
+                )
+            case "google":
+                return GoogleProvider(api_key=config.api_key, model=config.model)
+            case _:
+                # LLMServiceConfiguration validates provider, so this is unreachable
+                msg = f"Unsupported provider: {config.provider}"
+                raise ValueError(msg)

@@ -8,8 +8,8 @@ Architecture notes:
     This factory makes two types of decisions:
 
     1. **LLM Strategy Selection** (design-time, schema-dependent):
-       - source_code schema + content available → ExtendedContextLLMValidationStrategy
-       - Otherwise → simple finding-based strategy
+       - source_code schema + content available → SourceCodeValidationStrategy (EXTENDED_CONTEXT)
+       - Otherwise → ProcessingPurposeValidationStrategy (COUNT_BASED, evidence-only)
        This is determined by the input schema, not runtime configuration.
 
     2. **Grouping vs Sampling** (separate concerns):
@@ -28,8 +28,8 @@ Testing rationale:
 
     1. It contains only simple wiring logic (no runtime behaviour to test)
     2. The components it assembles are tested independently:
-       - ProcessingPurposeValidationStrategy: inline, follows tested pattern
-       - SourceCodeValidationStrategy: tested in test_extended_context_strategy.py
+       - ProcessingPurposeValidationStrategy: tested in test_llm_validation_strategy.py
+       - SourceCodeValidationStrategy: tested in test_llm_validation_strategy.py
        - ValidationOrchestrator: tested in waivern-analysers-shared
        - ConcernGroupingStrategy/RandomSamplingStrategy: tested in waivern-analysers-shared
     3. The complete validation flow is verified by integration tests
@@ -38,18 +38,17 @@ Testing rationale:
     handling, validation), you SHOULD add tests for that behaviour.
 """
 
-from typing import override
-
 from waivern_analysers_shared.llm_validation import (
     ConcernGroupingStrategy,
-    FilteringLLMValidationStrategy,
+    LLMValidationStrategy,
     RandomSamplingStrategy,
     ValidationOrchestrator,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
+from waivern_llm import LLMService
 
-from waivern_processing_purpose_analyser.prompts.processing_purpose_validation import (
-    get_processing_purpose_validation_prompt,
+from waivern_processing_purpose_analyser.llm_validation_strategy import (
+    ProcessingPurposeValidationStrategy,
 )
 from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeIndicatorModel,
@@ -62,33 +61,11 @@ from .providers import (
 )
 
 
-class ProcessingPurposeValidationStrategy(
-    FilteringLLMValidationStrategy[ProcessingPurposeIndicatorModel]
-):
-    """Simple finding-based validation strategy for processing purposes.
-
-    Uses the filtering paradigm to validate processing purpose findings,
-    categorising them as TRUE_POSITIVE (keep) or FALSE_POSITIVE (remove).
-
-    Used when source file content is not available (e.g., standard_input schema).
-    """
-
-    @override
-    def get_validation_prompt(
-        self,
-        findings_batch: list[ProcessingPurposeIndicatorModel],
-        config: LLMValidationConfig,
-    ) -> str:
-        """Generate validation prompt for processing purpose findings."""
-        return get_processing_purpose_validation_prompt(
-            findings_batch, config.llm_validation_mode
-        )
-
-
 def create_validation_orchestrator(
     config: LLMValidationConfig,
     input_schema_name: str,
     source_contents: dict[str, str] | None = None,
+    llm_service: LLMService | None = None,
 ) -> ValidationOrchestrator[ProcessingPurposeIndicatorModel]:
     """Create orchestrator configured for processing purpose validation.
 
@@ -96,26 +73,36 @@ def create_validation_orchestrator(
         config: LLM validation configuration.
         input_schema_name: Name of the input schema (e.g., "source_code", "standard_input").
         source_contents: Map of file paths to content (for source_code schema).
+        llm_service: LLM service instance for validation.
 
     Returns:
         Configured ValidationOrchestrator instance.
 
+    Raises:
+        ValueError: If llm_service is not provided.
+
     """
+    if llm_service is None:
+        raise ValueError("llm_service is required for validation")
+
     # LLM Strategy: Design-time decision based on input schema
-    # source_code schema with content → extended context strategy (includes full file)
-    # Otherwise → simple finding-based strategy (evidence snippets only)
+    # - source_code: SourceCodeValidationStrategy (EXTENDED_CONTEXT batching)
+    # - standard_input: ProcessingPurposeValidationStrategy (COUNT_BASED batching)
+    llm_strategy: LLMValidationStrategy[ProcessingPurposeIndicatorModel, object]
     fallback_strategy: (
-        FilteringLLMValidationStrategy[ProcessingPurposeIndicatorModel] | None
+        LLMValidationStrategy[ProcessingPurposeIndicatorModel, object] | None
     ) = None
 
     if input_schema_name == "source_code" and source_contents:
+        # Extended context strategy - uses full file content for validation
         source_provider = SourceCodeSourceProvider(source_contents)
-        llm_strategy = SourceCodeValidationStrategy(source_provider)
+        llm_strategy = SourceCodeValidationStrategy(llm_service, source_provider)
         # Fallback to evidence-only strategy for findings that can't be validated
         # with extended context (e.g., oversized sources, missing content)
-        fallback_strategy = ProcessingPurposeValidationStrategy()
+        fallback_strategy = ProcessingPurposeValidationStrategy(llm_service)
     else:
-        llm_strategy = ProcessingPurposeValidationStrategy()
+        # Standard input - use evidence-only strategy
+        llm_strategy = ProcessingPurposeValidationStrategy(llm_service)
         # No fallback needed - already using evidence-only strategy
 
     # Grouping: Design-time decision

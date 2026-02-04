@@ -7,21 +7,55 @@ Run with: uv run pytest -m integration
 """
 
 import pytest
+from waivern_artifact_store.in_memory import AsyncInMemoryStore
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import BaseLLMService
+from waivern_llm import LLMService
+from waivern_llm.di.configuration import LLMServiceConfiguration
+from waivern_llm.errors import LLMConfigurationError
+from waivern_llm.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
+from waivern_llm.service import DefaultLLMService
 
 from waivern_gdpr_data_subject_classifier import GDPRDataSubjectClassifier
 from waivern_gdpr_data_subject_classifier.types import GDPRDataSubjectClassifierConfig
+
+
+@pytest.fixture
+def llm_service() -> LLMService:
+    """Create LLM service based on .env configuration.
+
+    This fixture overrides the root conftest fixture to provide
+    an LLMService instance for integration tests.
+    Skips the test if LLM service is not configured.
+    """
+    try:
+        config = LLMServiceConfiguration.from_properties({})
+    except Exception as e:
+        pytest.skip(f"LLM service not configured: {e}")
+
+    # Create provider based on configuration
+    match config.provider:
+        case "anthropic":
+            provider = AnthropicProvider(api_key=config.api_key, model=config.model)
+        case "openai":
+            provider = OpenAIProvider(
+                api_key=config.api_key, model=config.model, base_url=config.base_url
+            )
+        case "google":
+            provider = GoogleProvider(api_key=config.api_key, model=config.model)
+        case _:
+            raise LLMConfigurationError(f"Unsupported provider: {config.provider}")
+
+    cache_store = AsyncInMemoryStore()
+
+    return DefaultLLMService(provider=provider, cache_store=cache_store)
 
 
 class TestGDPRDataSubjectClassifierLLMIntegration:
     """Integration tests with real LLM API for risk modifier detection."""
 
     @pytest.fixture
-    def classifier_with_llm(
-        self, llm_service: BaseLLMService
-    ) -> GDPRDataSubjectClassifier:
+    def classifier_with_llm(self, llm_service: LLMService) -> GDPRDataSubjectClassifier:
         """Create classifier with real LLM service and validation enabled."""
         config = GDPRDataSubjectClassifierConfig.from_properties(
             {"llm_validation": {"enable_llm_validation": True}}
@@ -55,6 +89,7 @@ class TestGDPRDataSubjectClassifierLLMIntegration:
                 ]
             },
             schema=Schema("data_subject_indicator", "1.0.0"),
+            run_id="integration-test-run",
         )
 
     @pytest.mark.integration

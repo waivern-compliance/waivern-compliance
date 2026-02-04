@@ -28,7 +28,7 @@ from waivern_core import (
 )
 from waivern_core.services import ServiceContainer, ServiceDescriptor
 from waivern_core.services.protocols import ServiceFactory
-from waivern_llm import BaseLLMService
+from waivern_llm import LLMService
 
 from waivern_gdpr_data_subject_classifier import GDPRDataSubjectClassifier
 from waivern_gdpr_data_subject_classifier.factory import (
@@ -56,10 +56,10 @@ class TestGDPRDataSubjectClassifierFactory(
         This fixture is required by ComponentFactoryContractTests.
         """
         container = ServiceContainer()
-        llm_service = Mock(spec=BaseLLMService)
+        llm_service = Mock(spec=LLMService)
         llm_service_factory = Mock(spec=ServiceFactory)
         llm_service_factory.create.return_value = llm_service
-        container.register(ServiceDescriptor(BaseLLMService, llm_service_factory))
+        container.register(ServiceDescriptor(LLMService, llm_service_factory))
         return GDPRDataSubjectClassifierFactory(container)
 
     @pytest.fixture
@@ -73,7 +73,6 @@ class TestGDPRDataSubjectClassifierFactory(
             "ruleset": "local/gdpr_data_subject_classification/1.0.0",
             "llm_validation": {
                 "enable_llm_validation": True,
-                "llm_batch_size": 10,
             },
         }
 
@@ -91,7 +90,6 @@ class TestGDPRDataSubjectClassifierFactory(
             "ruleset": "local/gdpr_data_subject_classification/1.0.0",
             "llm_validation": {
                 "enable_llm_validation": True,  # LLM required
-                "llm_batch_size": 10,
             },
         }
 
@@ -102,7 +100,7 @@ class TestGDPRDataSubjectClassifierFactory(
         assert result is False
 
     def test_get_service_dependencies_declares_llm_service(self) -> None:
-        """Test that factory declares BaseLLMService dependency."""
+        """Test that factory declares LLMService dependency."""
         # Arrange: Factory with no container (not needed for this check)
         container = ServiceContainer()
         factory = GDPRDataSubjectClassifierFactory(container)
@@ -112,7 +110,7 @@ class TestGDPRDataSubjectClassifierFactory(
 
         # Assert: LLM service declared
         assert "llm_service" in dependencies
-        assert dependencies["llm_service"] is BaseLLMService
+        assert dependencies["llm_service"] is LLMService
 
     def test_can_create_returns_false_for_nonexistent_ruleset(self) -> None:
         """Test that can_create returns False when ruleset doesn't exist."""

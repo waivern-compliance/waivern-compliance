@@ -9,7 +9,6 @@ Types are organised into submodules by concern:
 """
 
 from waivern_analysers_shared.types.llm_validation import (
-    BatchingConfig,
     LLMValidationConfig,
 )
 from waivern_analysers_shared.types.pattern_matching import (
@@ -32,7 +31,6 @@ __all__ = [
     "PatternMatchResult",
     "PatternType",
     # LLM validation
-    "BatchingConfig",
     "LLMValidationConfig",
     # Protocols
     "SchemaInputHandler",

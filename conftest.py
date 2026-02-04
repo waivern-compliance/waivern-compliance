@@ -8,9 +8,10 @@ See docs/how-tos/testing-patterns.md for the singleton testing pattern.
 
 import pytest
 from dotenv import load_dotenv
+from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
 from waivern_core.schemas import SchemaRegistry
-from waivern_llm import BaseLLMService, LLMServiceFactory
-from waivern_llm.errors import LLMConfigurationError
+from waivern_core.services import ServiceContainer, ServiceDescriptor
+from waivern_llm import LLMService, LLMServiceFactory
 from waivern_rulesets.core.registry import RulesetRegistry
 from waivern_source_code_analyser.languages.registry import LanguageRegistry
 from wct.exporters.registry import ExporterRegistry
@@ -21,7 +22,7 @@ load_dotenv()
 
 
 @pytest.fixture
-def llm_service() -> BaseLLMService:
+def llm_service() -> LLMService:
     """Create LLM service based on .env configuration.
 
     Uses LLM_PROVIDER env var to select provider:
@@ -36,10 +37,21 @@ def llm_service() -> BaseLLMService:
 
     Skips the test if LLM service is not configured.
     """
-    try:
-        return LLMServiceFactory.create_service()
-    except LLMConfigurationError as e:
-        pytest.skip(f"LLM service not configured: {e}")
+    # Create minimal container with dependencies
+    container = ServiceContainer()
+    container.register(
+        ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(), "singleton")
+    )
+
+    factory = LLMServiceFactory(container)
+    if not factory.can_create():
+        pytest.skip("LLM service not configured")
+
+    service = factory.create()
+    if service is None:
+        pytest.skip("LLM service not configured")
+
+    return service
 
 
 @pytest.fixture(autouse=True, scope="function")
