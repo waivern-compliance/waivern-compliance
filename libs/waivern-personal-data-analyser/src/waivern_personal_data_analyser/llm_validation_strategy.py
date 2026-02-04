@@ -13,7 +13,6 @@ from waivern_analysers_shared.llm_validation.models import (
 )
 from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrategy
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_llm import BaseLLMService
 from waivern_llm.v2 import (
     BatchingMode,
     ItemGroup,
@@ -48,31 +47,24 @@ class PersonalDataValidationStrategy(
         """
         self._llm_service = llm_service
 
-    # TODO: Post-migration cleanup (once all processors use LLMService):
-    #   1. Remove llm_service parameter - strategies now receive LLMService via constructor
-    #   2. Make run_id required (remove None default) - all callers now provide it
     @override
     def validate_findings(
         self,
         findings: list[PersonalDataIndicatorModel],
         config: LLMValidationConfig,
-        llm_service: BaseLLMService,  # Interface compat - ignored
-        run_id: str | None = None,
+        run_id: str,
     ) -> LLMValidationOutcome[PersonalDataIndicatorModel]:
         """Validate findings using LLM service.
 
         Args:
             findings: Findings to validate.
             config: Validation configuration.
-            llm_service: Ignored - uses LLMService from constructor.
             run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             LLMValidationOutcome with categorised findings.
 
         """
-        del llm_service  # Unused - strategy uses constructor-injected LLMService
-
         if not findings:
             return LLMValidationOutcome(
                 llm_validated_kept=[],
@@ -80,9 +72,6 @@ class PersonalDataValidationStrategy(
                 llm_not_flagged=[],
                 skipped=[],
             )
-
-        if run_id is None:
-            raise ValueError("run_id is required for LLM validation cache scoping")
 
         try:
             return asyncio.run(self._validate_async(findings, config, run_id))

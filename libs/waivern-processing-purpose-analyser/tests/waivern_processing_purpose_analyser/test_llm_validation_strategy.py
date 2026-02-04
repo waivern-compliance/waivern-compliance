@@ -108,8 +108,7 @@ class TestProcessingPurposeValidationStrategy:
         )
         strategy = ProcessingPurposeValidationStrategy(mock_llm_service)
 
-        # llm_service param is required by interface but ignored by this strategy
-        strategy.validate_findings(findings, config, Mock(), run_id="test-run")
+        strategy.validate_findings(findings, config, "test-run")
 
         mock_llm_service.complete.assert_called_once()
         call_kwargs = mock_llm_service.complete.call_args.kwargs
@@ -125,18 +124,6 @@ class TestProcessingPurposeValidationStrategy:
         assert call_kwargs["response_model"] == LLMValidationResponseModel
         assert call_kwargs["batching_mode"] == BatchingMode.COUNT_BASED
         assert call_kwargs["run_id"] == "test-run"
-
-    def test_raises_error_when_run_id_not_provided(
-        self,
-        mock_llm_service: Mock,
-        config: LLMValidationConfig,
-    ) -> None:
-        """Strategy raises ValueError if run_id is not provided."""
-        findings = [_make_finding("Payment Processing")]
-        strategy = ProcessingPurposeValidationStrategy(mock_llm_service)
-
-        with pytest.raises(ValueError, match="run_id is required"):
-            strategy.validate_findings(findings, config, Mock())  # No run_id
 
     # =========================================================================
     # Response Mapping
@@ -174,9 +161,7 @@ class TestProcessingPurposeValidationStrategy:
         )
         strategy = ProcessingPurposeValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         assert len(outcome.llm_validated_kept) == 2
         assert outcome.llm_validated_removed == []
@@ -217,9 +202,7 @@ class TestProcessingPurposeValidationStrategy:
         )
         strategy = ProcessingPurposeValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         assert len(outcome.llm_validated_kept) == 1
         assert outcome.llm_validated_kept[0].id == sample_findings[1].id
@@ -240,9 +223,7 @@ class TestProcessingPurposeValidationStrategy:
         )
         strategy = ProcessingPurposeValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         # Both findings kept via fail-safe (not_flagged)
         assert outcome.llm_validated_kept == []
@@ -265,9 +246,7 @@ class TestProcessingPurposeValidationStrategy:
         mock_llm_service.complete.side_effect = Exception("LLM API unavailable")
         strategy = ProcessingPurposeValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         # All findings should be skipped with BATCH_ERROR reason
         assert outcome.llm_validated_kept == []
@@ -352,7 +331,7 @@ class TestSourceCodeValidationStrategy:
         )
         strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
 
-        strategy.validate_findings(sample_findings, config, Mock(), run_id="test-run")
+        strategy.validate_findings(sample_findings, config, "test-run")
 
         mock_llm_service.complete.assert_called_once()
         call_kwargs = mock_llm_service.complete.call_args.kwargs
@@ -366,19 +345,6 @@ class TestSourceCodeValidationStrategy:
         assert call_kwargs["response_model"] == LLMValidationResponseModel
         assert call_kwargs["batching_mode"] == BatchingMode.EXTENDED_CONTEXT
         assert call_kwargs["run_id"] == "test-run"
-
-    def test_raises_error_when_run_id_not_provided(
-        self,
-        mock_llm_service: Mock,
-        source_provider: SourceCodeSourceProvider,
-        config: LLMValidationConfig,
-    ) -> None:
-        """Strategy raises ValueError if run_id is not provided."""
-        findings = [_make_finding("Payment Processing", "payment", "/src/test.php")]
-        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
-
-        with pytest.raises(ValueError, match="run_id is required"):
-            strategy.validate_findings(findings, config, Mock())  # No run_id
 
     def test_creates_groups_by_source_file(
         self,
@@ -398,7 +364,7 @@ class TestSourceCodeValidationStrategy:
         )
         strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
 
-        strategy.validate_findings(findings, config, Mock(), run_id="test-run")
+        strategy.validate_findings(findings, config, "test-run")
 
         # Verify single group created (same source file)
         groups = mock_llm_service.complete.call_args.args[0]
@@ -443,9 +409,7 @@ class TestSourceCodeValidationStrategy:
         )
         strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         assert len(outcome.llm_validated_kept) == 2
         assert outcome.llm_validated_removed == []
@@ -486,9 +450,7 @@ class TestSourceCodeValidationStrategy:
         )
         strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         assert len(outcome.llm_validated_kept) == 1
         assert outcome.llm_validated_kept[0].id == sample_findings[1].id
@@ -509,9 +471,7 @@ class TestSourceCodeValidationStrategy:
         )
         strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         # Both findings kept via fail-safe (not_flagged)
         assert outcome.llm_validated_kept == []
@@ -535,9 +495,7 @@ class TestSourceCodeValidationStrategy:
         mock_llm_service.complete.side_effect = Exception("LLM API unavailable")
         strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         # All findings should be skipped with BATCH_ERROR reason
         assert outcome.llm_validated_kept == []
@@ -581,9 +539,7 @@ class TestSourceCodeValidationStrategy:
         )
         strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         # First finding kept, second skipped
         assert len(outcome.llm_validated_kept) == 1

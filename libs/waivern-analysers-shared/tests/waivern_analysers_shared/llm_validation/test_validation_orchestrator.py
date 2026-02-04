@@ -14,7 +14,6 @@ from waivern_core.schemas.finding_types import (
     BaseFindingModel,
     PatternMatchDetail,
 )
-from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.llm_validation.models import (
     LLMValidationOutcome,
@@ -53,9 +52,7 @@ def make_config() -> LLMValidationConfig:
     )
 
 
-def make_llm_service() -> Mock:
-    """Create mock LLM service."""
-    return Mock(spec=BaseLLMService)
+TEST_RUN_ID = "test-run-id"
 
 
 # =============================================================================
@@ -72,10 +69,9 @@ class TestCoreOrchestration:
         mock_llm_strategy = Mock()
         orchestrator = ValidationOrchestrator(llm_strategy=mock_llm_strategy)
         config = make_config()
-        llm_service = make_llm_service()
 
         # Act
-        result = orchestrator.validate([], config, llm_service)
+        result = orchestrator.validate([], config, TEST_RUN_ID)
 
         # Assert
         assert result.kept_findings == []
@@ -113,7 +109,7 @@ class TestCoreOrchestration:
         )
 
         # Act
-        orchestrator.validate(findings, make_config(), make_llm_service())
+        orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - calls made in order
         mock_grouping.group.assert_called_once_with(findings)
@@ -151,7 +147,7 @@ class TestCoreOrchestration:
         )
 
         # Act
-        orchestrator.validate(findings, make_config(), make_llm_service())
+        orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - single call with all 4 samples
         mock_llm_strategy.validate_findings.assert_called_once()
@@ -182,14 +178,13 @@ class TestNoGroupingMode:
         )
         orchestrator = ValidationOrchestrator(llm_strategy=mock_llm_strategy)
         config = make_config()
-        llm_service = make_llm_service()
 
         # Act
-        result = orchestrator.validate(findings, config, llm_service)
+        result = orchestrator.validate(findings, config, TEST_RUN_ID)
 
         # Assert - LLM strategy called directly with all findings
         mock_llm_strategy.validate_findings.assert_called_once_with(
-            findings, config, llm_service, None
+            findings, config, TEST_RUN_ID
         )
         # Results mapped directly from LLMValidationOutcome
         assert result.kept_findings == [findings[0]]
@@ -210,10 +205,9 @@ class TestNoGroupingMode:
         )
         orchestrator = ValidationOrchestrator(llm_strategy=mock_llm_strategy)
         config = make_config()
-        llm_service = make_llm_service()
 
         # Act
-        result = orchestrator.validate(findings, config, llm_service)
+        result = orchestrator.validate(findings, config, TEST_RUN_ID)
 
         # Assert - no group removal, just individual removal
         assert result.removed_groups == []
@@ -301,7 +295,7 @@ class TestGroupLevelDecisions:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - all 3 findings kept (1 sampled + 2 non-sampled)
         assert len(result.kept_findings) == 3
@@ -340,7 +334,7 @@ class TestGroupLevelDecisions:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - 3 kept (1 validated + 2 non-sampled), 1 removed (the FP)
         assert len(result.kept_findings) == 3
@@ -379,7 +373,7 @@ class TestGroupLevelDecisions:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - entire group removed (including non-sampled finding)
         assert result.kept_findings == []
@@ -416,7 +410,7 @@ class TestGroupLevelDecisions:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - RemovedGroup metadata
         assert len(result.removed_groups) == 1
@@ -466,7 +460,7 @@ class TestSkippedSamplesHandling:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - Group kept (skipped doesn't count as FP)
         # Kept: validated (1) + non-sampled (1) + skipped sample (1) = 3
@@ -500,7 +494,7 @@ class TestSkippedSamplesHandling:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - conservative: keep group when no validated samples
         assert len(result.kept_findings) == 2
@@ -531,7 +525,7 @@ class TestSkippedSamplesHandling:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - skipped_samples populated
         assert len(result.skipped_samples) == 1
@@ -571,7 +565,7 @@ class TestSamplingVariations:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - all 3 validated as samples
         assert len(result.kept_findings) == 3
@@ -607,7 +601,7 @@ class TestSamplingVariations:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - non-sampled findings (2, 3) are in kept_findings
         kept_ids = {f.id for f in result.kept_findings}
@@ -658,7 +652,7 @@ class TestMultipleGroups:
         )
 
         # Act
-        result = orchestrator.validate(all_findings, make_config(), make_llm_service())
+        result = orchestrator.validate(all_findings, make_config(), TEST_RUN_ID)
 
         # Assert - Group A kept (Case C), Group B removed (Case A)
         kept_ids = {f.id for f in result.kept_findings}
@@ -707,9 +701,7 @@ class TestMarkerCallback:
         orchestrator = ValidationOrchestrator(llm_strategy=mock_llm_strategy)
 
         # Act
-        orchestrator.validate(
-            findings, make_config(), make_llm_service(), marker=marker
-        )
+        orchestrator.validate(findings, make_config(), TEST_RUN_ID, marker=marker)
 
         # Assert - both validated findings should be marked
         assert marked_ids == {"1", "2"}
@@ -738,9 +730,7 @@ class TestMarkerCallback:
         orchestrator = ValidationOrchestrator(llm_strategy=mock_llm_strategy)
 
         # Act
-        orchestrator.validate(
-            findings, make_config(), make_llm_service(), marker=marker
-        )
+        orchestrator.validate(findings, make_config(), TEST_RUN_ID, marker=marker)
 
         # Assert - only validated finding is marked, not skipped one
         assert marked_ids == {"1"}
@@ -781,7 +771,7 @@ class TestMarkerCallback:
 
         # Act
         result = orchestrator.validate(
-            findings, make_config(), make_llm_service(), marker=marker
+            findings, make_config(), TEST_RUN_ID, marker=marker
         )
 
         # Assert - only sampled finding is marked
@@ -803,7 +793,7 @@ class TestMarkerCallback:
         orchestrator = ValidationOrchestrator(llm_strategy=mock_llm_strategy)
 
         # Act - no marker provided
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - validation still works
         assert len(result.kept_findings) == 1
@@ -851,7 +841,7 @@ class TestFallbackValidation:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - both findings are kept (one by primary, one by fallback)
         assert len(result.kept_findings) == 2
@@ -885,7 +875,7 @@ class TestFallbackValidation:
         )
 
         # Act
-        orchestrator.validate(findings, make_config(), make_llm_service())
+        orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - fallback should NOT be called
         mock_fallback_strategy.validate_findings.assert_not_called()
@@ -913,7 +903,7 @@ class TestFallbackValidation:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - fallback should NOT be called (SkipReason.BATCH_ERROR not eligible)
         mock_fallback_strategy.validate_findings.assert_not_called()
@@ -955,7 +945,7 @@ class TestFallbackValidation:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - correct categorisation
         assert len(result.kept_findings) == 2
@@ -993,7 +983,7 @@ class TestFallbackValidation:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - finding remains skipped (with fallback's reason)
         assert len(result.skipped_samples) == 1
@@ -1048,7 +1038,7 @@ class TestFallbackValidation:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - Case B: keep group (1 TP + 1 FP), remove only FP sample
         assert len(result.removed_groups) == 0  # Group NOT removed
@@ -1091,9 +1081,7 @@ class TestFallbackValidation:
         )
 
         # Act
-        orchestrator.validate(
-            findings, make_config(), make_llm_service(), marker=marker
-        )
+        orchestrator.validate(findings, make_config(), TEST_RUN_ID, marker=marker)
 
         # Assert - both findings are marked (primary and fallback validated)
         assert marked_ids == {"1", "2"}
@@ -1133,7 +1121,7 @@ class TestFallbackValidation:
         )
 
         # Act
-        result = orchestrator.validate(findings, make_config(), make_llm_service())
+        result = orchestrator.validate(findings, make_config(), TEST_RUN_ID)
 
         # Assert - only eligible findings sent to fallback
         mock_fallback_strategy.validate_findings.assert_called_once()

@@ -29,7 +29,6 @@ The orchestrator handles grouping and sampling; the LLMService handles batching.
 from collections.abc import Callable
 
 from waivern_core import Finding
-from waivern_llm import BaseLLMService
 
 from waivern_analysers_shared.llm_validation.decision_engine import (
     ValidationDecisionEngine,
@@ -102,27 +101,22 @@ class ValidationOrchestrator[T: Finding]:
         self._sampling_strategy = sampling_strategy
         self._fallback_strategy = fallback_strategy
 
-    # TODO: Post-migration cleanup (once all processors use LLMService v2):
-    #   Remove llm_service parameter - v2 strategies receive LLMService via
-    #   constructor injection and ignore this parameter.
     def validate(
         self,
         findings: list[T],
         config: LLMValidationConfig,
-        llm_service: BaseLLMService,
+        run_id: str,
         marker: Callable[[T], T] | None = None,
-        run_id: str | None = None,
     ) -> ValidationResult[T]:
         """Validate findings using the configured strategies.
 
         Args:
             findings: List of findings to validate.
             config: LLM validation configuration.
-            llm_service: LLM service instance.
+            run_id: Unique identifier for the current run, used for cache scoping.
             marker: Optional callback to mark validated findings. Called on findings
                 that actually went through LLM validation (not skipped/errored).
                 Applied at the strategy level before aggregation into ValidationResult.
-            run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
             ValidationResult with validated findings and metadata.
@@ -141,22 +135,17 @@ class ValidationOrchestrator[T: Finding]:
 
         # No grouping - direct validation
         if self._grouping_strategy is None:
-            return self._validate_without_grouping(
-                findings, config, llm_service, marker, run_id
-            )
+            return self._validate_without_grouping(findings, config, run_id, marker)
 
         # With grouping - full orchestration flow
-        return self._validate_with_grouping(
-            findings, config, llm_service, marker, run_id
-        )
+        return self._validate_with_grouping(findings, config, run_id, marker)
 
     def _validate_without_grouping(
         self,
         findings: list[T],
         config: LLMValidationConfig,
-        llm_service: BaseLLMService,
+        run_id: str,
         marker: Callable[[T], T] | None = None,
-        run_id: str | None = None,
     ) -> ValidationResult[T]:
         """Validate findings directly without grouping.
 
@@ -164,15 +153,11 @@ class ValidationOrchestrator[T: Finding]:
         then maps outcome to ValidationResult. No group-level decisions apply.
 
         """
-        outcome = self._llm_strategy.validate_findings(
-            findings, config, llm_service, run_id
-        )
+        outcome = self._llm_strategy.validate_findings(findings, config, run_id)
 
         # Run fallback on eligible skipped findings
         if self._fallback_strategy is not None:
-            outcome = self._run_fallback_validation(
-                outcome, config, llm_service, run_id
-            )
+            outcome = self._run_fallback_validation(outcome, config, run_id)
 
         # Apply marker at strategy level (before aggregation) if provided
         if marker:
@@ -191,9 +176,8 @@ class ValidationOrchestrator[T: Finding]:
         self,
         findings: list[T],
         config: LLMValidationConfig,
-        llm_service: BaseLLMService,
+        run_id: str,
         marker: Callable[[T], T] | None = None,
-        run_id: str | None = None,
     ) -> ValidationResult[T]:
         """Validate findings with grouping and optional sampling.
 
@@ -240,15 +224,11 @@ class ValidationOrchestrator[T: Finding]:
             )
 
         # Step 4: Validate samples via LLM
-        outcome = self._llm_strategy.validate_findings(
-            all_samples, config, llm_service, run_id
-        )
+        outcome = self._llm_strategy.validate_findings(all_samples, config, run_id)
 
         # Step 4b: Run fallback on eligible skipped findings
         if self._fallback_strategy is not None:
-            outcome = self._run_fallback_validation(
-                outcome, config, llm_service, run_id
-            )
+            outcome = self._run_fallback_validation(outcome, config, run_id)
 
         # Step 5: Apply marker at strategy level (before aggregation) if provided
         if marker:
@@ -267,8 +247,7 @@ class ValidationOrchestrator[T: Finding]:
         self,
         primary_outcome: LLMValidationOutcome[T],
         config: LLMValidationConfig,
-        llm_service: BaseLLMService,
-        run_id: str | None = None,
+        run_id: str,
     ) -> LLMValidationOutcome[T]:
         """Run fallback validation on eligible skipped findings.
 
@@ -281,7 +260,6 @@ class ValidationOrchestrator[T: Finding]:
         Args:
             primary_outcome: Outcome from primary strategy.
             config: LLM validation configuration.
-            llm_service: LLM service instance.
             run_id: Unique identifier for the current run, used for cache scoping.
 
         Returns:
@@ -309,7 +287,7 @@ class ValidationOrchestrator[T: Finding]:
 
         # Run fallback strategy
         fallback_outcome = fallback_strategy.validate_findings(
-            eligible_for_fallback, config, llm_service, run_id
+            eligible_for_fallback, config, run_id
         )
 
         # Merge results

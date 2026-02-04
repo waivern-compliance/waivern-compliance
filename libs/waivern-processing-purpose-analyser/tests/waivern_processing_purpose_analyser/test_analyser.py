@@ -22,7 +22,7 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm import BaseLLMService
+from waivern_llm.v2 import LLMService
 
 from waivern_processing_purpose_analyser.analyser import (
     ProcessingPurposeAnalyser,
@@ -67,7 +67,7 @@ class TestProcessingPurposeAnalyserInitialisation:
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
         """Create mock LLM service for testing."""
-        return Mock(spec=BaseLLMService)
+        return Mock(spec=LLMService)
 
     def test_init_creates_analyser_with_valid_configuration(
         self,
@@ -243,7 +243,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
         """Create mock LLM service for testing."""
-        return Mock(spec=BaseLLMService)
+        return Mock(spec=LLMService)
 
     @pytest.fixture
     def analyser(self, mock_llm_service: Mock) -> ProcessingPurposeAnalyser:
@@ -508,7 +508,7 @@ class TestProcessingPurposeAnalyserErrorHandling:
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
         """Create mock LLM service for testing."""
-        return Mock(spec=BaseLLMService)
+        return Mock(spec=LLMService)
 
     @pytest.fixture
     def analyser(self, mock_llm_service: Mock) -> ProcessingPurposeAnalyser:
@@ -564,7 +564,7 @@ class TestProcessingPurposeAnalyserOutputValidation:
     @pytest.fixture
     def mock_llm_service(self) -> Mock:
         """Create mock LLM service for testing."""
-        return Mock(spec=BaseLLMService)
+        return Mock(spec=LLMService)
 
     @pytest.fixture
     def analyser(self, mock_llm_service: Mock) -> ProcessingPurposeAnalyser:

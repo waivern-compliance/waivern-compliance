@@ -14,16 +14,16 @@ The `ServiceContainer` manages singleton services like LLM providers that are sh
 
 **Example - Registering a service:**
 ```python
-from waivern_core.services.container import ServiceContainer
-from waivern_llm.di import LLMServiceFactory
-from waivern_llm import BaseLLMService
+from waivern_core.services import ServiceContainer, ServiceDescriptor
+from waivern_llm.v2 import LLMService, LLMServiceFactory
 
 # Create container
 container = ServiceContainer()
 
 # Register LLM service with factory
-llm_factory = LLMServiceFactory()
-container.register(BaseLLMService, llm_factory, lifetime="singleton")
+container.register(
+    ServiceDescriptor(LLMService, LLMServiceFactory(container), "singleton")
+)
 ```
 
 ## ComponentFactory Pattern
@@ -49,7 +49,7 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
         analyser_config = PersonalDataAnalyserConfig.from_properties(config)
 
         # Resolve LLM service from container
-        llm_service = self._container.get_service(BaseLLMService)
+        llm_service = self._container.get_service(LLMService)
 
         # Create component with dependencies
         return PersonalDataAnalyser(
@@ -64,12 +64,16 @@ Here's how dependency injection works end-to-end in WCF:
 
 **1. Application Startup (WCT)**
 ```python
+from waivern_core.services import ServiceContainer, ServiceDescriptor
+from waivern_llm.v2 import LLMService, LLMServiceFactory
+
 # Create service container
 container = ServiceContainer()
 
 # Register services
-llm_factory = LLMServiceFactory()
-container.register(BaseLLMService, llm_factory, lifetime="singleton")
+container.register(
+    ServiceDescriptor(LLMService, LLMServiceFactory(container), "singleton")
+)
 
 # Create factories with container
 personal_data_factory = PersonalDataAnalyserFactory(container)
@@ -105,7 +109,7 @@ class PersonalDataAnalyser:
     def __init__(
         self,
         config: PersonalDataAnalyserConfig,
-        llm_service: BaseLLMService | None = None
+        llm_service: LLMService | None = None
     ):
         """Component receives validated config + services."""
         self._config = config

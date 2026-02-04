@@ -194,20 +194,21 @@ class DataSubjectAnalyser(Analyser):
             logger.warning("LLM service unavailable, returning original findings")
             return findings, False, None
 
+        if run_id is None:
+            logger.warning("run_id is required for LLM validation, skipping")
+            return findings, False, None
+
         try:
             # Create orchestrator and validate with marker callback
             # Marker is applied at strategy level to only mark actually-validated findings
             orchestrator = create_validation_orchestrator(
                 self._config.llm_validation, self._llm_service
             )
-            # TODO: Post-migration cleanup (once all processors use LLMService):
-            #   Remove the None argument - orchestrator.validate() won't need llm_service param
             result = orchestrator.validate(
                 findings,
                 self._config.llm_validation,
-                None,  # type: ignore[arg-type]  # Strategy uses constructor-injected service
+                run_id,
                 marker=self._mark_finding_validated,
-                run_id=run_id,
             )
 
             logger.info(

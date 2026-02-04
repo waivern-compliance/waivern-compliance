@@ -99,8 +99,7 @@ class TestDataSubjectValidationStrategy:
         )
         strategy = DataSubjectValidationStrategy(mock_llm_service)
 
-        # llm_service param is required by interface but ignored by this strategy
-        strategy.validate_findings(findings, config, Mock(), run_id="test-run")
+        strategy.validate_findings(findings, config, "test-run")
 
         mock_llm_service.complete.assert_called_once()
         call_kwargs = mock_llm_service.complete.call_args.kwargs
@@ -116,18 +115,6 @@ class TestDataSubjectValidationStrategy:
         assert call_kwargs["response_model"] == LLMValidationResponseModel
         assert call_kwargs["batching_mode"] == BatchingMode.COUNT_BASED
         assert call_kwargs["run_id"] == "test-run"
-
-    def test_raises_error_when_run_id_not_provided(
-        self,
-        mock_llm_service: Mock,
-        config: LLMValidationConfig,
-    ) -> None:
-        """Strategy raises ValueError if run_id is not provided."""
-        findings = [_make_finding("Customer")]
-        strategy = DataSubjectValidationStrategy(mock_llm_service)
-
-        with pytest.raises(ValueError, match="run_id is required"):
-            strategy.validate_findings(findings, config, Mock())  # No run_id
 
     # =========================================================================
     # Response Mapping
@@ -165,9 +152,7 @@ class TestDataSubjectValidationStrategy:
         )
         strategy = DataSubjectValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         assert len(outcome.llm_validated_kept) == 2
         assert outcome.llm_validated_removed == []
@@ -208,9 +193,7 @@ class TestDataSubjectValidationStrategy:
         )
         strategy = DataSubjectValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         assert len(outcome.llm_validated_kept) == 1
         assert outcome.llm_validated_kept[0].id == sample_findings[1].id
@@ -231,9 +214,7 @@ class TestDataSubjectValidationStrategy:
         )
         strategy = DataSubjectValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         # Both findings kept via fail-safe (not_flagged)
         assert outcome.llm_validated_kept == []
@@ -256,9 +237,7 @@ class TestDataSubjectValidationStrategy:
         mock_llm_service.complete.side_effect = Exception("LLM API unavailable")
         strategy = DataSubjectValidationStrategy(mock_llm_service)
 
-        outcome = strategy.validate_findings(
-            sample_findings, config, Mock(), run_id="test-run"
-        )
+        outcome = strategy.validate_findings(sample_findings, config, "test-run")
 
         # All findings should be skipped with BATCH_ERROR reason
         assert outcome.llm_validated_kept == []
