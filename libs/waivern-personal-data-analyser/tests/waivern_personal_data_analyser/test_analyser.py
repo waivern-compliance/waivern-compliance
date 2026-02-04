@@ -19,7 +19,7 @@ from waivern_analysers_shared.types import (
 from waivern_core import AnalyserContractTests
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm.v2 import LLMCompletionResult, LLMService
+from waivern_llm import LLMCompletionResult, LLMService
 from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 
 from waivern_personal_data_analyser.analyser import PersonalDataAnalyser

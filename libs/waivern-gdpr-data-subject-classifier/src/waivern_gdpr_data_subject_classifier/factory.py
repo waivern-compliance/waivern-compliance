@@ -5,7 +5,7 @@ from typing import override
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
-from waivern_llm.v2 import LLMService
+from waivern_llm import LLMService
 from waivern_rulesets import GDPRDataSubjectClassificationRule
 
 from .classifier import GDPRDataSubjectClassifier

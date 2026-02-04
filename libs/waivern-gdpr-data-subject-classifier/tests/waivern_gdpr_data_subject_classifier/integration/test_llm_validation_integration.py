@@ -10,11 +10,11 @@ import pytest
 from waivern_artifact_store.in_memory import AsyncInMemoryStore
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
+from waivern_llm import LLMService
 from waivern_llm.di.configuration import LLMServiceConfiguration
 from waivern_llm.errors import LLMConfigurationError
-from waivern_llm.v2 import LLMService
-from waivern_llm.v2.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
-from waivern_llm.v2.service import DefaultLLMService
+from waivern_llm.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
+from waivern_llm.service import DefaultLLMService
 
 from waivern_gdpr_data_subject_classifier import GDPRDataSubjectClassifier
 from waivern_gdpr_data_subject_classifier.types import GDPRDataSubjectClassifierConfig

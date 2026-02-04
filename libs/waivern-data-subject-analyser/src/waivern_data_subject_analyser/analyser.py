@@ -9,7 +9,7 @@ from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm.v2 import LLMService
+from waivern_llm import LLMService
 
 from .result_builder import DataSubjectResultBuilder
 from .schemas.types import DataSubjectIndicatorModel

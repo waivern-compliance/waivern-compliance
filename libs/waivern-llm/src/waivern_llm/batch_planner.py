@@ -9,8 +9,8 @@ from dataclasses import dataclass
 
 from waivern_core import Finding
 
-from waivern_llm.v2.token_estimation import TOKENS_PER_FINDING, estimate_tokens
-from waivern_llm.v2.types import BatchingMode, ItemGroup, SkippedFinding, SkipReason
+from waivern_llm.token_estimation import TOKENS_PER_FINDING, estimate_tokens
+from waivern_llm.types import BatchingMode, ItemGroup, SkippedFinding, SkipReason
 
 
 @dataclass(frozen=True)

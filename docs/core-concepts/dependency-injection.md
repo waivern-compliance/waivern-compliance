@@ -15,7 +15,7 @@ The `ServiceContainer` manages singleton services like LLM providers that are sh
 **Example - Registering a service:**
 ```python
 from waivern_core.services import ServiceContainer, ServiceDescriptor
-from waivern_llm.v2 import LLMService, LLMServiceFactory
+from waivern_llm import LLMService, LLMServiceFactory
 
 # Create container
 container = ServiceContainer()
@@ -65,7 +65,7 @@ Here's how dependency injection works end-to-end in WCF:
 **1. Application Startup (WCT)**
 ```python
 from waivern_core.services import ServiceContainer, ServiceDescriptor
-from waivern_llm.v2 import LLMService, LLMServiceFactory
+from waivern_llm import LLMService, LLMServiceFactory
 
 # Create service container
 container = ServiceContainer()

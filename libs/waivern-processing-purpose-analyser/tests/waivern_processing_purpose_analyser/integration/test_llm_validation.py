@@ -13,11 +13,11 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
+from waivern_llm import LLMService
 from waivern_llm.di.configuration import LLMServiceConfiguration
 from waivern_llm.errors import LLMConfigurationError
-from waivern_llm.v2 import LLMService
-from waivern_llm.v2.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
-from waivern_llm.v2.service import DefaultLLMService
+from waivern_llm.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
+from waivern_llm.service import DefaultLLMService
 
 from waivern_processing_purpose_analyser import (
     ProcessingPurposeAnalyser,

@@ -18,11 +18,11 @@ from typing import TYPE_CHECKING, override
 from pydantic import BaseModel
 from waivern_core import Finding
 
-from waivern_llm.v2.batch_planner import BatchPlanner
-from waivern_llm.v2.cache import CacheEntry
-from waivern_llm.v2.providers.protocol import LLMProvider
-from waivern_llm.v2.token_estimation import calculate_max_payload_tokens
-from waivern_llm.v2.types import (
+from waivern_llm.batch_planner import BatchPlanner
+from waivern_llm.cache import CacheEntry
+from waivern_llm.providers.protocol import LLMProvider
+from waivern_llm.token_estimation import calculate_max_payload_tokens
+from waivern_llm.types import (
     BatchingMode,
     ItemGroup,
     LLMCompletionResult,

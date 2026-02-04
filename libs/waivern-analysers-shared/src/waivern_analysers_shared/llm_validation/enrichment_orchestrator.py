@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from waivern_core import Finding
-from waivern_llm.v2 import SkippedFinding, SkipReason
+from waivern_llm import SkippedFinding, SkipReason
 
 from waivern_analysers_shared.llm_validation.grouping import GroupingStrategy
 from waivern_analysers_shared.llm_validation.sampling import SamplingStrategy

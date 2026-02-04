@@ -373,7 +373,7 @@ class TestFailureHandling:
     def test_returns_skipped_when_strategy_raises(self) -> None:
         """When strategy raises, all findings are marked as skipped."""
         # Arrange
-        from waivern_llm.v2 import SkipReason
+        from waivern_llm import SkipReason
 
         from waivern_analysers_shared.llm_validation.enrichment_orchestrator import (
             EnrichmentOrchestrator,

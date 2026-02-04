@@ -17,7 +17,7 @@ from waivern_analysers_shared.llm_validation.models import (
 )
 from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrategy
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_llm.v2 import (
+from waivern_llm import (
     BatchingMode,
     ItemGroup,
     LLMService,

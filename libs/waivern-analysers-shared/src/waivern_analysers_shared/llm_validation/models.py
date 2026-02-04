@@ -14,7 +14,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 from waivern_core import Finding
-from waivern_llm.v2 import SkippedFinding, SkipReason
+from waivern_llm import SkippedFinding, SkipReason
 
 __all__ = [
     "FALLBACK_ELIGIBLE_SKIP_REASONS",

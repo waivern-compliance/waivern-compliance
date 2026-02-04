@@ -15,8 +15,8 @@ from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.llm_cache import LLMCache
 
 from waivern_llm.di.configuration import LLMServiceConfiguration
-from waivern_llm.v2.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
-from waivern_llm.v2.service import DefaultLLMService, LLMService
+from waivern_llm.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
+from waivern_llm.service import DefaultLLMService, LLMService
 
 if TYPE_CHECKING:
     from waivern_core.services import ServiceContainer
@@ -38,7 +38,7 @@ class LLMServiceFactory:
         ```python
         from waivern_core.services import ServiceContainer, ServiceDescriptor
         from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
-        from waivern_llm.v2 import LLMService, LLMServiceFactory
+        from waivern_llm import LLMService, LLMServiceFactory
 
         container = ServiceContainer()
 

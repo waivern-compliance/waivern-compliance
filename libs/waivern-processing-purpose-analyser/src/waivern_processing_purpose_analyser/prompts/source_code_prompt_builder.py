@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from typing import override
 
-from waivern_llm.v2 import PromptBuilder
+from waivern_llm import PromptBuilder
 
 from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeIndicatorModel,

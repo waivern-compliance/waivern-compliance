@@ -5,7 +5,7 @@ The key ensures same inputs produce same key, and different inputs produce
 different keys.
 """
 
-from waivern_llm.v2.cache import CacheEntry
+from waivern_llm.cache import CacheEntry
 
 
 class TestCacheEntryComputeKey:

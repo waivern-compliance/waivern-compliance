@@ -13,7 +13,7 @@ from waivern_artifact_store.base import ArtifactStore
 from waivern_core.services import ServiceContainer, ServiceDescriptor
 
 from waivern_llm.di.configuration import LLMServiceConfiguration
-from waivern_llm.v2.factory import LLMServiceFactory
+from waivern_llm.factory import LLMServiceFactory
 
 if TYPE_CHECKING:
     import pytest
@@ -147,7 +147,7 @@ class TestLLMServiceFactoryCreate:
         factory = LLMServiceFactory(container, config)
         service = factory.create()
 
-        from waivern_llm.v2.service import LLMService
+        from waivern_llm.service import LLMService
 
         assert service is not None
         assert isinstance(service, LLMService)
@@ -160,7 +160,7 @@ class TestLLMServiceFactoryCreate:
         factory = LLMServiceFactory(container, config)
         service = factory.create()
 
-        from waivern_llm.v2.service import LLMService
+        from waivern_llm.service import LLMService
 
         assert service is not None
         assert isinstance(service, LLMService)
@@ -173,7 +173,7 @@ class TestLLMServiceFactoryCreate:
         factory = LLMServiceFactory(container, config)
         service = factory.create()
 
-        from waivern_llm.v2.service import LLMService
+        from waivern_llm.service import LLMService
 
         assert service is not None
         assert isinstance(service, LLMService)

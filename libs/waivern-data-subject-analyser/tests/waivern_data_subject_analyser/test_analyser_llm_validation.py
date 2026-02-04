@@ -19,7 +19,7 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm.v2 import LLMCompletionResult, LLMService
+from waivern_llm import LLMCompletionResult, LLMService
 
 from waivern_data_subject_analyser.analyser import DataSubjectAnalyser
 from waivern_data_subject_analyser.types import DataSubjectAnalyserConfig

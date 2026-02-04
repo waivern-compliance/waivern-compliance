@@ -3,9 +3,9 @@
 This package provides configuration classes for LLM services that integrate
 with the waivern-core DI system.
 
-For DI integration with the v2 LLM service, use LLMServiceFactory from v2:
+For DI integration with the LLM service, use LLMServiceFactory:
 
-    from waivern_llm.v2 import LLMServiceFactory, LLMService
+    from waivern_llm import LLMServiceFactory, LLMService
     from waivern_llm.di import LLMServiceConfiguration
 
     # Create factory with configuration

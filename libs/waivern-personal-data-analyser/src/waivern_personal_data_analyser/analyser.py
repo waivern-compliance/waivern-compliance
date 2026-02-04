@@ -14,7 +14,7 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm.v2 import LLMService
+from waivern_llm import LLMService
 
 from .pattern_matcher import PersonalDataPatternMatcher
 from .result_builder import PersonalDataResultBuilder

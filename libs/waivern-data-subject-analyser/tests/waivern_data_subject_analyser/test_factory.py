@@ -10,7 +10,7 @@ from waivern_core import (
 )
 from waivern_core.services import ServiceContainer, ServiceDescriptor
 from waivern_core.services.protocols import ServiceFactory
-from waivern_llm.v2 import LLMService
+from waivern_llm import LLMService
 
 from waivern_data_subject_analyser import DataSubjectAnalyser
 from waivern_data_subject_analyser.factory import (

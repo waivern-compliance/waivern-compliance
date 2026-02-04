@@ -10,9 +10,9 @@ from unittest.mock import AsyncMock, Mock
 from pydantic import BaseModel
 from waivern_artifact_store.in_memory import AsyncInMemoryStore
 
-from waivern_llm.v2.cache import CacheEntry
-from waivern_llm.v2.service import DefaultLLMService
-from waivern_llm.v2.types import BatchingMode, ItemGroup, SkipReason
+from waivern_llm.cache import CacheEntry
+from waivern_llm.service import DefaultLLMService
+from waivern_llm.types import BatchingMode, ItemGroup, SkipReason
 
 # =============================================================================
 # Test Fixtures

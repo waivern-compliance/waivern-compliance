@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
-from waivern_llm.v2 import LLMCompletionResult, LLMService, SkippedFinding, SkipReason
+from waivern_llm import LLMCompletionResult, LLMService, SkippedFinding, SkipReason
 from waivern_rulesets import RiskModifier
 
 from waivern_gdpr_data_subject_classifier.schemas import (

@@ -8,7 +8,7 @@ from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
-from waivern_llm.v2 import LLMService
+from waivern_llm import LLMService
 from waivern_rulesets import (
     GDPRDataSubjectClassificationRule,
     RiskModifiers,

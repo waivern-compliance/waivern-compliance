@@ -27,7 +27,7 @@ from waivern_core import (
 )
 from waivern_core.services import ServiceContainer, ServiceDescriptor
 from waivern_core.services.protocols import ServiceFactory
-from waivern_llm.v2 import LLMService
+from waivern_llm import LLMService
 
 from waivern_personal_data_analyser import PersonalDataAnalyser
 from waivern_personal_data_analyser.factory import PersonalDataAnalyserFactory

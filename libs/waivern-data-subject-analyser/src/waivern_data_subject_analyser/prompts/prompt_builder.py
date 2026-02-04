@@ -7,7 +7,7 @@ for data subject indicators.
 from collections.abc import Sequence
 from typing import override
 
-from waivern_llm.v2 import PromptBuilder
+from waivern_llm import PromptBuilder
 
 from waivern_data_subject_analyser.schemas.types import DataSubjectIndicatorModel
 

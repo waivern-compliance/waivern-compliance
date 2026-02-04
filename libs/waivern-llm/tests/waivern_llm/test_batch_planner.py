@@ -4,8 +4,8 @@ Business behaviour: Plans batches for LLM processing using either
 token-aware bin-packing (EXTENDED_CONTEXT) or count-based splitting (COUNT_BASED).
 """
 
-from waivern_llm.v2.batch_planner import BatchPlanner
-from waivern_llm.v2.types import BatchingMode, ItemGroup, SkipReason
+from waivern_llm.batch_planner import BatchPlanner
+from waivern_llm.types import BatchingMode, ItemGroup, SkipReason
 
 # =============================================================================
 # Test Fixtures
@@ -266,7 +266,7 @@ class TestTokenEstimationIntegration:
 
     def test_estimated_tokens_includes_content_and_items(self) -> None:
         """PlannedBatch.estimated_tokens should equal content tokens + items × TOKENS_PER_FINDING."""
-        from waivern_llm.v2.token_estimation import TOKENS_PER_FINDING, estimate_tokens
+        from waivern_llm.token_estimation import TOKENS_PER_FINDING, estimate_tokens
 
         content = "a" * 400  # ~100 tokens (400 × 0.25)
         group = _create_group(content=content, item_count=3)  # 3 × 50 = 150 tokens

@@ -34,7 +34,7 @@ import asyncio
 import logging
 from collections import defaultdict
 
-from waivern_llm.v2 import (
+from waivern_llm import (
     BatchingMode,
     ItemGroup,
     LLMService,

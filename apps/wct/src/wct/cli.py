@@ -17,7 +17,7 @@ from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
 from waivern_core import Message
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
-from waivern_llm.v2 import LLMService, LLMServiceFactory
+from waivern_llm import LLMService, LLMServiceFactory
 from waivern_orchestration import (
     DAGExecutor,
     ExecutionPlan,

@@ -40,7 +40,7 @@ from waivern_analysers_shared.llm_validation import (
     ValidationOrchestrator,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_llm.v2 import LLMService
+from waivern_llm import LLMService
 
 from waivern_data_subject_analyser.llm_validation_strategy import (
     DataSubjectValidationStrategy,

@@ -8,7 +8,7 @@ import pytest
 from pydantic import BaseModel
 
 from waivern_llm.errors import LLMConfigurationError, LLMConnectionError
-from waivern_llm.v2.providers import OpenAIProvider
+from waivern_llm.providers import OpenAIProvider
 
 OPENAI_ENV_VARS = ["OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_BASE_URL"]
 
@@ -98,7 +98,7 @@ class TestOpenAIProviderProtocol:
 
     def test_satisfies_llm_provider_protocol(self) -> None:
         """Provider satisfies LLMProvider protocol (isinstance check)."""
-        from waivern_llm.v2.providers import LLMProvider
+        from waivern_llm.providers import LLMProvider
 
         provider = OpenAIProvider(api_key="test-key")
 
@@ -132,7 +132,7 @@ class TestOpenAIProviderInvokeStructured:
         """invoke_structured returns instance of provided response model."""
         from unittest.mock import Mock, patch
 
-        with patch("waivern_llm.v2.providers.openai.ChatOpenAI") as mock_chat_class:
+        with patch("waivern_llm.providers.openai.ChatOpenAI") as mock_chat_class:
             mock_llm = Mock()
             mock_structured = Mock()
             mock_structured.invoke.return_value = MockResponse(content="test response")
@@ -149,7 +149,7 @@ class TestOpenAIProviderInvokeStructured:
         """invoke_structured wraps LangChain errors in LLMConnectionError."""
         from unittest.mock import Mock, patch
 
-        with patch("waivern_llm.v2.providers.openai.ChatOpenAI") as mock_chat_class:
+        with patch("waivern_llm.providers.openai.ChatOpenAI") as mock_chat_class:
             mock_llm = Mock()
             mock_structured = Mock()
             mock_structured.invoke.side_effect = Exception("API error")

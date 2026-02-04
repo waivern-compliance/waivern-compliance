@@ -18,7 +18,7 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm.v2 import ItemGroup, LLMCompletionResult, LLMService
+from waivern_llm import ItemGroup, LLMCompletionResult, LLMService
 
 from waivern_personal_data_analyser.analyser import PersonalDataAnalyser
 from waivern_personal_data_analyser.schemas.types import PersonalDataIndicatorModel

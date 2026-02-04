@@ -14,7 +14,7 @@ from waivern_analysers_shared.llm_validation import (
 )
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm.v2 import LLMCompletionResult, LLMService
+from waivern_llm import LLMCompletionResult, LLMService
 
 from waivern_processing_purpose_analyser import (
     ProcessingPurposeAnalyser,

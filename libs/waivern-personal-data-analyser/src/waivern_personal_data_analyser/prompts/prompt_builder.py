@@ -7,7 +7,7 @@ for personal data indicators.
 from collections.abc import Sequence
 from typing import override
 
-from waivern_llm.v2 import PromptBuilder
+from waivern_llm import PromptBuilder
 
 from waivern_personal_data_analyser.schemas.types import PersonalDataIndicatorModel
 

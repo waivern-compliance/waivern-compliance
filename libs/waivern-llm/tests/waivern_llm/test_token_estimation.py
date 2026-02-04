@@ -1,6 +1,6 @@
 """Tests for token estimation utilities in LLM Service v2."""
 
-from waivern_llm.v2.token_estimation import (
+from waivern_llm.token_estimation import (
     calculate_max_payload_tokens,
     estimate_tokens,
     get_model_context_window,

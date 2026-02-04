@@ -6,7 +6,7 @@ implementation looks like.
 
 from pydantic import BaseModel
 
-from waivern_llm.v2.providers import LLMProvider
+from waivern_llm.providers import LLMProvider
 
 
 class MockResponse(BaseModel):

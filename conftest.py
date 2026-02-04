@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
 from waivern_core.schemas import SchemaRegistry
 from waivern_core.services import ServiceContainer, ServiceDescriptor
-from waivern_llm.v2 import LLMService, LLMServiceFactory
+from waivern_llm import LLMService, LLMServiceFactory
 from waivern_rulesets.core.registry import RulesetRegistry
 from waivern_source_code_analyser.languages.registry import LanguageRegistry
 from wct.exporters.registry import ExporterRegistry
