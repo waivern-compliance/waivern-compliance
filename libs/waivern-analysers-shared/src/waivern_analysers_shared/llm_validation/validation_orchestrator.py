@@ -15,31 +15,14 @@ Architecture
     │  Composes orthogonal strategies:                               │
     │  • GroupingStrategy: How to organise findings (optional)       │
     │  • SamplingStrategy: How to sample from groups (optional)      │
-    │  • LLMValidationStrategy: How to batch and call the LLM ◄──────┼─ Batching
+    │  • LLMValidationStrategy: How to validate findings via LLM     │
     └────────────────────────────────────────────────────────────────┘
-                                  │
-              ┌───────────────────┴───────────────────┐
-              ▼                                       ▼
-    ┌───────────────────────┐           ┌──────────────────────────────┐
-    │ DefaultLLMValidation  │           │ ExtendedContextLLMValidation │
-    │      Strategy         │           │         Strategy             │
-    ├───────────────────────┤           ├──────────────────────────────┤
-    │ Count-based batching  │           │ Token-aware source           │
-    │ (llm_batch_size)      │           │ batching with content        │
-    │                       │           │                              │
-    │ Use for: simple       │           │ Use for: validation          │
-    │ finding validation    │           │ needing full source          │
-    └───────────────────────┘           └──────────────────────────────┘
 
-Batching is a strategy concern, not an orchestrator concern. Each
-LLMValidationStrategy implementation chooses its own batching approach:
+Validation strategies use LLMService (from waivern_llm.v2) for batching:
+- COUNT_BASED: Simple count-based batching for evidence-only validation
+- EXTENDED_CONTEXT: Token-aware batching with source content
 
-- **DefaultLLMValidationStrategy**: Simple count-based batching. Batches
-  findings by ``llm_batch_size`` regardless of content size.
-
-- **ExtendedContextLLMValidationStrategy**: Token-aware batching. Groups
-  findings by source (file, table, etc.) and batches based on token limits
-  to fit within model context windows.
+The orchestrator handles grouping and sampling; the LLMService handles batching.
 
 """
 
