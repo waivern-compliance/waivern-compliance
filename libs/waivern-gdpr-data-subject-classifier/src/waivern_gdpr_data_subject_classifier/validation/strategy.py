@@ -42,9 +42,7 @@ from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_llm import BaseLLMService
 from waivern_rulesets import RiskModifier
 
-from waivern_gdpr_data_subject_classifier.prompts.risk_modifier_validation import (
-    get_risk_modifier_validation_prompt,
-)
+from waivern_gdpr_data_subject_classifier.prompts import RiskModifierPromptBuilder
 from waivern_gdpr_data_subject_classifier.schemas import GDPRDataSubjectFindingModel
 
 from .models import (
@@ -84,6 +82,7 @@ class RiskModifierValidationStrategy(
 
         """
         self._available_modifiers = available_modifiers
+        self._prompt_builder = RiskModifierPromptBuilder(available_modifiers)
 
     # -------------------------------------------------------------------------
     # Batch Validation
@@ -111,9 +110,7 @@ class RiskModifierValidationStrategy(
             Batch result with modifiers, confidences, and categories per finding.
 
         """
-        prompt = get_risk_modifier_validation_prompt(
-            findings_batch, self._available_modifiers
-        )
+        prompt = self._prompt_builder.build_prompt(findings_batch)
 
         logger.debug(
             f"Validating batch of {len(findings_batch)} findings for risk modifiers"

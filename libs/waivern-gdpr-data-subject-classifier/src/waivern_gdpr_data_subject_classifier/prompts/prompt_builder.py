@@ -1,35 +1,60 @@
-"""LLM validation prompt for risk modifier detection."""
+"""PromptBuilder for risk modifier validation.
 
+Implements the PromptBuilder protocol for generating validation prompts
+for risk modifier detection in GDPR data subject findings.
+"""
+
+from collections.abc import Sequence
+from typing import override
+
+from waivern_llm.v2 import PromptBuilder
 from waivern_rulesets import RiskModifier
 
 from waivern_gdpr_data_subject_classifier.schemas import GDPRDataSubjectFindingModel
 
 
-def get_risk_modifier_validation_prompt(
-    findings: list[GDPRDataSubjectFindingModel],
-    available_modifiers: list[RiskModifier],
-) -> str:
-    """Generate validation prompt for risk modifier detection.
+class RiskModifierPromptBuilder(PromptBuilder[GDPRDataSubjectFindingModel]):
+    """Builds validation prompts for risk modifier detection.
 
-    Args:
-        findings: List of classified GDPR data subject findings to analyse.
-        available_modifiers: List of risk modifiers from the ruleset.
-
-    Returns:
-        Formatted validation prompt for the LLM.
-
-    Raises:
-        ValueError: If findings list is empty.
-
+    Uses COUNT_BASED batching mode, so the content parameter is ignored.
     """
-    if not findings:
-        raise ValueError("At least one finding must be provided")
 
-    findings_text = _build_findings_block(findings)
-    modifier_definitions = _build_modifier_definitions(available_modifiers)
-    response_format = _get_response_format(len(findings))
+    def __init__(self, available_modifiers: list[RiskModifier]) -> None:
+        """Initialise prompt builder.
 
-    return f"""You are an expert GDPR data protection analyst. Analyse evidence text to detect risk modifiers that indicate special data subject categories requiring additional protections.
+        Args:
+            available_modifiers: Risk modifiers from the ruleset to detect.
+
+        """
+        self._available_modifiers = available_modifiers
+
+    @override
+    def build_prompt(
+        self,
+        items: Sequence[GDPRDataSubjectFindingModel],
+        content: str | None = None,
+    ) -> str:
+        """Build validation prompt for the given findings.
+
+        Args:
+            items: Findings to analyse for risk modifiers.
+            content: Ignored - COUNT_BASED mode doesn't use shared content.
+
+        Returns:
+            Complete prompt string for LLM validation.
+
+        Raises:
+            ValueError: If items is empty.
+
+        """
+        if not items:
+            raise ValueError("At least one finding must be provided")
+
+        findings_text = self._build_findings_block(items)
+        modifier_definitions = self._build_modifier_definitions()
+        response_format = self._get_response_format(len(items))
+
+        return f"""You are an expert GDPR data protection analyst. Analyse evidence text to detect risk modifiers that indicate special data subject categories requiring additional protections.
 
 **FINDINGS TO ANALYSE:**
 {findings_text}
@@ -93,44 +118,43 @@ Evidence: "12-year-old patient with learning disability receiving special educat
 
 {response_format}"""
 
+    def _build_findings_block(
+        self, items: Sequence[GDPRDataSubjectFindingModel]
+    ) -> str:
+        """Build formatted findings block for the prompt."""
+        findings_parts: list[str] = []
 
-def _build_findings_block(findings: list[GDPRDataSubjectFindingModel]) -> str:
-    """Build formatted findings block for the prompt."""
-    findings_text: list[str] = []
+        for finding in items:
+            evidence_text = (
+                "\n  ".join(f"- {evidence.content}" for evidence in finding.evidence)
+                if finding.evidence
+                else "No evidence"
+            )
 
-    for finding in findings:
-        evidence_text = (
-            "\n  ".join(f"- {evidence.content}" for evidence in finding.evidence)
-            if finding.evidence
-            else "No evidence"
-        )
-
-        findings_text.append(f"""
+            findings_parts.append(f"""
 Finding [{finding.id}]:
   Data Subject Category: {finding.data_subject_category}
   Source: {finding.metadata.source}
   Evidence:
   {evidence_text}""")
 
-    return "\n".join(findings_text)
+        return "\n".join(findings_parts)
 
+    def _build_modifier_definitions(self) -> str:
+        """Build modifier definitions section from ruleset."""
+        if not self._available_modifiers:
+            return "No specific modifiers defined - use general GDPR risk assessment."
 
-def _build_modifier_definitions(modifiers: list[RiskModifier]) -> str:
-    """Build modifier definitions section from ruleset."""
-    if not modifiers:
-        return "No specific modifiers defined - use general GDPR risk assessment."
+        definitions: list[str] = []
+        for modifier in self._available_modifiers:
+            articles = ", ".join(modifier.article_references)
+            definitions.append(f"- **{modifier.modifier}** ({articles})")
 
-    definitions: list[str] = []
-    for modifier in modifiers:
-        articles = ", ".join(modifier.article_references)
-        definitions.append(f"- **{modifier.modifier}** ({articles})")
+        return "\n".join(definitions)
 
-    return "\n".join(definitions)
-
-
-def _get_response_format(finding_count: int) -> str:
-    """Get response format section for the prompt."""
-    return f"""**RESPONSE FORMAT:**
+    def _get_response_format(self, finding_count: int) -> str:
+        """Get response format section for the prompt."""
+        return f"""**RESPONSE FORMAT:**
 Respond with valid JSON only (no markdown formatting).
 For each finding, provide the detected risk modifiers (empty list if none).
 Echo back the exact finding_id from each Finding [...] header.
