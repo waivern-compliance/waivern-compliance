@@ -18,7 +18,6 @@ from waivern_core.schemas.finding_types import (
 )
 
 from waivern_analysers_shared.llm_validation.sampling import SamplingResult
-from waivern_analysers_shared.types import LLMValidationConfig
 
 
 class MockFinding(BaseFindingModel[BaseFindingMetadata]):
@@ -35,14 +34,6 @@ def make_finding(finding_id: str, group: str) -> MockFinding:
         evidence=[BaseFindingEvidence(content=f"Evidence for {finding_id}")],
         matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
         metadata=BaseFindingMetadata(source="test_source"),
-    )
-
-
-def make_config() -> LLMValidationConfig:
-    """Create default test config."""
-    return LLMValidationConfig(
-        enable_llm_validation=True,
-        llm_batch_size=10,
     )
 
 
@@ -69,7 +60,6 @@ class TestCoreOrchestration:
         # Act
         result = orchestrator.enrich(
             findings=[],
-            config=make_config(),
             run_id="test-run",
         )
 
@@ -93,17 +83,16 @@ class TestCoreOrchestration:
         findings = [make_finding("1", "A"), make_finding("2", "B")]
         mock_strategy = Mock()
         mock_strategy.enrich.return_value = "enrichment_result"
-        config = make_config()
 
         orchestrator: EnrichmentOrchestrator[MockFinding, str] = EnrichmentOrchestrator(
             enrichment_strategy=mock_strategy,
         )
 
         # Act
-        orchestrator.enrich(findings=findings, config=config, run_id="test-run")
+        orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert - strategy called with all findings
-        mock_strategy.enrich.assert_called_once_with(findings, config, "test-run")
+        mock_strategy.enrich.assert_called_once_with(findings, "test-run")
 
     def test_returns_strategy_result_in_enrichment_result(self) -> None:
         """Strategy result passed through unchanged in EnrichmentResult."""
@@ -124,9 +113,7 @@ class TestCoreOrchestration:
         )
 
         # Act
-        result = orchestrator.enrich(
-            findings=findings, config=make_config(), run_id="test-run"
-        )
+        result = orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert - strategy result passed through unchanged
         assert result.strategy_result is expected_result
@@ -147,9 +134,7 @@ class TestCoreOrchestration:
         )
 
         # Act
-        result = orchestrator.enrich(
-            findings=findings, config=make_config(), run_id="test-run"
-        )
+        result = orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert
         assert result.all_findings == findings
@@ -182,7 +167,7 @@ class TestGroupingBehaviour:
         )
 
         # Act
-        orchestrator.enrich(findings=findings, config=make_config(), run_id="test-run")
+        orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert
         mock_grouping.group.assert_called_once_with(findings)
@@ -207,9 +192,7 @@ class TestGroupingBehaviour:
         )
 
         # Act
-        result = orchestrator.enrich(
-            findings=findings, config=make_config(), run_id="test-run"
-        )
+        result = orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert
         assert result.groups == expected_groups
@@ -230,9 +213,7 @@ class TestGroupingBehaviour:
         )
 
         # Act
-        result = orchestrator.enrich(
-            findings=findings, config=make_config(), run_id="test-run"
-        )
+        result = orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert
         assert result.groups is None
@@ -276,7 +257,7 @@ class TestSamplingBehaviour:
         )
 
         # Act
-        orchestrator.enrich(findings=findings, config=make_config(), run_id="test-run")
+        orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert - sampling called with groups
         mock_sampling.sample.assert_called_once_with(groups)
@@ -306,7 +287,6 @@ class TestSamplingBehaviour:
             sampled={"A": [findings[0]], "B": [findings[2]]},
             non_sampled={"A": [findings[1]], "B": []},
         )
-        config = make_config()
 
         orchestrator: EnrichmentOrchestrator[MockFinding, str] = EnrichmentOrchestrator(
             enrichment_strategy=mock_strategy,
@@ -315,7 +295,7 @@ class TestSamplingBehaviour:
         )
 
         # Act
-        orchestrator.enrich(findings=findings, config=config, run_id="test-run")
+        orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert - strategy called with sampled findings only (flattened)
         mock_strategy.enrich.assert_called_once()
@@ -349,9 +329,7 @@ class TestSamplingBehaviour:
         )
 
         # Act
-        result = orchestrator.enrich(
-            findings=findings, config=make_config(), run_id="test-run"
-        )
+        result = orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert - all_findings has all originals
         assert result.all_findings == findings
@@ -378,7 +356,7 @@ class TestSamplingBehaviour:
         )
 
         # Act
-        orchestrator.enrich(findings=findings, config=make_config(), run_id="test-run")
+        orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert - sampling called with implicit single group
         mock_sampling.sample.assert_called_once_with({"_all": findings})
@@ -410,9 +388,7 @@ class TestFailureHandling:
         )
 
         # Act
-        result = orchestrator.enrich(
-            findings=findings, config=make_config(), run_id="test-run"
-        )
+        result = orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert
         assert result.strategy_result is None
@@ -436,9 +412,7 @@ class TestFailureHandling:
         )
 
         # Act
-        result = orchestrator.enrich(
-            findings=findings, config=make_config(), run_id="test-run"
-        )
+        result = orchestrator.enrich(findings=findings, run_id="test-run")
 
         # Assert
         assert result.skipped == []

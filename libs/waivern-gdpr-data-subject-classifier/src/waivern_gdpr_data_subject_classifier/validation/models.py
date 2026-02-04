@@ -1,6 +1,6 @@
 """Response models for risk modifier LLM validation."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
 
@@ -49,24 +49,6 @@ class RiskModifierValidationResponseModel(BaseModel):
 
 
 @dataclass
-class RiskModifierBatchResult:
-    """Result from validating a single batch of findings.
-
-    This is the intermediate per-batch result type (TBatchResult) used by
-    the RiskModifierValidationStrategy.
-    """
-
-    finding_modifiers: dict[str, list[str]] = field(default_factory=dict)
-    """Mapping of finding_id → detected modifiers."""
-
-    finding_confidences: dict[str, float] = field(default_factory=dict)
-    """Mapping of finding_id → confidence score."""
-
-    finding_categories: dict[str, str] = field(default_factory=dict)
-    """Mapping of finding_id → data_subject_category."""
-
-
-@dataclass
 class CategoryRiskModifierResult:
     """Risk modifiers detected for a single data subject category.
 
@@ -91,8 +73,7 @@ class CategoryRiskModifierResult:
 class RiskModifierValidationResult:
     """Complete result of risk modifier validation.
 
-    This is the final result type (TResult) returned by
-    RiskModifierValidationStrategy.validate_findings().
+    This is the result type returned by RiskModifierValidationStrategy.enrich().
     """
 
     category_results: list[CategoryRiskModifierResult]

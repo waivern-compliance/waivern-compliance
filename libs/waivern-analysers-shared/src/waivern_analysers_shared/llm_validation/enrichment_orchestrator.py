@@ -13,7 +13,6 @@ from waivern_llm.v2 import SkippedFinding, SkipReason
 
 from waivern_analysers_shared.llm_validation.grouping import GroupingStrategy
 from waivern_analysers_shared.llm_validation.sampling import SamplingStrategy
-from waivern_analysers_shared.types import LLMValidationConfig
 
 
 class EnrichmentStrategy[TFinding: Finding, TResult](Protocol):
@@ -25,14 +24,12 @@ class EnrichmentStrategy[TFinding: Finding, TResult](Protocol):
     def enrich(
         self,
         findings: list[TFinding],
-        config: LLMValidationConfig,
         run_id: str,
     ) -> TResult:
         """Enrich findings using LLM.
 
         Args:
             findings: Findings to enrich.
-            config: LLM validation configuration.
             run_id: Run ID for cache scoping.
 
         Returns:
@@ -98,7 +95,6 @@ class EnrichmentOrchestrator[TFinding: Finding, TResult]:
     def enrich(
         self,
         findings: list[TFinding],
-        config: LLMValidationConfig,
         run_id: str,
     ) -> EnrichmentResult[TFinding, TResult]:
         """Orchestrate enrichment flow.
@@ -112,7 +108,6 @@ class EnrichmentOrchestrator[TFinding: Finding, TResult]:
 
         Args:
             findings: Findings to enrich.
-            config: LLM validation configuration.
             run_id: Run ID for cache scoping.
 
         Returns:
@@ -149,7 +144,7 @@ class EnrichmentOrchestrator[TFinding: Finding, TResult]:
         # Step 3: Call strategy with findings
         try:
             strategy_result = self._enrichment_strategy.enrich(
-                findings_to_enrich, config, run_id
+                findings_to_enrich, run_id
             )
             return EnrichmentResult(
                 strategy_result=strategy_result,

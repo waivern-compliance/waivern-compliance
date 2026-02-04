@@ -5,7 +5,7 @@ from typing import override
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
-from waivern_llm import BaseLLMService
+from waivern_llm.v2 import LLMService
 from waivern_rulesets import GDPRDataSubjectClassificationRule
 
 from .classifier import GDPRDataSubjectClassifier
@@ -49,7 +49,7 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
 
         # Safe to resolve - can_create() already validated availability
         llm_service = (
-            self._container.get_service(BaseLLMService)
+            self._container.get_service(LLMService)
             if classifier_config.llm_validation.enable_llm_validation
             else None
         )
@@ -91,7 +91,7 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
         # If LLM validation enabled, must have LLM service available in container
         if classifier_config.llm_validation.enable_llm_validation:
             try:
-                self._container.get_service(BaseLLMService)
+                self._container.get_service(LLMService)
             except (ValueError, KeyError):
                 return False
 
@@ -109,7 +109,7 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
 
         Returns:
             Dictionary mapping dependency names to their types.
-            Includes BaseLLMService for optional LLM validation.
+            Includes LLMService for optional LLM validation.
 
         """
-        return {"llm_service": BaseLLMService}
+        return {"llm_service": LLMService}
