@@ -7,6 +7,11 @@ from waivern_analysers_shared.llm_validation.decision_engine import (
 from waivern_analysers_shared.llm_validation.default_strategy import (
     DefaultLLMValidationStrategy,
 )
+from waivern_analysers_shared.llm_validation.enrichment_orchestrator import (
+    EnrichmentOrchestrator,
+    EnrichmentResult,
+    EnrichmentStrategy,
+)
 from waivern_analysers_shared.llm_validation.extended_context_strategy import (
     ExtendedContextLLMValidationStrategy,
     SourceBatch,
@@ -85,5 +90,8 @@ __all__ = [
     "LLMValidationStrategy",
     "SourceBatch",
     # Orchestration
+    "EnrichmentOrchestrator",
+    "EnrichmentResult",
+    "EnrichmentStrategy",
     "ValidationOrchestrator",
 ]
