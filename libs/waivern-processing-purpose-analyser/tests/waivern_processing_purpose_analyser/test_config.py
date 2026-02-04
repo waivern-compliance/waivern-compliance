@@ -35,7 +35,7 @@ class TestProcessingPurposeAnalyserConfig:
                 },
                 "llm_validation": {
                     "enable_llm_validation": True,
-                    "llm_batch_size": 100,
+                    "llm_validation_mode": "conservative",
                 },
             }
         )
@@ -47,7 +47,7 @@ class TestProcessingPurposeAnalyserConfig:
 
         # Verify LLM validation config respected (tests nested model parsing)
         assert config.llm_validation.enable_llm_validation is True
-        assert config.llm_validation.llm_batch_size == 100
+        assert config.llm_validation.llm_validation_mode == "conservative"
 
     def test_from_properties_invalid_ruleset_type_raises_validation_error(self):
         """Test from_properties rejects invalid ruleset type."""

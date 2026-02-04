@@ -60,7 +60,6 @@ class TestPersonalDataValidationStrategy:
         """Create standard LLM configuration."""
         return LLMValidationConfig(
             enable_llm_validation=True,
-            llm_batch_size=10,
             llm_validation_mode="standard",
         )
 

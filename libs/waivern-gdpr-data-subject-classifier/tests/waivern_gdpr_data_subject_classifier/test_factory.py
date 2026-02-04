@@ -73,7 +73,6 @@ class TestGDPRDataSubjectClassifierFactory(
             "ruleset": "local/gdpr_data_subject_classification/1.0.0",
             "llm_validation": {
                 "enable_llm_validation": True,
-                "llm_batch_size": 10,
             },
         }
 
@@ -91,7 +90,6 @@ class TestGDPRDataSubjectClassifierFactory(
             "ruleset": "local/gdpr_data_subject_classification/1.0.0",
             "llm_validation": {
                 "enable_llm_validation": True,  # LLM required
-                "llm_batch_size": 10,
             },
         }
 

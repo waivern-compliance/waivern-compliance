@@ -18,7 +18,7 @@ Architecture
     │  • LLMValidationStrategy: How to validate findings via LLM     │
     └────────────────────────────────────────────────────────────────┘
 
-Validation strategies use LLMService (from waivern_llm.v2) for batching:
+Validation strategies use LLMService (from waivern_llm) for batching:
 - COUNT_BASED: Simple count-based batching for evidence-only validation
 - EXTENDED_CONTEXT: Token-aware batching with source content
 

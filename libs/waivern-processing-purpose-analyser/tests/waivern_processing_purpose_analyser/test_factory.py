@@ -76,7 +76,6 @@ class TestProcessingPurposeAnalyserFactory(
             },
             "llm_validation": {
                 "enable_llm_validation": True,
-                "llm_batch_size": 10,
                 "llm_validation_mode": "standard",
             },
         }

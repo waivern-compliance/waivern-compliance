@@ -17,27 +17,26 @@ class TestGDPRDataSubjectClassifierConfig:
         properties = {
             "llm_validation": {
                 "enable_llm_validation": True,
-                "llm_batch_size": 100,
+                "llm_validation_mode": "conservative",
             }
         }
 
         config = GDPRDataSubjectClassifierConfig.from_properties(properties)
 
         assert config.llm_validation.enable_llm_validation is True
-        assert config.llm_validation.llm_batch_size == 100
+        assert config.llm_validation.llm_validation_mode == "conservative"
 
     def test_config_from_properties_with_partial_llm_validation(self) -> None:
         """Test that partial llm_validation config uses defaults for unspecified fields."""
         properties = {
             "llm_validation": {
-                "llm_batch_size": 75,
+                "llm_validation_mode": "aggressive",
             }
         }
 
         config = GDPRDataSubjectClassifierConfig.from_properties(properties)
 
         # Specified value should be applied
-        assert config.llm_validation.llm_batch_size == 75
+        assert config.llm_validation.llm_validation_mode == "aggressive"
         # Unspecified fields should use defaults
         assert config.llm_validation.enable_llm_validation is False
-        assert config.llm_validation.llm_validation_mode == "standard"

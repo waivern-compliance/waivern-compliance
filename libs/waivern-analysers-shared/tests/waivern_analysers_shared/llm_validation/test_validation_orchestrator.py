@@ -48,7 +48,6 @@ def make_config() -> LLMValidationConfig:
     """Create default test config."""
     return LLMValidationConfig(
         enable_llm_validation=True,
-        llm_batch_size=10,
     )
 
 
