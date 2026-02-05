@@ -142,55 +142,56 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
             # Create the config instance first
             config = cls.model_validate(config_data)
 
-            # Now handle authentication based on auth_method
-            if config.auth_method == "pat":
-                token = os.environ.get("GITHUB_TOKEN")
-                if token:
-                    object.__setattr__(config, "_token", token)
-                # Token is optional for public repos
+            # Handle authentication based on auth_method
+            match config.auth_method:
+                case "pat":
+                    token = os.environ.get("GITHUB_TOKEN")
+                    if token:
+                        object.__setattr__(config, "_token", token)
+                    # Token is optional for public repos
 
-            elif config.auth_method == "app":
-                # All three are required for GitHub App auth
-                app_id_str = os.environ.get("GITHUB_APP_ID")
-                private_key_path_str = os.environ.get("GITHUB_PRIVATE_KEY_PATH")
-                installation_id_str = os.environ.get("GITHUB_INSTALLATION_ID")
+                case "app":
+                    # All three are required for GitHub App auth
+                    app_id_str = os.environ.get("GITHUB_APP_ID")
+                    private_key_path_str = os.environ.get("GITHUB_PRIVATE_KEY_PATH")
+                    installation_id_str = os.environ.get("GITHUB_INSTALLATION_ID")
 
-                if not app_id_str:
-                    raise ConnectorConfigError(
-                        "GITHUB_APP_ID environment variable is required for GitHub App authentication"
-                    )
-                if not private_key_path_str:
-                    raise ConnectorConfigError(
-                        "GITHUB_PRIVATE_KEY_PATH environment variable is required for GitHub App authentication"
-                    )
-                if not installation_id_str:
-                    raise ConnectorConfigError(
-                        "GITHUB_INSTALLATION_ID environment variable is required for GitHub App authentication"
-                    )
+                    if not app_id_str:
+                        raise ConnectorConfigError(
+                            "GITHUB_APP_ID environment variable is required for GitHub App authentication"
+                        )
+                    if not private_key_path_str:
+                        raise ConnectorConfigError(
+                            "GITHUB_PRIVATE_KEY_PATH environment variable is required for GitHub App authentication"
+                        )
+                    if not installation_id_str:
+                        raise ConnectorConfigError(
+                            "GITHUB_INSTALLATION_ID environment variable is required for GitHub App authentication"
+                        )
 
-                try:
-                    app_id = int(app_id_str)
-                except ValueError as e:
-                    raise ConnectorConfigError(
-                        f"Invalid GITHUB_APP_ID: must be an integer, got '{app_id_str}'"
-                    ) from e
+                    try:
+                        app_id = int(app_id_str)
+                    except ValueError as e:
+                        raise ConnectorConfigError(
+                            f"Invalid GITHUB_APP_ID: must be an integer, got '{app_id_str}'"
+                        ) from e
 
-                try:
-                    installation_id = int(installation_id_str)
-                except ValueError as e:
-                    raise ConnectorConfigError(
-                        f"Invalid GITHUB_INSTALLATION_ID: must be an integer, got '{installation_id_str}'"
-                    ) from e
+                    try:
+                        installation_id = int(installation_id_str)
+                    except ValueError as e:
+                        raise ConnectorConfigError(
+                            f"Invalid GITHUB_INSTALLATION_ID: must be an integer, got '{installation_id_str}'"
+                        ) from e
 
-                private_key_path = Path(private_key_path_str)
-                if not private_key_path.exists():
-                    raise ConnectorConfigError(
-                        f"GitHub App private key file not found: {private_key_path}"
-                    )
+                    private_key_path = Path(private_key_path_str)
+                    if not private_key_path.exists():
+                        raise ConnectorConfigError(
+                            f"GitHub App private key file not found: {private_key_path}"
+                        )
 
-                object.__setattr__(config, "_app_id", app_id)
-                object.__setattr__(config, "_private_key_path", private_key_path)
-                object.__setattr__(config, "_installation_id", installation_id)
+                    object.__setattr__(config, "_app_id", app_id)
+                    object.__setattr__(config, "_private_key_path", private_key_path)
+                    object.__setattr__(config, "_installation_id", installation_id)
 
             return config
 
