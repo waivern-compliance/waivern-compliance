@@ -3,6 +3,7 @@
 from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
+from waivern_core import JsonValue
 
 # =============================================================================
 # Artifact Configuration
@@ -78,7 +79,7 @@ class RunbookInputDeclaration(BaseModel):
     optional: bool = False
     """If true, input doesn't need to be mapped."""
 
-    default: Any = None
+    default: JsonValue = None
     """Default value if not mapped (requires optional=True)."""
 
     sensitive: bool = False

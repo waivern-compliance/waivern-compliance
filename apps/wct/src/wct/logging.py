@@ -50,15 +50,15 @@ def get_config_path(
         config_file = f"logging-{environment}.yaml"
     else:
         # Default priority: environment-specific -> general
-        env = os.getenv("WCT_ENV", "").lower()
-        if env and env in ["dev", "development", "test", "prod", "production"]:
-            if env in ["development"]:
-                env = "dev"
-            elif env in ["production"]:
-                env = "prod"
-            config_file = f"logging-{env}.yaml"
-        else:
-            config_file = "logging.yaml"
+        match os.getenv("WCT_ENV", "").lower():
+            case "dev" | "development":
+                config_file = "logging-dev.yaml"
+            case "test":
+                config_file = "logging-test.yaml"
+            case "prod" | "production":
+                config_file = "logging-prod.yaml"
+            case _:
+                config_file = "logging.yaml"
 
     config_path = config_dir / config_file
 

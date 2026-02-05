@@ -5,7 +5,7 @@ from typing import Any, cast, override
 
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.utilities import RulesetManager
-from waivern_core import InputRequirement, Schema
+from waivern_core import InputRequirement, JsonValue, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
 from waivern_llm import LLMService
@@ -297,17 +297,19 @@ class GDPRDataSubjectClassifier(Classifier):
             List of evidence text strings.
 
         """
-        evidence_list: list[Any] = finding.get("evidence", [])
+        evidence_list: list[JsonValue] = finding.get("evidence", [])
         evidence_texts: list[str] = []
 
         for ev in evidence_list:
-            if isinstance(ev, dict):
-                ev_dict = cast(dict[str, Any], ev)
-                content = ev_dict.get("content", "")
-                if isinstance(content, str) and content:
-                    evidence_texts.append(content)
-            elif isinstance(ev, str):
-                evidence_texts.append(ev)
+            match ev:
+                case dict():
+                    content = ev.get("content", "")
+                    if isinstance(content, str) and content:
+                        evidence_texts.append(content)
+                case str():
+                    evidence_texts.append(ev)
+                case _:
+                    pass  # Skip non-dict, non-string evidence (int, float, bool, None, list)
 
         return evidence_texts
 
