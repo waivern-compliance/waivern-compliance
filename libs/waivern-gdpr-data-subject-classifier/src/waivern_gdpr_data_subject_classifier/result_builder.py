@@ -98,11 +98,13 @@ class GDPRDataSubjectResultBuilder:
         """
         categories = list({f.data_subject_category for f in findings})
         high_risk_count = len([f for f in findings if f.risk_modifiers])
+        requires_review_count = len([f for f in findings if f.require_review is True])
 
         return GDPRDataSubjectSummary(
             total_findings=len(findings),
             categories_identified=sorted(categories),
             high_risk_count=high_risk_count,
+            requires_review_count=requires_review_count,
         )
 
     def _build_analysis_metadata(

@@ -38,6 +38,7 @@ class GDPRProcessingPurposeFindingModel(
     - evidence: list[BaseFindingEvidence] - Evidence items with content
     - matched_patterns: list[PatternMatchDetail] - Patterns that matched
     - metadata: GDPRProcessingPurposeFindingMetadata - Required metadata with source
+    - require_review: bool | None - Whether this finding requires human review
     """
 
     # Original indicator data (propagated)
@@ -66,10 +67,6 @@ class GDPRProcessingPurposeFindingModel(
     dpia_recommendation: Literal["required", "recommended", "not_required"] = Field(
         default="not_required",
         description="DPIA recommendation level for this purpose",
-    )
-    require_review: bool | None = Field(
-        default=None,
-        description="Whether this finding requires human review to determine actual processing purpose (e.g., technical mechanisms that could serve multiple purposes). Only present when True.",
     )
 
     @override

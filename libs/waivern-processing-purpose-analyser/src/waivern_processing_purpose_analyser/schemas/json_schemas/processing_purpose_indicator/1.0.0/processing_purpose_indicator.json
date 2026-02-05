@@ -151,7 +151,7 @@
       "type": "object"
     },
     "ProcessingPurposeIndicatorModel": {
-      "description": "Processing purpose indicator structure.\n\nA framework-agnostic indicator of a detected processing purpose.\nRegulatory classification (e.g., GDPR category) is performed by\ndownstream classifiers.\n\nInherits from BaseFindingModel[ProcessingPurposeIndicatorMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: ProcessingPurposeIndicatorMetadata - Required metadata with source",
+      "description": "Processing purpose indicator structure.\n\nA framework-agnostic indicator of a detected processing purpose.\nRegulatory classification (e.g., GDPR category) is performed by\ndownstream classifiers.\n\nInherits from BaseFindingModel[ProcessingPurposeIndicatorMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: ProcessingPurposeIndicatorMetadata - Required metadata with source\n- require_review: bool | None - Whether this finding requires human review",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -179,6 +179,19 @@
         "metadata": {
           "$ref": "#/$defs/ProcessingPurposeIndicatorMetadata",
           "description": "Metadata with source and context information"
+        },
+        "require_review": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether this finding requires human review. Only present when True.",
+          "title": "Require Review"
         },
         "purpose": {
           "description": "Processing purpose name (from ruleset)",

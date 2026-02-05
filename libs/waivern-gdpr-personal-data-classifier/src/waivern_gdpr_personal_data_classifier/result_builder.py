@@ -81,9 +81,12 @@ class GDPRClassifierResultBuilder:
             Summary statistics model.
 
         """
+        requires_review_count = len([f for f in findings if f.require_review is True])
+
         return GDPRPersonalDataSummary(
             total_findings=len(findings),
             special_category_count=len([f for f in findings if f.special_category]),
+            requires_review_count=requires_review_count,
         )
 
     def _build_analysis_metadata(

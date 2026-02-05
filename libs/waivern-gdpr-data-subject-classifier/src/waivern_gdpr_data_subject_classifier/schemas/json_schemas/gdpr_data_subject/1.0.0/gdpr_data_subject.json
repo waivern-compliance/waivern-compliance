@@ -85,7 +85,7 @@
       "type": "object"
     },
     "GDPRDataSubjectFindingModel": {
-      "description": "GDPR data subject classification finding structure.\n\nRepresents a data subject indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nrisk_modifiers - e.g., minors (Article 8) or vulnerable individuals\n(Recital 75) require additional protections under GDPR.\n\nInherits from BaseFindingModel[GDPRDataSubjectFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: GDPRDataSubjectFindingMetadata - Required metadata with source",
+      "description": "GDPR data subject classification finding structure.\n\nRepresents a data subject indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nrisk_modifiers - e.g., minors (Article 8) or vulnerable individuals\n(Recital 75) require additional protections under GDPR.\n\nInherits from BaseFindingModel[GDPRDataSubjectFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: GDPRDataSubjectFindingMetadata - Required metadata with source\n- require_review: bool | None - Whether this finding requires human review",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -113,6 +113,19 @@
         "metadata": {
           "$ref": "#/$defs/GDPRDataSubjectFindingMetadata",
           "description": "Metadata with source and context information"
+        },
+        "require_review": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether this finding requires human review. Only present when True.",
+          "title": "Require Review"
         },
         "data_subject_category": {
           "description": "Normalised GDPR data subject category (e.g., 'employee', 'customer')",
@@ -183,11 +196,18 @@
           "minimum": 0,
           "title": "High Risk Count",
           "type": "integer"
+        },
+        "requires_review_count": {
+          "description": "Number of findings that require human review",
+          "minimum": 0,
+          "title": "Requires Review Count",
+          "type": "integer"
         }
       },
       "required": [
         "total_findings",
-        "high_risk_count"
+        "high_risk_count",
+        "requires_review_count"
       ],
       "title": "GDPRDataSubjectSummary",
       "type": "object"

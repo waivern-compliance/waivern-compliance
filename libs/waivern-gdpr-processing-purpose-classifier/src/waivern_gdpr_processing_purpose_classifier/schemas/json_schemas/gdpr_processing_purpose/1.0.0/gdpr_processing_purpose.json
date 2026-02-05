@@ -85,7 +85,7 @@
       "type": "object"
     },
     "GDPRProcessingPurposeFindingModel": {
-      "description": "GDPR processing purpose classification finding structure.\n\nRepresents a processing purpose indicator that has been enriched with\nGDPR-specific classification information. Sensitive purposes (e.g., AI/ML,\nanalytics, marketing) may require additional considerations such as\nexplicit consent or DPIA under GDPR.\n\nInherits from BaseFindingModel[GDPRProcessingPurposeFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: GDPRProcessingPurposeFindingMetadata - Required metadata with source",
+      "description": "GDPR processing purpose classification finding structure.\n\nRepresents a processing purpose indicator that has been enriched with\nGDPR-specific classification information. Sensitive purposes (e.g., AI/ML,\nanalytics, marketing) may require additional considerations such as\nexplicit consent or DPIA under GDPR.\n\nInherits from BaseFindingModel[GDPRProcessingPurposeFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: GDPRProcessingPurposeFindingMetadata - Required metadata with source\n- require_review: bool | None - Whether this finding requires human review",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -113,6 +113,19 @@
         "metadata": {
           "$ref": "#/$defs/GDPRProcessingPurposeFindingMetadata",
           "description": "Metadata with source and context information"
+        },
+        "require_review": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether this finding requires human review. Only present when True.",
+          "title": "Require Review"
         },
         "processing_purpose": {
           "description": "Processing purpose name from indicator (e.g., 'Analytics', 'Payment Processing')",
@@ -156,19 +169,6 @@
           ],
           "title": "Dpia Recommendation",
           "type": "string"
-        },
-        "require_review": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Whether this finding requires human review to determine actual processing purpose (e.g., technical mechanisms that could serve multiple purposes). Only present when True.",
-          "title": "Require Review"
         }
       },
       "required": [

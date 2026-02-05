@@ -33,6 +33,7 @@ class DataSubjectIndicatorModel(BaseFindingModel[DataSubjectIndicatorMetadata]):
     - evidence: list[BaseFindingEvidence] - Evidence items with content
     - matched_patterns: list[PatternMatchDetail] - Patterns that matched
     - metadata: DataSubjectIndicatorMetadata - Required metadata with source
+    - require_review: bool | None - Whether this finding requires human review
     """
 
     subject_category: str = Field(description="Data subject category detected")

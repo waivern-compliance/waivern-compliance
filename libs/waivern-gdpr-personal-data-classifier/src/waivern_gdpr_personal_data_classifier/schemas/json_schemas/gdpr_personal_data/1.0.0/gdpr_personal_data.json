@@ -85,7 +85,7 @@
       "type": "object"
     },
     "GDPRPersonalDataFindingModel": {
-      "description": "GDPR personal data classification finding structure.\n\nRepresents a personal data indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nspecial_category - Article 9 special category data requires\nadditional protections under GDPR.\n\nNote: privacy_category values are NOT GDPR-defined terms - they're from\nlegal team for reporting/governance purposes. GDPR only mandates the\ndistinction between personal data (Article 4) and special category (Article 9).\n\nInherits from BaseFindingModel[GDPRPersonalDataFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: GDPRPersonalDataFindingMetadata - Required metadata with source",
+      "description": "GDPR personal data classification finding structure.\n\nRepresents a personal data indicator that has been enriched with\nGDPR-specific classification information. Risk is indicated by\nspecial_category - Article 9 special category data requires\nadditional protections under GDPR.\n\nNote: privacy_category values are NOT GDPR-defined terms - they're from\nlegal team for reporting/governance purposes. GDPR only mandates the\ndistinction between personal data (Article 4) and special category (Article 9).\n\nInherits from BaseFindingModel[GDPRPersonalDataFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: GDPRPersonalDataFindingMetadata - Required metadata with source\n- require_review: bool | None - Whether this finding requires human review",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -113,6 +113,19 @@
         "metadata": {
           "$ref": "#/$defs/GDPRPersonalDataFindingMetadata",
           "description": "Metadata with source and context information"
+        },
+        "require_review": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether this finding requires human review. Only present when True.",
+          "title": "Require Review"
         },
         "indicator_type": {
           "description": "Original personal data indicator category (e.g., 'email', 'health')",
@@ -163,11 +176,18 @@
           "minimum": 0,
           "title": "Special Category Count",
           "type": "integer"
+        },
+        "requires_review_count": {
+          "description": "Number of findings that require human review",
+          "minimum": 0,
+          "title": "Requires Review Count",
+          "type": "integer"
         }
       },
       "required": [
         "total_findings",
-        "special_category_count"
+        "special_category_count",
+        "requires_review_count"
       ],
       "title": "GDPRPersonalDataSummary",
       "type": "object"
