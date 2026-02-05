@@ -98,7 +98,7 @@
       "type": "object"
     },
     "DataSubjectIndicatorModel": {
-      "description": "Data subject indicator from pattern-based detection.\n\nInherits from BaseFindingModel[DataSubjectIndicatorMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: DataSubjectIndicatorMetadata - Required metadata with source",
+      "description": "Data subject indicator from pattern-based detection.\n\nInherits from BaseFindingModel[DataSubjectIndicatorMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: DataSubjectIndicatorMetadata - Required metadata with source\n- require_review: bool | None - Whether this finding requires human review",
       "properties": {
         "id": {
           "description": "Unique identifier for this finding (UUID)",
@@ -126,6 +126,19 @@
         "metadata": {
           "$ref": "#/$defs/DataSubjectIndicatorMetadata",
           "description": "Metadata with source and context information"
+        },
+        "require_review": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether this finding requires human review. Only present when True.",
+          "title": "Require Review"
         },
         "subject_category": {
           "description": "Data subject category detected",

@@ -103,6 +103,10 @@ class BaseFindingModel[MetadataT: BaseFindingMetadata](BaseModel):
     metadata: MetadataT = Field(
         description="Metadata with source and context information",
     )
+    require_review: bool | None = Field(
+        default=None,
+        description="Whether this finding requires human review. Only present when True.",
+    )
 
 
 class BaseAnalysisOutputMetadata(BaseModel):

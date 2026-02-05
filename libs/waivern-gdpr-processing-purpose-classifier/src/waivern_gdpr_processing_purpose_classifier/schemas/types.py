@@ -38,6 +38,7 @@ class GDPRProcessingPurposeFindingModel(
     - evidence: list[BaseFindingEvidence] - Evidence items with content
     - matched_patterns: list[PatternMatchDetail] - Patterns that matched
     - metadata: GDPRProcessingPurposeFindingMetadata - Required metadata with source
+    - require_review: bool | None - Whether this finding requires human review
     """
 
     # Original indicator data (propagated)
@@ -92,6 +93,10 @@ class GDPRProcessingPurposeSummary(BaseModel):
     dpia_required_count: int = Field(
         ge=0,
         description="Number of findings where DPIA is required",
+    )
+    requires_review_count: int = Field(
+        ge=0,
+        description="Number of findings that require human review to determine actual processing purpose",
     )
 
 

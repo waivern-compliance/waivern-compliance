@@ -36,6 +36,7 @@ class GDPRDataSubjectFindingModel(BaseFindingModel[GDPRDataSubjectFindingMetadat
     - evidence: list[BaseFindingEvidence] - Evidence items with content
     - matched_patterns: list[PatternMatchDetail] - Patterns that matched
     - metadata: GDPRDataSubjectFindingMetadata - Required metadata with source
+    - require_review: bool | None - Whether this finding requires human review
     """
 
     # GDPR classification (from ruleset mapping)
@@ -84,6 +85,10 @@ class GDPRDataSubjectSummary(BaseModel):
     high_risk_count: int = Field(
         ge=0,
         description="Number of findings with risk modifiers (e.g., minors, vulnerable individuals)",
+    )
+    requires_review_count: int = Field(
+        ge=0,
+        description="Number of findings that require human review",
     )
 
 

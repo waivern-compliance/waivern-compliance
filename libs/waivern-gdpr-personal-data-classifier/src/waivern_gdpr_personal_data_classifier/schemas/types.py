@@ -40,6 +40,7 @@ class GDPRPersonalDataFindingModel(BaseFindingModel[GDPRPersonalDataFindingMetad
     - evidence: list[BaseFindingEvidence] - Evidence items with content
     - matched_patterns: list[PatternMatchDetail] - Patterns that matched
     - metadata: GDPRPersonalDataFindingMetadata - Required metadata with source
+    - require_review: bool | None - Whether this finding requires human review
     """
 
     # Original indicator information
@@ -75,6 +76,10 @@ class GDPRPersonalDataSummary(BaseModel):
     special_category_count: int = Field(
         ge=0,
         description="Number of GDPR Article 9 special category data (high risk under GDPR)",
+    )
+    requires_review_count: int = Field(
+        ge=0,
+        description="Number of findings that require human review",
     )
 
 

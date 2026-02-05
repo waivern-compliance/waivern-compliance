@@ -31,12 +31,12 @@ def output_schema() -> Schema:
 
 
 def make_indicator_finding(
-    processing_purpose: str,
+    purpose: str,
     source: str = "test.php",
 ) -> dict[str, object]:
     """Create a mock processing purpose indicator finding."""
     return {
-        "processing_purpose": processing_purpose,
+        "purpose": purpose,
         "evidence": [{"content": "test content", "line_number": 1}],
         "matched_patterns": [{"pattern": "test_pattern", "match_count": 1}],
         "metadata": {"source": source, "context": {}},
@@ -152,6 +152,34 @@ class TestGDPRProcessingPurposeClassification:
         assert classified["purpose_category"] == "unclassified"
         assert classified["sensitive_purpose"] is False
 
+    def test_context_dependent_purposes_require_review(
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
+    ) -> None:
+        """Test that context_dependent purposes have require_review set to True."""
+        # SQL Database Queries is a technical mechanism mapped to context_dependent
+        finding = make_indicator_finding("SQL Database Queries")
+        input_msg = make_input_message([finding])
+
+        result = classifier.process([input_msg], output_schema)
+        classified = result.content["findings"][0]
+
+        assert classified["purpose_category"] == "context_dependent"
+        assert classified["require_review"] is True
+
+    def test_non_context_dependent_purposes_do_not_require_review(
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
+    ) -> None:
+        """Test that non-context_dependent purposes don't have require_review in output."""
+        finding = make_indicator_finding("Payment, Billing, and Invoicing")
+        input_msg = make_input_message([finding])
+
+        result = classifier.process([input_msg], output_schema)
+        classified = result.content["findings"][0]
+
+        assert classified["purpose_category"] == "operational"
+        # require_review is excluded from JSON output when False (to reduce noise)
+        assert "require_review" not in classified
+
 
 # =============================================================================
 # Summary Tests
@@ -225,6 +253,22 @@ class TestSummaryGeneration:
 
         assert summary["dpia_required_count"] == 1
 
+    def test_summary_counts_requires_review(
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
+    ) -> None:
+        """Test that summary counts findings requiring human review."""
+        findings = [
+            make_indicator_finding("SQL Database Queries"),  # context_dependent
+            make_indicator_finding("PHP Cookie Access"),  # context_dependent
+            make_indicator_finding("Payment, Billing, and Invoicing"),  # operational
+        ]
+        input_msg = make_input_message(findings)
+
+        result = classifier.process([input_msg], output_schema)
+        summary = result.content["summary"]
+
+        assert summary["requires_review_count"] == 2
+
 
 # =============================================================================
 # Edge Cases
@@ -262,7 +306,7 @@ class TestEdgeCases:
         """Test that classifier handles findings without metadata gracefully."""
         # Note: evidence and matched_patterns must have at least 1 item (BaseFindingModel constraint)
         finding: dict[str, object] = {
-            "processing_purpose": "Behavioral Data Analysis for Product Improvement",
+            "purpose": "Behavioral Data Analysis for Product Improvement",
             "evidence": [{"content": "test", "line_number": 1}],
             "matched_patterns": [{"pattern": "test", "match_count": 1}],
             # No metadata field
