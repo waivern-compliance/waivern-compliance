@@ -67,6 +67,10 @@ class GDPRProcessingPurposeFindingModel(
         default="not_required",
         description="DPIA recommendation level for this purpose",
     )
+    require_review: bool | None = Field(
+        default=None,
+        description="Whether this finding requires human review to determine actual processing purpose (e.g., technical mechanisms that could serve multiple purposes). Only present when True.",
+    )
 
     @override
     def __str__(self) -> str:
@@ -92,6 +96,10 @@ class GDPRProcessingPurposeSummary(BaseModel):
     dpia_required_count: int = Field(
         ge=0,
         description="Number of findings where DPIA is required",
+    )
+    requires_review_count: int = Field(
+        ge=0,
+        description="Number of findings that require human review to determine actual processing purpose",
     )
 
 

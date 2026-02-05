@@ -156,6 +156,19 @@
           ],
           "title": "Dpia Recommendation",
           "type": "string"
+        },
+        "require_review": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether this finding requires human review to determine actual processing purpose (e.g., technical mechanisms that could serve multiple purposes). Only present when True.",
+          "title": "Require Review"
         }
       },
       "required": [
@@ -196,12 +209,19 @@
           "minimum": 0,
           "title": "Dpia Required Count",
           "type": "integer"
+        },
+        "requires_review_count": {
+          "description": "Number of findings that require human review to determine actual processing purpose",
+          "minimum": 0,
+          "title": "Requires Review Count",
+          "type": "integer"
         }
       },
       "required": [
         "total_findings",
         "sensitive_purposes_count",
-        "dpia_required_count"
+        "dpia_required_count",
+        "requires_review_count"
       ],
       "title": "GDPRProcessingPurposeSummary",
       "type": "object"

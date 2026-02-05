@@ -85,17 +85,19 @@ class GDPRProcessingPurposeResultBuilder:
         # Count by purpose category
         category_counts = Counter(f.purpose_category for f in findings)
 
-        # Count sensitive and DPIA required
+        # Count sensitive, DPIA required, and requires review
         sensitive_count = len([f for f in findings if f.sensitive_purpose])
         dpia_required_count = len(
             [f for f in findings if f.dpia_recommendation == "required"]
         )
+        requires_review_count = len([f for f in findings if f.require_review is True])
 
         return GDPRProcessingPurposeSummary(
             total_findings=len(findings),
             purpose_categories=dict(sorted(category_counts.items())),
             sensitive_purposes_count=sensitive_count,
             dpia_required_count=dpia_required_count,
+            requires_review_count=requires_review_count,
         )
 
     def _build_analysis_metadata(

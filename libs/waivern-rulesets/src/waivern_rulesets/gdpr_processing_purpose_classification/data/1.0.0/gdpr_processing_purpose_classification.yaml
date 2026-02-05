@@ -9,12 +9,15 @@ description: "Maps processing purpose indicators to GDPR classification"
 purpose_categories:
   - ai_and_ml
   - analytics
+  - context_dependent
+  - healthcare
   - marketing_and_advertising
   - operational
   - security
 
-# Valid indicator purposes (from processing_purposes ruleset)
+# Valid indicator purposes (from processing_purposes, service_integrations, and data_collection rulesets)
 indicator_purposes:
+  # From processing_purposes ruleset
   - Artificial Intelligence Model Training
   - Artificial Intelligence Bias Testing
   - Artificial Intelligence Model Refinement
@@ -32,11 +35,33 @@ indicator_purposes:
   - Targeted Marketing via Third-Party Platforms
   - Third-Party Marketing via Owned Products
   - Security, Fraud Prevention, and Abuse Detection
+  # From service_integrations ruleset
+  - Cloud Infrastructure Services
+  - Communication Services
+  - Identity Management Services
+  - Payment Processing Services
+  - user_analytics
+  - social_media
+  - AI and ML Services
+  - Media Processing Services
+  - Messaging Platforms
+  - Healthcare Practice Management
+  # From data_collection ruleset
+  - PHP POST Data Collection
+  - PHP GET Parameter Collection
+  - PHP Cookie Access
+  - PHP Session Data Access
+  - HTML Form Input Fields
+  - JavaScript Client Storage
+  - File Upload Processing
+  - SQL Database Queries
+  - Database Connections and ORM
 
 # Categories considered privacy-sensitive (require extra scrutiny)
 sensitive_categories:
   - ai_and_ml
   - analytics
+  - healthcare
   - marketing_and_advertising
 
 rules:
@@ -185,3 +210,189 @@ rules:
     dpia_recommendation: "not_required"
     indicator_purposes:
       - Security, Fraud Prevention, and Abuse Detection
+
+  # =============================================================================
+  # Service Integration Purposes (from service_integrations ruleset)
+  # =============================================================================
+
+  - name: "Cloud Infrastructure"
+    description: "Processing via cloud storage and platform services"
+    purpose_category: "operational"
+    article_references:
+      - "Article 28"
+      - "Article 32"
+    typical_lawful_bases:
+      - "contract"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - Cloud Infrastructure Services
+      - Media Processing Services
+
+  - name: "Communication and Messaging"
+    description: "Processing for email, SMS, and messaging - could be transactional (operational) or marketing communications. Requires contextual review to determine actual purpose and applicable ePrivacy rules."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 6"
+      - "Article 13"
+      - "ePrivacy Directive Article 13"
+    typical_lawful_bases:
+      - "contract"
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_purposes:
+      - Communication Services
+      - Messaging Platforms
+
+  - name: "Third-Party Identity Management"
+    description: "Processing via third-party authentication and identity services"
+    purpose_category: "operational"
+    article_references:
+      - "Article 6(1)(b)"
+      - "Article 32"
+    typical_lawful_bases:
+      - "contract"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - Identity Management Services
+
+  - name: "Third-Party Payment Processing"
+    description: "Processing via third-party payment services"
+    purpose_category: "operational"
+    article_references:
+      - "Article 6(1)(b)"
+      - "Article 6(1)(c)"
+    typical_lawful_bases:
+      - "contract"
+      - "legal_obligation"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - Payment Processing Services
+
+  - name: "Third-Party Analytics"
+    description: "Processing via third-party analytics and tracking services"
+    purpose_category: "analytics"
+    article_references:
+      - "Article 6(1)(a)"
+      - "Article 22"
+      - "Recital 71"
+    typical_lawful_bases:
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: true
+    dpia_recommendation: "recommended"
+    indicator_purposes:
+      - user_analytics
+
+  - name: "Social Media Integration"
+    description: "Processing via social media platforms - could be authentication (operational) or marketing/advertising. Requires contextual review to determine actual purpose."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 6"
+      - "Article 7"
+      - "Article 21"
+    typical_lawful_bases:
+      - "consent"
+      - "contract"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_purposes:
+      - social_media
+
+  - name: "Third-Party AI Services"
+    description: "Processing via third-party AI and machine learning services"
+    purpose_category: "ai_and_ml"
+    article_references:
+      - "Article 22"
+      - "Article 35"
+      - "Recital 71"
+    typical_lawful_bases:
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: true
+    dpia_recommendation: "required"
+    indicator_purposes:
+      - AI and ML Services
+
+  - name: "Healthcare Systems"
+    description: "Processing via healthcare and medical practice management systems"
+    purpose_category: "healthcare"
+    article_references:
+      - "Article 9"
+      - "Article 6(1)(b)"
+    typical_lawful_bases:
+      - "contract"
+      - "explicit_consent"
+    sensitive_purpose: true
+    dpia_recommendation: "required"
+    indicator_purposes:
+      - Healthcare Practice Management
+
+  # =============================================================================
+  # Data Collection Mechanisms (from data_collection ruleset)
+  # These are TECHNICAL MECHANISMS, not purposes. The actual GDPR purpose
+  # depends on what data is collected and why. Requires contextual review.
+  # =============================================================================
+
+  - name: "Web Form Data Collection"
+    description: "Technical mechanism for collecting data via web forms and HTTP requests. The actual processing purpose depends on what data is collected (could include special category data) and why. Requires contextual review."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 5"
+      - "Article 6"
+      - "Article 9"
+      - "Article 13"
+    typical_lawful_bases:
+      - "contract"
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_purposes:
+      - PHP POST Data Collection
+      - PHP GET Parameter Collection
+      - HTML Form Input Fields
+      - File Upload Processing
+
+  - name: "Session and Cookie Management"
+    description: "Technical mechanism for session management, cookies, and client storage. Could be strictly necessary (operational, no consent required) or for tracking/analytics (requires consent under ePrivacy Directive Article 5(3)). Requires contextual review."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 6"
+      - "Article 13"
+      - "ePrivacy Directive Article 5(3)"
+    typical_lawful_bases:
+      - "contract"
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_purposes:
+      - PHP Cookie Access
+      - PHP Session Data Access
+      - JavaScript Client Storage
+
+  - name: "Database Operations"
+    description: "Technical mechanism for database queries and data persistence. Databases store and process data for ALL purposes - the actual GDPR purpose depends on the business context and what data is being processed. Requires contextual review."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 5"
+      - "Article 6"
+      - "Article 32"
+    typical_lawful_bases:
+      - "contract"
+      - "consent"
+      - "legitimate_interests"
+      - "legal_obligation"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_purposes:
+      - SQL Database Queries
+      - Database Connections and ORM

@@ -167,9 +167,16 @@ class GDPRProcessingPurposeClassifier(Classifier):
         else:
             metadata = GDPRProcessingPurposeFindingMetadata(source="unknown")
 
+        purpose_category = classification.get("purpose_category", "unclassified")
+
+        # Set require_review=True for context-dependent purposes (technical mechanisms
+        # that need human review to determine actual processing purpose).
+        # Leave as None (default) otherwise - excluded from JSON output by exclude_none.
+        require_review = True if purpose_category == "context_dependent" else None
+
         return GDPRProcessingPurposeFindingModel(
             processing_purpose=processing_purpose,
-            purpose_category=classification.get("purpose_category", "unclassified"),
+            purpose_category=purpose_category,
             article_references=tuple(classification.get("article_references", ())),
             typical_lawful_bases=tuple(classification.get("typical_lawful_bases", ())),
             sensitive_purpose=classification.get("sensitive_purpose", False),
@@ -177,6 +184,7 @@ class GDPRProcessingPurposeClassifier(Classifier):
                 Literal["required", "recommended", "not_required"],
                 classification.get("dpia_recommendation", "not_required"),
             ),
+            require_review=require_review,
             evidence=finding.get("evidence", []),
             matched_patterns=finding.get("matched_patterns", []),
             metadata=metadata,
