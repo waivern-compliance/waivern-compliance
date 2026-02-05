@@ -71,3 +71,16 @@ artifacts:
       type: gdpr_data_subject_classifier
     output: true
 ```
+
+## Output Schema
+
+The classifier outputs `gdpr_data_subject` version `1.0.0` with:
+
+- `findings`: List of classified findings with GDPR enrichment
+  - Each finding may include `require_review` when human review is needed
+- `summary`: Statistics including:
+  - `total_findings`: Total classified findings
+  - `categories_identified`: Unique data subject categories found
+  - `high_risk_count`: Findings with risk modifiers (minors, vulnerable individuals)
+  - `requires_review_count`: Findings needing human review
+- `analysis_metadata`: Metadata about the classification process

@@ -11,6 +11,7 @@ This classifier enriches processing purpose indicator findings with GDPR-specifi
 - **Typical Lawful Bases**: Typical Article 6 lawful bases for this processing
 - **Sensitivity Indicators**: Whether the purpose is privacy-sensitive
 - **DPIA Recommendations**: Data Protection Impact Assessment recommendation level
+- **Review Requirements**: Whether human review is needed to determine actual purpose
 
 ## Usage
 
@@ -49,18 +50,38 @@ result = classifier.process([indicator_message], output_schema)
 
 ## Classification Categories
 
-| GDPR Category               | Processing Purposes                                                           | Sensitive | DPIA         |
-| --------------------------- | ----------------------------------------------------------------------------- | --------- | ------------ |
-| `ai_and_ml`                 | AI and ML                                                                     | Yes       | Required     |
-| `analytics`                 | Analytics, Session Recording, User Behaviour Tracking, A/B Testing, Profiling | Yes       | Recommended  |
-| `marketing_and_advertising` | Advertising, Marketing, Personalisation                                       | Yes       | Recommended  |
-| `operational`               | Authentication, Payment Processing, Communication, Content Delivery, etc.     | No        | Not Required |
-| `security`                  | Security, Fraud Detection                                                     | No        | Not Required |
+| GDPR Category               | Processing Purposes                                                            | Sensitive | DPIA         |
+| --------------------------- | ------------------------------------------------------------------------------ | --------- | ------------ |
+| `ai_and_ml`                 | AI Model Training, AI Services, ML Processing                                  | Yes       | Required     |
+| `analytics`                 | Behavioural Analysis, Personalisation, Third-Party Analytics                   | Yes       | Recommended  |
+| `healthcare`                | Healthcare Practice Management, Medical Systems                                | Yes       | Required     |
+| `marketing_and_advertising` | Consumer Marketing, Targeted Marketing, Third-Party Marketing                  | Yes       | Recommended  |
+| `operational`               | Service Delivery, Payment Processing, Identity Management, Cloud Infrastructure | No        | Not Required |
+| `security`                  | Security, Fraud Prevention, Abuse Detection                                    | No        | Not Required |
+| `context_dependent`         | Technical mechanisms requiring human review (see below)                        | No        | Recommended  |
+
+### Context-Dependent Category
+
+The `context_dependent` category is used for technical mechanisms that cannot be automatically classified to a specific GDPR purpose. These are the "how" of data collection, not the "why":
+
+- **Communication and Messaging**: Could be transactional (operational) or marketing
+- **Social Media Integration**: Could be authentication (operational) or marketing/advertising
+- **Web Form Data Collection**: Purpose depends on what data is collected and why
+- **Session and Cookie Management**: Could be strictly necessary or for tracking/analytics
+- **Database Operations**: Purpose depends on business context
+
+Findings in this category have `require_review: true` set, indicating they need human review to determine the actual processing purpose.
 
 ## Output Schema
 
 The classifier outputs `gdpr_processing_purpose` version `1.0.0` with:
 
 - `findings`: List of classified findings with GDPR enrichment
-- `summary`: Statistics including sensitive purpose counts and DPIA requirements
+  - Each finding includes `require_review` (only present when `true`)
+- `summary`: Statistics including:
+  - `total_findings`: Total classified findings
+  - `purpose_categories`: Count per category
+  - `sensitive_purposes_count`: Findings with sensitive purposes
+  - `dpia_required_count`: Findings requiring DPIA
+  - `requires_review_count`: Findings needing human review
 - `analysis_metadata`: Metadata about the classification process
