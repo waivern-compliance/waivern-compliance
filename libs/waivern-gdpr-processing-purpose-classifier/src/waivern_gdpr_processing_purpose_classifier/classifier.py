@@ -145,8 +145,8 @@ class GDPRProcessingPurposeClassifier(Classifier):
             Classified finding with GDPR enrichment.
 
         """
-        # Look up classification based on processing_purpose
-        processing_purpose = finding.get("processing_purpose", "")
+        # Look up classification based on purpose field from indicator schema
+        processing_purpose = finding.get("purpose", "")
         classification = self._classification_map.get(processing_purpose, {})
 
         if not classification:

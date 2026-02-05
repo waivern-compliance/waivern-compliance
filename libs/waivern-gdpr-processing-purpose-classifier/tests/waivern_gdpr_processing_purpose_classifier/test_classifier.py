@@ -31,12 +31,12 @@ def output_schema() -> Schema:
 
 
 def make_indicator_finding(
-    processing_purpose: str,
+    purpose: str,
     source: str = "test.php",
 ) -> dict[str, object]:
     """Create a mock processing purpose indicator finding."""
     return {
-        "processing_purpose": processing_purpose,
+        "purpose": purpose,
         "evidence": [{"content": "test content", "line_number": 1}],
         "matched_patterns": [{"pattern": "test_pattern", "match_count": 1}],
         "metadata": {"source": source, "context": {}},
@@ -262,7 +262,7 @@ class TestEdgeCases:
         """Test that classifier handles findings without metadata gracefully."""
         # Note: evidence and matched_patterns must have at least 1 item (BaseFindingModel constraint)
         finding: dict[str, object] = {
-            "processing_purpose": "Behavioral Data Analysis for Product Improvement",
+            "purpose": "Behavioral Data Analysis for Product Improvement",
             "evidence": [{"content": "test", "line_number": 1}],
             "matched_patterns": [{"pattern": "test", "match_count": 1}],
             # No metadata field
