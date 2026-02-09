@@ -1,0 +1,66 @@
+name: "Sample Runbook - Service Integration Detection in Source Code"
+description: >
+  Detect third-party service integrations in application source code.
+  Analyses PHP and JavaScript files for cloud infrastructure, payment processing, communication,
+  identity management, analytics, social media, AI/ML, healthcare, and media service usage.
+  Demonstrates the source code analysis pipeline with both pattern-matching and LLM validation:
+  Filesystem → SourceCodeAnalyser → ProcessingPurposeAnalyser → GDPRProcessingPurposeClassifier.
+contact: "James Wilson (Lead Developer) <james.wilson@company.co.uk>"
+
+artifacts:
+  # ─────────────────────────────────────────────
+  # Source artifact - read source files from filesystem
+  # ─────────────────────────────────────────────
+  source_files:
+    name: "Application Source Files"
+    description: "Read PHP and JavaScript application files containing third-party service integrations"
+    source:
+      type: "filesystem"
+      properties:
+        path: "./libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock/source_code"
+        include_patterns: ["*.php", "*.js"]
+        max_files: 50
+        encoding: "utf-8"
+
+  # ─────────────────────────────────────────────
+  # Source code analysis pipeline
+  # ─────────────────────────────────────────────
+  source_code:
+    name: "Source Code Content"
+    description: "Read source files and detect language from file extensions for downstream analysis"
+    inputs: source_files
+    process:
+      type: "source_code_analyser"
+      properties:
+        max_file_size: 10485760  # 10MB
+
+  service_integration_indicators:
+    name: "Service Integration Detection"
+    description: >
+      Detect third-party service integrations in source code.
+      Automatically analyses three ruleset dimensions: processing purposes, service integrations,
+      and data collection patterns. LLM validation cross-references pattern matches against
+      surrounding code context to reduce false positives.
+    contact: "James Wilson (Lead Developer) <james.wilson@company.co.uk>"
+    inputs: source_code
+    process:
+      type: "processing_purpose"
+      properties:
+        pattern_matching:
+          ruleset: "local/processing_purposes/1.0.0"
+          evidence_context_size: "medium"
+          maximum_evidence_count: 3
+        source_code_context_window: "medium"
+        llm_validation:
+          enable_llm_validation: true
+          llm_validation_mode: "standard"
+          sampling_size: 3
+    output: true
+
+  gdpr_processing_purpose:
+    name: "GDPR Processing Purpose Classification"
+    description: "Classify detected service integrations and processing purposes according to GDPR categories, sensitivity levels, and DPIA requirements"
+    inputs: service_integration_indicators
+    process:
+      type: "gdpr_processing_purpose_classifier"
+    output: true
