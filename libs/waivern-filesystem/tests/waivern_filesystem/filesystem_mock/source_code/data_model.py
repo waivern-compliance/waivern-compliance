@@ -12,6 +12,14 @@ Contains personal data fields:
 - Addresses and location data
 - Date of birth and age calculation
 - National identifiers and sensitive data
+
+Third-Party Service Integrations:
+- OpenAI: AI-powered personal data classification and analysis
+- LangChain: LLM orchestration for document processing
+- Pinecone: Vector database for user data embeddings
+- AWS (boto3): S3 storage and cloud infrastructure
+- SimplePractice: Healthcare practice management integration
+- Cliniko: Patient record management system
 """
 # pyright: reportMissingImports=false, reportDeprecated=false
 # pyright: reportGeneralTypeIssues=false, reportArgumentType=false
@@ -21,19 +29,37 @@ Contains personal data fields:
 # - Column.__bool__() returns Never (can't use in conditionals)
 # - Column types can't be passed to functions expecting Python types
 # - Missing type stubs for .ilike() and other SQLAlchemy query methods
-# Also imports third-party libs (phonenumbers, email_validator, cryptography)
-# that aren't actual dependencies. These targeted ignores are necessary for test fixture code.
+# Also imports third-party libs (phonenumbers, email_validator, cryptography,
+# openai, langchain, pinecone, boto3, etc.) that aren't actual dependencies.
+# These targeted ignores are necessary for test fixture code.
 
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
+import boto3  # pyright: ignore[reportMissingImports]
+
+# Third-party service integrations
+import openai  # pyright: ignore[reportMissingImports]
 import phonenumbers  # pyright: ignore[reportMissingImports]
+import pinecone  # pyright: ignore[reportMissingImports]
+from botocore.exceptions import ClientError  # pyright: ignore[reportMissingImports]
 from cryptography.fernet import Fernet  # pyright: ignore[reportMissingImports]
 from email_validator import (  # pyright: ignore[reportMissingImports]
     EmailNotValidError,
     validate_email,
+)
+from langchain.chains import LLMChain  # pyright: ignore[reportMissingImports]
+from langchain.embeddings import (
+    OpenAIEmbeddings,  # pyright: ignore[reportMissingImports]
+)
+from langchain.llms import (
+    OpenAI as LangChainOpenAI,  # pyright: ignore[reportMissingImports]
+)
+from langchain.prompts import PromptTemplate  # pyright: ignore[reportMissingImports]
+from langchain.text_splitter import (
+    RecursiveCharacterTextSplitter,  # pyright: ignore[reportMissingImports]
 )
 from sqlalchemy import (
     Boolean,
@@ -104,6 +130,479 @@ class EncryptionService:
         return self.fernet.decrypt(encrypted_data.encode()).decode()
 
 
+class AWSStorageService:
+    """AWS S3 storage service for personal data documents and exports.
+
+    Handles secure storage of personal data exports, identity documents,
+    and healthcare records in encrypted S3 buckets.
+    """
+
+    def __init__(self, region: str = "eu-west-2"):
+        self.s3_client = boto3.client("s3", region_name=region)
+        self.documents_bucket = "customer-documents-eu"
+        self.exports_bucket = "gdpr-data-exports-eu"
+        self.healthcare_bucket = "healthcare-records-eu"
+
+    def upload_personal_data_export(
+        self, user_id: int, export_data: dict[str, Any]
+    ) -> str:
+        """Upload GDPR data export to S3 with encryption"""
+        import json
+
+        key = f"exports/user_{user_id}/{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_export.json"
+
+        self.s3_client.put_object(
+            Bucket=self.exports_bucket,
+            Key=key,
+            Body=json.dumps(export_data, default=str),
+            ContentType="application/json",
+            ServerSideEncryption="aws:kms",
+            Metadata={
+                "user_id": str(user_id),
+                "export_type": "gdpr_data_portability",
+                "created_at": datetime.utcnow().isoformat(),
+            },
+        )
+        return f"s3://{self.exports_bucket}/{key}"
+
+    def upload_identity_document(
+        self, user_id: int, document_bytes: bytes, document_type: str, filename: str
+    ) -> str:
+        """Upload identity document (passport, driving licence) to S3"""
+        key = f"users/{user_id}/identity/{document_type}/{filename}"
+
+        self.s3_client.put_object(
+            Bucket=self.documents_bucket,
+            Key=key,
+            Body=document_bytes,
+            ServerSideEncryption="aws:kms",
+            Metadata={
+                "user_id": str(user_id),
+                "document_type": document_type,
+                "uploaded_at": datetime.utcnow().isoformat(),
+            },
+        )
+        return f"s3://{self.documents_bucket}/{key}"
+
+    def upload_healthcare_record(
+        self, patient_id: str, record_data: bytes, record_type: str
+    ) -> str:
+        """Upload healthcare record to dedicated encrypted S3 bucket"""
+        key = f"patients/{patient_id}/records/{record_type}/{datetime.utcnow().strftime('%Y%m%d')}.json"
+
+        self.s3_client.put_object(
+            Bucket=self.healthcare_bucket,
+            Key=key,
+            Body=record_data,
+            ServerSideEncryption="aws:kms",
+            Metadata={
+                "patient_id": patient_id,
+                "record_type": record_type,
+                "uploaded_at": datetime.utcnow().isoformat(),
+            },
+        )
+        return f"s3://{self.healthcare_bucket}/{key}"
+
+    def delete_user_data(self, user_id: int) -> int:
+        """Delete all user data from S3 (GDPR right to erasure)"""
+        deleted_count = 0
+        for bucket in [self.documents_bucket, self.exports_bucket]:
+            try:
+                response = self.s3_client.list_objects_v2(
+                    Bucket=bucket, Prefix=f"users/{user_id}/"
+                )
+                if "Contents" in response:
+                    objects = [{"Key": obj["Key"]} for obj in response["Contents"]]
+                    self.s3_client.delete_objects(
+                        Bucket=bucket, Delete={"Objects": objects}
+                    )
+                    deleted_count += len(objects)
+            except ClientError as e:
+                print(f"S3 cleanup error for bucket {bucket}: {e}")
+        return deleted_count
+
+    def generate_presigned_download_url(
+        self, bucket: str, key: str, expiry_seconds: int = 86400
+    ) -> str:
+        """Generate pre-signed URL for secure data download"""
+        return self.s3_client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": bucket, "Key": key},
+            ExpiresIn=expiry_seconds,
+        )
+
+
+class AIDataClassificationService:
+    """AI-powered personal data classification using OpenAI and LangChain.
+
+    Uses LLM capabilities to:
+    - Classify personal data categories automatically
+    - Detect sensitive data in unstructured text
+    - Generate privacy impact assessments
+    - Create vector embeddings for data subject access requests
+    """
+
+    def __init__(self):
+        # Initialise OpenAI client for GPT-4 classification
+        openai.api_key = "sk-..."  # Loaded from environment in production
+        self.openai_client = openai.OpenAI()
+
+        # Initialise LangChain with OpenAI LLM
+        self.llm = LangChainOpenAI(
+            model_name="gpt-4",
+            temperature=0.0,
+            max_tokens=2000,
+        )
+
+        # Initialise OpenAI embeddings for vector search
+        self.embeddings = OpenAIEmbeddings(
+            model="text-embedding-ada-002",
+        )
+
+        # Initialise Pinecone vector database for data search
+        pinecone.init(
+            api_key="pcsk_...",  # Loaded from environment in production
+            environment="eu-west1-gcp",
+        )
+        self.pinecone_index = pinecone.Index("user-data-embeddings")
+
+        # Text splitter for processing large documents
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200,
+        )
+
+    def classify_personal_data(self, text: str) -> dict[str, Any]:
+        """Use OpenAI GPT-4 to classify personal data categories in text.
+
+        Sends text content to OpenAI for analysis - text may contain
+        personal data (names, emails, addresses, health information).
+        """
+        classification_prompt = PromptTemplate(
+            input_variables=["text"],
+            template="""Analyse the following text and identify any personal data present.
+            Classify each piece of personal data into GDPR categories.
+
+            Text: {text}
+
+            Return a JSON object with:
+            - personal_data_found: list of identified personal data items
+            - categories: GDPR data categories (basic_identity, contact_info, etc.)
+            - sensitivity_level: low, medium, high, or special_category
+            - recommended_legal_basis: appropriate GDPR Article 6 legal basis
+            """,
+        )
+
+        chain = LLMChain(llm=self.llm, prompt=classification_prompt)
+        result = chain.run(text=text)
+
+        return {
+            "classification": result,
+            "model": "gpt-4",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    def generate_data_subject_embeddings(
+        self, user_id: int, personal_data: dict[str, Any]
+    ) -> str:
+        """Generate vector embeddings of user's personal data for DSAR search.
+
+        Creates embeddings using OpenAI and stores in Pinecone vector database.
+        This enables efficient data subject access request (DSAR) processing.
+
+        Personal data (names, emails, etc.) is sent to OpenAI for embedding
+        and stored in Pinecone for vector similarity search.
+        """
+        import json
+
+        # Convert personal data to text for embedding
+        data_text = json.dumps(personal_data, default=str)
+        chunks = self.text_splitter.split_text(data_text)
+
+        # Generate embeddings via OpenAI
+        chunk_embeddings = self.embeddings.embed_documents(chunks)
+
+        # Store embeddings in Pinecone with user metadata
+        vectors = []
+        for i, (chunk, embedding) in enumerate(zip(chunks, chunk_embeddings)):
+            vectors.append(
+                {
+                    "id": f"user_{user_id}_chunk_{i}",
+                    "values": embedding,
+                    "metadata": {
+                        "user_id": user_id,
+                        "chunk_index": i,
+                        "text": chunk[:500],  # Store truncated text for reference
+                        "created_at": datetime.utcnow().isoformat(),
+                    },
+                }
+            )
+
+        self.pinecone_index.upsert(vectors=vectors)
+        return f"Stored {len(vectors)} embedding vectors for user {user_id}"
+
+    def search_user_data(self, query: str, top_k: int = 10) -> list[dict[str, Any]]:
+        """Search for user personal data using vector similarity.
+
+        Used for data subject access requests (DSAR) - finds all personal
+        data related to a specific individual across the system.
+        """
+        query_embedding = self.embeddings.embed_query(query)
+
+        results = self.pinecone_index.query(
+            vector=query_embedding,
+            top_k=top_k,
+            include_metadata=True,
+        )
+
+        return [
+            {
+                "user_id": match["metadata"].get("user_id"),
+                "text": match["metadata"].get("text"),
+                "similarity_score": match["score"],
+            }
+            for match in results["matches"]
+        ]
+
+    def delete_user_embeddings(self, user_id: int) -> None:
+        """Delete user's vector embeddings from Pinecone (GDPR erasure)"""
+        self.pinecone_index.delete(filter={"user_id": {"$eq": user_id}})
+
+    def generate_privacy_impact_assessment(
+        self, data_processing_description: str
+    ) -> dict[str, Any]:
+        """Use GPT-4 to generate a Data Protection Impact Assessment (DPIA).
+
+        Analyses data processing activities and generates GDPR-compliant
+        impact assessment recommendations.
+        """
+        response = self.openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a GDPR compliance expert. Analyse the data processing "
+                    "activity and generate a Data Protection Impact Assessment (DPIA).",
+                },
+                {
+                    "role": "user",
+                    "content": f"Generate a DPIA for the following data processing activity:\n\n"
+                    f"{data_processing_description}",
+                },
+            ],
+            temperature=0.2,
+            max_tokens=3000,
+        )
+
+        return {
+            "assessment": response.choices[0].message.content,
+            "model": "gpt-4",
+            "generated_at": datetime.utcnow().isoformat(),
+        }
+
+
+class HealthcareIntegrationService:
+    """Integration service for healthcare practice management systems.
+
+    Syncs patient personal data between the application and healthcare
+    platforms (SimplePractice, Cliniko) for GDPR-compliant health data
+    processing under Article 9 (special category data).
+    """
+
+    def __init__(self):
+        self.simplepractice_api_key = "sp_..."  # Loaded from environment
+        self.simplepractice_base_url = "https://api.simplepractice.com/v1"
+        self.cliniko_api_key = "ck_..."  # Loaded from environment
+        self.cliniko_base_url = "https://api.cliniko.com/v1"
+        self.aws_storage = AWSStorageService()
+
+    def sync_patient_to_simplepractice(
+        self, patient_data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Sync patient personal and health data to SimplePractice.
+
+        Shares special category data (health records) with SimplePractice
+        platform. Requires explicit patient consent under GDPR Article 9.
+
+        Personal data shared:
+        - Patient name, date of birth, contact information
+        - Health conditions and treatment history
+        - Insurance details
+        """
+        import requests  # pyright: ignore[reportMissingImports]
+
+        headers = {
+            "Authorization": f"Bearer {self.simplepractice_api_key}",
+            "Content-Type": "application/json",
+        }
+
+        # Create or update patient in SimplePractice
+        response = requests.post(
+            f"{self.simplepractice_base_url}/clients",
+            headers=headers,
+            json={
+                "first_name": patient_data["first_name"],
+                "last_name": patient_data["last_name"],
+                "email": patient_data["email"],
+                "phone_number": patient_data.get("phone"),
+                "date_of_birth": patient_data.get("date_of_birth"),
+                "gender": patient_data.get("gender"),
+                "address": {
+                    "street": patient_data.get("street_address"),
+                    "city": patient_data.get("city"),
+                    "state": patient_data.get("state"),
+                    "zip": patient_data.get("postal_code"),
+                    "country": patient_data.get("country"),
+                },
+                "emergency_contact": {
+                    "name": patient_data.get("emergency_contact_name"),
+                    "phone": patient_data.get("emergency_contact_phone"),
+                    "relationship": patient_data.get("emergency_contact_relationship"),
+                },
+                "insurance": {
+                    "provider": patient_data.get("insurance_provider"),
+                    "member_id": patient_data.get("insurance_member_id"),
+                },
+            },
+            timeout=30,
+        )
+
+        return response.json()
+
+    def sync_patient_to_cliniko(self, patient_data: dict[str, Any]) -> dict[str, Any]:
+        """Sync patient personal and health data to Cliniko.
+
+        Shares special category data (health records) with Cliniko
+        patient management system. Requires explicit consent.
+
+        Personal data shared:
+        - Patient demographics (name, DOB, gender)
+        - Contact details (email, phone, address)
+        - Medical history and treatment notes
+        """
+        import requests  # pyright: ignore[reportMissingImports]
+
+        headers = {
+            "Authorization": f"Bearer {self.cliniko_api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "CustomerPortal/2.3.1",
+        }
+
+        response = requests.post(
+            f"{self.cliniko_base_url}/patients",
+            headers=headers,
+            json={
+                "first_name": patient_data["first_name"],
+                "last_name": patient_data["last_name"],
+                "email": patient_data["email"],
+                "date_of_birth": patient_data.get("date_of_birth"),
+                "gender_identity": patient_data.get("gender"),
+                "patient_phone_numbers": [
+                    {"phone_type": "Mobile", "number": patient_data.get("phone")},
+                ],
+                "address": f"{patient_data.get('street_address', '')}, "
+                f"{patient_data.get('city', '')}, "
+                f"{patient_data.get('postal_code', '')}",
+                "medicare_reference_number": patient_data.get("national_health_id"),
+            },
+            timeout=30,
+        )
+
+        return response.json()
+
+    def fetch_patient_records_from_cliniko(
+        self, cliniko_patient_id: str
+    ) -> dict[str, Any]:
+        """Fetch patient treatment records from Cliniko.
+
+        Retrieves special category health data including:
+        - Treatment notes and clinical observations
+        - Appointment history
+        - Practitioner notes containing personal health information
+        """
+        import requests  # pyright: ignore[reportMissingImports]
+
+        headers = {
+            "Authorization": f"Bearer {self.cliniko_api_key}",
+            "Accept": "application/json",
+        }
+
+        # Fetch patient details (personal data)
+        patient_response = requests.get(
+            f"{self.cliniko_base_url}/patients/{cliniko_patient_id}",
+            headers=headers,
+            timeout=30,
+        )
+
+        # Fetch treatment notes (special category health data)
+        notes_response = requests.get(
+            f"{self.cliniko_base_url}/patients/{cliniko_patient_id}/treatment_notes",
+            headers=headers,
+            timeout=30,
+        )
+
+        patient = patient_response.json()
+        notes = notes_response.json()
+
+        # Store healthcare records in encrypted S3 bucket
+        import json
+
+        self.aws_storage.upload_healthcare_record(
+            patient_id=cliniko_patient_id,
+            record_data=json.dumps(
+                {"patient": patient, "treatment_notes": notes}, default=str
+            ).encode(),
+            record_type="cliniko_sync",
+        )
+
+        return {
+            "patient": patient,
+            "treatment_notes": notes.get("treatment_notes", []),
+            "synced_at": datetime.utcnow().isoformat(),
+        }
+
+    def delete_patient_from_platforms(
+        self, patient_data: dict[str, Any]
+    ) -> dict[str, bool]:
+        """Delete patient data from all healthcare platforms (GDPR erasure).
+
+        Removes personal and health data from:
+        - SimplePractice patient records
+        - Cliniko patient records
+        - AWS S3 healthcare records bucket
+        """
+        results = {}
+
+        import requests  # pyright: ignore[reportMissingImports]
+
+        # Delete from SimplePractice
+        if patient_data.get("simplepractice_id"):
+            try:
+                requests.delete(
+                    f"{self.simplepractice_base_url}/clients/{patient_data['simplepractice_id']}",
+                    headers={"Authorization": f"Bearer {self.simplepractice_api_key}"},
+                    timeout=30,
+                )
+                results["simplepractice"] = True
+            except Exception:
+                results["simplepractice"] = False
+
+        # Delete from Cliniko
+        if patient_data.get("cliniko_id"):
+            try:
+                requests.delete(
+                    f"{self.cliniko_base_url}/patients/{patient_data['cliniko_id']}",
+                    headers={"Authorization": f"Bearer {self.cliniko_api_key}"},
+                    timeout=30,
+                )
+                results["cliniko"] = True
+            except Exception:
+                results["cliniko"] = False
+
+        return results
+
+
 class User(Base):
     """
     User model - stores personal data
@@ -151,6 +650,10 @@ class User(Base):
     marketing_consent = Column(Boolean, default=False)
     analytics_consent = Column(Boolean, default=False)
     data_retention_until = Column(Date)
+
+    # Third-party service identifiers
+    simplepractice_client_id = Column(String(255), comment="SimplePractice patient ID")
+    cliniko_patient_id = Column(String(255), comment="Cliniko patient ID")
 
     # Audit fields
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -283,7 +786,32 @@ class User(Base):
                 "marketing_consent": self.marketing_consent,
                 "analytics_consent": self.analytics_consent,
             },
+            "third_party_identifiers": {
+                "simplepractice_client_id": self.simplepractice_client_id,
+                "cliniko_patient_id": self.cliniko_patient_id,
+            },
         }
+
+    def export_and_store_to_s3(self) -> str:
+        """Export personal data and upload to AWS S3 for secure delivery"""
+        storage = AWSStorageService()
+        export_data = self.export_personal_data()
+        return storage.upload_personal_data_export(self.id, export_data)
+
+    def classify_personal_data_with_ai(self) -> dict[str, Any]:
+        """Use AI to classify personal data categories for this user"""
+        classifier = AIDataClassificationService()
+        import json
+
+        user_data_text = json.dumps(self.export_personal_data(), default=str)
+        return classifier.classify_personal_data(user_data_text)
+
+    def generate_user_embeddings(self) -> str:
+        """Generate vector embeddings for DSAR search using Pinecone"""
+        classifier = AIDataClassificationService()
+        return classifier.generate_data_subject_embeddings(
+            self.id, self.export_personal_data()
+        )
 
     def anonymize_personal_data(self):
         """Anonymize personal data for GDPR right to be forgotten (Article 17)"""
@@ -295,7 +823,48 @@ class User(Base):
         self.date_of_birth = None
         self.gender = None
         self.nationality = None
+        self.simplepractice_client_id = None
+        self.cliniko_patient_id = None
         self.deleted_at = datetime.utcnow()
+
+    def delete_from_all_services(self) -> dict[str, bool]:
+        """Delete user data from all third-party services (GDPR erasure).
+
+        Removes personal data from:
+        - AWS S3 (documents and exports)
+        - Pinecone (vector embeddings)
+        - SimplePractice (healthcare records)
+        - Cliniko (patient records)
+        """
+        results: dict[str, bool] = {}
+
+        # Delete from AWS S3
+        try:
+            storage = AWSStorageService()
+            storage.delete_user_data(self.id)
+            results["aws_s3"] = True
+        except Exception:
+            results["aws_s3"] = False
+
+        # Delete from Pinecone vector database
+        try:
+            classifier = AIDataClassificationService()
+            classifier.delete_user_embeddings(self.id)
+            results["pinecone"] = True
+        except Exception:
+            results["pinecone"] = False
+
+        # Delete from healthcare platforms
+        healthcare = HealthcareIntegrationService()
+        healthcare_results = healthcare.delete_patient_from_platforms(
+            {
+                "simplepractice_id": self.simplepractice_client_id,
+                "cliniko_id": self.cliniko_patient_id,
+            }
+        )
+        results.update(healthcare_results)
+
+        return results
 
     @staticmethod
     def _get_encryption_key():
@@ -450,6 +1019,12 @@ class PersonalDataAuditLog(Base):
     legal_basis = Column(String(50), comment="GDPR legal basis for processing")
     processing_purpose = Column(String(200), comment="Purpose of data processing")
 
+    # Third-party service data sharing
+    data_shared_with = Column(
+        String(200),
+        comment="Third-party services that received personal data",
+    )
+
     # Session information
     accessed_by_user_id = Column(Integer, ForeignKey("users.id"))
     ip_address = Column(String(45), comment="IP address - potentially identifying")
@@ -543,6 +1118,16 @@ def generate_user_report(user_id: int) -> dict[str, Any] | None:
     }
 
 
+def search_users_with_ai(query: str) -> list[dict[str, Any]]:
+    """Search for users using AI-powered vector similarity search.
+
+    Uses OpenAI embeddings and Pinecone to find users matching a natural
+    language query. Useful for data subject access requests (DSAR).
+    """
+    classifier = AIDataClassificationService()
+    return classifier.search_user_data(query)
+
+
 def validate_personal_data_formats(user_data: dict[str, Any]) -> dict[str, bool]:
     """Validate personal data formats before processing"""
     validations = {}
@@ -605,6 +1190,25 @@ SAMPLE_CONTACT_INFO = {
         "phone": "07700 900456",
         "address": "42 Baker Street, London SW1A 1AA",
     },
+}
+
+SAMPLE_HEALTHCARE_PATIENT = {
+    "first_name": "Sarah",
+    "last_name": "Johnson",
+    "email": "sarah.johnson@example.com",
+    "phone": "+44 20 7946 0958",
+    "date_of_birth": "1987-03-15",
+    "gender": "female",
+    "street_address": "42 Baker Street",
+    "city": "London",
+    "postal_code": "SW1A 1AA",
+    "country": "United Kingdom",
+    "emergency_contact_name": "Michael Johnson",
+    "emergency_contact_phone": "+44 7700 900123",
+    "emergency_contact_relationship": "Spouse",
+    "insurance_provider": "BUPA",
+    "insurance_member_id": "BUPA-12345678",
+    "national_health_id": "NHS-943-215-7890",
 }
 
 # Regular expressions for personal data detection
