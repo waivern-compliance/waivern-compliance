@@ -130,7 +130,7 @@ class LLMServiceFactory:
             store = self._container.get_service(ArtifactStore)
 
             # Create provider based on configuration
-            provider = self._create_provider(config)
+            provider = self.create_provider(config)
 
             logger.info(
                 f"LLM service created (provider={config.provider}, "
@@ -148,8 +148,9 @@ class LLMServiceFactory:
             logger.warning(f"Failed to create LLM service: {e}")
             return None
 
-    def _create_provider(
-        self, config: LLMServiceConfiguration
+    @staticmethod
+    def create_provider(
+        config: LLMServiceConfiguration,
     ) -> AnthropicProvider | OpenAIProvider | GoogleProvider:
         """Create the appropriate LLM provider based on configuration.
 

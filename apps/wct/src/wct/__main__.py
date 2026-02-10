@@ -25,6 +25,7 @@ from wct.cli import (
     list_processors_command,
     list_rulesets_command,
     list_runs_command,
+    poll_run_command,
     validate_runbook_command,
 )
 
@@ -209,6 +210,33 @@ def list_runs(
 ) -> None:
     """List recorded execution runs."""
     list_runs_command(log_level, status)
+
+
+@app.command(name="poll")
+def poll(
+    run_id: Annotated[
+        str,
+        typer.Argument(help="Run ID (UUID) to poll for batch completion"),
+    ],
+    log_level: Annotated[
+        str,
+        typer.Option(
+            "--log-level",
+            help="Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+            case_sensitive=False,
+        ),
+    ] = "INFO",
+) -> None:
+    """Poll batch job status for a run.
+
+    Checks all pending batch jobs and updates their status.
+    Use after 'wct run' reports an interrupted run due to batch processing.
+
+    Example:
+        wct poll 123e4567-e89b-12d3-a456-426614174000
+
+    """
+    poll_run_command(run_id, log_level)
 
 
 @app.command(name="validate-runbook")
