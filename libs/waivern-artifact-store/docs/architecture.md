@@ -155,7 +155,7 @@ class ArtifactStore(ABC):
     Stateless interface where run_id is passed to each operation.
     This enables singleton stores compatible with standard DI patterns.
 
-    Provides semantic methods for artifacts and system metadata.
+    Provides semantic methods for artifacts, system metadata, and batch jobs.
     Implementations handle internal storage structure (prefixes, directories).
     """
 
@@ -233,6 +233,33 @@ class ArtifactStore(ABC):
         Raises:
             ArtifactNotFoundError: If metadata does not exist.
         """
+        ...
+
+    # ========================================================================
+    # Batch Job Operations
+    # ========================================================================
+
+    @abstractmethod
+    async def save_batch_job(
+        self, run_id: str, batch_id: str, data: dict[str, JsonValue]
+    ) -> None:
+        """Persist a batch job record."""
+        ...
+
+    @abstractmethod
+    async def load_batch_job(
+        self, run_id: str, batch_id: str
+    ) -> dict[str, JsonValue]:
+        """Load a batch job record.
+
+        Raises:
+            ArtifactNotFoundError: If batch job does not exist.
+        """
+        ...
+
+    @abstractmethod
+    async def list_batch_jobs(self, run_id: str) -> list[str]:
+        """List all batch job IDs for a run."""
         ...
 
     # ========================================================================
@@ -399,11 +426,16 @@ waivern-artifact-store/
         ├── _system/                 # System metadata partition
         │   ├── run.json             # RunMetadata (status, timestamps, hash)
         │   └── state.json           # ExecutionState (completed, failed, skipped)
-        └── artifacts/               # Pipeline artifacts partition
-            ├── source_data.json
-            ├── findings.json
-            └── namespace/           # Hierarchical artifact IDs supported
-                └── analysis.json
+        ├── artifacts/               # Pipeline artifacts partition
+        │   ├── source_data.json
+        │   ├── findings.json
+        │   └── namespace/           # Hierarchical artifact IDs supported
+        │       └── analysis.json
+        ├── llm_cache/               # LLM response cache
+        │   ├── {cache_key}.json     # CacheEntry (pending → completed)
+        │   └── ...
+        └── batch_jobs/              # LLM batch job tracking
+            └── {batch_id}.json      # BatchJob metadata
 ```
 
 **Note**: The `artifacts/` prefix is an internal implementation detail. API users work with artifact IDs directly (e.g., `"findings"`, `"namespace/analysis"`), not prefixed keys.

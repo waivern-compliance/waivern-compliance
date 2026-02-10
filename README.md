@@ -67,9 +67,25 @@ uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml -v
 ### Available Commands
 
 ```bash
+# Run analysis
+uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml
+uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml -v  # Verbose
+
+# Resume an interrupted or failed run
+uv run wct run analysis.yaml --resume <run-id>
+
+# List recorded runs
+uv run wct runs
+uv run wct runs --status failed
+
+# Poll batch job status (when using LLM batch mode)
+uv run wct poll <run-id>
+
 # List components
 uv run wct connectors
 uv run wct processors       # Lists analysers
+uv run wct rulesets
+uv run wct exporters
 
 # Validate runbook
 uv run wct validate-runbook apps/wct/runbooks/samples/file_content_analysis.yaml

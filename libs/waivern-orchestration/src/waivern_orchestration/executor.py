@@ -58,12 +58,14 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
+from dataclasses import field as dataclass_field
 from datetime import UTC, datetime
 from pathlib import Path
 
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.errors import ArtifactNotFoundError
 from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
+from waivern_core.errors import PendingProcessingError
 from waivern_core.services import ComponentRegistry
 
 from waivern_orchestration.errors import (
@@ -95,6 +97,7 @@ class _ExecutionContext:
     state: ExecutionState
     semaphore: asyncio.Semaphore
     thread_pool: ThreadPoolExecutor
+    pending_batch_artifacts: set[str] = dataclass_field(default_factory=set)
 
 
 class DAGExecutor:
@@ -151,7 +154,6 @@ class DAGExecutor:
             "Creating ThreadPoolExecutor with max_workers=%d", config.max_concurrency
         )
 
-        execution_failed = False
         with ThreadPoolExecutor(max_workers=config.max_concurrency) as thread_pool:
             ctx = _ExecutionContext(
                 run_id=run_id,
@@ -169,13 +171,16 @@ class DAGExecutor:
                 await self._mark_remaining_as_skipped(plan, ctx)
                 logger.warning("Execution timed out after %d seconds", config.timeout)
 
-            # Determine final status
-            execution_failed = len(ctx.state.failed) > 0
-
         logger.debug("ThreadPoolExecutor shutdown complete")
 
-        # Update and save run metadata
-        if execution_failed:
+        # Persist final state (safety net — state may already have been saved
+        # incrementally, but pending-only runs skip the per-artifact save)
+        await ctx.state.save(ctx.store)
+
+        # Determine final status: interrupted > failed > completed
+        if ctx.pending_batch_artifacts:
+            metadata.mark_interrupted()
+        elif len(ctx.state.failed) > 0:
             metadata.mark_failed()
         else:
             metadata.mark_completed()
@@ -301,7 +306,16 @@ class DAGExecutor:
         plan: ExecutionPlan,
         ctx: _ExecutionContext,
     ) -> None:
-        """Execute artifacts in topological order with parallel batches."""
+        """Execute artifacts in topological order with parallel batches.
+
+        Handles three artifact outcomes:
+        1. Success — mark completed, notify sorter
+        2. Failure — mark failed, skip dependents, notify sorter
+        3. PendingProcessingError — leave in not_started, do NOT notify sorter
+
+        The loop exits when no more progress is possible. If pending batch
+        artifacts exist at that point, the run is marked interrupted.
+        """
         logger.debug("Starting DAG execution...")
         sorter = plan.dag.create_sorter()
 
@@ -315,6 +329,16 @@ class DAGExecutor:
                 sorter.done(aid)
 
             if not ready:
+                if not already_done:
+                    # No progress possible — stalled
+                    if ctx.pending_batch_artifacts:
+                        logger.info(
+                            "DAG stalled with pending batch artifacts: %s",
+                            ctx.pending_batch_artifacts,
+                        )
+                    else:
+                        logger.error("DAG stalled unexpectedly with no pending batches")
+                    break
                 continue
 
             logger.debug("Starting batch execution for artifacts: %s", ready)
@@ -324,7 +348,8 @@ class DAGExecutor:
 
             for aid, result in zip(ready, batch_results, strict=True):
                 await self._handle_artifact_result(aid, result, plan, ctx)
-                sorter.done(aid)
+                if aid not in ctx.pending_batch_artifacts:
+                    sorter.done(aid)
 
         logger.debug("DAG execution complete.")
 
@@ -362,11 +387,20 @@ class DAGExecutor:
         """Handle the result of producing an artifact.
 
         Persists state transitions. On failure, skips all dependent artifacts.
-        Success messages are saved in _produce(). Error messages from exceptions
-        caught in _produce() need to be saved here.
+        PendingProcessingError leaves the artifact in not_started for retry
+        on resume. Success messages are saved in _produce(). Error messages
+        from exceptions caught in _produce() need to be saved here.
 
         """
-        if isinstance(result, BaseException):
+        if isinstance(result, PendingProcessingError):
+            # Async processing pending — leave artifact in not_started
+            ctx.pending_batch_artifacts.add(artifact_id)
+            logger.info(
+                "Artifact '%s' has pending async processing: %s",
+                artifact_id,
+                result,
+            )
+        elif isinstance(result, BaseException):
             # Exception during production (from asyncio.gather) - create and save
             message = self._create_error_message_for_exception(
                 artifact_id, result, plan, ctx
@@ -483,6 +517,8 @@ class DAGExecutor:
 
                 return message
 
+            except PendingProcessingError:
+                raise
             except Exception as e:
                 duration = time.monotonic() - start_time
                 logger.debug(

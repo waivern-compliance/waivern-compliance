@@ -8,11 +8,10 @@ from the ServiceContainer.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 from waivern_artifact_store.base import ArtifactStore
-from waivern_artifact_store.llm_cache import LLMCache
 
 from waivern_llm.di.configuration import LLMServiceConfiguration
 from waivern_llm.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
@@ -127,27 +126,31 @@ class LLMServiceFactory:
             return None
 
         try:
-            # Resolve cache store from container (lazy resolution)
-            # ArtifactStore implementations also satisfy LLMCache protocol
-            artifact_store = self._container.get_service(ArtifactStore)
-            cache_store = cast(LLMCache, artifact_store)
+            # Resolve artifact store from container (lazy resolution)
+            store = self._container.get_service(ArtifactStore)
 
             # Create provider based on configuration
-            provider = self._create_provider(config)
+            provider = self.create_provider(config)
 
             logger.info(
                 f"LLM service created (provider={config.provider}, "
                 f"model={config.model or 'default'})"
             )
 
-            return DefaultLLMService(provider=provider, cache_store=cache_store)
+            return DefaultLLMService(
+                provider=provider,
+                store=store,
+                batch_mode=config.batch_mode,
+                provider_name=config.provider,
+            )
 
         except Exception as e:
             logger.warning(f"Failed to create LLM service: {e}")
             return None
 
-    def _create_provider(
-        self, config: LLMServiceConfiguration
+    @staticmethod
+    def create_provider(
+        config: LLMServiceConfiguration,
     ) -> AnthropicProvider | OpenAIProvider | GoogleProvider:
         """Create the appropriate LLM provider based on configuration.
 

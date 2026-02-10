@@ -85,6 +85,11 @@ class RunMetadata(BaseModel):
         self.status = "failed"
         self.completed_at = datetime.now(UTC)
 
+    def mark_interrupted(self) -> None:
+        """Transition status to 'interrupted' and set completed_at timestamp."""
+        self.status = "interrupted"
+        self.completed_at = datetime.now(UTC)
+
     # -------------------------------------------------------------------------
     # Persistence
     # -------------------------------------------------------------------------

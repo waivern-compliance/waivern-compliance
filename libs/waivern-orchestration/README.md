@@ -25,17 +25,33 @@ Sync components (connectors, processors) are bridged to async via ThreadPoolExec
 Execution state is persisted after each artifact completes, enabling:
 
 - **Resume from failure** - Re-run failed runs, skipping completed artifacts
+- **Resume from batch interruption** - When LLM batch mode is active, runs pause with `interrupted` status while batches process asynchronously. Poll with `wct poll`, then resume.
 - **Artifact reuse** - Reference artifacts from previous runs in new runbooks
 - **Run inspection** - Query run status and examine artifacts
 
 ```bash
-# Resume a failed run
+# Resume a failed or interrupted run
 wct run analysis.yaml --resume <run-id>
 
 # List recorded runs
 wct runs
 wct runs --status failed
+wct runs --status interrupted
+
+# Poll batch job status (when using LLM batch mode)
+wct poll <run-id>
 ```
+
+### Batch Mode Integration
+
+When a processor raises `PendingProcessingError` (e.g., from LLM batch submission), the DAGExecutor:
+
+1. Leaves the artifact in `not_started` state (not failed)
+2. Continues executing independent branches in the DAG
+3. Stalls when no more progress is possible
+4. Marks the run as `interrupted`
+
+On resume, the pending artifact is re-attempted. Since the LLM cache has been populated by the poller, it completes immediately.
 
 ### Artifact Reuse
 

@@ -186,6 +186,56 @@ class ArtifactStore(ABC):
         ...
 
     # ========================================================================
+    # Batch Job Operations
+    # ========================================================================
+
+    @abstractmethod
+    async def save_batch_job(
+        self, run_id: str, batch_id: str, data: dict[str, JsonValue]
+    ) -> None:
+        """Store batch job data.
+
+        Uses upsert semantics — overwrites if batch_id already exists.
+
+        Args:
+            run_id: Unique identifier for the run.
+            batch_id: The provider's batch identifier.
+            data: The batch job data as a dictionary.
+
+        """
+        ...
+
+    @abstractmethod
+    async def load_batch_job(self, run_id: str, batch_id: str) -> dict[str, JsonValue]:
+        """Load batch job data.
+
+        Args:
+            run_id: Unique identifier for the run.
+            batch_id: The provider's batch identifier.
+
+        Returns:
+            The batch job data as a dictionary.
+
+        Raises:
+            ArtifactNotFoundError: If batch job does not exist.
+
+        """
+        ...
+
+    @abstractmethod
+    async def list_batch_jobs(self, run_id: str) -> list[str]:
+        """List all batch job IDs for a run.
+
+        Args:
+            run_id: Unique identifier for the run.
+
+        Returns:
+            List of batch IDs. Empty list if no batch jobs exist.
+
+        """
+        ...
+
+    # ========================================================================
     # Run Enumeration
     # ========================================================================
 

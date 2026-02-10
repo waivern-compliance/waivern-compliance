@@ -67,20 +67,31 @@ prompt + model + response_model. Cache is cleared after successful completion
 
 __version__ = "0.1.0"
 
+from waivern_llm.batch_job import BatchJob
 from waivern_llm.batch_planner import (
     BatchPlan,
     BatchPlanner,
     PlannedBatch,
+)
+from waivern_llm.batch_poller import BatchResultPoller, PollResult
+from waivern_llm.batch_types import (
+    BatchRequest,
+    BatchResult,
+    BatchStatus,
+    BatchStatusLiteral,
+    BatchSubmission,
 )
 from waivern_llm.cache import CacheEntry
 from waivern_llm.errors import (
     LLMConfigurationError,
     LLMConnectionError,
     LLMServiceError,
+    PendingBatchError,
 )
 from waivern_llm.factory import LLMServiceFactory
 from waivern_llm.providers import (
     AnthropicProvider,
+    BatchLLMProvider,
     GoogleProvider,
     LLMProvider,
     OpenAIProvider,
@@ -120,6 +131,7 @@ __all__ = [
     "LLMServiceFactory",
     # Providers
     "LLMProvider",
+    "BatchLLMProvider",
     "AnthropicProvider",
     "OpenAIProvider",
     "GoogleProvider",
@@ -127,6 +139,18 @@ __all__ = [
     "LLMServiceError",
     "LLMConfigurationError",
     "LLMConnectionError",
+    "PendingBatchError",
+    # Batch job
+    "BatchJob",
+    # Batch poller
+    "BatchResultPoller",
+    "PollResult",
+    # Batch types
+    "BatchRequest",
+    "BatchSubmission",
+    "BatchStatus",
+    "BatchStatusLiteral",
+    "BatchResult",
     # Cache
     "CacheEntry",
     # Batch planning

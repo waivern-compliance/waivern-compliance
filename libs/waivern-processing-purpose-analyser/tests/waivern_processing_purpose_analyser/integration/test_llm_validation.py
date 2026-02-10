@@ -53,7 +53,7 @@ def llm_service() -> LLMService:
 
     cache_store = AsyncInMemoryStore()
 
-    return DefaultLLMService(provider=provider, cache_store=cache_store)
+    return DefaultLLMService(provider=provider, store=cache_store)
 
 
 class TestProcessingPurposeAnalyserLLMIntegration:

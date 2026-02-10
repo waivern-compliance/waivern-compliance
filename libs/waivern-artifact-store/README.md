@@ -8,9 +8,11 @@ Provides abstract interface and concrete implementations for storing and retriev
 
 ## Features
 
-- **Abstract interface**: `ArtifactStore` base class
-- **In-memory storage**: `InMemoryArtifactStore` (default, thread-safe)
+- **Abstract interface**: `ArtifactStore` async base class
+- **In-memory storage**: `AsyncInMemoryStore` (default, for testing)
+- **Filesystem storage**: `LocalFilesystemStore` (persistent, for local development)
 - **Factory pattern**: Backend selection via configuration
+- **Batch job tracking**: Storage for LLM batch job metadata
 
 ## Installation
 
@@ -29,18 +31,18 @@ from waivern_artifact_store import ArtifactStoreFactory
 factory = ArtifactStoreFactory()
 store = factory.create()
 
-# Save artifact
-store.save(step_id="extract", message=output_message)
+# Save artifact (run-scoped, async)
+await store.save_artifact(run_id, "extract", output_message)
 
 # Retrieve artifact
-message = store.get(step_id="extract")
+message = await store.get_artifact(run_id, "extract")
 
 # Check existence
-if store.exists(step_id="extract"):
+if await store.artifact_exists(run_id, "extract"):
     # ...
 
-# Cleanup
-store.clear()
+# Cleanup artifacts (preserves system metadata)
+await store.clear_artifacts(run_id)
 ```
 
 ### Configuration Options

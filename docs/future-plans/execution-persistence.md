@@ -16,9 +16,17 @@ Execution persistence enables artifact storage, state tracking, and run resumpti
 │   ├── run.json              # Run metadata (runbook, timestamps, status)
 │   └── state.json            # Execution state (completed, not_started, failed)
 │
-├── source_data.json          # Artifacts (key = artifact_id)
-├── findings.json
-└── validated_findings.json
+├── artifacts/
+│   ├── source_data.json      # Artifacts (key = artifact_id)
+│   ├── findings.json
+│   └── validated_findings.json
+│
+├── llm_cache/
+│   ├── {cache_key}.json      # LLM response cache entries
+│   └── ...
+│
+└── batch_jobs/
+    └── {batch_id}.json       # LLM batch job tracking metadata
 ```
 
 ### Run Metadata (`_system/run.json`)
@@ -52,15 +60,27 @@ Execution persistence enables artifact storage, state tracking, and run resumpti
 class ArtifactStore(ABC):
     """Stateless interface - run_id passed to each operation."""
 
-    async def save(self, run_id: str, key: str, message: Message) -> None: ...
-    async def get(self, run_id: str, key: str) -> Message: ...
-    async def exists(self, run_id: str, key: str) -> bool: ...
-    async def delete(self, run_id: str, key: str) -> None: ...
-    async def list_keys(self, run_id: str, prefix: str = "") -> list[str]: ...
+    # Artifact operations
+    async def save_artifact(self, run_id: str, artifact_id: str, message: Message) -> None: ...
+    async def get_artifact(self, run_id: str, artifact_id: str) -> Message: ...
+    async def artifact_exists(self, run_id: str, artifact_id: str) -> bool: ...
+    async def delete_artifact(self, run_id: str, artifact_id: str) -> None: ...
+    async def list_artifacts(self, run_id: str) -> list[str]: ...
+    async def clear_artifacts(self, run_id: str) -> None: ...
+
+    # System metadata
+    async def save_execution_state(self, run_id: str, state_data: dict) -> None: ...
+    async def load_execution_state(self, run_id: str) -> dict: ...
+    async def save_run_metadata(self, run_id: str, metadata: dict) -> None: ...
+    async def load_run_metadata(self, run_id: str) -> dict: ...
+
+    # Batch job tracking
+    async def save_batch_job(self, run_id: str, batch_id: str, data: dict) -> None: ...
+    async def load_batch_job(self, run_id: str, batch_id: str) -> dict: ...
+    async def list_batch_jobs(self, run_id: str) -> list[str]: ...
+
+    # Run enumeration
     async def list_runs(self) -> list[str]: ...
-    async def clear(self, run_id: str) -> None: ...
-    async def save_json(self, run_id: str, key: str, data: dict) -> None: ...
-    async def get_json(self, run_id: str, key: str) -> dict: ...
 ```
 
 **Available backends:**
@@ -70,7 +90,7 @@ class ArtifactStore(ABC):
 
 ## Features
 
-### Resume from Failure
+### Resume from Failure or Batch Interruption
 
 Resume a failed or interrupted run, skipping already-completed artifacts:
 
@@ -78,6 +98,7 @@ Resume a failed or interrupted run, skipping already-completed artifacts:
 # List recorded runs
 wct runs
 wct runs --status failed
+wct runs --status interrupted
 
 # Resume a specific run
 wct run analysis.yaml --resume <run-id>
@@ -87,6 +108,22 @@ wct run analysis.yaml --resume <run-id>
 
 - Runbook hash must match (prevents resuming with modified runbook)
 - Run must not be in "running" status (prevents concurrent execution)
+
+### LLM Batch Mode Integration
+
+When LLM batch mode is enabled (`WAIVERN_LLM_BATCH_MODE=true`), the execution flow becomes:
+
+1. `wct run` submits prompts to the provider's Batch API and marks the run `interrupted`
+2. `wct poll <run-id>` checks batch status and populates the LLM cache when complete
+3. `wct run --resume <run-id>` re-attempts pending artifacts, which now hit cache
+
+```bash
+# Poll batch job status
+wct poll <run-id>
+
+# Resume once batches complete
+wct run analysis.yaml --resume <run-id>
+```
 
 ### Artifact Reuse
 
@@ -124,5 +161,9 @@ artifacts:
 | Resume capability (`--resume` flag)        | ✅ Implemented |
 | `wct runs` command                         | ✅ Implemented |
 | Artifact reuse (`reuse` config)            | ✅ Implemented |
+| LLM batch job storage (`batch_jobs/`)      | ✅ Implemented |
+| LLM batch mode (`PendingProcessingError`)  | ✅ Implemented |
+| `wct poll` command                         | ✅ Implemented |
+| `interrupted` run status                   | ✅ Implemented |
 | `wct inspect` command                      | ⏳ Future      |
 | Run cleanup/retention policies             | ⏳ Future      |

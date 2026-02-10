@@ -18,14 +18,19 @@ apps/wct/
 │   └── type-check.sh
 ├── src/
 │   └── wct/
-│       ├── __main__.py     # CLI entry point
-│       ├── cli.py          # CLI commands
-│       ├── executor.py     # Runbook executor
-│       ├── connectors/     # Data source connectors
-│       ├── analysers/      # Compliance analysers
-│       ├── rulesets/       # Compliance rulesets
+│       ├── __main__.py     # CLI entry point (Typer app definition)
+│       ├── cli/            # CLI command implementations
+│       │   ├── errors.py       # CLIError and error handling context manager
+│       │   ├── formatting.py   # Rich console output formatting
+│       │   ├── infrastructure.py # Service container setup
+│       │   ├── run.py          # `wct run` command
+│       │   ├── list.py         # `wct connectors/processors/runs/...` commands
+│       │   ├── poll.py         # `wct poll` command (batch mode)
+│       │   └── validate.py     # `wct validate-runbook` and `wct generate-schema`
+│       ├── config/         # Configuration loading
+│       ├── exporters/      # Result exporters (JSON, GDPR, etc.)
 │       ├── schemas/        # Data schemas
-│       └── llm_service/    # LLM integration
+│       └── logging.py      # Logging configuration
 └── tests/                  # Package tests
 ```
 
@@ -59,19 +64,12 @@ This enables independent development and ensures consistent standards.
 
 ### Core Dependencies
 - `waivern-core` - Framework abstractions
+- `waivern-orchestration` - Runbook parsing, DAG execution
+- `waivern-llm` - Multi-provider LLM abstraction (with batch mode support)
+- `waivern-artifact-store` - Artifact and batch job storage
 - `pydantic>=2.11.5` - Data validation
 - `typer>=0.16.0` - CLI framework
 - `rich>=13.0.0` - Terminal formatting
-
-### Connector Dependencies
-- `pymysql>=1.1.1` - MySQL database connector
-- `cryptography>=45.0.5` - Database connection security
-- `tree-sitter>=0.21.0` - Source code parsing
-
-### Analyser Dependencies
-- `langchain>=0.3.0` - LLM framework
-- `langchain-anthropic>=0.2.0` - Anthropic LLM provider
-- `jsonschema>=4.25.0` - Schema validation
 
 ## Usage
 
@@ -82,6 +80,9 @@ See the [main README](../../README.md) for installation and usage instructions.
 ```bash
 # From workspace root
 uv run wct run runbooks/samples/file_content_analysis.yaml
+uv run wct run analysis.yaml --resume <run-id>  # Resume interrupted/failed run
+uv run wct runs                                  # List recorded runs
+uv run wct poll <run-id>                         # Poll batch job status
 uv run wct connectors
 uv run wct processors
 ```

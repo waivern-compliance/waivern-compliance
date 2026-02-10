@@ -2,6 +2,7 @@
 
 This module provides:
 - WaivernError: Base exception class for all framework errors
+- PendingProcessingError: Marker for async processing pending (batch APIs)
 - ConnectorError, ConnectorConfigError, ConnectorExtractionError: Connector exceptions
 - ProcessorError: Base exception for processor-related errors
 - AnalyserError, AnalyserConfigError, AnalyserInputError, AnalyserProcessingError: Analyser exceptions
@@ -91,5 +92,19 @@ class MessageValidationError(WaivernError):
 
 class ParserError(WaivernError):
     """Base exception for parser-related errors."""
+
+    pass
+
+
+class PendingProcessingError(WaivernError):
+    """Raised when async processing is pending and results are not yet available.
+
+    The DAGExecutor catches this to leave the artifact in ``not_started``
+    and mark the run as ``interrupted``.  On resume, the artifact is
+    re-attempted and (typically) completes from cached results.
+
+    Subclasses (e.g. ``PendingBatchError`` in ``waivern-llm``) add
+    domain-specific fields such as batch IDs.
+    """
 
     pass

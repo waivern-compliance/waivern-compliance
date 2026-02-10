@@ -8,8 +8,14 @@ Storage structure:
         ├── _system/
         │   ├── run.json          # RunMetadata
         │   └── state.json        # ExecutionState
-        └── artifacts/
-            ├── {artifact_id}.json
+        ├── artifacts/
+        │   ├── {artifact_id}.json
+        │   └── ...
+        ├── llm_cache/
+        │   ├── {cache_key}.json
+        │   └── ...
+        └── batch_jobs/
+            ├── {batch_id}.json
             └── ...
 """
 
@@ -39,6 +45,7 @@ class LocalFilesystemStore(ArtifactStore):
     _ARTIFACTS_PREFIX = "artifacts"
     _SYSTEM_PREFIX = "_system"
     _LLM_CACHE_PREFIX = "llm_cache"
+    _BATCH_JOBS_PREFIX = "batch_jobs"
 
     # System file keys
     _STATE_KEY = f"{_SYSTEM_PREFIX}/state"
@@ -91,6 +98,10 @@ class LocalFilesystemStore(ArtifactStore):
     def _cache_key(self, key: str) -> str:
         """Convert cache key to internal storage key."""
         return f"{self._LLM_CACHE_PREFIX}/{key}"
+
+    def _batch_job_key(self, batch_id: str) -> str:
+        """Convert batch job ID to internal storage key."""
+        return f"{self._BATCH_JOBS_PREFIX}/{batch_id}"
 
     # ========================================================================
     # Artifact Operations
@@ -249,6 +260,45 @@ class LocalFilesystemStore(ArtifactStore):
             return []
 
         return sorted(d.name for d in runs_dir.iterdir() if d.is_dir())
+
+    # ========================================================================
+    # Batch Job Operations
+    # ========================================================================
+
+    @override
+    async def save_batch_job(
+        self, run_id: str, batch_id: str, data: dict[str, JsonValue]
+    ) -> None:
+        """Store batch job data to batch_jobs/{batch_id}.json."""
+        file_path = self._key_to_path(run_id, self._batch_job_key(batch_id))
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        async with aiofiles.open(file_path, "w") as f:
+            await f.write(json.dumps(data, indent=2))
+
+    @override
+    async def load_batch_job(self, run_id: str, batch_id: str) -> dict[str, JsonValue]:
+        """Load batch job data from batch_jobs/{batch_id}.json."""
+        file_path = self._key_to_path(run_id, self._batch_job_key(batch_id))
+
+        if not file_path.exists():
+            raise ArtifactNotFoundError(
+                f"Batch job '{batch_id}' not found for run '{run_id}'."
+            )
+
+        async with aiofiles.open(file_path) as f:
+            content = await f.read()
+        data = json.loads(content)
+        return cast(dict[str, JsonValue], data)
+
+    @override
+    async def list_batch_jobs(self, run_id: str) -> list[str]:
+        """List all batch job IDs for a run."""
+        batch_dir = self._run_dir(run_id) / self._BATCH_JOBS_PREFIX
+        if not batch_dir.exists():
+            return []
+
+        return sorted(f.stem for f in batch_dir.glob("*.json"))
 
     # ========================================================================
     # LLM Cache Operations

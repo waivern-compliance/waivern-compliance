@@ -7,10 +7,14 @@ for LLM processing of finding groups.
 from collections.abc import Sequence
 from unittest.mock import AsyncMock, Mock
 
+import pytest
 from pydantic import BaseModel
 from waivern_artifact_store.in_memory import AsyncInMemoryStore
 
+from waivern_llm.batch_job import BatchJob
+from waivern_llm.batch_types import BatchSubmission
 from waivern_llm.cache import CacheEntry
+from waivern_llm.errors import PendingBatchError
 from waivern_llm.service import DefaultLLMService
 from waivern_llm.types import BatchingMode, ItemGroup, SkipReason
 
@@ -62,10 +66,68 @@ def _create_mock_provider(response: MockResponse) -> Mock:
     return provider
 
 
+def _create_mock_batch_provider(
+    response: MockResponse,
+    submission: BatchSubmission,
+) -> Mock:
+    """Create a mock provider that implements both LLMProvider and BatchLLMProvider."""
+    provider = Mock()
+    provider.model_name = "test-model"
+    provider.context_window = 100_000
+    provider.invoke_structured = AsyncMock(return_value=response)
+    provider.submit_batch = AsyncMock(return_value=submission)
+    provider.get_batch_status = AsyncMock()
+    provider.get_batch_results = AsyncMock()
+    provider.cancel_batch = AsyncMock()
+    return provider
+
+
+class _SyncOnlyProvider:
+    """Concrete LLMProvider that does NOT implement BatchLLMProvider.
+
+    Unlike Mock(), which auto-creates attributes and passes isinstance()
+    for any @runtime_checkable protocol, this class explicitly lacks
+    batch methods so isinstance(p, BatchLLMProvider) returns False.
+    """
+
+    def __init__(self, response: BaseModel) -> None:
+        self._response = response
+        self.invoke_structured = AsyncMock(return_value=response)
+
+    @property
+    def model_name(self) -> str:
+        return "test-model"
+
+    @property
+    def context_window(self) -> int:
+        return 100_000
+
+
+def _create_sync_only_provider(response: MockResponse) -> _SyncOnlyProvider:
+    """Create a provider that only implements LLMProvider (no batch support)."""
+    return _SyncOnlyProvider(response)
+
+
 def _create_mock_prompt_builder() -> Mock:
     """Create a mock prompt builder that tracks calls."""
     builder = Mock()
     builder.build_prompt = Mock(return_value="test prompt")
+    return builder
+
+
+def _create_unique_prompt_builder() -> Mock:
+    """Create a prompt builder that returns unique prompts per call."""
+    call_count = 0
+
+    def build_prompt_side_effect(
+        _items: Sequence[MockFinding], *, content: str | None = None
+    ) -> str:
+        nonlocal call_count
+        call_count += 1
+        return f"prompt-{call_count}"
+
+    builder = Mock()
+    builder.build_prompt = Mock(side_effect=build_prompt_side_effect)
     return builder
 
 
@@ -94,7 +156,7 @@ class TestDefaultLLMServiceCountBasedMode:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
 
         group = _create_group(content="some content", item_count=2)
 
@@ -120,7 +182,7 @@ class TestDefaultLLMServiceCountBasedMode:
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
         # batch_size=2 means 5 items should produce 3 batches
-        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=2)
+        service = DefaultLLMService(provider=provider, store=store, batch_size=2)
 
         group = _create_group(content="some content", item_count=5)
 
@@ -153,7 +215,7 @@ class TestDefaultLLMServiceExtendedContextMode:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
 
         group = _create_group(content="file content here", item_count=2)
 
@@ -179,7 +241,7 @@ class TestDefaultLLMServiceExtendedContextMode:
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
         # Small max_payload forces groups into separate batches
-        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
 
         # Two groups that should each become their own batch
         # (content is small enough to fit individually but creates separate batches)
@@ -216,7 +278,7 @@ class TestDefaultLLMServiceCaching:
         response = MockResponse(valid=True, reason="from provider")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
 
         group = _create_group(content="test content", item_count=1)
 
@@ -269,7 +331,7 @@ class TestDefaultLLMServiceCaching:
         prompt_builder = Mock()
         prompt_builder.build_prompt = Mock(side_effect=build_prompt_side_effect)
 
-        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=1)
+        service = DefaultLLMService(provider=provider, store=store, batch_size=1)
 
         # Two items that will become two batches (batch_size=1, COUNT_BASED flattens)
         group = _create_group(content=None, item_count=2)
@@ -316,7 +378,7 @@ class TestDefaultLLMServiceCaching:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
 
         group = _create_group(content="test content", item_count=1)
 
@@ -351,7 +413,7 @@ class TestDefaultLLMServiceSkippedFindings:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
 
         # Valid group with content
         valid_group = _create_group(content="valid content", item_count=2)
@@ -386,8 +448,6 @@ class TestDefaultLLMServiceErrorHandling:
 
     async def test_provider_error_propagates(self) -> None:
         """Provider errors should propagate to caller."""
-        import pytest
-
         # Arrange
         store = AsyncInMemoryStore()
         provider = Mock()
@@ -397,7 +457,7 @@ class TestDefaultLLMServiceErrorHandling:
             side_effect=RuntimeError("Provider failed")
         )
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, cache_store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
 
         group = _create_group(content="test content", item_count=1)
 
@@ -410,3 +470,235 @@ class TestDefaultLLMServiceErrorHandling:
                 batching_mode=BatchingMode.EXTENDED_CONTEXT,
                 run_id="test-run",
             )
+
+
+# =============================================================================
+# Batch Mode
+# =============================================================================
+
+
+class TestDefaultLLMServiceBatchMode:
+    """Tests for batch API code path in complete()."""
+
+    async def test_batch_path_submits_misses_and_raises_pending_batch_error(
+        self,
+    ) -> None:
+        """All cache misses → submit_batch called → PendingBatchError raised."""
+        # Arrange
+        store = AsyncInMemoryStore()
+        response = MockResponse(valid=True, reason="test")
+        submission = BatchSubmission(batch_id="batch-abc", request_count=2)
+        provider = _create_mock_batch_provider(response, submission)
+        prompt_builder = _create_unique_prompt_builder()
+
+        service = DefaultLLMService(
+            provider=provider,
+            store=store,
+            batch_size=1,
+            batch_mode=True,
+            provider_name="test-provider",
+        )
+
+        group = _create_group(content=None, item_count=2)
+
+        # Act
+        with pytest.raises(PendingBatchError) as exc_info:
+            await service.complete(
+                groups=[group],
+                prompt_builder=prompt_builder,
+                response_model=MockResponse,
+                batching_mode=BatchingMode.COUNT_BASED,
+                run_id="run-1",
+            )
+
+        # Assert - PendingBatchError has correct batch_ids
+        assert exc_info.value.run_id == "run-1"
+        assert "batch-abc" in exc_info.value.batch_ids
+
+        # Assert - submit_batch called with correct requests
+        provider.submit_batch.assert_called_once()
+        requests = provider.submit_batch.call_args[0][0]
+        assert len(requests) == 2
+        assert all(r.model == "test-model" for r in requests)
+
+        # Assert - invoke_structured NOT called (batch path, not sync)
+        provider.invoke_structured.assert_not_called()
+
+        # Assert - cache entries written as "pending"
+        for req in requests:
+            cached_data = await store.cache_get("run-1", req.custom_id)
+            assert cached_data is not None
+            cached = CacheEntry.model_validate(cached_data)
+            assert cached.status == "pending"
+            assert cached.batch_id == "batch-abc"
+
+        # Assert - BatchJob saved
+        jobs = await BatchJob.list_for_run(store, "run-1")
+        assert len(jobs) == 1
+        job = jobs[0]
+        assert job.batch_id == "batch-abc"
+        assert job.run_id == "run-1"
+        assert job.provider == "test-provider"
+        assert job.model == "test-model"
+        assert job.status == "submitted"
+        assert job.request_count == 2
+        assert len(job.cache_keys) == 2
+
+    async def test_batch_path_submits_only_misses_in_mixed_cache_state(
+        self,
+    ) -> None:
+        """Only actual misses submitted when cache has completed/pending/miss entries."""
+        # Arrange — 3 batches: one completed, one pending, one miss
+        store = AsyncInMemoryStore()
+        response = MockResponse(valid=True, reason="test")
+        submission = BatchSubmission(batch_id="batch-new", request_count=1)
+        provider = _create_mock_batch_provider(response, submission)
+        prompt_builder = _create_unique_prompt_builder()
+
+        service = DefaultLLMService(
+            provider=provider,
+            store=store,
+            batch_size=1,
+            batch_mode=True,
+            provider_name="test-provider",
+        )
+
+        group = _create_group(content=None, item_count=3)
+
+        # Pre-populate cache for prompt-1 (completed) and prompt-2 (pending)
+        key_1 = CacheEntry.compute_key("prompt-1", "test-model", "MockResponse")
+        entry_1 = CacheEntry(
+            status="completed",
+            response={"valid": True, "reason": "cached"},
+            batch_id=None,
+            model_name="test-model",
+            response_model_name="MockResponse",
+        )
+        await store.cache_set("run-1", key_1, entry_1.model_dump())
+
+        key_2 = CacheEntry.compute_key("prompt-2", "test-model", "MockResponse")
+        entry_2 = CacheEntry(
+            status="pending",
+            response=None,
+            batch_id="batch-existing",
+            model_name="test-model",
+            response_model_name="MockResponse",
+        )
+        await store.cache_set("run-1", key_2, entry_2.model_dump())
+
+        # Act — prompt-3 is the only cache miss
+        with pytest.raises(PendingBatchError) as exc_info:
+            await service.complete(
+                groups=[group],
+                prompt_builder=prompt_builder,
+                response_model=MockResponse,
+                batching_mode=BatchingMode.COUNT_BASED,
+                run_id="run-1",
+            )
+
+        # Assert — only the miss (prompt-3) was submitted
+        provider.submit_batch.assert_called_once()
+        requests = provider.submit_batch.call_args[0][0]
+        assert len(requests) == 1
+
+        # Assert — PendingBatchError includes both existing and new batch IDs
+        assert "batch-existing" in exc_info.value.batch_ids
+        assert "batch-new" in exc_info.value.batch_ids
+
+    async def test_batch_path_returns_results_when_all_completed(self) -> None:
+        """All completed cache entries → results returned, no PendingBatchError."""
+        # Arrange — 2 batches, both already completed in cache (resume scenario)
+        store = AsyncInMemoryStore()
+        response = MockResponse(valid=True, reason="test")
+        submission = BatchSubmission(batch_id="batch-unused", request_count=0)
+        provider = _create_mock_batch_provider(response, submission)
+        prompt_builder = _create_unique_prompt_builder()
+
+        service = DefaultLLMService(
+            provider=provider,
+            store=store,
+            batch_size=1,
+            batch_mode=True,
+            provider_name="test-provider",
+        )
+
+        group = _create_group(content=None, item_count=2)
+
+        # Pre-populate cache with completed entries for both prompts
+        key_1 = CacheEntry.compute_key("prompt-1", "test-model", "MockResponse")
+        entry_1 = CacheEntry(
+            status="completed",
+            response={"valid": True, "reason": "cached-1"},
+            batch_id=None,
+            model_name="test-model",
+            response_model_name="MockResponse",
+        )
+        await store.cache_set("run-1", key_1, entry_1.model_dump())
+
+        key_2 = CacheEntry.compute_key("prompt-2", "test-model", "MockResponse")
+        entry_2 = CacheEntry(
+            status="completed",
+            response={"valid": False, "reason": "cached-2"},
+            batch_id=None,
+            model_name="test-model",
+            response_model_name="MockResponse",
+        )
+        await store.cache_set("run-1", key_2, entry_2.model_dump())
+
+        # Act — should NOT raise PendingBatchError
+        result = await service.complete(
+            groups=[group],
+            prompt_builder=prompt_builder,
+            response_model=MockResponse,
+            batching_mode=BatchingMode.COUNT_BASED,
+            run_id="run-1",
+        )
+
+        # Assert — responses deserialized from cache
+        assert len(result.responses) == 2
+        assert result.responses[0].reason == "cached-1"
+        assert result.responses[1].reason == "cached-2"
+
+        # Assert — no provider calls (everything served from cache)
+        provider.submit_batch.assert_not_called()
+        provider.invoke_structured.assert_not_called()
+
+        # Assert — cache cleared after successful completion
+        cached = await store.cache_get("run-1", key_1)
+        assert cached is None
+
+    async def test_batch_mode_falls_back_to_sync_for_non_batch_provider(
+        self,
+    ) -> None:
+        """batch_mode=True with non-BatchLLMProvider → sync path used."""
+        # Arrange — concrete provider that does NOT implement BatchLLMProvider
+        store = AsyncInMemoryStore()
+        response = MockResponse(valid=True, reason="from sync")
+
+        provider = _create_sync_only_provider(response)
+
+        prompt_builder = _create_mock_prompt_builder()
+
+        service = DefaultLLMService(
+            provider=provider,
+            store=store,
+            batch_size=50,
+            batch_mode=True,  # batch mode ON, but provider doesn't support it
+            provider_name="test-provider",
+        )
+
+        group = _create_group(content=None, item_count=1)
+
+        # Act — should use sync path (invoke_structured), NOT raise PendingBatchError
+        result = await service.complete(
+            groups=[group],
+            prompt_builder=prompt_builder,
+            response_model=MockResponse,
+            batching_mode=BatchingMode.COUNT_BASED,
+            run_id="run-1",
+        )
+
+        # Assert — sync path was used
+        assert len(result.responses) == 1
+        assert result.responses[0].reason == "from sync"
+        provider.invoke_structured.assert_called_once()

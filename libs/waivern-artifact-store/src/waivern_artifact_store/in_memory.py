@@ -32,6 +32,8 @@ class AsyncInMemoryStore(ArtifactStore):
         self._system_data: dict[str, dict[str, dict[str, JsonValue]]] = {}
         # LLM cache storage: run_id -> key -> entry
         self._llm_cache: dict[str, dict[str, dict[str, JsonValue]]] = {}
+        # Batch job storage: run_id -> batch_id -> data
+        self._batch_jobs: dict[str, dict[str, dict[str, JsonValue]]] = {}
 
     def _get_artifact_storage(self, run_id: str) -> dict[str, Message]:
         """Get or create artifact storage dict for a run."""
@@ -50,6 +52,12 @@ class AsyncInMemoryStore(ArtifactStore):
         if run_id not in self._llm_cache:
             self._llm_cache[run_id] = {}
         return self._llm_cache[run_id]
+
+    def _get_batch_job_storage(self, run_id: str) -> dict[str, dict[str, JsonValue]]:
+        """Get or create batch job storage dict for a run."""
+        if run_id not in self._batch_jobs:
+            self._batch_jobs[run_id] = {}
+        return self._batch_jobs[run_id]
 
     # ========================================================================
     # Artifact Operations
@@ -139,6 +147,32 @@ class AsyncInMemoryStore(ArtifactStore):
         # Combine keys from both storages (a run may exist in either or both)
         all_run_ids = set(self._artifacts.keys()) | set(self._system_data.keys())
         return sorted(all_run_ids)
+
+    # ========================================================================
+    # Batch Job Operations
+    # ========================================================================
+
+    @override
+    async def save_batch_job(
+        self, run_id: str, batch_id: str, data: dict[str, JsonValue]
+    ) -> None:
+        """Store batch job data."""
+        self._get_batch_job_storage(run_id)[batch_id] = data
+
+    @override
+    async def load_batch_job(self, run_id: str, batch_id: str) -> dict[str, JsonValue]:
+        """Load batch job data."""
+        jobs = self._get_batch_job_storage(run_id)
+        if batch_id not in jobs:
+            raise ArtifactNotFoundError(
+                f"Batch job '{batch_id}' not found for run '{run_id}'."
+            )
+        return jobs[batch_id]
+
+    @override
+    async def list_batch_jobs(self, run_id: str) -> list[str]:
+        """List all batch job IDs for a run."""
+        return sorted(self._get_batch_job_storage(run_id).keys())
 
     # ========================================================================
     # LLM Cache Operations
