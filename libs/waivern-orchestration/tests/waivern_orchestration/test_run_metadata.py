@@ -97,6 +97,24 @@ class TestRunMetadataStatusTransitions:
         assert metadata.status == "completed"
         assert metadata.completed_at is not None
 
+    def test_mark_interrupted_sets_status_and_timestamp(self) -> None:
+        """mark_interrupted() transitions status and sets completed_at."""
+        # Arrange
+        metadata = RunMetadata.fresh(
+            run_id="test-run",
+            runbook_path=Path("/path/to/runbook.yaml"),
+            runbook_hash="sha256:abc123",
+        )
+        assert metadata.status == "running"
+        assert metadata.completed_at is None
+
+        # Act
+        metadata.mark_interrupted()
+
+        # Assert
+        assert metadata.status == "interrupted"
+        assert metadata.completed_at is not None
+
     def test_mark_failed_sets_status_and_timestamp(self) -> None:
         """mark_failed() transitions status and sets completed_at."""
         # Arrange

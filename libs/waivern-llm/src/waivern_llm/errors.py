@@ -1,6 +1,6 @@
 """LLM service exceptions."""
 
-from waivern_core.errors import WaivernError
+from waivern_core.errors import PendingProcessingError, WaivernError
 
 
 class LLMServiceError(WaivernError):
@@ -21,7 +21,7 @@ class LLMConnectionError(LLMServiceError):
     pass
 
 
-class PendingBatchError(LLMServiceError):
+class PendingBatchError(LLMServiceError, PendingProcessingError):
     """Raised when LLM prompts have been submitted to a batch API and results are not yet available.
 
     The DAGExecutor catches this to leave the artifact in ``not_started``
