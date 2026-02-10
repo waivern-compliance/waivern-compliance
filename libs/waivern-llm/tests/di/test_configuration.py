@@ -294,3 +294,57 @@ class TestLLMServiceConfiguration:
             config = LLMServiceConfiguration.from_properties({})
             assert config.provider == "anthropic"
             assert config.base_url is None
+
+    def test_batch_mode_defaults_to_false(self) -> None:
+        """Test batch_mode field defaults to False when not specified."""
+        config = LLMServiceConfiguration(provider="anthropic", api_key="test-key")
+
+        assert config.batch_mode is False
+
+    def test_from_properties_reads_batch_mode_from_environment_with_truthy_string_parsing(
+        self,
+    ) -> None:
+        """Test WAIVERN_LLM_BATCH_MODE env var parsed as truthy string."""
+        # Truthy values should activate batch mode
+        for truthy_value in ("true", "1", "yes", "TRUE", "Yes"):
+            with patch.dict(
+                os.environ,
+                {
+                    "LLM_PROVIDER": "anthropic",
+                    "ANTHROPIC_API_KEY": "test-key",
+                    "WAIVERN_LLM_BATCH_MODE": truthy_value,
+                },
+                clear=True,
+            ):
+                config = LLMServiceConfiguration.from_properties({})
+                assert config.batch_mode is True, (
+                    f"Expected batch_mode=True for env value {truthy_value!r}"
+                )
+
+        # Non-truthy values should not activate batch mode
+        for falsy_value in ("false", "0", "no", "random"):
+            with patch.dict(
+                os.environ,
+                {
+                    "LLM_PROVIDER": "anthropic",
+                    "ANTHROPIC_API_KEY": "test-key",
+                    "WAIVERN_LLM_BATCH_MODE": falsy_value,
+                },
+                clear=True,
+            ):
+                config = LLMServiceConfiguration.from_properties({})
+                assert config.batch_mode is False, (
+                    f"Expected batch_mode=False for env value {falsy_value!r}"
+                )
+
+        # Absent env var should default to False
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "anthropic",
+                "ANTHROPIC_API_KEY": "test-key",
+            },
+            clear=True,
+        ):
+            config = LLMServiceConfiguration.from_properties({})
+            assert config.batch_mode is False

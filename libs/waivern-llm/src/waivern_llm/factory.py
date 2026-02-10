@@ -140,7 +140,11 @@ class LLMServiceFactory:
                 f"model={config.model or 'default'})"
             )
 
-            return DefaultLLMService(provider=provider, cache_store=cache_store)
+            return DefaultLLMService(
+                provider=provider,
+                cache_store=cache_store,
+                batch_mode=config.batch_mode,
+            )
 
         except Exception as e:
             logger.warning(f"Failed to create LLM service: {e}")

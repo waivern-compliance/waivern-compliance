@@ -140,6 +140,8 @@ class DefaultLLMService(LLMService):
         provider: LLMProvider,
         cache_store: LLMCache,
         batch_size: int = 50,
+        *,
+        batch_mode: bool = False,
     ) -> None:
         """Initialise the service.
 
@@ -147,11 +149,13 @@ class DefaultLLMService(LLMService):
             provider: LLM provider for making structured calls.
             cache_store: LLMCache protocol implementation for response caching.
             batch_size: Maximum items per batch in COUNT_BASED mode.
+            batch_mode: Use batch API for async processing (lower cost).
 
         """
         self._provider = provider
         self._cache_store = cache_store
         self._batch_size = batch_size
+        self._batch_mode = batch_mode
 
     @override
     async def complete[T: Finding, R: BaseModel](

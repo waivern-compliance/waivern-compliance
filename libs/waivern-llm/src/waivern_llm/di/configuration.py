@@ -58,6 +58,10 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
         default=None,
         description="Base URL for OpenAI-compatible APIs (e.g., local LLMs)",
     )
+    batch_mode: bool = Field(
+        default=False,
+        description="Use batch API for LLM calls (async, lower cost)",
+    )
 
     @field_validator("provider")
     @classmethod
@@ -117,6 +121,7 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
         - ANTHROPIC_MODEL: Model for Anthropic
         - OPENAI_MODEL: Model for OpenAI
         - GOOGLE_MODEL: Model for Google
+        - WAIVERN_LLM_BATCH_MODE: Enable batch API ("true"/"1"/"yes")
 
         Args:
             properties: Configuration properties dictionary
@@ -175,6 +180,11 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
             base_url = os.getenv("OPENAI_BASE_URL")
             if base_url:
                 config_data["base_url"] = base_url
+
+        # Batch mode (truthy string → True)
+        if "batch_mode" not in config_data:
+            batch_env = os.getenv("WAIVERN_LLM_BATCH_MODE", "")
+            config_data["batch_mode"] = batch_env.lower() in ("true", "1", "yes")
 
         return cls.model_validate(config_data)
 
