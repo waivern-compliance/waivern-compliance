@@ -67,6 +67,7 @@ prompt + model + response_model. Cache is cleared after successful completion
 
 __version__ = "0.1.0"
 
+from waivern_llm.batch_job import BatchJob
 from waivern_llm.batch_planner import (
     BatchPlan,
     BatchPlanner,
@@ -138,6 +139,8 @@ __all__ = [
     "LLMConfigurationError",
     "LLMConnectionError",
     "PendingBatchError",
+    # Batch job
+    "BatchJob",
     # Batch types
     "BatchRequest",
     "BatchSubmission",
