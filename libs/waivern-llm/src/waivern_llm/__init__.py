@@ -89,6 +89,7 @@ from waivern_llm.errors import (
 from waivern_llm.factory import LLMServiceFactory
 from waivern_llm.providers import (
     AnthropicProvider,
+    BatchLLMProvider,
     GoogleProvider,
     LLMProvider,
     OpenAIProvider,
@@ -128,6 +129,7 @@ __all__ = [
     "LLMServiceFactory",
     # Providers
     "LLMProvider",
+    "BatchLLMProvider",
     "AnthropicProvider",
     "OpenAIProvider",
     "GoogleProvider",
