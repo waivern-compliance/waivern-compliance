@@ -70,10 +70,10 @@ def _setup_happy_path_mocks(
     # Store factory
     mock_store_factory = Mock()
     mock_store_factory.return_value.create.return_value = store
-    monkeypatch.setattr("wct.cli.ArtifactStoreFactory", mock_store_factory)
+    monkeypatch.setattr("wct.cli.poll.ArtifactStoreFactory", mock_store_factory)
 
     # Logging (no-op)
-    monkeypatch.setattr("wct.cli.setup_logging", lambda **kwargs: None)
+    monkeypatch.setattr("wct.cli.poll.setup_logging", lambda **kwargs: None)
 
     # LLM configuration
     mock_config = Mock()
@@ -82,17 +82,19 @@ def _setup_happy_path_mocks(
     mock_config.get_default_model.return_value = "claude-sonnet-4-5-20250929"
     mock_llm_config_class = Mock()
     mock_llm_config_class.from_properties.return_value = mock_config
-    monkeypatch.setattr("wct.cli.LLMServiceConfiguration", mock_llm_config_class)
+    monkeypatch.setattr("wct.cli.poll.LLMServiceConfiguration", mock_llm_config_class)
 
     # Batch-capable provider (spec= required for isinstance() with Protocol)
     mock_factory_class = Mock()
     mock_factory_class.create_provider.return_value = Mock(spec=BatchLLMProvider)
-    monkeypatch.setattr("wct.cli.LLMServiceFactory", mock_factory_class)
+    monkeypatch.setattr("wct.cli.poll.LLMServiceFactory", mock_factory_class)
 
     # BatchResultPoller returning controlled result
     mock_poller = Mock()
     mock_poller.poll_run = AsyncMock(return_value=poll_result)
-    monkeypatch.setattr("wct.cli.BatchResultPoller", Mock(return_value=mock_poller))
+    monkeypatch.setattr(
+        "wct.cli.poll.BatchResultPoller", Mock(return_value=mock_poller)
+    )
 
 
 # =============================================================================
@@ -190,8 +192,8 @@ class TestPollRunCommand:
         # Arrange — factory returns None (no store configured)
         mock_store_factory = Mock()
         mock_store_factory.return_value.create.return_value = None
-        monkeypatch.setattr("wct.cli.ArtifactStoreFactory", mock_store_factory)
-        monkeypatch.setattr("wct.cli.setup_logging", lambda **kwargs: None)
+        monkeypatch.setattr("wct.cli.poll.ArtifactStoreFactory", mock_store_factory)
+        monkeypatch.setattr("wct.cli.poll.setup_logging", lambda **kwargs: None)
 
         # Act
         from wct.cli import poll_run_command
@@ -215,20 +217,22 @@ class TestPollRunCommand:
 
         mock_store_factory = Mock()
         mock_store_factory.return_value.create.return_value = store
-        monkeypatch.setattr("wct.cli.ArtifactStoreFactory", mock_store_factory)
-        monkeypatch.setattr("wct.cli.setup_logging", lambda **kwargs: None)
+        monkeypatch.setattr("wct.cli.poll.ArtifactStoreFactory", mock_store_factory)
+        monkeypatch.setattr("wct.cli.poll.setup_logging", lambda **kwargs: None)
 
         mock_config = Mock()
         mock_config.provider = "anthropic"
         mock_config.model = "claude-sonnet-4-5-20250929"
         mock_llm_config_class = Mock()
         mock_llm_config_class.from_properties.return_value = mock_config
-        monkeypatch.setattr("wct.cli.LLMServiceConfiguration", mock_llm_config_class)
+        monkeypatch.setattr(
+            "wct.cli.poll.LLMServiceConfiguration", mock_llm_config_class
+        )
 
         # Provider that does NOT implement BatchLLMProvider
         mock_factory_class = Mock()
         mock_factory_class.create_provider.return_value = _SyncOnlyProvider()
-        monkeypatch.setattr("wct.cli.LLMServiceFactory", mock_factory_class)
+        monkeypatch.setattr("wct.cli.poll.LLMServiceFactory", mock_factory_class)
 
         # Act
         from wct.cli import poll_run_command
