@@ -213,6 +213,59 @@ class DefaultLLMService(LLMService):
             plan.batches, prompt_builder, response_model, run_id, plan.skipped
         )
 
+    def _build_prompt_and_key[T: Finding](
+        self,
+        batch: PlannedBatch[T],
+        prompt_builder: PromptBuilder[T],
+        response_model_name: str,
+    ) -> tuple[str, str]:
+        """Build prompt from batch groups and compute its cache key.
+
+        Args:
+            batch: Planned batch containing item groups.
+            prompt_builder: Domain-specific prompt builder.
+            response_model_name: Name of the response model (for cache key).
+
+        Returns:
+            Tuple of (prompt, cache_key).
+
+        """
+        all_items: list[T] = []
+        content: str | None = None
+        for group in batch.groups:
+            all_items.extend(group.items)
+            if group.content is not None:
+                content = group.content
+
+        prompt = prompt_builder.build_prompt(all_items, content=content)
+
+        cache_key = CacheEntry.compute_key(
+            prompt=prompt,
+            model=self._provider.model_name,
+            response_model=response_model_name,
+        )
+        return prompt, cache_key
+
+    async def _get_cached_entry(
+        self,
+        run_id: str,
+        cache_key: str,
+    ) -> CacheEntry | None:
+        """Load a cache entry if one exists.
+
+        Args:
+            run_id: Current run identifier.
+            cache_key: Cache key to look up.
+
+        Returns:
+            Parsed CacheEntry, or None if no entry exists.
+
+        """
+        cached_data = await self._cache.cache_get(run_id, cache_key)
+        if cached_data is not None:
+            return CacheEntry.model_validate(cached_data)
+        return None
+
     async def _complete_sync[T: Finding, R: BaseModel](
         self,
         batches: Sequence[PlannedBatch[T]],
@@ -224,28 +277,14 @@ class DefaultLLMService(LLMService):
         """Execute the synchronous code path — call provider for each cache miss."""
         responses: list[R] = []
         for batch in batches:
-            all_items: list[T] = []
-            content: str | None = None
-            for group in batch.groups:
-                all_items.extend(group.items)
-                if group.content is not None:
-                    content = group.content
-
-            prompt = prompt_builder.build_prompt(all_items, content=content)
-
-            cache_key = CacheEntry.compute_key(
-                prompt=prompt,
-                model=self._provider.model_name,
-                response_model=response_model.__name__,
+            prompt, cache_key = self._build_prompt_and_key(
+                batch, prompt_builder, response_model.__name__
             )
-            cached_data = await self._cache.cache_get(run_id, cache_key)
 
-            if cached_data is not None:
-                cached = CacheEntry.model_validate(cached_data)
-                if cached.status == "completed" and cached.response:
-                    response = response_model.model_validate(cached.response)
-                    responses.append(response)
-                    continue
+            cached = await self._get_cached_entry(run_id, cache_key)
+            if cached is not None and cached.status == "completed" and cached.response:
+                responses.append(response_model.model_validate(cached.response))
+                continue
 
             response = await self._provider.invoke_structured(prompt, response_model)
 
@@ -285,27 +324,14 @@ class DefaultLLMService(LLMService):
         cache_keys_for_submission: list[str] = []
 
         for batch in batches:
-            all_items: list[T] = []
-            content: str | None = None
-            for group in batch.groups:
-                all_items.extend(group.items)
-                if group.content is not None:
-                    content = group.content
-
-            prompt = prompt_builder.build_prompt(all_items, content=content)
-
-            cache_key = CacheEntry.compute_key(
-                prompt=prompt,
-                model=self._provider.model_name,
-                response_model=response_model.__name__,
+            prompt, cache_key = self._build_prompt_and_key(
+                batch, prompt_builder, response_model.__name__
             )
-            cached_data = await self._cache.cache_get(run_id, cache_key)
 
-            if cached_data is not None:
-                cached = CacheEntry.model_validate(cached_data)
+            cached = await self._get_cached_entry(run_id, cache_key)
+            if cached is not None:
                 if cached.status == "completed" and cached.response:
-                    response = response_model.model_validate(cached.response)
-                    responses.append(response)
+                    responses.append(response_model.model_validate(cached.response))
                     continue
                 if cached.status == "pending" and cached.batch_id:
                     pending_batch_ids.append(cached.batch_id)
