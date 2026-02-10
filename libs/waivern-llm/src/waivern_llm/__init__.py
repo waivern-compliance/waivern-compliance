@@ -73,6 +73,7 @@ from waivern_llm.batch_planner import (
     BatchPlanner,
     PlannedBatch,
 )
+from waivern_llm.batch_poller import BatchResultPoller, PollResult
 from waivern_llm.batch_types import (
     BatchRequest,
     BatchResult,
@@ -141,6 +142,9 @@ __all__ = [
     "PendingBatchError",
     # Batch job
     "BatchJob",
+    # Batch poller
+    "BatchResultPoller",
+    "PollResult",
     # Batch types
     "BatchRequest",
     "BatchSubmission",
