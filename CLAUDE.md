@@ -13,7 +13,7 @@ waivern-compliance/
 │   ├── waivern-core/                  # Base abstractions (Connector, Analyser, Schema, Message)
 │   ├── waivern-llm/                   # Multi-provider LLM abstraction
 │   ├── waivern-orchestration/         # Runbook parsing, flattening, DAG execution
-│   ├── waivern-artifact-store/        # In-memory artifact storage
+│   ├── waivern-artifact-store/        # Artifact and batch job storage
 │   ├── waivern-connectors-database/   # Shared SQL utilities
 │   ├── waivern-mongodb/               # MongoDB connector
 │   ├── waivern-mysql/                 # MySQL connector
@@ -93,6 +93,9 @@ uv run pytest -m integration        # Integration tests (requires API keys)
 # WCT CLI
 uv run wct run <runbook.yaml>       # Run analysis
 uv run wct run <runbook.yaml> -v    # Verbose
+uv run wct run <rb> --resume <id>   # Resume interrupted/failed run
+uv run wct runs                     # List recorded runs
+uv run wct poll <run-id>            # Poll batch job status
 uv run wct connectors               # List connectors
 uv run wct processors               # List processors
 uv run wct validate-runbook <file>  # Validate runbook
@@ -209,7 +212,7 @@ uv run wct test-llm
 
 **Priority:** Environment variables > `.env` file > Runbook properties > Code defaults
 
-**Key variables:** `ANTHROPIC_API_KEY`, `LLM_PROVIDER`, `MYSQL_*`
+**Key variables:** `ANTHROPIC_API_KEY`, `LLM_PROVIDER`, `WAIVERN_LLM_BATCH_MODE`, `MYSQL_*`
 
 **Note:** The `.env` file lives at the workspace root (same level as `pyproject.toml`).
 All commands (`uv run wct`, `uv run pytest`, etc.) should be run from the workspace root.

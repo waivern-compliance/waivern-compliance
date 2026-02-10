@@ -152,18 +152,71 @@ for skipped in result.skipped:
             pass
 ```
 
+## Batch Mode
+
+When enabled, `DefaultLLMService.complete()` submits prompts to the provider's asynchronous Batch API instead of making synchronous calls. This allows large analysis runs to submit prompts in bulk, pause, and resume once results are ready — without any changes to analysers.
+
+### How It Works
+
+1. **Submission** (`wct run`): Cache misses are submitted as a batch via `BatchLLMProvider.submit_batch()`. Cache entries are written as `"pending"` and a `BatchJob` is saved. The service raises `PendingBatchError`, which the DAGExecutor catches — leaving the artifact in `not_started` and marking the run `interrupted`.
+
+2. **Polling** (`wct poll <run-id>`): The `BatchResultPoller` checks batch status with the provider. When complete, it updates cache entries from `"pending"` to `"completed"` with actual responses.
+
+3. **Resume** (`wct run --resume <run-id>`): The artifact is re-attempted. All prompts now hit the cache (populated by the poller), so it completes immediately.
+
+### Enabling Batch Mode
+
+```bash
+export WAIVERN_LLM_BATCH_MODE=true
+```
+
+The provider must implement the `BatchLLMProvider` protocol. If the provider only implements `LLMProvider`, the service falls back to synchronous calls automatically.
+
+### BatchLLMProvider Protocol
+
+Providers that support batch mode implement this protocol alongside `LLMProvider`:
+
+```python
+from waivern_llm import BatchLLMProvider
+
+class MyBatchProvider(LLMProvider, BatchLLMProvider):
+    async def submit_batch(self, requests: list[BatchRequest]) -> BatchSubmission: ...
+    async def get_batch_status(self, batch_id: str) -> BatchStatus: ...
+    async def get_batch_results(self, batch_id: str) -> list[BatchResult]: ...
+    async def cancel_batch(self, batch_id: str) -> None: ...
+```
+
+### BatchResultPoller
+
+Polls for batch completion and populates the LLM cache:
+
+```python
+from waivern_llm import BatchResultPoller, PollResult
+
+poller = BatchResultPoller(
+    store=artifact_store,
+    provider=batch_provider,
+    provider_name="anthropic",
+    model_name="claude-sonnet-4-5-20250929",
+)
+
+result: PollResult = await poller.poll_run(run_id)
+# result.completed, result.failed, result.pending, result.errors
+```
+
 ## Environment Variables
 
-| Variable            | Description                                     | Required                                              |
-| ------------------- | ----------------------------------------------- | ----------------------------------------------------- |
-| `LLM_PROVIDER`      | Provider (`anthropic`, `openai`, `google`)      | Yes                                                   |
-| `ANTHROPIC_API_KEY` | Anthropic API key                               | If using Anthropic                                    |
-| `ANTHROPIC_MODEL`   | Model name (e.g., `claude-sonnet-4-5-20250929`) | No                                                    |
-| `OPENAI_API_KEY`    | OpenAI API key                                  | If using OpenAI (not required with `OPENAI_BASE_URL`) |
-| `OPENAI_MODEL`      | Model name                                      | No                                                    |
-| `OPENAI_BASE_URL`   | Base URL for OpenAI-compatible APIs             | For local LLMs                                        |
-| `GOOGLE_API_KEY`    | Google API key                                  | If using Google                                       |
-| `GOOGLE_MODEL`      | Model name                                      | No                                                    |
+| Variable                  | Description                                     | Required                                              |
+| ------------------------- | ----------------------------------------------- | ----------------------------------------------------- |
+| `LLM_PROVIDER`            | Provider (`anthropic`, `openai`, `google`)      | Yes                                                   |
+| `WAIVERN_LLM_BATCH_MODE`  | Enable batch mode (`true`/`false`)              | No (default: `false`)                                 |
+| `ANTHROPIC_API_KEY`       | Anthropic API key                               | If using Anthropic                                    |
+| `ANTHROPIC_MODEL`         | Model name (e.g., `claude-sonnet-4-5-20250929`) | No                                                    |
+| `OPENAI_API_KEY`          | OpenAI API key                                  | If using OpenAI (not required with `OPENAI_BASE_URL`) |
+| `OPENAI_MODEL`            | Model name                                      | No                                                    |
+| `OPENAI_BASE_URL`         | Base URL for OpenAI-compatible APIs             | For local LLMs                                        |
+| `GOOGLE_API_KEY`          | Google API key                                  | If using Google                                       |
+| `GOOGLE_MODEL`            | Model name                                      | No                                                    |
 
 ## Local LLM Support
 

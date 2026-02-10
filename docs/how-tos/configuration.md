@@ -63,6 +63,15 @@ GOOGLE_MODEL=gemini-2.5-flash  # optional
 LLM_PROVIDER=anthropic  # Options: anthropic, openai, google
 ```
 
+**Batch mode (for large analysis runs):**
+
+```bash
+# Enable LLM batch mode - submits prompts to provider's async Batch API
+# Run is interrupted after submission; use `wct poll` to check status,
+# then `wct run --resume` to complete
+WAIVERN_LLM_BATCH_MODE=true  # Default: false
+```
+
 **Local LLM support (LM Studio, Ollama, vLLM, etc.):**
 
 Local LLMs that expose an OpenAI-compatible API can be used by setting `OPENAI_BASE_URL`:
@@ -283,6 +292,7 @@ analysers:
 
 **Optional environment variables:**
 - `LLM_PROVIDER` - Select provider (anthropic, openai, google)
+- `WAIVERN_LLM_BATCH_MODE` - Enable batch mode for async LLM API (default: `false`)
 - `ANTHROPIC_MODEL` - Override default model
 - `OPENAI_API_KEY` - For OpenAI provider
 - `OPENAI_MODEL` - Override default model

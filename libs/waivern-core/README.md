@@ -11,6 +11,7 @@ This package provides the base abstractions that all Waivern components must imp
 - **Ruleset**: Base class for compliance rulesets
 - **Message**: Data structure for passing data between components
 - **Schema**: Base classes for schema definitions and validation
+- **PendingProcessingError**: Marker exception for asynchronous processing (e.g., LLM batch mode)
 
 ## Installation
 
