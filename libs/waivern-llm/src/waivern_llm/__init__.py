@@ -72,11 +72,19 @@ from waivern_llm.batch_planner import (
     BatchPlanner,
     PlannedBatch,
 )
+from waivern_llm.batch_types import (
+    BatchRequest,
+    BatchResult,
+    BatchStatus,
+    BatchStatusLiteral,
+    BatchSubmission,
+)
 from waivern_llm.cache import CacheEntry
 from waivern_llm.errors import (
     LLMConfigurationError,
     LLMConnectionError,
     LLMServiceError,
+    PendingBatchError,
 )
 from waivern_llm.factory import LLMServiceFactory
 from waivern_llm.providers import (
@@ -127,6 +135,13 @@ __all__ = [
     "LLMServiceError",
     "LLMConfigurationError",
     "LLMConnectionError",
+    "PendingBatchError",
+    # Batch types
+    "BatchRequest",
+    "BatchSubmission",
+    "BatchStatus",
+    "BatchStatusLiteral",
+    "BatchResult",
     # Cache
     "CacheEntry",
     # Batch planning
