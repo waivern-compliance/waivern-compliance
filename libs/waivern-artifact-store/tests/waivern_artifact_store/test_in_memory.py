@@ -655,3 +655,124 @@ class TestAsyncInMemoryStoreCacheIsolation:
         assert retrieved_run1["run"] == "1"
         assert retrieved_run2 is not None
         assert retrieved_run2["run"] == "2"
+
+
+# =============================================================================
+# Batch Job Tests
+# =============================================================================
+
+
+class TestAsyncInMemoryStoreSaveBatchJob:
+    """Tests for the save_batch_job() method."""
+
+    async def test_save_batch_job_stores_data_retrievable_by_load(self) -> None:
+        store = AsyncInMemoryStore()
+        data: dict[str, JsonValue] = {
+            "batch_id": "batch-123",
+            "status": "submitted",
+            "provider": "anthropic",
+            "cache_keys": ["key-a", "key-b"],
+        }
+
+        await store.save_batch_job("test-run", "batch-123", data)
+
+        retrieved = await store.load_batch_job("test-run", "batch-123")
+        assert retrieved["batch_id"] == "batch-123"
+        assert retrieved["status"] == "submitted"
+        assert retrieved["provider"] == "anthropic"
+        assert retrieved["cache_keys"] == ["key-a", "key-b"]
+
+    async def test_save_batch_job_overwrites_existing(self) -> None:
+        store = AsyncInMemoryStore()
+        original: dict[str, JsonValue] = {"status": "submitted", "request_count": 3}
+        updated: dict[str, JsonValue] = {"status": "completed", "request_count": 3}
+
+        await store.save_batch_job("test-run", "batch-1", original)
+        await store.save_batch_job("test-run", "batch-1", updated)
+
+        retrieved = await store.load_batch_job("test-run", "batch-1")
+        assert retrieved["status"] == "completed"
+
+
+class TestAsyncInMemoryStoreLoadBatchJob:
+    """Tests for the load_batch_job() method."""
+
+    async def test_load_batch_job_raises_not_found_for_missing(self) -> None:
+        store = AsyncInMemoryStore()
+
+        with pytest.raises(ArtifactNotFoundError, match="batch-nonexistent"):
+            await store.load_batch_job("test-run", "batch-nonexistent")
+
+
+class TestAsyncInMemoryStoreListBatchJobs:
+    """Tests for the list_batch_jobs() method."""
+
+    async def test_list_batch_jobs_returns_all_saved_ids(self) -> None:
+        store = AsyncInMemoryStore()
+        for batch_id in ["batch-a", "batch-b", "batch-c"]:
+            data: dict[str, JsonValue] = {"batch_id": batch_id, "status": "submitted"}
+            await store.save_batch_job("test-run", batch_id, data)
+
+        result = await store.list_batch_jobs("test-run")
+
+        assert result == ["batch-a", "batch-b", "batch-c"]
+
+    async def test_list_batch_jobs_returns_empty_for_no_batch_jobs(self) -> None:
+        store = AsyncInMemoryStore()
+
+        result = await store.list_batch_jobs("test-run")
+
+        assert result == []
+
+
+class TestAsyncInMemoryStoreBatchJobIsolation:
+    """Tests for batch job isolation between runs and storage domains."""
+
+    async def test_batch_jobs_isolated_between_runs(self) -> None:
+        store = AsyncInMemoryStore()
+        data_run1: dict[str, JsonValue] = {"status": "submitted", "run": "1"}
+        data_run2: dict[str, JsonValue] = {"status": "completed", "run": "2"}
+
+        await store.save_batch_job("run-1", "same-batch", data_run1)
+        await store.save_batch_job("run-2", "same-batch", data_run2)
+
+        retrieved_run1 = await store.load_batch_job("run-1", "same-batch")
+        retrieved_run2 = await store.load_batch_job("run-2", "same-batch")
+        assert retrieved_run1["run"] == "1"
+        assert retrieved_run2["run"] == "2"
+
+    async def test_clear_artifacts_preserves_batch_jobs(self) -> None:
+        store = AsyncInMemoryStore()
+        # Save an artifact and a batch job
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save_artifact("test-run", "findings", message)
+        data: dict[str, JsonValue] = {"batch_id": "batch-1", "status": "submitted"}
+        await store.save_batch_job("test-run", "batch-1", data)
+
+        await store.clear_artifacts("test-run")
+
+        # Batch job should still exist
+        retrieved = await store.load_batch_job("test-run", "batch-1")
+        assert retrieved["status"] == "submitted"
+        # Artifact should be gone
+        assert not await store.artifact_exists("test-run", "findings")
+
+    async def test_list_artifacts_excludes_batch_jobs(self) -> None:
+        store = AsyncInMemoryStore()
+        # Save a batch job and an artifact
+        data: dict[str, JsonValue] = {"batch_id": "batch-1", "status": "submitted"}
+        await store.save_batch_job("test-run", "batch-1", data)
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save_artifact("test-run", "findings", message)
+
+        artifacts = await store.list_artifacts("test-run")
+
+        assert artifacts == ["findings"]
