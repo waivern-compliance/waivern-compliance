@@ -8,11 +8,10 @@ from the ServiceContainer.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 from waivern_artifact_store.base import ArtifactStore
-from waivern_artifact_store.llm_cache import LLMCache
 
 from waivern_llm.di.configuration import LLMServiceConfiguration
 from waivern_llm.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
@@ -127,10 +126,8 @@ class LLMServiceFactory:
             return None
 
         try:
-            # Resolve cache store from container (lazy resolution)
-            # ArtifactStore implementations also satisfy LLMCache protocol
-            artifact_store = self._container.get_service(ArtifactStore)
-            cache_store = cast(LLMCache, artifact_store)
+            # Resolve artifact store from container (lazy resolution)
+            store = self._container.get_service(ArtifactStore)
 
             # Create provider based on configuration
             provider = self._create_provider(config)
@@ -142,8 +139,9 @@ class LLMServiceFactory:
 
             return DefaultLLMService(
                 provider=provider,
-                cache_store=cache_store,
+                store=store,
                 batch_mode=config.batch_mode,
+                provider_name=config.provider,
             )
 
         except Exception as e:
