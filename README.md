@@ -186,6 +186,7 @@ Runbook (YAML) → Planner → DAGExecutor → Connector/Analyser → Findings (
 uv run pytest                       # Run all tests
 uv run pytest -v                    # Verbose output
 uv run pytest -m integration        # Integration tests (requires API keys)
+uv run pytest -m batch              # Batch API tests (requires API keys, may take minutes)
 ```
 
 ### Quality Checks

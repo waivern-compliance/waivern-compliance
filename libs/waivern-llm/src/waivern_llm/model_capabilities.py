@@ -10,11 +10,15 @@ class ModelCapabilities:
     Attributes:
         context_window: Maximum input context window size in tokens.
         max_output_tokens: Maximum output tokens the model can generate.
+        temperature: Temperature setting for the model. Defaults to 0 for
+            deterministic output. Some models (e.g. gpt-5-mini) only support
+            their default temperature (1).
 
     """
 
     context_window: int
     max_output_tokens: int
+    temperature: int = 0
 
     @classmethod
     def get(cls, model_name: str) -> "ModelCapabilities":
@@ -58,16 +62,16 @@ _MODEL_CAPABILITIES: dict[str, ModelCapabilities] = {
     # OpenAI GPT-4 family
     "gpt-4o": ModelCapabilities(128_000, 16_384),
     "gpt-4o-mini": ModelCapabilities(128_000, 16_384),
-    # OpenAI GPT-5 family
-    "gpt-5": ModelCapabilities(256_000, 16_384),
-    "gpt-5-mini": ModelCapabilities(256_000, 16_384),
-    "gpt-5.1": ModelCapabilities(256_000, 16_384),
-    "gpt-5.2": ModelCapabilities(400_000, 16_384),
-    "gpt-5.2-pro": ModelCapabilities(400_000, 16_384),
-    "gpt-5-nano": ModelCapabilities(128_000, 16_384),
-    # OpenAI o-series reasoning models
-    "o3": ModelCapabilities(200_000, 16_384),
-    "o4-mini": ModelCapabilities(200_000, 16_384),
+    # OpenAI GPT-5 family (temperature=0 not supported)
+    "gpt-5": ModelCapabilities(256_000, 16_384, temperature=1),
+    "gpt-5-mini": ModelCapabilities(256_000, 16_384, temperature=1),
+    "gpt-5.1": ModelCapabilities(256_000, 16_384, temperature=1),
+    "gpt-5.2": ModelCapabilities(400_000, 16_384, temperature=1),
+    "gpt-5.2-pro": ModelCapabilities(400_000, 16_384, temperature=1),
+    "gpt-5-nano": ModelCapabilities(128_000, 16_384, temperature=1),
+    # OpenAI o-series reasoning models (temperature=0 not supported)
+    "o3": ModelCapabilities(200_000, 16_384, temperature=1),
+    "o4-mini": ModelCapabilities(200_000, 16_384, temperature=1),
     # Google Gemini 2.5 family
     "gemini-2.5-flash": ModelCapabilities(1_000_000, 8192),
     "gemini-2.5-pro": ModelCapabilities(1_000_000, 8192),

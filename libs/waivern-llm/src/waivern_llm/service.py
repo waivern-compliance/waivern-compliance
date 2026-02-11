@@ -343,6 +343,7 @@ class DefaultLLMService(LLMService):
                     custom_id=cache_key,
                     prompt=prompt,
                     model=self._provider.model_name,
+                    response_schema=response_model.model_json_schema(),
                 )
             )
             cache_keys_for_submission.append(cache_key)

@@ -520,6 +520,9 @@ class TestDefaultLLMServiceBatchMode:
         requests = provider.submit_batch.call_args[0][0]
         assert len(requests) == 2
         assert all(r.model == "test-model" for r in requests)
+        assert all(
+            r.response_schema == MockResponse.model_json_schema() for r in requests
+        )
 
         # Assert - invoke_structured NOT called (batch path, not sync)
         provider.invoke_structured.assert_not_called()

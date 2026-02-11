@@ -89,6 +89,7 @@ artifacts:
 # Testing
 uv run pytest                       # All tests
 uv run pytest -m integration        # Integration tests (requires API keys)
+uv run pytest -m batch              # Batch API tests (requires API keys, may take minutes)
 
 # WCT CLI
 uv run wct run <runbook.yaml>       # Run analysis
