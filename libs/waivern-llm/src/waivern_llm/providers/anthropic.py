@@ -3,22 +3,92 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
+from typing import TypeGuard
 
 from anthropic import AsyncAnthropic
+from anthropic.types.beta.beta_text_block import BetaTextBlock
 from anthropic.types.beta.messages.batch_create_params import (
     Request as BatchRequestParams,
+)
+from anthropic.types.beta.messages.beta_message_batch_canceled_result import (
+    BetaMessageBatchCanceledResult,
+)
+from anthropic.types.beta.messages.beta_message_batch_errored_result import (
+    BetaMessageBatchErroredResult,
+)
+from anthropic.types.beta.messages.beta_message_batch_expired_result import (
+    BetaMessageBatchExpiredResult,
+)
+from anthropic.types.beta.messages.beta_message_batch_succeeded_result import (
+    BetaMessageBatchSucceededResult,
 )
 from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel, SecretStr
 
-from waivern_llm.batch_types import BatchRequest, BatchSubmission
+from waivern_llm.batch_types import (
+    BatchRequest,
+    BatchResult,
+    BatchStatus,
+    BatchStatusLiteral,
+    BatchSubmission,
+)
 from waivern_llm.errors import LLMConfigurationError, LLMConnectionError
 from waivern_llm.model_capabilities import ModelCapabilities
 from waivern_llm.providers._schema_utils import ensure_strict_schema
 
 logger = logging.getLogger(__name__)
+
+
+# Type guard functions for narrowing batch result union types
+def _is_succeeded_result(
+    result: (
+        BetaMessageBatchSucceededResult
+        | BetaMessageBatchErroredResult
+        | BetaMessageBatchCanceledResult
+        | BetaMessageBatchExpiredResult
+    ),
+) -> TypeGuard[BetaMessageBatchSucceededResult]:
+    """Narrow batch result to succeeded variant."""
+    return result.type == "succeeded"
+
+
+def _is_errored_result(
+    result: (
+        BetaMessageBatchSucceededResult
+        | BetaMessageBatchErroredResult
+        | BetaMessageBatchCanceledResult
+        | BetaMessageBatchExpiredResult
+    ),
+) -> TypeGuard[BetaMessageBatchErroredResult]:
+    """Narrow batch result to errored variant."""
+    return result.type == "errored"
+
+
+def _is_canceled_result(
+    result: (
+        BetaMessageBatchSucceededResult
+        | BetaMessageBatchErroredResult
+        | BetaMessageBatchCanceledResult
+        | BetaMessageBatchExpiredResult
+    ),
+) -> TypeGuard[BetaMessageBatchCanceledResult]:
+    """Narrow batch result to canceled variant."""
+    return result.type == "canceled"
+
+
+def _is_expired_result(
+    result: (
+        BetaMessageBatchSucceededResult
+        | BetaMessageBatchErroredResult
+        | BetaMessageBatchCanceledResult
+        | BetaMessageBatchExpiredResult
+    ),
+) -> TypeGuard[BetaMessageBatchExpiredResult]:
+    """Narrow batch result to expired variant."""
+    return result.type == "expired"
 
 
 class AnthropicProvider:
@@ -179,3 +249,166 @@ class AnthropicProvider:
         except Exception as e:
             logger.error(f"Batch submission failed: {e}")
             raise LLMConnectionError(f"Batch submission failed: {e}") from e
+
+    async def get_batch_status(self, batch_id: str) -> BatchStatus:
+        """Poll a batch's processing status.
+
+        Args:
+            batch_id: The provider's batch identifier from submission.
+
+        Returns:
+            Current status including completion and failure counts.
+
+        Raises:
+            LLMConnectionError: If the status request fails.
+
+        """
+        try:
+            client = self._get_async_client()
+            batch = await client.beta.messages.batches.retrieve(batch_id)
+
+            status = _ANTHROPIC_STATUS_MAP.get(batch.processing_status, "in_progress")
+
+            # Map Anthropic's request counts to our schema
+            counts = batch.request_counts
+            completed_count = counts.succeeded or 0
+            failed_count = (
+                (counts.errored or 0) + (counts.expired or 0) + (counts.canceled or 0)
+            )
+            total_count = (
+                (counts.processing or 0)
+                + (counts.succeeded or 0)
+                + (counts.errored or 0)
+                + (counts.canceled or 0)
+                + (counts.expired or 0)
+            )
+
+            return BatchStatus(
+                batch_id=batch_id,
+                status=status,
+                completed_count=completed_count,
+                failed_count=failed_count,
+                total_count=total_count,
+            )
+
+        except LLMConnectionError:
+            raise
+        except Exception as e:
+            logger.error(f"Batch status check failed: {e}")
+            raise LLMConnectionError(f"Batch status check failed: {e}") from e
+
+    async def get_batch_results(self, batch_id: str) -> list[BatchResult]:
+        """Retrieve results for a completed batch.
+
+        Streams results from the Anthropic Message Batches API and parses each
+        result type (succeeded, errored, canceled, expired) into a BatchResult.
+
+        Args:
+            batch_id: The provider's batch identifier from submission.
+
+        Returns:
+            Per-prompt results mapping back to cache keys via custom_id.
+
+        Raises:
+            LLMConnectionError: If the results request fails.
+
+        """
+        try:
+            client = self._get_async_client()
+            results: list[BatchResult] = []
+
+            # Stream results from the beta API
+            result_stream = await client.beta.messages.batches.results(batch_id)
+            async for response in result_stream:
+                custom_id = response.custom_id
+                result = response.result
+
+                if _is_succeeded_result(result):
+                    # Extract JSON from message content
+                    # For structured output, the first content block is a TextBlock
+                    content_block = result.message.content[0]
+                    if isinstance(content_block, BetaTextBlock):
+                        message_content = content_block.text
+                        parsed = json.loads(message_content)
+                        results.append(
+                            BatchResult(
+                                custom_id=custom_id,
+                                status="completed",
+                                response=parsed,
+                                error=None,
+                            )
+                        )
+                    else:
+                        # Unexpected content block type for structured output
+                        results.append(
+                            BatchResult(
+                                custom_id=custom_id,
+                                status="failed",
+                                response=None,
+                                error=f"Unexpected content block type: {type(content_block).__name__}",
+                            )
+                        )
+                elif _is_errored_result(result):
+                    # Error response structure varies, extract message safely
+                    error_obj = result.error
+                    error_msg = getattr(error_obj, "message", str(error_obj))
+                    results.append(
+                        BatchResult(
+                            custom_id=custom_id,
+                            status="failed",
+                            response=None,
+                            error=error_msg,
+                        )
+                    )
+                elif _is_canceled_result(result):
+                    results.append(
+                        BatchResult(
+                            custom_id=custom_id,
+                            status="failed",
+                            response=None,
+                            error="Request was cancelled",
+                        )
+                    )
+                elif _is_expired_result(result):
+                    results.append(
+                        BatchResult(
+                            custom_id=custom_id,
+                            status="failed",
+                            response=None,
+                            error="Request expired",
+                        )
+                    )
+
+            return results
+
+        except LLMConnectionError:
+            raise
+        except Exception as e:
+            logger.error(f"Batch results retrieval failed: {e}")
+            raise LLMConnectionError(f"Batch results retrieval failed: {e}") from e
+
+    async def cancel_batch(self, batch_id: str) -> None:
+        """Cancel an in-progress batch.
+
+        Args:
+            batch_id: The provider's batch identifier from submission.
+
+        Raises:
+            LLMConnectionError: If the cancellation request fails.
+
+        """
+        try:
+            client = self._get_async_client()
+            _ = await client.beta.messages.batches.cancel(batch_id)
+        except LLMConnectionError:
+            raise
+        except Exception as e:
+            logger.error(f"Batch cancellation failed: {e}")
+            raise LLMConnectionError(f"Batch cancellation failed: {e}") from e
+
+
+_ANTHROPIC_STATUS_MAP: dict[str, BatchStatusLiteral] = {
+    "in_progress": "in_progress",
+    "canceling": "cancelled",
+    "ended": "completed",
+}

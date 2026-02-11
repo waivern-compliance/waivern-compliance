@@ -263,3 +263,189 @@ class TestAnthropicProviderSubmitBatch:
                 await provider.submit_batch(requests)
 
             assert "API rate limit exceeded" in str(exc_info.value)
+
+
+# =============================================================================
+# Batch operations (get_batch_status, get_batch_results, cancel_batch)
+# =============================================================================
+
+
+class TestAnthropicProviderBatchOperations:
+    """Tests for remaining BatchLLMProvider methods."""
+
+    @pytest.mark.parametrize(
+        ("anthropic_status", "expected_status"),
+        [
+            ("in_progress", "in_progress"),
+            ("canceling", "cancelled"),
+            ("ended", "completed"),
+        ],
+    )
+    async def test_get_batch_status_maps_anthropic_status_and_counts(
+        self, anthropic_status: str, expected_status: str
+    ) -> None:
+        """get_batch_status maps Anthropic status strings to BatchStatusLiteral."""
+        from unittest.mock import AsyncMock, patch
+
+        # Create mock batch with request counts
+        mock_batch = AsyncMock()
+        mock_batch.processing_status = anthropic_status
+        mock_batch.request_counts = AsyncMock()
+        mock_batch.request_counts.succeeded = 5
+        mock_batch.request_counts.errored = 2
+        mock_batch.request_counts.expired = 1
+        mock_batch.request_counts.canceled = 1
+        mock_batch.request_counts.processing = 3
+
+        mock_async_client = AsyncMock()
+        mock_async_client.beta.messages.batches.retrieve.return_value = mock_batch
+
+        with patch(
+            "waivern_llm.providers.anthropic.AsyncAnthropic",
+            return_value=mock_async_client,
+        ):
+            provider = AnthropicProvider(api_key="test-key", model="claude-sonnet-4-5")
+            result = await provider.get_batch_status("batch-123")
+
+        # Verify status mapping
+        assert result.batch_id == "batch-123"
+        assert result.status == expected_status
+
+        # Verify count mapping
+        assert result.completed_count == 5  # succeeded
+        assert result.failed_count == 4  # errored + expired + canceled
+        assert (
+            result.total_count == 12
+        )  # processing + succeeded + errored + expired + canceled
+
+    async def test_get_batch_results_parses_mixed_outcomes(self) -> None:
+        """get_batch_results parses succeeded, errored, canceled, and expired results."""
+        from unittest.mock import AsyncMock, patch
+
+        # Create mock responses for each result type
+        mock_succeeded = AsyncMock()
+        mock_succeeded.custom_id = "req-1"
+        mock_succeeded.result.type = "succeeded"
+        mock_succeeded.result.message.content = [
+            AsyncMock(text='{"result": "success"}')
+        ]
+
+        mock_errored = AsyncMock()
+        mock_errored.custom_id = "req-2"
+        mock_errored.result.type = "errored"
+        mock_errored.result.error.message = "Rate limit exceeded"
+
+        mock_canceled = AsyncMock()
+        mock_canceled.custom_id = "req-3"
+        mock_canceled.result.type = "canceled"
+
+        mock_expired = AsyncMock()
+        mock_expired.custom_id = "req-4"
+        mock_expired.result.type = "expired"
+
+        # Create async iterator
+        async def mock_results():
+            yield mock_succeeded
+            yield mock_errored
+            yield mock_canceled
+            yield mock_expired
+
+        mock_async_client = AsyncMock()
+        mock_async_client.beta.messages.batches.results.return_value = mock_results()
+
+        with (
+            patch(
+                "waivern_llm.providers.anthropic.AsyncAnthropic",
+                return_value=mock_async_client,
+            ),
+            patch(
+                "waivern_llm.providers.anthropic.isinstance",
+                side_effect=lambda obj, cls: (
+                    cls.__name__ == "BetaTextBlock" if hasattr(obj, "text") else False
+                ),
+            ),
+        ):
+            provider = AnthropicProvider(api_key="test-key", model="claude-sonnet-4-5")
+            results = await provider.get_batch_results("batch-123")
+
+        # Verify we got 4 results
+        assert len(results) == 4
+
+        # Verify succeeded result
+        assert results[0].custom_id == "req-1"
+        assert results[0].status == "completed"
+        assert results[0].response == {"result": "success"}
+        assert results[0].error is None
+
+        # Verify errored result
+        assert results[1].custom_id == "req-2"
+        assert results[1].status == "failed"
+        assert results[1].response is None
+        assert results[1].error == "Rate limit exceeded"
+
+        # Verify canceled result
+        assert results[2].custom_id == "req-3"
+        assert results[2].status == "failed"
+        assert results[2].response is None
+        assert results[2].error == "Request was cancelled"
+
+        # Verify expired result
+        assert results[3].custom_id == "req-4"
+        assert results[3].status == "failed"
+        assert results[3].response is None
+        assert results[3].error == "Request expired"
+
+    async def test_cancel_batch_calls_sdk(self) -> None:
+        """cancel_batch calls client.beta.messages.batches.cancel with the batch_id."""
+        from unittest.mock import AsyncMock, patch
+
+        mock_async_client = AsyncMock()
+        mock_async_client.beta.messages.batches.cancel.return_value = AsyncMock()
+
+        with patch(
+            "waivern_llm.providers.anthropic.AsyncAnthropic",
+            return_value=mock_async_client,
+        ):
+            provider = AnthropicProvider(api_key="test-key", model="claude-sonnet-4-5")
+            await provider.cancel_batch("batch-123")
+
+        # Verify SDK method was called with correct batch_id
+        mock_async_client.beta.messages.batches.cancel.assert_awaited_once_with(
+            "batch-123"
+        )
+
+    async def test_batch_operation_wraps_sdk_exception_in_connection_error(
+        self,
+    ) -> None:
+        """SDK exceptions during batch operations are wrapped in LLMConnectionError."""
+        from unittest.mock import AsyncMock, patch
+
+        mock_async_client = AsyncMock()
+        mock_async_client.beta.messages.batches.retrieve.side_effect = Exception(
+            "Network timeout"
+        )
+
+        with (
+            patch(
+                "waivern_llm.providers.anthropic.AsyncAnthropic",
+                return_value=mock_async_client,
+            ),
+            pytest.raises(LLMConnectionError) as exc_info,
+        ):
+            provider = AnthropicProvider(api_key="test-key", model="claude-sonnet-4-5")
+            await provider.get_batch_status("batch-123")
+
+        # Verify the exception message includes the original error
+        assert "Network timeout" in str(exc_info.value)
+
+
+class TestAnthropicProviderProtocolCompliance:
+    """Tests for BatchLLMProvider protocol compliance."""
+
+    def test_satisfies_batch_llm_provider_protocol(self) -> None:
+        """Provider satisfies BatchLLMProvider protocol (isinstance check)."""
+        from waivern_llm.providers.protocol import BatchLLMProvider
+
+        provider = AnthropicProvider(api_key="test-key")
+
+        assert isinstance(provider, BatchLLMProvider)
