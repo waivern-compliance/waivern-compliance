@@ -151,3 +151,115 @@ class TestAnthropicProviderInvokeStructured:
                 await provider.invoke_structured("test prompt", MockResponse)
 
             assert "API error" in str(exc_info.value)
+
+
+# =============================================================================
+# submit_batch
+# =============================================================================
+
+
+class TestAnthropicProviderSubmitBatch:
+    """Tests for BatchLLMProvider.submit_batch() implementation."""
+
+    async def test_submit_batch_creates_batch_with_correct_requests(self) -> None:
+        """submit_batch builds correct request list, calls SDK, returns BatchSubmission."""
+        from unittest.mock import AsyncMock, patch
+
+        from waivern_core import JsonValue
+
+        from waivern_llm.batch_types import BatchRequest
+
+        mock_batch = AsyncMock()
+        mock_batch.id = "batch-abc123"
+
+        mock_async_client = AsyncMock()
+        mock_async_client.beta.messages.batches.create.return_value = mock_batch
+
+        schema: dict[str, JsonValue] = {
+            "type": "object",
+            "properties": {"result": {"type": "string"}},
+        }
+        requests = [
+            BatchRequest(
+                custom_id="key-1",
+                prompt="Analyse this data",
+                model="claude-sonnet-4-5",
+                response_schema=schema,
+            ),
+        ]
+
+        with patch(
+            "waivern_llm.providers.anthropic.AsyncAnthropic",
+            return_value=mock_async_client,
+        ):
+            provider = AnthropicProvider(api_key="test-key", model="claude-sonnet-4-5")
+            result = await provider.submit_batch(requests)
+
+        # Verify batch creation
+        mock_async_client.beta.messages.batches.create.assert_awaited_once()
+        create_kwargs = mock_async_client.beta.messages.batches.create.call_args.kwargs
+        assert "requests" in create_kwargs
+
+        request_list = create_kwargs["requests"]
+        assert len(request_list) == 1
+
+        # Verify request structure
+        req = request_list[0]
+        assert req["custom_id"] == "key-1"
+        assert "params" in req
+
+        params = req["params"]
+        assert params["model"] == "claude-sonnet-4-5"
+        assert params["max_tokens"] == 8192  # ModelCapabilities for claude-sonnet-4-5
+        assert params["temperature"] == 0
+        assert params["messages"] == [{"role": "user", "content": "Analyse this data"}]
+
+        # Verify structured output format
+        assert "output_format" in params
+        output_format = params["output_format"]
+        assert output_format["type"] == "json_schema"
+        strict_schema = output_format["schema"]
+        assert strict_schema["type"] == "object"
+        assert strict_schema["properties"] == schema["properties"]
+        assert strict_schema["additionalProperties"] is False  # ensure_strict_schema
+
+        # Verify return value
+        assert result.batch_id == "batch-abc123"
+        assert result.request_count == 1
+
+    async def test_submit_batch_wraps_sdk_exception_in_connection_error(self) -> None:
+        """SDK exceptions during batch submission are wrapped in LLMConnectionError."""
+        from unittest.mock import AsyncMock, patch
+
+        from waivern_core import JsonValue
+
+        from waivern_llm.batch_types import BatchRequest
+
+        mock_async_client = AsyncMock()
+        mock_async_client.beta.messages.batches.create.side_effect = Exception(
+            "API rate limit exceeded"
+        )
+
+        schema: dict[str, JsonValue] = {
+            "type": "object",
+            "properties": {"result": {"type": "string"}},
+        }
+        requests = [
+            BatchRequest(
+                custom_id="key-1",
+                prompt="Analyse this",
+                model="claude-sonnet-4-5",
+                response_schema=schema,
+            ),
+        ]
+
+        with patch(
+            "waivern_llm.providers.anthropic.AsyncAnthropic",
+            return_value=mock_async_client,
+        ):
+            provider = AnthropicProvider(api_key="test-key", model="claude-sonnet-4-5")
+
+            with pytest.raises(LLMConnectionError) as exc_info:
+                await provider.submit_batch(requests)
+
+            assert "API rate limit exceeded" in str(exc_info.value)

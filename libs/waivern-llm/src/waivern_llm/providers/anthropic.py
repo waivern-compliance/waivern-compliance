@@ -6,21 +6,30 @@ import asyncio
 import logging
 import os
 
+from anthropic import AsyncAnthropic
+from anthropic.types.beta.messages.batch_create_params import (
+    Request as BatchRequestParams,
+)
 from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel, SecretStr
 
+from waivern_llm.batch_types import BatchRequest, BatchSubmission
 from waivern_llm.errors import LLMConfigurationError, LLMConnectionError
 from waivern_llm.model_capabilities import ModelCapabilities
+from waivern_llm.providers._schema_utils import ensure_strict_schema
 
 logger = logging.getLogger(__name__)
 
 
 class AnthropicProvider:
-    """Anthropic Claude provider using LangChain.
+    """Anthropic Claude provider using LangChain and the Anthropic SDK.
 
-    Provides async structured LLM calls using Anthropic's Claude models.
-    Satisfies the LLMProvider protocol.
+    Provides async structured LLM calls (sync path via LangChain) and
+    batch API operations (via the ``anthropic`` SDK's ``AsyncAnthropic``).
+    Satisfies both the ``LLMProvider`` and ``BatchLLMProvider`` protocols.
     """
+
+    _async_client: AsyncAnthropic | None = None
 
     def __init__(
         self,
@@ -99,3 +108,74 @@ class AnthropicProvider:
         except Exception as e:
             logger.error(f"Structured output invocation failed: {e}")
             raise LLMConnectionError(f"LLM structured output failed: {e}") from e
+
+    # -------------------------------------------------------------------------
+    # BatchLLMProvider protocol
+    # -------------------------------------------------------------------------
+
+    def _get_async_client(self) -> AsyncAnthropic:
+        """Return the lazily-initialised ``AsyncAnthropic`` client.
+
+        The sync path uses LangChain's ``ChatAnthropic`` and does not need this
+        client. Creating it lazily avoids unnecessary overhead when only the
+        sync path is used.
+        """
+        if self._async_client is None:
+            self._async_client = AsyncAnthropic(api_key=self._api_key)
+        return self._async_client
+
+    async def submit_batch(self, requests: list[BatchRequest]) -> BatchSubmission:
+        """Submit multiple prompts as a single batch.
+
+        Builds a request list with structured output configuration and submits
+        via the Anthropic Message Batches API.
+
+        Args:
+            requests: List of batch requests containing prompts and schemas.
+
+        Returns:
+            Confirmation with the provider's batch identifier and count.
+
+        Raises:
+            LLMConnectionError: If the submission request fails.
+
+        """
+        try:
+            client = self._get_async_client()
+
+            # Build request list
+            request_list: list[BatchRequestParams] = []
+            for request in requests:
+                req_dict: BatchRequestParams = {
+                    "custom_id": request.custom_id,
+                    "params": {
+                        "model": request.model,
+                        "max_tokens": self._capabilities.max_output_tokens,
+                        "temperature": self._capabilities.temperature,
+                        "messages": [{"role": "user", "content": request.prompt}],
+                        "output_format": {
+                            "type": "json_schema",
+                            "schema": ensure_strict_schema(request.response_schema),
+                        },
+                    },
+                }
+                request_list.append(req_dict)
+
+            # Create batch using beta API
+            # Note: We use the beta API because structured output (output_format)
+            # is a beta feature. The standard messages.batches API does not support
+            # the output_format field required for JSON schema responses.
+            batch = await client.beta.messages.batches.create(requests=request_list)
+
+            logger.info(f"Submitted batch {batch.id} with {len(requests)} request(s)")
+
+            return BatchSubmission(
+                batch_id=batch.id,
+                request_count=len(requests),
+            )
+
+        except LLMConnectionError:
+            raise
+        except Exception as e:
+            logger.error(f"Batch submission failed: {e}")
+            raise LLMConnectionError(f"Batch submission failed: {e}") from e
