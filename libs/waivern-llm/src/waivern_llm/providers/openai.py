@@ -12,7 +12,13 @@ from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI
 from pydantic import BaseModel, SecretStr
 
-from waivern_llm.batch_types import BatchRequest, BatchSubmission
+from waivern_llm.batch_types import (
+    BatchRequest,
+    BatchResult,
+    BatchStatus,
+    BatchStatusLiteral,
+    BatchSubmission,
+)
 from waivern_llm.errors import LLMConfigurationError, LLMConnectionError
 from waivern_llm.model_capabilities import ModelCapabilities
 
@@ -117,6 +123,10 @@ class OpenAIProvider:
             logger.error(f"Structured output invocation failed: {e}")
             raise LLMConnectionError(f"LLM structured output failed: {e}") from e
 
+    # -------------------------------------------------------------------------
+    # BatchLLMProvider protocol
+    # -------------------------------------------------------------------------
+
     def _get_async_client(self) -> AsyncOpenAI:
         """Return the lazily-initialised ``AsyncOpenAI`` client.
 
@@ -201,3 +211,149 @@ class OpenAIProvider:
         except Exception as e:
             logger.error(f"Batch submission failed: {e}")
             raise LLMConnectionError(f"Batch submission failed: {e}") from e
+
+    async def get_batch_status(self, batch_id: str) -> BatchStatus:
+        """Poll a batch's processing status.
+
+        Args:
+            batch_id: The provider's batch identifier from submission.
+
+        Returns:
+            Current status including completion and failure counts.
+
+        Raises:
+            LLMConnectionError: If the status request fails.
+
+        """
+        try:
+            client = self._get_async_client()
+            batch = await client.batches.retrieve(batch_id)
+
+            status = _OPENAI_STATUS_MAP.get(batch.status, "in_progress")
+
+            completed_count = 0
+            failed_count = 0
+            total_count = 0
+            if batch.request_counts is not None:
+                completed_count = batch.request_counts.completed or 0
+                failed_count = batch.request_counts.failed or 0
+                total_count = batch.request_counts.total or 0
+
+            return BatchStatus(
+                batch_id=batch_id,
+                status=status,
+                completed_count=completed_count,
+                failed_count=failed_count,
+                total_count=total_count,
+            )
+
+        except LLMConnectionError:
+            raise
+        except Exception as e:
+            logger.error(f"Batch status check failed: {e}")
+            raise LLMConnectionError(f"Batch status check failed: {e}") from e
+
+    async def get_batch_results(self, batch_id: str) -> list[BatchResult]:
+        """Retrieve results for a completed batch.
+
+        Downloads the output file and parses each JSONL line into a
+        ``BatchResult``, handling successful responses, per-line errors,
+        and non-200 status codes.
+
+        Args:
+            batch_id: The provider's batch identifier from submission.
+
+        Returns:
+            Per-prompt results mapping back to cache keys via custom_id.
+
+        Raises:
+            LLMConnectionError: If the results request fails.
+
+        """
+        try:
+            client = self._get_async_client()
+            batch = await client.batches.retrieve(batch_id)
+
+            if batch.output_file_id is None:
+                return []
+
+            content = await client.files.content(batch.output_file_id)
+            results: list[BatchResult] = []
+
+            for raw_line in content.text.strip().splitlines():
+                line = json.loads(raw_line)
+                custom_id = line["custom_id"]
+
+                if line.get("error"):
+                    results.append(
+                        BatchResult(
+                            custom_id=custom_id,
+                            status="failed",
+                            response=None,
+                            error=line["error"].get("message", str(line["error"])),
+                        )
+                    )
+                    continue
+
+                response = line.get("response", {})
+                http_ok = 200
+                if response.get("status_code") != http_ok:
+                    results.append(
+                        BatchResult(
+                            custom_id=custom_id,
+                            status="failed",
+                            response=None,
+                            error=f"Non-200 status: {response.get('status_code')}",
+                        )
+                    )
+                    continue
+
+                body_content = response["body"]["choices"][0]["message"]["content"]
+                parsed = json.loads(body_content)
+                results.append(
+                    BatchResult(
+                        custom_id=custom_id,
+                        status="completed",
+                        response=parsed,
+                        error=None,
+                    )
+                )
+
+            return results
+
+        except LLMConnectionError:
+            raise
+        except Exception as e:
+            logger.error(f"Batch results retrieval failed: {e}")
+            raise LLMConnectionError(f"Batch results retrieval failed: {e}") from e
+
+    async def cancel_batch(self, batch_id: str) -> None:
+        """Cancel an in-progress batch.
+
+        Args:
+            batch_id: The provider's batch identifier from submission.
+
+        Raises:
+            LLMConnectionError: If the cancellation request fails.
+
+        """
+        try:
+            client = self._get_async_client()
+            await client.batches.cancel(batch_id)
+        except LLMConnectionError:
+            raise
+        except Exception as e:
+            logger.error(f"Batch cancellation failed: {e}")
+            raise LLMConnectionError(f"Batch cancellation failed: {e}") from e
+
+
+_OPENAI_STATUS_MAP: dict[str, BatchStatusLiteral] = {
+    "validating": "submitted",
+    "in_progress": "in_progress",
+    "finalizing": "in_progress",
+    "completed": "completed",
+    "failed": "failed",
+    "expired": "expired",
+    "cancelling": "cancelled",
+    "cancelled": "cancelled",
+}

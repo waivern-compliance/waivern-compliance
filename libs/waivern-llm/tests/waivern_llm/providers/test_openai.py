@@ -95,7 +95,7 @@ class TestOpenAIProviderInitialisation:
 
 
 class TestOpenAIProviderProtocol:
-    """Tests for LLMProvider protocol compliance."""
+    """Tests for LLMProvider and BatchLLMProvider protocol compliance."""
 
     def test_satisfies_llm_provider_protocol(self) -> None:
         """Provider satisfies LLMProvider protocol (isinstance check)."""
@@ -104,6 +104,14 @@ class TestOpenAIProviderProtocol:
         provider = OpenAIProvider(api_key="test-key")
 
         assert isinstance(provider, LLMProvider)
+
+    def test_satisfies_batch_llm_provider_protocol(self) -> None:
+        """Provider satisfies BatchLLMProvider protocol (isinstance check)."""
+        from waivern_llm.providers.protocol import BatchLLMProvider
+
+        provider = OpenAIProvider(api_key="test-key")
+
+        assert isinstance(provider, BatchLLMProvider)
 
     def test_context_window_returns_model_capabilities(self) -> None:
         """context_window property returns value from ModelCapabilities."""
@@ -274,3 +282,161 @@ class TestOpenAIProviderSubmitBatch:
                 await provider.submit_batch(requests)
 
             assert "Upload failed" in str(exc_info.value)
+
+
+# =============================================================================
+# Batch operations (get_batch_status, get_batch_results, cancel_batch)
+# =============================================================================
+
+
+class TestOpenAIProviderBatchOperations:
+    """Tests for the remaining BatchLLMProvider methods."""
+
+    @pytest.mark.parametrize(
+        ("openai_status", "expected_status"),
+        [
+            ("validating", "submitted"),
+            ("in_progress", "in_progress"),
+            ("finalizing", "in_progress"),
+            ("completed", "completed"),
+            ("failed", "failed"),
+            ("expired", "expired"),
+            ("cancelling", "cancelled"),
+            ("cancelled", "cancelled"),
+        ],
+    )
+    async def test_get_batch_status_maps_openai_status_and_counts(
+        self, openai_status: str, expected_status: str
+    ) -> None:
+        """get_batch_status maps OpenAI status strings to BatchStatusLiteral."""
+        from unittest.mock import AsyncMock, patch
+
+        mock_batch = AsyncMock()
+        mock_batch.status = openai_status
+        mock_batch.request_counts.completed = 5
+        mock_batch.request_counts.failed = 1
+        mock_batch.request_counts.total = 10
+
+        mock_async_client = AsyncMock()
+        mock_async_client.batches.retrieve.return_value = mock_batch
+
+        with patch(
+            "waivern_llm.providers.openai.AsyncOpenAI", return_value=mock_async_client
+        ):
+            provider = OpenAIProvider(api_key="test-key", model="gpt-4o")
+            result = await provider.get_batch_status("batch-123")
+
+        assert result.batch_id == "batch-123"
+        assert result.status == expected_status
+        assert result.completed_count == 5
+        assert result.failed_count == 1
+        assert result.total_count == 10
+
+    async def test_get_batch_results_parses_mixed_outcomes(self) -> None:
+        """get_batch_results parses successful, error, and non-200 result lines."""
+        import json
+        from unittest.mock import AsyncMock, patch
+
+        # Three JSONL lines: success, per-line error, non-200
+        lines = [
+            json.dumps(
+                {
+                    "id": "resp-1",
+                    "custom_id": "key-1",
+                    "response": {
+                        "status_code": 200,
+                        "body": {
+                            "choices": [{"message": {"content": '{"result": "valid"}'}}]
+                        },
+                    },
+                    "error": None,
+                }
+            ),
+            json.dumps(
+                {
+                    "id": "resp-2",
+                    "custom_id": "key-2",
+                    "response": None,
+                    "error": {"message": "Content policy violation"},
+                }
+            ),
+            json.dumps(
+                {
+                    "id": "resp-3",
+                    "custom_id": "key-3",
+                    "response": {"status_code": 429, "body": {}},
+                    "error": None,
+                }
+            ),
+        ]
+        output_jsonl = "\n".join(lines)
+
+        mock_batch = AsyncMock()
+        mock_batch.output_file_id = "file-output-123"
+
+        mock_content = AsyncMock()
+        mock_content.text = output_jsonl
+
+        mock_async_client = AsyncMock()
+        mock_async_client.batches.retrieve.return_value = mock_batch
+        mock_async_client.files.content.return_value = mock_content
+
+        with patch(
+            "waivern_llm.providers.openai.AsyncOpenAI", return_value=mock_async_client
+        ):
+            provider = OpenAIProvider(api_key="test-key", model="gpt-4o")
+            results = await provider.get_batch_results("batch-123")
+
+        assert len(results) == 3
+
+        # Successful response
+        assert results[0].custom_id == "key-1"
+        assert results[0].status == "completed"
+        assert results[0].response == {"result": "valid"}
+        assert results[0].error is None
+
+        # Per-line error
+        assert results[1].custom_id == "key-2"
+        assert results[1].status == "failed"
+        assert results[1].response is None
+        assert results[1].error == "Content policy violation"
+
+        # Non-200 status code
+        assert results[2].custom_id == "key-3"
+        assert results[2].status == "failed"
+        assert results[2].response is None
+        assert "429" in (results[2].error or "")
+
+    async def test_cancel_batch_calls_sdk(self) -> None:
+        """cancel_batch calls client.batches.cancel with the batch_id."""
+        from unittest.mock import AsyncMock, patch
+
+        mock_async_client = AsyncMock()
+
+        with patch(
+            "waivern_llm.providers.openai.AsyncOpenAI", return_value=mock_async_client
+        ):
+            provider = OpenAIProvider(api_key="test-key", model="gpt-4o")
+            result = await provider.cancel_batch("batch-123")
+
+        assert result is None
+        mock_async_client.batches.cancel.assert_awaited_once_with("batch-123")
+
+    async def test_batch_operation_wraps_sdk_exception_in_connection_error(
+        self,
+    ) -> None:
+        """SDK exceptions during batch operations are wrapped in LLMConnectionError."""
+        from unittest.mock import AsyncMock, patch
+
+        mock_async_client = AsyncMock()
+        mock_async_client.batches.retrieve.side_effect = Exception("Network timeout")
+
+        with patch(
+            "waivern_llm.providers.openai.AsyncOpenAI", return_value=mock_async_client
+        ):
+            provider = OpenAIProvider(api_key="test-key", model="gpt-4o")
+
+            with pytest.raises(LLMConnectionError) as exc_info:
+                await provider.get_batch_status("batch-123")
+
+            assert "Network timeout" in str(exc_info.value)
