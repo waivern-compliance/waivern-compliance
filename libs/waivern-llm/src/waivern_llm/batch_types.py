@@ -22,6 +22,10 @@ class BatchRequest(BaseModel):
     The ``custom_id`` is the deterministic cache key (SHA256 of
     prompt|model|response_model), creating a direct mapping between
     batch results and cache entries.
+
+    The ``response_schema`` carries the JSON schema for the expected
+    response structure, enabling providers to enforce structured output
+    in their batch API requests.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -29,6 +33,7 @@ class BatchRequest(BaseModel):
     custom_id: str
     prompt: str
     model: str
+    response_schema: dict[str, JsonValue]
 
 
 class BatchSubmission(BaseModel):
