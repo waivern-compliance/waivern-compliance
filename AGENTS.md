@@ -25,6 +25,9 @@ uv run pytest -v
 
 # Integration tests (requires API keys)
 uv run pytest -m integration
+
+# Batch API tests (requires API keys, may take several minutes)
+uv run pytest -m batch
 ```
 
 ## Code Style
@@ -51,6 +54,6 @@ uv run pytest -m integration
 
 **Docstrings:** Required for public methods/classes; Google-style or similar
 
-**Testing:** Tests use `--import-mode=importlib`; integration tests marked with `@pytest.mark.integration` (excluded by default)
+**Testing:** Tests use `--import-mode=importlib`; integration tests marked with `@pytest.mark.integration`, batch API tests with `@pytest.mark.batch` (both excluded by default)
 
 **Monorepo:** UV workspace with libs/ and apps/; each package owns its configuration

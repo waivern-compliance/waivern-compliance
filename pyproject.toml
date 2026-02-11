@@ -66,9 +66,10 @@ addopts = [
     # with a `tests` directory.
     # See https://docs.pytest.org/en/stable/explanation/goodpractices.html#tests-outside-application-code
     "--import-mode=importlib",
-    # Exclude integration tests by default (they require API keys and make real API calls)
-    "-m", "not integration",
+    # Exclude integration and batch tests by default (they require API keys and make real API calls)
+    "-m", "not integration and not batch",
 ]
 markers = [
     "integration: marks tests as integration tests requiring real API calls (deselect with '-m \"not integration\"')",
+    "batch: marks tests that exercise async batch APIs — may take several minutes (deselect with '-m \"not batch\"')",
 ]

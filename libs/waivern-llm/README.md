@@ -170,7 +170,7 @@ When enabled, `DefaultLLMService.complete()` submits prompts to the provider's a
 export WAIVERN_LLM_BATCH_MODE=true
 ```
 
-The provider must implement the `BatchLLMProvider` protocol. If the provider only implements `LLMProvider`, the service falls back to synchronous calls automatically.
+The provider must implement the `BatchLLMProvider` protocol. If the provider only implements `LLMProvider`, the service falls back to synchronous calls automatically. Currently, `OpenAIProvider` implements `BatchLLMProvider`.
 
 ### BatchLLMProvider Protocol
 
