@@ -235,9 +235,12 @@ class TestOpenAIProviderSubmitBatch:
             {"role": "user", "content": "Analyse this data"}
         ]
         assert line["body"]["temperature"] == 0
-        assert line["body"]["max_tokens"] == 16_384
+        assert line["body"]["max_completion_tokens"] == 16_384
         assert line["body"]["response_format"]["type"] == "json_schema"
-        assert line["body"]["response_format"]["json_schema"]["schema"] == schema
+        strict_schema = line["body"]["response_format"]["json_schema"]["schema"]
+        assert strict_schema["type"] == "object"
+        assert strict_schema["properties"] == schema["properties"]
+        assert strict_schema["additionalProperties"] is False
         assert line["body"]["response_format"]["json_schema"]["strict"] is True
 
         # Verify batch creation
@@ -373,6 +376,7 @@ class TestOpenAIProviderBatchOperations:
 
         mock_batch = AsyncMock()
         mock_batch.output_file_id = "file-output-123"
+        mock_batch.error_file_id = None
 
         mock_content = AsyncMock()
         mock_content.text = output_jsonl

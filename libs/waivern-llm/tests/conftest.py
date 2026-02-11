@@ -9,3 +9,7 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "integration: marks tests as integration tests (require real API calls)",
     )
+    config.addinivalue_line(
+        "markers",
+        "batch: marks tests that exercise async batch APIs (may take several minutes)",
+    )

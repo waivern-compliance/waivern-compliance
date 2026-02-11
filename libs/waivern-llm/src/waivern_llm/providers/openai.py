@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import os
+from typing import Any
 
 from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI
@@ -77,7 +78,7 @@ class OpenAIProvider:
             model=self._model,
             api_key=SecretStr(effective_api_key),
             base_url=self._base_url,
-            temperature=0,
+            temperature=self._capabilities.temperature,
             max_tokens=self._capabilities.max_output_tokens,  # type: ignore[reportCallIssue]
             timeout=300,
         )
@@ -171,8 +172,8 @@ class OpenAIProvider:
                     "body": {
                         "model": request.model,
                         "messages": [{"role": "user", "content": request.prompt}],
-                        "temperature": 0,
-                        "max_tokens": self._capabilities.max_output_tokens,
+                        "temperature": self._capabilities.temperature,
+                        "max_completion_tokens": self._capabilities.max_output_tokens,
                         "response_format": {
                             "type": "json_schema",
                             "json_schema": {
@@ -180,7 +181,9 @@ class OpenAIProvider:
                                     "title", "response"
                                 ),
                                 "strict": True,
-                                "schema": request.response_schema,
+                                "schema": _ensure_strict_schema(
+                                    request.response_schema
+                                ),
                             },
                         },
                     },
@@ -273,51 +276,18 @@ class OpenAIProvider:
         try:
             client = self._get_async_client()
             batch = await client.batches.retrieve(batch_id)
-
-            if batch.output_file_id is None:
-                return []
-
-            content = await client.files.content(batch.output_file_id)
             results: list[BatchResult] = []
 
-            for raw_line in content.text.strip().splitlines():
-                line = json.loads(raw_line)
-                custom_id = line["custom_id"]
-
-                if line.get("error"):
-                    results.append(
-                        BatchResult(
-                            custom_id=custom_id,
-                            status="failed",
-                            response=None,
-                            error=line["error"].get("message", str(line["error"])),
-                        )
-                    )
-                    continue
-
-                response = line.get("response", {})
-                http_ok = 200
-                if response.get("status_code") != http_ok:
-                    results.append(
-                        BatchResult(
-                            custom_id=custom_id,
-                            status="failed",
-                            response=None,
-                            error=f"Non-200 status: {response.get('status_code')}",
-                        )
-                    )
-                    continue
-
-                body_content = response["body"]["choices"][0]["message"]["content"]
-                parsed = json.loads(body_content)
-                results.append(
-                    BatchResult(
-                        custom_id=custom_id,
-                        status="completed",
-                        response=parsed,
-                        error=None,
-                    )
-                )
+            # Both output and error files share the same JSONL structure
+            file_ids = [
+                fid
+                for fid in (batch.output_file_id, batch.error_file_id)
+                if fid is not None
+            ]
+            for file_id in file_ids:
+                content = await client.files.content(file_id)
+                for raw_line in content.text.strip().splitlines():
+                    results.append(_parse_batch_result_line(raw_line))
 
             return results
 
@@ -357,3 +327,81 @@ _OPENAI_STATUS_MAP: dict[str, BatchStatusLiteral] = {
     "cancelling": "cancelled",
     "cancelled": "cancelled",
 }
+
+
+def _parse_batch_result_line(raw_line: str) -> BatchResult:
+    """Parse a single JSONL line from an OpenAI batch output or error file.
+
+    Both files share the same structure. Each line contains:
+    - ``custom_id``: the cache key
+    - ``error``: top-level error (non-null when the request could not be dispatched)
+    - ``response``: contains ``status_code`` and ``body`` with the completion or error detail
+    """
+    line = json.loads(raw_line)
+    custom_id: str = line["custom_id"]
+
+    if line.get("error"):
+        return BatchResult(
+            custom_id=custom_id,
+            status="failed",
+            response=None,
+            error=line["error"].get("message", str(line["error"])),
+        )
+
+    response = line.get("response", {})
+    http_ok = 200
+    if response.get("status_code") != http_ok:
+        body = response.get("body", {})
+        error_detail = body.get("error", {})
+        message = error_detail.get("message") if error_detail else None
+        return BatchResult(
+            custom_id=custom_id,
+            status="failed",
+            response=None,
+            error=message or f"Non-200 status: {response.get('status_code')}",
+        )
+
+    body_content: str = response["body"]["choices"][0]["message"]["content"]
+    parsed = json.loads(body_content)
+    return BatchResult(
+        custom_id=custom_id,
+        status="completed",
+        response=parsed,
+        error=None,
+    )
+
+
+def _ensure_strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Add ``additionalProperties: false`` to all objects in a JSON schema.
+
+    OpenAI's strict structured-output mode requires every object definition
+    to include ``"additionalProperties": false``. Pydantic's
+    ``model_json_schema()`` does not emit this by default.
+
+    Operates recursively on the schema, including ``$defs`` and nested objects.
+    Returns a new dict — the original is not mutated.
+    """
+    schema = dict(schema)
+
+    if schema.get("type") == "object":
+        schema["additionalProperties"] = False
+
+    # Recurse into properties
+    if "properties" in schema:
+        schema["properties"] = {
+            key: _ensure_strict_schema(value)  # type: ignore[arg-type]
+            for key, value in schema["properties"].items()  # type: ignore[union-attr]
+        }
+
+    # Recurse into $defs (Pydantic puts referenced models here)
+    if "$defs" in schema:
+        schema["$defs"] = {
+            key: _ensure_strict_schema(value)  # type: ignore[arg-type]
+            for key, value in schema["$defs"].items()  # type: ignore[union-attr]
+        }
+
+    # Recurse into array items
+    if "items" in schema and isinstance(schema["items"], dict):
+        schema["items"] = _ensure_strict_schema(schema["items"])  # type: ignore[arg-type]
+
+    return schema
