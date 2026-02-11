@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import io
+import json
 import logging
 import os
 
 from langchain_openai import ChatOpenAI
+from openai import AsyncOpenAI
 from pydantic import BaseModel, SecretStr
 
+from waivern_llm.batch_types import BatchRequest, BatchSubmission
 from waivern_llm.errors import LLMConfigurationError, LLMConnectionError
 from waivern_llm.model_capabilities import ModelCapabilities
 
@@ -16,13 +20,16 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAIProvider:
-    """OpenAI provider using LangChain.
+    """OpenAI provider using LangChain and the OpenAI SDK.
 
-    Provides async structured LLM calls using OpenAI's models.
-    Satisfies the LLMProvider protocol.
+    Provides async structured LLM calls (sync path via LangChain) and
+    batch API operations (via the ``openai`` SDK's ``AsyncOpenAI``).
+    Satisfies both the ``LLMProvider`` and ``BatchLLMProvider`` protocols.
 
     Supports custom base_url for OpenAI-compatible APIs (e.g., local LLMs).
     """
+
+    _async_client: AsyncOpenAI | None = None
 
     def __init__(
         self,
@@ -109,3 +116,88 @@ class OpenAIProvider:
         except Exception as e:
             logger.error(f"Structured output invocation failed: {e}")
             raise LLMConnectionError(f"LLM structured output failed: {e}") from e
+
+    def _get_async_client(self) -> AsyncOpenAI:
+        """Return the lazily-initialised ``AsyncOpenAI`` client.
+
+        The sync path uses LangChain's ``ChatOpenAI`` and does not need this
+        client. Creating it lazily avoids unnecessary overhead when only the
+        sync path is used.
+        """
+        if self._async_client is None:
+            effective_api_key = self._api_key or "local"
+            self._async_client = AsyncOpenAI(
+                api_key=effective_api_key,
+                base_url=self._base_url,
+            )
+        return self._async_client
+
+    async def submit_batch(self, requests: list[BatchRequest]) -> BatchSubmission:
+        """Submit multiple prompts as a single batch.
+
+        Builds a JSONL file in-memory from the batch requests, uploads it
+        via the Files API, then creates a batch referencing the uploaded file.
+
+        Args:
+            requests: List of batch requests containing prompts and schemas.
+
+        Returns:
+            Confirmation with the provider's batch identifier and count.
+
+        Raises:
+            LLMConnectionError: If the submission request fails.
+
+        """
+        try:
+            client = self._get_async_client()
+
+            # Build JSONL in-memory
+            buf = io.BytesIO()
+            for request in requests:
+                line = {
+                    "custom_id": request.custom_id,
+                    "method": "POST",
+                    "url": "/v1/chat/completions",
+                    "body": {
+                        "model": request.model,
+                        "messages": [{"role": "user", "content": request.prompt}],
+                        "temperature": 0,
+                        "max_tokens": self._capabilities.max_output_tokens,
+                        "response_format": {
+                            "type": "json_schema",
+                            "json_schema": {
+                                "name": request.response_schema.get(
+                                    "title", "response"
+                                ),
+                                "strict": True,
+                                "schema": request.response_schema,
+                            },
+                        },
+                    },
+                }
+                buf.write(json.dumps(line).encode("utf-8"))
+                buf.write(b"\n")
+            buf.seek(0)
+
+            # Upload JSONL file
+            uploaded = await client.files.create(file=buf, purpose="batch")
+
+            # Create batch
+            batch = await client.batches.create(
+                input_file_id=uploaded.id,
+                endpoint="/v1/chat/completions",
+                completion_window="24h",
+            )
+
+            logger.info(f"Submitted batch {batch.id} with {len(requests)} request(s)")
+
+            return BatchSubmission(
+                batch_id=batch.id,
+                request_count=len(requests),
+            )
+
+        except LLMConnectionError:
+            raise
+        except Exception as e:
+            logger.error(f"Batch submission failed: {e}")
+            raise LLMConnectionError(f"Batch submission failed: {e}") from e

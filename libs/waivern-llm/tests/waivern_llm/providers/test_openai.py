@@ -6,6 +6,7 @@ via LangChain, satisfying the LLMProvider protocol.
 
 import pytest
 from pydantic import BaseModel
+from waivern_core import JsonValue
 
 from waivern_llm.errors import LLMConfigurationError, LLMConnectionError
 from waivern_llm.providers import OpenAIProvider
@@ -162,3 +163,114 @@ class TestOpenAIProviderInvokeStructured:
                 await provider.invoke_structured("test prompt", MockResponse)
 
             assert "API error" in str(exc_info.value)
+
+
+# =============================================================================
+# submit_batch
+# =============================================================================
+
+
+class TestOpenAIProviderSubmitBatch:
+    """Tests for BatchLLMProvider.submit_batch() implementation."""
+
+    async def test_submit_batch_uploads_jsonl_and_creates_batch(self) -> None:
+        """submit_batch builds JSONL, uploads file, creates batch, returns BatchSubmission."""
+        import json
+        from unittest.mock import AsyncMock, patch
+
+        from waivern_llm.batch_types import BatchRequest
+
+        mock_file = AsyncMock()
+        mock_file.id = "file-abc123"
+
+        mock_batch = AsyncMock()
+        mock_batch.id = "batch-xyz789"
+
+        mock_async_client = AsyncMock()
+        mock_async_client.files.create.return_value = mock_file
+        mock_async_client.batches.create.return_value = mock_batch
+
+        schema: dict[str, JsonValue] = {
+            "type": "object",
+            "properties": {"result": {"type": "string"}},
+        }
+        requests = [
+            BatchRequest(
+                custom_id="key-1",
+                prompt="Analyse this data",
+                model="gpt-4o",
+                response_schema=schema,
+            ),
+        ]
+
+        with patch(
+            "waivern_llm.providers.openai.AsyncOpenAI", return_value=mock_async_client
+        ):
+            provider = OpenAIProvider(api_key="test-key", model="gpt-4o")
+            result = await provider.submit_batch(requests)
+
+        # Verify file upload
+        mock_async_client.files.create.assert_awaited_once()
+        upload_kwargs = mock_async_client.files.create.call_args.kwargs
+        assert upload_kwargs["purpose"] == "batch"
+
+        # Parse and verify JSONL content
+        uploaded_file = upload_kwargs["file"]
+        jsonl_content = uploaded_file.read().decode("utf-8").strip()
+        line = json.loads(jsonl_content)
+
+        assert line["custom_id"] == "key-1"
+        assert line["method"] == "POST"
+        assert line["url"] == "/v1/chat/completions"
+        assert line["body"]["model"] == "gpt-4o"
+        assert line["body"]["messages"] == [
+            {"role": "user", "content": "Analyse this data"}
+        ]
+        assert line["body"]["temperature"] == 0
+        assert line["body"]["max_tokens"] == 16_384
+        assert line["body"]["response_format"]["type"] == "json_schema"
+        assert line["body"]["response_format"]["json_schema"]["schema"] == schema
+        assert line["body"]["response_format"]["json_schema"]["strict"] is True
+
+        # Verify batch creation
+        mock_async_client.batches.create.assert_awaited_once()
+        batch_kwargs = mock_async_client.batches.create.call_args.kwargs
+        assert batch_kwargs["input_file_id"] == "file-abc123"
+        assert batch_kwargs["endpoint"] == "/v1/chat/completions"
+        assert batch_kwargs["completion_window"] == "24h"
+
+        # Verify return value
+        assert result.batch_id == "batch-xyz789"
+        assert result.request_count == 1
+
+    async def test_submit_batch_wraps_sdk_exception_in_connection_error(self) -> None:
+        """SDK exceptions during batch submission are wrapped in LLMConnectionError."""
+        from unittest.mock import AsyncMock, patch
+
+        from waivern_llm.batch_types import BatchRequest
+
+        mock_async_client = AsyncMock()
+        mock_async_client.files.create.side_effect = Exception("Upload failed")
+
+        schema: dict[str, JsonValue] = {
+            "type": "object",
+            "properties": {"result": {"type": "string"}},
+        }
+        requests = [
+            BatchRequest(
+                custom_id="key-1",
+                prompt="Analyse this",
+                model="gpt-4o",
+                response_schema=schema,
+            ),
+        ]
+
+        with patch(
+            "waivern_llm.providers.openai.AsyncOpenAI", return_value=mock_async_client
+        ):
+            provider = OpenAIProvider(api_key="test-key", model="gpt-4o")
+
+            with pytest.raises(LLMConnectionError) as exc_info:
+                await provider.submit_batch(requests)
+
+            assert "Upload failed" in str(exc_info.value)
