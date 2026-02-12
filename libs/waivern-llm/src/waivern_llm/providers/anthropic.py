@@ -6,7 +6,6 @@ import asyncio
 import json
 import logging
 import os
-from typing import TypeGuard
 
 from anthropic import AsyncAnthropic
 from anthropic.types.beta.beta_text_block import BetaTextBlock
@@ -18,9 +17,6 @@ from anthropic.types.beta.messages.beta_message_batch_canceled_result import (
 )
 from anthropic.types.beta.messages.beta_message_batch_errored_result import (
     BetaMessageBatchErroredResult,
-)
-from anthropic.types.beta.messages.beta_message_batch_expired_result import (
-    BetaMessageBatchExpiredResult,
 )
 from anthropic.types.beta.messages.beta_message_batch_succeeded_result import (
     BetaMessageBatchSucceededResult,
@@ -40,55 +36,6 @@ from waivern_llm.model_capabilities import ModelCapabilities
 from waivern_llm.providers._schema_utils import ensure_strict_schema
 
 logger = logging.getLogger(__name__)
-
-
-# Type guard functions for narrowing batch result union types
-def _is_succeeded_result(
-    result: (
-        BetaMessageBatchSucceededResult
-        | BetaMessageBatchErroredResult
-        | BetaMessageBatchCanceledResult
-        | BetaMessageBatchExpiredResult
-    ),
-) -> TypeGuard[BetaMessageBatchSucceededResult]:
-    """Narrow batch result to succeeded variant."""
-    return result.type == "succeeded"
-
-
-def _is_errored_result(
-    result: (
-        BetaMessageBatchSucceededResult
-        | BetaMessageBatchErroredResult
-        | BetaMessageBatchCanceledResult
-        | BetaMessageBatchExpiredResult
-    ),
-) -> TypeGuard[BetaMessageBatchErroredResult]:
-    """Narrow batch result to errored variant."""
-    return result.type == "errored"
-
-
-def _is_canceled_result(
-    result: (
-        BetaMessageBatchSucceededResult
-        | BetaMessageBatchErroredResult
-        | BetaMessageBatchCanceledResult
-        | BetaMessageBatchExpiredResult
-    ),
-) -> TypeGuard[BetaMessageBatchCanceledResult]:
-    """Narrow batch result to canceled variant."""
-    return result.type == "canceled"
-
-
-def _is_expired_result(
-    result: (
-        BetaMessageBatchSucceededResult
-        | BetaMessageBatchErroredResult
-        | BetaMessageBatchCanceledResult
-        | BetaMessageBatchExpiredResult
-    ),
-) -> TypeGuard[BetaMessageBatchExpiredResult]:
-    """Narrow batch result to expired variant."""
-    return result.type == "expired"
 
 
 class AnthropicProvider:
@@ -327,7 +274,7 @@ class AnthropicProvider:
                 custom_id = response.custom_id
                 result = response.result
 
-                if _is_succeeded_result(result):
+                if isinstance(result, BetaMessageBatchSucceededResult):
                     # Extract JSON from message content
                     # For structured output, the first content block is a TextBlock
                     content_block = result.message.content[0]
@@ -352,19 +299,17 @@ class AnthropicProvider:
                                 error=f"Unexpected content block type: {type(content_block).__name__}",
                             )
                         )
-                elif _is_errored_result(result):
-                    # Error response structure varies, extract message safely
-                    error_obj = result.error
-                    error_msg = getattr(error_obj, "message", str(error_obj))
+                elif isinstance(result, BetaMessageBatchErroredResult):
+                    # BetaErrorResponse wraps BetaError in a response envelope
                     results.append(
                         BatchResult(
                             custom_id=custom_id,
                             status="failed",
                             response=None,
-                            error=error_msg,
+                            error=result.error.error.message,
                         )
                     )
-                elif _is_canceled_result(result):
+                elif isinstance(result, BetaMessageBatchCanceledResult):
                     results.append(
                         BatchResult(
                             custom_id=custom_id,
@@ -373,7 +318,7 @@ class AnthropicProvider:
                             error="Request was cancelled",
                         )
                     )
-                elif _is_expired_result(result):
+                else:  # BetaMessageBatchExpiredResult
                     results.append(
                         BatchResult(
                             custom_id=custom_id,

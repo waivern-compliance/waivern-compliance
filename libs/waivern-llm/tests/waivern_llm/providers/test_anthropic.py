@@ -4,6 +4,8 @@ Business behaviour: Provides async LLM calls using Anthropic's Claude models
 via LangChain, satisfying the LLMProvider protocol.
 """
 
+from unittest.mock import AsyncMock
+
 import pytest
 from pydantic import BaseModel
 
@@ -272,6 +274,63 @@ class TestAnthropicProviderSubmitBatch:
 # =============================================================================
 
 
+def _build_mixed_batch_responses() -> list[AsyncMock]:
+    """Build mock batch responses covering all four Anthropic result types.
+
+    Uses ``Mock(spec=...)`` so ``isinstance`` checks in the implementation
+    pass naturally.  ``Mock(spec=PydanticModel)`` restricts ``__getattr__``
+    but not ``__setattr__``, so attributes are set before chaining access.
+    """
+    from unittest.mock import AsyncMock, Mock
+
+    from anthropic.types.beta.beta_text_block import BetaTextBlock
+    from anthropic.types.beta.messages.beta_message_batch_canceled_result import (
+        BetaMessageBatchCanceledResult,
+    )
+    from anthropic.types.beta.messages.beta_message_batch_errored_result import (
+        BetaMessageBatchErroredResult,
+    )
+    from anthropic.types.beta.messages.beta_message_batch_expired_result import (
+        BetaMessageBatchExpiredResult,
+    )
+    from anthropic.types.beta.messages.beta_message_batch_succeeded_result import (
+        BetaMessageBatchSucceededResult,
+    )
+
+    # Succeeded
+    mock_text_block = Mock(spec=BetaTextBlock)
+    mock_text_block.text = '{"result": "success"}'
+
+    mock_succeeded_result = Mock(spec=BetaMessageBatchSucceededResult)
+    mock_succeeded_result.message = Mock()
+    mock_succeeded_result.message.content = [mock_text_block]
+
+    mock_succeeded = AsyncMock()
+    mock_succeeded.custom_id = "req-1"
+    mock_succeeded.result = mock_succeeded_result
+
+    # Errored: SDK path is result.error (BetaErrorResponse) .error (BetaError) .message
+    mock_errored_result = Mock(spec=BetaMessageBatchErroredResult)
+    mock_errored_result.error = Mock()
+    mock_errored_result.error.error.message = "Rate limit exceeded"
+
+    mock_errored = AsyncMock()
+    mock_errored.custom_id = "req-2"
+    mock_errored.result = mock_errored_result
+
+    # Canceled
+    mock_canceled = AsyncMock()
+    mock_canceled.custom_id = "req-3"
+    mock_canceled.result = Mock(spec=BetaMessageBatchCanceledResult)
+
+    # Expired
+    mock_expired = AsyncMock()
+    mock_expired.custom_id = "req-4"
+    mock_expired.result = Mock(spec=BetaMessageBatchExpiredResult)
+
+    return [mock_succeeded, mock_errored, mock_canceled, mock_expired]
+
+
 class TestAnthropicProviderBatchOperations:
     """Tests for remaining BatchLLMProvider methods."""
 
@@ -281,6 +340,7 @@ class TestAnthropicProviderBatchOperations:
             ("in_progress", "in_progress"),
             ("canceling", "cancelled"),
             ("ended", "completed"),
+            ("some_future_status", "in_progress"),
         ],
     )
     async def test_get_batch_status_maps_anthropic_status_and_counts(
@@ -324,48 +384,18 @@ class TestAnthropicProviderBatchOperations:
         """get_batch_results parses succeeded, errored, canceled, and expired results."""
         from unittest.mock import AsyncMock, patch
 
-        # Create mock responses for each result type
-        mock_succeeded = AsyncMock()
-        mock_succeeded.custom_id = "req-1"
-        mock_succeeded.result.type = "succeeded"
-        mock_succeeded.result.message.content = [
-            AsyncMock(text='{"result": "success"}')
-        ]
+        responses = _build_mixed_batch_responses()
 
-        mock_errored = AsyncMock()
-        mock_errored.custom_id = "req-2"
-        mock_errored.result.type = "errored"
-        mock_errored.result.error.message = "Rate limit exceeded"
-
-        mock_canceled = AsyncMock()
-        mock_canceled.custom_id = "req-3"
-        mock_canceled.result.type = "canceled"
-
-        mock_expired = AsyncMock()
-        mock_expired.custom_id = "req-4"
-        mock_expired.result.type = "expired"
-
-        # Create async iterator
         async def mock_results():
-            yield mock_succeeded
-            yield mock_errored
-            yield mock_canceled
-            yield mock_expired
+            for response in responses:
+                yield response
 
         mock_async_client = AsyncMock()
         mock_async_client.beta.messages.batches.results.return_value = mock_results()
 
-        with (
-            patch(
-                "waivern_llm.providers.anthropic.AsyncAnthropic",
-                return_value=mock_async_client,
-            ),
-            patch(
-                "waivern_llm.providers.anthropic.isinstance",
-                side_effect=lambda obj, cls: (
-                    cls.__name__ == "BetaTextBlock" if hasattr(obj, "text") else False
-                ),
-            ),
+        with patch(
+            "waivern_llm.providers.anthropic.AsyncAnthropic",
+            return_value=mock_async_client,
         ):
             provider = AnthropicProvider(api_key="test-key", model="claude-sonnet-4-5")
             results = await provider.get_batch_results("batch-123")

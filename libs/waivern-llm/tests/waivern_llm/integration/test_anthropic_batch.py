@@ -7,49 +7,19 @@ Run with: uv run pytest -m batch
 """
 
 import asyncio
-from typing import Literal
 
 import pytest
-from pydantic import BaseModel, Field
 from waivern_core import JsonValue
 
 from waivern_llm.batch_types import BatchRequest
 from waivern_llm.providers import AnthropicProvider
 
-POLL_INTERVAL_SECONDS = 10
-POLL_TIMEOUT_SECONDS = 300  # 5 minutes
-
-
-class ValidationResult(BaseModel):
-    """Single validation result — mirrors real analyser response models."""
-
-    finding_id: str = Field(description="ID of the finding being validated")
-    validation_result: Literal["TRUE_POSITIVE", "FALSE_POSITIVE"] = Field(
-        description="Whether the finding is a true or false positive"
-    )
-    confidence: float = Field(description="Confidence score between 0 and 1")
-    reasoning: str = Field(description="Explanation for the validation decision")
-
-
-class ValidationResponse(BaseModel):
-    """Batch validation response — mirrors LLMValidationResponseModel."""
-
-    results: list[ValidationResult] = Field(
-        description="List of validation results for each finding"
-    )
-
-
-VALIDATION_PROMPT = """\
-You are a compliance data validator. Analyse the following finding and determine \
-whether it is a TRUE_POSITIVE or FALSE_POSITIVE.
-
-Finding ID: finding-001
-Content: "The system stores user email addresses for account recovery purposes."
-Category: personal_data
-Matched pattern: email
-
-Respond with a ValidationResponse containing exactly one result for finding-001.\
-"""
+from .conftest import (
+    POLL_INTERVAL_SECONDS,
+    POLL_TIMEOUT_SECONDS,
+    VALIDATION_PROMPT,
+    ValidationResponse,
+)
 
 
 @pytest.mark.integration
