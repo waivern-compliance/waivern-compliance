@@ -14,7 +14,12 @@ from pydantic import ValidationError
 from waivern_artifact_store.base import ArtifactStore
 
 from waivern_llm.di.configuration import LLMServiceConfiguration
-from waivern_llm.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
+from waivern_llm.providers import (
+    AnthropicProvider,
+    GoogleProvider,
+    LLMProvider,
+    OpenAIProvider,
+)
 from waivern_llm.service import DefaultLLMService, LLMService
 
 if TYPE_CHECKING:
@@ -151,7 +156,7 @@ class LLMServiceFactory:
     @staticmethod
     def create_provider(
         config: LLMServiceConfiguration,
-    ) -> AnthropicProvider | OpenAIProvider | GoogleProvider:
+    ) -> LLMProvider:
         """Create the appropriate LLM provider based on configuration.
 
         Args:

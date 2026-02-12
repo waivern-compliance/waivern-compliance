@@ -155,3 +155,288 @@ class TestGoogleProviderInvokeStructured:
                 await provider.invoke_structured("test prompt", MockResponse)
 
             assert "API error" in str(exc_info.value)
+
+
+# =============================================================================
+# submit_batch
+# =============================================================================
+
+
+class TestGoogleProviderSubmitBatch:
+    """Tests for BatchLLMProvider.submit_batch() implementation."""
+
+    async def test_submit_batch_uploads_jsonl_and_creates_batch(self) -> None:
+        """submit_batch builds JSONL, uploads file, creates batch, returns BatchSubmission."""
+        import io
+        import json
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from waivern_core import JsonValue
+
+        from waivern_llm.batch_types import BatchRequest
+
+        # Mock file upload
+        mock_uploaded_file = Mock()
+        mock_uploaded_file.name = "files/uploaded-123"
+
+        # Mock batch job
+        mock_batch_job = Mock()
+        mock_batch_job.name = "batches/batch-abc123"
+
+        mock_client = Mock()
+        mock_client.aio.files.upload = AsyncMock(return_value=mock_uploaded_file)
+        mock_client.aio.batches.create = AsyncMock(return_value=mock_batch_job)
+
+        schema: dict[str, JsonValue] = {
+            "type": "object",
+            "properties": {"result": {"type": "string"}},
+        }
+        requests = [
+            BatchRequest(
+                custom_id="key-1",
+                prompt="Analyse this data",
+                model="gemini-2.5-flash",
+                response_schema=schema,
+            ),
+        ]
+
+        with patch(
+            "waivern_llm.providers.google.genai.Client",
+            return_value=mock_client,
+        ):
+            provider = GoogleProvider(api_key="test-key", model="gemini-2.5-flash")
+            result = await provider.submit_batch(requests)
+
+        # Verify file upload
+        mock_client.aio.files.upload.assert_awaited_once()
+        upload_kwargs = mock_client.aio.files.upload.call_args.kwargs
+        assert upload_kwargs["config"]["mime_type"] == "application/jsonl"
+
+        # Verify JSONL content
+        uploaded_file = upload_kwargs["file"]
+        assert isinstance(uploaded_file, io.BytesIO)
+        uploaded_file.seek(0)
+        line = json.loads(uploaded_file.readline())
+        assert line["key"] == "key-1"
+        assert line["request"]["contents"] == [
+            {"role": "user", "parts": [{"text": "Analyse this data"}]}
+        ]
+        gen_config = line["request"]["generation_config"]
+        assert gen_config["response_mime_type"] == "application/json"
+        assert gen_config["response_schema"]["type"] == "OBJECT"
+        assert gen_config["temperature"] == 0
+
+        # Verify batch creation
+        mock_client.aio.batches.create.assert_awaited_once()
+        create_kwargs = mock_client.aio.batches.create.call_args.kwargs
+        assert create_kwargs["model"] == "gemini-2.5-flash"
+        assert create_kwargs["src"] == "files/uploaded-123"
+
+        # Verify return value
+        assert result.batch_id == "batches/batch-abc123"
+        assert result.request_count == 1
+
+    async def test_submit_batch_wraps_sdk_exception_in_connection_error(self) -> None:
+        """SDK exceptions during batch submission are wrapped in LLMConnectionError."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from waivern_core import JsonValue
+
+        from waivern_llm.batch_types import BatchRequest
+
+        mock_client = Mock()
+        mock_client.aio.files.upload = AsyncMock(
+            side_effect=Exception("API rate limit exceeded")
+        )
+
+        schema: dict[str, JsonValue] = {
+            "type": "object",
+            "properties": {"result": {"type": "string"}},
+        }
+        requests = [
+            BatchRequest(
+                custom_id="key-1",
+                prompt="Analyse this",
+                model="gemini-2.5-flash",
+                response_schema=schema,
+            ),
+        ]
+
+        with patch(
+            "waivern_llm.providers.google.genai.Client",
+            return_value=mock_client,
+        ):
+            provider = GoogleProvider(api_key="test-key", model="gemini-2.5-flash")
+
+            with pytest.raises(LLMConnectionError) as exc_info:
+                await provider.submit_batch(requests)
+
+            assert "API rate limit exceeded" in str(exc_info.value)
+
+
+# =============================================================================
+# Batch operations (get_batch_status, get_batch_results, cancel_batch)
+# =============================================================================
+
+
+class TestGoogleProviderBatchOperations:
+    """Tests for remaining BatchLLMProvider methods."""
+
+    @pytest.mark.parametrize(
+        ("gemini_state", "expected_status"),
+        [
+            ("JOB_STATE_PENDING", "submitted"),
+            ("JOB_STATE_QUEUED", "submitted"),
+            ("JOB_STATE_RUNNING", "in_progress"),
+            ("JOB_STATE_SUCCEEDED", "completed"),
+            ("JOB_STATE_FAILED", "failed"),
+            ("JOB_STATE_CANCELLING", "cancelled"),
+            ("JOB_STATE_CANCELLED", "cancelled"),
+            ("JOB_STATE_EXPIRED", "expired"),
+            ("JOB_STATE_PARTIALLY_SUCCEEDED", "completed"),
+            ("JOB_STATE_UPDATING", "in_progress"),
+        ],
+    )
+    async def test_get_batch_status_maps_gemini_state(
+        self, gemini_state: str, expected_status: str
+    ) -> None:
+        """get_batch_status maps Gemini JobState values to BatchStatusLiteral."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from google.genai.types import JobState
+
+        mock_batch_job = Mock()
+        mock_batch_job.state = JobState(gemini_state)
+
+        mock_client = Mock()
+        mock_client.aio.batches.get = AsyncMock(return_value=mock_batch_job)
+
+        with patch(
+            "waivern_llm.providers.google.genai.Client",
+            return_value=mock_client,
+        ):
+            provider = GoogleProvider(api_key="test-key", model="gemini-2.5-flash")
+            result = await provider.get_batch_status("batches/test-123")
+
+        assert result.batch_id == "batches/test-123"
+        assert result.status == expected_status
+
+    async def test_get_batch_results_parses_successful_responses(self) -> None:
+        """get_batch_results parses JSONL output file into BatchResult list."""
+        import json
+        from unittest.mock import AsyncMock, Mock, patch
+
+        # Build a two-line JSONL output matching Gemini's response format
+        line1 = json.dumps(
+            {
+                "key": "key-1",
+                "response": {
+                    "candidates": [
+                        {"content": {"parts": [{"text": '{"result": "ok"}'}]}}
+                    ]
+                },
+            }
+        )
+        line2 = json.dumps({"key": "key-2", "error": {"message": "quota exceeded"}})
+        output_bytes = f"{line1}\n{line2}\n".encode()
+
+        mock_batch_job = Mock()
+        mock_batch_job.dest = Mock()
+        mock_batch_job.dest.file_name = "files/output-456"
+
+        mock_client = Mock()
+        mock_client.aio.batches.get = AsyncMock(return_value=mock_batch_job)
+        mock_client.aio.files.download = AsyncMock(return_value=output_bytes)
+
+        with patch(
+            "waivern_llm.providers.google.genai.Client",
+            return_value=mock_client,
+        ):
+            provider = GoogleProvider(api_key="test-key", model="gemini-2.5-flash")
+            results = await provider.get_batch_results("batches/test-123")
+
+        assert len(results) == 2
+
+        # First result: successful parse
+        assert results[0].custom_id == "key-1"
+        assert results[0].status == "completed"
+        assert results[0].response == {"result": "ok"}
+        assert results[0].error is None
+
+        # Second result: error response
+        assert results[1].custom_id == "key-2"
+        assert results[1].status == "failed"
+        assert results[1].response is None
+        assert "quota exceeded" in (results[1].error or "")
+
+    async def test_get_batch_results_raises_on_missing_output_file(self) -> None:
+        """get_batch_results raises LLMConnectionError when dest.file_name is None."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        mock_batch_job = Mock()
+        mock_batch_job.dest = Mock()
+        mock_batch_job.dest.file_name = None
+
+        mock_client = Mock()
+        mock_client.aio.batches.get = AsyncMock(return_value=mock_batch_job)
+
+        with patch(
+            "waivern_llm.providers.google.genai.Client",
+            return_value=mock_client,
+        ):
+            provider = GoogleProvider(api_key="test-key", model="gemini-2.5-flash")
+
+            with pytest.raises(LLMConnectionError) as exc_info:
+                await provider.get_batch_results("batches/test-123")
+
+            assert "no output file" in str(exc_info.value).lower()
+
+    async def test_cancel_batch_calls_sdk(self) -> None:
+        """cancel_batch calls client.aio.batches.cancel with the batch name."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        mock_client = Mock()
+        mock_client.aio.batches.cancel = AsyncMock()
+
+        with patch(
+            "waivern_llm.providers.google.genai.Client",
+            return_value=mock_client,
+        ):
+            provider = GoogleProvider(api_key="test-key", model="gemini-2.5-flash")
+            await provider.cancel_batch("batches/test-123")
+
+        mock_client.aio.batches.cancel.assert_awaited_once_with(name="batches/test-123")
+
+    async def test_batch_operation_wraps_sdk_exception_in_connection_error(
+        self,
+    ) -> None:
+        """SDK exceptions during batch operations are wrapped in LLMConnectionError."""
+        from unittest.mock import AsyncMock, Mock, patch
+
+        mock_client = Mock()
+        mock_client.aio.batches.get = AsyncMock(
+            side_effect=Exception("network timeout")
+        )
+
+        with patch(
+            "waivern_llm.providers.google.genai.Client",
+            return_value=mock_client,
+        ):
+            provider = GoogleProvider(api_key="test-key", model="gemini-2.5-flash")
+
+            with pytest.raises(LLMConnectionError) as exc_info:
+                await provider.get_batch_status("batches/test-123")
+
+            assert "network timeout" in str(exc_info.value)
+
+
+class TestGoogleProviderProtocolCompliance:
+    """Tests for BatchLLMProvider protocol compliance."""
+
+    def test_satisfies_batch_llm_provider_protocol(self) -> None:
+        """Provider satisfies BatchLLMProvider protocol (isinstance check)."""
+        from waivern_llm.providers import BatchLLMProvider
+
+        provider = GoogleProvider(api_key="test-key")
+
+        assert isinstance(provider, BatchLLMProvider)
