@@ -214,27 +214,31 @@ class AnthropicProvider:
             client = self._get_async_client()
 
             # Build request list
+            # Note: SDK type stubs for output_config are incomplete/outdated.
+            # The API accepts output_config.format but types don't reflect this yet.
             request_list: list[BatchRequestParams] = []
             for request in requests:
-                req_dict: BatchRequestParams = {
+                req_dict = {
                     "custom_id": request.custom_id,
                     "params": {
                         "model": request.model,
                         "max_tokens": self._capabilities.max_output_tokens,
                         "temperature": self._capabilities.temperature,
                         "messages": [{"role": "user", "content": request.prompt}],
-                        "output_format": {
-                            "type": "json_schema",
-                            "schema": ensure_strict_schema(request.response_schema),
+                        "output_config": {
+                            "format": {
+                                "type": "json_schema",
+                                "schema": ensure_strict_schema(request.response_schema),
+                            }
                         },
                     },
                 }
-                request_list.append(req_dict)
+                request_list.append(req_dict)  # type: ignore[reportArgumentType]
 
             # Create batch using beta API
-            # Note: We use the beta API because structured output (output_format)
+            # Note: We use the beta API because structured output (output_config)
             # is a beta feature. The standard messages.batches API does not support
-            # the output_format field required for JSON schema responses.
+            # the output_config field required for JSON schema responses.
             batch = await client.beta.messages.batches.create(requests=request_list)
 
             logger.info(f"Submitted batch {batch.id} with {len(requests)} request(s)")

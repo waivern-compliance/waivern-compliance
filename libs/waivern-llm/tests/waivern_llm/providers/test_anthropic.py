@@ -214,11 +214,13 @@ class TestAnthropicProviderSubmitBatch:
         assert params["temperature"] == 0
         assert params["messages"] == [{"role": "user", "content": "Analyse this data"}]
 
-        # Verify structured output format
-        assert "output_format" in params
-        output_format = params["output_format"]
-        assert output_format["type"] == "json_schema"
-        strict_schema = output_format["schema"]
+        # Verify structured output config
+        assert "output_config" in params
+        output_config = params["output_config"]
+        assert "format" in output_config
+        format_spec = output_config["format"]
+        assert format_spec["type"] == "json_schema"
+        strict_schema = format_spec["schema"]
         assert strict_schema["type"] == "object"
         assert strict_schema["properties"] == schema["properties"]
         assert strict_schema["additionalProperties"] is False  # ensure_strict_schema
