@@ -46,6 +46,10 @@ class CryptoQualityIndicatorRuleset(YAMLRuleset[CryptoQualityIndicatorRule]):
 
     Provides structured access to cryptographic algorithm patterns for
     security evidence analysis.
+
+    The ruleset name matches the output schema name (`crypto_quality_indicator`),
+    following the WCF convention: rulesets are named after their output schema,
+    not the detection mechanism (e.g. not `crypto_quality_patterns`).
     """
 
     ruleset_name: ClassVar[str] = "crypto_quality_indicator"
