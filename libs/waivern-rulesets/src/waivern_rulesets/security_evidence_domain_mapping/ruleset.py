@@ -34,8 +34,8 @@ class SecurityEvidenceDomainMappingRule(ClassificationRule):
     - "category": matches personal_data_indicator.category values
     """
 
-    source_type: Literal["purpose", "category"] = Field(
-        description="Indicator schema to match: 'purpose' or 'category'",
+    source_type: Literal["purpose", "category", "algorithm"] = Field(
+        description="Indicator schema to match: 'purpose', 'category', or 'algorithm'",
     )
     indicator_values: tuple[str, ...] = Field(
         min_length=1,
@@ -76,6 +76,10 @@ class SecurityEvidenceDomainMappingRulesetData(
         min_length=1,
         description="Master list of valid personal data indicator categories",
     )
+    algorithm_values: list[str] = Field(
+        min_length=1,
+        description="Master list of valid cryptographic algorithm identifiers",
+    )
 
     @model_validator(mode="after")
     def validate_rules(self) -> "SecurityEvidenceDomainMappingRulesetData":
@@ -83,6 +87,7 @@ class SecurityEvidenceDomainMappingRulesetData(
         valid_domains = set(self.security_domains)
         valid_purposes = set(self.purpose_slugs)
         valid_categories = set(self.indicator_categories)
+        valid_algorithms = set(self.algorithm_values)
 
         for rule in self.rules:
             if rule.security_domain not in valid_domains:
@@ -102,26 +107,24 @@ class SecurityEvidenceDomainMappingRulesetData(
                 )
                 raise ValueError(msg)
 
-            if rule.source_type == "purpose":
-                invalid_values = [
-                    v for v in rule.indicator_values if v not in valid_purposes
-                ]
-                if invalid_values:
-                    msg = (
-                        f"Rule '{rule.name}' has invalid purpose indicator_values: "
-                        f"{invalid_values}. Valid: {valid_purposes}"
-                    )
-                    raise ValueError(msg)
-            else:  # "category"
-                invalid_values = [
-                    v for v in rule.indicator_values if v not in valid_categories
-                ]
-                if invalid_values:
-                    msg = (
-                        f"Rule '{rule.name}' has invalid category indicator_values: "
-                        f"{invalid_values}. Valid: {valid_categories}"
-                    )
-                    raise ValueError(msg)
+            match rule.source_type:
+                case "purpose":
+                    valid_values = valid_purposes
+                    label = "purpose"
+                case "category":
+                    valid_values = valid_categories
+                    label = "category"
+                case "algorithm":
+                    valid_values = valid_algorithms
+                    label = "algorithm"
+
+            invalid_values = [v for v in rule.indicator_values if v not in valid_values]
+            if invalid_values:
+                msg = (
+                    f"Rule '{rule.name}' has invalid {label} indicator_values: "
+                    f"{invalid_values}. Valid: {valid_values}"
+                )
+                raise ValueError(msg)
 
         return self
 

@@ -1,0 +1,497 @@
+"""Unit tests for SecurityEvidenceNormaliser."""
+
+import logging
+
+import pytest
+from waivern_core import AnalyserContractTests
+from waivern_core.message import Message
+from waivern_core.schemas import Schema
+
+from waivern_security_evidence_normaliser.analyser import SecurityEvidenceNormaliser
+from waivern_security_evidence_normaliser.types import SecurityEvidenceNormaliserConfig
+
+# =============================================================================
+# Contract tests
+# =============================================================================
+
+
+class TestSecurityEvidenceNormaliserContract(
+    AnalyserContractTests[SecurityEvidenceNormaliser]
+):
+    """Contract tests for SecurityEvidenceNormaliser.
+
+    Inherits from AnalyserContractTests to verify that SecurityEvidenceNormaliser
+    meets the Analyser interface contract.
+    """
+
+    @pytest.fixture
+    def processor_class(self) -> type[SecurityEvidenceNormaliser]:
+        """Provide the processor class for contract testing."""
+        return SecurityEvidenceNormaliser
+
+
+# =============================================================================
+# Personal data indicator → security evidence mapping
+# =============================================================================
+
+
+class TestNormalisePersonalData:
+    """Tests for personal_data_indicator → security evidence normalisation."""
+
+    @pytest.fixture
+    def valid_config(self) -> SecurityEvidenceNormaliserConfig:
+        """Return default configuration using local domain mapping ruleset."""
+        return SecurityEvidenceNormaliserConfig()
+
+    @pytest.fixture
+    def output_schema(self) -> Schema:
+        """Return the standard output schema for security_evidence."""
+        return Schema("security_evidence", "1.0.0")
+
+    def _make_message(
+        self, category: str, source: str, require_review: bool | None = None
+    ) -> Message:
+        """Build a personal_data_indicator message with a single finding."""
+        finding: dict[str, object] = {
+            "id": f"test-{category}",
+            "category": category,
+            "evidence": [{"content": f"Detected {category} in {source}"}],
+            "matched_patterns": [{"pattern": category, "match_count": 1}],
+            "metadata": {"source": source},
+        }
+        if require_review is not None:
+            finding["require_review"] = require_review
+        return Message(
+            id="test_pd",
+            content={
+                "findings": [finding],
+                "summary": {"total_findings": 1},
+                "analysis_metadata": {
+                    "ruleset_used": "local/personal_data_indicator/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+
+    def test_personal_data_category_maps_to_expected_security_domain(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """A known category (email) maps to data_protection with neutral polarity."""
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        msg = self._make_message("email", "user.php")
+
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert findings[0]["security_domain"] == "data_protection"
+        assert findings[0]["polarity"] == "neutral"
+        assert findings[0]["evidence_type"] == "CODE"
+
+    def test_personal_data_findings_with_same_category_and_source_file_are_grouped(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """Multiple findings sharing category+source produce a single grouped evidence item."""
+        finding: dict[str, object] = {
+            "id": "test-email-1",
+            "category": "email",
+            "evidence": [{"content": "email@example.com"}],
+            "matched_patterns": [{"pattern": "email", "match_count": 2}],
+            "metadata": {"source": "user.php"},
+        }
+        msg = Message(
+            id="test_pd_grouped",
+            content={
+                "findings": [finding, {**finding, "id": "test-email-2"}],
+                "summary": {"total_findings": 2},
+                "analysis_metadata": {
+                    "ruleset_used": "local/personal_data_indicator/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert "2 occurrence(s)" in findings[0]["description"]
+
+    def test_sensitive_personal_data_category_produces_secondary_domain_evidence_item(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """A sensitive category (health) produces evidence for both data_protection and people_controls."""
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        msg = self._make_message("health", "health.php")
+
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        domains = {f["security_domain"] for f in findings}
+        assert len(findings) == 2
+        assert "data_protection" in domains
+        assert "people_controls" in domains
+
+    def test_unknown_personal_data_category_is_skipped_with_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """An unmapped category is skipped and a warning is logged."""
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        msg = self._make_message("unknown_xyz", "file.php")
+
+        with caplog.at_level(logging.WARNING):
+            result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+
+        assert result.content["findings"] == []
+        assert "unknown_xyz" in caplog.text
+
+
+# =============================================================================
+# Processing purpose indicator → security evidence mapping
+# =============================================================================
+
+
+class TestNormaliseProcessingPurpose:
+    """Tests for processing_purpose_indicator → security evidence normalisation."""
+
+    @pytest.fixture
+    def valid_config(self) -> SecurityEvidenceNormaliserConfig:
+        """Return default configuration using local domain mapping ruleset."""
+        return SecurityEvidenceNormaliserConfig()
+
+    @pytest.fixture
+    def output_schema(self) -> Schema:
+        """Return the standard output schema for security_evidence."""
+        return Schema("security_evidence", "1.0.0")
+
+    def _make_message(self, purpose: str, source: str) -> Message:
+        """Build a processing_purpose_indicator message with a single finding."""
+        return Message(
+            id="test_pp",
+            content={
+                "findings": [
+                    {
+                        "id": f"test-{purpose}",
+                        "purpose": purpose,
+                        "evidence": [{"content": f"Detected {purpose} in {source}"}],
+                        "matched_patterns": [{"pattern": purpose, "match_count": 1}],
+                        "metadata": {"source": source},
+                    }
+                ],
+                "summary": {
+                    "total_findings": 1,
+                    "purposes_identified": 1,
+                    "purposes": [{"purpose": purpose, "findings_count": 1}],
+                },
+                "analysis_metadata": {
+                    "ruleset_used": "local/processing_purposes/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("processing_purpose_indicator", "1.0.0"),
+        )
+
+    def test_processing_purpose_maps_to_expected_security_domain(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """A known purpose (user_identity_login) maps to the authentication domain."""
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        msg = self._make_message("user_identity_login", "auth.php")
+
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert findings[0]["security_domain"] == "authentication"
+        assert findings[0]["polarity"] == "neutral"
+
+    def test_processing_purpose_findings_with_same_purpose_and_source_file_are_grouped(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """Multiple findings sharing purpose+source produce a single grouped evidence item."""
+        finding: dict[str, object] = {
+            "id": "test-login-1",
+            "purpose": "user_identity_login",
+            "evidence": [{"content": "login check"}],
+            "matched_patterns": [{"pattern": "user_identity_login", "match_count": 1}],
+            "metadata": {"source": "auth.php"},
+        }
+        msg = Message(
+            id="test_pp_grouped",
+            content={
+                "findings": [finding, {**finding, "id": "test-login-2"}],
+                "summary": {
+                    "total_findings": 2,
+                    "purposes_identified": 1,
+                    "purposes": [
+                        {"purpose": "user_identity_login", "findings_count": 2}
+                    ],
+                },
+                "analysis_metadata": {
+                    "ruleset_used": "local/processing_purposes/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("processing_purpose_indicator", "1.0.0"),
+        )
+
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert "2 occurrence(s)" in findings[0]["description"]
+
+    def test_unknown_processing_purpose_is_skipped_with_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """An unmapped purpose is skipped and a warning is logged."""
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        msg = self._make_message("unknown_purpose_xyz", "file.php")
+
+        with caplog.at_level(logging.WARNING):
+            result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+
+        assert result.content["findings"] == []
+        assert "unknown_purpose_xyz" in caplog.text
+
+
+# =============================================================================
+# Crypto quality indicator → security evidence mapping
+# =============================================================================
+
+
+class TestNormaliseCryptoQuality:
+    """Tests for crypto_quality_indicator → security evidence normalisation."""
+
+    @pytest.fixture
+    def valid_config(self) -> SecurityEvidenceNormaliserConfig:
+        """Return default configuration using local domain mapping ruleset."""
+        return SecurityEvidenceNormaliserConfig()
+
+    @pytest.fixture
+    def output_schema(self) -> Schema:
+        """Return the standard output schema for security_evidence."""
+        return Schema("security_evidence", "1.0.0")
+
+    def _make_message(
+        self,
+        algorithm: str,
+        quality_rating: str,
+        polarity: str,
+        source: str = "crypto.php",
+    ) -> Message:
+        """Build a crypto_quality_indicator message with a single finding."""
+        return Message(
+            id="test_cq",
+            content={
+                "findings": [
+                    {
+                        "id": f"test-{algorithm}",
+                        "algorithm": algorithm,
+                        "quality_rating": quality_rating,
+                        "polarity": polarity,
+                        "evidence": [{"content": f"Found {algorithm} usage"}],
+                        "matched_patterns": [{"pattern": algorithm, "match_count": 1}],
+                        "metadata": {"source": source},
+                    }
+                ],
+                "summary": {"total_findings": 1},
+                "analysis_metadata": {
+                    "ruleset_used": "local/crypto_quality_indicator/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("crypto_quality_indicator", "1.0.0"),
+        )
+
+    def test_strong_crypto_algorithm_produces_positive_polarity_evidence(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """A strong algorithm (bcrypt) produces encryption evidence with positive polarity."""
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        msg = self._make_message("bcrypt", "strong", "positive")
+
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert findings[0]["security_domain"] == "encryption"
+        assert findings[0]["polarity"] == "positive"
+
+    def test_deprecated_crypto_algorithm_produces_negative_polarity_evidence(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """A deprecated algorithm (md5) produces encryption evidence with negative polarity."""
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        msg = self._make_message("md5", "deprecated", "negative")
+
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert findings[0]["security_domain"] == "encryption"
+        assert findings[0]["polarity"] == "negative"
+
+    def test_unknown_crypto_algorithm_is_skipped_with_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """An unmapped algorithm is skipped and a warning is logged."""
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        msg = self._make_message("unknown_algo_xyz", "weak", "negative")
+
+        with caplog.at_level(logging.WARNING):
+            result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+
+        assert result.content["findings"] == []
+        assert "unknown_algo_xyz" in caplog.text
+
+
+# =============================================================================
+# require_review propagation
+# =============================================================================
+
+
+class TestRequireReviewPropagation:
+    """Tests for require_review propagation from indicator findings to evidence items."""
+
+    def test_require_review_true_in_any_finding_propagates_to_evidence_item(
+        self,
+    ) -> None:
+        """A single True in a grouped set propagates require_review=True to the evidence item."""
+        finding_base: dict[str, object] = {
+            "category": "email",
+            "evidence": [{"content": "email@example.com"}],
+            "matched_patterns": [{"pattern": "email", "match_count": 1}],
+            "metadata": {"source": "user.php"},
+        }
+        msg = Message(
+            id="test_rr",
+            content={
+                "findings": [
+                    {**finding_base, "id": "f1", "require_review": True},
+                    {**finding_base, "id": "f2"},
+                ],
+                "summary": {"total_findings": 2},
+                "analysis_metadata": {
+                    "ruleset_used": "local/personal_data_indicator/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert findings[0]["require_review"] is True
+
+
+# =============================================================================
+# Fan-in (multiple input messages of same schema type)
+# =============================================================================
+
+
+class TestFanIn:
+    """Tests for fan-in: multiple input messages of the same schema type."""
+
+    def _make_pd_message(self, msg_id: str, category: str, source: str) -> Message:
+        """Build a personal_data_indicator message with a single finding."""
+        return Message(
+            id=msg_id,
+            content={
+                "findings": [
+                    {
+                        "id": f"test-{msg_id}",
+                        "category": category,
+                        "evidence": [{"content": f"Detected {category}"}],
+                        "matched_patterns": [{"pattern": category, "match_count": 1}],
+                        "metadata": {"source": source},
+                    }
+                ],
+                "summary": {"total_findings": 1},
+                "analysis_metadata": {
+                    "ruleset_used": "local/personal_data_indicator/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+
+    def test_multiple_input_messages_of_same_schema_type_are_merged(self) -> None:
+        """Findings from separate input messages are all present in the output."""
+        msg1 = self._make_pd_message("msg1", "email", "user.php")
+        msg2 = self._make_pd_message("msg2", "phone", "contact.php")
+
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        result = analyser.process([msg1, msg2], Schema("security_evidence", "1.0.0"))
+
+        findings = result.content["findings"]
+        source_locations = {f["source_location"] for f in findings}
+        assert "user.php" in source_locations
+        assert "contact.php" in source_locations
+
+
+# =============================================================================
+# Output message structure
+# =============================================================================
+
+
+class TestOutputMessageStructure:
+    """Tests for the shape and schema compliance of the output message."""
+
+    def test_process_returns_valid_output_message_structure(self) -> None:
+        """process() returns a Message with the correct schema and required content keys."""
+        msg = Message(
+            id="test_struct",
+            content={
+                "findings": [
+                    {
+                        "id": "test-email",
+                        "category": "email",
+                        "evidence": [{"content": "email@example.com"}],
+                        "matched_patterns": [{"pattern": "email", "match_count": 1}],
+                        "metadata": {"source": "user.php"},
+                    }
+                ],
+                "summary": {"total_findings": 1},
+                "analysis_metadata": {
+                    "ruleset_used": "local/personal_data_indicator/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("personal_data_indicator", "1.0.0"),
+        )
+        output_schema = Schema("security_evidence", "1.0.0")
+
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        result = analyser.process([msg], output_schema)
+
+        assert isinstance(result, Message)
+        assert result.schema == output_schema
+        assert "findings" in result.content
+        assert "summary" in result.content
+        assert "analysis_metadata" in result.content
+        assert isinstance(result.content["findings"], list)
+        assert result.content["summary"]["total_findings"] == len(
+            result.content["findings"]
+        )
