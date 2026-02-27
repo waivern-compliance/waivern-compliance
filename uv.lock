@@ -9,6 +9,7 @@ members = [
     "waivern-compliance-tool",
     "waivern-connectors-database",
     "waivern-core",
+    "waivern-crypto-quality-analyser",
     "waivern-data-export-analyser",
     "waivern-data-subject-analyser",
     "waivern-filesystem",
@@ -1840,6 +1841,37 @@ requires-dist = [
     { name = "annotated-types", specifier = ">=0.7.0" },
     { name = "jsonschema", specifier = ">=4.25.0" },
     { name = "typing-extensions", specifier = ">=4.14.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
+[[package]]
+name = "waivern-crypto-quality-analyser"
+version = "0.1.0"
+source = { editable = "libs/waivern-crypto-quality-analyser" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "waivern-analysers-shared" },
+    { name = "waivern-core" },
+    { name = "waivern-rulesets" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
+    { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
 ]
 
 [package.metadata.requires-dev]
