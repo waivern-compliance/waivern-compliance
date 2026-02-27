@@ -54,6 +54,7 @@ class TestProcessingPurposesRulesetDataValidation:
         """Test that rules with names not in purposes list are rejected."""
         rule = ProcessingPurposeRule(
             name="Unknown Purpose",
+            purpose="unknown_purpose",
             description="This purpose is not in the allowed list",
             patterns=("unknown",),
         )
@@ -64,5 +65,39 @@ class TestProcessingPurposesRulesetDataValidation:
                 version="1.0.0",
                 description="Test ruleset",
                 purposes=["Payment Processing", "Analytics"],
+                purpose_slugs=["payment_processing", "analytics"],
                 rules=[rule],
+            )
+
+    def test_rejects_rule_with_unknown_purpose_slug(self) -> None:
+        """Test that rules with purpose slugs not in purpose_slugs list are rejected."""
+        rule = ProcessingPurposeRule(
+            name="Payment Processing",
+            purpose="unknown_slug",
+            description="Rule with a slug not in the allowed list",
+            patterns=("payment",),
+        )
+
+        with pytest.raises(ValidationError, match="not in purpose_slugs"):
+            ProcessingPurposesRulesetData(
+                name="test_ruleset",
+                version="1.0.0",
+                description="Test ruleset",
+                purposes=["Payment Processing"],
+                purpose_slugs=["payment_processing"],
+                rules=[rule],
+            )
+
+    def test_purpose_slug_from_loaded_ruleset_is_snake_case(self) -> None:
+        """Test that loaded rules expose snake_case purpose slugs, not full names."""
+        ruleset = ProcessingPurposesRuleset()
+        rules = ruleset.get_rules()
+
+        assert len(rules) > 0
+        for rule in rules:
+            assert rule.purpose == rule.purpose.lower(), (
+                f"Purpose slug '{rule.purpose}' should be lowercase"
+            )
+            assert " " not in rule.purpose, (
+                f"Purpose slug '{rule.purpose}' should not contain spaces"
             )

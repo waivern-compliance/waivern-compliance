@@ -30,6 +30,7 @@ class ConcreteRuleset(AbstractRuleset[ProcessingPurposeRule]):
         return (
             ProcessingPurposeRule(
                 name="test_rule",
+                purpose="test_rule",
                 description="Test rule for unit tests",
                 patterns=("test_pattern", "test_pattern_2"),
             ),
@@ -60,6 +61,7 @@ class ConcreteRulesetV2(AbstractRuleset[ProcessingPurposeRule]):
         return (
             ProcessingPurposeRule(
                 name="test_rule_v2",
+                purpose="test_rule_v2",
                 description="Test rule for v2",
                 patterns=("v2_pattern",),
             ),

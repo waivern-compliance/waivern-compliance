@@ -51,6 +51,7 @@ class TestRulesetManager:
         test_rules = (
             ProcessingPurposeRule(
                 name="test_purpose",
+                purpose="test_purpose",
                 description="Test processing purpose",
                 patterns=("test_pattern",),
             ),
@@ -80,6 +81,7 @@ class TestRulesetManager:
         test_rules = (
             ProcessingPurposeRule(
                 name="test_purpose",
+                purpose="test_purpose",
                 description="Test processing purpose",
                 patterns=("test_pattern",),
             ),
@@ -138,6 +140,7 @@ class TestRulesetManager:
         processing_rules = (
             ProcessingPurposeRule(
                 name="purpose_rule",
+                purpose="purpose_rule",
                 description="Test purpose",
                 patterns=("purpose_pattern",),
             ),
@@ -182,6 +185,7 @@ class TestRulesetManagerCaching:
         test_rules = (
             ProcessingPurposeRule(
                 name="cached_rule",
+                purpose="cached_rule",
                 description="Test caching",
                 patterns=("cache_test",),
             ),
@@ -216,6 +220,7 @@ class TestRulesetManagerCaching:
         test_rules = (
             ProcessingPurposeRule(
                 name="cached_rule",
+                purpose="cached_rule",
                 description="Test caching",
                 patterns=("cache_test",),
             ),
@@ -245,6 +250,7 @@ class TestRulesetManagerCaching:
         processing_rules = (
             ProcessingPurposeRule(
                 name="processing_rule",
+                purpose="processing_rule",
                 description="Processing rule",
                 patterns=("processing",),
             ),
@@ -300,6 +306,7 @@ class TestRulesetManagerCaching:
         test_rules = (
             ProcessingPurposeRule(
                 name="clear_test",
+                purpose="clear_test",
                 description="Cache clear test",
                 patterns=("clear",),
             ),
