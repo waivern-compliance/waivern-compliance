@@ -1,0 +1,170 @@
+# Security Evidence Domain Mapping Ruleset
+# Maps processing purpose slugs and personal data indicator categories to
+# framework-agnostic security domains for use by SecurityEvidenceNormaliser.
+
+name: security_evidence_domain_mapping
+version: 1.0.0
+description: Maps indicator findings to security evidence domains for downstream compliance assessors
+
+# Master list of valid security domain values
+# DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence.
+# When adding or removing a domain there, update this list and re-check all rules below.
+security_domains:
+  - authentication
+  - encryption
+  - access_control
+  - logging_monitoring
+  - vulnerability_management
+  - data_protection
+  - network_security
+  - physical_security
+  - people_controls
+  - supplier_management
+  - incident_management
+  - business_continuity
+
+# Master list of valid processing purpose slugs
+# DEPENDENCY: Must stay in sync with purpose_slugs in processing_purposes/1.0.0.
+# When adding or removing a purpose there, update this list and add or remove a rule below.
+# The test test_all_purpose_slugs_are_covered will fail if any slug is unmapped.
+purpose_slugs:
+  - ai_model_training
+  - ai_bias_testing
+  - ai_model_refinement
+  - ai_performance_testing
+  - ai_security_testing
+  - ai_compliance_management
+  - product_service_delivery
+  - customer_service_support
+  - product_customisation
+  - user_identity_login
+  - payment_billing
+  - behavioral_analytics
+  - dynamic_personalisation
+  - consumer_marketing
+  - third_party_targeted_marketing
+  - third_party_marketing
+  - security_fraud_prevention
+
+# Master list of valid personal data indicator categories
+# DEPENDENCY: Must stay in sync with categories in personal_data_indicator/1.0.0.
+# When adding or removing a category there, update this list and add or remove a rule below.
+# The test test_all_categories_are_covered will fail if any category is unmapped.
+indicator_categories:
+  - name
+  - email
+  - phone
+  - address
+  - date_of_birth
+  - government_id
+  - user_identifier
+  - account
+  - subscription
+  - payment
+  - financial
+  - user_activity
+  - analytics
+  - device
+  - network
+  - browser
+  - cookie
+  - inferred
+  - preference
+  - location
+  - precise_location
+  - user_content
+  - health
+  - political
+  - racial_ethnic
+  - religious
+  - genetic
+  - biometric
+  - sexual_orientation
+
+rules:
+  # =============================================================================
+  # Purpose-based mappings
+  # Maps processing_purpose_indicator.purpose slugs to security domains
+  # =============================================================================
+
+  - name: user_identity_and_login
+    description: Authentication and identity management purposes map to the authentication domain
+    source_type: purpose
+    indicator_values:
+      - user_identity_login
+    security_domain: authentication
+
+  - name: security_and_testing
+    description: Security testing, fraud prevention, and vulnerability assessment purposes
+    source_type: purpose
+    indicator_values:
+      - security_fraud_prevention
+      - ai_performance_testing
+      - ai_security_testing
+    security_domain: vulnerability_management
+
+  - name: data_driven_processing
+    description: Data collection, analysis, marketing, and AI processing purposes
+    source_type: purpose
+    indicator_values:
+      - ai_model_training
+      - ai_bias_testing
+      - ai_model_refinement
+      - ai_compliance_management
+      - product_service_delivery
+      - customer_service_support
+      - product_customisation
+      - payment_billing
+      - behavioral_analytics
+      - dynamic_personalisation
+      - consumer_marketing
+      - third_party_targeted_marketing
+      - third_party_marketing
+    security_domain: data_protection
+
+  # =============================================================================
+  # Category-based mappings
+  # Maps personal_data_indicator.category values to security domains
+  # =============================================================================
+
+  - name: sensitive_personal_data
+    description: Government identifiers and Article 9 special category data requiring elevated protection
+    source_type: category
+    indicator_values:
+      - government_id
+      - health
+      - political
+      - racial_ethnic
+      - religious
+      - genetic
+      - biometric
+      - sexual_orientation
+    security_domain: data_protection
+    secondary_domain: people_controls
+
+  - name: standard_personal_data
+    description: Standard personal data categories mapping to data protection domain
+    source_type: category
+    indicator_values:
+      - name
+      - email
+      - phone
+      - address
+      - date_of_birth
+      - user_identifier
+      - account
+      - subscription
+      - payment
+      - financial
+      - user_activity
+      - analytics
+      - device
+      - network
+      - browser
+      - cookie
+      - inferred
+      - preference
+      - location
+      - precise_location
+      - user_content
+    security_domain: data_protection

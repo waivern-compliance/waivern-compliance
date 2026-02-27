@@ -6,7 +6,7 @@ name: processing_purposes
 version: 1.0.0
 description: Ruleset for detecting processing purpose patterns in source code and documents
 
-# Master list of valid processing purpose names
+# Master list of valid processing purpose names (human-readable)
 # Each rule's name must match an entry in this list
 purposes:
   # AI and Machine Learning
@@ -32,12 +32,34 @@ purposes:
   # Security
   - Security, Fraud Prevention, and Abuse Detection
 
+# Master list of valid purpose slugs (snake_case, used in findings output)
+# Each rule's purpose must match an entry in this list
+purpose_slugs:
+  - ai_model_training
+  - ai_bias_testing
+  - ai_model_refinement
+  - ai_performance_testing
+  - ai_security_testing
+  - ai_compliance_management
+  - product_service_delivery
+  - customer_service_support
+  - product_customisation
+  - user_identity_login
+  - payment_billing
+  - behavioral_analytics
+  - dynamic_personalisation
+  - consumer_marketing
+  - third_party_targeted_marketing
+  - third_party_marketing
+  - security_fraud_prevention
+
 rules:
   # =============================================================================
   # AI and Machine Learning Purposes
   # =============================================================================
 
   - name: Artificial Intelligence Model Training
+    purpose: ai_model_training
     description: Training AI/ML models using personal data
     patterns:
       - model training
@@ -60,6 +82,7 @@ rules:
       - feast
 
   - name: Artificial Intelligence Bias Testing
+    purpose: ai_bias_testing
     description: Testing AI/ML models for bias and fairness issues
     patterns:
       - bias testing
@@ -85,6 +108,7 @@ rules:
       - parity ai
 
   - name: Artificial Intelligence Model Refinement
+    purpose: ai_model_refinement
     description: Refining and improving AI/ML models for better performance
     patterns:
       - model refinement
@@ -111,6 +135,7 @@ rules:
       - labelbox
 
   - name: Artificial Intelligence Performance Testing
+    purpose: ai_performance_testing
     description: Testing AI/ML model performance, accuracy, and robustness
     patterns:
       - performance testing
@@ -131,6 +156,7 @@ rules:
       - decoding trust benchmark
 
   - name: Artificial Intelligence Security Testing
+    purpose: ai_security_testing
     description: Testing AI/ML models for security vulnerabilities and threats
     patterns:
       - security testing
@@ -155,6 +181,7 @@ rules:
       - shellgpt
 
   - name: Artificial Intelligence Compliance Management
+    purpose: ai_compliance_management
     description: Managing AI/ML compliance, governance, and regulatory requirements
     patterns:
       - compliance
@@ -190,6 +217,7 @@ rules:
   # =============================================================================
 
   - name: General Product and Service Delivery
+    purpose: product_service_delivery
     description: Delivering products and services to customers and users
     patterns:
       - service
@@ -210,6 +238,7 @@ rules:
       - Dr Publish
 
   - name: Customer Service and Support
+    purpose: customer_service_support
     description: Providing customer service, support, and assistance
     patterns:
       - support
@@ -228,6 +257,7 @@ rules:
       - liveagent
 
   - name: Customization of Products and Services
+    purpose: product_customisation
     description: Customising products and services based on user preferences
     patterns:
       - customisation
@@ -239,6 +269,7 @@ rules:
       - personalization
 
   - name: User Identity and Login Management
+    purpose: user_identity_login
     description: Managing user identity, authentication, and login processes
     patterns:
       - authentication
@@ -307,6 +338,7 @@ rules:
       - forgerock
 
   - name: Payment, Billing, and Invoicing
+    purpose: payment_billing
     description: Processing payments, billing, and financial transactions
     patterns:
       - payment
@@ -351,6 +383,7 @@ rules:
   # =============================================================================
 
   - name: Behavioral Data Analysis for Product Improvement
+    purpose: behavioral_analytics
     description: Analysing user behaviour and data to improve products and services
     patterns:
       - analytics
@@ -389,6 +422,7 @@ rules:
   # =============================================================================
 
   - name: Dynamic Personalization of Products and Services
+    purpose: dynamic_personalisation
     description: Dynamically personalising products and services based on user data
     patterns:
       - personalization
@@ -417,6 +451,7 @@ rules:
       - Clevertap
 
   - name: Consumer Marketing Within Owned Products
+    purpose: consumer_marketing
     description: Marketing and promotional activities within company-owned products and platforms
     patterns:
       - marketing
@@ -436,6 +471,7 @@ rules:
       - onesignal
 
   - name: Targeted Marketing via Third-Party Platforms
+    purpose: third_party_targeted_marketing
     description: Targeted marketing and advertising through third-party platforms
     patterns:
       - advertising
@@ -452,6 +488,7 @@ rules:
       - linkedin ads
 
   - name: Third-Party Marketing via Owned Products
+    purpose: third_party_marketing
     description: Third-party marketing and advertising activities conducted through company-owned products
     patterns:
       - partner marketing
@@ -469,6 +506,7 @@ rules:
   # =============================================================================
 
   - name: Security, Fraud Prevention, and Abuse Detection
+    purpose: security_fraud_prevention
     description: Protecting against security threats, fraud, and platform abuse
     patterns:
       - security

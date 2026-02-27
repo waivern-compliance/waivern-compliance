@@ -15,11 +15,15 @@ from waivern_rulesets.core.base import YAMLRuleset
 class ProcessingPurposeRule(DetectionRule):
     """Processing purpose detection rule.
 
-    A simple detection rule for identifying processing purposes.
     Inherits name, description, patterns, and value_patterns from DetectionRule.
+    The `purpose` slug is the canonical machine-readable identifier output in
+    findings — distinct from the human-readable `name` field.
     """
 
-    pass
+    purpose: str = Field(
+        description="Snake_case slug used as the canonical purpose identifier in findings "
+        "(e.g. 'user_identity_login'). Distinct from the human-readable rule name.",
+    )
 
 
 class ProcessingPurposesRulesetData(RulesetData[ProcessingPurposeRule]):
@@ -28,17 +32,26 @@ class ProcessingPurposesRulesetData(RulesetData[ProcessingPurposeRule]):
     purposes: list[str] = Field(
         min_length=1, description="Master list of valid processing purpose names"
     )
+    purpose_slugs: list[str] = Field(
+        min_length=1, description="Master list of valid purpose slugs (snake_case)"
+    )
 
     @model_validator(mode="after")
-    def validate_rule_names_in_purposes(self) -> "ProcessingPurposesRulesetData":
-        """Validate all rule names exist in the purposes list."""
+    def validate_rules(self) -> "ProcessingPurposesRulesetData":
+        """Validate all rule names and purpose slugs against master lists."""
         valid_purposes = set(self.purposes)
+        valid_slugs = set(self.purpose_slugs)
 
         for rule in self.rules:
             if rule.name not in valid_purposes:
                 raise ValueError(
                     f"Rule '{rule.name}' is not in purposes list. "
                     f"Add it to purposes or remove the rule."
+                )
+            if rule.purpose not in valid_slugs:
+                raise ValueError(
+                    f"Rule '{rule.name}' has purpose slug '{rule.purpose}' "
+                    f"not in purpose_slugs list. Add it to purpose_slugs or fix the slug."
                 )
         return self
 

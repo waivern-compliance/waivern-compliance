@@ -79,7 +79,7 @@ class ProcessingPurposePatternMatcher:
                 ]
 
                 finding = ProcessingPurposeIndicatorModel(
-                    purpose=rule.name,
+                    purpose=rule.purpose,
                     matched_patterns=matched_patterns,
                     evidence=evidence_items,
                     metadata=ProcessingPurposeIndicatorMetadata(
