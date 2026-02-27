@@ -27,6 +27,7 @@ waivern-rulesets = { workspace = true }
 waivern-analysers-shared = { workspace = true }
 waivern-personal-data-analyser = { workspace = true }
 waivern-crypto-quality-analyser = { workspace = true }
+waivern-security-evidence = { workspace = true }
 waivern-compliance-tool = { workspace = true }
 
 [project]

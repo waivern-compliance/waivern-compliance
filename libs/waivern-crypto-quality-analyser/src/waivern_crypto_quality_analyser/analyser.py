@@ -100,6 +100,9 @@ class CryptoQualityAnalyser(Analyser):
             Flattened list of all data items from all inputs.
 
         """
+        # Explicit annotation required: basedpyright strict mode infers [] as
+        # list[Unknown], causing reportUnknownMemberType on .extend() calls.
+        # Follow this pattern in all analyser methods that accumulate findings.
         all_data_items: list[StandardInputDataItemModel[BaseMetadata]] = []
         for message in inputs:
             reader = self._load_reader(message.schema)

@@ -224,6 +224,7 @@ All commands (`uv run wct`, `uv run pytest`, etc.) should be run from the worksp
 2. Add standard scripts: `scripts/lint.sh`, `scripts/format.sh`, `scripts/type-check.sh`
 3. Add to `[tool.uv.sources]` in root `pyproject.toml` if used as dependency
 4. Run `uv sync`
+5. Run `chmod +x libs/<package>/scripts/*.sh` — the `Write` tool creates files without execute permission, so `dev-checks.sh` will fail with "Permission denied" without this step
 
 ## Resources
 
