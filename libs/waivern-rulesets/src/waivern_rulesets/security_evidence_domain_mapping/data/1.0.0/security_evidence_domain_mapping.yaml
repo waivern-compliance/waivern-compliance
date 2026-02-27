@@ -81,6 +81,25 @@ indicator_categories:
   - biometric
   - sexual_orientation
 
+# Master list of valid cryptographic algorithm identifiers
+# DEPENDENCY: Must stay in sync with algorithm values in crypto_quality_indicator/1.0.0.
+# When adding or removing an algorithm there, update this list and add or remove entries
+# to the cryptographic_algorithms rule below.
+# The test test_all_algorithm_values_are_covered will fail if any algorithm is unmapped.
+algorithm_values:
+  - md5
+  - sha1
+  - des
+  - rc4
+  - blowfish
+  - aes_128
+  - bcrypt
+  - argon2
+  - scrypt
+  - pbkdf2
+  - aes_256
+  - chacha20
+
 rules:
   # =============================================================================
   # Purpose-based mappings
@@ -168,3 +187,26 @@ rules:
       - precise_location
       - user_content
     security_domain: data_protection
+
+  # =============================================================================
+  # Algorithm-based mappings
+  # Maps crypto_quality_indicator.algorithm values to security domains
+  # =============================================================================
+
+  - name: cryptographic_algorithms
+    description: All cryptographic algorithm detections map to the encryption domain regardless of quality rating; polarity (positive/negative) carries the quality signal
+    source_type: algorithm
+    indicator_values:
+      - md5
+      - sha1
+      - des
+      - rc4
+      - blowfish
+      - aes_128
+      - bcrypt
+      - argon2
+      - scrypt
+      - pbkdf2
+      - aes_256
+      - chacha20
+    security_domain: encryption

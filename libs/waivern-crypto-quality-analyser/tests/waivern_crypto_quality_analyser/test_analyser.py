@@ -1,10 +1,4 @@
-"""Unit tests for CryptoQualityAnalyser.
-
-Tests are grouped by concern:
-  B - Polarity and algorithm field derivation
-  C - Output message structure
-  D - Fan-in (multiple input messages)
-"""
+"""Unit tests for CryptoQualityAnalyser."""
 
 import pytest
 from waivern_core import AnalyserContractTests
@@ -13,6 +7,10 @@ from waivern_core.schemas import Schema
 
 from waivern_crypto_quality_analyser.analyser import CryptoQualityAnalyser
 from waivern_crypto_quality_analyser.types import CryptoQualityAnalyserConfig
+
+# =============================================================================
+# Contract tests
+# =============================================================================
 
 
 class TestCryptoQualityAnalyserContract(AnalyserContractTests[CryptoQualityAnalyser]):
@@ -28,8 +26,13 @@ class TestCryptoQualityAnalyserContract(AnalyserContractTests[CryptoQualityAnaly
         return CryptoQualityAnalyser
 
 
-class TestCryptoQualityAnalyser:
-    """Behavioural tests for CryptoQualityAnalyser."""
+# =============================================================================
+# Polarity and algorithm field derivation
+# =============================================================================
+
+
+class TestCryptoQualityPolarity:
+    """Tests for polarity assignment and algorithm field derivation."""
 
     @pytest.fixture
     def valid_config(self) -> CryptoQualityAnalyserConfig:
@@ -103,8 +106,6 @@ class TestCryptoQualityAnalyser:
     def output_schema(self) -> Schema:
         """Return the standard output schema for crypto_quality_indicator."""
         return Schema("crypto_quality_indicator", "1.0.0")
-
-    # ─── Group B: Polarity and algorithm field derivation ────────────────────
 
     def test_deprecated_algorithm_produces_negative_polarity(
         self,
@@ -200,7 +201,45 @@ class TestCryptoQualityAnalyser:
         assert result.content["findings"] == []
         assert result.content["summary"]["total_findings"] == 0
 
-    # ─── Group C: Output message structure ──────────────────────────────────
+
+# =============================================================================
+# Output message structure
+# =============================================================================
+
+
+class TestCryptoQualityOutputStructure:
+    """Tests for the shape and schema compliance of the output message."""
+
+    @pytest.fixture
+    def valid_config(self) -> CryptoQualityAnalyserConfig:
+        """Return default configuration using local crypto_quality_indicator ruleset."""
+        return CryptoQualityAnalyserConfig()
+
+    @pytest.fixture
+    def deprecated_input_message(self) -> Message:
+        """Input message containing a deprecated algorithm reference."""
+        return Message(
+            id="test_deprecated",
+            content={
+                "schemaVersion": "1.0.0",
+                "name": "Test source",
+                "data": [
+                    {
+                        "content": "password_hash = md5(password)",
+                        "metadata": {
+                            "source": "auth.php",
+                            "connector_type": "filesystem",
+                        },
+                    }
+                ],
+            },
+            schema=Schema("standard_input", "1.0.0"),
+        )
+
+    @pytest.fixture
+    def output_schema(self) -> Schema:
+        """Return the standard output schema for crypto_quality_indicator."""
+        return Schema("crypto_quality_indicator", "1.0.0")
 
     def test_process_returns_valid_output_message_structure(
         self,
@@ -233,7 +272,66 @@ class TestCryptoQualityAnalyser:
         summary = result.content["summary"]
         assert summary["total_findings"] == len(findings)
 
-    # ─── Group D: Fan-in ────────────────────────────────────────────────────
+
+# =============================================================================
+# Fan-in (multiple input messages)
+# =============================================================================
+
+
+class TestCryptoQualityFanIn:
+    """Tests for fan-in: multiple input messages produce merged findings."""
+
+    @pytest.fixture
+    def valid_config(self) -> CryptoQualityAnalyserConfig:
+        """Return default configuration using local crypto_quality_indicator ruleset."""
+        return CryptoQualityAnalyserConfig()
+
+    @pytest.fixture
+    def deprecated_input_message(self) -> Message:
+        """Input message containing a deprecated algorithm reference."""
+        return Message(
+            id="test_deprecated",
+            content={
+                "schemaVersion": "1.0.0",
+                "name": "Test source",
+                "data": [
+                    {
+                        "content": "password_hash = md5(password)",
+                        "metadata": {
+                            "source": "auth.php",
+                            "connector_type": "filesystem",
+                        },
+                    }
+                ],
+            },
+            schema=Schema("standard_input", "1.0.0"),
+        )
+
+    @pytest.fixture
+    def strong_input_message(self) -> Message:
+        """Input message containing a strong algorithm reference."""
+        return Message(
+            id="test_strong",
+            content={
+                "schemaVersion": "1.0.0",
+                "name": "Test source",
+                "data": [
+                    {
+                        "content": "hashed = bcrypt.hashpw(password, bcrypt.gensalt())",
+                        "metadata": {
+                            "source": "auth.php",
+                            "connector_type": "filesystem",
+                        },
+                    }
+                ],
+            },
+            schema=Schema("standard_input", "1.0.0"),
+        )
+
+    @pytest.fixture
+    def output_schema(self) -> Schema:
+        """Return the standard output schema for crypto_quality_indicator."""
+        return Schema("crypto_quality_indicator", "1.0.0")
 
     def test_process_merges_findings_from_multiple_inputs(
         self,

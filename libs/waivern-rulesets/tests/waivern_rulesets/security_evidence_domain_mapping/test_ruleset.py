@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from waivern_rulesets import AbstractRuleset
+from waivern_rulesets.crypto_quality_indicator import CryptoQualityIndicatorRuleset
 from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRuleset
 from waivern_rulesets.processing_purposes import ProcessingPurposesRuleset
 from waivern_rulesets.security_evidence_domain_mapping import (
@@ -73,6 +74,7 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
                 security_domains=["authentication", "data_protection"],
                 purpose_slugs=["user_identity_login"],
                 indicator_categories=["email"],
+                algorithm_values=["bcrypt"],
                 rules=[rule],
             )
 
@@ -95,6 +97,7 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
                 security_domains=["authentication", "data_protection"],
                 purpose_slugs=["user_identity_login"],
                 indicator_categories=["email"],
+                algorithm_values=["bcrypt"],
                 rules=[rule],
             )
 
@@ -116,6 +119,7 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
                 security_domains=["authentication"],
                 purpose_slugs=["user_identity_login"],
                 indicator_categories=["email"],
+                algorithm_values=["bcrypt"],
                 rules=[rule],
             )
 
@@ -137,6 +141,29 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
                 security_domains=["data_protection"],
                 purpose_slugs=["user_identity_login"],
                 indicator_categories=["email"],
+                algorithm_values=["bcrypt"],
+                rules=[rule],
+            )
+
+    def test_rejects_invalid_algorithm_indicator_values(self) -> None:
+        """Test that algorithm rules with values not in algorithm_values list are rejected."""
+        rule = SecurityEvidenceDomainMappingRule(
+            name="invalid_algorithm_rule",
+            description="Rule with invalid algorithm value",
+            source_type="algorithm",
+            indicator_values=("nonexistent_algo",),
+            security_domain="encryption",
+        )
+
+        with pytest.raises(ValidationError, match="invalid algorithm indicator_values"):
+            SecurityEvidenceDomainMappingRulesetData(
+                name="test_ruleset",
+                version="1.0.0",
+                description="Test ruleset",
+                security_domains=["encryption"],
+                purpose_slugs=["user_identity_login"],
+                indicator_categories=["email"],
+                algorithm_values=["bcrypt"],
                 rules=[rule],
             )
 
@@ -159,6 +186,7 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
             security_domains=["data_protection", "people_controls"],
             purpose_slugs=["user_identity_login"],
             indicator_categories=["health"],
+            algorithm_values=["bcrypt"],
             rules=[rule],
         )
 
@@ -265,4 +293,39 @@ class TestSecurityEvidenceDomainMappingRulesetBusinessRules:
                 ]
                 assert not invalid, (
                     f"Rule '{rule.name}' has invalid indicator categories: {invalid}"
+                )
+
+    def test_all_algorithm_values_are_covered(
+        self, ruleset: SecurityEvidenceDomainMappingRuleset
+    ) -> None:
+        """Test that every algorithm from the crypto_quality_indicator ruleset is mapped."""
+        all_algorithms: set[str] = {
+            rule.algorithm for rule in CryptoQualityIndicatorRuleset().get_rules()
+        }
+
+        mapped_algorithms: set[str] = {
+            v
+            for rule in ruleset.get_rules()
+            if rule.source_type == "algorithm"
+            for v in rule.indicator_values
+        }
+
+        uncovered = all_algorithms - mapped_algorithms
+        assert not uncovered, f"Algorithm values not covered by any rule: {uncovered}"
+
+    def test_algorithm_rules_use_valid_algorithm_values(
+        self, ruleset: SecurityEvidenceDomainMappingRuleset
+    ) -> None:
+        """Test that all algorithm indicator_values are valid algorithms from the upstream ruleset."""
+        valid_algorithms: set[str] = {
+            rule.algorithm for rule in CryptoQualityIndicatorRuleset().get_rules()
+        }
+
+        for rule in ruleset.get_rules():
+            if rule.source_type == "algorithm":
+                invalid = [
+                    v for v in rule.indicator_values if v not in valid_algorithms
+                ]
+                assert not invalid, (
+                    f"Rule '{rule.name}' has invalid algorithm values: {invalid}"
                 )
