@@ -1,0 +1,117 @@
+# Crypto Quality Indicator Ruleset
+# Detects cryptographic algorithm usage and rates implementation quality.
+#
+# quality_rating values:
+#   strong     - Modern, recommended algorithm (positive polarity)
+#   weak       - Functional but below current best-practice (negative polarity)
+#   deprecated - Cryptographically broken or insecure (negative polarity)
+
+name: crypto_quality_indicator
+version: 1.0.0
+description: Ruleset for detecting cryptographic algorithm usage and evaluating implementation quality
+
+rules:
+  # ===========================================================================
+  # Deprecated — cryptographically broken
+  # ===========================================================================
+
+  - name: MD5
+    description: MD5 hash function (collision attacks demonstrated, unsuitable for security use)
+    algorithm: md5
+    quality_rating: deprecated
+    patterns:
+      - md5
+      - md5_hash
+      - md5_digest
+
+  - name: SHA-1
+    description: SHA-1 hash function (collision attacks demonstrated, deprecated by NIST)
+    algorithm: sha1
+    quality_rating: deprecated
+    patterns:
+      - sha1
+      - sha_1
+
+  - name: DES
+    description: Data Encryption Standard (56-bit key, brute-forceable)
+    algorithm: des
+    quality_rating: deprecated
+    patterns:
+      - des_encrypt
+      - des_decrypt
+      - triple_des
+      - 3des
+
+  - name: RC4
+    description: RC4 stream cipher (known biases, prohibited in TLS 1.3)
+    algorithm: rc4
+    quality_rating: deprecated
+    patterns:
+      - rc4
+      - arcfour
+
+  # ===========================================================================
+  # Weak — not broken but below current best practice
+  # ===========================================================================
+
+  - name: Blowfish
+    description: Blowfish cipher (64-bit block size, birthday-attack risk; superseded by AES)
+    algorithm: blowfish
+    quality_rating: weak
+    patterns:
+      - blowfish
+
+  - name: AES-128
+    description: AES with 128-bit key (secure but AES-256 preferred for new systems)
+    algorithm: aes_128
+    quality_rating: weak
+    patterns:
+      - aes_128
+      - aes128
+
+  # ===========================================================================
+  # Strong — current best practice
+  # ===========================================================================
+
+  - name: bcrypt
+    description: bcrypt password-hashing function (adaptive cost, salted)
+    algorithm: bcrypt
+    quality_rating: strong
+    patterns:
+      - bcrypt
+
+  - name: Argon2
+    description: Argon2 key derivation function (winner of Password Hashing Competition)
+    algorithm: argon2
+    quality_rating: strong
+    patterns:
+      - argon2
+
+  - name: scrypt
+    description: scrypt key derivation function (memory-hard, resistant to hardware attacks)
+    algorithm: scrypt
+    quality_rating: strong
+    patterns:
+      - scrypt
+
+  - name: PBKDF2
+    description: PBKDF2 key derivation function (NIST recommended, widely supported)
+    algorithm: pbkdf2
+    quality_rating: strong
+    patterns:
+      - pbkdf2
+
+  - name: AES-256
+    description: AES with 256-bit key (current standard for symmetric encryption)
+    algorithm: aes_256
+    quality_rating: strong
+    patterns:
+      - aes_256
+      - aes256
+
+  - name: ChaCha20
+    description: ChaCha20 stream cipher (modern, constant-time, side-channel resistant)
+    algorithm: chacha20
+    quality_rating: strong
+    patterns:
+      - chacha20

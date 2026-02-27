@@ -1,0 +1,264 @@
+{
+  "$defs": {
+    "BaseAnalysisOutputMetadata": {
+      "additionalProperties": true,
+      "description": "Base metadata for analysis outputs.",
+      "properties": {
+        "ruleset_used": {
+          "description": "Name of the ruleset used for analysis",
+          "title": "Ruleset Used",
+          "type": "string"
+        },
+        "llm_validation_enabled": {
+          "description": "Whether LLM validation was enabled for this analysis",
+          "title": "Llm Validation Enabled",
+          "type": "boolean"
+        },
+        "analysis_timestamp": {
+          "description": "ISO 8601 timestamp when the analysis was performed",
+          "title": "Analysis Timestamp",
+          "type": "string"
+        },
+        "evidence_context_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Size of context used for evidence extraction",
+          "title": "Evidence Context Size"
+        }
+      },
+      "required": [
+        "ruleset_used",
+        "llm_validation_enabled"
+      ],
+      "title": "BaseAnalysisOutputMetadata",
+      "type": "object"
+    },
+    "BaseFindingEvidence": {
+      "description": "Evidence item with content and collection timestamp.",
+      "properties": {
+        "content": {
+          "description": "The evidence content snippet",
+          "title": "Content",
+          "type": "string"
+        },
+        "collection_timestamp": {
+          "description": "When the evidence was collected",
+          "title": "Collection Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "BaseFindingEvidence",
+      "type": "object"
+    },
+    "CryptoQualityIndicatorMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata for crypto quality indicator findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the algorithm was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "properties": {
+        "source": {
+          "description": "Source file or location where the data was found",
+          "title": "Source",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
+          "title": "Context",
+          "type": "object"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "CryptoQualityIndicatorMetadata",
+      "type": "object"
+    },
+    "CryptoQualityIndicatorModel": {
+      "description": "Crypto quality indicator finding structure.\n\nCaptures a single cryptographic algorithm usage in source code and\nassigns a quality rating and polarity. Polarity is set by the pattern\nmatcher at construction time based on quality_rating:\n    strong     \u2192 positive\n    weak       \u2192 negative\n    deprecated \u2192 negative\n\nInherits from BaseFindingModel[CryptoQualityIndicatorMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with context\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: CryptoQualityIndicatorMetadata - Required metadata with source\n- require_review: bool | None - Whether this finding requires human review",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this finding (UUID)",
+          "title": "Id",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "Evidence items with content and timestamps for this finding",
+          "items": {
+            "$ref": "#/$defs/BaseFindingEvidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "matched_patterns": {
+          "description": "Patterns that were matched during analysis with occurrence counts",
+          "items": {
+            "$ref": "#/$defs/PatternMatchDetail"
+          },
+          "minItems": 1,
+          "title": "Matched Patterns",
+          "type": "array"
+        },
+        "metadata": {
+          "$ref": "#/$defs/CryptoQualityIndicatorMetadata",
+          "description": "Metadata with source and context information"
+        },
+        "require_review": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether this finding requires human review. Only present when True.",
+          "title": "Require Review"
+        },
+        "algorithm": {
+          "description": "Canonical algorithm name (e.g., 'md5', 'bcrypt')",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "quality_rating": {
+          "description": "Cryptographic quality rating of the detected algorithm",
+          "enum": [
+            "strong",
+            "weak",
+            "deprecated"
+          ],
+          "title": "Quality Rating",
+          "type": "string"
+        },
+        "polarity": {
+          "description": "Evidence polarity derived from quality_rating: strong \u2192 positive, weak/deprecated \u2192 negative",
+          "enum": [
+            "positive",
+            "negative"
+          ],
+          "title": "Polarity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence",
+        "matched_patterns",
+        "metadata",
+        "algorithm",
+        "quality_rating",
+        "polarity"
+      ],
+      "title": "CryptoQualityIndicatorModel",
+      "type": "object"
+    },
+    "CryptoQualityIndicatorSummary": {
+      "description": "Summary statistics for crypto quality indicator findings.",
+      "properties": {
+        "total_findings": {
+          "description": "Total number of crypto quality indicators found",
+          "minimum": 0,
+          "title": "Total Findings",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total_findings"
+      ],
+      "title": "CryptoQualityIndicatorSummary",
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "PatternMatchDetail": {
+      "description": "Detail about a matched pattern including occurrence count.\n\nThis structured type replaces simple pattern strings to provide\nricher information about how many times each pattern was found,\nwhich is useful for auditing and confidence assessment.",
+      "properties": {
+        "pattern": {
+          "description": "The pattern that matched",
+          "title": "Pattern",
+          "type": "string"
+        },
+        "match_count": {
+          "description": "Number of times this pattern matched in the content",
+          "minimum": 1,
+          "title": "Match Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pattern",
+        "match_count"
+      ],
+      "title": "PatternMatchDetail",
+      "type": "object"
+    }
+  },
+  "description": "Complete output structure for crypto_quality_indicator schema.\n\nRepresents the full wire format for crypto quality indicator results.\nThese indicators feed directly into SecurityEvidenceNormaliser, which\nmaps them to security_evidence items with polarity for gap analysis.",
+  "properties": {
+    "findings": {
+      "description": "List of cryptographic algorithm quality indicators found",
+      "items": {
+        "$ref": "#/$defs/CryptoQualityIndicatorModel"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/CryptoQualityIndicatorSummary",
+      "description": "Summary statistics of the crypto quality analysis"
+    },
+    "analysis_metadata": {
+      "$ref": "#/$defs/BaseAnalysisOutputMetadata",
+      "description": "Metadata about the analysis process"
+    }
+  },
+  "required": [
+    "findings",
+    "summary",
+    "analysis_metadata"
+  ],
+  "title": "CryptoQualityIndicatorOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}

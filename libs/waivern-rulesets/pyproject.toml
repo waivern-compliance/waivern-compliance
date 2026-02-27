@@ -18,6 +18,7 @@ dev = [
 
 # Ruleset auto-discovery via entry points
 [project.entry-points."waivern.rulesets"]
+crypto_quality_indicator = "waivern_rulesets.crypto_quality_indicator:CryptoQualityIndicatorRuleset"
 personal_data_indicator = "waivern_rulesets.personal_data_indicator:PersonalDataIndicatorRuleset"
 processing_purposes = "waivern_rulesets.processing_purposes:ProcessingPurposesRuleset"
 data_collection = "waivern_rulesets.data_collection:DataCollectionRuleset"

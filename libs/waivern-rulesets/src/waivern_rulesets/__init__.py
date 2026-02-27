@@ -14,6 +14,10 @@ from waivern_rulesets.core import (
 )
 
 # Detection rulesets
+from waivern_rulesets.crypto_quality_indicator import (
+    CryptoQualityIndicatorRule,
+    CryptoQualityIndicatorRuleset,
+)
 from waivern_rulesets.data_collection import (
     DataCollectionRule,
     DataCollectionRuleset,
@@ -74,6 +78,7 @@ __all__ = [
     # Protocols
     "DataSubjectClassificationRulesetProtocol",
     # Rulesets
+    "CryptoQualityIndicatorRuleset",
     "PersonalDataIndicatorRuleset",
     "ProcessingPurposesRuleset",
     "DataCollectionRuleset",
@@ -83,6 +88,7 @@ __all__ = [
     "GDPRDataSubjectClassificationRuleset",
     "GDPRProcessingPurposeClassificationRuleset",
     # Rule types
+    "CryptoQualityIndicatorRule",
     "PersonalDataIndicatorRule",
     "ProcessingPurposeRule",
     "DataCollectionRule",
