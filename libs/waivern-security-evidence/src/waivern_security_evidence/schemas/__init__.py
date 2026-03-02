@@ -2,6 +2,7 @@
 
 from .types import (
     SecurityDomain,
+    SecurityEvidenceMetadata,
     SecurityEvidenceModel,
     SecurityEvidenceOutput,
     SecurityEvidenceSummary,
@@ -9,6 +10,7 @@ from .types import (
 
 __all__ = [
     "SecurityDomain",
+    "SecurityEvidenceMetadata",
     "SecurityEvidenceModel",
     "SecurityEvidenceOutput",
     "SecurityEvidenceSummary",
