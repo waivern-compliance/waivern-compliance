@@ -4,13 +4,30 @@ Compliance rulesets for Waivern Compliance Framework.
 
 ## Overview
 
-This package provides GDPR and privacy compliance rulesets used by analysers:
+This package provides compliance rulesets used by analysers:
 
 - **personal_data**: Detects personal data patterns (GDPR Article 4)
 - **processing_purposes**: Identifies data processing purposes (GDPR Article 30)
 - **data_collection**: Detects data collection methods
 - **service_integrations**: Identifies third-party service integrations
 - **data_subjects**: Detects data subject categories
+- **security_evidence_domain_mapping**: Maps indicator findings to security domains
+- **iso27001_domains**: ISO 27001 Annex A clause definitions for `ControlAssessor`
+
+## Disclaimer
+
+Rulesets in this package that reference compliance frameworks (GDPR, ISO 27001,
+NIS2, DORA, etc.) are derived from **publicly available summaries, paraphrases,
+and LLM-generated descriptions** of those standards. They are **not** copies of
+any official or licensed standards text.
+
+For authoritative, verbatim control text (e.g. licensed ISO 27001 content),
+use the `rag/` provider URI, which routes to a licensed backend:
+
+```yaml
+domain_ruleset: "rag/iso27001_domains/1.0.0"   # licensed text via Bedrock
+domain_ruleset: "local/iso27001_domains/1.0.0"  # paraphrased summaries (default)
+```
 
 Each ruleset includes:
 - Strongly-typed Pydantic rule models
