@@ -52,8 +52,10 @@ class TestISO27001DomainsRulesetDataValidation:
         return ISO27001DomainsRule(
             name=name,
             description="A test rule",
-            domain="A.5",
+            control_ref="A.5.1",
             security_domains=("authentication",),
+            evidence_source=("TECHNICAL",),
+            attestation_required=False,
             control_type="preventive",
             cia=("confidentiality",),
             cybersecurity_concept="identify",
@@ -67,8 +69,10 @@ class TestISO27001DomainsRulesetDataValidation:
         rule = ISO27001DomainsRule(
             name="invalid_domain_rule",
             description="Rule with invalid security_domain",
-            domain="A.5",
+            control_ref="A.5.1",
             security_domains=("nonexistent_domain",),
+            evidence_source=(),
+            attestation_required=True,
             control_type="preventive",
             cia=("confidentiality",),
             cybersecurity_concept="identify",
@@ -92,8 +96,10 @@ class TestISO27001DomainsRulesetDataValidation:
             ISO27001DomainsRule(
                 name="empty_guidance_rule",
                 description="Rule with empty guidance_text",
-                domain="A.5",
-                security_domains=("authentication",),
+                control_ref="A.5.1",
+                security_domains=(),
+                evidence_source=(),
+                attestation_required=True,
                 control_type="preventive",
                 cia=("confidentiality",),
                 cybersecurity_concept="identify",
@@ -124,27 +130,20 @@ class TestISO27001DomainsRulesetBusinessRules:
     def test_all_four_annex_a_clauses_present(
         self, ruleset: ISO27001DomainsRuleset
     ) -> None:
-        """Test that all four Annex A clauses have a rule (A.5, A.6, A.7, A.8)."""
-        domains = {rule.domain for rule in ruleset.get_rules()}
-        assert {"A.5", "A.6", "A.7", "A.8"}.issubset(domains), (
-            f"Missing Annex A clauses. Found: {domains}"
+        """Test that all four Annex A clauses have at least one control (A.5, A.6, A.7, A.8)."""
+        clauses = {rule.control_ref[:3] for rule in ruleset.get_rules()}
+        assert {"A.5", "A.6", "A.7", "A.8"}.issubset(clauses), (
+            f"Missing Annex A clauses. Found clause prefixes: {clauses}"
         )
 
-    def test_domain_values_are_unique(self, ruleset: ISO27001DomainsRuleset) -> None:
-        """Test that no two rules share the same domain value."""
-        domains = [rule.domain for rule in ruleset.get_rules()]
-        assert len(domains) == len(set(domains)), (
-            f"Duplicate domain values: {[d for d in domains if domains.count(d) > 1]}"
-        )
-
-    def test_every_rule_has_at_least_one_security_domain(
+    def test_control_ref_values_are_unique(
         self, ruleset: ISO27001DomainsRuleset
     ) -> None:
-        """Test that no rule has an empty security_domains tuple."""
-        for rule in ruleset.get_rules():
-            assert len(rule.security_domains) > 0, (
-                f"Rule '{rule.name}' (domain {rule.domain}) has no security_domains"
-            )
+        """Test that no two rules share the same control_ref value."""
+        refs = [rule.control_ref for rule in ruleset.get_rules()]
+        assert len(refs) == len(set(refs)), (
+            f"Duplicate control_ref values: {[r for r in refs if refs.count(r) > 1]}"
+        )
 
     def test_all_security_domains_are_covered(
         self, ruleset: ISO27001DomainsRuleset
@@ -152,7 +151,8 @@ class TestISO27001DomainsRulesetBusinessRules:
         """Test that every security taxonomy domain is covered by at least one rule.
 
         Ensures no security_evidence items are silently unassessable because their
-        domain maps to no Annex A clause.
+        domain maps to no ISO 27001 control. Physical controls cover physical_security
+        via document evidence from physical security policies and audit reports.
 
         DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence.
         When adding or removing a domain there, update this set accordingly.
@@ -177,3 +177,47 @@ class TestISO27001DomainsRulesetBusinessRules:
         uncovered = expected_domains - covered_domains
 
         assert not uncovered, f"Security domains not covered by any rule: {uncovered}"
+
+    def test_all_93_controls_are_present(self, ruleset: ISO27001DomainsRuleset) -> None:
+        """Test that exactly 93 individual Annex A controls are defined in the ruleset."""
+        assert len(ruleset.get_rules()) == 93, (
+            f"Expected 93 Annex A controls, got {len(ruleset.get_rules())}"
+        )
+
+    def test_physical_controls_have_physical_security_domain(
+        self, ruleset: ISO27001DomainsRuleset
+    ) -> None:
+        """Test that all A.7 physical controls include physical_security in their security_domains.
+
+        Document evidence from physical security policies and audit reports carries
+        security_domain: physical_security and must be routable to A.7.x controls.
+        """
+        physical_rules = [
+            r for r in ruleset.get_rules() if r.control_ref.startswith("A.7.")
+        ]
+        violations = [
+            r.control_ref
+            for r in physical_rules
+            if "physical_security" not in r.security_domains
+        ]
+        assert not violations, (
+            f"A.7 controls missing physical_security domain: {violations}"
+        )
+
+    def test_physical_controls_require_attestation(
+        self, ruleset: ISO27001DomainsRuleset
+    ) -> None:
+        """Test that all A.7 physical controls have attestation_required=True.
+
+        Physical controls (perimeters, entry, equipment) cannot be verified from
+        documents alone — a physical site visit is always required.
+        """
+        physical_rules = [
+            r for r in ruleset.get_rules() if r.control_ref.startswith("A.7.")
+        ]
+        violations = [
+            r.control_ref for r in physical_rules if not r.attestation_required
+        ]
+        assert not violations, (
+            f"A.7 controls missing attestation_required=True: {violations}"
+        )
