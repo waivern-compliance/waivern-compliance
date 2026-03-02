@@ -7,6 +7,7 @@ from waivern_core.schemas import SchemaRegistry
 
 from .schemas import (
     SecurityDomain,
+    SecurityEvidenceMetadata,
     SecurityEvidenceModel,
     SecurityEvidenceOutput,
     SecurityEvidenceSummary,
@@ -27,6 +28,7 @@ def register_schemas() -> None:
 
 __all__ = [
     "SecurityDomain",
+    "SecurityEvidenceMetadata",
     "SecurityEvidenceModel",
     "SecurityEvidenceOutput",
     "SecurityEvidenceSummary",

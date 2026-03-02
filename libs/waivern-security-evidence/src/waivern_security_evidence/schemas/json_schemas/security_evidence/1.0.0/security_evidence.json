@@ -59,6 +59,21 @@
       "title": "SecurityDomain",
       "type": "string"
     },
+    "SecurityEvidenceMetadata": {
+      "description": "Metadata for a security evidence item.\n\nSatisfies the FindingMetadata protocol via its source field, enabling\nSecurityEvidenceModel to be used directly with LLMService.complete[T, R].",
+      "properties": {
+        "source": {
+          "description": "Where the evidence was found. For code/config: file path. For documents: document name and section reference.",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "SecurityEvidenceMetadata",
+      "type": "object"
+    },
     "SecurityEvidenceModel": {
       "description": "A single normalised piece of security evidence.\n\nUnlike indicator models (which extend BaseFindingModel and carry raw\npattern match details), SecurityEvidenceModel is a normalised hub item.\nIt abstracts over the origin of the evidence \u2014 pattern-matched code,\nconfig file, or LLM-extracted document section \u2014 presenting a uniform\nstructure to downstream assessors.\n\nFields are deliberately broad to accommodate all three evidence paths:\n- CODE/CONFIG: produced by SecurityEvidenceNormaliser (no LLM)\n- DOCUMENT:    produced by DocumentEvidenceExtractor (LLM-based)",
       "properties": {
@@ -67,10 +82,9 @@
           "title": "Id",
           "type": "string"
         },
-        "source_location": {
-          "description": "Where the evidence was found. For code/config: file path. For documents: document name and section reference.",
-          "title": "Source Location",
-          "type": "string"
+        "metadata": {
+          "$ref": "#/$defs/SecurityEvidenceMetadata",
+          "description": "Metadata about the source of this evidence item"
         },
         "evidence_type": {
           "description": "Origin of the evidence: CODE, CONFIG, or DOCUMENT",
@@ -123,7 +137,7 @@
         }
       },
       "required": [
-        "source_location",
+        "metadata",
         "evidence_type",
         "security_domain",
         "polarity",

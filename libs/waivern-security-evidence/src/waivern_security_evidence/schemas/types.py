@@ -33,6 +33,21 @@ class SecurityDomain(StrEnum):
     BUSINESS_CONTINUITY = "business_continuity"
 
 
+class SecurityEvidenceMetadata(BaseModel):
+    """Metadata for a security evidence item.
+
+    Satisfies the FindingMetadata protocol via its source field, enabling
+    SecurityEvidenceModel to be used directly with LLMService.complete[T, R].
+    """
+
+    source: str = Field(
+        description=(
+            "Where the evidence was found. For code/config: file path. "
+            "For documents: document name and section reference."
+        )
+    )
+
+
 class SecurityEvidenceModel(BaseModel):
     """A single normalised piece of security evidence.
 
@@ -51,11 +66,8 @@ class SecurityEvidenceModel(BaseModel):
         default_factory=lambda: str(uuid.uuid4()),
         description="Unique identifier for this evidence item (UUID)",
     )
-    source_location: str = Field(
-        description=(
-            "Where the evidence was found. For code/config: file path. "
-            "For documents: document name and section reference."
-        )
+    metadata: SecurityEvidenceMetadata = Field(
+        description="Metadata about the source of this evidence item",
     )
     evidence_type: Literal["CODE", "CONFIG", "DOCUMENT"] = Field(
         description="Origin of the evidence: CODE, CONFIG, or DOCUMENT",

@@ -446,7 +446,7 @@ class TestFanIn:
         result = analyser.process([msg1, msg2], Schema("security_evidence", "1.0.0"))
 
         findings = result.content["findings"]
-        source_locations = {f["source_location"] for f in findings}
+        source_locations = {f["metadata"]["source"] for f in findings}
         assert "user.php" in source_locations
         assert "contact.php" in source_locations
 

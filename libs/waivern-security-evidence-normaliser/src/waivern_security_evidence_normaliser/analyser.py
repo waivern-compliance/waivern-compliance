@@ -27,6 +27,7 @@ from waivern_rulesets.security_evidence_domain_mapping import (
 )
 from waivern_security_evidence.schemas.types import (
     SecurityDomain,
+    SecurityEvidenceMetadata,
     SecurityEvidenceModel,
 )
 
@@ -204,7 +205,7 @@ class SecurityEvidenceNormaliser(Analyser):
 
         """
         item = SecurityEvidenceModel(
-            source_location=source_file,
+            metadata=SecurityEvidenceMetadata(source=source_file),
             evidence_type="CODE",
             security_domain=SecurityDomain(rule.security_domain),
             polarity=polarity,
@@ -217,7 +218,7 @@ class SecurityEvidenceNormaliser(Analyser):
         if rule.secondary_domain is not None:
             items.append(
                 SecurityEvidenceModel(
-                    source_location=source_file,
+                    metadata=SecurityEvidenceMetadata(source=source_file),
                     evidence_type="CODE",
                     security_domain=SecurityDomain(rule.secondary_domain),
                     polarity=polarity,
