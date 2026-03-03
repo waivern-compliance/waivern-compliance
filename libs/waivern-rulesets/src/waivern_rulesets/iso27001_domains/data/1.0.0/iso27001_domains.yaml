@@ -1,6 +1,7 @@
 # ISO 27001 Domains Ruleset
-# One rule per Annex A clause. Each rule carries the five ISO 27001 control attributes
-# and guidance text used by ControlAssessor to structure LLM prompts and populate
+# One rule per individual ISO 27001:2022 Annex A control (93 rules total).
+# Each rule carries the five ISO 27001 control attributes and guidance text
+# used by ControlAssessor to structure LLM prompts and populate
 # control_assessment schema fields.
 #
 # DISCLAIMER: The guidance text in this file is derived from publicly available
@@ -8,10 +9,20 @@
 # ISO 27001 standard text, which is a licensed publication. For authoritative,
 # verbatim control text, switch to the rag/ provider URI:
 #   domain_ruleset: "rag/iso27001_domains/1.0.0"
+#
+# Field semantics:
+# - security_domains: taxonomy domains of evidence relevant to this control.
+#     Empty only for cross-cutting governance controls where no single taxonomy
+#     domain applies (e.g. A.5.1 Policies). Physical controls use [physical_security]
+#     because document evidence from physical security policies carries that domain.
+# - evidence_source: origin types of evidence (TECHNICAL | DOCUMENT).
+#     TECHNICAL covers both CODE and CONFIG. Orthogonal to security_domains.
+# - attestation_required: true when human sign-off is always needed regardless
+#     of automated evidence (policy approval, physical inspection, etc.).
 
 name: iso27001_domains
 version: 1.0.0
-description: ISO 27001 Annex A clause definitions with control attributes and LLM guidance text
+description: ISO 27001:2022 Annex A individual control definitions with control attributes and LLM guidance text
 
 # Master list of valid security domain values
 # DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence.
@@ -33,225 +44,1507 @@ security_domains:
 
 rules:
 
-  # ---------------------------------------------------------------------------
-  # A.5 — Organisational Controls (37 controls)
-  # Covers policies, roles, asset management, access control policy, supplier
-  # relationships, incident management, business continuity, and compliance.
-  # ---------------------------------------------------------------------------
+  # ===========================================================================
+  # A.5 — Organisational Controls (A.5.1–A.5.37, 37 controls)
+  # ===========================================================================
 
-  - name: organisational_controls
-    description: ISO 27001 Annex A.5 organisational controls covering governance, asset management, and policy frameworks
-    domain: "A.5"
-    security_domains:
-      - authentication
-      - access_control
-      - logging_monitoring
-      - vulnerability_management
-      - data_protection
-      - supplier_management
-      - incident_management
-      - business_continuity
+  - name: information_security_policies
+    description: Policies for information security shall be defined, approved, published and reviewed
+    control_ref: "A.5.1"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
     control_type: preventive
-    cia:
-      - confidentiality
-      - integrity
-      - availability
+    cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
     operational_capability: governance
     iso_security_domain: governance_and_ecosystem
     guidance_text: |
-      A.5.1 Policies for information security: An information security policy and topic-specific
-      policies shall be defined, approved by management, published, communicated to relevant
-      personnel, and reviewed at planned intervals.
+      A.5.1 Policies for information security: An information security policy and
+      topic-specific policies shall be defined, approved by management, published,
+      communicated to relevant personnel and interested parties, and reviewed at
+      planned intervals or when significant changes occur.
 
-      A.5.2 Information security roles and responsibilities: Information security roles and
-      responsibilities shall be defined and allocated according to the organisation's needs.
-
-      A.5.9 Inventory of information and other associated assets: An inventory of information
-      and other associated assets shall be developed, maintained, and regularly updated.
-
-      A.5.14 Information transfer: Information transfer rules, procedures, or agreements shall
-      be in place for all types of transfer facilities within the organisation and between the
-      organisation and other parties.
-
-      A.5.19 Information security in supplier relationships: Processes and procedures shall be
-      defined and implemented to manage the information security risks associated with the use
-      of supplier products or services.
-
-      A.5.23 Information security for use of cloud services: Processes for acquisition, use,
-      management, and exit from cloud services shall be established, considering information
-      security requirements.
-
-      A.5.24 Information security incident management planning and preparation: The organisation
-      shall plan and prepare for managing information security incidents by defining, establishing,
-      and communicating incident management processes, roles, and responsibilities.
-
-      A.5.29 Information security during disruption: The organisation shall plan how to maintain
-      information security at an appropriate level during disruption.
-
-      A.5.30 ICT readiness for business continuity: ICT readiness shall be planned, implemented,
-      maintained, and tested based on business continuity objectives and ICT continuity requirements.
-
-      A.5.36 Compliance with policies, rules, and standards for information security: Compliance
-      with the information security policy, topic-specific policies, rules, and standards shall
-      be regularly reviewed.
-
-  # ---------------------------------------------------------------------------
-  # A.6 — People Controls (8 controls)
-  # Covers screening, employment conditions, awareness and training, disciplinary
-  # processes, confidentiality agreements, and remote working.
-  # ---------------------------------------------------------------------------
-
-  - name: people_controls
-    description: ISO 27001 Annex A.6 people controls covering personnel security before, during, and after employment
-    domain: "A.6"
-    security_domains:
-      - people_controls
+  - name: information_security_roles_and_responsibilities
+    description: Information security roles and responsibilities shall be defined and allocated
+    control_ref: "A.5.2"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
     control_type: preventive
-    cia:
-      - confidentiality
-      - integrity
-      - availability
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: governance
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.2 Information security roles and responsibilities: Information security
+      roles and responsibilities shall be defined and allocated according to the
+      organisation's needs.
+
+  - name: segregation_of_duties
+    description: Conflicting duties and areas of responsibility shall be segregated
+    control_ref: "A.5.3"
+    security_domains: [access_control]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: access_control
+    iso_security_domain: protection
+    guidance_text: |
+      A.5.3 Segregation of duties: Conflicting duties and conflicting areas of
+      responsibility shall be segregated to reduce opportunities for unauthorised
+      or unintentional modification or misuse of the organisation's assets.
+
+  - name: management_responsibilities
+    description: Management shall require all personnel to apply information security in accordance with policy
+    control_ref: "A.5.4"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: governance
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.4 Management responsibilities: Management shall require all personnel
+      to apply information security in accordance with the established information
+      security policy, topic-specific policies and procedures of the organisation.
+
+  - name: contact_with_authorities
+    description: The organisation shall establish and maintain contact with relevant authorities
+    control_ref: "A.5.5"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: respond
+    operational_capability: governance
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.5 Contact with authorities: The organisation shall establish and maintain
+      contact with relevant authorities (e.g. law enforcement, regulatory bodies)
+      and share information as required by legal and regulatory obligations.
+
+  - name: contact_with_special_interest_groups
+    description: The organisation shall establish and maintain contact with special interest groups
+    control_ref: "A.5.6"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: governance
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.6 Contact with special interest groups: The organisation shall establish
+      and maintain contact with special interest groups or other specialist security
+      forums and professional associations.
+
+  - name: threat_intelligence
+    description: Information about information security threats shall be collected and analysed
+    control_ref: "A.5.7"
+    security_domains: [vulnerability_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: detective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: threat_and_vulnerability_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.5.7 Threat intelligence: Information relating to information security
+      threats shall be collected and analysed to produce threat intelligence in
+      order to be used in the risk assessment and risk treatment process.
+
+  - name: information_security_in_project_management
+    description: Information security shall be integrated into project management
+    control_ref: "A.5.8"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: governance
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.8 Information security in project management: Information security shall
+      be integrated into project management throughout the project life cycle.
+
+  - name: inventory_of_information_and_associated_assets
+    description: An inventory of information and associated assets shall be developed and maintained
+    control_ref: "A.5.9"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: asset_management
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.9 Inventory of information and other associated assets: An inventory
+      of information and other associated assets, including owners, shall be
+      developed and maintained.
+
+  - name: acceptable_use_of_information_and_assets
+    description: Rules for acceptable use and procedures for handling information and assets shall be identified
+    control_ref: "A.5.10"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: asset_management
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.10 Acceptable use of information and other associated assets: Rules for
+      the acceptable use and procedures for handling information and other associated
+      assets shall be identified, documented and implemented.
+
+  - name: return_of_assets
+    description: Personnel and external parties shall return all assets upon termination
+    control_ref: "A.5.11"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: asset_management
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.11 Return of assets: Personnel and other interested parties shall return
+      all the organisation's assets in their possession upon change or termination
+      of their employment, contract or agreement.
+
+  - name: classification_of_information
+    description: Information shall be classified according to the information security needs of the organisation
+    control_ref: "A.5.12"
+    security_domains: [data_protection]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: identify
+    operational_capability: information_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.5.12 Classification of information: Information shall be classified
+      according to the information security needs of the organisation based on
+      confidentiality, integrity, availability and relevant interested party
+      requirements.
+
+  - name: labelling_of_information
+    description: An appropriate set of procedures for information labelling shall be developed and implemented
+    control_ref: "A.5.13"
+    security_domains: [data_protection]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: information_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.5.13 Labelling of information: An appropriate set of procedures for
+      information labelling shall be developed and implemented in accordance with
+      the information classification scheme adopted by the organisation.
+
+  - name: information_transfer
+    description: Information transfer rules and procedures shall be in place for all transfer facilities
+    control_ref: "A.5.14"
+    security_domains: [data_protection]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: information_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.5.14 Information transfer: Information transfer rules, procedures or
+      agreements shall be in place for all types of transfer facilities within
+      the organisation and between the organisation and other parties.
+
+  - name: access_control
+    description: Rules to control physical and logical access to information and assets shall be established
+    control_ref: "A.5.15"
+    security_domains: [access_control]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: access_control
+    iso_security_domain: protection
+    guidance_text: |
+      A.5.15 Access control: Rules to control physical and logical access to
+      information and other associated assets shall be established and implemented
+      based on business and information security requirements.
+
+  - name: identity_management
+    description: The full life cycle of identities shall be managed
+    control_ref: "A.5.16"
+    security_domains: [authentication]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: identity_and_access_management
+    iso_security_domain: protection
+    guidance_text: |
+      A.5.16 Identity management: The full life cycle of identities shall be
+      managed including registration, credential issuance, re-certification, and
+      removal of identities for users and non-human entities.
+
+  - name: authentication_information
+    description: Allocation and management of authentication information shall be controlled by a management process
+    control_ref: "A.5.17"
+    security_domains: [authentication]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: identity_and_access_management
+    iso_security_domain: protection
+    guidance_text: |
+      A.5.17 Authentication information: Allocation and management of
+      authentication information shall be controlled by a management process,
+      including advising personnel on appropriate handling of authentication
+      information.
+
+  - name: access_rights
+    description: Access rights to information and assets shall be provisioned, reviewed, modified and removed
+    control_ref: "A.5.18"
+    security_domains: [access_control]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: access_control
+    iso_security_domain: protection
+    guidance_text: |
+      A.5.18 Access rights: Access rights to information and other associated
+      assets shall be provisioned, reviewed, modified and removed in accordance
+      with the organisation's topic-specific policy on and rules for access control.
+
+  - name: information_security_in_supplier_relationships
+    description: Processes to manage information security risks in supplier use shall be defined and implemented
+    control_ref: "A.5.19"
+    security_domains: [supplier_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: supplier_relationships
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.19 Information security in supplier relationships: Processes and
+      procedures shall be defined and implemented to manage the information
+      security risks associated with the use of supplier's products or services.
+
+  - name: addressing_information_security_in_supplier_agreements
+    description: Relevant information security requirements shall be established and agreed with each supplier
+    control_ref: "A.5.20"
+    security_domains: [supplier_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: supplier_relationships
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.20 Addressing information security within supplier agreements: Relevant
+      information security requirements shall be established and agreed with each
+      supplier based on the type of supplier relationship.
+
+  - name: managing_information_security_in_ict_supply_chain
+    description: Processes to manage information security risks in the ICT supply chain shall be defined
+    control_ref: "A.5.21"
+    security_domains: [supplier_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: supplier_relationships
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.21 Managing information security in the ICT supply chain: Processes and
+      procedures shall be defined and implemented to manage the information security
+      risks associated with the ICT products and services supply chain.
+
+  - name: monitoring_and_review_of_supplier_services
+    description: The organisation shall regularly monitor, review and audit supplier service delivery
+    control_ref: "A.5.22"
+    security_domains: [supplier_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: detective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: supplier_relationships
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.22 Monitoring, review and change management of supplier services: The
+      organisation shall regularly monitor, review, evaluate and manage change in
+      supplier information security practices and service delivery.
+
+  - name: information_security_for_cloud_services
+    description: Processes for cloud service acquisition, use, management and exit shall be established
+    control_ref: "A.5.23"
+    security_domains: [supplier_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: supplier_relationships
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.23 Information security for use of cloud services: Processes for
+      acquisition, use, management and exit from cloud services shall be
+      established in accordance with the organisation's information security
+      requirements.
+
+  - name: information_security_incident_management_planning
+    description: The organisation shall plan and prepare for managing information security incidents
+    control_ref: "A.5.24"
+    security_domains: [incident_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: respond
+    operational_capability: event_and_incident_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.5.24 Information security incident management planning and preparation:
+      The organisation shall plan and prepare for managing information security
+      incidents by defining, establishing and communicating incident management
+      processes, roles and responsibilities.
+
+  - name: assessment_of_information_security_events
+    description: The organisation shall assess information security events and decide if they are incidents
+    control_ref: "A.5.25"
+    security_domains: [incident_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: detective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: detect
+    operational_capability: event_and_incident_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.5.25 Assessment and decision on information security events: The
+      organisation shall assess information security events and decide if they
+      are to be categorised as information security incidents.
+
+  - name: response_to_information_security_incidents
+    description: Information security incidents shall be responded to in accordance with documented procedures
+    control_ref: "A.5.26"
+    security_domains: [incident_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: corrective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: respond
+    operational_capability: event_and_incident_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.5.26 Response to information security incidents: Information security
+      incidents shall be responded to in accordance with the documented procedures.
+
+  - name: learning_from_information_security_incidents
+    description: Knowledge gained from incidents shall be used to improve controls
+    control_ref: "A.5.27"
+    security_domains: [incident_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: corrective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: recover
+    operational_capability: event_and_incident_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.5.27 Learning from information security incidents: Knowledge gained from
+      information security incidents shall be used to strengthen and improve the
+      information security controls.
+
+  - name: collection_of_evidence
+    description: The organisation shall establish and apply procedures for identification and collection of evidence
+    control_ref: "A.5.28"
+    security_domains: [incident_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: detective
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: respond
+    operational_capability: event_and_incident_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.5.28 Collection of evidence: The organisation shall establish and apply
+      procedures for the identification, collection, acquisition and preservation
+      of evidence related to information security events.
+
+  - name: information_security_during_disruption
+    description: The organisation shall plan how to maintain information security during disruption
+    control_ref: "A.5.29"
+    security_domains: [business_continuity]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [availability, confidentiality]
+    cybersecurity_concept: recover
+    operational_capability: continuity
+    iso_security_domain: resilience
+    guidance_text: |
+      A.5.29 Information security during disruption: The organisation shall plan
+      how to maintain information security at an appropriate level during disruption.
+
+  - name: ict_readiness_for_business_continuity
+    description: ICT readiness shall be planned, implemented and tested based on continuity objectives
+    control_ref: "A.5.30"
+    security_domains: [business_continuity]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [availability]
+    cybersecurity_concept: recover
+    operational_capability: continuity
+    iso_security_domain: resilience
+    guidance_text: |
+      A.5.30 ICT readiness for business continuity: ICT readiness shall be
+      planned, implemented, maintained and tested based on business continuity
+      objectives and ICT continuity requirements.
+
+  - name: legal_statutory_regulatory_contractual_requirements
+    description: Legal, statutory, regulatory and contractual requirements shall be identified and documented
+    control_ref: "A.5.31"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: compliance
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.31 Legal, statutory, regulatory and contractual requirements: Legal,
+      statutory, regulatory and contractual requirements relevant to information
+      security and the organisation's approach to meet these requirements shall
+      be identified, documented and kept up to date.
+
+  - name: intellectual_property_rights
+    description: The organisation shall implement procedures to protect intellectual property rights
+    control_ref: "A.5.32"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: compliance
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.32 Intellectual property rights: The organisation shall implement
+      appropriate procedures to protect intellectual property rights.
+
+  - name: protection_of_records
+    description: Records shall be protected from loss, destruction, falsification and unauthorised access
+    control_ref: "A.5.33"
+    security_domains: [data_protection]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: information_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.5.33 Protection of records: Records shall be protected from loss,
+      destruction, falsification, unauthorised access and unauthorised release,
+      in accordance with legal, statutory, regulatory, contractual and business
+      requirements.
+
+  - name: privacy_and_protection_of_pii
+    description: The organisation shall identify and meet requirements for privacy and PII protection
+    control_ref: "A.5.34"
+    security_domains: [data_protection]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality]
+    cybersecurity_concept: protect
+    operational_capability: privacy
+    iso_security_domain: protection
+    guidance_text: |
+      A.5.34 Privacy and protection of personally identifiable information (PII):
+      The organisation shall identify and meet the requirements regarding the
+      preservation of privacy and protection of PII according to applicable laws
+      and regulations and contractual requirements.
+
+  - name: independent_review_of_information_security
+    description: The organisation's approach to managing information security shall be reviewed independently
+    control_ref: "A.5.35"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: detective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: assurance
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.35 Independent review of information security: The organisation's
+      approach to managing information security and its implementation shall
+      be reviewed independently at planned intervals or when significant changes
+      occur.
+
+  - name: compliance_with_policies_and_standards
+    description: Compliance with information security policy, standards and rules shall be regularly reviewed
+    control_ref: "A.5.36"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: detective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: compliance
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.36 Compliance with policies, rules and standards for information
+      security: Compliance with the organisation's information security policy,
+      topic-specific policies, rules and standards shall be regularly reviewed.
+
+  - name: documented_operating_procedures
+    description: Operating procedures for information processing facilities shall be documented and made available
+    control_ref: "A.5.37"
+    security_domains: []
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: governance
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.5.37 Documented operating procedures: Operating procedures for
+      information processing facilities shall be documented and made available
+      to personnel who need them.
+
+  # ===========================================================================
+  # A.6 — People Controls (A.6.1–A.6.8, 8 controls)
+  # ===========================================================================
+
+  - name: screening
+    description: Background verification checks on candidates shall be carried out prior to joining
+    control_ref: "A.6.1"
+    security_domains: [people_controls]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
     cybersecurity_concept: identify
     operational_capability: human_resource_security
     iso_security_domain: governance_and_ecosystem
     guidance_text: |
-      A.6.1 Screening: Background verification checks shall be carried out on candidates
-      prior to joining the organisation and on an ongoing basis, considering applicable laws,
-      regulations, and proportional to business requirements and risks.
+      A.6.1 Screening: Background verification checks on all candidates to
+      become personnel shall be carried out prior to joining the organisation
+      and on an ongoing basis, taking into consideration applicable laws,
+      regulations and ethics, proportional to the business requirements, the
+      classification of the information to be accessed and the perceived risks.
 
-      A.6.2 Terms and conditions of employment: Employment contractual agreements shall state
-      the personnel's and the organisation's responsibilities for information security.
-
-      A.6.3 Information security awareness, education, and training: Personnel and relevant
-      interested parties shall receive appropriate information security awareness, education,
-      and training, and regular updates of the organisation's information security policy,
-      topic-specific policies, and procedures.
-
-      A.6.4 Disciplinary process: A disciplinary process shall be formalised and communicated
-      to take actions against personnel and other relevant interested parties who have committed
-      an information security policy violation.
-
-      A.6.5 Responsibilities after termination or change of employment: Information security
-      responsibilities and duties that remain valid after termination or change of employment
-      shall be defined, enforced, and communicated to relevant personnel.
-
-      A.6.6 Confidentiality or non-disclosure agreements: Confidentiality or non-disclosure
-      agreements reflecting the organisation's needs for the protection of information shall
-      be identified, documented, regularly reviewed, and signed by personnel and other relevant
-      interested parties.
-
-      A.6.7 Remote working: Security measures shall be implemented when personnel are working
-      remotely to protect information accessed, processed, or stored outside the organisation's
-      premises.
-
-      A.6.8 Information security event reporting: The organisation shall provide a mechanism
-      for personnel to report observed or suspected information security events through
-      appropriate channels in a timely manner.
-
-  # ---------------------------------------------------------------------------
-  # A.7 — Physical Controls (14 controls)
-  # Covers physical security perimeters, entry controls, clear desk and screen
-  # policies, equipment protection, and storage media security.
-  # ---------------------------------------------------------------------------
-
-  - name: physical_controls
-    description: ISO 27001 Annex A.7 physical controls covering premises security, equipment protection, and secure working environments
-    domain: "A.7"
-    security_domains:
-      - physical_security
+  - name: terms_and_conditions_of_employment
+    description: Employment contractual agreements shall state personnel information security responsibilities
+    control_ref: "A.6.2"
+    security_domains: [people_controls]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
     control_type: preventive
-    cia:
-      - confidentiality
-      - availability
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: human_resource_security
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.6.2 Terms and conditions of employment: Employment contractual agreements
+      shall state the personnel's and the organisation's responsibilities for
+      information security.
+
+  - name: information_security_awareness_education_and_training
+    description: Personnel shall receive appropriate information security awareness, education and training
+    control_ref: "A.6.3"
+    security_domains: [people_controls]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: human_resource_security
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.6.3 Information security awareness, education and training: Personnel
+      and relevant interested parties shall receive appropriate information
+      security awareness, education and training and regular updates of the
+      organisation's information security policy, topic-specific policies and
+      procedures, as relevant for their job function.
+
+  - name: disciplinary_process
+    description: A disciplinary process shall be formalised to take actions against personnel committing violations
+    control_ref: "A.6.4"
+    security_domains: [people_controls]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: corrective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: respond
+    operational_capability: human_resource_security
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.6.4 Disciplinary process: A disciplinary process shall be formalised
+      and communicated to take actions against personnel who have committed an
+      information security policy violation.
+
+  - name: responsibilities_after_termination_or_change_of_employment
+    description: Information security responsibilities remaining valid after termination shall be enforced
+    control_ref: "A.6.5"
+    security_domains: [people_controls]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: human_resource_security
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.6.5 Responsibilities after termination or change of employment:
+      Information security responsibilities and duties that remain valid after
+      termination or change of employment shall be defined, enforced and
+      communicated to relevant personnel and other interested parties.
+
+  - name: confidentiality_or_non_disclosure_agreements
+    description: Confidentiality or non-disclosure agreements reflecting information protection needs shall be identified
+    control_ref: "A.6.6"
+    security_domains: [people_controls]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality]
+    cybersecurity_concept: protect
+    operational_capability: human_resource_security
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.6.6 Confidentiality or non-disclosure agreements: Confidentiality or
+      non-disclosure agreements reflecting the organisation's needs for the
+      protection of information shall be identified, documented, regularly
+      reviewed and signed by personnel and other relevant interested parties.
+
+  - name: remote_working
+    description: Security measures shall be implemented when personnel are working remotely
+    control_ref: "A.6.7"
+    security_domains: [people_controls, network_security]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: human_resource_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.6.7 Remote working: Security measures shall be implemented when
+      personnel are working remotely to protect information accessed, processed
+      or stored outside the organisation's premises.
+
+  - name: information_security_event_reporting
+    description: A mechanism for personnel to report information security events shall be provided
+    control_ref: "A.6.8"
+    security_domains: [incident_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: detective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: detect
+    operational_capability: event_and_incident_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.6.8 Information security event reporting: The organisation shall provide
+      a mechanism for personnel to report observed or suspected information
+      security events through appropriate channels in a timely manner.
+
+  # ===========================================================================
+  # A.7 — Physical Controls (A.7.1–A.7.14, 14 controls)
+  #
+  # All A.7.x controls use security_domains: [physical_security] because
+  # document evidence from physical security policies and audit reports carries
+  # security_domain: physical_security and should flow to these controls.
+  # evidence_source: [DOCUMENT] — code/config analysis cannot detect physical
+  # security measures. attestation_required: true — a physical site visit or
+  # inspection is always required regardless of document evidence.
+  # ===========================================================================
+
+  - name: physical_security_perimeters
+    description: Security perimeters shall be defined and used to protect areas containing information assets
+    control_ref: "A.7.1"
+    security_domains: [physical_security]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, availability]
     cybersecurity_concept: protect
     operational_capability: physical_security
     iso_security_domain: protection
     guidance_text: |
-      A.7.1 Physical security perimeters: Security perimeters shall be defined and used to
-      protect areas that contain information and other associated assets.
+      A.7.1 Physical security perimeters: Security perimeters shall be defined
+      and used to protect areas that contain information and other associated
+      assets.
 
-      A.7.2 Physical entry: Secure areas shall be protected by appropriate entry controls and
-      access points to ensure only authorised personnel are allowed access.
-
-      A.7.3 Securing offices, rooms, and facilities: Physical security for offices, rooms,
-      and facilities shall be designed and implemented.
-
-      A.7.4 Physical security monitoring: Premises shall be continuously monitored for
-      unauthorised physical access.
-
-      A.7.7 Clear desk and clear screen: Clear desk rules for papers and removable storage
-      media and clear screen rules for information processing facilities shall be defined
-      and appropriately enforced.
-
-      A.7.8 Equipment siting and protection: Equipment shall be sited securely and protected
-      to reduce the risks from physical and environmental threats and from unauthorised access
-      and interference.
-
-      A.7.10 Storage media: Storage media shall be managed through their life cycle of
-      acquisition, use, transportation, and disposal in accordance with the organisation's
-      classification scheme and handling requirements.
-
-      A.7.11 Supporting utilities: Information processing facilities shall be protected from
-      power failures and other disruptions caused by failures in supporting utilities.
-
-      A.7.14 Secure disposal or re-use of equipment: Items of equipment containing storage
-      media shall be verified to ensure that any sensitive data and licensed software has been
-      removed or securely overwritten prior to disposal or re-use.
-
-  # ---------------------------------------------------------------------------
-  # A.8 — Technological Controls (34 controls)
-  # Covers endpoint security, access management, cryptography, secure development,
-  # configuration management, vulnerability management, and network security.
-  # ---------------------------------------------------------------------------
-
-  - name: technological_controls
-    description: ISO 27001 Annex A.8 technological controls covering system security, cryptography, vulnerability management, and network protection
-    domain: "A.8"
-    security_domains:
-      - encryption
-      - network_security
-      - data_protection
-      - vulnerability_management
-      - logging_monitoring
+  - name: physical_entry
+    description: Secure areas shall be protected by appropriate entry controls
+    control_ref: "A.7.2"
+    security_domains: [physical_security]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
     control_type: preventive
-    cia:
-      - confidentiality
-      - integrity
+    cia: [confidentiality, availability]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.7.2 Physical entry: Secure areas shall be protected by appropriate
+      entry controls and access points to ensure only authorised personnel are
+      allowed access.
+
+  - name: securing_offices_rooms_and_facilities
+    description: Physical security for offices, rooms and facilities shall be designed and implemented
+    control_ref: "A.7.3"
+    security_domains: [physical_security]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, availability]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.7.3 Securing offices, rooms and facilities: Physical security for
+      offices, rooms and facilities shall be designed and implemented.
+
+  - name: physical_security_monitoring
+    description: Premises shall be continuously monitored for unauthorised physical access
+    control_ref: "A.7.4"
+    security_domains: [physical_security, logging_monitoring]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: detective
+    cia: [confidentiality, availability]
+    cybersecurity_concept: detect
+    operational_capability: physical_security
+    iso_security_domain: defence
+    guidance_text: |
+      A.7.4 Physical security monitoring: Premises shall be continuously
+      monitored for unauthorised physical access.
+
+  - name: protecting_against_physical_and_environmental_threats
+    description: Protection against physical and environmental threats such as disasters shall be designed
+    control_ref: "A.7.5"
+    security_domains: [physical_security]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [availability, confidentiality]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: resilience
+    guidance_text: |
+      A.7.5 Protecting against physical and environmental threats: Protection
+      against physical and environmental threats, such as natural disasters and
+      other intentional or unintentional physical threats to infrastructure,
+      shall be designed and implemented.
+
+  - name: working_in_secure_areas
+    description: Security measures for working in secure areas shall be designed and implemented
+    control_ref: "A.7.6"
+    security_domains: [physical_security]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.7.6 Working in secure areas: Security measures for working in secure
+      areas shall be designed and implemented.
+
+  - name: clear_desk_and_clear_screen
+    description: Clear desk and clear screen rules shall be defined and appropriately enforced
+    control_ref: "A.7.7"
+    security_domains: [physical_security]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.7.7 Clear desk and clear screen: Clear desk rules for papers and
+      removable storage media and clear screen rules for information processing
+      facilities shall be defined and appropriately enforced.
+
+  - name: equipment_siting_and_protection
+    description: Equipment shall be sited securely and protected from physical and environmental threats
+    control_ref: "A.7.8"
+    security_domains: [physical_security]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [availability, confidentiality]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.7.8 Equipment siting and protection: Equipment shall be sited securely
+      and protected to reduce the risks from physical and environmental threats
+      and from unauthorised access and interference.
+
+  - name: security_of_assets_off_premises
+    description: Off-site assets shall be protected against the risks of operating outside organisation premises
+    control_ref: "A.7.9"
+    security_domains: [physical_security]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, availability]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.7.9 Security of assets off-premises: Off-site assets shall be protected
+      against the risks of operating outside the organisation's premises.
+
+  - name: storage_media
+    description: Storage media shall be managed through their life cycle of acquisition, use, transport and disposal
+    control_ref: "A.7.10"
+    security_domains: [physical_security, data_protection]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.7.10 Storage media: Storage media shall be managed through their life
+      cycle of acquisition, use, transportation and disposal in accordance with
+      the organisation's classification scheme and handling requirements.
+
+  - name: supporting_utilities
+    description: Information processing facilities shall be protected from power failures and disruptions
+    control_ref: "A.7.11"
+    security_domains: [physical_security, business_continuity]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [availability]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: resilience
+    guidance_text: |
+      A.7.11 Supporting utilities: Information processing facilities shall be
+      protected from power failures and other disruptions caused by failures in
+      supporting utilities.
+
+  - name: cabling_security
+    description: Cables carrying power or data shall be protected from interception, interference or damage
+    control_ref: "A.7.12"
+    security_domains: [physical_security, network_security]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, availability]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.7.12 Cabling security: Cables carrying power or transmitting data or
+      supporting information services shall be protected from interception,
+      interference or damage.
+
+  - name: equipment_maintenance
+    description: Equipment shall be maintained correctly to ensure availability, integrity and confidentiality
+    control_ref: "A.7.13"
+    security_domains: [physical_security]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [availability, integrity]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.7.13 Equipment maintenance: Equipment shall be maintained correctly to
+      ensure availability, integrity and confidentiality of information.
+
+  - name: secure_disposal_or_reuse_of_equipment
+    description: Equipment containing storage media shall have sensitive data removed or securely overwritten before disposal
+    control_ref: "A.7.14"
+    security_domains: [physical_security, data_protection]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality]
+    cybersecurity_concept: protect
+    operational_capability: physical_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.7.14 Secure disposal or re-use of equipment: Items of equipment
+      containing storage media shall be verified to ensure that any sensitive
+      data and licensed software has been removed or securely overwritten prior
+      to disposal or re-use.
+
+  # ===========================================================================
+  # A.8 — Technological Controls (A.8.1–A.8.34, 34 controls)
+  # ===========================================================================
+
+  - name: user_endpoint_devices
+    description: Information stored on, processed by or accessible via user endpoint devices shall be protected
+    control_ref: "A.8.1"
+    security_domains: [access_control, vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: endpoint_security
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.1 User endpoint devices: Information stored on, processed by or
+      accessible via user endpoint devices shall be protected.
+
+  - name: privileged_access_rights
+    description: The allocation and use of privileged access rights shall be restricted and managed
+    control_ref: "A.8.2"
+    security_domains: [access_control]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: identity_and_access_management
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.2 Privileged access rights: The allocation and use of privileged
+      access rights shall be restricted and managed.
+
+  - name: information_access_restriction
+    description: Access to information and assets shall be restricted in accordance with the access control policy
+    control_ref: "A.8.3"
+    security_domains: [access_control]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: access_control
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.3 Information access restriction: Access to information and other
+      associated assets shall be restricted in accordance with the established
+      topic-specific policy on access control.
+
+  - name: access_to_source_code
+    description: Read and write access to source code, development tools and software libraries shall be managed
+    control_ref: "A.8.4"
+    security_domains: [access_control]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: access_control
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.4 Access to source code: Read and write access to source code,
+      development tools and software libraries shall be appropriately managed.
+
+  - name: secure_authentication
+    description: Secure authentication technologies and procedures shall be implemented based on access restrictions
+    control_ref: "A.8.5"
+    security_domains: [authentication]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: identity_and_access_management
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.5 Secure authentication: Secure authentication technologies and
+      procedures shall be implemented based on information access restrictions
+      and the topic-specific policy on access control.
+
+  - name: capacity_management
+    description: The use of resources shall be monitored and adjusted to meet current and future capacity requirements
+    control_ref: "A.8.6"
+    security_domains: [business_continuity]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [availability]
+    cybersecurity_concept: protect
+    operational_capability: continuity
+    iso_security_domain: resilience
+    guidance_text: |
+      A.8.6 Capacity management: The use of resources shall be monitored and
+      adjusted in line with current and expected future capacity requirements.
+
+  - name: protection_against_malware
+    description: Protection against malware shall be implemented and supported by appropriate user awareness
+    control_ref: "A.8.7"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: threat_and_vulnerability_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.8.7 Protection against malware: Protection against malware shall be
+      implemented and supported by appropriate user awareness.
+
+  - name: management_of_technical_vulnerabilities
+    description: Information about technical vulnerabilities shall be obtained and appropriate measures taken
+    control_ref: "A.8.8"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: threat_and_vulnerability_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.8.8 Management of technical vulnerabilities: Information about technical
+      vulnerabilities of information systems in use shall be obtained in a timely
+      fashion, the organisation's exposure to such vulnerabilities shall be
+      evaluated, and appropriate measures taken.
+
+  - name: configuration_management
+    description: Configurations of hardware, software, services and networks shall be established and managed
+    control_ref: "A.8.9"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
     operational_capability: system_and_network_protection
     iso_security_domain: protection
     guidance_text: |
-      A.8.2 Privileged access rights: The allocation and use of privileged access rights
-      shall be restricted and managed.
+      A.8.9 Configuration management: Configurations, including security
+      configurations, of hardware, software, services and networks shall be
+      established, documented, implemented, monitored and reviewed.
 
-      A.8.3 Information access restriction: Access to information and other associated assets
-      shall be restricted in accordance with the established topic-specific policy on access control.
+  - name: information_deletion
+    description: Information stored in systems and media shall be deleted when no longer required
+    control_ref: "A.8.10"
+    security_domains: [data_protection]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality]
+    cybersecurity_concept: protect
+    operational_capability: information_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.10 Information deletion: Information stored in information systems,
+      devices or in any other storage media shall be deleted when no longer
+      required.
 
-      A.8.5 Secure authentication: Secure authentication technologies and procedures shall be
-      implemented based on information access restrictions and the topic-specific policy on
-      access control.
+  - name: data_masking
+    description: Data masking shall be used in accordance with access control and applicable regulations
+    control_ref: "A.8.11"
+    security_domains: [data_protection]
+    evidence_source: [TECHNICAL]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality]
+    cybersecurity_concept: protect
+    operational_capability: information_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.11 Data masking: Data masking shall be used in accordance with the
+      organisation's topic-specific policy on access control and other related
+      topic-specific policies, and business requirements, taking applicable
+      legislation into consideration.
 
-      A.8.7 Protection against malware: Protection against malware shall be implemented and
-      supported by appropriate user awareness.
+  - name: data_leakage_prevention
+    description: Data leakage prevention measures shall be applied to systems and networks
+    control_ref: "A.8.12"
+    security_domains: [data_protection]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: detective
+    cia: [confidentiality]
+    cybersecurity_concept: protect
+    operational_capability: information_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.12 Data leakage prevention: Data leakage prevention measures shall
+      be applied to systems, networks and any other devices that process, store
+      or transmit sensitive information.
 
-      A.8.8 Management of technical vulnerabilities: Information about technical vulnerabilities
-      of information systems in use shall be obtained in a timely fashion, the organisation's
-      exposure to such vulnerabilities shall be evaluated, and appropriate measures taken.
+  - name: information_backup
+    description: Backup copies of information, software and systems shall be maintained and tested
+    control_ref: "A.8.13"
+    security_domains: [business_continuity]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [availability, integrity]
+    cybersecurity_concept: recover
+    operational_capability: continuity
+    iso_security_domain: resilience
+    guidance_text: |
+      A.8.13 Information backup: Backup copies of information, software and
+      systems shall be maintained and regularly tested in accordance with the
+      agreed topic-specific policy on backup.
 
-      A.8.15 Logging: Logs that record activities, exceptions, faults, and other relevant
-      events shall be produced, stored, protected, and analysed.
+  - name: redundancy_of_information_processing_facilities
+    description: Facilities shall be implemented with redundancy sufficient to meet availability requirements
+    control_ref: "A.8.14"
+    security_domains: [business_continuity]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [availability]
+    cybersecurity_concept: recover
+    operational_capability: continuity
+    iso_security_domain: resilience
+    guidance_text: |
+      A.8.14 Redundancy of information processing facilities: Information
+      processing facilities shall be implemented with redundancy sufficient to
+      meet availability requirements.
 
-      A.8.20 Networks security: Networks and network devices shall be secured, managed, and
-      controlled to protect information in systems and applications.
+  - name: logging
+    description: Logs that record activities, exceptions, faults and other events shall be produced and protected
+    control_ref: "A.8.15"
+    security_domains: [logging_monitoring]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: detective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: detect
+    operational_capability: event_and_incident_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.8.15 Logging: Logs that record activities, exceptions, faults and other
+      relevant events shall be produced, stored, protected and analysed.
 
-      A.8.24 Use of cryptography: Rules for the effective use of cryptography, including
-      cryptographic key management, shall be defined and implemented.
+  - name: monitoring_activities
+    description: Networks, systems and applications shall be monitored for anomalous behaviour
+    control_ref: "A.8.16"
+    security_domains: [logging_monitoring]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: detective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: detect
+    operational_capability: event_and_incident_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.8.16 Monitoring activities: Networks, systems and applications shall be
+      monitored for anomalous behaviour and appropriate actions taken to evaluate
+      potential information security incidents.
 
-      A.8.25 Secure development life cycle: Rules for the secure development of software and
-      systems shall be established and applied.
+  - name: clock_synchronisation
+    description: The clocks of information processing systems shall be synchronised to approved time sources
+    control_ref: "A.8.17"
+    security_domains: [logging_monitoring]
+    evidence_source: [TECHNICAL]
+    attestation_required: false
+    control_type: preventive
+    cia: [integrity]
+    cybersecurity_concept: protect
+    operational_capability: event_and_incident_management
+    iso_security_domain: defence
+    guidance_text: |
+      A.8.17 Clock synchronisation: The clocks of information processing systems
+      used by the organisation shall be synchronised to approved time sources.
 
-      A.8.28 Secure coding: Secure coding principles shall be applied to software development.
+  - name: use_of_privileged_utility_programs
+    description: The use of utility programs that can override system and application controls shall be restricted
+    control_ref: "A.8.18"
+    security_domains: [access_control]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: access_control
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.18 Use of privileged utility programs: The use of utility programs
+      that might be capable of overriding system and application controls shall
+      be restricted and tightly controlled.
 
-      A.8.32 Change management: Changes to information processing facilities and information
-      systems shall be subject to change management procedures.
+  - name: installation_of_software_on_operational_systems
+    description: Procedures shall be implemented to securely manage software installation on operational systems
+    control_ref: "A.8.19"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: threat_and_vulnerability_management
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.19 Installation of software on operational systems: Procedures and
+      measures shall be implemented to securely manage software installation on
+      operational systems.
+
+  - name: networks_security
+    description: Networks and network devices shall be secured, managed and controlled to protect information
+    control_ref: "A.8.20"
+    security_domains: [network_security]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: system_and_network_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.20 Networks security: Networks and network devices shall be secured,
+      managed and controlled to protect information in systems and applications.
+
+  - name: security_of_network_services
+    description: Security mechanisms and service levels for network services shall be identified and implemented
+    control_ref: "A.8.21"
+    security_domains: [network_security]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: system_and_network_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.21 Security of network services: Security mechanisms, service levels
+      and management requirements of all network services shall be identified,
+      implemented and monitored.
+
+  - name: segregation_of_networks
+    description: Groups of information services, users and systems shall be segregated in the organisation's networks
+    control_ref: "A.8.22"
+    security_domains: [network_security]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: system_and_network_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.22 Segregation of networks: Groups of information services, users
+      and information systems shall be segregated in the organisation's networks.
+
+  - name: web_filtering
+    description: Access to external websites shall be managed to reduce exposure to malicious content
+    control_ref: "A.8.23"
+    security_domains: [network_security]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: system_and_network_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.23 Web filtering: Access to external websites shall be managed to
+      reduce exposure to malicious content.
+
+  - name: use_of_cryptography
+    description: Rules for the effective use of cryptography, including cryptographic key management, shall be implemented
+    control_ref: "A.8.24"
+    security_domains: [encryption]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity]
+    cybersecurity_concept: protect
+    operational_capability: system_and_network_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.24 Use of cryptography: Rules for the effective use of cryptography,
+      including cryptographic key management, shall be defined and implemented.
+
+  - name: secure_development_life_cycle
+    description: Rules for secure development of software and systems shall be established and applied
+    control_ref: "A.8.25"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: secure_development
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.25 Secure development life cycle: Rules for the secure development
+      of software and systems shall be established and applied.
+
+  - name: application_security_requirements
+    description: Information security requirements shall be identified when developing or acquiring applications
+    control_ref: "A.8.26"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: secure_development
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.26 Application security requirements: Information security requirements
+      shall be identified, specified and approved when developing or acquiring
+      applications.
+
+  - name: secure_system_architecture_and_engineering_principles
+    description: Principles for engineering secure systems shall be established, documented and applied
+    control_ref: "A.8.27"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: secure_development
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.27 Secure system architecture and engineering principles: Principles
+      for engineering secure systems shall be established, documented, maintained
+      and applied to any information system development and integration activities.
+
+  - name: secure_coding
+    description: Secure coding principles shall be applied to software development
+    control_ref: "A.8.28"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: secure_development
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.28 Secure coding: Secure coding principles shall be applied to
+      software development.
+
+  - name: security_testing_in_development_and_acceptance
+    description: Security testing processes shall be defined and implemented in the development life cycle
+    control_ref: "A.8.29"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: detective
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: secure_development
+    iso_security_domain: defence
+    guidance_text: |
+      A.8.29 Security testing in development and acceptance: Security testing
+      processes shall be defined and implemented in the development life cycle.
+
+  - name: outsourced_development
+    description: The organisation shall direct, monitor and review outsourced system development activities
+    control_ref: "A.8.30"
+    security_domains: [supplier_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: identify
+    operational_capability: supplier_relationships
+    iso_security_domain: governance_and_ecosystem
+    guidance_text: |
+      A.8.30 Outsourced development: The organisation shall direct, monitor
+      and review the activities related to outsourced system development.
+
+  - name: separation_of_development_test_and_production_environments
+    description: Development, testing and production environments shall be separated and secured
+    control_ref: "A.8.31"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: secure_development
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.31 Separation of development, test and production environments:
+      Development, testing and production environments shall be separated and
+      secured.
+
+  - name: change_management
+    description: Changes to information processing facilities and systems shall be subject to change management procedures
+    control_ref: "A.8.32"
+    security_domains: [vulnerability_management]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: system_and_network_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.32 Change management: Changes to information processing facilities
+      and information systems shall be subject to change management procedures.
+
+  - name: test_information
+    description: Test information shall be appropriately selected, protected and managed
+    control_ref: "A.8.33"
+    security_domains: [data_protection]
+    evidence_source: [TECHNICAL, DOCUMENT]
+    attestation_required: false
+    control_type: preventive
+    cia: [confidentiality]
+    cybersecurity_concept: protect
+    operational_capability: information_protection
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.33 Test information: Test information shall be appropriately selected,
+      protected and managed.
+
+  - name: protection_of_information_systems_during_audit_testing
+    description: Audit tests and activities involving verification of operational systems shall be planned
+    control_ref: "A.8.34"
+    security_domains: [vulnerability_management]
+    evidence_source: [DOCUMENT]
+    attestation_required: true
+    control_type: preventive
+    cia: [confidentiality, integrity, availability]
+    cybersecurity_concept: protect
+    operational_capability: assurance
+    iso_security_domain: protection
+    guidance_text: |
+      A.8.34 Protection of information systems during audit testing: Audit
+      tests and other assurance activities involving assessment of operational
+      systems shall be planned and agreed between the tester and appropriate
+      management.

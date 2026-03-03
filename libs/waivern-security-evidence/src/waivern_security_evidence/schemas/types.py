@@ -102,12 +102,29 @@ class SecurityEvidenceModel(BaseModel):
     )
 
 
+class DomainBreakdown(BaseModel):
+    """Per-domain breakdown of security evidence findings."""
+
+    security_domain: str = Field(description="Security domain name")
+    findings_count: int = Field(
+        ge=0, description="Number of evidence items for this domain"
+    )
+
+
 class SecurityEvidenceSummary(BaseModel):
     """Summary statistics for a security_evidence output."""
 
     total_findings: int = Field(
         ge=0,
         description="Total number of security evidence items",
+    )
+    domains_identified: int = Field(
+        ge=0,
+        description="Number of distinct security domains represented in the findings",
+    )
+    domains: list[DomainBreakdown] = Field(
+        default_factory=list,
+        description="Per-domain breakdown of findings, sorted descending by findings_count",
     )
 
 

@@ -7,6 +7,7 @@ from pprint import pformat
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
 from waivern_security_evidence.schemas.types import (
+    DomainBreakdown,
     SecurityEvidenceModel,
     SecurityEvidenceOutput,
     SecurityEvidenceSummary,
@@ -44,7 +45,24 @@ class SecurityEvidenceResultBuilder:
             Complete validated output message.
 
         """
-        summary = SecurityEvidenceSummary(total_findings=len(findings))
+        domain_counts: dict[str, int] = {}
+        for finding in findings:
+            domain_counts[finding.security_domain] = (
+                domain_counts.get(finding.security_domain, 0) + 1
+            )
+        domains = sorted(
+            [
+                DomainBreakdown(security_domain=domain, findings_count=count)
+                for domain, count in domain_counts.items()
+            ],
+            key=lambda d: d.findings_count,
+            reverse=True,
+        )
+        summary = SecurityEvidenceSummary(
+            total_findings=len(findings),
+            domains_identified=len(domains),
+            domains=domains,
+        )
         analysis_metadata = BaseAnalysisOutputMetadata(
             ruleset_used=self._config.domain_ruleset,
             llm_validation_enabled=False,

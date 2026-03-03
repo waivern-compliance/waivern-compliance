@@ -1,0 +1,23 @@
+# Personal Data Indicator ERP Extension Ruleset
+# Dolibarr/ERP-specific patterns for existing personal data indicator categories.
+# These patterns are intentionally narrow — ERP-specific identifiers that
+# would add noise to the universal ruleset when applied to non-ERP codebases.
+
+name: personal_data_indicator_erp
+version: 1.0.0
+description: ERP sector extension for personal data indicator detection (Dolibarr-specific patterns)
+
+# Master list: required by PersonalDataIndicatorRulesetData.validate_rule_categories().
+# Every rule's `category` must appear here, and this list must be a strict subset of
+# the universal personal_data_indicator ruleset's `categories` list — extension
+# rulesets cannot introduce new categories, only additional patterns for existing ones.
+categories:
+  - user_identifier
+
+rules:
+  - name: User Identifiers
+    description: Dolibarr-specific user identifier patterns
+    category: user_identifier
+    patterns:
+      - fk_user
+      - socid

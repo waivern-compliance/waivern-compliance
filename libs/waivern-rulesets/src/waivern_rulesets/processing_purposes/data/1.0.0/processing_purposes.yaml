@@ -31,6 +31,14 @@ purposes:
   - Third-Party Marketing via Owned Products
   # Security
   - Security, Fraud Prevention, and Abuse Detection
+  # Security Operations and Controls
+  - Audit Logging and Event Tracking
+  - Access Control and Permissions Management
+  - Network Access Control and Security
+  - Supplier and Vendor Integration Management
+  - Incident Response and Error Management
+  - Data Backup and Disaster Recovery
+  - Input Validation and Sanitisation
 
 # Master list of valid purpose slugs (snake_case, used in findings output)
 # Each rule's purpose must match an entry in this list
@@ -52,6 +60,13 @@ purpose_slugs:
   - third_party_targeted_marketing
   - third_party_marketing
   - security_fraud_prevention
+  - audit_logging
+  - access_control_management
+  - network_access_control
+  - supplier_vendor_management
+  - incident_response
+  - data_backup_recovery
+  - input_validation_sanitisation
 
 rules:
   # =============================================================================
@@ -523,3 +538,150 @@ rules:
       - complyadvantage
       - veriff
       - feedzai
+
+  # =============================================================================
+  # Security Operations and Controls
+  # =============================================================================
+
+  - name: Audit Logging and Event Tracking
+    purpose: audit_logging
+    description: Recording system events, user activity, and data changes for traceability and audit trails
+    patterns:
+      - audit_log
+      - audit_trail
+      - audit log
+      - audit trail
+      - event_log
+      - activity_log
+      - action_log
+      - write_log
+      - log_action
+      - monolog
+      - syslog
+      - change_log
+      - user_activity_log
+      - system_log
+      - audit_service
+      - access_log
+
+  - name: Access Control and Permissions Management
+    purpose: access_control_management
+    description: Managing user roles, permissions, and authorisation rules for access to resources
+    patterns:
+      - permission
+      - access control
+      - access_control
+      - acl
+      - rbac
+      - role based
+      - user_role
+      - user role
+      - access_right
+      - access right
+      - access_level
+      - privilege
+      - access_policy
+      - authorisation rules
+
+  - name: Network Access Control and Security
+    purpose: network_access_control
+    description: Controlling network access through IP restrictions, firewalls, TLS, and certificate management
+    patterns:
+      - ip_whitelist
+      - ip whitelist
+      - whitelist_ip
+      - allowed_ips
+      - ip_restriction
+      - ip restriction
+      - ip_allowlist
+      - firewall
+      - vpn
+      - ssl_verify
+      - tls
+      - certificate
+      - openssl_verify_peer
+      - network_access
+      - ssl certificate
+
+  - name: Supplier and Vendor Integration Management
+    purpose: supplier_vendor_management
+    description: Managing security for third-party supplier and vendor integrations including webhooks and EDI
+    patterns:
+      - webhook_signature
+      - webhook signature
+      - webhook_verification
+      - webhook verification
+      - api_integration
+      - api integration
+      - third_party_api
+      - third party api
+      - edi
+      - electronic data interchange
+      - vendor_api
+      - supplier_api
+      - gocardless
+      - xero api
+      - myddleware
+      - direct_debit_mandate
+      - mandate management
+
+  - name: Incident Response and Error Management
+    purpose: incident_response
+    description: Detecting, handling, and escalating system incidents, errors, and operational alerts
+    patterns:
+      - incident
+      - incident_response
+      - error_handler
+      - exception_handler
+      - alerting
+      - escalation
+      - pagerduty
+      - opsgenie
+      - sentry
+      - bugsnag
+      - rollbar
+      - error monitoring
+      - application monitoring
+
+  - name: Data Backup and Disaster Recovery
+    purpose: data_backup_recovery
+    description: Creating backups, snapshots, and disaster recovery mechanisms to ensure business continuity
+    patterns:
+      - backup
+      - restore
+      - recovery
+      - disaster_recovery
+      - disaster recovery
+      - db_sync
+      - database_sync
+      - db sync
+      - database sync
+      - snapshot
+      - archive
+      - mysqldump
+      - data_retention
+      - data retention
+      - failover
+      - replication
+
+  - name: Input Validation and Sanitisation
+    purpose: input_validation_sanitisation
+    description: Validating and sanitising user input to prevent injection attacks and security vulnerabilities
+    patterns:
+      - sanitise
+      - sanitize
+      - filter_input
+      - filter_var
+      - htmlspecialchars
+      - htmlentities
+      - strip_tags
+      - csrf
+      - prepared_statement
+      - prepared statement
+      - parameterised
+      - parameterized
+      - rate_limit
+      - rate limit
+      - input_validation
+      - input validation
+      - xss

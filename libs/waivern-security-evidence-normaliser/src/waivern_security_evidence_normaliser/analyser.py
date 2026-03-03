@@ -272,7 +272,7 @@ class SecurityEvidenceNormaliser(Analyser):
             )
             if rule is None:
                 _, source_file = group_key
-                logger.warning(
+                logger.debug(
                     f"No domain mapping rule for {first['source_type']} "
                     f"'{first['indicator_value']}' "
                     f"— skipping {len(group)} finding(s) from {source_file}"

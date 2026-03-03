@@ -45,6 +45,13 @@ purpose_slugs:
   - third_party_targeted_marketing
   - third_party_marketing
   - security_fraud_prevention
+  - audit_logging
+  - access_control_management
+  - network_access_control
+  - supplier_vendor_management
+  - incident_response
+  - data_backup_recovery
+  - input_validation_sanitisation
 
 # Master list of valid personal data indicator categories
 # DEPENDENCY: Must stay in sync with categories in personal_data_indicator/1.0.0.
@@ -99,6 +106,16 @@ algorithm_values:
   - pbkdf2
   - aes_256
   - chacha20
+  - sha256
+  - sha512
+  - sha3
+  - hmac_sha256
+  - rsa_2048_plus
+  - rsa_1024
+  - ecdsa
+  - sodium
+  - php_password_hash
+  - aes_gcm
 
 rules:
   # =============================================================================
@@ -193,6 +210,65 @@ rules:
   # Maps crypto_quality_indicator.algorithm values to security domains
   # =============================================================================
 
+  # =============================================================================
+  # Security operations mappings
+  # Maps the new security operations and controls purposes to their domains
+  # =============================================================================
+
+  - name: audit_and_logging
+    description: Audit logging and event tracking maps to the logging and monitoring domain
+    source_type: purpose
+    indicator_values:
+      - audit_logging
+    security_domain: logging_monitoring
+
+  - name: access_control_and_permissions
+    description: Access control and permissions management maps to the access control domain
+    source_type: purpose
+    indicator_values:
+      - access_control_management
+    security_domain: access_control
+
+  - name: network_security_controls
+    description: Network access control (IP restrictions, firewalls, TLS) maps to network security
+    source_type: purpose
+    indicator_values:
+      - network_access_control
+    security_domain: network_security
+
+  - name: supplier_and_vendor_integrations
+    description: Third-party supplier and vendor integrations map to supplier management
+    source_type: purpose
+    indicator_values:
+      - supplier_vendor_management
+    security_domain: supplier_management
+
+  - name: incident_and_error_management
+    description: Incident response and error management maps to incident management
+    source_type: purpose
+    indicator_values:
+      - incident_response
+    security_domain: incident_management
+
+  - name: backup_and_recovery
+    description: Data backup and disaster recovery maps to business continuity
+    source_type: purpose
+    indicator_values:
+      - data_backup_recovery
+    security_domain: business_continuity
+
+  - name: input_validation_and_sanitisation
+    description: Input validation and sanitisation extends vulnerability management evidence
+    source_type: purpose
+    indicator_values:
+      - input_validation_sanitisation
+    security_domain: vulnerability_management
+
+  # =============================================================================
+  # Algorithm-based mappings
+  # Maps crypto_quality_indicator.algorithm values to security domains
+  # =============================================================================
+
   - name: cryptographic_algorithms
     description: All cryptographic algorithm detections map to the encryption domain regardless of quality rating; polarity (positive/negative) carries the quality signal
     source_type: algorithm
@@ -209,4 +285,14 @@ rules:
       - pbkdf2
       - aes_256
       - chacha20
+      - sha256
+      - sha512
+      - sha3
+      - hmac_sha256
+      - rsa_2048_plus
+      - rsa_1024
+      - ecdsa
+      - sodium
+      - php_password_hash
+      - aes_gcm
     security_domain: encryption
