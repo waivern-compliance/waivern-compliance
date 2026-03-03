@@ -2,7 +2,7 @@
 
 Uses authoritative Pydantic models from waivern-source-code-analyser.
 
-Groups matches by purpose (rule.name) within each file, similar to how
+Groups matches by purpose slug (rule.purpose) within each file, similar to how
 DataSubjectAnalyser groups by subject_category.
 """
 
@@ -140,7 +140,7 @@ class SourceCodeSchemaInputHandler:
 
         Orchestrates the analysis flow:
         1. Collect matches from all three rule types
-        2. Group matches by purpose (rule.name)
+        2. Group matches by purpose slug (rule.purpose for ProcessingPurposeRule, rule.name for others)
         3. Aggregate pattern counts and create one finding per purpose
 
         Args:
@@ -153,14 +153,14 @@ class SourceCodeSchemaInputHandler:
         lines = file_data.raw_content.splitlines()
         file_path = file_data.file_path
 
-        # Group matches by purpose (rule.name)
+        # Group matches by purpose slug
         # Structure: {purpose: [MatchInfo, ...]}
         purpose_matches: dict[str, list[MatchInfo]] = {}
 
         # Collect matches from processing purpose rules
         for rule in self._processing_purposes_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule):
-                purpose = rule.name
+                purpose = rule.purpose
                 if purpose not in purpose_matches:
                     purpose_matches[purpose] = []
                 purpose_matches[purpose].append(

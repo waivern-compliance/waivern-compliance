@@ -736,16 +736,12 @@ class PaymentService {
         # Act
         findings = handler.analyse(source_data)
 
-        # Assert - find the "Payment, Billing, and Invoicing" finding specifically
-        # This is the purpose name from the processing_purposes ruleset
-        billing_findings = [
-            f for f in findings if f.purpose == "Payment, Billing, and Invoicing"
-        ]
+        # Assert - find the "payment_billing" slug finding specifically
+        billing_findings = [f for f in findings if f.purpose == "payment_billing"]
 
         # Should have exactly ONE finding for this specific purpose
         assert len(billing_findings) == 1, (
-            f"Expected 1 finding for 'Payment, Billing, and Invoicing', "
-            f"got {len(billing_findings)}"
+            f"Expected 1 finding for 'payment_billing', got {len(billing_findings)}"
         )
 
         # The finding should have match_count > 1 (multiple 'payment' occurrences)
@@ -838,10 +834,8 @@ $payment4 = new Payment();
         # Act
         findings = handler.analyse(source_data)
 
-        # Assert - find "Payment, Billing, and Invoicing" finding
-        billing_findings = [
-            f for f in findings if f.purpose == "Payment, Billing, and Invoicing"
-        ]
+        # Assert - find the "payment_billing" slug finding
+        billing_findings = [f for f in findings if f.purpose == "payment_billing"]
 
         assert len(billing_findings) == 1, "Expected exactly one billing finding"
 
@@ -856,3 +850,42 @@ $payment4 = new Payment();
             f"Expected match_count=4 for 'payment' (4 lines), "
             f"got {payment_pattern.match_count}"
         )
+
+    def test_processing_purpose_rule_findings_carry_purpose_slug(
+        self,
+        sample_file_metadata: SourceCodeFileMetadataModel,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+    ) -> None:
+        """Test that ProcessingPurposeRule findings carry the slug, not the display name.
+
+        ProcessingPurposeRule has both `name` (display, e.g. 'Payment, Billing, and Invoicing')
+        and `purpose` (slug, e.g. 'payment_billing'). The finding's `purpose` field must
+        carry the slug so downstream consumers like SecurityEvidenceNormaliser can match
+        against indicator_values in the domain mapping.
+        """
+        file_data = SourceCodeFileDataModel(
+            file_path="/src/PaymentHandler.php",
+            language="php",
+            raw_content="$payment = processPayment($amount);",
+            metadata=sample_file_metadata,
+        )
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="Slug test",
+            description="Test purpose slug output",
+            source="source_code",
+            metadata=sample_analysis_metadata,
+            data=[file_data],
+        )
+        handler = SourceCodeSchemaInputHandler()
+
+        findings = handler.analyse(source_data)
+
+        payment_findings = [f for f in findings if "payment" in f.purpose.lower()]
+        assert len(payment_findings) > 0, (
+            "Expected at least one payment-related finding"
+        )
+
+        # The purpose must be the slug, not the human-readable display name
+        assert payment_findings[0].purpose == "payment_billing"
+        assert payment_findings[0].purpose != "Payment, Billing, and Invoicing"
