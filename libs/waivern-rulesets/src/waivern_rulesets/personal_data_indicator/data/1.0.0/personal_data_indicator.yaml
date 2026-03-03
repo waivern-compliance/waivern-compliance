@@ -178,8 +178,6 @@ rules:
       - staff_id
       - worker_id
       - operator_id
-      - fk_user
-      - socid
       - access_token
       - refresh_token
       - session_token

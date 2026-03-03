@@ -554,8 +554,6 @@ rules:
       - event_log
       - activity_log
       - action_log
-      - useractivity
-      - addEvent
       - write_log
       - log_action
       - monolog
@@ -582,13 +580,8 @@ rules:
       - access right
       - access_level
       - privilege
-      - restrictedArea
-      - verifCond
-      - checkUserAccess
       - access_policy
       - authorisation rules
-      - llx_rights
-      - llx_user_rights
 
   - name: Network Access Control and Security
     purpose: network_access_control

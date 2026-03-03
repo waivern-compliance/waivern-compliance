@@ -29,6 +29,8 @@ gdpr_data_subject_classification = "waivern_rulesets.gdpr_data_subject_classific
 gdpr_processing_purpose_classification = "waivern_rulesets.gdpr_processing_purpose_classification:GDPRProcessingPurposeClassificationRuleset"
 security_evidence_domain_mapping = "waivern_rulesets.security_evidence_domain_mapping:SecurityEvidenceDomainMappingRuleset"
 iso27001_domains = "waivern_rulesets.iso27001_domains:ISO27001DomainsRuleset"
+processing_purposes_erp = "waivern_rulesets.processing_purposes_erp:ProcessingPurposesERPRuleset"
+personal_data_indicator_erp = "waivern_rulesets.personal_data_indicator_erp:PersonalDataIndicatorERPRuleset"
 
 [build-system]
 requires = ["hatchling"]
