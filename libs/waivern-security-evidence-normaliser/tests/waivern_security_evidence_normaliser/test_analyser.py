@@ -141,14 +141,14 @@ class TestNormalisePersonalData:
         assert "data_protection" in domains
         assert "people_controls" in domains
 
-    def test_unknown_personal_data_category_is_skipped_with_warning(
+    def test_unknown_personal_data_category_is_skipped_silently(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """An unmapped category is skipped and a warning is logged."""
+        """An unmapped category is skipped and a debug message is logged."""
         analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
         msg = self._make_message("unknown_xyz", "file.php")
 
-        with caplog.at_level(logging.WARNING):
+        with caplog.at_level(logging.DEBUG):
             result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
 
         assert result.content["findings"] == []
@@ -255,14 +255,14 @@ class TestNormaliseProcessingPurpose:
         assert len(findings) == 1
         assert "2 occurrence(s)" in findings[0]["description"]
 
-    def test_unknown_processing_purpose_is_skipped_with_warning(
+    def test_unknown_processing_purpose_is_skipped_silently(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """An unmapped purpose is skipped and a warning is logged."""
+        """An unmapped purpose is skipped and a debug message is logged."""
         analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
         msg = self._make_message("unknown_purpose_xyz", "file.php")
 
-        with caplog.at_level(logging.WARNING):
+        with caplog.at_level(logging.DEBUG):
             result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
 
         assert result.content["findings"] == []
@@ -350,14 +350,14 @@ class TestNormaliseCryptoQuality:
         assert findings[0]["security_domain"] == "encryption"
         assert findings[0]["polarity"] == "negative"
 
-    def test_unknown_crypto_algorithm_is_skipped_with_warning(
+    def test_unknown_crypto_algorithm_is_skipped_silently(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """An unmapped algorithm is skipped and a warning is logged."""
+        """An unmapped algorithm is skipped and a debug message is logged."""
         analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
         msg = self._make_message("unknown_algo_xyz", "weak", "negative")
 
-        with caplog.at_level(logging.WARNING):
+        with caplog.at_level(logging.DEBUG):
             result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
 
         assert result.content["findings"] == []
