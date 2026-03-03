@@ -7,12 +7,15 @@ name: processing_purposes_erp
 version: 1.0.0
 description: ERP sector extension for processing purposes detection (Dolibarr-specific patterns)
 
-# Master list of valid processing purpose names (must match universal ruleset names exactly)
+# Master lists: required by ProcessingPurposesRulesetData.validate_rules().
+# Every rule's `name` must appear in `purposes` and every rule's `purpose` slug
+# must appear in `purpose_slugs`. Both lists must be a strict subset of the
+# universal processing_purposes ruleset's master lists — extension rulesets
+# cannot introduce new slugs, only additional patterns for existing ones.
 purposes:
   - Audit Logging and Event Tracking
   - Access Control and Permissions Management
 
-# Master list of valid purpose slugs (must match universal ruleset slugs exactly)
 purpose_slugs:
   - audit_logging
   - access_control_management

@@ -7,7 +7,10 @@ name: personal_data_indicator_erp
 version: 1.0.0
 description: ERP sector extension for personal data indicator detection (Dolibarr-specific patterns)
 
-# Master list of valid categories (must match universal ruleset categories exactly)
+# Master list: required by PersonalDataIndicatorRulesetData.validate_rule_categories().
+# Every rule's `category` must appear here, and this list must be a strict subset of
+# the universal personal_data_indicator ruleset's `categories` list — extension
+# rulesets cannot introduce new categories, only additional patterns for existing ones.
 categories:
   - user_identifier
 
