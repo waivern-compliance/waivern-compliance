@@ -40,6 +40,28 @@
       "title": "BaseAnalysisOutputMetadata",
       "type": "object"
     },
+    "DomainBreakdown": {
+      "description": "Per-domain breakdown of security evidence findings.",
+      "properties": {
+        "security_domain": {
+          "description": "Security domain name",
+          "title": "Security Domain",
+          "type": "string"
+        },
+        "findings_count": {
+          "description": "Number of evidence items for this domain",
+          "minimum": 0,
+          "title": "Findings Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "security_domain",
+        "findings_count"
+      ],
+      "title": "DomainBreakdown",
+      "type": "object"
+    },
     "SecurityDomain": {
       "description": "Framework-agnostic security domain taxonomy.\n\nUsed as the bridge between indicator findings and compliance framework\ncontrols (ISO 27001 Annex A, GDPR Art 32, etc.). A single taxonomy\nshared across all producers and consumers of security_evidence.\n\nStrEnum serialises to plain strings in JSON \u2014 Pydantic handles this\ntransparently, so no custom serialiser is needed.",
       "enum": [
@@ -155,10 +177,25 @@
           "minimum": 0,
           "title": "Total Findings",
           "type": "integer"
+        },
+        "domains_identified": {
+          "description": "Number of distinct security domains represented in the findings",
+          "minimum": 0,
+          "title": "Domains Identified",
+          "type": "integer"
+        },
+        "domains": {
+          "description": "Per-domain breakdown of findings, sorted descending by findings_count",
+          "items": {
+            "$ref": "#/$defs/DomainBreakdown"
+          },
+          "title": "Domains",
+          "type": "array"
         }
       },
       "required": [
-        "total_findings"
+        "total_findings",
+        "domains_identified"
       ],
       "title": "SecurityEvidenceSummary",
       "type": "object"

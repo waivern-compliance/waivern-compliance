@@ -495,3 +495,118 @@ class TestOutputMessageStructure:
         assert result.content["summary"]["total_findings"] == len(
             result.content["findings"]
         )
+        assert "domains_identified" in result.content["summary"]
+        assert "domains" in result.content["summary"]
+
+
+# =============================================================================
+# Summary domain breakdown
+# =============================================================================
+
+
+class TestSummaryDomainBreakdown:
+    """Tests for the domain breakdown in SecurityEvidenceSummary."""
+
+    def _make_cq_message(
+        self, algorithm: str, quality_rating: str, polarity: str, source: str
+    ) -> Message:
+        """Build a crypto_quality_indicator message with a single finding."""
+        return Message(
+            id=f"test_{algorithm}",
+            content={
+                "findings": [
+                    {
+                        "id": f"test-{algorithm}",
+                        "algorithm": algorithm,
+                        "quality_rating": quality_rating,
+                        "polarity": polarity,
+                        "evidence": [{"content": f"Found {algorithm}"}],
+                        "matched_patterns": [{"pattern": algorithm, "match_count": 1}],
+                        "metadata": {"source": source},
+                    }
+                ],
+                "summary": {"total_findings": 1},
+                "analysis_metadata": {
+                    "ruleset_used": "local/crypto_quality_indicator/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("crypto_quality_indicator", "1.0.0"),
+        )
+
+    def test_summary_domain_breakdown_counts_findings_per_domain(self) -> None:
+        """summary.domains has one entry per unique domain with correct findings_count."""
+        # Two findings both in the encryption domain (sha256 + bcrypt, same domain)
+        msg1 = self._make_cq_message("sha256", "strong", "positive", "file_a.php")
+        msg2 = self._make_cq_message("bcrypt", "strong", "positive", "file_b.php")
+
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        result = analyser.process([msg1, msg2], Schema("security_evidence", "1.0.0"))
+
+        summary = result.content["summary"]
+        assert summary["domains_identified"] == 1
+        assert len(summary["domains"]) == 1
+        assert summary["domains"][0]["security_domain"] == "encryption"
+        assert summary["domains"][0]["findings_count"] == 2
+
+    def test_summary_domains_sorted_descending_by_findings_count(self) -> None:
+        """summary.domains is ordered with the highest findings_count first."""
+        # user_identity_login appears in two files → authentication: 2
+        # audit_logging appears in one file → logging_monitoring: 1
+        msg = Message(
+            id="test_sort",
+            content={
+                "findings": [
+                    {
+                        "id": "login-1",
+                        "purpose": "user_identity_login",
+                        "evidence": [{"content": "login"}],
+                        "matched_patterns": [
+                            {"pattern": "user_identity_login", "match_count": 1}
+                        ],
+                        "metadata": {"source": "auth1.php"},
+                    },
+                    {
+                        "id": "login-2",
+                        "purpose": "user_identity_login",
+                        "evidence": [{"content": "login"}],
+                        "matched_patterns": [
+                            {"pattern": "user_identity_login", "match_count": 1}
+                        ],
+                        "metadata": {"source": "auth2.php"},
+                    },
+                    {
+                        "id": "audit-1",
+                        "purpose": "audit_logging",
+                        "evidence": [{"content": "audit"}],
+                        "matched_patterns": [
+                            {"pattern": "audit_logging", "match_count": 1}
+                        ],
+                        "metadata": {"source": "logger.php"},
+                    },
+                ],
+                "summary": {
+                    "total_findings": 3,
+                    "purposes_identified": 2,
+                    "purposes": [
+                        {"purpose": "user_identity_login", "findings_count": 2},
+                        {"purpose": "audit_logging", "findings_count": 1},
+                    ],
+                },
+                "analysis_metadata": {
+                    "ruleset_used": "local/processing_purposes/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("processing_purpose_indicator", "1.0.0"),
+        )
+
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+        domains = result.content["summary"]["domains"]
+
+        # authentication (2 findings) must come before logging_monitoring (1 finding)
+        assert domains[0]["security_domain"] == "authentication"
+        assert domains[0]["findings_count"] == 2
+        assert domains[1]["security_domain"] == "logging_monitoring"
+        assert domains[1]["findings_count"] == 1
