@@ -52,11 +52,13 @@ class CryptoQualityAnalyser(Analyser):
     def get_input_requirements(cls) -> list[list[InputRequirement]]:
         """Declare supported input schema combinations.
 
-        CryptoQualityAnalyser accepts standard_input schema.
-        Multiple messages of the same schema are supported (fan-in).
+        CryptoQualityAnalyser accepts either standard_input OR source_code schema.
+        Each is a valid alternative input. Multiple messages of the same schema are
+        supported (fan-in).
         """
         return [
             [InputRequirement("standard_input", "1.0.0")],
+            [InputRequirement("source_code", "1.0.0")],
         ]
 
     @classmethod

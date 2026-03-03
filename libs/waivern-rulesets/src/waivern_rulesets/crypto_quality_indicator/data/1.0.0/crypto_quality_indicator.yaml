@@ -115,3 +115,124 @@ rules:
     quality_rating: strong
     patterns:
       - chacha20
+
+  # ===========================================================================
+  # Strong — SHA-2 / SHA-3 hash families
+  # ===========================================================================
+
+  - name: SHA-256
+    description: SHA-256 hash function (NIST standard; widely used for signatures and integrity checks)
+    algorithm: sha256
+    quality_rating: strong
+    patterns:
+      - sha256
+      - sha_256
+      - sha-256
+      - sha2
+
+  - name: SHA-512
+    description: SHA-512 hash function (larger SHA-2 variant; preferred where extra margin is needed)
+    algorithm: sha512
+    quality_rating: strong
+    patterns:
+      - sha512
+      - sha_512
+      - sha-512
+
+  - name: SHA-3
+    description: SHA-3 / Keccak hash function (NIST standard; structurally distinct from SHA-2 family)
+    algorithm: sha3
+    quality_rating: strong
+    patterns:
+      - sha3
+      - sha3_256
+      - sha3_512
+      - sha-3
+      - keccak
+
+  # ===========================================================================
+  # Strong — HMAC and asymmetric algorithms
+  # ===========================================================================
+
+  - name: HMAC-SHA256
+    description: HMAC keyed-hash (standard for webhook signature verification and API request signing)
+    algorithm: hmac_sha256
+    quality_rating: strong
+    patterns:
+      - hmac
+      - hash_hmac
+      - hmac_sha256
+      - hmac_sha512
+
+  - name: RSA-2048+
+    description: RSA with 2048-bit or larger key (adequate for asymmetric encryption and digital signatures)
+    algorithm: rsa_2048_plus
+    quality_rating: strong
+    patterns:
+      - rsa_2048
+      - rsa2048
+      - rsa_4096
+      - rsa4096
+      - rsa_3072
+      - rsa3072
+
+  - name: ECDSA/Ed25519
+    description: Elliptic-curve digital signatures (compact, fast, strong; preferred for modern APIs and OAuth)
+    algorithm: ecdsa
+    quality_rating: strong
+    patterns:
+      - ecdsa
+      - ecdh
+      - ed25519
+      - curve25519
+      - secp256r1
+      - p-256
+      - p-384
+      - elliptic_curve
+
+  # ===========================================================================
+  # Strong — PHP-native crypto APIs
+  # ===========================================================================
+
+  - name: libsodium
+    description: PHP libsodium (sodium_* extension); modern opinionated crypto library with no weak primitives
+    algorithm: sodium
+    quality_rating: strong
+    patterns:
+      - sodium_
+      - libsodium
+      - sodium_crypto
+      - sodium_secretbox
+      - sodium_box
+      - sodium_sign
+
+  - name: PHP password_hash
+    description: PHP password_hash() / password_verify() API; delegates to bcrypt or Argon2 via PASSWORD_DEFAULT
+    algorithm: php_password_hash
+    quality_rating: strong
+    patterns:
+      - password_hash
+      - password_verify
+      - password_needs_rehash
+
+  - name: AES-GCM
+    description: AES in Galois/Counter Mode (authenticated encryption; combines confidentiality and integrity)
+    algorithm: aes_gcm
+    quality_rating: strong
+    patterns:
+      - aes_gcm
+      - aes-gcm
+      - aesgcm
+      - gcm_tag
+
+  # ===========================================================================
+  # Deprecated — weak key sizes
+  # ===========================================================================
+
+  - name: RSA-1024
+    description: RSA with 1024-bit key (below NIST minimum recommendation since 2010; considered broken)
+    algorithm: rsa_1024
+    quality_rating: deprecated
+    patterns:
+      - rsa_1024
+      - rsa1024

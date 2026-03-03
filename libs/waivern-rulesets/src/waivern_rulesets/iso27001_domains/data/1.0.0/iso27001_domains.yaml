@@ -1099,9 +1099,9 @@ rules:
   - name: capacity_management
     description: The use of resources shall be monitored and adjusted to meet current and future capacity requirements
     control_ref: "A.8.6"
-    security_domains: []
+    security_domains: [business_continuity]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
+    attestation_required: true
     control_type: preventive
     cia: [availability]
     cybersecurity_concept: protect

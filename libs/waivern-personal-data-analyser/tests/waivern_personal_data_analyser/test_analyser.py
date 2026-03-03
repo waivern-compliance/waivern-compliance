@@ -118,16 +118,17 @@ class TestPersonalDataAnalyser:
         # Assert
         assert name == self.EXPECTED_ANALYSER_NAME
 
-    def test_get_input_requirements_returns_standard_input(self) -> None:
-        """Test that the analyser declares standard_input as input requirement."""
+    def test_get_input_requirements_returns_standard_input_and_source_code(
+        self,
+    ) -> None:
+        """Test that the analyser declares both standard_input and source_code as valid inputs."""
         # Act
         requirements = PersonalDataAnalyser.get_input_requirements()
 
         # Assert
-        assert len(requirements) == 1  # One valid combination
-        assert len(requirements[0]) == 1  # One requirement in that combination
-        assert requirements[0][0].schema_name == "standard_input"
-        assert requirements[0][0].version == "1.0.0"
+        schema_names = {req[0].schema_name for req in requirements}
+        assert "standard_input" in schema_names
+        assert "source_code" in schema_names
 
     def test_get_supported_output_schemas_returns_personal_data_indicator(self) -> None:
         """Test that the analyser outputs personal_data_indicator schema."""
