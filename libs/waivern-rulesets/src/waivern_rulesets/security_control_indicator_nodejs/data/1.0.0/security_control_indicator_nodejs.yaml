@@ -1,0 +1,93 @@
+# Security Control Indicator Node.js Extension Ruleset
+# Node.js/Express-specific security control patterns with binary polarity.
+#
+# Extension contract:
+#   All security_domain values must appear in the security_domains master list
+#   below, and must stay in sync with SecurityDomain enum in waivern-security-evidence.
+#
+# Why this extension exists:
+#   The generic ruleset matches language-agnostic patterns. Node.js/Express uses
+#   library call conventions (jwt.verify, helmet, rateLimit) that do not match
+#   the generic ruleset's patterns (jwt_verify, tls_verify, etc.).
+
+name: security_control_indicator_nodejs
+version: 1.0.0
+description: Node.js/Express extension for security control detection
+
+security_domains:
+  - authentication
+  - network_security
+  - vulnerability_management
+
+rules:
+  # ===========================================================================
+  # Authentication — Positive
+  # ===========================================================================
+
+  - name: JWT Token Verification
+    description: >
+      Verifies JWT tokens using the jsonwebtoken library. jwt.verify() validates
+      the token signature and expiry; jwtVerify covers alternative naming
+      conventions in frameworks such as jose.
+    security_domain: authentication
+    polarity: positive
+    patterns:
+      - jwt.verify
+      - jwtVerify
+
+  # ===========================================================================
+  # Network Security — Positive
+  # ===========================================================================
+
+  - name: Express Security Headers
+    description: >
+      Sets HTTP security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options)
+      via the helmet middleware. Presence of helmet() in the startup configuration
+      is positive evidence of network security hardening.
+    security_domain: network_security
+    polarity: positive
+    patterns:
+      - helmet
+
+  # ===========================================================================
+  # Vulnerability Management — Positive
+  # ===========================================================================
+
+  - name: Express Rate Limiting
+    description: >
+      Protects against brute-force and denial-of-service attacks via
+      express-rate-limit. rateLimit is the standard export name; rateLimiting
+      covers custom wrapper function names as used in BookedSolid.
+    security_domain: vulnerability_management
+    polarity: positive
+    patterns:
+      - rateLimit
+      - rateLimiting
+
+  - name: HTML Sanitisation
+    description: >
+      Prevents XSS by escaping or sanitising HTML output. escapeHtml() performs
+      character-level escaping; sanitizeInput() and sanitizeHtml() are common
+      wrapper names for comprehensive input sanitisation (as in xss-protection.js).
+    security_domain: vulnerability_management
+    polarity: positive
+    patterns:
+      - escapeHtml
+      - sanitizeInput
+      - sanitizeHtml
+
+  # ===========================================================================
+  # Vulnerability Management — Negative
+  # ===========================================================================
+
+  - name: Node.js Shell Execution
+    description: >
+      Signals the use of Node.js shell execution capability. child_process is
+      the require target for all shell execution in Node.js; execSync and
+      spawnSync are the synchronous variants most likely to block on untrusted input.
+    security_domain: vulnerability_management
+    polarity: negative
+    patterns:
+      - child_process
+      - execSync
+      - spawnSync
