@@ -1,0 +1,184 @@
+# Security Control Indicator Ruleset
+# Detects security control implementations in source code with binary polarity.
+#
+# polarity values:
+#   positive  — good practice; evidence of a security control being correctly implemented
+#   negative  — bad practice; evidence of a security gap or insecure implementation
+#
+# Neutral polarity is not permitted. If a pattern only detects presence without
+# quality signal, it belongs in the processing_purpose ruleset, not here.
+
+name: security_control_indicator
+version: 1.0.0
+description: Detects security control implementations in source code with binary quality polarity
+
+# Master list of valid security domain values
+# DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence.
+# When adding or removing a domain there, update this list and re-check all rules below.
+security_domains:
+  - authentication
+  - encryption
+  - access_control
+  - logging_monitoring
+  - vulnerability_management
+  - data_protection
+  - network_security
+  - physical_security
+  - people_controls
+  - supplier_management
+  - incident_management
+  - business_continuity
+
+rules:
+  # ===========================================================================
+  # Authentication — Positive
+  # ===========================================================================
+
+  - name: Secure Password Hashing
+    description: Uses an adaptive password hashing function appropriate for authentication
+    security_domain: authentication
+    polarity: positive
+    patterns:
+      - bcrypt
+      - argon2
+      - scrypt
+      - pbkdf2
+      - password_hash
+      - password_verify
+
+  - name: JWT Token Verification
+    description: Verifies JWT tokens for request authentication
+    security_domain: authentication
+    polarity: positive
+    patterns:
+      - jwt_verify
+      - verify_token
+      - validate_token
+
+  - name: Multi-Factor Authentication
+    description: Implements multi-factor or two-factor authentication
+    security_domain: authentication
+    polarity: positive
+    patterns:
+      - mfa_verify
+      - totp_verify
+      - two_factor_auth
+      - 2fa_verify
+
+  # ===========================================================================
+  # Authentication — Negative
+  # ===========================================================================
+
+  - name: Hardcoded Credentials
+    description: Password or secret hardcoded directly in source code
+    security_domain: authentication
+    polarity: negative
+    patterns:
+      - hardcoded_password
+      - plain_password
+      - password_plaintext
+
+  # ===========================================================================
+  # Access Control — Positive
+  # ===========================================================================
+
+  - name: Permission Check
+    description: Explicit permission or role check before a privileged action
+    security_domain: access_control
+    polarity: positive
+    patterns:
+      - has_permission
+      - check_role
+      - authorize
+      - rbac_check
+
+  # ===========================================================================
+  # Logging and Monitoring — Positive
+  # ===========================================================================
+
+  - name: Audit Logging
+    description: Records security-relevant events for an audit trail
+    security_domain: logging_monitoring
+    polarity: positive
+    patterns:
+      - audit_log
+      - security_event
+      - access_log
+
+  # ===========================================================================
+  # Vulnerability Management — Positive
+  # ===========================================================================
+
+  - name: Parameterised Query
+    description: Uses parameterised queries or prepared statements to prevent SQL injection
+    security_domain: vulnerability_management
+    polarity: positive
+    patterns:
+      - prepared_statement
+      - parameterize
+      - htmlspecialchars
+      - csrf_token
+
+  # ===========================================================================
+  # Vulnerability Management — Negative
+  # ===========================================================================
+
+  - name: Unsafe Code Execution
+    description: Executes code or OS commands, potentially with unsanitised user input
+    security_domain: vulnerability_management
+    polarity: negative
+    patterns:
+      - shell_exec
+      - eval_user_input
+      - passthru
+
+  # ===========================================================================
+  # Data Protection — Positive
+  # ===========================================================================
+
+  - name: Data Encryption at Rest
+    description: Encrypts or anonymises sensitive data before storage
+    security_domain: data_protection
+    polarity: positive
+    patterns:
+      - encrypt_at_rest
+      - anonymize
+      - pseudonymize
+
+  # ===========================================================================
+  # Data Protection — Negative
+  # ===========================================================================
+
+  - name: Unencrypted Storage
+    description: Stores sensitive data in plain text without encryption
+    security_domain: data_protection
+    polarity: negative
+    patterns:
+      - unencrypted_storage
+      - plaintext_storage
+
+  # ===========================================================================
+  # Network Security — Positive
+  # ===========================================================================
+
+  - name: TLS Certificate Verification
+    description: Verifies TLS certificates to prevent man-in-the-middle attacks
+    security_domain: network_security
+    polarity: positive
+    patterns:
+      - tls_verify
+      - ssl_cert_verify
+      - certificate_pinning
+
+  # ===========================================================================
+  # Network Security — Negative
+  # ===========================================================================
+
+  - name: TLS Verification Disabled
+    description: Disables TLS certificate verification, enabling man-in-the-middle attacks
+    security_domain: network_security
+    polarity: negative
+    patterns:
+      - ssl_verify_false
+      - verify_peer_false
+      - disable_ssl_verification
