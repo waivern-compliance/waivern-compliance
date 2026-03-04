@@ -1,0 +1,88 @@
+# Security Control Indicator ERP Extension Ruleset
+# Dolibarr-specific security control patterns with binary polarity.
+#
+# Extension contract:
+#   All security_domain values must appear in the security_domains master list
+#   below, and must stay in sync with SecurityDomain enum in waivern-security-evidence.
+#
+# Polarity note:
+#   All rules are positive — the ERP extension recognises Dolibarr-proprietary
+#   security mechanisms as good practice. Negative patterns (shell_exec, passthru,
+#   TLS disabled) are covered by the generic security_control_indicator ruleset.
+
+name: security_control_indicator_erp
+version: 1.0.0
+description: ERP sector extension for security control detection (Dolibarr-specific patterns)
+
+security_domains:
+  - authentication
+  - access_control
+  - logging_monitoring
+  - vulnerability_management
+
+rules:
+  # ===========================================================================
+  # Access Control — Positive
+  # ===========================================================================
+
+  - name: Dolibarr Permission Check
+    description: >
+      Dolibarr-specific access control enforcement. hasRight() is the primary
+      permission API (v15+); accessforbidden() is the denial handler;
+      restrictedArea(), verifCond(), and checkUserAccess() are page-level and
+      condition-based access gates used throughout the platform.
+    security_domain: access_control
+    polarity: positive
+    patterns:
+      - hasRight
+      - accessforbidden
+      - restrictedArea
+      - verifCond
+      - checkUserAccess
+
+  # ===========================================================================
+  # Logging and Monitoring — Positive
+  # ===========================================================================
+
+  - name: Dolibarr Audit Event Recording
+    description: >
+      Dolibarr audit and system logging functions. addEvent() records structured
+      audit trail entries; dol_syslog() writes security-relevant events to the
+      system log for monitoring and incident investigation.
+    security_domain: logging_monitoring
+    polarity: positive
+    patterns:
+      - addEvent
+      - dol_syslog
+
+  # ===========================================================================
+  # Vulnerability Management — Positive
+  # ===========================================================================
+
+  - name: Dolibarr SQL Escaping
+    description: >
+      Dolibarr DB layer escaping methods that prevent SQL injection.
+      db->escape() escapes string values; db->sanitize() sanitises column names
+      against allowlists; db->idate() formats and escapes date values.
+    security_domain: vulnerability_management
+    polarity: positive
+    patterns:
+      - db->escape
+      - db->sanitize
+      - db->idate
+
+  # ===========================================================================
+  # Authentication — Positive
+  # ===========================================================================
+
+  - name: HMAC Webhook Verification
+    description: >
+      HMAC-based webhook signature verification used by payment integrations
+      (GoCardless, Xero, PayBox, QuickBooks). hash_hmac() generates the expected
+      signature; hash_equals() performs timing-safe comparison to prevent
+      timing attacks on the verification step.
+    security_domain: authentication
+    polarity: positive
+    patterns:
+      - hash_hmac
+      - hash_equals

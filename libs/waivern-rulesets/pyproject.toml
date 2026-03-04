@@ -32,6 +32,7 @@ iso27001_domains = "waivern_rulesets.iso27001_domains:ISO27001DomainsRuleset"
 processing_purposes_erp = "waivern_rulesets.processing_purposes_erp:ProcessingPurposesERPRuleset"
 personal_data_indicator_erp = "waivern_rulesets.personal_data_indicator_erp:PersonalDataIndicatorERPRuleset"
 security_control_indicator = "waivern_rulesets.security_control_indicator:SecurityControlIndicatorRuleset"
+security_control_indicator_erp = "waivern_rulesets.security_control_indicator_erp:SecurityControlIndicatorERPRuleset"
 
 [build-system]
 requires = ["hatchling"]
