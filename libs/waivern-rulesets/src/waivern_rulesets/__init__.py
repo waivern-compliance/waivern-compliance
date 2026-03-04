@@ -12,8 +12,6 @@ from waivern_rulesets.core import (
     RulesetURIParseError,
     UnsupportedProviderError,
 )
-
-# Detection rulesets
 from waivern_rulesets.crypto_quality_indicator import (
     CryptoQualityIndicatorRule,
     CryptoQualityIndicatorRuleset,
@@ -26,8 +24,6 @@ from waivern_rulesets.data_subject_indicator import (
     DataSubjectIndicatorRule,
     DataSubjectIndicatorRuleset,
 )
-
-# Classification rulesets
 from waivern_rulesets.gdpr_data_subject_classification import (
     GDPRDataSubjectClassificationRule,
     GDPRDataSubjectClassificationRuleset,
@@ -42,17 +38,32 @@ from waivern_rulesets.gdpr_processing_purpose_classification import (
     GDPRProcessingPurposeClassificationRule,
     GDPRProcessingPurposeClassificationRuleset,
 )
+from waivern_rulesets.iso27001_domains import (
+    ISO27001DomainsRule,
+    ISO27001DomainsRuleset,
+)
 from waivern_rulesets.personal_data_indicator import (
     PersonalDataIndicatorRule,
     PersonalDataIndicatorRuleset,
 )
+from waivern_rulesets.personal_data_indicator_erp import PersonalDataIndicatorERPRuleset
 from waivern_rulesets.processing_purposes import (
     ProcessingPurposeRule,
     ProcessingPurposesRuleset,
 )
-
-# Protocols
+from waivern_rulesets.processing_purposes_erp import ProcessingPurposesERPRuleset
 from waivern_rulesets.protocols import DataSubjectClassificationRulesetProtocol
+from waivern_rulesets.security_control_indicator import (
+    SecurityControlIndicatorRule,
+    SecurityControlIndicatorRuleset,
+)
+from waivern_rulesets.security_control_indicator_erp import (
+    SecurityControlIndicatorERPRuleset,
+)
+from waivern_rulesets.security_evidence_domain_mapping import (
+    SecurityEvidenceDomainMappingRule,
+    SecurityEvidenceDomainMappingRuleset,
+)
 from waivern_rulesets.service_integrations import (
     ServiceIntegrationRule,
     ServiceIntegrationsRuleset,
@@ -77,26 +88,40 @@ __all__ = [
     "AbstractRuleset",
     # Protocols
     "DataSubjectClassificationRulesetProtocol",
-    # Rulesets
+    # Detection rulesets
     "CryptoQualityIndicatorRuleset",
+    "DataCollectionRuleset",
+    "DataSubjectIndicatorRuleset",
     "PersonalDataIndicatorRuleset",
     "ProcessingPurposesRuleset",
-    "DataCollectionRuleset",
     "ServiceIntegrationsRuleset",
-    "DataSubjectIndicatorRuleset",
-    "GDPRPersonalDataClassificationRuleset",
+    # Classification rulesets
     "GDPRDataSubjectClassificationRuleset",
+    "GDPRPersonalDataClassificationRuleset",
     "GDPRProcessingPurposeClassificationRuleset",
-    # Rule types
+    # Security rulesets
+    "ISO27001DomainsRuleset",
+    "SecurityControlIndicatorRuleset",
+    "SecurityEvidenceDomainMappingRuleset",
+    # ERP extension rulesets
+    "PersonalDataIndicatorERPRuleset",
+    "ProcessingPurposesERPRuleset",
+    "SecurityControlIndicatorERPRuleset",
+    # Detection rule types
     "CryptoQualityIndicatorRule",
+    "DataCollectionRule",
+    "DataSubjectIndicatorRule",
     "PersonalDataIndicatorRule",
     "ProcessingPurposeRule",
-    "DataCollectionRule",
     "ServiceIntegrationRule",
-    "DataSubjectIndicatorRule",
-    "GDPRPersonalDataClassificationRule",
+    # Classification rule types
     "GDPRDataSubjectClassificationRule",
+    "GDPRPersonalDataClassificationRule",
     "GDPRProcessingPurposeClassificationRule",
+    # Security rule types
+    "ISO27001DomainsRule",
+    "SecurityControlIndicatorRule",
+    "SecurityEvidenceDomainMappingRule",
     # Supporting types
     "RiskModifier",
     "RiskModifiers",
