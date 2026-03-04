@@ -7,6 +7,9 @@ Unlike the processing_purpose_indicator path (which detects presence with
 neutral polarity), every pattern here has a definitive quality signal:
 a prepared_statement() call is positive evidence; an eval() of user input
 is negative evidence. No neutral polarity is permitted.
+
+Dependencies (keep in sync when upstream definitions change):
+- SecurityDomain enum in waivern-security-evidence → security_domains master list
 """
 
 from typing import ClassVar, Literal
@@ -47,7 +50,11 @@ class SecurityControlIndicatorRulesetData(RulesetData[SecurityControlIndicatorRu
 
     security_domains: list[str] = Field(
         min_length=1,
-        description="Master list of valid security domain values",
+        description=(
+            "Master list of valid security domain values. "
+            "DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence. "
+            "When adding or removing a domain there, update this list and re-check all rules below."
+        ),
     )
 
     @model_validator(mode="after")
