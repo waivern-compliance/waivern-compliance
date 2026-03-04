@@ -20,3 +20,11 @@ class SecurityEvidenceNormaliserConfig(BaseComponentConfiguration):
         default="local/security_evidence_domain_mapping/1.0.0",
         description="Ruleset URI for mapping indicator values to security domains",
     )
+    maximum_evidence_items: int = Field(
+        default=3,
+        ge=1,
+        description=(
+            "Maximum number of evidence snippets to include per security evidence item. "
+            "Snippets are collected across all findings in a group and capped at this value."
+        ),
+    )

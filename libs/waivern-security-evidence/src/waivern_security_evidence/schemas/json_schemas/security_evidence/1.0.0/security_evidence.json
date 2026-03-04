@@ -40,6 +40,26 @@
       "title": "BaseAnalysisOutputMetadata",
       "type": "object"
     },
+    "BaseFindingEvidence": {
+      "description": "Evidence item with content and collection timestamp.",
+      "properties": {
+        "content": {
+          "description": "The evidence content snippet",
+          "title": "Content",
+          "type": "string"
+        },
+        "collection_timestamp": {
+          "description": "When the evidence was collected",
+          "title": "Collection Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "BaseFindingEvidence",
+      "type": "object"
+    },
     "DomainBreakdown": {
       "description": "Per-domain breakdown of security evidence findings.",
       "properties": {
@@ -97,7 +117,7 @@
       "type": "object"
     },
     "SecurityEvidenceModel": {
-      "description": "A single normalised piece of security evidence.\n\nUnlike indicator models (which extend BaseFindingModel and carry raw\npattern match details), SecurityEvidenceModel is a normalised hub item.\nIt abstracts over the origin of the evidence \u2014 pattern-matched code,\nconfig file, or LLM-extracted document section \u2014 presenting a uniform\nstructure to downstream assessors.\n\nFields are deliberately broad to accommodate all three evidence paths:\n- CODE/CONFIG: produced by SecurityEvidenceNormaliser (no LLM)\n- DOCUMENT:    produced by DocumentEvidenceExtractor (LLM-based)",
+      "description": "A single normalised piece of security evidence.\n\nUnlike indicator models (which extend BaseFindingModel and carry raw\npattern match details), SecurityEvidenceModel is a normalised hub item.\nIt abstracts over the origin of the evidence \u2014 pattern-matched code,\nconfig file, or LLM-extracted document section \u2014 presenting a uniform\nstructure to downstream assessors.\n\nFields are deliberately broad to accommodate all three evidence paths:\n- CODE/CONFIG: produced by SecurityEvidenceNormaliser (no LLM)\n- DOCUMENT:    produced by DocumentEvidenceExtractor (LLM-based)\n\nThe evidence field carries up to 3 representative snippets (by producer\nconvention) so downstream LLM assessors receive actual code or document\nexcerpts alongside the summary description.",
       "properties": {
         "id": {
           "description": "Unique identifier for this evidence item (UUID)",
@@ -143,6 +163,14 @@
           "description": "Evidence content. For code/config: matched excerpt or summary. For documents: verbatim section or LLM-generated summary.",
           "title": "Description",
           "type": "string"
+        },
+        "evidence": {
+          "description": "Representative snippets supporting this finding. Producers should include up to 3 examples. Empty for evidence paths that do not carry raw snippets.",
+          "items": {
+            "$ref": "#/$defs/BaseFindingEvidence"
+          },
+          "title": "Evidence",
+          "type": "array"
         },
         "require_review": {
           "anyOf": [

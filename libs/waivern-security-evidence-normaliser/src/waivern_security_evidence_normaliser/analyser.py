@@ -10,6 +10,7 @@ from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
+from waivern_core.schemas.finding_types import BaseFindingEvidence
 from waivern_crypto_quality_analyser.schemas.types import (
     CryptoQualityIndicatorModel,
     CryptoQualityIndicatorOutput,
@@ -54,6 +55,17 @@ class _FindingValues(TypedDict):
     description_label: str
     polarity: _Polarity
     require_review: bool | None
+    evidence_items: list[BaseFindingEvidence]
+
+
+class _EvidenceItemSpec(TypedDict):
+    """Resolved attributes for a single SecurityEvidenceModel to be built."""
+
+    source_file: str
+    description: str
+    polarity: _Polarity
+    require_review: bool | None
+    evidence_snippets: list[BaseFindingEvidence]
 
 
 class SecurityEvidenceNormaliser(Analyser):
@@ -182,10 +194,7 @@ class SecurityEvidenceNormaliser(Analyser):
     def _build_evidence_items(
         self,
         rule: SecurityEvidenceDomainMappingRule,
-        source_file: str,
-        description: str,
-        polarity: _Polarity,
-        require_review: bool | None,
+        spec: _EvidenceItemSpec,
     ) -> list[SecurityEvidenceModel]:
         """Build evidence items for a single rule group.
 
@@ -195,36 +204,35 @@ class SecurityEvidenceNormaliser(Analyser):
 
         Args:
             rule: Matched domain mapping rule.
-            source_file: Source file path for the evidence item.
-            description: Human-readable description of the finding group.
-            polarity: Evidence polarity (positive/negative/neutral).
-            require_review: Propagated require_review flag.
+            spec: Resolved attributes for the evidence item(s) to build.
 
         Returns:
             One or two SecurityEvidenceModel instances.
 
         """
         item = SecurityEvidenceModel(
-            metadata=SecurityEvidenceMetadata(source=source_file),
+            metadata=SecurityEvidenceMetadata(source=spec["source_file"]),
             evidence_type="CODE",
             security_domain=SecurityDomain(rule.security_domain),
-            polarity=polarity,
+            polarity=spec["polarity"],
             confidence=1.0,
-            description=description,
-            require_review=require_review,
+            description=spec["description"],
+            evidence=spec["evidence_snippets"],
+            require_review=spec["require_review"],
         )
         items = [item]
 
         if rule.secondary_domain is not None:
             items.append(
                 SecurityEvidenceModel(
-                    metadata=SecurityEvidenceMetadata(source=source_file),
+                    metadata=SecurityEvidenceMetadata(source=spec["source_file"]),
                     evidence_type="CODE",
                     security_domain=SecurityDomain(rule.secondary_domain),
-                    polarity=polarity,
+                    polarity=spec["polarity"],
                     confidence=1.0,
-                    description=description,
-                    require_review=require_review,
+                    description=spec["description"],
+                    evidence=spec["evidence_snippets"],
+                    require_review=spec["require_review"],
                 )
             )
 
@@ -283,13 +291,23 @@ class SecurityEvidenceNormaliser(Analyser):
             require_review = self._propagate_require_review(
                 [v["require_review"] for v in group]
             )
+            snippets: list[BaseFindingEvidence] = []
+            for v in group:
+                snippets.extend(v["evidence_items"])
+                if len(snippets) >= self._config.maximum_evidence_items:
+                    break
             evidence_items.extend(
                 self._build_evidence_items(
                     rule=rule,
-                    source_file=source_file,
-                    description=first["description_label"].format(count=len(group)),
-                    polarity=first["polarity"],
-                    require_review=require_review,
+                    spec=_EvidenceItemSpec(
+                        source_file=source_file,
+                        description=first["description_label"].format(count=len(group)),
+                        polarity=first["polarity"],
+                        require_review=require_review,
+                        evidence_snippets=snippets[
+                            : self._config.maximum_evidence_items
+                        ],
+                    ),
                 )
             )
 
@@ -324,6 +342,7 @@ class SecurityEvidenceNormaliser(Analyser):
                 + "' personal data detected",
                 polarity="neutral",
                 require_review=finding.require_review,
+                evidence_items=list(finding.evidence),
             )
 
         return self._normalise(inputs, PersonalDataIndicatorOutput, extract)
@@ -355,6 +374,7 @@ class SecurityEvidenceNormaliser(Analyser):
                 + "' processing purpose detected",
                 polarity="neutral",
                 require_review=finding.require_review,
+                evidence_items=list(finding.evidence),
             )
 
         return self._normalise(inputs, ProcessingPurposeIndicatorOutput, extract)
@@ -390,6 +410,7 @@ class SecurityEvidenceNormaliser(Analyser):
                 + ") detected",
                 polarity=finding.polarity,
                 require_review=finding.require_review,
+                evidence_items=list(finding.evidence),
             )
 
         return self._normalise(inputs, CryptoQualityIndicatorOutput, extract)
