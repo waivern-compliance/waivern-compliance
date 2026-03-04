@@ -75,6 +75,9 @@ class SecurityControlPatternMatcher:
 
                 total_matches = sum(r.match_count for r in results)
 
+                # rule.polarity is Literal["positive", "negative"], which is a
+                # proper subtype of SecurityEvidenceModel.polarity's
+                # Literal["positive", "negative", "neutral"] — no cast needed.
                 finding = SecurityEvidenceModel(
                     metadata=SecurityEvidenceMetadata(source=metadata.source),
                     evidence_type="CODE",

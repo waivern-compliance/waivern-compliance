@@ -16,6 +16,14 @@ def read(content: dict[str, Any]) -> StandardInputDataModel[BaseMetadata]:
     Converts each source code file to a StandardInputDataItemModel,
     mapping raw_content → content and file_path → metadata.source.
 
+    SourceCodeDataModel requires these fields (all mandatory):
+      - name: str
+      - description: str
+      - source: str (repository name)
+      - metadata: {total_files, total_lines, analysis_timestamp}
+      - data[]: {file_path, language, raw_content,
+                 metadata: {file_size, line_count, last_modified}}
+
     Args:
         content: Validated source_code v1.0.0 data
 
