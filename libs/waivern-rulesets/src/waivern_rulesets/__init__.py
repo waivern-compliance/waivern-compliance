@@ -60,6 +60,9 @@ from waivern_rulesets.security_control_indicator import (
 from waivern_rulesets.security_control_indicator_erp import (
     SecurityControlIndicatorERPRuleset,
 )
+from waivern_rulesets.security_control_indicator_nodejs import (
+    SecurityControlIndicatorNodejsRuleset,
+)
 from waivern_rulesets.security_evidence_domain_mapping import (
     SecurityEvidenceDomainMappingRule,
     SecurityEvidenceDomainMappingRuleset,
@@ -103,10 +106,11 @@ __all__ = [
     "ISO27001DomainsRuleset",
     "SecurityControlIndicatorRuleset",
     "SecurityEvidenceDomainMappingRuleset",
-    # ERP extension rulesets
+    # Extension rulesets
     "PersonalDataIndicatorERPRuleset",
     "ProcessingPurposesERPRuleset",
     "SecurityControlIndicatorERPRuleset",
+    "SecurityControlIndicatorNodejsRuleset",
     # Detection rule types
     "CryptoQualityIndicatorRule",
     "DataCollectionRule",
