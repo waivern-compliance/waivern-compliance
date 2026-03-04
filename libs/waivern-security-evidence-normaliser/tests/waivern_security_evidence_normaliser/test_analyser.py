@@ -3,6 +3,7 @@
 import logging
 
 import pytest
+from pydantic import ValidationError
 from waivern_core import AnalyserContractTests
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
@@ -13,6 +14,15 @@ from waivern_security_evidence_normaliser.types import SecurityEvidenceNormalise
 # =============================================================================
 # Contract tests
 # =============================================================================
+
+
+class TestSecurityEvidenceNormaliserConfig:
+    """Tests for SecurityEvidenceNormaliserConfig validation."""
+
+    def test_maximum_evidence_items_must_be_at_least_one(self) -> None:
+        """maximum_evidence_items=0 raises a validation error."""
+        with pytest.raises(ValidationError):
+            SecurityEvidenceNormaliserConfig(maximum_evidence_items=0)
 
 
 class TestSecurityEvidenceNormaliserContract(
@@ -349,6 +359,100 @@ class TestNormaliseCryptoQuality:
         assert len(findings) == 1
         assert findings[0]["security_domain"] == "encryption"
         assert findings[0]["polarity"] == "negative"
+
+    def test_evidence_items_from_upstream_finding_are_propagated(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """A finding's evidence snippet is propagated into the output SecurityEvidenceModel."""
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        msg = self._make_message("bcrypt", "strong", "positive")
+
+        result = analyser.process([msg], output_schema)
+
+        finding = result.content["findings"][0]
+        assert len(finding["evidence"]) == 1
+        assert finding["evidence"][0]["content"] == "Found bcrypt usage"
+
+    def test_evidence_items_collected_across_all_findings_in_group(
+        self,
+        output_schema: Schema,
+    ) -> None:
+        """Evidence items are collected from all findings in a group, not just the first."""
+        finding_base: dict[str, object] = {
+            "algorithm": "bcrypt",
+            "quality_rating": "strong",
+            "polarity": "positive",
+            "matched_patterns": [{"pattern": "bcrypt", "match_count": 1}],
+            "metadata": {"source": "auth.php"},
+        }
+        msg = Message(
+            id="test_cq_group",
+            content={
+                "findings": [
+                    {
+                        **finding_base,
+                        "id": "f1",
+                        "evidence": [{"content": "bcrypt_hash($pw)"}],
+                    },
+                    {
+                        **finding_base,
+                        "id": "f2",
+                        "evidence": [{"content": "bcrypt_verify($pw)"}],
+                    },
+                ],
+                "summary": {"total_findings": 2},
+                "analysis_metadata": {
+                    "ruleset_used": "local/crypto_quality_indicator/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("crypto_quality_indicator", "1.0.0"),
+        )
+
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        result = analyser.process([msg], output_schema)
+
+        finding = result.content["findings"][0]
+        contents = [e["content"] for e in finding["evidence"]]
+        assert "bcrypt_hash($pw)" in contents
+        assert "bcrypt_verify($pw)" in contents
+
+    def test_evidence_items_capped_at_configured_maximum(
+        self,
+        output_schema: Schema,
+    ) -> None:
+        """Evidence items are capped at maximum_evidence_items from config."""
+        finding_base: dict[str, object] = {
+            "algorithm": "bcrypt",
+            "quality_rating": "strong",
+            "polarity": "positive",
+            "matched_patterns": [{"pattern": "bcrypt", "match_count": 1}],
+            "metadata": {"source": "auth.php"},
+        }
+        findings = [
+            {**finding_base, "id": f"f{i}", "evidence": [{"content": f"snippet_{i}"}]}
+            for i in range(4)
+        ]
+        msg = Message(
+            id="test_cq_cap",
+            content={
+                "findings": findings,
+                "summary": {"total_findings": 4},
+                "analysis_metadata": {
+                    "ruleset_used": "local/crypto_quality_indicator/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("crypto_quality_indicator", "1.0.0"),
+        )
+
+        config = SecurityEvidenceNormaliserConfig(maximum_evidence_items=2)
+        analyser = SecurityEvidenceNormaliser(config)
+        result = analyser.process([msg], output_schema)
+
+        assert len(result.content["findings"][0]["evidence"]) == 2
 
     def test_unknown_crypto_algorithm_is_skipped_silently(
         self, caplog: pytest.LogCaptureFixture

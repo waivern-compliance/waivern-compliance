@@ -6,6 +6,7 @@ from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
 from waivern_core.schemas import BaseAnalysisOutputMetadata, BaseSchemaOutput
+from waivern_core.schemas.finding_types import BaseFindingEvidence
 
 
 class SecurityDomain(StrEnum):
@@ -60,6 +61,10 @@ class SecurityEvidenceModel(BaseModel):
     Fields are deliberately broad to accommodate all three evidence paths:
     - CODE/CONFIG: produced by SecurityEvidenceNormaliser (no LLM)
     - DOCUMENT:    produced by DocumentEvidenceExtractor (LLM-based)
+
+    The evidence field carries representative snippets from the source so
+    downstream LLM assessors receive actual code or document excerpts
+    alongside the summary description.
     """
 
     id: str = Field(
@@ -91,6 +96,13 @@ class SecurityEvidenceModel(BaseModel):
             "Evidence content. For code/config: matched excerpt or summary. "
             "For documents: verbatim section or LLM-generated summary."
         )
+    )
+    evidence: list[BaseFindingEvidence] = Field(
+        default_factory=list,
+        description=(
+            "Representative snippets supporting this finding. "
+            "Empty for evidence paths that do not carry raw snippets."
+        ),
     )
     require_review: bool | None = Field(
         default=None,
