@@ -7,18 +7,12 @@ is required for a meaningful Statement of Applicability (SoA).
 Each rule carries the five ISO 27001 control attributes and guidance text for LLM
 prompting. Consumed by ControlAssessor to structure assessments and populate
 control_assessment schema fields without LLM involvement.
-
-Dependencies (keep in sync when upstream definitions change):
-- SecurityDomain enum in waivern-security-evidence → security_domains master list
-
-Tests enforce completeness: test_all_security_domains_are_covered will fail
-if the security_domains master list diverges from the SecurityDomain enum.
 """
 
 from typing import ClassVar, Literal
 
-from pydantic import Field, field_validator, model_validator
-from waivern_core import ClassificationRule, RulesetData
+from pydantic import Field, field_validator
+from waivern_core import ClassificationRule, RulesetData, SecurityDomain
 
 from waivern_rulesets.core.base import YAMLRuleset
 
@@ -38,7 +32,7 @@ class ISO27001DomainsRule(ClassificationRule):
         min_length=1,
         description="Individual ISO 27001:2022 Annex A control reference (e.g. 'A.5.15')",
     )
-    security_domains: tuple[str, ...] = Field(
+    security_domains: tuple[SecurityDomain, ...] = Field(
         description=(
             "Security taxonomy domains relevant to this control; used to filter "
             "security_evidence items by domain. May be empty for cross-cutting governance "
@@ -123,32 +117,13 @@ class ISO27001DomainsRule(ClassificationRule):
 
 
 class ISO27001DomainsRulesetData(RulesetData[ISO27001DomainsRule]):
-    """ISO 27001 domains ruleset data with cross-field validation."""
+    """ISO 27001 domains ruleset data.
 
-    security_domains: list[str] = Field(
-        min_length=1,
-        description=(
-            "Master list of valid security domain values. "
-            "DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence. "
-            "When adding or removing a domain there, update this list and re-check all rules below."
-        ),
-    )
+    security_domains values are validated by Pydantic against the SecurityDomain
+    enum at rule parse time — no manual cross-field validator needed.
+    """
 
-    @model_validator(mode="after")
-    def validate_rules(self) -> "ISO27001DomainsRulesetData":
-        """Validate all rule security_domains values against the master list."""
-        valid_domains = set(self.security_domains)
-
-        for rule in self.rules:
-            invalid = [d for d in rule.security_domains if d not in valid_domains]
-            if invalid:
-                msg = (
-                    f"Rule '{rule.name}' has invalid security_domains: "
-                    f"{invalid}. Valid: {sorted(valid_domains)}"
-                )
-                raise ValueError(msg)
-
-        return self
+    pass
 
 
 class ISO27001DomainsRuleset(YAMLRuleset[ISO27001DomainsRule]):

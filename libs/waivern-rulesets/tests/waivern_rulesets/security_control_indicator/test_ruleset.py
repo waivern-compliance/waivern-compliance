@@ -7,7 +7,6 @@ from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.security_control_indicator import (
     SecurityControlIndicatorRule,
     SecurityControlIndicatorRuleset,
-    SecurityControlIndicatorRulesetData,
 )
 from waivern_rulesets.testing import RulesetContractTests
 
@@ -45,29 +44,21 @@ class TestSecurityControlIndicatorRulesetContract(
 
 
 class TestSecurityControlIndicatorRulesetDataValidation:
-    """Test the custom model validator on the ruleset data class.
+    """Test validation on the security control indicator ruleset models.
 
-    The security_control_indicator ruleset validates one cross-field constraint:
-    - security_domain must be in the security_domains master list.
+    security_domain is validated by Pydantic as a SecurityDomain enum field
+    on SecurityControlIndicatorRule — rejection happens at rule construction.
     """
 
-    def test_rejects_security_domain_not_in_master_list(self) -> None:
-        """A rule whose security_domain is absent from the master list is rejected."""
-        rule = SecurityControlIndicatorRule(
-            name="invalid_domain_rule",
-            description="Rule with invalid security_domain",
-            security_domain="nonexistent_domain",
-            polarity="positive",
-            patterns=("prepared_statement",),
-        )
-
-        with pytest.raises(ValidationError, match="invalid security_domain"):
-            SecurityControlIndicatorRulesetData(
-                name="test_ruleset",
-                version="1.0.0",
-                description="Test ruleset",
-                security_domains=["authentication", "vulnerability_management"],
-                rules=[rule],
+    def test_rejects_invalid_security_domain(self) -> None:
+        """A rule with an unrecognised security_domain string is rejected at construction."""
+        with pytest.raises(ValidationError):
+            SecurityControlIndicatorRule(
+                name="invalid_domain_rule",
+                description="Rule with invalid security_domain",
+                security_domain="nonexistent_domain",  # type: ignore[arg-type]
+                polarity="positive",
+                patterns=("prepared_statement",),
             )
 
 

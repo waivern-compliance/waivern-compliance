@@ -57,7 +57,7 @@ from waivern_core.testing import (
     ComponentFactoryContractTests,
     ProcessorContractTests,
 )
-from waivern_core.types import InputRequirement, JsonValue
+from waivern_core.types import InputRequirement, JsonValue, SecurityDomain
 from waivern_core.utils import validate_output_schema
 
 __all__ = [
@@ -99,6 +99,7 @@ __all__ = [
     # Types
     "InputRequirement",
     "JsonValue",
+    "SecurityDomain",
     # Protocols
     "Finding",
     "FindingMetadata",

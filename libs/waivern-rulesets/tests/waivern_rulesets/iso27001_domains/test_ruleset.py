@@ -2,12 +2,12 @@
 
 import pytest
 from pydantic import ValidationError
+from waivern_core import SecurityDomain
 
 from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.iso27001_domains import (
     ISO27001DomainsRule,
     ISO27001DomainsRuleset,
-    ISO27001DomainsRulesetData,  # used in model validator tests
 )
 from waivern_rulesets.testing import RulesetContractTests
 
@@ -41,10 +41,10 @@ class TestISO27001DomainsRulesetContract(RulesetContractTests[ISO27001DomainsRul
 
 
 class TestISO27001DomainsRulesetDataValidation:
-    """Test custom model validators on the ruleset data class.
+    """Test validation on the ISO 27001 domains ruleset models.
 
-    The iso27001_domains ruleset validates one cross-field constraint:
-    - security_domains values in each rule must be in the security_domains master list.
+    security_domains on ISO27001DomainsRule is validated by Pydantic as a
+    tuple[SecurityDomain, ...] field — rejection happens at rule construction.
     """
 
     def _make_valid_rule(self, name: str = "test_rule") -> ISO27001DomainsRule:
@@ -53,7 +53,7 @@ class TestISO27001DomainsRulesetDataValidation:
             name=name,
             description="A test rule",
             control_ref="A.5.1",
-            security_domains=("authentication",),
+            security_domains=(SecurityDomain.AUTHENTICATION,),
             evidence_source=("TECHNICAL",),
             attestation_required=False,
             control_type="preventive",
@@ -65,29 +65,21 @@ class TestISO27001DomainsRulesetDataValidation:
         )
 
     def test_rejects_invalid_security_domain(self) -> None:
-        """Test that rules with a security_domain not in master list are rejected."""
-        rule = ISO27001DomainsRule(
-            name="invalid_domain_rule",
-            description="Rule with invalid security_domain",
-            control_ref="A.5.1",
-            security_domains=("nonexistent_domain",),
-            evidence_source=(),
-            attestation_required=True,
-            control_type="preventive",
-            cia=("confidentiality",),
-            cybersecurity_concept="identify",
-            operational_capability="governance",
-            iso_security_domain="governance_and_ecosystem",
-            guidance_text="Some guidance.",
-        )
-
-        with pytest.raises(ValidationError, match="invalid security_domains"):
-            ISO27001DomainsRulesetData(
-                name="test_ruleset",
-                version="1.0.0",
-                description="Test ruleset",
-                security_domains=["authentication"],
-                rules=[rule],
+        """A rule with an unrecognised security_domains value is rejected at construction."""
+        with pytest.raises(ValidationError):
+            ISO27001DomainsRule(
+                name="invalid_domain_rule",
+                description="Rule with invalid security_domain",
+                control_ref="A.5.1",
+                security_domains=("nonexistent_domain",),  # type: ignore[arg-type]
+                evidence_source=(),
+                attestation_required=True,
+                control_type="preventive",
+                cia=("confidentiality",),
+                cybersecurity_concept="identify",
+                operational_capability="governance",
+                iso_security_domain="governance_and_ecosystem",
+                guidance_text="Some guidance.",
             )
 
     def test_rejects_rule_with_empty_guidance_text(self) -> None:
@@ -148,29 +140,16 @@ class TestISO27001DomainsRulesetBusinessRules:
     def test_all_security_domains_are_covered(
         self, ruleset: ISO27001DomainsRuleset
     ) -> None:
-        """Test that every security taxonomy domain is covered by at least one rule.
+        """Test that every SecurityDomain value is covered by at least one rule.
 
         Ensures no security_evidence items are silently unassessable because their
         domain maps to no ISO 27001 control. Physical controls cover physical_security
         via document evidence from physical security policies and audit reports.
 
-        DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence.
-        When adding or removing a domain there, update this set accordingly.
+        Uses SecurityDomain from waivern_core as the authoritative source — no
+        hardcoded set to keep in sync.
         """
-        expected_domains = {
-            "authentication",
-            "encryption",
-            "access_control",
-            "logging_monitoring",
-            "vulnerability_management",
-            "data_protection",
-            "network_security",
-            "physical_security",
-            "people_controls",
-            "supplier_management",
-            "incident_management",
-            "business_continuity",
-        }
+        expected_domains = {d.value for d in SecurityDomain}
         covered_domains = {
             d for rule in ruleset.get_rules() for d in rule.security_domains
         }

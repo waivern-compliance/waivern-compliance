@@ -27,7 +27,6 @@ from waivern_rulesets.security_evidence_domain_mapping import (
     SecurityEvidenceDomainMappingRule,
 )
 from waivern_security_evidence.schemas.types import (
-    SecurityDomain,
     SecurityEvidenceMetadata,
     SecurityEvidenceModel,
 )
@@ -213,7 +212,7 @@ class SecurityEvidenceNormaliser(Analyser):
         item = SecurityEvidenceModel(
             metadata=SecurityEvidenceMetadata(source=spec["source_file"]),
             evidence_type="CODE",
-            security_domain=SecurityDomain(rule.security_domain),
+            security_domain=rule.security_domain,
             polarity=spec["polarity"],
             confidence=1.0,
             description=spec["description"],
@@ -227,7 +226,7 @@ class SecurityEvidenceNormaliser(Analyser):
                 SecurityEvidenceModel(
                     metadata=SecurityEvidenceMetadata(source=spec["source_file"]),
                     evidence_type="CODE",
-                    security_domain=SecurityDomain(rule.secondary_domain),
+                    security_domain=rule.secondary_domain,
                     polarity=spec["polarity"],
                     confidence=1.0,
                     description=spec["description"],

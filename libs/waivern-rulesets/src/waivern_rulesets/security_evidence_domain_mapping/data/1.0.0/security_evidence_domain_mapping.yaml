@@ -6,23 +6,6 @@ name: security_evidence_domain_mapping
 version: 1.0.0
 description: Maps indicator findings to security evidence domains for downstream compliance assessors
 
-# Master list of valid security domain values
-# DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence.
-# When adding or removing a domain there, update this list and re-check all rules below.
-security_domains:
-  - authentication
-  - encryption
-  - access_control
-  - logging_monitoring
-  - vulnerability_management
-  - data_protection
-  - network_security
-  - physical_security
-  - people_controls
-  - supplier_management
-  - incident_management
-  - business_continuity
-
 # Master list of valid processing purpose slugs
 # DEPENDENCY: Must stay in sync with purpose_slugs in processing_purposes/1.0.0.
 # When adding or removing a purpose there, update this list and add or remove a rule below.

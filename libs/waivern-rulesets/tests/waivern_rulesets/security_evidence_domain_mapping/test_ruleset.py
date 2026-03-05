@@ -2,6 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
+from waivern_core import SecurityDomain
 
 from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.crypto_quality_indicator import CryptoQualityIndicatorRuleset
@@ -48,57 +49,35 @@ class TestSecurityEvidenceDomainMappingRulesetContract(
 
 
 class TestSecurityEvidenceDomainMappingRulesetDataValidation:
-    """Test our custom model validators on the ruleset data class.
+    """Test validators on the security evidence domain mapping ruleset models.
 
-    The mapping ruleset validates three cross-field constraints:
-    - security_domain must be in the master security_domains list
-    - secondary_domain (if set) must be in the master security_domains list
-    - indicator_values must match the appropriate master list based on source_type
+    security_domain and secondary_domain are validated by Pydantic as SecurityDomain
+    enum fields on SecurityEvidenceDomainMappingRule. indicator_values are still
+    validated by a cross-field model_validator on the data class against the upstream
+    master lists (purpose_slugs, indicator_categories, algorithm_values).
     """
 
     def test_rejects_invalid_security_domain(self) -> None:
-        """Test that rules with security_domain not in master list are rejected."""
-        rule = SecurityEvidenceDomainMappingRule(
-            name="invalid_domain_rule",
-            description="Rule with invalid security_domain",
-            source_type="purpose",
-            indicator_values=("user_identity_login",),
-            security_domain="nonexistent_domain",
-        )
-
-        with pytest.raises(ValidationError, match="invalid security_domain"):
-            SecurityEvidenceDomainMappingRulesetData(
-                name="test_ruleset",
-                version="1.0.0",
-                description="Test ruleset",
-                security_domains=["authentication", "data_protection"],
-                purpose_slugs=["user_identity_login"],
-                indicator_categories=["email"],
-                algorithm_values=["bcrypt"],
-                rules=[rule],
+        """A rule with an unrecognised security_domain string is rejected at construction."""
+        with pytest.raises(ValidationError):
+            SecurityEvidenceDomainMappingRule(
+                name="invalid_domain_rule",
+                description="Rule with invalid security_domain",
+                source_type="purpose",
+                indicator_values=("user_identity_login",),
+                security_domain="nonexistent_domain",  # type: ignore[arg-type]
             )
 
     def test_rejects_invalid_secondary_domain(self) -> None:
-        """Test that rules with secondary_domain not in master list are rejected."""
-        rule = SecurityEvidenceDomainMappingRule(
-            name="invalid_secondary_rule",
-            description="Rule with invalid secondary_domain",
-            source_type="category",
-            indicator_values=("email",),
-            security_domain="data_protection",
-            secondary_domain="nonexistent_domain",
-        )
-
-        with pytest.raises(ValidationError, match="invalid secondary_domain"):
-            SecurityEvidenceDomainMappingRulesetData(
-                name="test_ruleset",
-                version="1.0.0",
-                description="Test ruleset",
-                security_domains=["authentication", "data_protection"],
-                purpose_slugs=["user_identity_login"],
-                indicator_categories=["email"],
-                algorithm_values=["bcrypt"],
-                rules=[rule],
+        """A rule with an unrecognised secondary_domain string is rejected at construction."""
+        with pytest.raises(ValidationError):
+            SecurityEvidenceDomainMappingRule(
+                name="invalid_secondary_rule",
+                description="Rule with invalid secondary_domain",
+                source_type="category",
+                indicator_values=("email",),
+                security_domain=SecurityDomain.DATA_PROTECTION,
+                secondary_domain="nonexistent_domain",  # type: ignore[arg-type]
             )
 
     def test_rejects_invalid_purpose_indicator_values(self) -> None:
@@ -108,7 +87,7 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
             description="Rule with invalid purpose slug",
             source_type="purpose",
             indicator_values=("nonexistent_purpose_slug",),
-            security_domain="authentication",
+            security_domain=SecurityDomain.AUTHENTICATION,
         )
 
         with pytest.raises(ValidationError, match="invalid purpose indicator_values"):
@@ -116,7 +95,6 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
                 name="test_ruleset",
                 version="1.0.0",
                 description="Test ruleset",
-                security_domains=["authentication"],
                 purpose_slugs=["user_identity_login"],
                 indicator_categories=["email"],
                 algorithm_values=["bcrypt"],
@@ -130,7 +108,7 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
             description="Rule with invalid indicator category",
             source_type="category",
             indicator_values=("nonexistent_category",),
-            security_domain="data_protection",
+            security_domain=SecurityDomain.DATA_PROTECTION,
         )
 
         with pytest.raises(ValidationError, match="invalid category indicator_values"):
@@ -138,7 +116,6 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
                 name="test_ruleset",
                 version="1.0.0",
                 description="Test ruleset",
-                security_domains=["data_protection"],
                 purpose_slugs=["user_identity_login"],
                 indicator_categories=["email"],
                 algorithm_values=["bcrypt"],
@@ -152,7 +129,7 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
             description="Rule with invalid algorithm value",
             source_type="algorithm",
             indicator_values=("nonexistent_algo",),
-            security_domain="encryption",
+            security_domain=SecurityDomain.ENCRYPTION,
         )
 
         with pytest.raises(ValidationError, match="invalid algorithm indicator_values"):
@@ -160,7 +137,6 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
                 name="test_ruleset",
                 version="1.0.0",
                 description="Test ruleset",
-                security_domains=["encryption"],
                 purpose_slugs=["user_identity_login"],
                 indicator_categories=["email"],
                 algorithm_values=["bcrypt"],
@@ -174,8 +150,8 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
             description="Valid rule with secondary domain",
             source_type="category",
             indicator_values=("health",),
-            security_domain="data_protection",
-            secondary_domain="people_controls",
+            security_domain=SecurityDomain.DATA_PROTECTION,
+            secondary_domain=SecurityDomain.PEOPLE_CONTROLS,
         )
 
         # Should not raise
@@ -183,7 +159,6 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
             name="test_ruleset",
             version="1.0.0",
             description="Test ruleset",
-            security_domains=["data_protection", "people_controls"],
             purpose_slugs=["user_identity_login"],
             indicator_categories=["health"],
             algorithm_values=["bcrypt"],
