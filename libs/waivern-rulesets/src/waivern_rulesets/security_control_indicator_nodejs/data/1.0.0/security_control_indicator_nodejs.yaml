@@ -1,10 +1,6 @@
 # Security Control Indicator Node.js Extension Ruleset
 # Node.js/Express-specific security control patterns with binary polarity.
 #
-# Extension contract:
-#   All security_domain values must appear in the security_domains master list
-#   below, and must stay in sync with SecurityDomain enum in waivern-security-evidence.
-#
 # Why this extension exists:
 #   The generic ruleset matches language-agnostic patterns. Node.js/Express uses
 #   library call conventions (jwt.verify, helmet, rateLimit) that do not match
@@ -13,11 +9,6 @@
 name: security_control_indicator_nodejs
 version: 1.0.0
 description: Node.js/Express extension for security control detection
-
-security_domains:
-  - authentication
-  - network_security
-  - vulnerability_management
 
 rules:
   # ===========================================================================

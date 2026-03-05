@@ -12,23 +12,6 @@ name: security_control_indicator
 version: 1.0.0
 description: Detects security control implementations in source code with binary quality polarity
 
-# Master list of valid security domain values
-# DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence.
-# When adding or removing a domain there, update this list and re-check all rules below.
-security_domains:
-  - authentication
-  - encryption
-  - access_control
-  - logging_monitoring
-  - vulnerability_management
-  - data_protection
-  - network_security
-  - physical_security
-  - people_controls
-  - supplier_management
-  - incident_management
-  - business_continuity
-
 rules:
   # ===========================================================================
   # Authentication — Positive

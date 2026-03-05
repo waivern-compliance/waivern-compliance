@@ -1,10 +1,6 @@
 # Security Control Indicator ERP Extension Ruleset
 # Dolibarr-specific security control patterns with binary polarity.
 #
-# Extension contract:
-#   All security_domain values must appear in the security_domains master list
-#   below, and must stay in sync with SecurityDomain enum in waivern-security-evidence.
-#
 # Polarity note:
 #   All rules are positive — the ERP extension recognises Dolibarr-proprietary
 #   security mechanisms as good practice. Negative patterns (shell_exec, passthru,
@@ -13,12 +9,6 @@
 name: security_control_indicator_erp
 version: 1.0.0
 description: ERP sector extension for security control detection (Dolibarr-specific patterns)
-
-security_domains:
-  - authentication
-  - access_control
-  - logging_monitoring
-  - vulnerability_management
 
 rules:
   # ===========================================================================

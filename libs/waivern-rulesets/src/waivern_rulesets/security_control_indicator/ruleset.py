@@ -7,15 +7,12 @@ Unlike the processing_purpose_indicator path (which detects presence with
 neutral polarity), every pattern here has a definitive quality signal:
 a prepared_statement() call is positive evidence; an eval() of user input
 is negative evidence. No neutral polarity is permitted.
-
-Dependencies (keep in sync when upstream definitions change):
-- SecurityDomain enum in waivern-security-evidence → security_domains master list
 """
 
 from typing import ClassVar, Literal
 
-from pydantic import Field, model_validator
-from waivern_core import DetectionRule, RulesetData
+from pydantic import Field
+from waivern_core import DetectionRule, RulesetData, SecurityDomain
 
 from waivern_rulesets.core.base import YAMLRuleset
 
@@ -28,8 +25,8 @@ class SecurityControlIndicatorRule(DetectionRule):
     at runtime because the domain and polarity live on the rule itself.
     """
 
-    security_domain: str = Field(
-        description="Security domain this control belongs to (snake_case)"
+    security_domain: SecurityDomain = Field(
+        description="Security domain this control belongs to"
     )
     polarity: Literal["positive", "negative"] = Field(
         description=(
@@ -41,34 +38,13 @@ class SecurityControlIndicatorRule(DetectionRule):
 
 
 class SecurityControlIndicatorRulesetData(RulesetData[SecurityControlIndicatorRule]):
-    """Security control indicator ruleset data with domain validation.
+    """Security control indicator ruleset data.
 
-    Validates that every rule's security_domain is drawn from the master list.
-    This keeps waivern-rulesets independent of waivern-security-evidence while
-    still enforcing the shared SecurityDomain taxonomy at parse time.
+    security_domain values are validated by Pydantic against the SecurityDomain
+    enum at rule parse time — no manual cross-field validator needed.
     """
 
-    security_domains: list[str] = Field(
-        min_length=1,
-        description=(
-            "Master list of valid security domain values. "
-            "DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence. "
-            "When adding or removing a domain there, update this list and re-check all rules below."
-        ),
-    )
-
-    @model_validator(mode="after")
-    def validate_rules(self) -> "SecurityControlIndicatorRulesetData":
-        """Validate all rules against the security_domains master list."""
-        valid_domains = set(self.security_domains)
-        for rule in self.rules:
-            if rule.security_domain not in valid_domains:
-                msg = (
-                    f"Rule '{rule.name}' has invalid security_domain "
-                    f"'{rule.security_domain}'. Valid: {valid_domains}"
-                )
-                raise ValueError(msg)
-        return self
+    pass
 
 
 class SecurityControlIndicatorRuleset(YAMLRuleset[SecurityControlIndicatorRule]):

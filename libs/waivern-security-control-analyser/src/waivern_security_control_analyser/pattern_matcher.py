@@ -6,7 +6,6 @@ from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
 from waivern_core.schemas import BaseMetadata
 from waivern_rulesets.security_control_indicator import SecurityControlIndicatorRule
 from waivern_security_evidence import (
-    SecurityDomain,
     SecurityEvidenceMetadata,
     SecurityEvidenceModel,
 )
@@ -81,7 +80,7 @@ class SecurityControlPatternMatcher:
                 finding = SecurityEvidenceModel(
                     metadata=SecurityEvidenceMetadata(source=metadata.source),
                     evidence_type="CODE",
-                    security_domain=SecurityDomain(rule.security_domain),
+                    security_domain=rule.security_domain,
                     polarity=rule.polarity,
                     confidence=1.0,
                     description=(

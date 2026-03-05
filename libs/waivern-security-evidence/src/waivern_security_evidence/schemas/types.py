@@ -1,37 +1,12 @@
 """Security evidence schema types."""
 
 import uuid
-from enum import StrEnum
 from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
+from waivern_core import SecurityDomain
 from waivern_core.schemas import BaseAnalysisOutputMetadata, BaseSchemaOutput
 from waivern_core.schemas.finding_types import BaseFindingEvidence
-
-
-class SecurityDomain(StrEnum):
-    """Framework-agnostic security domain taxonomy.
-
-    Used as the bridge between indicator findings and compliance framework
-    controls (ISO 27001 Annex A, GDPR Art 32, etc.). A single taxonomy
-    shared across all producers and consumers of security_evidence.
-
-    StrEnum serialises to plain strings in JSON — Pydantic handles this
-    transparently, so no custom serialiser is needed.
-    """
-
-    AUTHENTICATION = "authentication"
-    ENCRYPTION = "encryption"
-    ACCESS_CONTROL = "access_control"
-    LOGGING_MONITORING = "logging_monitoring"
-    VULNERABILITY_MANAGEMENT = "vulnerability_management"
-    DATA_PROTECTION = "data_protection"
-    NETWORK_SECURITY = "network_security"
-    PHYSICAL_SECURITY = "physical_security"
-    PEOPLE_CONTROLS = "people_controls"
-    SUPPLIER_MANAGEMENT = "supplier_management"
-    INCIDENT_MANAGEMENT = "incident_management"
-    BUSINESS_CONTINUITY = "business_continuity"
 
 
 class SecurityEvidenceMetadata(BaseModel):

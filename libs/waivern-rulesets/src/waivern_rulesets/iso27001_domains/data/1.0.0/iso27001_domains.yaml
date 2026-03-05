@@ -24,24 +24,6 @@ name: iso27001_domains
 version: 1.0.0
 description: ISO 27001:2022 Annex A individual control definitions with control attributes and LLM guidance text
 
-# Master list of valid security domain values
-# DEPENDENCY: Must stay in sync with SecurityDomain enum in waivern-security-evidence.
-# When adding or removing a domain there, update this list and re-check all rules below.
-# The test test_all_security_domains_are_covered will fail if any domain is unmapped.
-security_domains:
-  - authentication
-  - encryption
-  - access_control
-  - logging_monitoring
-  - vulnerability_management
-  - data_protection
-  - network_security
-  - physical_security
-  - people_controls
-  - supplier_management
-  - incident_management
-  - business_continuity
-
 rules:
 
   # ===========================================================================
