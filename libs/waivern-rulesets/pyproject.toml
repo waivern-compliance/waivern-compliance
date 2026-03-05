@@ -34,6 +34,7 @@ personal_data_indicator_erp = "waivern_rulesets.personal_data_indicator_erp:Pers
 security_control_indicator = "waivern_rulesets.security_control_indicator:SecurityControlIndicatorRuleset"
 security_control_indicator_erp = "waivern_rulesets.security_control_indicator_erp:SecurityControlIndicatorERPRuleset"
 security_control_indicator_nodejs = "waivern_rulesets.security_control_indicator_nodejs:SecurityControlIndicatorNodejsRuleset"
+security_domains = "waivern_rulesets.security_domains:SecurityDomainsRuleset"
 
 [build-system]
 requires = ["hatchling"]
