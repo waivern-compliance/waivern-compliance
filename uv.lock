@@ -2486,7 +2486,9 @@ version = "0.1.0"
 source = { editable = "libs/waivern-security-document-evidence-extractor" }
 dependencies = [
     { name = "pydantic" },
+    { name = "waivern-analysers-shared" },
     { name = "waivern-core" },
+    { name = "waivern-llm" },
 ]
 
 [package.dev-dependencies]
@@ -2498,7 +2500,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-llm", editable = "libs/waivern-llm" },
 ]
 
 [package.metadata.requires-dev]
