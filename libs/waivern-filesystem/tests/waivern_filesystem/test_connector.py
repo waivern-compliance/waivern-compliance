@@ -74,6 +74,10 @@ class TestFilesystemConnector:
         """Standard input schema fixture."""
         return Schema("standard_input", "1.0.0")
 
+    # =========================================================================
+    # Connector identity and initialisation
+    # =========================================================================
+
     def test_get_name_returns_correct_name(self):
         """Test get_name returns the connector name."""
         assert FilesystemConnector.get_name() == EXPECTED_CONNECTOR_NAME
@@ -118,6 +122,10 @@ class TestFilesystemConnector:
 
         with pytest.raises(ConnectorConfigError, match="Unsupported output schema"):
             connector.extract(unsupported_schema)
+
+    # =========================================================================
+    # Single file and directory extraction
+    # =========================================================================
 
     def test_extract_single_file_with_standard_input_schema(
         self, sample_file, standard_input_schema
@@ -170,6 +178,56 @@ class TestFilesystemConnector:
         assert "Content of file 1" in file_contents
         assert "Content of file 2" in file_contents
         assert "Content of file 3" in file_contents
+
+    def test_extract_large_file_with_chunked_reading(self, standard_input_schema):
+        """Test extracting large file with chunked reading through public API."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
+            # Create content larger than default chunk size
+            large_content = "A" * TEST_LARGE_CONTENT_SIZE
+            f.write(large_content)
+            temp_path = Path(f.name)
+
+        try:
+            config = FilesystemConnectorConfig.from_properties(
+                {"path": str(temp_path), "chunk_size": 1024}
+            )
+            connector = FilesystemConnector(config)
+            result = connector.extract(standard_input_schema)
+
+            assert isinstance(result, Message)
+            content = result.content
+            assert content["data"][0]["content"] == large_content
+            assert len(content["data"][0]["content"]) == TEST_LARGE_CONTENT_SIZE
+        finally:
+            if temp_path.exists():
+                temp_path.unlink()
+
+    def test_extract_creates_filesystem_metadata(
+        self, sample_file, standard_input_schema
+    ):
+        """Test that filesystem connector creates FilesystemMetadata with accurate file context."""
+        config = FilesystemConnectorConfig.from_properties({"path": str(sample_file)})
+        connector = FilesystemConnector(config)
+
+        result = connector.extract(standard_input_schema)
+
+        # Validate the result conforms to FilesystemMetadata expectations
+        typed_result = StandardInputDataModel[FilesystemMetadata].model_validate(
+            result.content
+        )
+
+        # Should have 1 data item for the file
+        assert len(typed_result.data) == 1
+
+        # Verify data item has proper FilesystemMetadata
+        data_item = typed_result.data[0]
+        assert data_item.metadata.connector_type == "filesystem_connector"
+        assert data_item.metadata.file_path == str(sample_file)
+        assert str(sample_file) in data_item.metadata.source
+
+    # =========================================================================
+    # Include and exclude pattern filtering
+    # =========================================================================
 
     def test_extract_directory_with_exclude_patterns(
         self, sample_directory, standard_input_schema
@@ -329,99 +387,6 @@ class TestFilesystemConnector:
         # File not matching pattern should be excluded
         assert "Regular content" not in file_contents
 
-    def test_extract_directory_with_max_files_limit(
-        self, sample_directory, standard_input_schema
-    ):
-        """Test extracting directory with max_files limit through public API."""
-        # Create many files
-        for i in range(10):
-            (sample_directory / f"extra_file_{i}.txt").write_text(f"Content {i}")
-
-        config = FilesystemConnectorConfig.from_properties(
-            {"path": str(sample_directory), "max_files": TEST_MAX_FILES_LIMIT}
-        )
-        connector = FilesystemConnector(config)
-
-        result = connector.extract(standard_input_schema)
-
-        # Should limit number of files processed
-        content = result.content
-        assert content["metadata"]["file_count"] == TEST_MAX_FILES_LIMIT
-        assert len(content["data"]) == TEST_MAX_FILES_LIMIT
-
-    def test_extract_large_file_with_chunked_reading(self, standard_input_schema):
-        """Test extracting large file with chunked reading through public API."""
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
-            # Create content larger than default chunk size
-            large_content = "A" * TEST_LARGE_CONTENT_SIZE
-            f.write(large_content)
-            temp_path = Path(f.name)
-
-        try:
-            config = FilesystemConnectorConfig.from_properties(
-                {"path": str(temp_path), "chunk_size": 1024}
-            )
-            connector = FilesystemConnector(config)
-            result = connector.extract(standard_input_schema)
-
-            assert isinstance(result, Message)
-            content = result.content
-            assert content["data"][0]["content"] == large_content
-            assert len(content["data"][0]["content"]) == TEST_LARGE_CONTENT_SIZE
-        finally:
-            if temp_path.exists():
-                temp_path.unlink()
-
-    def test_extract_no_readable_files_raises_error(self):
-        """Test extract with no readable files raises error."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            # Create binary file only with invalid UTF-8 bytes
-            binary_file = temp_path / "binary.bin"
-            binary_file.write_bytes(b"\x00\x01\x02\x03\xff\xfe\xfd")
-
-            config = FilesystemConnectorConfig.from_properties({"path": str(temp_path)})
-            connector = FilesystemConnector(config)
-            schema = Schema("standard_input", "1.0.0")
-
-            with pytest.raises(
-                ConnectorExtractionError, match="No readable files found"
-            ):
-                connector.extract(schema)
-
-    def test_extract_handles_file_read_errors_gracefully(
-        self, sample_directory, standard_input_schema
-    ):
-        """Test extract handles individual file read errors gracefully."""
-        # Create a file with restrictive permissions (if on Unix-like system)
-        restricted_file = sample_directory / "restricted.txt"
-        restricted_file.write_text("This file will be restricted")
-
-        try:
-            # Make file unreadable (only works on Unix-like systems)
-            if os.name != "nt":  # Not Windows
-                restricted_file.chmod(0o000)
-
-            config = FilesystemConnectorConfig.from_properties(
-                {"path": str(sample_directory)}
-            )
-            connector = FilesystemConnector(config)
-            result = connector.extract(standard_input_schema)
-
-            # Should still succeed with other readable files
-            assert isinstance(result, Message)
-            # Should have fewer files than total (restricted file skipped)
-            content = result.content
-            if os.name != "nt":  # On Unix-like systems, file should be skipped
-                assert (
-                    content["metadata"]["file_count"] >= MIN_READABLE_FILES
-                )  # At least file1.txt and file2.txt
-
-        finally:
-            # Restore permissions for cleanup
-            if os.name != "nt" and restricted_file.exists():
-                restricted_file.chmod(0o644)
-
     def test_extract_directory_with_include_and_exclude_patterns_layered(
         self, sample_directory, standard_input_schema
     ):
@@ -486,25 +451,148 @@ class TestFilesystemConnector:
             assert path.endswith(".js"), f"Non-JS file included: {path}"
             assert "admin" not in path, f"Admin file included: {path}"
 
-    def test_extract_creates_filesystem_metadata(
-        self, sample_file, standard_input_schema
+    # =========================================================================
+    # Max files limit
+    # =========================================================================
+
+    def test_extract_directory_with_max_files_limit(
+        self, sample_directory, standard_input_schema
     ):
-        """Test that filesystem connector creates FilesystemMetadata with accurate file context."""
-        config = FilesystemConnectorConfig.from_properties({"path": str(sample_file)})
+        """Test extracting directory with max_files limit through public API."""
+        # Create many files
+        for i in range(10):
+            (sample_directory / f"extra_file_{i}.txt").write_text(f"Content {i}")
+
+        config = FilesystemConnectorConfig.from_properties(
+            {"path": str(sample_directory), "max_files": TEST_MAX_FILES_LIMIT}
+        )
         connector = FilesystemConnector(config)
 
         result = connector.extract(standard_input_schema)
 
-        # Validate the result conforms to FilesystemMetadata expectations
-        typed_result = StandardInputDataModel[FilesystemMetadata].model_validate(
-            result.content
+        # Should limit number of files processed
+        content = result.content
+        assert content["metadata"]["file_count"] == TEST_MAX_FILES_LIMIT
+        assert len(content["data"]) == TEST_MAX_FILES_LIMIT
+
+    # =========================================================================
+    # Error handling and graceful degradation
+    # =========================================================================
+
+    def test_extract_no_readable_files_raises_error(self):
+        """Test extract with no readable files raises error."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            # Create binary file only with invalid UTF-8 bytes
+            binary_file = temp_path / "binary.bin"
+            binary_file.write_bytes(b"\x00\x01\x02\x03\xff\xfe\xfd")
+
+            config = FilesystemConnectorConfig.from_properties({"path": str(temp_path)})
+            connector = FilesystemConnector(config)
+            schema = Schema("standard_input", "1.0.0")
+
+            with pytest.raises(
+                ConnectorExtractionError, match="No readable files found"
+            ):
+                connector.extract(schema)
+
+    def test_extract_handles_file_read_errors_gracefully(
+        self, sample_directory, standard_input_schema
+    ):
+        """Test extract handles individual file read errors gracefully."""
+        # Create a file with restrictive permissions (if on Unix-like system)
+        restricted_file = sample_directory / "restricted.txt"
+        restricted_file.write_text("This file will be restricted")
+
+        try:
+            # Make file unreadable (only works on Unix-like systems)
+            if os.name != "nt":  # Not Windows
+                restricted_file.chmod(0o000)
+
+            config = FilesystemConnectorConfig.from_properties(
+                {"path": str(sample_directory)}
+            )
+            connector = FilesystemConnector(config)
+            result = connector.extract(standard_input_schema)
+
+            # Should still succeed with other readable files
+            assert isinstance(result, Message)
+            # Should have fewer files than total (restricted file skipped)
+            content = result.content
+            if os.name != "nt":  # On Unix-like systems, file should be skipped
+                assert (
+                    content["metadata"]["file_count"] >= MIN_READABLE_FILES
+                )  # At least file1.txt and file2.txt
+
+        finally:
+            # Restore permissions for cleanup
+            if os.name != "nt" and restricted_file.exists():
+                restricted_file.chmod(0o644)
+
+    # =========================================================================
+    # Rich document extraction (DOCX, XLSX)
+    # =========================================================================
+
+    def test_extract_directory_with_mixed_file_types(
+        self, sample_directory, standard_input_schema
+    ):
+        """DOCX, XLSX, and plain text files all produce standard_input data items."""
+        from docx import Document
+        from openpyxl import Workbook
+
+        # Create a .docx file
+        doc = Document()
+        doc.add_paragraph("Policy document content")
+        doc.save(str(sample_directory / "policy.docx"))
+
+        # Create a .xlsx file
+        wb = Workbook()
+        ws = wb.active
+        assert ws is not None
+        ws.title = "Controls"
+        ws.append(["Ref", "Status"])
+        ws.append(["A.5.1", "Implemented"])
+        wb.save(str(sample_directory / "controls.xlsx"))
+
+        # Plain text files already exist from sample_directory fixture
+
+        config = FilesystemConnectorConfig.from_properties(
+            {"path": str(sample_directory)}
         )
+        connector = FilesystemConnector(config)
+        result = connector.extract(standard_input_schema)
 
-        # Should have 1 data item for the file
-        assert len(typed_result.data) == 1
+        content = result.content
+        file_contents = [item["content"] for item in content["data"]]
 
-        # Verify data item has proper FilesystemMetadata
-        data_item = typed_result.data[0]
-        assert data_item.metadata.connector_type == "filesystem_connector"
-        assert data_item.metadata.file_path == str(sample_file)
-        assert str(sample_file) in data_item.metadata.source
+        # All file types should be extracted
+        assert any("Policy document content" in c for c in file_contents)
+        assert any("A.5.1" in c for c in file_contents)
+        assert any("Content of file 1" in c for c in file_contents)
+        # Total: 3 txt + 1 docx + 1 xlsx = 5
+        assert content["metadata"]["file_count"] == 5
+
+    def test_extract_corrupt_binary_files_skipped_gracefully(
+        self, sample_directory, standard_input_schema
+    ):
+        """Corrupt DOCX and XLSX files are skipped; valid files still extracted."""
+        # Create corrupt binary files
+        (sample_directory / "bad.docx").write_bytes(b"\x00\x01\x02\x03")
+        (sample_directory / "bad.xlsx").write_bytes(b"\xff\xfe\xfd\xfc")
+
+        # Plain text files already exist from sample_directory fixture
+
+        config = FilesystemConnectorConfig.from_properties(
+            {"path": str(sample_directory)}
+        )
+        connector = FilesystemConnector(config)
+        result = connector.extract(standard_input_schema)
+
+        content = result.content
+        file_contents = [item["content"] for item in content["data"]]
+
+        # Valid text files should still be extracted
+        assert "Content of file 1" in file_contents
+        assert "Content of file 2" in file_contents
+        # Corrupt files should be skipped (3 txt files only)
+        assert content["metadata"]["file_count"] == TEST_FILE_COUNT

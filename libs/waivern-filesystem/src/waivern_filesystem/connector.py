@@ -17,6 +17,7 @@ from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
 from waivern_filesystem.config import FilesystemConnectorConfig
+from waivern_filesystem.content_extractors import CONTENT_EXTRACTORS
 
 logger = logging.getLogger(__name__)
 
@@ -292,11 +293,20 @@ class FilesystemConnector(Connector):
     def _read_file_content(self, file_path: Path | None = None) -> str:
         """Read file content efficiently for large files.
 
+        For rich document formats (DOCX, XLSX), delegates to the appropriate
+        content extractor based on file suffix. For all other files, reads
+        as plain text with chunked reading for large files.
+
         Args:
             file_path: Path to file to read. If None, uses self._config.path
 
         """
         target_path = file_path or self._config.path
+
+        suffix = target_path.suffix.lower()
+        if suffix in CONTENT_EXTRACTORS:
+            return CONTENT_EXTRACTORS[suffix](target_path)
+
         try:
             # For small files, read all at once
             if target_path.stat().st_size <= self._config.chunk_size:
