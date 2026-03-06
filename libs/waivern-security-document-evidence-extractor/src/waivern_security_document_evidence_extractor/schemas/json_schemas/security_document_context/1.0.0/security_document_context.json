@@ -1,0 +1,218 @@
+{
+  "$defs": {
+    "BaseAnalysisOutputMetadata": {
+      "additionalProperties": true,
+      "description": "Base metadata for analysis outputs.",
+      "properties": {
+        "ruleset_used": {
+          "description": "Name of the ruleset used for analysis",
+          "title": "Ruleset Used",
+          "type": "string"
+        },
+        "llm_validation_enabled": {
+          "description": "Whether LLM validation was enabled for this analysis",
+          "title": "Llm Validation Enabled",
+          "type": "boolean"
+        },
+        "analysis_timestamp": {
+          "description": "ISO 8601 timestamp when the analysis was performed",
+          "title": "Analysis Timestamp",
+          "type": "string"
+        },
+        "evidence_context_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Size of context used for evidence extraction",
+          "title": "Evidence Context Size"
+        }
+      },
+      "required": [
+        "ruleset_used",
+        "llm_validation_enabled"
+      ],
+      "title": "BaseAnalysisOutputMetadata",
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "SecurityDocumentContextMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata for security document context items.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file path (same as filename)\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "properties": {
+        "source": {
+          "description": "Source file or location where the data was found",
+          "title": "Source",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
+          "title": "Context",
+          "type": "object"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "SecurityDocumentContextMetadata",
+      "type": "object"
+    },
+    "SecurityDocumentContextModel": {
+      "description": "Individual document context item.\n\nCarries the full document content and its classified security domains\nfor downstream assessors. This is NOT a compliance finding \u2014 it is a\ndocument context carrier. It satisfies the Finding protocol (id + metadata)\nfor LLMService.complete() compatibility.\n\nAn empty security_domains list means the document is cross-cutting and\nflows to every assessor instance regardless of domain filter.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this document context item (UUID)",
+          "title": "Id",
+          "type": "string"
+        },
+        "filename": {
+          "description": "Relative path within the policy documents directory",
+          "title": "Filename",
+          "type": "string"
+        },
+        "content": {
+          "description": "Full document text, passed verbatim to downstream LLM",
+          "title": "Content",
+          "type": "string"
+        },
+        "security_domains": {
+          "description": "Security domains this document addresses. Empty list = cross-cutting (flows to all assessors)",
+          "items": {
+            "$ref": "#/$defs/SecurityDomain"
+          },
+          "title": "Security Domains",
+          "type": "array"
+        },
+        "metadata": {
+          "$ref": "#/$defs/SecurityDocumentContextMetadata",
+          "description": "Metadata with source file information"
+        }
+      },
+      "required": [
+        "filename",
+        "content",
+        "security_domains",
+        "metadata"
+      ],
+      "title": "SecurityDocumentContextModel",
+      "type": "object"
+    },
+    "SecurityDocumentContextSummary": {
+      "description": "Summary statistics for security document context extraction.",
+      "properties": {
+        "total_documents": {
+          "description": "Total number of documents processed",
+          "minimum": 0,
+          "title": "Total Documents",
+          "type": "integer"
+        },
+        "cross_cutting_count": {
+          "description": "Documents with empty security_domains (cross-cutting)",
+          "minimum": 0,
+          "title": "Cross Cutting Count",
+          "type": "integer"
+        },
+        "domain_coverage": {
+          "description": "Distinct security domains across all documents",
+          "items": {
+            "type": "string"
+          },
+          "title": "Domain Coverage",
+          "type": "array"
+        }
+      },
+      "required": [
+        "total_documents",
+        "cross_cutting_count",
+        "domain_coverage"
+      ],
+      "title": "SecurityDocumentContextSummary",
+      "type": "object"
+    },
+    "SecurityDomain": {
+      "description": "Framework-agnostic security domain taxonomy.\n\nBridges indicator findings to compliance framework controls\n(ISO 27001 Annex A, GDPR Art 32, etc.). Shared across all producers\nand consumers of security evidence \u2014 rulesets, normalisers, assessors.\n\nStrEnum serialises to plain strings in JSON \u2014 Pydantic handles this\ntransparently, so no custom serialiser is needed.",
+      "enum": [
+        "authentication",
+        "encryption",
+        "access_control",
+        "logging_monitoring",
+        "vulnerability_management",
+        "data_protection",
+        "network_security",
+        "physical_security",
+        "people_controls",
+        "supplier_management",
+        "incident_management",
+        "business_continuity"
+      ],
+      "title": "SecurityDomain",
+      "type": "string"
+    }
+  },
+  "description": "Complete output structure for security_document_context schema.\n\nRepresents the full wire format for security document context results.\nThese context items feed into ISO27001Assessor instances, which receive\ndocuments filtered by security domain.",
+  "properties": {
+    "findings": {
+      "description": "List of classified document context items",
+      "items": {
+        "$ref": "#/$defs/SecurityDocumentContextModel"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/SecurityDocumentContextSummary",
+      "description": "Summary statistics of the document classification"
+    },
+    "analysis_metadata": {
+      "$ref": "#/$defs/BaseAnalysisOutputMetadata",
+      "description": "Metadata about the extraction process"
+    }
+  },
+  "required": [
+    "findings",
+    "summary",
+    "analysis_metadata"
+  ],
+  "title": "SecurityDocumentContextOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}
