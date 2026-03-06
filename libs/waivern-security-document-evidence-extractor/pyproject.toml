@@ -1,0 +1,77 @@
+[project]
+name = "waivern-security-document-evidence-extractor"
+version = "0.1.0"
+description = "Security document evidence extractor for Waivern Compliance Framework"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "waivern-core",
+    "pydantic>=2.11.5",
+]
+
+[project.entry-points."waivern.processors"]
+security_document_evidence_extractor = "waivern_security_document_evidence_extractor:SecurityDocumentEvidenceExtractorFactory"
+
+[project.entry-points."waivern.schemas"]
+security_document_context = "waivern_security_document_evidence_extractor:register_schemas"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.29.2",
+    "ruff>=0.11.12",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+dev-mode-dirs = ["src"]
+
+# Include JSON schemas and py.typed marker
+include = [
+    "src/waivern_security_document_evidence_extractor/**/*.py",
+    "src/waivern_security_document_evidence_extractor/**/schemas/json_schemas/**/*.json",
+    "src/waivern_security_document_evidence_extractor/py.typed",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/waivern_security_document_evidence_extractor"]
+
+[tool.basedpyright]
+typeCheckingMode = "strict"
+reportImplicitOverride = "error"
+
+[tool.ruff]
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "ANN",    # flake8-annotations - enforce type annotations
+    "B",      # flake8-bugbear - find likely bugs and design problems
+    "D",      # pydocstyle - docstring style checking
+    "F",      # pyflakes - detect various errors
+    "I",      # isort - import sorting
+    "PL",     # pylint - comprehensive code analysis
+    "RUF100", # ruff-specific - detect unused noqa directives
+    "S",      # flake8-bandit - security issue detection
+    "UP",     # pyupgrade - upgrade syntax for newer Python versions
+]
+ignore = [
+    "D203",    # one-blank-line-before-class - conflicts with D211 (no-blank-line-before-class)
+    "D213",    # multi-line-summary-second-line - conflicts with D212 (multi-line-summary-first-line)
+]
+
+[tool.ruff.lint.pydocstyle]
+ignore-decorators = ["typing.overload"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "ANN",     # Type annotations - not required in tests
+    "B",       # flake8-bugbear - less strict in tests
+    "D",       # Documentation - docstrings not required in tests
+    "S101",    # Use of assert detected
+    "PLC0415", # Import outside top-level
+    "PLR2004", # Magic value comparison
+]
