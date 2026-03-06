@@ -10,6 +10,12 @@ dependencies = [
     "pathspec>=0.12.1",
 ]
 
+[project.optional-dependencies]
+docs = [
+    "python-docx>=1.1.2",
+    "openpyxl>=3.1.0",
+]
+
 [project.entry-points."waivern.connectors"]
 filesystem = "waivern_filesystem:FilesystemConnectorFactory"
 
