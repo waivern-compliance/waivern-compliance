@@ -378,7 +378,8 @@ class TestSchemaResolution:
         input_schema, output_schema = plan.artifact_schemas[analysis_id]
 
         assert input_schema is not None
-        assert input_schema.name == "standard_input"
+        assert isinstance(input_schema, list)
+        assert input_schema[0].name == "standard_input"
         assert output_schema.name == "finding"
 
     def test_plan_aliases_in_execution_plan(

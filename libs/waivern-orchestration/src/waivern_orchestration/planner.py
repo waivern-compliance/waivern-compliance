@@ -41,7 +41,7 @@ class ExecutionPlan:
 
     runbook: Runbook
     dag: ExecutionDAG
-    artifact_schemas: dict[str, tuple[Schema | None, Schema]]
+    artifact_schemas: dict[str, tuple[list[Schema] | None, Schema]]
     aliases: dict[str, str] = field(default_factory=dict)
     reversed_aliases: dict[str, str] = field(default_factory=dict)
     """Maps artifact IDs to alias names (reverse of aliases)."""
@@ -180,7 +180,7 @@ class Planner:
 
     def _resolve_schemas(
         self, runbook: Runbook, dag: ExecutionDAG
-    ) -> dict[str, tuple[Schema | None, Schema]]:
+    ) -> dict[str, tuple[list[Schema] | None, Schema]]:
         """Resolve input and output schemas for each artifact.
 
         Processes artifacts in topological order so dependencies are resolved first.
@@ -193,7 +193,7 @@ class Planner:
             Dict mapping artifact ID to (input_schema, output_schema) tuple.
 
         """
-        result: dict[str, tuple[Schema | None, Schema]] = {}
+        result: dict[str, tuple[list[Schema] | None, Schema]] = {}
 
         sorter = dag.create_sorter()
         while sorter.is_active():
@@ -246,8 +246,8 @@ class Planner:
         self,
         artifact_id: str,
         definition: ArtifactDefinition,
-        resolved: dict[str, tuple[Schema | None, Schema]],
-    ) -> tuple[Schema, Schema]:
+        resolved: dict[str, tuple[list[Schema] | None, Schema]],
+    ) -> tuple[list[Schema], Schema]:
         """Resolve schemas for a derived artifact.
 
         Args:
@@ -256,7 +256,7 @@ class Planner:
             resolved: Already-resolved schemas for upstream artifacts.
 
         Returns:
-            Tuple of (input_schema, output_schema).
+            Tuple of (input_schemas, output_schema).
 
         Raises:
             ComponentNotFoundError: If processor type not found.
@@ -269,7 +269,12 @@ class Planner:
 
         # Get all input schemas and validate fan-in compatibility
         input_refs = [inputs] if isinstance(inputs, str) else inputs
-        input_schema = self._validate_fan_in_schemas(artifact_id, input_refs, resolved)
+        processor_type = (
+            definition.process.type if definition.process is not None else None
+        )
+        input_schemas = self._validate_fan_in_schemas(
+            artifact_id, input_refs, resolved, processor_type
+        )
 
         # Determine output schema - explicit override takes precedence
         if definition.output_schema is not None:
@@ -277,47 +282,107 @@ class Planner:
         elif definition.process is not None:
             output_schema = self._get_processor_output_schema(definition.process.type)
         else:
-            # Pass-through: output equals input
-            output_schema = input_schema
+            # Pass-through: output equals input (only valid for single-schema)
+            output_schema = input_schemas[0]
 
-        return (input_schema, output_schema)
+        return (input_schemas, output_schema)
 
     def _validate_fan_in_schemas(
         self,
         artifact_id: str,
         input_refs: list[str],
-        resolved: dict[str, tuple[Schema | None, Schema]],
-    ) -> Schema:
-        """Validate that all fan-in inputs have the same schema.
+        resolved: dict[str, tuple[list[Schema] | None, Schema]],
+        processor_type: str | None,
+    ) -> list[Schema]:
+        """Validate fan-in input schemas for compatibility.
+
+        For same-schema fan-in (all inputs share one schema), returns a list
+        containing that single schema. For multi-schema combinations (inputs
+        produce different schemas), validates against the processor's declared
+        input requirements and returns the list of unique schemas.
 
         Args:
             artifact_id: The artifact ID (for error messages).
             input_refs: List of upstream artifact IDs.
             resolved: Already-resolved schemas for upstream artifacts.
+            processor_type: The processor type name, or None for pass-through.
 
         Returns:
-            The common input schema.
+            List of unique input schemas.
 
         Raises:
-            SchemaCompatibilityError: If inputs have different schemas.
+            SchemaCompatibilityError: If inputs have incompatible schemas
+                that don't match any declared input requirement combination.
 
         """
-        first_schema = resolved[input_refs[0]][1]
-
-        for ref in input_refs[1:]:
+        # Collect unique schemas preserving first occurrence order
+        seen: set[tuple[str, str]] = set()
+        unique_schemas: list[Schema] = []
+        for ref in input_refs:
             schema = resolved[ref][1]
-            if (
-                schema.name != first_schema.name
-                or schema.version != first_schema.version
-            ):
-                raise SchemaCompatibilityError(
-                    f"Artifact '{artifact_id}' has incompatible fan-in schemas: "
-                    f"'{input_refs[0]}' produces {first_schema.name}/{first_schema.version}, "
-                    f"but '{ref}' produces {schema.name}/{schema.version}. "
-                    f"All fan-in inputs must have the same schema."
-                )
+            key = (schema.name, schema.version)
+            if key not in seen:
+                seen.add(key)
+                unique_schemas.append(schema)
 
-        return first_schema
+        # Fast path: all inputs share the same schema (same-schema fan-in)
+        if len(unique_schemas) == 1:
+            return unique_schemas
+
+        # Multiple distinct schemas — validate against processor requirements
+        return self._validate_multi_schema_combination(
+            artifact_id, unique_schemas, processor_type
+        )
+
+    def _validate_multi_schema_combination(
+        self,
+        artifact_id: str,
+        unique_schemas: list[Schema],
+        processor_type: str | None,
+    ) -> list[Schema]:
+        """Validate multi-schema inputs against processor's declared requirements.
+
+        Args:
+            artifact_id: The artifact ID (for error messages).
+            unique_schemas: List of unique schemas from the inputs.
+            processor_type: The processor type name, or None for pass-through.
+
+        Returns:
+            The validated list of unique schemas.
+
+        Raises:
+            SchemaCompatibilityError: If no matching combination is found
+                or no processor is declared.
+
+        """
+        schema_desc = ", ".join(f"{s.name}/{s.version}" for s in unique_schemas)
+
+        if processor_type is None:
+            raise SchemaCompatibilityError(
+                f"Artifact '{artifact_id}' has multiple input schema types "
+                f"({schema_desc}) but no processor is declared. "
+                f"Multi-schema inputs require a processor with matching "
+                f"input requirements."
+            )
+
+        if processor_type not in self._registry.processor_factories:
+            raise ComponentNotFoundError(f"Processor type '{processor_type}' not found")
+
+        factory = self._registry.processor_factories[processor_type]
+        requirements = factory.component_class.get_input_requirements()
+
+        # Match input schema types against declared requirement combinations
+        input_schema_set = frozenset((s.name, s.version) for s in unique_schemas)
+        for combination in requirements:
+            combination_set = frozenset((r.schema_name, r.version) for r in combination)
+            if input_schema_set == combination_set:
+                return unique_schemas
+
+        raise SchemaCompatibilityError(
+            f"Artifact '{artifact_id}' has input schema types ({schema_desc}) "
+            f"that don't match any declared input requirement combination "
+            f"for processor '{processor_type}'."
+        )
 
     def _get_processor_output_schema(self, processor_type: str) -> Schema:
         """Get output schema from a processor factory.

@@ -55,7 +55,7 @@ class TestExecutorReuse:
             )
         }
         output_schema = Schema("standard_input", "1.0.0")
-        artifact_schemas: dict[str, tuple[Schema | None, Schema]] = {
+        artifact_schemas: dict[str, tuple[list[Schema] | None, Schema]] = {
             "reused_data": (None, output_schema)
         }
         plan = create_simple_plan(artifacts, artifact_schemas)
@@ -92,7 +92,7 @@ class TestExecutorReuse:
             )
         }
         output_schema = Schema("standard_input", "1.0.0")
-        artifact_schemas: dict[str, tuple[Schema | None, Schema]] = {
+        artifact_schemas: dict[str, tuple[list[Schema] | None, Schema]] = {
             "reused_data": (None, output_schema)
         }
         plan = create_simple_plan(artifacts, artifact_schemas)

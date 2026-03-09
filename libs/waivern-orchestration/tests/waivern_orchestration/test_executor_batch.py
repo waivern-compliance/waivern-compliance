@@ -102,7 +102,7 @@ class TestDAGExecutorBatchHandling:
             {
                 "source_a": (None, output_schema),
                 "source_b": (None, output_schema),
-                "derived_c": (output_schema, output_schema),
+                "derived_c": ([output_schema], output_schema),
             },
         )
 

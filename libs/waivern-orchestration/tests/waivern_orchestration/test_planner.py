@@ -104,7 +104,8 @@ class TestPlannerHappyPath:
 
         derived_input, derived_output = plan.artifact_schemas["findings"]
         assert derived_input is not None
-        assert derived_input.name == "standard_input"
+        assert isinstance(derived_input, list)
+        assert derived_input[0].name == "standard_input"
         assert derived_output.name == "personal_data_finding"
 
     def test_plan_derived_artifact_without_process_passthrough(self) -> None:
@@ -136,7 +137,8 @@ class TestPlannerHappyPath:
 
         assert source_output.name == "standard_input"
         assert pass_input is not None
-        assert pass_input.name == "standard_input"
+        assert isinstance(pass_input, list)
+        assert pass_input[0].name == "standard_input"
         assert pass_output.name == "standard_input"
 
     def test_plan_fan_in_compatible_schemas(self) -> None:
@@ -170,8 +172,45 @@ class TestPlannerHappyPath:
 
         merged_input, merged_output = plan.artifact_schemas["merged"]
         assert merged_input is not None
-        assert merged_input.name == "standard_input"
+        assert isinstance(merged_input, list)
+        assert merged_input[0].name == "standard_input"
         assert merged_output.name == "standard_input"
+
+    def test_plan_input_schemas_as_list_for_single_schema(self) -> None:
+        """Single-schema derived artifact stores input_schemas as a list of one Schema."""
+        connector_factory = create_mock_connector_factory(
+            "filesystem", [Schema("standard_input", "1.0.0")]
+        )
+        analyser_factory = create_mock_processor_factory(
+            "personal_data_analyser",
+            [Schema("standard_input", "1.0.0")],
+            [Schema("personal_data_finding", "1.0.0")],
+        )
+
+        registry = create_mock_registry(
+            connector_factories={"filesystem": connector_factory},
+            processor_factories={"personal_data_analyser": analyser_factory},
+        )
+        planner = Planner(registry)
+
+        runbook_data = {
+            "name": "Test",
+            "description": "Test",
+            "artifacts": {
+                "source": {"source": {"type": "filesystem", "properties": {}}},
+                "findings": {
+                    "inputs": "source",
+                    "process": {"type": "personal_data_analyser", "properties": {}},
+                },
+            },
+        }
+
+        plan = planner.plan_from_dict(runbook_data)
+
+        input_schemas, _ = plan.artifact_schemas["findings"]
+        assert isinstance(input_schemas, list)
+        assert len(input_schemas) == 1
+        assert input_schemas[0].name == "standard_input"
 
     def test_plan_explicit_output_schema_override(self) -> None:
         """Explicit output_schema on derived artifact overrides analyser's inferred schema."""
@@ -239,6 +278,106 @@ class TestPlannerHappyPath:
         _, output_schema = plan.artifact_schemas["data"]
         assert output_schema.name == "custom_output"
         assert output_schema.name != "standard_input"
+
+
+# =============================================================================
+# Multi-Schema Input Combinations
+# =============================================================================
+
+
+class TestPlannerMultiSchemaInputs:
+    """Tests for processors accepting multiple distinct input schema types."""
+
+    def test_plan_multi_schema_combination_with_matching_processor(self) -> None:
+        """Inputs of schema A + schema B succeed when processor declares [[A, B]]."""
+        schema_a = Schema("security_evidence", "1.0.0")
+        schema_b = Schema("security_document_context", "1.0.0")
+        output_schema = Schema("iso27001_assessment", "1.0.0")
+
+        connector_a = create_mock_connector_factory("source_code", [schema_a])
+        connector_b = create_mock_connector_factory("filesystem", [schema_b])
+        assessor_factory = create_mock_processor_factory(
+            "iso27001_assessor",
+            [],
+            [output_schema],
+            input_requirements=[[schema_a, schema_b]],
+        )
+
+        registry = create_mock_registry(
+            connector_factories={"source_code": connector_a, "filesystem": connector_b},
+            processor_factories={"iso27001_assessor": assessor_factory},
+        )
+        planner = Planner(registry)
+
+        runbook_data = {
+            "name": "Test",
+            "description": "Multi-schema combination",
+            "artifacts": {
+                "evidence": {"source": {"type": "source_code", "properties": {}}},
+                "documents": {"source": {"type": "filesystem", "properties": {}}},
+                "assessment": {
+                    "inputs": ["evidence", "documents"],
+                    "process": {"type": "iso27001_assessor", "properties": {}},
+                },
+            },
+        }
+
+        plan = planner.plan_from_dict(runbook_data)
+
+        input_schemas, result_output = plan.artifact_schemas["assessment"]
+        assert input_schemas is not None
+        assert len(input_schemas) == 2
+        schema_names = {s.name for s in input_schemas}
+        assert schema_names == {"security_evidence", "security_document_context"}
+        assert result_output.name == "iso27001_assessment"
+
+    def test_plan_multi_schema_combination_with_fan_in(self) -> None:
+        """Two inputs of schema A + one of schema B succeed when processor declares [[A, B]]."""
+        schema_a = Schema("security_evidence", "1.0.0")
+        schema_b = Schema("security_document_context", "1.0.0")
+        output_schema = Schema("iso27001_assessment", "1.0.0")
+
+        connector_a = create_mock_connector_factory("source_code", [schema_a])
+        connector_b = create_mock_connector_factory("filesystem", [schema_b])
+        assessor_factory = create_mock_processor_factory(
+            "iso27001_assessor",
+            [],
+            [output_schema],
+            input_requirements=[[schema_a, schema_b]],
+        )
+
+        registry = create_mock_registry(
+            connector_factories={"source_code": connector_a, "filesystem": connector_b},
+            processor_factories={"iso27001_assessor": assessor_factory},
+        )
+        planner = Planner(registry)
+
+        runbook_data = {
+            "name": "Test",
+            "description": "Multi-schema with fan-in",
+            "artifacts": {
+                "evidence_a": {
+                    "source": {"type": "source_code", "properties": {"path": "/a"}}
+                },
+                "evidence_b": {
+                    "source": {"type": "source_code", "properties": {"path": "/b"}}
+                },
+                "documents": {"source": {"type": "filesystem", "properties": {}}},
+                "assessment": {
+                    "inputs": ["evidence_a", "evidence_b", "documents"],
+                    "process": {"type": "iso27001_assessor", "properties": {}},
+                },
+            },
+        }
+
+        plan = planner.plan_from_dict(runbook_data)
+
+        input_schemas, result_output = plan.artifact_schemas["assessment"]
+        assert input_schemas is not None
+        assert len(input_schemas) == 2
+        schema_names = {s.name for s in input_schemas}
+        assert schema_names == {"security_evidence", "security_document_context"}
+        assert result_output.name == "iso27001_assessment"
 
 
 # =============================================================================

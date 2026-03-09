@@ -193,7 +193,7 @@ class TestDAGExecutorStateTransitions:
             artifacts,
             {
                 "source": (None, output_schema),
-                "dependent": (output_schema, output_schema),
+                "dependent": ([output_schema], output_schema),
             },
         )
 
@@ -306,8 +306,8 @@ class TestDAGExecutorStatePersistence:
             artifacts,
             {
                 "source": (None, output_schema),
-                "middle": (output_schema, output_schema),
-                "final": (output_schema, output_schema),
+                "middle": ([output_schema], output_schema),
+                "final": ([output_schema], output_schema),
             },
         )
 
@@ -402,9 +402,9 @@ class TestDAGExecutorStateConsistency:
             artifacts,
             {
                 "success_source": (None, output_schema),
-                "success_derived": (output_schema, output_schema),
+                "success_derived": ([output_schema], output_schema),
                 "failing_source": (None, output_schema),
-                "skipped_derived": (output_schema, output_schema),
+                "skipped_derived": ([output_schema], output_schema),
             },
         )
 
@@ -460,7 +460,7 @@ class TestDAGExecutorStateConsistency:
             artifacts,
             {
                 "source": (None, output_schema),
-                "dependent": (output_schema, output_schema),
+                "dependent": ([output_schema], output_schema),
             },
         )
 

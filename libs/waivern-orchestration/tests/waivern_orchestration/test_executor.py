@@ -52,7 +52,7 @@ class TestDAGExecutorHappyPath:
                 source=SourceConfig(type="filesystem", properties={"path": "/tmp"})
             )
         }
-        artifact_schemas: dict[str, tuple[Schema | None, Schema]] = {
+        artifact_schemas: dict[str, tuple[list[Schema] | None, Schema]] = {
             "data": (None, output_schema)
         }
         plan = create_simple_plan(artifacts, artifact_schemas)
@@ -117,8 +117,8 @@ class TestDAGExecutorDependencies:
             artifacts,
             {
                 "a": (None, output_schema),
-                "b": (output_schema, output_schema),  # input from A, output same
-                "c": (output_schema, output_schema),  # input from B, output same
+                "b": ([output_schema], output_schema),  # input from A, output same
+                "c": ([output_schema], output_schema),  # input from B, output same
             },
         )
 
@@ -216,7 +216,7 @@ class TestDAGExecutorFanIn:
             {
                 "source_a": (None, output_schema),
                 "source_b": (None, output_schema),
-                "merged": (output_schema, output_schema),
+                "merged": ([output_schema], output_schema),
             },
         )
 
@@ -272,7 +272,7 @@ class TestDAGExecutorErrorHandling:
             artifacts,
             {
                 "source": (None, output_schema),
-                "dependent": (output_schema, output_schema),
+                "dependent": ([output_schema], output_schema),
             },
         )
 
@@ -406,7 +406,7 @@ class TestDAGExecutorProcess:
             artifacts,
             {
                 "source": (None, source_schema),
-                "findings": (source_schema, output_schema),
+                "findings": ([source_schema], output_schema),
             },
         )
 
@@ -450,7 +450,7 @@ class TestDAGExecutorProcess:
             artifacts,
             {
                 "source_data": (None, output_schema),
-                "processed": (output_schema, output_schema),
+                "processed": ([output_schema], output_schema),
             },
         )
 
@@ -580,7 +580,7 @@ class TestDAGExecutorArtifactMetadata:
             artifacts,
             {
                 "source": (None, source_schema),
-                "findings": (source_schema, output_schema),
+                "findings": ([source_schema], output_schema),
             },
         )
 
