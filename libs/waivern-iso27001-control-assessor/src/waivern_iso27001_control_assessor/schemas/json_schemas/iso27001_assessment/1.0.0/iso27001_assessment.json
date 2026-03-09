@@ -1,0 +1,364 @@
+{
+  "$defs": {
+    "BaseAnalysisOutputMetadata": {
+      "additionalProperties": true,
+      "description": "Base metadata for analysis outputs.",
+      "properties": {
+        "ruleset_used": {
+          "description": "Name of the ruleset used for analysis",
+          "title": "Ruleset Used",
+          "type": "string"
+        },
+        "llm_validation_enabled": {
+          "description": "Whether LLM validation was enabled for this analysis",
+          "title": "Llm Validation Enabled",
+          "type": "boolean"
+        },
+        "analysis_timestamp": {
+          "description": "ISO 8601 timestamp when the analysis was performed",
+          "title": "Analysis Timestamp",
+          "type": "string"
+        },
+        "evidence_context_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Size of context used for evidence extraction",
+          "title": "Evidence Context Size"
+        }
+      },
+      "required": [
+        "ruleset_used",
+        "llm_validation_enabled"
+      ],
+      "title": "BaseAnalysisOutputMetadata",
+      "type": "object"
+    },
+    "CIAProperty": {
+      "description": "CIA triad information security property.",
+      "enum": [
+        "confidentiality",
+        "integrity",
+        "availability"
+      ],
+      "title": "CIAProperty",
+      "type": "string"
+    },
+    "ControlStatus": {
+      "description": "Assessment status for an individual ISO 27001 control.",
+      "enum": [
+        "compliant",
+        "partial",
+        "non_compliant",
+        "not_assessed"
+      ],
+      "title": "ControlStatus",
+      "type": "string"
+    },
+    "ControlType": {
+      "description": "ISO 27001 Annex A control type attribute.",
+      "enum": [
+        "preventive",
+        "detective",
+        "corrective"
+      ],
+      "title": "ControlType",
+      "type": "string"
+    },
+    "CybersecurityConcept": {
+      "description": "NIST Cybersecurity Framework function alignment.",
+      "enum": [
+        "identify",
+        "protect",
+        "detect",
+        "respond",
+        "recover"
+      ],
+      "title": "CybersecurityConcept",
+      "type": "string"
+    },
+    "EvidenceStatus": {
+      "description": "How the evidence for a control was obtained or why it is missing.",
+      "enum": [
+        "automated",
+        "requires_attestation",
+        "insufficient_evidence"
+      ],
+      "title": "EvidenceStatus",
+      "type": "string"
+    },
+    "ISO27001AssessmentMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata for ISO 27001 assessment items.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Control reference (e.g. \"A.5.1\")\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "properties": {
+        "source": {
+          "description": "Source file or location where the data was found",
+          "title": "Source",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
+          "title": "Context",
+          "type": "object"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "ISO27001AssessmentMetadata",
+      "type": "object"
+    },
+    "ISO27001AssessmentModel": {
+      "description": "Individual ISO 27001 control assessment verdict.\n\nOne instance per assessed control. Does NOT extend BaseFindingModel \u2014\nthis is an assessment verdict, not a pattern-matched finding. It has no\nevidence snippets or matched_patterns. It satisfies the Finding protocol\n(id + metadata) for LLMService.complete() compatibility.\n\nIf future requirements arise, evidence and/or matched_patterns fields\ncan be added to the model when appropriate.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this assessment (UUID)",
+          "title": "Id",
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/ISO27001AssessmentMetadata",
+          "description": "Metadata with control reference as source"
+        },
+        "control_ref": {
+          "description": "ISO 27001:2022 Annex A control reference (e.g. 'A.5.1')",
+          "minLength": 1,
+          "title": "Control Ref",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ControlStatus",
+          "description": "Assessment verdict for this control"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "description": "How evidence was obtained or why it is missing"
+        },
+        "rationale": {
+          "description": "Narrative explaining the verdict (LLM-generated or fixed message)",
+          "title": "Rationale",
+          "type": "string"
+        },
+        "gap_description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Actionable description of gaps (None when status is compliant)",
+          "title": "Gap Description"
+        },
+        "control_type": {
+          "$ref": "#/$defs/ControlType",
+          "description": "ISO 27001 Annex A control type attribute"
+        },
+        "cia": {
+          "description": "CIA triad information security properties for this control",
+          "items": {
+            "$ref": "#/$defs/CIAProperty"
+          },
+          "title": "Cia",
+          "type": "array"
+        },
+        "cybersecurity_concept": {
+          "$ref": "#/$defs/CybersecurityConcept",
+          "description": "NIST CSF cybersecurity concept alignment"
+        },
+        "operational_capability": {
+          "$ref": "#/$defs/OperationalCapability",
+          "description": "Annex A operational capability tag"
+        },
+        "iso_security_domain": {
+          "$ref": "#/$defs/ISOSecurityDomain",
+          "description": "ISO 27001 security domain attribute (4-value taxonomy)"
+        }
+      },
+      "required": [
+        "metadata",
+        "control_ref",
+        "status",
+        "evidence_status",
+        "rationale",
+        "control_type",
+        "cia",
+        "cybersecurity_concept",
+        "operational_capability",
+        "iso_security_domain"
+      ],
+      "title": "ISO27001AssessmentModel",
+      "type": "object"
+    },
+    "ISO27001AssessmentSummary": {
+      "description": "Summary statistics for ISO 27001 control assessments.",
+      "properties": {
+        "total_controls": {
+          "description": "Total number of controls assessed",
+          "minimum": 0,
+          "title": "Total Controls",
+          "type": "integer"
+        },
+        "compliant_count": {
+          "description": "Controls with status=compliant",
+          "minimum": 0,
+          "title": "Compliant Count",
+          "type": "integer"
+        },
+        "partial_count": {
+          "description": "Controls with status=partial",
+          "minimum": 0,
+          "title": "Partial Count",
+          "type": "integer"
+        },
+        "non_compliant_count": {
+          "description": "Controls with status=non_compliant",
+          "minimum": 0,
+          "title": "Non Compliant Count",
+          "type": "integer"
+        },
+        "not_assessed_count": {
+          "description": "Controls with status=not_assessed",
+          "minimum": 0,
+          "title": "Not Assessed Count",
+          "type": "integer"
+        },
+        "automated_count": {
+          "description": "Controls with evidence_status=automated",
+          "minimum": 0,
+          "title": "Automated Count",
+          "type": "integer"
+        },
+        "requires_attestation_count": {
+          "description": "Controls with evidence_status=requires_attestation",
+          "minimum": 0,
+          "title": "Requires Attestation Count",
+          "type": "integer"
+        },
+        "insufficient_evidence_count": {
+          "description": "Controls with evidence_status=insufficient_evidence",
+          "minimum": 0,
+          "title": "Insufficient Evidence Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total_controls",
+        "compliant_count",
+        "partial_count",
+        "non_compliant_count",
+        "not_assessed_count",
+        "automated_count",
+        "requires_attestation_count",
+        "insufficient_evidence_count"
+      ],
+      "title": "ISO27001AssessmentSummary",
+      "type": "object"
+    },
+    "ISOSecurityDomain": {
+      "description": "ISO 27001 security domain attribute (4-value taxonomy).",
+      "enum": [
+        "governance_and_ecosystem",
+        "protection",
+        "defence",
+        "resilience"
+      ],
+      "title": "ISOSecurityDomain",
+      "type": "string"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "OperationalCapability": {
+      "description": "ISO 27001 Annex A operational capability tag.",
+      "enum": [
+        "access_control",
+        "asset_management",
+        "assurance",
+        "compliance",
+        "continuity",
+        "endpoint_security",
+        "event_and_incident_management",
+        "governance",
+        "human_resource_security",
+        "identity_and_access_management",
+        "information_protection",
+        "physical_security",
+        "privacy",
+        "secure_development",
+        "supplier_relationships",
+        "system_and_network_protection",
+        "threat_and_vulnerability_management"
+      ],
+      "title": "OperationalCapability",
+      "type": "string"
+    }
+  },
+  "description": "Complete output structure for iso27001_assessment schema.\n\nRepresents the full wire format for ISO 27001 assessment results.\nOne finding per control assessed, with summary statistics and\nanalysis metadata.",
+  "properties": {
+    "findings": {
+      "description": "List of individual control assessment verdicts",
+      "items": {
+        "$ref": "#/$defs/ISO27001AssessmentModel"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/ISO27001AssessmentSummary",
+      "description": "Summary statistics across all assessed controls"
+    },
+    "analysis_metadata": {
+      "$ref": "#/$defs/BaseAnalysisOutputMetadata",
+      "description": "Metadata about the assessment process"
+    }
+  },
+  "required": [
+    "findings",
+    "summary",
+    "analysis_metadata"
+  ],
+  "title": "ISO27001AssessmentOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}
