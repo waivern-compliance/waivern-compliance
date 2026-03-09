@@ -5,7 +5,10 @@ from pathlib import Path
 
 from waivern_core.schemas import SchemaRegistry
 
+from .analyser import ISO27001Assessor
+from .factory import ISO27001AssessorFactory
 from .schemas import ISO27001AssessmentModel
+from .types import ISO27001AssessorConfig
 
 
 def register_schemas() -> None:
@@ -21,6 +24,9 @@ def register_schemas() -> None:
 
 
 __all__ = [
+    "ISO27001Assessor",
+    "ISO27001AssessorConfig",
+    "ISO27001AssessorFactory",
     "ISO27001AssessmentModel",
     "register_schemas",
 ]

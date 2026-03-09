@@ -6,11 +6,19 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
+    "waivern-llm",
+    "waivern-rulesets",
+    "waivern-security-evidence",
+    "waivern-analysers-shared",
+    "waivern-security-document-evidence-extractor",
     "pydantic>=2.11.5",
 ]
 
 [project.entry-points."waivern.schemas"]
 iso27001_assessment = "waivern_iso27001_control_assessor:register_schemas"
+
+[project.entry-points."waivern.processors"]
+iso27001_assessor = "waivern_iso27001_control_assessor:ISO27001AssessorFactory"
 
 [dependency-groups]
 dev = [

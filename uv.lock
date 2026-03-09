@@ -2231,7 +2231,12 @@ version = "0.1.0"
 source = { editable = "libs/waivern-iso27001-control-assessor" }
 dependencies = [
     { name = "pydantic" },
+    { name = "waivern-analysers-shared" },
     { name = "waivern-core" },
+    { name = "waivern-llm" },
+    { name = "waivern-rulesets" },
+    { name = "waivern-security-document-evidence-extractor" },
+    { name = "waivern-security-evidence" },
 ]
 
 [package.dev-dependencies]
@@ -2243,7 +2248,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-llm", editable = "libs/waivern-llm" },
+    { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
+    { name = "waivern-security-document-evidence-extractor", editable = "libs/waivern-security-document-evidence-extractor" },
+    { name = "waivern-security-evidence", editable = "libs/waivern-security-evidence" },
 ]
 
 [package.metadata.requires-dev]
