@@ -44,31 +44,60 @@ class Processor(abc.ABC):
     def get_input_requirements(cls) -> list[list[InputRequirement]]:
         """Declare valid input schema combinations for this processor.
 
-        Each inner list represents one valid combination of inputs.
-        For single-input processors, return a list with one combination.
-        For multi-input processors (fan-in), return multiple combinations.
+        Returns a list of **alternatives**, where each alternative is a list of
+        **required schema types**. The Planner matches the set of schema types
+        arriving from the runbook against each alternative to find a valid match.
+
+        Key concepts:
+
+        - **Outer list = OR (alternatives):** Each inner list is one valid way to
+          invoke this processor. The Planner selects the first alternative whose
+          schema types match the runbook inputs.
+        - **Inner list = AND (required types):** All schema types in the inner list
+          must be present in the runbook inputs for that alternative to match.
+        - **Schema types, not counts:** Each ``InputRequirement`` declares a schema
+          type that must be present — it does not constrain how many inputs of that
+          type are provided. Multiple inputs sharing the same schema are delivered
+          together via fan-in. ``process()`` receives all inputs as an unordered
+          ``list[Message]`` and is responsible for partitioning by
+          ``message.schema.name``.
+        - **No ordering guarantee:** The ``inputs`` list passed to ``process()``
+          has no guaranteed order. Partition by schema name, not by position.
 
         Examples:
-            # Single input processor
+            # Single input — accepts one schema type
             return [[InputRequirement("standard_input", "1.0.0")]]
 
-            # Multi-input processor with alternatives
+            # Alternatives — accepts EITHER schema A OR schema B (not both)
             return [
                 [InputRequirement("personal_data_finding", "1.0.0")],
                 [InputRequirement("data_subject_finding", "1.0.0")],
             ]
 
-            # Fan-in processor requiring multiple inputs together
+            # Multi-schema combination — requires BOTH schema types together
+            # Fan-in: multiple inputs of the same schema type are merged
+            # automatically; process() receives all messages in one list
             return [
                 [
-                    InputRequirement("personal_data_finding", "1.0.0"),
-                    InputRequirement("data_subject_finding", "1.0.0"),
+                    InputRequirement("security_evidence", "1.0.0"),
+                    InputRequirement("security_document_context", "1.0.0"),
                 ]
+            ]
+
+            # Combination with optional schema — two alternatives:
+            # 1. Both schemas together (preferred)
+            # 2. Schema A alone (schema B is optional)
+            return [
+                [
+                    InputRequirement("security_evidence", "1.0.0"),
+                    InputRequirement("security_document_context", "1.0.0"),
+                ],
+                [InputRequirement("security_evidence", "1.0.0")],
             ]
 
         Returns:
             List of valid input combinations. Each combination is a list of
-            InputRequirement objects.
+            InputRequirement objects declaring the required schema types.
 
         """
 

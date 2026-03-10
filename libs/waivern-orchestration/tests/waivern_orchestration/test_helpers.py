@@ -55,15 +55,20 @@ def create_mock_processor_factory(
     input_schemas: list[Schema],
     output_schemas: list[Schema],
     process_result: Message | None = None,
+    input_requirements: list[list[Schema]] | None = None,
 ) -> MagicMock:
     """Create a mock processor factory.
 
     Args:
         name: Component name.
         input_schemas: List of input schemas the processor accepts.
+            Each schema becomes a separate single-item alternative.
         output_schemas: List of output schemas the processor produces.
         process_result: Optional message to return from process().
             If provided, creates a mock processor that returns this message.
+        input_requirements: Optional explicit input requirement combinations.
+            Each inner list is one valid combination of schema types.
+            If provided, overrides the default conversion from input_schemas.
 
     Returns:
         Mock ComponentFactory for a processor.
@@ -75,11 +80,18 @@ def create_mock_processor_factory(
     mock_class = MagicMock()
     mock_class.get_name.return_value = name
     mock_class.get_supported_output_schemas.return_value = output_schemas
-    # Convert input_schemas to InputRequirement-style format
-    # For simplicity, each schema becomes a single-item combination
-    mock_class.get_input_requirements.return_value = [
-        [MagicMock(schema_name=s.name, version=s.version)] for s in input_schemas
-    ]
+
+    if input_requirements is not None:
+        # Explicit combinations: each inner list becomes one combination
+        mock_class.get_input_requirements.return_value = [
+            [MagicMock(schema_name=s.name, version=s.version) for s in combo]
+            for combo in input_requirements
+        ]
+    else:
+        # Default: each schema becomes a single-item combination
+        mock_class.get_input_requirements.return_value = [
+            [MagicMock(schema_name=s.name, version=s.version)] for s in input_schemas
+        ]
     factory.component_class = mock_class
 
     if process_result is not None:
@@ -207,7 +219,7 @@ def create_message_with_execution(  # noqa: PLR0913
 
 def create_simple_plan(
     artifacts: dict[str, ArtifactDefinition],
-    artifact_schemas: dict[str, tuple[Schema | None, Schema]] | None = None,
+    artifact_schemas: dict[str, tuple[list[Schema] | None, Schema]] | None = None,
     runbook_config: RunbookConfig | None = None,
     aliases: dict[str, str] | None = None,
     runbook_name: str = "Test Runbook",

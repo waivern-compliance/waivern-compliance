@@ -25,6 +25,9 @@ _DOMAIN_DESCRIPTIONS: dict[SecurityDomain, str] = {
     SecurityDomain.SUPPLIER_MANAGEMENT: "Third-party risk, vendor assessments, SLAs",
     SecurityDomain.INCIDENT_MANAGEMENT: "Incident response, breach notification, forensics",
     SecurityDomain.BUSINESS_CONTINUITY: "DR planning, BCP, resilience testing, RTO/RPO",
+    SecurityDomain.GOVERNANCE: "Information security policies, roles, management commitment, independent review",
+    SecurityDomain.ASSET_MANAGEMENT: "Asset inventory, acceptable use, classification, return of assets",
+    SecurityDomain.LEGAL_COMPLIANCE: "Legal/regulatory requirements, intellectual property, compliance reviews",
 }
 
 
@@ -70,10 +73,10 @@ class DomainClassificationPromptBuilder(PromptBuilder[DocumentItem]):
 **TASK:**
 Analyse the document and return which security domains it addresses. Consider:
 - A document may address multiple domains (e.g. an access control policy might cover both authentication and access_control)
-- Return an empty list [] if the document is cross-cutting (applies to ALL domains equally), such as:
-  - Organisational context documents (industry, tech stack, team size)
-  - Overarching ISMS policy documents that span all domains
-  - General governance or management review documents
+- Return an empty list [] ONLY if the document is purely organisational context (applies to ALL domains equally), such as:
+  - Organisational context documents (industry, tech stack, team size, regulatory jurisdiction)
+  - Company overview or general background documents
+  Note: ISMS policy documents should be classified as 'governance', not []
 - Only include domains the document meaningfully addresses, not domains it merely mentions in passing
 
 **RESPONSE FORMAT:**

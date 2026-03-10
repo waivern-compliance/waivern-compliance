@@ -124,7 +124,7 @@ class TestExecutorChildRunbookAliases:
             artifacts,
             {
                 namespaced_source: (None, source_schema),
-                "analysis": (source_schema, output_schema),
+                "analysis": ([source_schema], output_schema),
             },
             aliases={"child_data": namespaced_source},
         )

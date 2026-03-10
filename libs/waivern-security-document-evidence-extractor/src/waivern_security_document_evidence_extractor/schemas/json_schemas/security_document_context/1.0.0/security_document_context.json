@@ -181,7 +181,10 @@
         "people_controls",
         "supplier_management",
         "incident_management",
-        "business_continuity"
+        "business_continuity",
+        "governance",
+        "asset_management",
+        "legal_compliance"
       ],
       "title": "SecurityDomain",
       "type": "string"

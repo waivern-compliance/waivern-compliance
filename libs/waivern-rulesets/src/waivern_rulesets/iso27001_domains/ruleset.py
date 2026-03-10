@@ -23,7 +23,7 @@ class ISO27001DomainsRule(ClassificationRule):
     Each rule covers one individual control (e.g. A.5.15) and carries:
     - The security taxonomy domains relevant to this control (for filtering evidence)
     - The evidence source types relevant to this control (TECHNICAL | DOCUMENT)
-    - Whether human attestation is always required regardless of automated evidence
+    - Which evidence types are mandatory (evidence_required), if any
     - The five ISO 27001 Annex A control attributes (populated into control_assessment)
     - Guidance text for LLM prompt construction
     """
@@ -35,8 +35,8 @@ class ISO27001DomainsRule(ClassificationRule):
     security_domains: tuple[SecurityDomain, ...] = Field(
         description=(
             "Security taxonomy domains relevant to this control; used to filter "
-            "security_evidence items by domain. May be empty for cross-cutting governance "
-            "controls where no single taxonomy domain applies (e.g. A.5.1 Policies). "
+            "security_evidence items by domain. Every rule has at least one domain — "
+            "organisational controls use governance, asset_management, or legal_compliance. "
             "Physical controls use [physical_security] because document evidence from "
             "physical security policies carries that domain."
         ),
@@ -48,11 +48,14 @@ class ISO27001DomainsRule(ClassificationRule):
             "May be empty for purely manual controls with no evidence path."
         ),
     )
-    attestation_required: bool = Field(
+    evidence_required: tuple[Literal["TECHNICAL", "DOCUMENT"], ...] | None = Field(
+        default=None,
         description=(
-            "True when the control requires human attestation regardless of automated "
-            "evidence (e.g. policy approval, physical inspection). Independent from "
-            "evidence_source — both can be true simultaneously."
+            "Evidence types that are mandatory for this control to be assessable. "
+            "When set, the assessor gates on these types — if any required type is "
+            "missing after filtering, the control is marked requires_attestation. "
+            "Only needed for mixed-source controls where one type is mandatory "
+            "(e.g. access control needs DOCUMENT even when TECHNICAL evidence exists)."
         ),
     )
     control_type: Literal["preventive", "detective", "corrective"] = Field(
@@ -99,6 +102,19 @@ class ISO27001DomainsRule(ClassificationRule):
         | tuple[Literal["TECHNICAL", "DOCUMENT"], ...],
     ) -> tuple[Literal["TECHNICAL", "DOCUMENT"], ...]:
         """Convert list to tuple for immutability."""
+        if isinstance(v, list):
+            return tuple(v)
+        return v
+
+    @field_validator("evidence_required", mode="before")
+    @classmethod
+    def convert_evidence_required_to_tuple(
+        cls,
+        v: list[Literal["TECHNICAL", "DOCUMENT"]]
+        | tuple[Literal["TECHNICAL", "DOCUMENT"], ...]
+        | None,
+    ) -> tuple[Literal["TECHNICAL", "DOCUMENT"], ...] | None:
+        """Convert list to tuple for immutability, preserving None."""
         if isinstance(v, list):
             return tuple(v)
         return v

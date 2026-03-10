@@ -83,7 +83,7 @@
       "type": "object"
     },
     "SecurityDomain": {
-      "description": "Framework-agnostic security domain taxonomy.\n\nUsed as the bridge between indicator findings and compliance framework\ncontrols (ISO 27001 Annex A, GDPR Art 32, etc.). A single taxonomy\nshared across all producers and consumers of security_evidence.\n\nStrEnum serialises to plain strings in JSON \u2014 Pydantic handles this\ntransparently, so no custom serialiser is needed.",
+      "description": "Framework-agnostic security domain taxonomy.\n\nBridges indicator findings to compliance framework controls\n(ISO 27001 Annex A, GDPR Art 32, etc.). Shared across all producers\nand consumers of security evidence \u2014 rulesets, normalisers, assessors.\n\nStrEnum serialises to plain strings in JSON \u2014 Pydantic handles this\ntransparently, so no custom serialiser is needed.",
       "enum": [
         "authentication",
         "encryption",
@@ -96,7 +96,10 @@
         "people_controls",
         "supplier_management",
         "incident_management",
-        "business_continuity"
+        "business_continuity",
+        "governance",
+        "asset_management",
+        "legal_compliance"
       ],
       "title": "SecurityDomain",
       "type": "string"
@@ -117,7 +120,7 @@
       "type": "object"
     },
     "SecurityEvidenceModel": {
-      "description": "A single normalised piece of security evidence.\n\nUnlike indicator models (which extend BaseFindingModel and carry raw\npattern match details), SecurityEvidenceModel is a normalised hub item.\nIt abstracts over the origin of the evidence \u2014 pattern-matched code,\nconfig file, or LLM-extracted document section \u2014 presenting a uniform\nstructure to downstream assessors.\n\nFields are deliberately broad to accommodate all three evidence paths:\n- CODE/CONFIG: produced by SecurityEvidenceNormaliser (no LLM)\n- DOCUMENT:    produced by DocumentEvidenceExtractor (LLM-based)\n\nThe evidence field carries up to 3 representative snippets (by producer\nconvention) so downstream LLM assessors receive actual code or document\nexcerpts alongside the summary description.",
+      "description": "A single normalised piece of security evidence.\n\nUnlike indicator models (which extend BaseFindingModel and carry raw\npattern match details), SecurityEvidenceModel is a normalised hub item.\nIt abstracts over the origin of the evidence \u2014 pattern-matched code,\nconfig file, or LLM-extracted document section \u2014 presenting a uniform\nstructure to downstream assessors.\n\nFields are deliberately broad to accommodate all three evidence paths:\n- CODE/CONFIG: produced by SecurityEvidenceNormaliser (no LLM)\n- DOCUMENT:    produced by DocumentEvidenceExtractor (LLM-based)\n\nThe evidence field carries representative snippets from the source so\ndownstream LLM assessors receive actual code or document excerpts\nalongside the summary description.",
       "properties": {
         "id": {
           "description": "Unique identifier for this evidence item (UUID)",
@@ -165,7 +168,7 @@
           "type": "string"
         },
         "evidence": {
-          "description": "Representative snippets supporting this finding. Producers should include up to 3 examples. Empty for evidence paths that do not carry raw snippets.",
+          "description": "Representative snippets supporting this finding. Empty for evidence paths that do not carry raw snippets.",
           "items": {
             "$ref": "#/$defs/BaseFindingEvidence"
           },

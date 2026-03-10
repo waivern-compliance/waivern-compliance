@@ -78,7 +78,7 @@ class TestDAGExecutorConcurrency:
             )
             for i in range(5)
         }
-        artifact_schemas: dict[str, tuple[Schema | None, Schema]] = {
+        artifact_schemas: dict[str, tuple[list[Schema] | None, Schema]] = {
             f"data_{i}": (None, output_schema) for i in range(5)
         }
         plan = create_simple_plan(
@@ -309,7 +309,7 @@ class TestDAGExecutorTimeout:
             )
             for i in range(5)
         }
-        artifact_schemas: dict[str, tuple[Schema | None, Schema]] = {
+        artifact_schemas: dict[str, tuple[list[Schema] | None, Schema]] = {
             f"data_{i}": (None, output_schema) for i in range(5)
         }
         # Set 1 second timeout - connectors take 2s each, so timeout will occur

@@ -32,6 +32,9 @@ class SecurityDomain(StrEnum):
     SUPPLIER_MANAGEMENT = "supplier_management"
     INCIDENT_MANAGEMENT = "incident_management"
     BUSINESS_CONTINUITY = "business_continuity"
+    GOVERNANCE = "governance"
+    ASSET_MANAGEMENT = "asset_management"
+    LEGAL_COMPLIANCE = "legal_compliance"
 
 
 @dataclass(frozen=True)
