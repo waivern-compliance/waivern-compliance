@@ -12,8 +12,8 @@
 #
 # Field semantics:
 # - security_domains: taxonomy domains of evidence relevant to this control.
-#     Empty only for cross-cutting governance controls where no single taxonomy
-#     domain applies (e.g. A.5.1 Policies). Physical controls use [physical_security]
+#     Every rule has at least one domain. Organisational controls use governance,
+#     asset_management, or legal_compliance. Physical controls use [physical_security]
 #     because document evidence from physical security policies carries that domain.
 # - evidence_source: origin types of evidence (TECHNICAL | DOCUMENT).
 #     TECHNICAL covers both CODE and CONFIG. Orthogonal to security_domains.
@@ -33,7 +33,7 @@ rules:
   - name: information_security_policies
     description: Policies for information security shall be defined, approved, published and reviewed
     control_ref: "A.5.1"
-    security_domains: []
+    security_domains: [governance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -50,7 +50,7 @@ rules:
   - name: information_security_roles_and_responsibilities
     description: Information security roles and responsibilities shall be defined and allocated
     control_ref: "A.5.2"
-    security_domains: []
+    security_domains: [governance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -82,7 +82,7 @@ rules:
   - name: management_responsibilities
     description: Management shall require all personnel to apply information security in accordance with policy
     control_ref: "A.5.4"
-    security_domains: []
+    security_domains: [governance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -98,7 +98,7 @@ rules:
   - name: contact_with_authorities
     description: The organisation shall establish and maintain contact with relevant authorities
     control_ref: "A.5.5"
-    security_domains: []
+    security_domains: [governance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -114,7 +114,7 @@ rules:
   - name: contact_with_special_interest_groups
     description: The organisation shall establish and maintain contact with special interest groups
     control_ref: "A.5.6"
-    security_domains: []
+    security_domains: [governance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -146,7 +146,7 @@ rules:
   - name: information_security_in_project_management
     description: Information security shall be integrated into project management
     control_ref: "A.5.8"
-    security_domains: []
+    security_domains: [governance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -161,7 +161,7 @@ rules:
   - name: inventory_of_information_and_associated_assets
     description: An inventory of information and associated assets shall be developed and maintained
     control_ref: "A.5.9"
-    security_domains: []
+    security_domains: [asset_management]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -177,7 +177,7 @@ rules:
   - name: acceptable_use_of_information_and_assets
     description: Rules for acceptable use and procedures for handling information and assets shall be identified
     control_ref: "A.5.10"
-    security_domains: []
+    security_domains: [asset_management]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -193,7 +193,7 @@ rules:
   - name: return_of_assets
     description: Personnel and external parties shall return all assets upon termination
     control_ref: "A.5.11"
-    security_domains: []
+    security_domains: [asset_management]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -515,7 +515,7 @@ rules:
   - name: legal_statutory_regulatory_contractual_requirements
     description: Legal, statutory, regulatory and contractual requirements shall be identified and documented
     control_ref: "A.5.31"
-    security_domains: []
+    security_domains: [legal_compliance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -532,7 +532,7 @@ rules:
   - name: intellectual_property_rights
     description: The organisation shall implement procedures to protect intellectual property rights
     control_ref: "A.5.32"
-    security_domains: []
+    security_domains: [legal_compliance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
@@ -581,7 +581,7 @@ rules:
   - name: independent_review_of_information_security
     description: The organisation's approach to managing information security shall be reviewed independently
     control_ref: "A.5.35"
-    security_domains: []
+    security_domains: [governance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: detective
@@ -598,7 +598,7 @@ rules:
   - name: compliance_with_policies_and_standards
     description: Compliance with information security policy, standards and rules shall be regularly reviewed
     control_ref: "A.5.36"
-    security_domains: []
+    security_domains: [legal_compliance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: detective
@@ -614,7 +614,7 @@ rules:
   - name: documented_operating_procedures
     description: Operating procedures for information processing facilities shall be documented and made available
     control_ref: "A.5.37"
-    security_domains: []
+    security_domains: [governance]
     evidence_source: [DOCUMENT]
     attestation_required: true
     control_type: preventive
