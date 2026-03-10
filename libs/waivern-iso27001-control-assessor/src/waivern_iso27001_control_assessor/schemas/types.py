@@ -1,6 +1,7 @@
 """Schema data models for ISO 27001 assessment."""
 
 import uuid
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import ClassVar
 
@@ -27,6 +28,16 @@ class EvidenceStatus(StrEnum):
     AUTOMATED = "automated"
     REQUIRES_ATTESTATION = "requires_attestation"
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
+
+
+@dataclass(frozen=True)
+class AssessmentVerdict:
+    """Grouped verdict fields for a single control assessment."""
+
+    status: ControlStatus
+    evidence_status: EvidenceStatus
+    rationale: str
+    gap_description: str | None
 
 
 class ControlType(StrEnum):

@@ -1,12 +1,15 @@
-"""Tests for ISO27001Assessor.process() — evidence filtering and status derivation."""
+"""Tests for ISO27001Assessor.process() — evidence filtering, status derivation, and LLM assessment."""
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import LLMService
+from waivern_llm import LLMCompletionResult, LLMService
 
 from waivern_iso27001_control_assessor import ISO27001Assessor
+from waivern_iso27001_control_assessor.prompts.response_model import (
+    ISO27001LLMResponse,
+)
 from waivern_iso27001_control_assessor.schemas.types import (
     CIAProperty,
     ControlStatus,
@@ -21,11 +24,31 @@ from waivern_iso27001_control_assessor.types import ISO27001AssessorConfig
 
 OUTPUT_SCHEMA = Schema("iso27001_assessment", "1.0.0")
 
+_DEFAULT_LLM_RESPONSE = ISO27001LLMResponse(
+    status="compliant",
+    rationale="Control is fully implemented.",
+    gap_description=None,
+)
 
-def _make_assessor(control_ref: str) -> ISO27001Assessor:
-    """Build an assessor instance for a given control."""
+
+def _make_assessor(
+    control_ref: str,
+    llm_response: ISO27001LLMResponse = _DEFAULT_LLM_RESPONSE,
+) -> ISO27001Assessor:
+    """Build an assessor instance with a configured mock LLM.
+
+    The mock LLM returns the given response for any complete() call.
+    Tests that never reach the AUTOMATED path ignore this default.
+    """
     config = ISO27001AssessorConfig.from_properties({"control_ref": control_ref})
-    return ISO27001Assessor(config=config, llm_service=Mock(spec=LLMService))
+    llm_service = Mock(spec=LLMService)
+    llm_service.complete = AsyncMock(
+        return_value=LLMCompletionResult(
+            responses=[llm_response],
+            skipped=[],
+        )
+    )
+    return ISO27001Assessor(config=config, llm_service=llm_service)
 
 
 def _make_evidence_message(
@@ -309,3 +332,93 @@ class TestOutputShape:
             == OperationalCapability.SYSTEM_AND_NETWORK_PROTECTION
         )
         assert finding.iso_security_domain == ISOSecurityDomain.PROTECTION
+
+
+# =============================================================================
+# LLM Assessment Verdicts
+# =============================================================================
+
+
+class TestLLMAssessmentVerdicts:
+    """Tests for the LLM assessment path (evidence_status == automated)."""
+
+    def test_automated_compliant_has_no_gap_description(self) -> None:
+        """LLM returns compliant → gap_description=None, summary counts correct.
+
+        When the LLM assesses a control as compliant, the output must have
+        gap_description=None and summary.compliant_count=1 (not not_assessed).
+        """
+        assessor = _make_assessor(
+            "A.8.24",
+            llm_response=ISO27001LLMResponse(
+                status="compliant",
+                rationale="AES-256 encryption is correctly implemented.",
+                gap_description=None,
+            ),
+        )
+        evidence_msg = _make_evidence_message(
+            [_make_evidence_finding(security_domain="encryption")]
+        )
+
+        result = assessor.process(inputs=[evidence_msg], output_schema=OUTPUT_SCHEMA)
+
+        output = _parse_output(result)
+        finding = output.findings[0]
+
+        assert finding.status == ControlStatus.COMPLIANT
+        assert finding.evidence_status == EvidenceStatus.AUTOMATED
+        assert finding.gap_description is None
+        assert finding.rationale == "AES-256 encryption is correctly implemented."
+        assert output.summary.compliant_count == 1
+        assert output.summary.not_assessed_count == 0
+
+    def test_automated_non_compliant_has_gap_description(self) -> None:
+        """LLM returns non_compliant → gap_description populated.
+
+        When the LLM assesses a control as non_compliant, gap_description must
+        be present with actionable text. SecurityGapReporter depends on this.
+        """
+        assessor = _make_assessor(
+            "A.8.24",
+            llm_response=ISO27001LLMResponse(
+                status="non_compliant",
+                rationale="MD5 is used for password hashing instead of bcrypt.",
+                gap_description="Replace MD5 with bcrypt or Argon2.",
+            ),
+        )
+        evidence_msg = _make_evidence_message(
+            [_make_evidence_finding(security_domain="encryption")]
+        )
+
+        result = assessor.process(inputs=[evidence_msg], output_schema=OUTPUT_SCHEMA)
+
+        output = _parse_output(result)
+        finding = output.findings[0]
+
+        assert finding.status == ControlStatus.NON_COMPLIANT
+        assert finding.evidence_status == EvidenceStatus.AUTOMATED
+        assert finding.gap_description == "Replace MD5 with bcrypt or Argon2."
+        assert output.summary.non_compliant_count == 1
+
+    def test_llm_failure_falls_back_to_not_assessed(self) -> None:
+        """LLM call raises → status=not_assessed, pipeline doesn't crash.
+
+        93 assessors run in parallel. One LLM failure should not kill the run.
+        The assessor should fall back to not_assessed with an error rationale.
+        """
+        assessor = _make_assessor("A.8.24")
+        assessor._llm_service.complete = AsyncMock(
+            side_effect=RuntimeError("LLM provider unavailable")
+        )
+        evidence_msg = _make_evidence_message(
+            [_make_evidence_finding(security_domain="encryption")]
+        )
+
+        result = assessor.process(inputs=[evidence_msg], output_schema=OUTPUT_SCHEMA)
+
+        output = _parse_output(result)
+        finding = output.findings[0]
+
+        assert finding.status == ControlStatus.NOT_ASSESSED
+        assert finding.evidence_status == EvidenceStatus.AUTOMATED
+        assert "LLM provider unavailable" in finding.rationale

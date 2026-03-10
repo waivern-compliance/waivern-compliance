@@ -1,31 +1,22 @@
 """ISO 27001 control assessor."""
 
+import asyncio
 import logging
-from datetime import UTC, datetime
 from typing import override
 
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
-from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-from waivern_llm import LLMService
+from waivern_core.schemas import Schema
+from waivern_llm import BatchingMode, ItemGroup, LLMService
 from waivern_rulesets.iso27001_domains import ISO27001DomainsRule
 from waivern_security_document_evidence_extractor import SecurityDocumentContextModel
 from waivern_security_evidence import SecurityEvidenceModel
 
-from .schemas.types import (
-    CIAProperty,
-    ControlStatus,
-    ControlType,
-    CybersecurityConcept,
-    EvidenceStatus,
-    ISO27001AssessmentMetadata,
-    ISO27001AssessmentModel,
-    ISO27001AssessmentOutput,
-    ISO27001AssessmentSummary,
-    ISOSecurityDomain,
-    OperationalCapability,
-)
+from .prompts.prompt_builder import ControlContext, ISO27001PromptBuilder
+from .prompts.response_model import ISO27001LLMResponse
+from .result_builder import ISO27001ResultBuilder
+from .schemas.types import AssessmentVerdict, ControlStatus, EvidenceStatus
 from .types import ISO27001AssessorConfig
 
 logger = logging.getLogger(__name__)
@@ -58,6 +49,7 @@ class ISO27001Assessor(Analyser):
         """
         self._config = config
         self._llm_service = llm_service
+        self._result_builder = ISO27001ResultBuilder(config.domain_ruleset)
 
     @classmethod
     @override
@@ -105,8 +97,8 @@ class ISO27001Assessor(Analyser):
         2. Partition inputs by schema and extract findings
         3. Filter evidence by security_domains and evidence_source
         4. Derive evidence_status (may short-circuit without LLM)
-        5. Build LLM prompt with filtered evidence (Step 5)
-        6. Parse LLM response into structured assessment verdict (Step 5)
+        5. Call LLM with filtered evidence and document context
+        6. Parse LLM response into structured assessment verdict
 
         Args:
             inputs: Input messages (security_evidence and/or document_context).
@@ -122,29 +114,40 @@ class ISO27001Assessor(Analyser):
 
         match evidence_status:
             case EvidenceStatus.REQUIRES_ATTESTATION:
-                return self._build_not_assessed(
+                return self._result_builder.build_output_message(
                     rule,
-                    evidence_status,
-                    "Awaiting document evidence. This control requires human-produced "
-                    "documentation (e.g. policy, procedure, inspection report) that "
-                    "has not yet been provided.",
-                    output_schema,
+                    verdict=AssessmentVerdict(
+                        status=ControlStatus.NOT_ASSESSED,
+                        evidence_status=evidence_status,
+                        rationale=(
+                            "Awaiting document evidence. This control requires "
+                            "human-produced documentation (e.g. policy, procedure, "
+                            "inspection report) that has not yet been provided."
+                        ),
+                        gap_description=None,
+                    ),
+                    llm_enabled=False,
+                    output_schema=output_schema,
                 )
             case EvidenceStatus.INSUFFICIENT_EVIDENCE:
-                return self._build_not_assessed(
+                return self._result_builder.build_output_message(
                     rule,
-                    evidence_status,
-                    "No relevant evidence found. Neither technical findings nor "
-                    "document context matched this control's security domains.",
-                    output_schema,
+                    verdict=AssessmentVerdict(
+                        status=ControlStatus.NOT_ASSESSED,
+                        evidence_status=evidence_status,
+                        rationale=(
+                            "No relevant evidence found. Neither technical findings "
+                            "nor document context matched this control's security "
+                            "domains."
+                        ),
+                        gap_description=None,
+                    ),
+                    llm_enabled=False,
+                    output_schema=output_schema,
                 )
             case EvidenceStatus.AUTOMATED:
-                # Step 5: LLM assessment will replace this placeholder.
-                return self._build_not_assessed(
-                    rule,
-                    evidence_status,
-                    "LLM assessment pending (Step 5).",
-                    output_schema,
+                return self._assess_with_llm(
+                    rule, evidence, documents, inputs, output_schema
                 )
 
     def _load_rule(self) -> ISO27001DomainsRule:
@@ -267,78 +270,127 @@ class ISO27001Assessor(Analyser):
 
         return EvidenceStatus.AUTOMATED
 
-    def _build_not_assessed(
+    def _assess_with_llm(
         self,
         rule: ISO27001DomainsRule,
-        evidence_status: EvidenceStatus,
-        rationale: str,
+        evidence: list[SecurityEvidenceModel],
+        documents: list[SecurityDocumentContextModel],
+        inputs: list[Message],
         output_schema: Schema,
     ) -> Message:
-        """Build a not_assessed output message (no LLM call).
+        """Assess a control using the LLM service.
 
-        Constructs a complete ISO27001AssessmentOutput with a single finding,
-        copies the five ISO 27001 attributes from the rule, and validates
-        against the JSON schema.
+        Orchestrates the LLM assessment flow:
+        1. Format document content and create prompt builder
+        2. Call LLMService.complete() via asyncio.run()
+        3. Parse response into assessment output
+        4. On failure, fall back to not_assessed
 
         Args:
-            rule: The matched ISO 27001 rule (source of control attributes).
-            evidence_status: The derived evidence status.
-            rationale: Fixed rationale message.
+            rule: The matched ISO 27001 rule.
+            evidence: Filtered security evidence items.
+            documents: Filtered document context items.
+            inputs: Original input messages (for run_id extraction).
             output_schema: Schema for output validation.
 
         Returns:
-            Validated output message.
+            Validated output message with LLM-assessed verdict.
 
         """
-        finding = ISO27001AssessmentModel(
-            metadata=ISO27001AssessmentMetadata(source=rule.control_ref),
-            control_ref=rule.control_ref,
-            status=ControlStatus.NOT_ASSESSED,
-            evidence_status=evidence_status,
-            rationale=rationale,
-            gap_description=None,
-            control_type=ControlType(rule.control_type),
-            cia=[CIAProperty(c) for c in rule.cia],
-            cybersecurity_concept=CybersecurityConcept(rule.cybersecurity_concept),
-            operational_capability=OperationalCapability(rule.operational_capability),
-            iso_security_domain=ISOSecurityDomain(rule.iso_security_domain),
-        )
+        try:
+            doc_content = self._format_document_content(documents)
+            control = ControlContext(
+                guidance_text=rule.guidance_text,
+                control_type=rule.control_type,
+                cia=list(rule.cia),
+                cybersecurity_concept=rule.cybersecurity_concept,
+                operational_capability=rule.operational_capability,
+                iso_security_domain=rule.iso_security_domain,
+            )
+            prompt_builder = ISO27001PromptBuilder(control)
 
-        summary = ISO27001AssessmentSummary(
-            total_controls=1,
-            compliant_count=0,
-            partial_count=0,
-            non_compliant_count=0,
-            not_assessed_count=1,
-            automated_count=1 if evidence_status == EvidenceStatus.AUTOMATED else 0,
-            requires_attestation_count=(
-                1 if evidence_status == EvidenceStatus.REQUIRES_ATTESTATION else 0
-            ),
-            insufficient_evidence_count=(
-                1 if evidence_status == EvidenceStatus.INSUFFICIENT_EVIDENCE else 0
-            ),
-        )
+            groups = [
+                ItemGroup(
+                    items=evidence,
+                    content=doc_content,
+                    group_id=rule.control_ref,
+                )
+            ]
+            run_id = inputs[0].run_id if inputs else "unknown"
 
-        output = ISO27001AssessmentOutput(
-            findings=[finding],
-            summary=summary,
-            analysis_metadata=BaseAnalysisOutputMetadata(
-                ruleset_used=self._config.domain_ruleset,
-                llm_validation_enabled=False,
-            ),
-        )
+            result = asyncio.run(
+                self._llm_service.complete(
+                    groups,
+                    prompt_builder=prompt_builder,
+                    response_model=ISO27001LLMResponse,
+                    batching_mode=BatchingMode.EXTENDED_CONTEXT,
+                    run_id=run_id or "unknown",
+                )
+            )
 
-        result_data = output.model_dump(mode="json", exclude_none=True)
-        output_message = Message(
-            id=f"iso27001_assessment_{rule.control_ref}_{datetime.now(UTC).isoformat()}",
-            content=result_data,
-            schema=output_schema,
-        )
-        output_message.validate()
+            if not result.responses:
+                return self._result_builder.build_output_message(
+                    rule,
+                    verdict=AssessmentVerdict(
+                        status=ControlStatus.NOT_ASSESSED,
+                        evidence_status=EvidenceStatus.AUTOMATED,
+                        rationale="LLM assessment skipped — evidence exceeded context window.",
+                        gap_description=None,
+                    ),
+                    llm_enabled=False,
+                    output_schema=output_schema,
+                )
 
-        logger.info(
-            f"ISO27001Assessor [{rule.control_ref}]: "
-            f"evidence_status={evidence_status.value}, status=not_assessed"
-        )
+            llm_response = result.responses[0]
+            return self._result_builder.build_output_message(
+                rule,
+                verdict=AssessmentVerdict(
+                    status=ControlStatus(llm_response.status),
+                    evidence_status=EvidenceStatus.AUTOMATED,
+                    rationale=llm_response.rationale,
+                    gap_description=llm_response.gap_description,
+                ),
+                llm_enabled=True,
+                output_schema=output_schema,
+            )
 
-        return output_message
+        except Exception as e:
+            logger.error(
+                f"ISO27001Assessor [{rule.control_ref}]: LLM assessment failed: {e}"
+            )
+            return self._result_builder.build_output_message(
+                rule,
+                verdict=AssessmentVerdict(
+                    status=ControlStatus.NOT_ASSESSED,
+                    evidence_status=EvidenceStatus.AUTOMATED,
+                    rationale=f"LLM assessment failed: {e}",
+                    gap_description=None,
+                ),
+                llm_enabled=False,
+                output_schema=output_schema,
+            )
+
+    def _format_document_content(
+        self,
+        documents: list[SecurityDocumentContextModel],
+    ) -> str:
+        """Format document context items into a single content string.
+
+        Concatenates document text with filename headers for the LLM prompt.
+        Always returns a non-empty string (includes a placeholder when no
+        documents are available) so the ItemGroup.content is never None.
+
+        Args:
+            documents: Filtered document context items.
+
+        Returns:
+            Formatted document content string.
+
+        """
+        if not documents:
+            return "No document context available for this control."
+
+        parts: list[str] = []
+        for doc in documents:
+            parts.append(f"--- {doc.filename} ---\n{doc.content}")
+        return "\n\n".join(parts)
