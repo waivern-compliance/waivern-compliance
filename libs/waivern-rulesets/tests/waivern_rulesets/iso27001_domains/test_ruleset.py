@@ -55,7 +55,7 @@ class TestISO27001DomainsRulesetDataValidation:
             control_ref="A.5.1",
             security_domains=(SecurityDomain.AUTHENTICATION,),
             evidence_source=("TECHNICAL",),
-            attestation_required=False,
+            evidence_required=None,
             control_type="preventive",
             cia=("confidentiality",),
             cybersecurity_concept="identify",
@@ -73,7 +73,7 @@ class TestISO27001DomainsRulesetDataValidation:
                 control_ref="A.5.1",
                 security_domains=("nonexistent_domain",),  # type: ignore[arg-type]
                 evidence_source=(),
-                attestation_required=True,
+                evidence_required=None,
                 control_type="preventive",
                 cia=("confidentiality",),
                 cybersecurity_concept="identify",
@@ -91,7 +91,7 @@ class TestISO27001DomainsRulesetDataValidation:
                 control_ref="A.5.1",
                 security_domains=(),
                 evidence_source=(),
-                attestation_required=True,
+                evidence_required=None,
                 control_type="preventive",
                 cia=("confidentiality",),
                 cybersecurity_concept="identify",
@@ -163,6 +163,51 @@ class TestISO27001DomainsRulesetBusinessRules:
             f"Expected 93 Annex A controls, got {len(ruleset.get_rules())}"
         )
 
+    def test_every_rule_has_at_least_one_security_domain(
+        self, ruleset: ISO27001DomainsRuleset
+    ) -> None:
+        """Every rule must have at least one security_domain for evidence routing.
+
+        Without a domain, the assessor cannot match any security_evidence items
+        to the control — it would always produce insufficient_evidence.
+        """
+        violations = [
+            r.control_ref for r in ruleset.get_rules() if not r.security_domains
+        ]
+        assert not violations, f"Rules with empty security_domains: {violations}"
+
+    def test_every_rule_has_at_least_one_evidence_source(
+        self, ruleset: ISO27001DomainsRuleset
+    ) -> None:
+        """Every rule must declare at least one evidence source type.
+
+        A control with no evidence source can never be assessed — the assessor
+        would have no evidence type to accept.
+        """
+        violations = [
+            r.control_ref for r in ruleset.get_rules() if not r.evidence_source
+        ]
+        assert not violations, f"Rules with empty evidence_source: {violations}"
+
+    def test_evidence_required_is_subset_of_evidence_source(
+        self, ruleset: ISO27001DomainsRuleset
+    ) -> None:
+        """evidence_required types must be a subset of evidence_source.
+
+        Requiring an evidence type that the control does not accept is a
+        logical error — the required type could never be present.
+        """
+        violations = [
+            f"{r.control_ref}: required={list(r.evidence_required)} "
+            f"not in source={list(r.evidence_source)}"
+            for r in ruleset.get_rules()
+            if r.evidence_required
+            and not set(r.evidence_required).issubset(set(r.evidence_source))
+        ]
+        assert not violations, (
+            f"evidence_required not subset of evidence_source: {violations}"
+        )
+
     def test_physical_controls_have_physical_security_domain(
         self, ruleset: ISO27001DomainsRuleset
     ) -> None:
@@ -183,20 +228,22 @@ class TestISO27001DomainsRulesetBusinessRules:
             f"A.7 controls missing physical_security domain: {violations}"
         )
 
-    def test_physical_controls_require_attestation(
+    def test_physical_controls_require_document_evidence(
         self, ruleset: ISO27001DomainsRuleset
     ) -> None:
-        """Test that all A.7 physical controls have attestation_required=True.
+        """Test that all A.7 physical controls require DOCUMENT evidence.
 
-        Physical controls (perimeters, entry, equipment) cannot be verified from
-        documents alone — a physical site visit is always required.
+        Physical controls (perimeters, entry, equipment) cannot be verified
+        by code scanning alone — they need document evidence (inspection reports,
+        physical security policies). This is either the sole evidence source or
+        an explicit requirement via evidence_required.
         """
         physical_rules = [
             r for r in ruleset.get_rules() if r.control_ref.startswith("A.7.")
         ]
         violations = [
-            r.control_ref for r in physical_rules if not r.attestation_required
+            r.control_ref for r in physical_rules if "DOCUMENT" not in r.evidence_source
         ]
         assert not violations, (
-            f"A.7 controls missing attestation_required=True: {violations}"
+            f"A.7 controls missing DOCUMENT in evidence_source: {violations}"
         )

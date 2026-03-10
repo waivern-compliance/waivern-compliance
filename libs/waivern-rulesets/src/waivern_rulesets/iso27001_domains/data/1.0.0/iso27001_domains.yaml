@@ -17,8 +17,9 @@
 #     because document evidence from physical security policies carries that domain.
 # - evidence_source: origin types of evidence (TECHNICAL | DOCUMENT).
 #     TECHNICAL covers both CODE and CONFIG. Orthogonal to security_domains.
-# - attestation_required: true when human sign-off is always needed regardless
-#     of automated evidence (policy approval, physical inspection, etc.).
+# - evidence_required: mandatory evidence types for mixed-source controls.
+#     Only set when evidence_source has multiple types but one is mandatory
+#     (e.g. access control needs DOCUMENT even when TECHNICAL evidence exists).
 
 name: iso27001_domains
 version: 1.0.0
@@ -35,7 +36,6 @@ rules:
     control_ref: "A.5.1"
     security_domains: [governance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -52,7 +52,6 @@ rules:
     control_ref: "A.5.2"
     security_domains: [governance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -68,7 +67,7 @@ rules:
     control_ref: "A.5.3"
     security_domains: [access_control]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -84,7 +83,6 @@ rules:
     control_ref: "A.5.4"
     security_domains: [governance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -100,7 +98,6 @@ rules:
     control_ref: "A.5.5"
     security_domains: [governance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: respond
@@ -116,7 +113,6 @@ rules:
     control_ref: "A.5.6"
     security_domains: [governance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -132,7 +128,6 @@ rules:
     control_ref: "A.5.7"
     security_domains: [vulnerability_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: detective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -148,7 +143,6 @@ rules:
     control_ref: "A.5.8"
     security_domains: [governance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -163,7 +157,6 @@ rules:
     control_ref: "A.5.9"
     security_domains: [asset_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -179,7 +172,6 @@ rules:
     control_ref: "A.5.10"
     security_domains: [asset_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -195,7 +187,6 @@ rules:
     control_ref: "A.5.11"
     security_domains: [asset_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -211,7 +202,6 @@ rules:
     control_ref: "A.5.12"
     security_domains: [data_protection]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: identify
@@ -228,7 +218,7 @@ rules:
     control_ref: "A.5.13"
     security_domains: [data_protection]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -244,7 +234,7 @@ rules:
     control_ref: "A.5.14"
     security_domains: [data_protection]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -260,7 +250,7 @@ rules:
     control_ref: "A.5.15"
     security_domains: [access_control]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -276,7 +266,7 @@ rules:
     control_ref: "A.5.16"
     security_domains: [authentication]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -292,7 +282,7 @@ rules:
     control_ref: "A.5.17"
     security_domains: [authentication]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -309,7 +299,7 @@ rules:
     control_ref: "A.5.18"
     security_domains: [access_control]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -325,7 +315,6 @@ rules:
     control_ref: "A.5.19"
     security_domains: [supplier_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -341,7 +330,6 @@ rules:
     control_ref: "A.5.20"
     security_domains: [supplier_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -357,7 +345,6 @@ rules:
     control_ref: "A.5.21"
     security_domains: [supplier_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -373,7 +360,6 @@ rules:
     control_ref: "A.5.22"
     security_domains: [supplier_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: detective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -389,7 +375,6 @@ rules:
     control_ref: "A.5.23"
     security_domains: [supplier_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -406,7 +391,6 @@ rules:
     control_ref: "A.5.24"
     security_domains: [incident_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: respond
@@ -423,7 +407,6 @@ rules:
     control_ref: "A.5.25"
     security_domains: [incident_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: detective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: detect
@@ -439,7 +422,6 @@ rules:
     control_ref: "A.5.26"
     security_domains: [incident_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: corrective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: respond
@@ -454,7 +436,6 @@ rules:
     control_ref: "A.5.27"
     security_domains: [incident_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: corrective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: recover
@@ -470,7 +451,6 @@ rules:
     control_ref: "A.5.28"
     security_domains: [incident_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: detective
     cia: [confidentiality, integrity]
     cybersecurity_concept: respond
@@ -486,7 +466,6 @@ rules:
     control_ref: "A.5.29"
     security_domains: [business_continuity]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [availability, confidentiality]
     cybersecurity_concept: recover
@@ -501,7 +480,7 @@ rules:
     control_ref: "A.5.30"
     security_domains: [business_continuity]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [availability]
     cybersecurity_concept: recover
@@ -517,7 +496,6 @@ rules:
     control_ref: "A.5.31"
     security_domains: [legal_compliance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -534,7 +512,6 @@ rules:
     control_ref: "A.5.32"
     security_domains: [legal_compliance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -549,7 +526,7 @@ rules:
     control_ref: "A.5.33"
     security_domains: [data_protection]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -566,7 +543,7 @@ rules:
     control_ref: "A.5.34"
     security_domains: [data_protection]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality]
     cybersecurity_concept: protect
@@ -583,7 +560,6 @@ rules:
     control_ref: "A.5.35"
     security_domains: [governance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: detective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -600,7 +576,6 @@ rules:
     control_ref: "A.5.36"
     security_domains: [legal_compliance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: detective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -616,7 +591,6 @@ rules:
     control_ref: "A.5.37"
     security_domains: [governance]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -636,7 +610,6 @@ rules:
     control_ref: "A.6.1"
     security_domains: [people_controls]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: identify
@@ -654,7 +627,6 @@ rules:
     control_ref: "A.6.2"
     security_domains: [people_controls]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -670,7 +642,6 @@ rules:
     control_ref: "A.6.3"
     security_domains: [people_controls]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -688,7 +659,6 @@ rules:
     control_ref: "A.6.4"
     security_domains: [people_controls]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: corrective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: respond
@@ -704,7 +674,6 @@ rules:
     control_ref: "A.6.5"
     security_domains: [people_controls]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -721,7 +690,6 @@ rules:
     control_ref: "A.6.6"
     security_domains: [people_controls]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality]
     cybersecurity_concept: protect
@@ -738,7 +706,7 @@ rules:
     control_ref: "A.6.7"
     security_domains: [people_controls, network_security]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -754,7 +722,7 @@ rules:
     control_ref: "A.6.8"
     security_domains: [incident_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: detective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: detect
@@ -772,8 +740,8 @@ rules:
   # document evidence from physical security policies and audit reports carries
   # security_domain: physical_security and should flow to these controls.
   # evidence_source: [DOCUMENT] — code/config analysis cannot detect physical
-  # security measures. attestation_required: true — a physical site visit or
-  # inspection is always required regardless of document evidence.
+  # security measures. Document-only evidence source means absence of documents
+  # yields insufficient_evidence — no separate evidence_required needed.
   # ===========================================================================
 
   - name: physical_security_perimeters
@@ -781,7 +749,6 @@ rules:
     control_ref: "A.7.1"
     security_domains: [physical_security]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, availability]
     cybersecurity_concept: protect
@@ -797,7 +764,6 @@ rules:
     control_ref: "A.7.2"
     security_domains: [physical_security]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, availability]
     cybersecurity_concept: protect
@@ -813,7 +779,6 @@ rules:
     control_ref: "A.7.3"
     security_domains: [physical_security]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, availability]
     cybersecurity_concept: protect
@@ -828,7 +793,6 @@ rules:
     control_ref: "A.7.4"
     security_domains: [physical_security, logging_monitoring]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: detective
     cia: [confidentiality, availability]
     cybersecurity_concept: detect
@@ -843,7 +807,6 @@ rules:
     control_ref: "A.7.5"
     security_domains: [physical_security]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [availability, confidentiality]
     cybersecurity_concept: protect
@@ -860,7 +823,6 @@ rules:
     control_ref: "A.7.6"
     security_domains: [physical_security]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -875,7 +837,6 @@ rules:
     control_ref: "A.7.7"
     security_domains: [physical_security]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality]
     cybersecurity_concept: protect
@@ -891,7 +852,6 @@ rules:
     control_ref: "A.7.8"
     security_domains: [physical_security]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [availability, confidentiality]
     cybersecurity_concept: protect
@@ -907,7 +867,6 @@ rules:
     control_ref: "A.7.9"
     security_domains: [physical_security]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, availability]
     cybersecurity_concept: protect
@@ -922,7 +881,6 @@ rules:
     control_ref: "A.7.10"
     security_domains: [physical_security, data_protection]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -938,7 +896,6 @@ rules:
     control_ref: "A.7.11"
     security_domains: [physical_security, business_continuity]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [availability]
     cybersecurity_concept: protect
@@ -954,7 +911,6 @@ rules:
     control_ref: "A.7.12"
     security_domains: [physical_security, network_security]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, availability]
     cybersecurity_concept: protect
@@ -970,7 +926,6 @@ rules:
     control_ref: "A.7.13"
     security_domains: [physical_security]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [availability, integrity]
     cybersecurity_concept: protect
@@ -985,7 +940,7 @@ rules:
     control_ref: "A.7.14"
     security_domains: [physical_security, data_protection]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality]
     cybersecurity_concept: protect
@@ -1006,7 +961,6 @@ rules:
     control_ref: "A.8.1"
     security_domains: [access_control, vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -1021,7 +975,7 @@ rules:
     control_ref: "A.8.2"
     security_domains: [access_control]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -1036,7 +990,6 @@ rules:
     control_ref: "A.8.3"
     security_domains: [access_control]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -1052,7 +1005,6 @@ rules:
     control_ref: "A.8.4"
     security_domains: [access_control]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -1067,7 +1019,6 @@ rules:
     control_ref: "A.8.5"
     security_domains: [authentication]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -1083,7 +1034,7 @@ rules:
     control_ref: "A.8.6"
     security_domains: [business_continuity]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [availability]
     cybersecurity_concept: protect
@@ -1098,7 +1049,6 @@ rules:
     control_ref: "A.8.7"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1113,7 +1063,6 @@ rules:
     control_ref: "A.8.8"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -1130,7 +1079,6 @@ rules:
     control_ref: "A.8.9"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1146,7 +1094,6 @@ rules:
     control_ref: "A.8.10"
     security_domains: [data_protection]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality]
     cybersecurity_concept: protect
@@ -1162,7 +1109,6 @@ rules:
     control_ref: "A.8.11"
     security_domains: [data_protection]
     evidence_source: [TECHNICAL]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality]
     cybersecurity_concept: protect
@@ -1179,7 +1125,6 @@ rules:
     control_ref: "A.8.12"
     security_domains: [data_protection]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: detective
     cia: [confidentiality]
     cybersecurity_concept: protect
@@ -1195,7 +1140,6 @@ rules:
     control_ref: "A.8.13"
     security_domains: [business_continuity]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [availability, integrity]
     cybersecurity_concept: recover
@@ -1211,7 +1155,6 @@ rules:
     control_ref: "A.8.14"
     security_domains: [business_continuity]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [availability]
     cybersecurity_concept: recover
@@ -1227,7 +1170,6 @@ rules:
     control_ref: "A.8.15"
     security_domains: [logging_monitoring]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: detective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: detect
@@ -1242,7 +1184,6 @@ rules:
     control_ref: "A.8.16"
     security_domains: [logging_monitoring]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: detective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: detect
@@ -1258,7 +1199,6 @@ rules:
     control_ref: "A.8.17"
     security_domains: [logging_monitoring]
     evidence_source: [TECHNICAL]
-    attestation_required: false
     control_type: preventive
     cia: [integrity]
     cybersecurity_concept: protect
@@ -1273,7 +1213,6 @@ rules:
     control_ref: "A.8.18"
     security_domains: [access_control]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -1289,7 +1228,6 @@ rules:
     control_ref: "A.8.19"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1305,7 +1243,6 @@ rules:
     control_ref: "A.8.20"
     security_domains: [network_security]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1320,7 +1257,6 @@ rules:
     control_ref: "A.8.21"
     security_domains: [network_security]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1336,7 +1272,6 @@ rules:
     control_ref: "A.8.22"
     security_domains: [network_security]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -1351,7 +1286,6 @@ rules:
     control_ref: "A.8.23"
     security_domains: [network_security]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1366,7 +1300,6 @@ rules:
     control_ref: "A.8.24"
     security_domains: [encryption]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity]
     cybersecurity_concept: protect
@@ -1381,7 +1314,6 @@ rules:
     control_ref: "A.8.25"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1396,7 +1328,6 @@ rules:
     control_ref: "A.8.26"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1412,7 +1343,6 @@ rules:
     control_ref: "A.8.27"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1428,7 +1358,6 @@ rules:
     control_ref: "A.8.28"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1443,7 +1372,6 @@ rules:
     control_ref: "A.8.29"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: detective
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -1458,7 +1386,6 @@ rules:
     control_ref: "A.8.30"
     security_domains: [supplier_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: identify
@@ -1473,7 +1400,6 @@ rules:
     control_ref: "A.8.31"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1489,7 +1415,7 @@ rules:
     control_ref: "A.8.32"
     security_domains: [vulnerability_management]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: true
+    evidence_required: [DOCUMENT]
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
@@ -1504,7 +1430,6 @@ rules:
     control_ref: "A.8.33"
     security_domains: [data_protection]
     evidence_source: [TECHNICAL, DOCUMENT]
-    attestation_required: false
     control_type: preventive
     cia: [confidentiality]
     cybersecurity_concept: protect
@@ -1519,7 +1444,6 @@ rules:
     control_ref: "A.8.34"
     security_domains: [vulnerability_management]
     evidence_source: [DOCUMENT]
-    attestation_required: true
     control_type: preventive
     cia: [confidentiality, integrity, availability]
     cybersecurity_concept: protect
