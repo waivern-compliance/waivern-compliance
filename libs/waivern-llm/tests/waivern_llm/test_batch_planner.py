@@ -257,6 +257,102 @@ class TestCountBasedMode:
 
 
 # =============================================================================
+# INDEPENDENT Mode
+# =============================================================================
+
+
+class TestIndependentMode:
+    """Tests for INDEPENDENT mode — one group per batch, no bin-packing."""
+
+    def test_each_group_becomes_its_own_batch(self) -> None:
+        """N groups should produce N batches, each containing exactly one group."""
+        group1 = _create_group(content="a" * 100, item_count=1, group_id="g1")
+        group2 = _create_group(content="b" * 100, item_count=2, group_id="g2")
+        group3 = _create_group(content="c" * 100, item_count=1, group_id="g3")
+        planner = BatchPlanner(max_payload_tokens=10_000)
+
+        plan = planner.plan([group1, group2, group3], mode=BatchingMode.INDEPENDENT)
+
+        assert len(plan.batches) == 3
+        assert len(plan.skipped) == 0
+        assert plan.batches[0].groups == [group1]
+        assert plan.batches[1].groups == [group2]
+        assert plan.batches[2].groups == [group3]
+
+    def test_oversized_group_skipped(self) -> None:
+        """Group exceeding token limit should be skipped with OVERSIZED reason."""
+        oversized = _create_group(content="x" * 100_000, item_count=1, group_id="huge")
+        planner = BatchPlanner(max_payload_tokens=10_000)
+
+        plan = planner.plan([oversized], mode=BatchingMode.INDEPENDENT)
+
+        assert len(plan.batches) == 0
+        assert len(plan.skipped) == 1
+        assert plan.skipped[0].reason == SkipReason.OVERSIZED
+
+    def test_missing_content_skipped(self) -> None:
+        """Group with content=None should be skipped with MISSING_CONTENT reason."""
+        no_content = _create_group(content=None, item_count=2, group_id="no-content")
+        planner = BatchPlanner(max_payload_tokens=10_000)
+
+        plan = planner.plan([no_content], mode=BatchingMode.INDEPENDENT)
+
+        assert len(plan.batches) == 0
+        assert len(plan.skipped) == 2
+        assert all(s.reason == SkipReason.MISSING_CONTENT for s in plan.skipped)
+
+    def test_empty_groups_returns_empty_plan(self) -> None:
+        """Empty input should return empty batches and empty skipped."""
+        planner = BatchPlanner(max_payload_tokens=10_000)
+
+        plan = planner.plan([], mode=BatchingMode.INDEPENDENT)
+
+        assert len(plan.batches) == 0
+        assert len(plan.skipped) == 0
+
+    def test_mixed_valid_and_invalid_groups(self) -> None:
+        """Valid groups get individual batches; invalid groups are skipped."""
+        valid = _create_group(content="valid content", item_count=1, group_id="valid")
+        oversized = _create_group(
+            content="x" * 100_000, item_count=1, group_id="oversized"
+        )
+        no_content = _create_group(content=None, item_count=1, group_id="no-content")
+        planner = BatchPlanner(max_payload_tokens=10_000)
+
+        plan = planner.plan(
+            [valid, oversized, no_content], mode=BatchingMode.INDEPENDENT
+        )
+
+        assert len(plan.batches) == 1
+        assert plan.batches[0].groups == [valid]
+        assert len(plan.skipped) == 2
+        skipped_reasons = {s.reason for s in plan.skipped}
+        assert skipped_reasons == {SkipReason.OVERSIZED, SkipReason.MISSING_CONTENT}
+
+    def test_token_estimation_scales_with_content(self) -> None:
+        """Batch with more content should have higher estimated_tokens."""
+        small_group = _create_group(content="a" * 100, item_count=1, group_id="small")
+        large_group = _create_group(content="a" * 4000, item_count=1, group_id="large")
+        planner = BatchPlanner(max_payload_tokens=10_000)
+
+        plan = planner.plan([small_group, large_group], mode=BatchingMode.INDEPENDENT)
+
+        assert plan.batches[0].estimated_tokens < plan.batches[1].estimated_tokens
+
+    def test_group_order_preserved(self) -> None:
+        """Batches should preserve input group order (no sorting unlike EXTENDED_CONTEXT)."""
+        small = _create_group(content="a" * 100, item_count=1, group_id="small")
+        large = _create_group(content="c" * 4000, item_count=1, group_id="large")
+        planner = BatchPlanner(max_payload_tokens=10_000)
+
+        plan = planner.plan([small, large], mode=BatchingMode.INDEPENDENT)
+
+        assert len(plan.batches) == 2
+        assert plan.batches[0].groups[0].group_id == "small"
+        assert plan.batches[1].groups[0].group_id == "large"
+
+
+# =============================================================================
 # Token Estimation Integration
 # =============================================================================
 

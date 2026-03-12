@@ -243,10 +243,10 @@ class TestDefaultLLMServiceExtendedContextMode:
         # Small max_payload forces groups into separate batches
         service = DefaultLLMService(provider=provider, store=store, batch_size=50)
 
-        # Two groups that should each become their own batch
-        # (content is small enough to fit individually but creates separate batches)
-        group1 = _create_group(content="content 1", item_count=2, group_id="g1")
-        group2 = _create_group(content="content 2", item_count=2, group_id="g2")
+        # Two groups sharing the same content (EXTENDED_CONTEXT contract)
+        shared_content = "shared file content"
+        group1 = _create_group(content=shared_content, item_count=2, group_id="g1")
+        group2 = _create_group(content=shared_content, item_count=2, group_id="g2")
 
         # Act
         results = await service.complete(
@@ -261,6 +261,29 @@ class TestDefaultLLMServiceExtendedContextMode:
         # so we get 1 response
         assert len(results.responses) >= 1
         assert all(isinstance(r, MockResponse) for r in results.responses)
+
+    async def test_raises_when_batch_contains_groups_with_different_content(
+        self,
+    ) -> None:
+        """Should raise ValueError when bin-packed groups have different content."""
+        store = AsyncInMemoryStore()
+        response = MockResponse(valid=True, reason="test")
+        provider = _create_mock_provider(response)
+        prompt_builder = _create_mock_prompt_builder()
+        # Large max_payload so both groups are bin-packed into one batch
+        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
+
+        group1 = _create_group(content="content A", item_count=1, group_id="g1")
+        group2 = _create_group(content="content B", item_count=1, group_id="g2")
+
+        with pytest.raises(ValueError, match="different content"):
+            await service.complete(
+                groups=[group1, group2],
+                prompt_builder=prompt_builder,
+                response_model=MockResponse,
+                batching_mode=BatchingMode.EXTENDED_CONTEXT,
+                run_id="test-run",
+            )
 
 
 # =============================================================================

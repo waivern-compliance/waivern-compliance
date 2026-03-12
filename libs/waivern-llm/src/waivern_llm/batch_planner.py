@@ -1,7 +1,8 @@
 """Batch planner for LLM Service v2.
 
-Plans batches for LLM processing using either token-aware bin-packing
-(EXTENDED_CONTEXT mode) or count-based splitting (COUNT_BASED mode).
+Plans batches for LLM processing using token-aware bin-packing
+(EXTENDED_CONTEXT), one-group-per-batch isolation (INDEPENDENT),
+or count-based splitting (COUNT_BASED).
 """
 
 from collections.abc import Sequence
@@ -48,8 +49,9 @@ class BatchPlan[T: Finding]:
 class BatchPlanner:
     """Plans batches for LLM processing.
 
-    Supports two modes:
+    Supports three modes:
     - EXTENDED_CONTEXT: Token-aware bin-packing keeping groups intact
+    - INDEPENDENT: One group per batch, no bin-packing (preserves input order)
     - COUNT_BASED: Simple count-based splitting with flattened items
     """
 
@@ -86,31 +88,28 @@ class BatchPlanner:
             BatchPlan with planned batches and skipped groups.
 
         """
-        if mode == BatchingMode.EXTENDED_CONTEXT:
-            return self._plan_extended_context(groups)
-        else:
-            return self._plan_count_based(groups)
+        match mode:
+            case BatchingMode.EXTENDED_CONTEXT:
+                return self._plan_extended_context(groups)
+            case BatchingMode.INDEPENDENT:
+                return self._plan_independent(groups)
+            case BatchingMode.COUNT_BASED:
+                return self._plan_count_based(groups)
 
-    def _plan_extended_context[T: Finding](
+    def _validate_groups[T: Finding](
         self,
         groups: Sequence[ItemGroup[T]],
-    ) -> BatchPlan[T]:
-        """Plan batches using token-aware bin-packing.
+    ) -> tuple[list[tuple[ItemGroup[T], int]], list[SkippedFinding[T]]]:
+        """Validate groups and estimate tokens, skipping invalid ones.
 
-        Algorithm (first-fit decreasing):
-        1. Estimate tokens for each group (content + items)
-        2. Sort by token estimate (largest first)
-        3. For each group, add to first batch that fits, else create new batch
+        Returns:
+            Tuple of (valid groups with token estimates, skipped findings).
+
         """
-        if not groups:
-            return BatchPlan(batches=[], skipped=[])
-
+        valid: list[tuple[ItemGroup[T], int]] = []
         skipped: list[SkippedFinding[T]] = []
 
-        # Calculate token estimates for each group, handling edge cases
-        group_tokens: list[tuple[ItemGroup[T], int]] = []
         for group in groups:
-            # Extended context requires content
             if group.content is None:
                 for item in group.items:
                     skipped.append(
@@ -122,7 +121,6 @@ class BatchPlanner:
             item_tokens = len(group.items) * self._tokens_per_item
             total_tokens = content_tokens + item_tokens
 
-            # Check if group exceeds maximum
             if total_tokens > self._max_payload_tokens:
                 for item in group.items:
                     skipped.append(
@@ -130,12 +128,26 @@ class BatchPlanner:
                     )
                 continue
 
-            group_tokens.append((group, total_tokens))
+            valid.append((group, total_tokens))
 
-        # Sort by tokens descending (largest first for better bin-packing)
+        return valid, skipped
+
+    def _plan_extended_context[T: Finding](
+        self,
+        groups: Sequence[ItemGroup[T]],
+    ) -> BatchPlan[T]:
+        """Plan batches using token-aware bin-packing.
+
+        Algorithm (first-fit decreasing):
+        1. Validate groups and estimate tokens
+        2. Sort by token estimate (largest first)
+        3. For each group, add to first batch that fits, else create new batch
+        """
+        if not groups:
+            return BatchPlan(batches=[], skipped=[])
+
+        group_tokens, skipped = self._validate_groups(groups)
         group_tokens.sort(key=lambda x: x[1], reverse=True)
-
-        # Bin-pack into batches
         batches = self._bin_pack_groups(group_tokens)
 
         return BatchPlan(batches=batches, skipped=skipped)
@@ -176,6 +188,28 @@ class BatchPlanner:
             PlannedBatch(groups=groups_list, estimated_tokens=total)
             for groups_list, total in zip(batch_groups, batch_totals, strict=True)
         ]
+
+    def _plan_independent[T: Finding](
+        self,
+        groups: Sequence[ItemGroup[T]],
+    ) -> BatchPlan[T]:
+        """Plan batches with one group per batch — no bin-packing.
+
+        Algorithm:
+        1. Validate groups and estimate tokens
+        2. Wrap each valid group in its own PlannedBatch
+        3. Preserve input order for 1:1 group-to-response mapping
+        """
+        if not groups:
+            return BatchPlan(batches=[], skipped=[])
+
+        group_tokens, skipped = self._validate_groups(groups)
+        batches = [
+            PlannedBatch(groups=[group], estimated_tokens=tokens)
+            for group, tokens in group_tokens
+        ]
+
+        return BatchPlan(batches=batches, skipped=skipped)
 
     def _plan_count_based[T: Finding](
         self,

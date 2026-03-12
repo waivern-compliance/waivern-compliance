@@ -57,6 +57,10 @@ Batching Modes
   source file content helps validation (e.g., validating findings against
   the original source code).
 
+- **INDEPENDENT**: One group per batch, no bin-packing. Use when each group
+  needs its own independent LLM call and response (e.g., classifying
+  documents where each needs a separate verdict).
+
 Caching
 -------
 
