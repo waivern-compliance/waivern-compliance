@@ -63,6 +63,14 @@ class BatchingMode(Enum):
     source file validated together with the file content).
     """
 
+    INDEPENDENT = auto()
+    """One group per batch, no bin-packing.
+
+    Use when each group needs its own independent LLM call and response
+    (e.g., classifying documents where each needs a separate verdict).
+    Preserves input order for 1:1 group-to-response mapping.
+    """
+
 
 class PromptBuilder[T: Finding](Protocol):
     """Protocol for building prompts from items.
