@@ -235,6 +235,13 @@ class DefaultLLMService(LLMService):
         for group in batch.groups:
             all_items.extend(group.items)
             if group.content is not None:
+                if content is not None and content is not group.content:
+                    msg = (
+                        "Batch contains groups with different content. "
+                        "EXTENDED_CONTEXT assumes shared content per batch. "
+                        "Use INDEPENDENT mode for groups with distinct content."
+                    )
+                    raise ValueError(msg)
                 content = group.content
 
         prompt = prompt_builder.build_prompt(all_items, content=content)
