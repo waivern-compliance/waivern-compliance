@@ -110,6 +110,10 @@ class SecurityDocumentEvidenceExtractor(Processor):
 
         """
         # 1. Parse and merge inputs
+        run_id = inputs[0].run_id if inputs else None
+        if not run_id:
+            msg = "run_id is required but not set on input messages"
+            raise ValueError(msg)
         data_items = self._merge_input_data_items(inputs)
         logger.info(f"Processing {len(data_items)} documents for domain classification")
 
@@ -128,7 +132,9 @@ class SecurityDocumentEvidenceExtractor(Processor):
 
         # 3/4. Classify
         if self._config.enable_llm_classification and self._llm_service:
-            responses = self._classify_with_llm(document_items, document_contents)
+            responses = self._classify_with_llm(
+                document_items, document_contents, run_id=run_id
+            )
         else:
             responses = [
                 DomainClassificationResponse(security_domains=[])
@@ -168,12 +174,15 @@ class SecurityDocumentEvidenceExtractor(Processor):
         self,
         document_items: list[DocumentItem],
         document_contents: list[str],
+        *,
+        run_id: str,
     ) -> list[DomainClassificationResponse]:
         """Classify documents using LLM service.
 
         Args:
             document_items: Document items for LLM grouping.
             document_contents: Full text of each document.
+            run_id: Run identifier for cache scoping.
 
         Returns:
             List of classification responses (one per document).
@@ -186,7 +195,6 @@ class SecurityDocumentEvidenceExtractor(Processor):
             for item, content in zip(document_items, document_contents, strict=True)
         ]
 
-        run_id = "domain-classification"
         prompt_builder = DomainClassificationPromptBuilder()
 
         result = asyncio.run(

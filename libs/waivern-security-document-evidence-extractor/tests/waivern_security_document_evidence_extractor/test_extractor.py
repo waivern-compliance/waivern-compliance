@@ -52,6 +52,7 @@ def _make_input_message(
         id=message_id,
         content=data.model_dump(exclude_none=True),
         schema=Schema("standard_input", "1.0.0"),
+        run_id="test-run",
     )
 
 
