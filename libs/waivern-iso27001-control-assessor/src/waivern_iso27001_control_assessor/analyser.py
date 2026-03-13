@@ -392,5 +392,5 @@ class ISO27001Assessor(Analyser):
 
         parts: list[str] = []
         for doc in documents:
-            parts.append(f"--- {doc.filename} ---\n{doc.content}")
+            parts.append(f"--- {doc.filename} ---\n{doc.summary}")
         return "\n\n".join(parts)

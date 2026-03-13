@@ -122,6 +122,7 @@ def _make_document_finding(
         "id": "doc-1",
         "filename": filename,
         "content": "Test document content",
+        "summary": "Test document summary",
         "security_domains": security_domains or [],
         "metadata": {"source": filename},
     }

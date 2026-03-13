@@ -201,6 +201,11 @@ class TestISO27001AssessorLLMIntegration:
                         "5. Policy violations will result in disciplinary action.\n"
                         "6. This policy is approved by the CISO and CEO."
                     ),
+                    "summary": (
+                        "InfoSec policy: establishes security framework, applies to "
+                        "all staff/contractors, annual senior review, defined roles, "
+                        "disciplinary enforcement, CISO+CEO approved."
+                    ),
                     "security_domains": ["governance"],
                     "metadata": {"source": "information_security_policy.md"},
                 },
@@ -260,6 +265,11 @@ class TestISO27001AssessorLLMIntegration:
                         "3. Privileged access is reviewed quarterly.\n"
                         "4. Multi-factor authentication is required for admin access.\n"
                         "5. Access is revoked immediately upon termination."
+                    ),
+                    "summary": (
+                        "Access control: need-to-know basis, manager approval required, "
+                        "quarterly privileged access review, MFA for admin, immediate "
+                        "revocation on termination."
                     ),
                     "security_domains": ["access_control"],
                     "metadata": {"source": "access_control_policy.md"},

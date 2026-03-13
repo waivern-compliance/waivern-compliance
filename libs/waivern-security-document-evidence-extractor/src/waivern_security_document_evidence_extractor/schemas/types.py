@@ -43,7 +43,14 @@ class SecurityDocumentContextModel(BaseModel):
         description="Relative path within the policy documents directory",
     )
     content: str = Field(
-        description="Full document text, passed verbatim to downstream LLM",
+        description="Full document text, preserved for audit and traceability",
+    )
+    summary: str = Field(
+        description=(
+            "Compliance-focused summary preserving key controls, procedures, "
+            "responsibilities, and requirements. Used by downstream assessors "
+            "instead of full content to stay within context window limits."
+        ),
     )
     security_domains: list[SecurityDomain] = Field(
         description=(

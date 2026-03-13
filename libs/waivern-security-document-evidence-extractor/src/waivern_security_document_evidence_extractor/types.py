@@ -46,12 +46,20 @@ class DomainClassificationResponse(BaseModel):
     """LLM response model for domain classification.
 
     The LLM returns which SecurityDomain values apply to a document,
-    or an empty list for cross-cutting documents.
+    or an empty list for cross-cutting documents. It also returns a
+    compliance-focused summary preserving key controls, procedures,
+    and requirements while discarding boilerplate.
     """
 
     security_domains: list[SecurityDomain] = Field(
         description=(
             "Security domains this document addresses. "
             "Empty list = cross-cutting (applies to all domains)"
+        ),
+    )
+    summary: str = Field(
+        description=(
+            "Compliance-focused summary of the document preserving key "
+            "controls, procedures, responsibilities, and requirements"
         ),
     )
