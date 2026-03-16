@@ -39,5 +39,6 @@ def create_handler(
 
     """
     return SourceCodeSchemaInputHandler(
-        context_window=config.source_code_context_window
+        context_window=config.source_code_context_window,
+        ruleset=config.pattern_matching.ruleset,
     )
