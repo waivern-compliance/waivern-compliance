@@ -104,3 +104,28 @@ class TestPromptContent:
         assert isinstance(prompt, str)
         assert len(prompt) > 0
         assert GUIDANCE_TEXT in prompt
+
+    def test_prompt_includes_risk_assessment_priority(self) -> None:
+        """The prompt includes guidance on risk assessment prioritisation.
+
+        Risk assessments and treatment plans have outsized impact on
+        ISO 27001 control effectiveness evaluation.
+        """
+        builder = _make_builder()
+
+        prompt = builder.build_prompt(items=[], content=None)
+
+        assert "RISK ASSESSMENT PRIORITY" in prompt
+        assert "risk treatment plan" in prompt
+
+    def test_prompt_includes_recommended_actions_instruction(self) -> None:
+        """The prompt instructs the LLM to produce recommended actions.
+
+        Non-compliant controls need actionable remediation steps.
+        """
+        builder = _make_builder()
+
+        prompt = builder.build_prompt(items=[], content=None)
+
+        assert "RECOMMENDED ACTIONS" in prompt
+        assert "recommended_actions" in prompt

@@ -68,6 +68,7 @@ class ISO27001ResultBuilder:
             evidence_status=verdict.evidence_status,
             rationale=verdict.rationale,
             gap_description=verdict.gap_description,
+            recommended_actions=verdict.recommended_actions,
             control_type=ControlType(rule.control_type),
             cia=[CIAProperty(c) for c in rule.cia],
             cybersecurity_concept=CybersecurityConcept(rule.cybersecurity_concept),
