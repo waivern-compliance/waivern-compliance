@@ -30,6 +30,7 @@ waivern-crypto-quality-analyser = { workspace = true }
 waivern-security-evidence = { workspace = true }
 waivern-security-evidence-normaliser = { workspace = true }
 waivern-security-control-analyser = { workspace = true }
+waivern-service-integration-analyser = { workspace = true }
 waivern-security-document-evidence-extractor = { workspace = true }
 waivern-iso27001-control-assessor = { workspace = true }
 waivern-compliance-tool = { workspace = true }

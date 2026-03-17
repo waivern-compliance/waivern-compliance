@@ -29,6 +29,7 @@ members = [
     "waivern-security-document-evidence-extractor",
     "waivern-security-evidence",
     "waivern-security-evidence-normaliser",
+    "waivern-service-integration-analyser",
     "waivern-source-code-analyser",
     "waivern-sqlite",
     "waivern-workspace",
@@ -2607,6 +2608,39 @@ requires-dist = [
     { name = "waivern-processing-purpose-analyser", editable = "libs/waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
     { name = "waivern-security-evidence", editable = "libs/waivern-security-evidence" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
+[[package]]
+name = "waivern-service-integration-analyser"
+version = "0.1.0"
+source = { editable = "libs/waivern-service-integration-analyser" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "waivern-analysers-shared" },
+    { name = "waivern-core" },
+    { name = "waivern-rulesets" },
+    { name = "waivern-source-code-analyser" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
+    { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
+    { name = "waivern-source-code-analyser", editable = "libs/waivern-source-code-analyser" },
 ]
 
 [package.metadata.requires-dev]
