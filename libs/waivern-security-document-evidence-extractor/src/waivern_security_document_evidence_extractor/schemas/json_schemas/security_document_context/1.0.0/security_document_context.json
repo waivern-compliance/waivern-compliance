@@ -109,8 +109,13 @@
           "type": "string"
         },
         "content": {
-          "description": "Full document text, passed verbatim to downstream LLM",
+          "description": "Full document text, preserved for audit and traceability",
           "title": "Content",
+          "type": "string"
+        },
+        "summary": {
+          "description": "Compliance-focused summary preserving key controls, procedures, responsibilities, and requirements. Used by downstream assessors instead of full content to stay within context window limits.",
+          "title": "Summary",
           "type": "string"
         },
         "security_domains": {
@@ -129,6 +134,7 @@
       "required": [
         "filename",
         "content",
+        "summary",
         "security_domains",
         "metadata"
       ],

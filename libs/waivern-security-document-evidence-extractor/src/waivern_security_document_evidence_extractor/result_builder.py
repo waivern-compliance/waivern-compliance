@@ -83,6 +83,7 @@ def _build_findings(
             SecurityDocumentContextModel(
                 filename=item.metadata.source,
                 content=content,
+                summary=response.summary,
                 security_domains=response.security_domains,
                 metadata=SecurityDocumentContextMetadata(
                     source=item.metadata.source,

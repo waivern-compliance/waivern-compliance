@@ -28,6 +28,7 @@ _DEFAULT_LLM_RESPONSE = ISO27001LLMResponse(
     status="compliant",
     rationale="Control is fully implemented.",
     gap_description=None,
+    recommended_actions=[],
 )
 
 
@@ -122,6 +123,7 @@ def _make_document_finding(
         "id": "doc-1",
         "filename": filename,
         "content": "Test document content",
+        "summary": "Test document summary",
         "security_domains": security_domains or [],
         "metadata": {"source": filename},
     }
@@ -354,6 +356,7 @@ class TestLLMAssessmentVerdicts:
                 status="compliant",
                 rationale="AES-256 encryption is correctly implemented.",
                 gap_description=None,
+                recommended_actions=[],
             ),
         )
         evidence_msg = _make_evidence_message(
@@ -368,6 +371,7 @@ class TestLLMAssessmentVerdicts:
         assert finding.status == ControlStatus.COMPLIANT
         assert finding.evidence_status == EvidenceStatus.AUTOMATED
         assert finding.gap_description is None
+        assert finding.recommended_actions == []
         assert finding.rationale == "AES-256 encryption is correctly implemented."
         assert output.summary.compliant_count == 1
         assert output.summary.not_assessed_count == 0
@@ -384,6 +388,10 @@ class TestLLMAssessmentVerdicts:
                 status="non_compliant",
                 rationale="MD5 is used for password hashing instead of bcrypt.",
                 gap_description="Replace MD5 with bcrypt or Argon2.",
+                recommended_actions=[
+                    "Replace MD5 password hashing with bcrypt or Argon2.",
+                    "Update the cryptography policy to mandate approved algorithms.",
+                ],
             ),
         )
         evidence_msg = _make_evidence_message(
@@ -398,6 +406,8 @@ class TestLLMAssessmentVerdicts:
         assert finding.status == ControlStatus.NON_COMPLIANT
         assert finding.evidence_status == EvidenceStatus.AUTOMATED
         assert finding.gap_description == "Replace MD5 with bcrypt or Argon2."
+        assert len(finding.recommended_actions) == 2
+        assert "bcrypt or Argon2" in finding.recommended_actions[0]
         assert output.summary.non_compliant_count == 1
 
     def test_llm_failure_falls_back_to_not_assessed(self) -> None:

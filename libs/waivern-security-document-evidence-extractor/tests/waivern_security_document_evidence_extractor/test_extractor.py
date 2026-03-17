@@ -107,7 +107,11 @@ class TestSecurityDocumentEvidenceExtractor:
         """Domains returned by the LLM end up in the output model."""
         domains = [SecurityDomain.AUTHENTICATION, SecurityDomain.ACCESS_CONTROL]
         extractor, _ = _make_extractor(
-            llm_responses=[DomainClassificationResponse(security_domains=domains)],
+            llm_responses=[
+                DomainClassificationResponse(
+                    security_domains=domains, summary="MFA and access control policies"
+                )
+            ],
         )
         msg = _make_input_message([{"content": "MFA policy doc", "source": "mfa.docx"}])
 
@@ -123,7 +127,11 @@ class TestSecurityDocumentEvidenceExtractor:
     def test_cross_cutting_emission(self):
         """LLM returning [] produces security_domains: [] in output."""
         extractor, _ = _make_extractor(
-            llm_responses=[DomainClassificationResponse(security_domains=[])],
+            llm_responses=[
+                DomainClassificationResponse(
+                    security_domains=[], summary="ISMS overview summary"
+                )
+            ],
         )
         msg = _make_input_message([{"content": "ISMS overview", "source": "isms.docx"}])
 
@@ -140,7 +148,11 @@ class TestSecurityDocumentEvidenceExtractor:
         """Document content in output equals input file text verbatim."""
         raw_text = "Full policy text\nwith newlines\nand special chars: £€¥"
         extractor, _ = _make_extractor(
-            llm_responses=[DomainClassificationResponse(security_domains=[])],
+            llm_responses=[
+                DomainClassificationResponse(
+                    security_domains=[], summary="Policy text summary"
+                )
+            ],
         )
         msg = _make_input_message([{"content": raw_text, "source": "policy.txt"}])
 
@@ -151,7 +163,11 @@ class TestSecurityDocumentEvidenceExtractor:
     def test_filename_preserved(self):
         """Output filename matches metadata.source from input."""
         extractor, _ = _make_extractor(
-            llm_responses=[DomainClassificationResponse(security_domains=[])],
+            llm_responses=[
+                DomainClassificationResponse(
+                    security_domains=[], summary="Access control summary"
+                )
+            ],
         )
         msg = _make_input_message(
             [{"content": "text", "source": "access-control-policy.docx"}]
@@ -172,10 +188,12 @@ class TestSecurityDocumentEvidenceExtractor:
         extractor, _ = _make_extractor(
             llm_responses=[
                 DomainClassificationResponse(
-                    security_domains=[SecurityDomain.ENCRYPTION]
+                    security_domains=[SecurityDomain.ENCRYPTION],
+                    summary="Encryption policy summary",
                 ),
                 DomainClassificationResponse(
-                    security_domains=[SecurityDomain.INCIDENT_MANAGEMENT]
+                    security_domains=[SecurityDomain.INCIDENT_MANAGEMENT],
+                    summary="Incident response summary",
                 ),
             ],
         )
@@ -226,10 +244,14 @@ class TestSecurityDocumentEvidenceExtractor:
                         SecurityDomain.ENCRYPTION,
                         SecurityDomain.DATA_PROTECTION,
                     ],
+                    summary="Encryption and DLP summary",
                 ),
-                DomainClassificationResponse(security_domains=[]),
                 DomainClassificationResponse(
-                    security_domains=[SecurityDomain.ENCRYPTION]
+                    security_domains=[], summary="ISMS overview summary"
+                ),
+                DomainClassificationResponse(
+                    security_domains=[SecurityDomain.ENCRYPTION],
+                    summary="TLS configuration summary",
                 ),
             ],
         )

@@ -137,8 +137,8 @@ class SecurityDocumentEvidenceExtractor(Processor):
             )
         else:
             responses = [
-                DomainClassificationResponse(security_domains=[])
-                for _ in document_items
+                DomainClassificationResponse(security_domains=[], summary=content)
+                for content in document_contents
             ]
 
         # 5. Build output

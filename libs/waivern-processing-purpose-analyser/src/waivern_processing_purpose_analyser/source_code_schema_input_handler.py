@@ -58,31 +58,27 @@ class SourceCodeSchemaInputHandler:
     from waivern-source-code-analyser.
     """
 
-    def __init__(self, context_window: SourceCodeContextWindow = "small") -> None:
+    def __init__(
+        self,
+        context_window: SourceCodeContextWindow = "small",
+        ruleset: str = "local/processing_purposes/1.0.0",
+    ) -> None:
         """Initialise the handler and load required rulesets.
 
         Args:
             context_window: Size of context to include around matches.
                 'small' = ±3 lines, 'medium' = ±15 lines, 'large' = ±50 lines, 'full' = entire file.
+            ruleset: Processing purposes ruleset URI. Configurable to support
+                extension rulesets (e.g. ERP-specific patterns). Service
+                integration and data collection rulesets remain hardcoded
+                as they have no configurable variants.
 
         """
         self.context_window: SourceCodeContextWindow = context_window
         self._dispatcher = RulePatternDispatcher()
 
-        # NOTE: Rulesets are hardcoded here rather than config-driven (unlike
-        # DataSubjectAnalyser which uses config.ruleset). This is intentional:
-        #
-        # Processing purpose detection requires THREE different ruleset types,
-        # each with a different Pydantic model (ProcessingPurposeRule,
-        # ServiceIntegrationRule, DataCollectionRule). These can't be combined
-        # into a single configurable ruleset because they have different schemas.
-        #
-        # Trade-off: We sacrifice per-ruleset configurability for comprehensive
-        # analysis - the handler always analyses all three aspects together.
-        # If configurability is needed later, consider accepting a list of
-        # (ruleset_path, rule_type) tuples in the config.
         self._processing_purposes_rules = RulesetManager.get_rules(
-            "local/processing_purposes/1.0.0", ProcessingPurposeRule
+            ruleset, ProcessingPurposeRule
         )
         self._service_integrations_rules = RulesetManager.get_rules(
             "local/service_integrations/1.0.0", ServiceIntegrationRule

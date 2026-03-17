@@ -1,5 +1,6 @@
 """Schema data models for ISO 27001 assessment."""
 
+import dataclasses
 import uuid
 from dataclasses import dataclass
 from enum import StrEnum
@@ -38,6 +39,7 @@ class AssessmentVerdict:
     evidence_status: EvidenceStatus
     rationale: str
     gap_description: str | None
+    recommended_actions: list[str] = dataclasses.field(default_factory=list)
 
 
 class ControlType(StrEnum):
@@ -141,6 +143,15 @@ class ISO27001AssessmentModel(BaseModel):
     gap_description: str | None = Field(
         default=None,
         description="Actionable description of gaps (None when status is compliant)",
+    )
+    recommended_actions: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Prioritised list of recommended actions to achieve or maintain compliance. "
+            "Each action is specific and actionable — technical implementation, "
+            "document creation/update, or evidence gathering. "
+            "Empty when status is compliant."
+        ),
     )
     control_type: ControlType = Field(
         description="ISO 27001 Annex A control type attribute",

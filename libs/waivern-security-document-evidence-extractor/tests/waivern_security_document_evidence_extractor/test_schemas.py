@@ -19,6 +19,7 @@ def _build_context_model(
     defaults: dict[str, object] = {
         "filename": "encryption-policy.md",
         "content": "All data at rest must be encrypted using AES-256.",
+        "summary": "Mandates AES-256 encryption for all data at rest.",
         "security_domains": [SecurityDomain.ENCRYPTION],
         "metadata": SecurityDocumentContextMetadata(source="encryption-policy.md"),
     }

@@ -161,6 +161,14 @@
           "description": "Actionable description of gaps (None when status is compliant)",
           "title": "Gap Description"
         },
+        "recommended_actions": {
+          "description": "Prioritised list of recommended actions to achieve or maintain compliance. Each action is specific and actionable \u2014 technical implementation, document creation/update, or evidence gathering. Empty when status is compliant.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Recommended Actions",
+          "type": "array"
+        },
         "control_type": {
           "$ref": "#/$defs/ControlType",
           "description": "ISO 27001 Annex A control type attribute"

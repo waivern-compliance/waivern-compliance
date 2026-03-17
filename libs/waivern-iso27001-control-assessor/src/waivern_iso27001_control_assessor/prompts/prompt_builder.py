@@ -131,10 +131,29 @@ _INSTRUCTIONS = """\
 - 'non_compliant': evidence shows the control is not implemented or has significant gaps.
 - gap_description must be specific and actionable — describe what is missing and what would close the gap. Set to null when compliant.
 
+**RISK ASSESSMENT PRIORITY:**
+Pay special attention to risk assessment results and risk treatment plans in the document context. \
+These have an outsized impact on control effectiveness evaluation in the ISO 27001 context:
+- A documented risk assessment that identifies relevant threats and assigns treatment ownership \
+demonstrates that the organisation has considered the risk landscape for this control.
+- A risk treatment plan that maps to this control's domain (e.g. accepting, mitigating, or transferring risk) \
+is strong evidence of intent and may elevate a 'non_compliant' to 'partial'.
+- Conversely, absence of risk assessment coverage for a control's domain is a significant gap \
+even if technical controls exist — ISO 27001 requires risk-driven decision-making.
+
+**RECOMMENDED ACTIONS:**
+When the control is 'partial' or 'non_compliant', provide a prioritised list of recommended actions. \
+Each action should be specific and fall into one of these categories:
+- **Technical implementation**: code changes, configuration updates, tool deployments
+- **Document creation/update**: policies, procedures, guidelines, risk registers
+- **Evidence gathering**: attestations, audit logs, third-party certifications
+When the control is 'compliant', recommended_actions must be an empty list.
+
 **RESPONSE FORMAT:**
 Respond with valid JSON:
 {
   "status": "compliant" | "partial" | "non_compliant",
   "rationale": "Narrative referencing specific evidence that informed the verdict.",
-  "gap_description": "Actionable gap description, or null if compliant."
+  "gap_description": "Actionable gap description, or null if compliant.",
+  "recommended_actions": ["Action 1", "Action 2"]
 }"""

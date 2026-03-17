@@ -349,6 +349,7 @@ class ISO27001Assessor(Analyser):
                     evidence_status=EvidenceStatus.AUTOMATED,
                     rationale=llm_response.rationale,
                     gap_description=llm_response.gap_description,
+                    recommended_actions=llm_response.recommended_actions,
                 ),
                 llm_enabled=True,
                 output_schema=output_schema,
@@ -392,5 +393,5 @@ class ISO27001Assessor(Analyser):
 
         parts: list[str] = []
         for doc in documents:
-            parts.append(f"--- {doc.filename} ---\n{doc.content}")
+            parts.append(f"--- {doc.filename} ---\n{doc.summary}")
         return "\n\n".join(parts)

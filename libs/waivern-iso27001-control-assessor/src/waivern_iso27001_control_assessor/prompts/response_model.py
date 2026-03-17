@@ -33,3 +33,12 @@ class ISO27001LLMResponse(BaseModel):
             "Must be None when status is 'compliant'."
         ),
     )
+    recommended_actions: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Prioritised list of recommended actions to achieve or maintain compliance. "
+            "Each action should be specific and actionable — e.g. technical implementation, "
+            "document creation/update, or evidence gathering. "
+            "Empty list when status is 'compliant'."
+        ),
+    )

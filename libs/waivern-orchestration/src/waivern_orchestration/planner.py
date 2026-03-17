@@ -200,7 +200,9 @@ class Planner:
             for artifact_id in sorter.get_ready():
                 definition = runbook.artifacts[artifact_id]
 
-                if definition.source is not None:
+                if definition.reuse is not None:
+                    schemas = self._resolve_reuse_schema(artifact_id, definition)
+                elif definition.source is not None:
                     schemas = self._resolve_source_schema(definition)
                 else:
                     schemas = self._resolve_derived_schema(
@@ -241,6 +243,36 @@ class Planner:
             )
 
         return (None, output_schema)
+
+    def _resolve_reuse_schema(
+        self,
+        artifact_id: str,
+        definition: ArtifactDefinition,
+    ) -> tuple[None, Schema]:
+        """Resolve schema for a reused artifact from a previous run.
+
+        Reuse artifacts require an explicit output_schema since the planner
+        cannot inspect the previous run's store at plan time.
+
+        Args:
+            artifact_id: The artifact ID (for error messages).
+            definition: The artifact definition with reuse config.
+
+        Returns:
+            Tuple of (None, output_schema) - reuse artifacts have no input.
+
+        Raises:
+            ValueError: If output_schema is not specified.
+
+        """
+        if definition.output_schema is None:
+            raise ValueError(
+                f"Artifact '{artifact_id}' uses reuse but has no output_schema. "
+                f"Reuse artifacts require an explicit output_schema (e.g. "
+                f"'standard_input/1.0.0') so the planner can resolve downstream "
+                f"schema compatibility."
+            )
+        return (None, parse_schema_string(definition.output_schema))
 
     def _resolve_derived_schema(
         self,

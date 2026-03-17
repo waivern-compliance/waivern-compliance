@@ -889,3 +889,122 @@ $payment4 = new Payment();
         # The purpose must be the slug, not the human-readable display name
         assert payment_findings[0].purpose == "payment_billing"
         assert payment_findings[0].purpose != "Payment, Billing, and Invoicing"
+
+
+class TestRulesetConfiguration:
+    """Tests for configurable ruleset support.
+
+    Verifies that the handler uses the configured processing purposes
+    ruleset rather than always loading the hardcoded core ruleset.
+    """
+
+    @pytest.fixture
+    def sample_file_metadata(self) -> SourceCodeFileMetadataModel:
+        """Create sample file metadata for testing."""
+        return SourceCodeFileMetadataModel(
+            file_size=1024,
+            line_count=20,
+            last_modified="2024-01-01T00:00:00Z",
+        )
+
+    @pytest.fixture
+    def sample_analysis_metadata(self) -> SourceCodeAnalysisMetadataModel:
+        """Create sample analysis metadata for testing."""
+        return SourceCodeAnalysisMetadataModel(
+            total_files=1,
+            total_lines=20,
+            analysis_timestamp="2024-01-01T00:00:00Z",
+        )
+
+    def test_handler_uses_configured_ruleset_not_hardcoded_default(
+        self,
+        sample_file_metadata: SourceCodeFileMetadataModel,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+    ) -> None:
+        """Core-only patterns produce no processing purpose findings with ERP ruleset.
+
+        The ERP ruleset defines only audit_logging and access_control_management
+        purposes. Source code containing only payment patterns (a core-only purpose)
+        should produce no processing purpose findings when the handler is configured
+        with the ERP ruleset — proving the handler respects the configured ruleset
+        rather than falling back to the hardcoded core ruleset.
+        """
+        file_data = SourceCodeFileDataModel(
+            file_path="/src/PaymentService.php",
+            language="php",
+            raw_content="""<?php
+class PaymentService {
+    public function processPayment($amount) {
+        return $this->payment->charge($amount);
+    }
+}
+""",
+            metadata=sample_file_metadata,
+        )
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="ERP ruleset test",
+            description="Test ERP ruleset ignores core-only patterns",
+            source="source_code",
+            metadata=sample_analysis_metadata,
+            data=[file_data],
+        )
+        handler = SourceCodeSchemaInputHandler(
+            ruleset="local/processing_purposes_erp/1.0.0",
+        )
+
+        findings = handler.analyse(source_data)
+
+        # ERP ruleset has no payment patterns — should produce no
+        # processing purpose findings (service_integration/data_collection
+        # findings may still appear from hardcoded rulesets)
+        purpose_findings = [f for f in findings if f.purpose in ("payment_billing",)]
+        assert len(purpose_findings) == 0, (
+            f"Expected no payment findings with ERP ruleset, "
+            f"got: {[f.purpose for f in purpose_findings]}"
+        )
+
+    def test_handler_with_erp_ruleset_detects_erp_purposes(
+        self,
+        sample_file_metadata: SourceCodeFileMetadataModel,
+        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
+    ) -> None:
+        """ERP patterns produce findings when handler uses ERP ruleset.
+
+        Source code containing ERP-specific patterns (e.g. restrictedArea,
+        verifCond) should produce access_control_management findings when
+        the handler is configured with the ERP ruleset.
+        """
+        file_data = SourceCodeFileDataModel(
+            file_path="/htdocs/user/card.php",
+            language="php",
+            raw_content="""<?php
+require '../main.inc.php';
+
+$result = restrictedArea($user, 'user', $id, 'user');
+if (!verifCond($user->rights->user->self->creer)) {
+    accessforbidden();
+}
+
+$object->addEvent($user, 'USER_MODIFY', 'User record modified');
+""",
+            metadata=sample_file_metadata,
+        )
+        source_data = SourceCodeDataModel(
+            schemaVersion="1.0.0",
+            name="ERP detection test",
+            description="Test ERP-specific pattern detection",
+            source="source_code",
+            metadata=sample_analysis_metadata,
+            data=[file_data],
+        )
+        handler = SourceCodeSchemaInputHandler(
+            ruleset="local/processing_purposes_erp/1.0.0",
+        )
+
+        findings = handler.analyse(source_data)
+
+        purposes = {f.purpose for f in findings}
+        assert "access_control_management" in purposes, (
+            f"Expected access_control_management in findings, got: {purposes}"
+        )

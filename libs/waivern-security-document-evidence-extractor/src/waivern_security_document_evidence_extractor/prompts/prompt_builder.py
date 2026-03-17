@@ -71,7 +71,11 @@ class DomainClassificationPromptBuilder(PromptBuilder[DocumentItem]):
 {domain_list}
 
 **TASK:**
-Analyse the document and return which security domains it addresses. Consider:
+Analyse the document and:
+1. Determine which security domains it addresses
+2. Produce a compliance-focused summary
+
+**Domain classification rules:**
 - A document may address multiple domains (e.g. an access control policy might cover both authentication and access_control)
 - Return an empty list [] ONLY if the document is purely organisational context (applies to ALL domains equally), such as:
   - Organisational context documents (industry, tech stack, team size, regulatory jurisdiction)
@@ -79,8 +83,14 @@ Analyse the document and return which security domains it addresses. Consider:
   Note: ISMS policy documents should be classified as 'governance', not []
 - Only include domains the document meaningfully addresses, not domains it merely mentions in passing
 
+**Summary rules:**
+- Preserve all compliance-relevant substance: controls, procedures, responsibilities, metrics, review cycles, specific requirements
+- Discard boilerplate: headers, formatting, table of contents, repeated definitions, generic preamble
+- Keep specific details (e.g. "passwords must be 12+ characters", "reviews every 6 months") rather than vague statements
+- The summary will be used by downstream compliance assessors — ensure no actionable detail is lost
+
 **RESPONSE FORMAT:**
 Return valid JSON only:
-{{"security_domains": ["domain1", "domain2"]}}
+{{"security_domains": ["domain1", "domain2"], "summary": "Compliance-focused summary..."}}
 or for cross-cutting documents:
-{{"security_domains": []}}"""
+{{"security_domains": [], "summary": "Compliance-focused summary..."}}"""
