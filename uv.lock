@@ -2686,10 +2686,12 @@ dependencies = [
     { name = "waivern-analysers-shared" },
     { name = "waivern-core" },
     { name = "waivern-crypto-quality-analyser" },
+    { name = "waivern-data-collection-analyser" },
     { name = "waivern-personal-data-analyser" },
     { name = "waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets" },
     { name = "waivern-security-evidence" },
+    { name = "waivern-service-integration-analyser" },
 ]
 
 [package.dev-dependencies]
@@ -2704,10 +2706,12 @@ requires-dist = [
     { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-crypto-quality-analyser", editable = "libs/waivern-crypto-quality-analyser" },
+    { name = "waivern-data-collection-analyser", editable = "libs/waivern-data-collection-analyser" },
     { name = "waivern-personal-data-analyser", editable = "libs/waivern-personal-data-analyser" },
     { name = "waivern-processing-purpose-analyser", editable = "libs/waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
     { name = "waivern-security-evidence", editable = "libs/waivern-security-evidence" },
+    { name = "waivern-service-integration-analyser", editable = "libs/waivern-service-integration-analyser" },
 ]
 
 [package.metadata.requires-dev]

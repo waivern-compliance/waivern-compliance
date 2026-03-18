@@ -100,6 +100,36 @@ algorithm_values:
   - php_password_hash
   - aes_gcm
 
+# Master list of valid service integration category slugs
+# DEPENDENCY: Must stay in sync with service_categories in service_integrations/1.0.0.
+# When adding or removing a category there, update this list and add or remove a rule below.
+# The test test_all_service_categories_are_covered will fail if any category is unmapped.
+service_category_values:
+  - cloud_infrastructure
+  - communication
+  - identity_management
+  - payment_processing
+  - user_analytics
+  - social_media
+  - ai_ml_services
+  - media_processing
+  - healthcare_integrations
+
+# Master list of valid data collection type slugs
+# DEPENDENCY: Must stay in sync with collection_type_categories in data_collection/1.0.0.
+# When adding or removing a type there, update this list and add or remove a rule below.
+# The test test_all_collection_types_are_covered will fail if any type is unmapped.
+collection_type_values:
+  - form_data
+  - url_parameters
+  - cookies
+  - session_data
+  - html_forms
+  - client_storage
+  - file_upload
+  - database_query
+  - database_connection
+
 rules:
   # =============================================================================
   # Purpose-based mappings
@@ -189,9 +219,101 @@ rules:
     security_domain: data_protection
 
   # =============================================================================
-  # Algorithm-based mappings
-  # Maps crypto_quality_indicator.algorithm values to security domains
+  # Service category-based mappings
+  # Maps service_integration_indicator.service_category slugs to security domains
   # =============================================================================
+
+  - name: third_party_infrastructure
+    description: Cloud infrastructure and media processing services map to supplier management
+    source_type: service_category
+    indicator_values:
+      - cloud_infrastructure
+      - media_processing
+    security_domain: supplier_management
+
+  - name: third_party_communication
+    description: Communication and messaging services map to supplier management
+    source_type: service_category
+    indicator_values:
+      - communication
+    security_domain: supplier_management
+
+  - name: third_party_identity
+    description: Identity management services map to supplier management with authentication secondary
+    source_type: service_category
+    indicator_values:
+      - identity_management
+    security_domain: supplier_management
+    secondary_domain: authentication
+
+  - name: third_party_payment
+    description: Payment processing services map to data protection with supplier management secondary
+    source_type: service_category
+    indicator_values:
+      - payment_processing
+    security_domain: data_protection
+    secondary_domain: supplier_management
+
+  - name: third_party_analytics
+    description: User analytics and social media services map to data protection
+    source_type: service_category
+    indicator_values:
+      - user_analytics
+      - social_media
+    security_domain: data_protection
+
+  - name: third_party_ai
+    description: AI and machine learning services map to data protection
+    source_type: service_category
+    indicator_values:
+      - ai_ml_services
+    security_domain: data_protection
+
+  - name: third_party_healthcare
+    description: Healthcare integration services map to data protection with people controls secondary
+    source_type: service_category
+    indicator_values:
+      - healthcare_integrations
+    security_domain: data_protection
+    secondary_domain: people_controls
+
+  # =============================================================================
+  # Collection type-based mappings
+  # Maps data_collection_indicator.collection_type slugs to security domains
+  # =============================================================================
+
+  - name: user_input_collection
+    description: Form data, URL parameters, and HTML form inputs map to data protection
+    source_type: collection_type
+    indicator_values:
+      - form_data
+      - url_parameters
+      - html_forms
+    security_domain: data_protection
+
+  - name: client_storage_collection
+    description: Cookies, session data, and client storage map to data protection
+    source_type: collection_type
+    indicator_values:
+      - cookies
+      - session_data
+      - client_storage
+    security_domain: data_protection
+
+  - name: file_upload_collection
+    description: File upload processing maps to vulnerability management (attack surface)
+    source_type: collection_type
+    indicator_values:
+      - file_upload
+    security_domain: vulnerability_management
+
+  - name: database_access_collection
+    description: Database queries and connections map to data protection
+    source_type: collection_type
+    indicator_values:
+      - database_query
+      - database_connection
+    security_domain: data_protection
 
   # =============================================================================
   # Security operations mappings

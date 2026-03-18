@@ -15,6 +15,10 @@ from waivern_crypto_quality_analyser.schemas.types import (
     CryptoQualityIndicatorModel,
     CryptoQualityIndicatorOutput,
 )
+from waivern_data_collection_analyser.schemas.types import (
+    DataCollectionIndicatorModel,
+    DataCollectionIndicatorOutput,
+)
 from waivern_personal_data_analyser.schemas.types import (
     PersonalDataIndicatorModel,
     PersonalDataIndicatorOutput,
@@ -29,6 +33,10 @@ from waivern_rulesets.security_evidence_domain_mapping import (
 from waivern_security_evidence.schemas.types import (
     SecurityEvidenceMetadata,
     SecurityEvidenceModel,
+)
+from waivern_service_integration_analyser.schemas.types import (
+    ServiceIntegrationIndicatorModel,
+    ServiceIntegrationIndicatorOutput,
 )
 
 from .result_builder import SecurityEvidenceResultBuilder
@@ -45,11 +53,16 @@ class _HasFindings[M](Protocol):
     findings: list[M]
 
 
+_SourceType = Literal[
+    "purpose", "category", "algorithm", "service_category", "collection_type"
+]
+
+
 class _FindingValues(TypedDict):
     """Extracted per-finding values needed to build one evidence group."""
 
     group_key: tuple[str, str]
-    source_type: Literal["purpose", "category", "algorithm"]
+    source_type: _SourceType
     indicator_value: str
     description_label: str
     polarity: _Polarity
@@ -82,6 +95,8 @@ class SecurityEvidenceNormaliser(Analyser):
     - personal_data_indicator/1.0.0
     - processing_purpose_indicator/1.0.0
     - crypto_quality_indicator/1.0.0
+    - service_integration_indicator/1.0.0
+    - data_collection_indicator/1.0.0
     """
 
     def __init__(self, config: SecurityEvidenceNormaliserConfig) -> None:
@@ -119,6 +134,8 @@ class SecurityEvidenceNormaliser(Analyser):
             [InputRequirement("personal_data_indicator", "1.0.0")],
             [InputRequirement("processing_purpose_indicator", "1.0.0")],
             [InputRequirement("crypto_quality_indicator", "1.0.0")],
+            [InputRequirement("service_integration_indicator", "1.0.0")],
+            [InputRequirement("data_collection_indicator", "1.0.0")],
         ]
 
     @classmethod
@@ -153,7 +170,7 @@ class SecurityEvidenceNormaliser(Analyser):
 
     def _find_domain_rule(
         self,
-        source_type: Literal["purpose", "category", "algorithm"],
+        source_type: _SourceType,
         value: str,
     ) -> SecurityEvidenceDomainMappingRule | None:
         """Find the domain mapping rule for a given source type and indicator value.
@@ -414,6 +431,72 @@ class SecurityEvidenceNormaliser(Analyser):
 
         return self._normalise(inputs, CryptoQualityIndicatorOutput, extract)
 
+    def _normalise_service_integration(
+        self, inputs: list[Message]
+    ) -> list[SecurityEvidenceModel]:
+        """Normalise service_integration_indicator findings to security evidence items.
+
+        Groups findings by (service_category, source_file).
+
+        Args:
+            inputs: service_integration_indicator messages (fan-in supported).
+
+        Returns:
+            Normalised security evidence items.
+
+        """
+
+        def extract(
+            finding: ServiceIntegrationIndicatorModel,
+        ) -> _FindingValues:
+            service_category = finding.service_category
+            source = finding.metadata.source
+            return _FindingValues(
+                group_key=(service_category, source),
+                source_type="service_category",
+                indicator_value=service_category,
+                description_label="{count} occurrence(s) of '"
+                + service_category
+                + "' service integration detected",
+                polarity="neutral",
+                require_review=finding.require_review,
+                evidence_items=list(finding.evidence),
+            )
+
+        return self._normalise(inputs, ServiceIntegrationIndicatorOutput, extract)
+
+    def _normalise_data_collection(
+        self, inputs: list[Message]
+    ) -> list[SecurityEvidenceModel]:
+        """Normalise data_collection_indicator findings to security evidence items.
+
+        Groups findings by (collection_type, source_file).
+
+        Args:
+            inputs: data_collection_indicator messages (fan-in supported).
+
+        Returns:
+            Normalised security evidence items.
+
+        """
+
+        def extract(finding: DataCollectionIndicatorModel) -> _FindingValues:
+            collection_type = finding.collection_type
+            source = finding.metadata.source
+            return _FindingValues(
+                group_key=(collection_type, source),
+                source_type="collection_type",
+                indicator_value=collection_type,
+                description_label="{count} occurrence(s) of '"
+                + collection_type
+                + "' data collection detected",
+                polarity="neutral",
+                require_review=finding.require_review,
+                evidence_items=list(finding.evidence),
+            )
+
+        return self._normalise(inputs, DataCollectionIndicatorOutput, extract)
+
     @override
     def process(
         self,
@@ -445,11 +528,16 @@ class SecurityEvidenceNormaliser(Analyser):
                 findings = self._normalise_processing_purpose(inputs)
             case "crypto_quality_indicator":
                 findings = self._normalise_crypto_quality(inputs)
+            case "service_integration_indicator":
+                findings = self._normalise_service_integration(inputs)
+            case "data_collection_indicator":
+                findings = self._normalise_data_collection(inputs)
             case _:
                 msg = (
                     f"Unsupported input schema '{input_schema_name}'. "
                     "Expected one of: personal_data_indicator, "
-                    "processing_purpose_indicator, crypto_quality_indicator"
+                    "processing_purpose_indicator, crypto_quality_indicator, "
+                    "service_integration_indicator, data_collection_indicator"
                 )
                 raise ValueError(msg)
 

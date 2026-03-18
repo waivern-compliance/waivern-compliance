@@ -24,18 +24,23 @@ from waivern_rulesets.core.base import YAMLRuleset
 class SecurityEvidenceDomainMappingRule(ClassificationRule):
     """Rule mapping indicator values to a security domain.
 
-    Maps either processing purpose slugs or personal data indicator categories
-    to a primary security domain, with an optional secondary domain for
-    indicators that span multiple security concerns (e.g., sensitive personal
-    data relates to both data_protection and people_controls).
+    Maps indicator values from any supported schema to a primary security domain,
+    with an optional secondary domain for indicators that span multiple security
+    concerns (e.g., sensitive personal data relates to both data_protection and
+    people_controls).
 
     source_type controls which indicator schema's values are matched:
     - "purpose": matches processing_purpose_indicator.purpose slugs
     - "category": matches personal_data_indicator.category values
+    - "algorithm": matches crypto_quality_indicator.algorithm identifiers
+    - "service_category": matches service_integration_indicator.service_category slugs
+    - "collection_type": matches data_collection_indicator.collection_type slugs
     """
 
-    source_type: Literal["purpose", "category", "algorithm"] = Field(
-        description="Indicator schema to match: 'purpose', 'category', or 'algorithm'",
+    source_type: Literal[
+        "purpose", "category", "algorithm", "service_category", "collection_type"
+    ] = Field(
+        description="Indicator schema to match",
     )
     indicator_values: tuple[str, ...] = Field(
         min_length=1,
@@ -80,6 +85,14 @@ class SecurityEvidenceDomainMappingRulesetData(
         min_length=1,
         description="Master list of valid cryptographic algorithm identifiers",
     )
+    service_category_values: list[str] = Field(
+        min_length=1,
+        description="Master list of valid service integration category slugs",
+    )
+    collection_type_values: list[str] = Field(
+        min_length=1,
+        description="Master list of valid data collection type slugs",
+    )
 
     @model_validator(mode="after")
     def validate_rules(self) -> "SecurityEvidenceDomainMappingRulesetData":
@@ -87,6 +100,8 @@ class SecurityEvidenceDomainMappingRulesetData(
         valid_purposes = set(self.purpose_slugs)
         valid_categories = set(self.indicator_categories)
         valid_algorithms = set(self.algorithm_values)
+        valid_service_categories = set(self.service_category_values)
+        valid_collection_types = set(self.collection_type_values)
 
         for rule in self.rules:
             match rule.source_type:
@@ -99,6 +114,12 @@ class SecurityEvidenceDomainMappingRulesetData(
                 case "algorithm":
                     valid_values = valid_algorithms
                     label = "algorithm"
+                case "service_category":
+                    valid_values = valid_service_categories
+                    label = "service_category"
+                case "collection_type":
+                    valid_values = valid_collection_types
+                    label = "collection_type"
 
             invalid_values = [v for v in rule.indicator_values if v not in valid_values]
             if invalid_values:
