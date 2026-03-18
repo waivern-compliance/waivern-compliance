@@ -146,7 +146,13 @@ class GDPRProcessingPurposeClassifier(Classifier):
 
         """
         # Look up classification based on purpose field from indicator schema
-        processing_purpose = finding.get("purpose", "")
+        processing_purpose = finding.get("purpose")
+        if processing_purpose is None:
+            logger.warning(
+                "Finding has no purpose field. "
+                "Expected from processing_purpose_indicator schema.",
+            )
+            processing_purpose = "unknown"
         classification = self._classification_map.get(processing_purpose, {})
 
         if not classification:
