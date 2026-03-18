@@ -1,0 +1,164 @@
+# GDPR Service Integration Classification Ruleset
+# Maps service integration indicators to GDPR classifications
+
+name: "gdpr_service_integration_classification"
+version: "1.0.0"
+description: "Maps service integration indicators to GDPR classification"
+
+# Master list of valid GDPR purpose categories (for reporting/governance)
+purpose_categories:
+  - ai_and_ml
+  - analytics
+  - context_dependent
+  - healthcare
+  - operational
+
+# Valid service category slugs (from service_integrations ruleset)
+indicator_service_categories:
+  - cloud_infrastructure
+  - communication
+  - identity_management
+  - payment_processing
+  - user_analytics
+  - social_media
+  - ai_ml_services
+  - media_processing
+  - healthcare_integrations
+
+# Categories considered privacy-sensitive (require extra scrutiny)
+sensitive_categories:
+  - ai_and_ml
+  - analytics
+  - healthcare
+
+rules:
+  # =============================================================================
+  # Operational Service Integrations
+  # =============================================================================
+
+  - name: "Cloud Infrastructure"
+    description: "Processing via cloud storage and platform services"
+    purpose_category: "operational"
+    article_references:
+      - "Article 28"
+      - "Article 32"
+    typical_lawful_bases:
+      - "contract"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_service_categories:
+      - cloud_infrastructure
+      - media_processing
+
+  - name: "Third-Party Identity Management"
+    description: "Processing via third-party authentication and identity services"
+    purpose_category: "operational"
+    article_references:
+      - "Article 6(1)(b)"
+      - "Article 32"
+    typical_lawful_bases:
+      - "contract"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_service_categories:
+      - identity_management
+
+  - name: "Third-Party Payment Processing"
+    description: "Processing via third-party payment services"
+    purpose_category: "operational"
+    article_references:
+      - "Article 6(1)(b)"
+      - "Article 6(1)(c)"
+    typical_lawful_bases:
+      - "contract"
+      - "legal_obligation"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_service_categories:
+      - payment_processing
+
+  # =============================================================================
+  # Context-Dependent Service Integrations
+  # =============================================================================
+
+  - name: "Communication and Messaging"
+    description: "Processing for email, SMS, and messaging - could be transactional (operational) or marketing communications. Requires contextual review to determine actual purpose and applicable ePrivacy rules."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 6"
+      - "Article 13"
+      - "ePrivacy Directive Article 13"
+    typical_lawful_bases:
+      - "contract"
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_service_categories:
+      - communication
+
+  - name: "Social Media Integration"
+    description: "Processing via social media platforms - could be authentication (operational) or marketing/advertising. Requires contextual review to determine actual purpose."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 6"
+      - "Article 7"
+      - "Article 21"
+    typical_lawful_bases:
+      - "consent"
+      - "contract"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_service_categories:
+      - social_media
+
+  # =============================================================================
+  # Sensitive Service Integrations
+  # =============================================================================
+
+  - name: "Third-Party Analytics"
+    description: "Processing via third-party analytics and tracking services"
+    purpose_category: "analytics"
+    article_references:
+      - "Article 6(1)(a)"
+      - "Article 22"
+      - "Recital 71"
+    typical_lawful_bases:
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: true
+    dpia_recommendation: "recommended"
+    indicator_service_categories:
+      - user_analytics
+
+  - name: "Third-Party AI Services"
+    description: "Processing via third-party AI and machine learning services"
+    purpose_category: "ai_and_ml"
+    article_references:
+      - "Article 22"
+      - "Article 35"
+      - "Recital 71"
+    typical_lawful_bases:
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: true
+    dpia_recommendation: "required"
+    indicator_service_categories:
+      - ai_ml_services
+
+  - name: "Healthcare Systems"
+    description: "Processing via healthcare and medical practice management systems"
+    purpose_category: "healthcare"
+    article_references:
+      - "Article 9"
+      - "Article 6(1)(b)"
+    typical_lawful_bases:
+      - "contract"
+      - "explicit_consent"
+    sensitive_purpose: true
+    dpia_recommendation: "required"
+    indicator_service_categories:
+      - healthcare_integrations

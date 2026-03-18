@@ -38,6 +38,10 @@ from waivern_rulesets.gdpr_processing_purpose_classification import (
     GDPRProcessingPurposeClassificationRule,
     GDPRProcessingPurposeClassificationRuleset,
 )
+from waivern_rulesets.gdpr_service_integration_classification import (
+    GDPRServiceIntegrationClassificationRule,
+    GDPRServiceIntegrationClassificationRuleset,
+)
 from waivern_rulesets.iso27001_domains import (
     ISO27001DomainsRule,
     ISO27001DomainsRuleset,
@@ -102,6 +106,7 @@ __all__ = [
     "GDPRDataSubjectClassificationRuleset",
     "GDPRPersonalDataClassificationRuleset",
     "GDPRProcessingPurposeClassificationRuleset",
+    "GDPRServiceIntegrationClassificationRuleset",
     # Security rulesets
     "ISO27001DomainsRuleset",
     "SecurityControlIndicatorRuleset",
@@ -122,6 +127,7 @@ __all__ = [
     "GDPRDataSubjectClassificationRule",
     "GDPRPersonalDataClassificationRule",
     "GDPRProcessingPurposeClassificationRule",
+    "GDPRServiceIntegrationClassificationRule",
     # Security rule types
     "ISO27001DomainsRule",
     "SecurityControlIndicatorRule",
