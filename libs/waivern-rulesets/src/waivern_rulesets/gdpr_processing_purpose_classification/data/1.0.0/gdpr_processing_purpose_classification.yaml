@@ -13,25 +13,38 @@ purpose_categories:
   - operational
   - security
 
-# Valid indicator purposes (from processing_purposes ruleset)
+# Valid indicator purposes — must use purpose slugs (snake_case) as output
+# by the processing_purpose analyser, NOT display names.
 indicator_purposes:
-  - Artificial Intelligence Model Training
-  - Artificial Intelligence Bias Testing
-  - Artificial Intelligence Model Refinement
-  - Artificial Intelligence Performance Testing
-  - Artificial Intelligence Security Testing
-  - Artificial Intelligence Compliance Management
-  - General Product and Service Delivery
-  - Customer Service and Support
-  - Customization of Products and Services
-  - User Identity and Login Management
-  - Payment, Billing, and Invoicing
-  - Behavioral Data Analysis for Product Improvement
-  - Dynamic Personalization of Products and Services
-  - Consumer Marketing Within Owned Products
-  - Targeted Marketing via Third-Party Platforms
-  - Third-Party Marketing via Owned Products
-  - Security, Fraud Prevention, and Abuse Detection
+  # AI and Machine Learning
+  - ai_model_training
+  - ai_bias_testing
+  - ai_model_refinement
+  - ai_performance_testing
+  - ai_security_testing
+  - ai_compliance_management
+  # Operational
+  - product_service_delivery
+  - customer_service_support
+  - product_customisation
+  - user_identity_login
+  - payment_billing
+  # Analytics
+  - behavioral_analytics
+  # Marketing and Advertising
+  - dynamic_personalisation
+  - consumer_marketing
+  - third_party_targeted_marketing
+  - third_party_marketing
+  # Security
+  - security_fraud_prevention
+  - audit_logging
+  - access_control_management
+  - network_access_control
+  - supplier_vendor_management
+  - incident_response
+  - data_backup_recovery
+  - input_validation_sanitisation
 
 # Categories considered privacy-sensitive (require extra scrutiny)
 sensitive_categories:
@@ -57,12 +70,12 @@ rules:
     sensitive_purpose: true
     dpia_recommendation: "required"
     indicator_purposes:
-      - Artificial Intelligence Model Training
-      - Artificial Intelligence Bias Testing
-      - Artificial Intelligence Model Refinement
-      - Artificial Intelligence Performance Testing
-      - Artificial Intelligence Security Testing
-      - Artificial Intelligence Compliance Management
+      - ai_model_training
+      - ai_bias_testing
+      - ai_model_refinement
+      - ai_performance_testing
+      - ai_security_testing
+      - ai_compliance_management
 
   # =============================================================================
   # Analytics Purposes
@@ -82,8 +95,8 @@ rules:
     sensitive_purpose: true
     dpia_recommendation: "recommended"
     indicator_purposes:
-      - Behavioral Data Analysis for Product Improvement
-      - Dynamic Personalization of Products and Services
+      - behavioral_analytics
+      - dynamic_personalisation
 
   # =============================================================================
   # Marketing and Advertising Purposes
@@ -103,9 +116,9 @@ rules:
     sensitive_purpose: true
     dpia_recommendation: "recommended"
     indicator_purposes:
-      - Consumer Marketing Within Owned Products
-      - Targeted Marketing via Third-Party Platforms
-      - Third-Party Marketing via Owned Products
+      - consumer_marketing
+      - third_party_targeted_marketing
+      - third_party_marketing
 
   # =============================================================================
   # Operational Purposes
@@ -122,8 +135,8 @@ rules:
     sensitive_purpose: false
     dpia_recommendation: "not_required"
     indicator_purposes:
-      - General Product and Service Delivery
-      - Customization of Products and Services
+      - product_service_delivery
+      - product_customisation
 
   - name: "Customer Support"
     description: "Processing for customer service and support activities"
@@ -137,7 +150,7 @@ rules:
     sensitive_purpose: false
     dpia_recommendation: "not_required"
     indicator_purposes:
-      - Customer Service and Support
+      - customer_service_support
 
   - name: "Identity Management"
     description: "Processing for user authentication and identity verification"
@@ -151,7 +164,7 @@ rules:
     sensitive_purpose: false
     dpia_recommendation: "not_required"
     indicator_purposes:
-      - User Identity and Login Management
+      - user_identity_login
 
   - name: "Payment Processing"
     description: "Processing for billing, invoicing, and payment transactions"
@@ -165,7 +178,22 @@ rules:
     sensitive_purpose: false
     dpia_recommendation: "not_required"
     indicator_purposes:
-      - Payment, Billing, and Invoicing
+      - payment_billing
+
+  - name: "Supplier and Vendor Management"
+    description: "Processing for managing third-party supplier and vendor integrations"
+    purpose_category: "operational"
+    article_references:
+      - "Article 6(1)(b)"
+      - "Article 6(1)(f)"
+      - "Article 28"
+    typical_lawful_bases:
+      - "contract"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - supplier_vendor_management
 
   # =============================================================================
   # Security Purposes
@@ -184,4 +212,38 @@ rules:
     sensitive_purpose: false
     dpia_recommendation: "not_required"
     indicator_purposes:
-      - Security, Fraud Prevention, and Abuse Detection
+      - security_fraud_prevention
+      - access_control_management
+      - network_access_control
+
+  - name: "Audit and Compliance"
+    description: "Processing for audit logging, incident response, and regulatory compliance"
+    purpose_category: "security"
+    article_references:
+      - "Article 5(2)"
+      - "Article 6(1)(c)"
+      - "Article 30"
+      - "Article 33"
+    typical_lawful_bases:
+      - "legal_obligation"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - audit_logging
+      - incident_response
+
+  - name: "Data Resilience"
+    description: "Processing for data backup, disaster recovery, and input validation"
+    purpose_category: "security"
+    article_references:
+      - "Article 5(1)(f)"
+      - "Article 32"
+    typical_lawful_bases:
+      - "legal_obligation"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - data_backup_recovery
+      - input_validation_sanitisation

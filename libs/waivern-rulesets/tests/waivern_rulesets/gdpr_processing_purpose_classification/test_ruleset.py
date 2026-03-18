@@ -11,6 +11,7 @@ from waivern_rulesets.gdpr_processing_purpose_classification import (
 from waivern_rulesets.gdpr_processing_purpose_classification.ruleset import (
     GDPRProcessingPurposeClassificationRulesetData,
 )
+from waivern_rulesets.processing_purposes import ProcessingPurposesRuleset
 from waivern_rulesets.testing import RulesetContractTests
 
 # =============================================================================
@@ -57,7 +58,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
             purpose_category="invalid_category",
             article_references=("Article 6(1)(b)",),
             typical_lawful_bases=("contract",),
-            indicator_purposes=("General Product and Service Delivery",),
+            indicator_purposes=("product_service_delivery",),
         )
 
         with pytest.raises(ValidationError, match="invalid purpose_category"):
@@ -66,7 +67,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
                 version="1.0.0",
                 description="Test",
                 purpose_categories=["operational"],
-                indicator_purposes=["General Product and Service Delivery"],
+                indicator_purposes=["product_service_delivery"],
                 rules=[rule],
             )
 
@@ -78,7 +79,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
             purpose_category="operational",
             article_references=("Article 6(1)(b)",),
             typical_lawful_bases=("contract",),
-            indicator_purposes=("Invalid Purpose",),
+            indicator_purposes=("invalid_purpose",),
         )
 
         with pytest.raises(ValidationError, match="invalid indicator_purposes"):
@@ -87,7 +88,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
                 version="1.0.0",
                 description="Test",
                 purpose_categories=["operational"],
-                indicator_purposes=["General Product and Service Delivery"],
+                indicator_purposes=["product_service_delivery"],
                 rules=[rule],
             )
 
@@ -98,7 +99,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
             description="Test",
             purpose_category="operational",
             typical_lawful_bases=("contract",),
-            indicator_purposes=("General Product and Service Delivery",),
+            indicator_purposes=("product_service_delivery",),
         )
 
         with pytest.raises(ValidationError, match="invalid categories"):
@@ -107,7 +108,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
                 version="1.0.0",
                 description="Test",
                 purpose_categories=["operational"],
-                indicator_purposes=["General Product and Service Delivery"],
+                indicator_purposes=["product_service_delivery"],
                 sensitive_categories=["ai_and_ml"],
                 rules=[rule],
             )
@@ -119,7 +120,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
             description="Test",
             purpose_category="ai_and_ml",
             typical_lawful_bases=("consent",),
-            indicator_purposes=("Artificial Intelligence Model Training",),
+            indicator_purposes=("ai_model_training",),
             sensitive_purpose=False,  # Should be True since ai_and_ml is sensitive
         )
 
@@ -129,7 +130,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
                 version="1.0.0",
                 description="Test",
                 purpose_categories=["ai_and_ml"],
-                indicator_purposes=["Artificial Intelligence Model Training"],
+                indicator_purposes=["ai_model_training"],
                 sensitive_categories=["ai_and_ml"],
                 rules=[rule],
             )
@@ -143,33 +144,20 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
 class TestGDPRProcessingPurposeClassificationRulesetCompleteness:
     """Test that the actual YAML ruleset data is complete."""
 
-    def test_all_indicator_purposes_are_mapped(self) -> None:
-        """Test that all indicator purposes have classifications."""
-        ruleset = GDPRProcessingPurposeClassificationRuleset()
-        rules = ruleset.get_rules()
-
-        all_mapped_purposes: set[str] = set()
-        for rule in rules:
-            all_mapped_purposes.update(rule.indicator_purposes)
-
-        expected_purposes = {
-            "Artificial Intelligence Model Training",
-            "Artificial Intelligence Bias Testing",
-            "Artificial Intelligence Model Refinement",
-            "Artificial Intelligence Performance Testing",
-            "Artificial Intelligence Security Testing",
-            "Artificial Intelligence Compliance Management",
-            "General Product and Service Delivery",
-            "Customer Service and Support",
-            "Customization of Products and Services",
-            "User Identity and Login Management",
-            "Payment, Billing, and Invoicing",
-            "Behavioral Data Analysis for Product Improvement",
-            "Dynamic Personalization of Products and Services",
-            "Consumer Marketing Within Owned Products",
-            "Targeted Marketing via Third-Party Platforms",
-            "Third-Party Marketing via Owned Products",
-            "Security, Fraud Prevention, and Abuse Detection",
+    def test_all_purpose_slugs_are_classified(self) -> None:
+        """Test that every purpose slug from the processing_purposes ruleset has a classification."""
+        all_purpose_slugs: set[str] = {
+            rule.purpose for rule in ProcessingPurposesRuleset().get_rules()
         }
 
-        assert all_mapped_purposes == expected_purposes
+        classification_ruleset = GDPRProcessingPurposeClassificationRuleset()
+        mapped_purposes: set[str] = {
+            purpose
+            for rule in classification_ruleset.get_rules()
+            for purpose in rule.indicator_purposes
+        }
+
+        uncovered = all_purpose_slugs - mapped_purposes
+        assert not uncovered, (
+            f"Purpose slugs not covered by any GDPR classification rule: {uncovered}"
+        )
