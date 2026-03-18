@@ -11,6 +11,7 @@ from waivern_rulesets.gdpr_service_integration_classification import (
 from waivern_rulesets.gdpr_service_integration_classification.ruleset import (
     GDPRServiceIntegrationClassificationRulesetData,
 )
+from waivern_rulesets.service_integrations import ServiceIntegrationsRuleset
 from waivern_rulesets.testing import RulesetContractTests
 
 # =============================================================================
@@ -145,25 +146,20 @@ class TestGDPRServiceIntegrationClassificationRulesetDataValidation:
 class TestGDPRServiceIntegrationClassificationRulesetCompleteness:
     """Test that the actual YAML ruleset data is complete."""
 
-    def test_all_indicator_service_categories_are_mapped(self) -> None:
-        """Test that all service category slugs have classifications."""
-        ruleset = GDPRServiceIntegrationClassificationRuleset()
-        rules = ruleset.get_rules()
-
-        all_mapped_categories: set[str] = set()
-        for rule in rules:
-            all_mapped_categories.update(rule.indicator_service_categories)
-
-        expected_categories = {
-            "cloud_infrastructure",
-            "communication",
-            "identity_management",
-            "payment_processing",
-            "user_analytics",
-            "social_media",
-            "ai_ml_services",
-            "media_processing",
-            "healthcare_integrations",
+    def test_all_service_categories_are_classified(self) -> None:
+        """Test that every service category from the service_integrations ruleset has a classification."""
+        all_service_categories: set[str] = {
+            rule.service_category for rule in ServiceIntegrationsRuleset().get_rules()
         }
 
-        assert all_mapped_categories == expected_categories
+        classification_ruleset = GDPRServiceIntegrationClassificationRuleset()
+        mapped_categories: set[str] = {
+            category
+            for rule in classification_ruleset.get_rules()
+            for category in rule.indicator_service_categories
+        }
+
+        uncovered = all_service_categories - mapped_categories
+        assert not uncovered, (
+            f"Service categories not covered by any GDPR classification rule: {uncovered}"
+        )

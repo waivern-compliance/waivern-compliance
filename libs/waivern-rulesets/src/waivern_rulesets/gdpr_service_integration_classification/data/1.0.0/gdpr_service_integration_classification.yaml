@@ -17,7 +17,9 @@ purpose_categories:
 indicator_service_categories:
   - cloud_infrastructure
   - communication
+  - crm
   - identity_management
+  - monitoring_observability
   - payment_processing
   - user_analytics
   - social_media
@@ -50,6 +52,20 @@ rules:
     indicator_service_categories:
       - cloud_infrastructure
       - media_processing
+
+  - name: "Monitoring and Observability"
+    description: "Processing via third-party error tracking and application monitoring services. Error payloads may inadvertently contain personal data."
+    purpose_category: "operational"
+    article_references:
+      - "Article 28"
+      - "Article 32"
+      - "Article 5(1)(c)"
+    typical_lawful_bases:
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_service_categories:
+      - monitoring_observability
 
   - name: "Third-Party Identity Management"
     description: "Processing via third-party authentication and identity services"
@@ -114,6 +130,22 @@ rules:
     dpia_recommendation: "recommended"
     indicator_service_categories:
       - social_media
+
+  - name: "CRM and Marketing Automation"
+    description: "Processing via third-party CRM and marketing automation platforms. Could be operational contact management or marketing/profiling. Requires contextual review to determine actual purpose."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 6"
+      - "Article 13"
+      - "Article 21"
+    typical_lawful_bases:
+      - "contract"
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_service_categories:
+      - crm
 
   # =============================================================================
   # Sensitive Service Integrations

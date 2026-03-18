@@ -107,7 +107,9 @@ algorithm_values:
 service_category_values:
   - cloud_infrastructure
   - communication
+  - crm
   - identity_management
+  - monitoring_observability
   - payment_processing
   - user_analytics
   - social_media
@@ -268,6 +270,21 @@ rules:
     indicator_values:
       - ai_ml_services
     security_domain: data_protection
+
+  - name: third_party_crm
+    description: CRM and marketing automation services map to data protection with supplier management secondary
+    source_type: service_category
+    indicator_values:
+      - crm
+    security_domain: data_protection
+    secondary_domain: supplier_management
+
+  - name: third_party_monitoring
+    description: Monitoring and observability services map to supplier management
+    source_type: service_category
+    indicator_values:
+      - monitoring_observability
+    security_domain: supplier_management
 
   - name: third_party_healthcare
     description: Healthcare integration services map to data protection with people controls secondary
