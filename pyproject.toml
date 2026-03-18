@@ -21,6 +21,7 @@ waivern-gdpr-personal-data-classifier = { workspace = true }
 waivern-gdpr-data-subject-classifier = { workspace = true }
 waivern-gdpr-processing-purpose-classifier = { workspace = true }
 waivern-gdpr-service-integration-classifier = { workspace = true }
+waivern-gdpr-data-collection-classifier = { workspace = true }
 waivern-processing-purpose-analyser = { workspace = true }
 waivern-sqlite = { workspace = true }
 waivern-source-code-analyser = { workspace = true }
