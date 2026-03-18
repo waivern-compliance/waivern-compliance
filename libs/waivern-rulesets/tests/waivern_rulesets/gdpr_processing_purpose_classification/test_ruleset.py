@@ -153,7 +153,6 @@ class TestGDPRProcessingPurposeClassificationRulesetCompleteness:
             all_mapped_purposes.update(rule.indicator_purposes)
 
         expected_purposes = {
-            # From processing_purposes ruleset
             "Artificial Intelligence Model Training",
             "Artificial Intelligence Bias Testing",
             "Artificial Intelligence Model Refinement",
@@ -171,27 +170,6 @@ class TestGDPRProcessingPurposeClassificationRulesetCompleteness:
             "Targeted Marketing via Third-Party Platforms",
             "Third-Party Marketing via Owned Products",
             "Security, Fraud Prevention, and Abuse Detection",
-            # From service_integrations ruleset
-            "Cloud Infrastructure Services",
-            "Communication Services",
-            "Identity Management Services",
-            "Payment Processing Services",
-            "user_analytics",
-            "social_media",
-            "AI and ML Services",
-            "Media Processing Services",
-            "Messaging Platforms",
-            "Healthcare Practice Management",
-            # From data_collection ruleset
-            "PHP POST Data Collection",
-            "PHP GET Parameter Collection",
-            "PHP Cookie Access",
-            "PHP Session Data Access",
-            "HTML Form Input Fields",
-            "JavaScript Client Storage",
-            "File Upload Processing",
-            "SQL Database Queries",
-            "Database Connections and ORM",
         }
 
         assert all_mapped_purposes == expected_purposes

@@ -78,7 +78,7 @@ rules:
   - charge
   service_category: payment_processing
   purpose_category: operational
-- name: user_analytics
+- name: User Analytics
   description: User analytics and tracking service integrations
   patterns:
   - google-analytics
@@ -92,7 +92,7 @@ rules:
   - logrocket
   service_category: user_analytics
   purpose_category: analytics
-- name: social_media
+- name: Social Media
   description: Social media platform integrations for marketing
   patterns:
   - facebook
