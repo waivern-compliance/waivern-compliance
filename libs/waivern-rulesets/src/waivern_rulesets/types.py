@@ -17,7 +17,7 @@ class GDPRClassificationRule(ClassificationRule):
     Used by:
     - GDPRPersonalDataClassificationRule (personal data classification)
     - GDPRDataSubjectClassificationRule (data subject classification)
-    - GDPRComplianceClassificationRule (compliance classification)
+    - GDPRProcessingPurposeClassificationRule (processing purpose classification)
     """
 
     article_references: tuple[str, ...] = Field(

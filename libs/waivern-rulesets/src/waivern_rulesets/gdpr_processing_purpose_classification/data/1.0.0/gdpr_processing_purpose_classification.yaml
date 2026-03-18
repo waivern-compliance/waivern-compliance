@@ -1,9 +1,9 @@
-# GDPR Compliance Classification Ruleset
-# Maps indicator findings to GDPR classifications
+# GDPR Processing Purpose Classification Ruleset
+# Maps processing purpose indicators to GDPR classifications
 
-name: "gdpr_compliance_classification"
+name: "gdpr_processing_purpose_classification"
 version: "1.0.0"
-description: "Maps indicator findings to GDPR compliance classification"
+description: "Maps processing purpose indicators to GDPR classification"
 
 # Master list of valid GDPR purpose categories (for reporting/governance)
 purpose_categories:
