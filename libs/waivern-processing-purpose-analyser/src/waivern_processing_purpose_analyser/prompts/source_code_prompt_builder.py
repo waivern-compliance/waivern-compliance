@@ -13,7 +13,7 @@ from waivern_processing_purpose_analyser.schemas.types import (
 class SourceCodePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorModel]):
     """Prompt builder for source code validation with full file content.
 
-    Uses EXTENDED_CONTEXT batching mode — the `content` parameter contains
+    Uses INDEPENDENT batching mode — the `content` parameter contains
     the full source file content for context-aware validation.
     """
 
@@ -36,7 +36,7 @@ class SourceCodePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorModel]):
 
         Args:
             items: Findings from this source file.
-            content: Full source file content (required for EXTENDED_CONTEXT mode).
+            content: Full source file content (required for INDEPENDENT mode with source context).
 
         Returns:
             Formatted prompt string.
@@ -48,7 +48,7 @@ class SourceCodePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorModel]):
         if not items:
             raise ValueError("At least one finding is required")
         if content is None:
-            raise ValueError("content is required for EXTENDED_CONTEXT batching")
+            raise ValueError("content is required for source code validation")
 
         source_file_section = self._build_source_file_section(items, content)
         findings_section = self._build_findings_section(items)

@@ -323,7 +323,7 @@ class ISO27001Assessor(Analyser):
                     groups,
                     prompt_builder=prompt_builder,
                     response_model=ISO27001LLMResponse,
-                    batching_mode=BatchingMode.EXTENDED_CONTEXT,
+                    batching_mode=BatchingMode.INDEPENDENT,
                     run_id=run_id or "unknown",
                 )
             )

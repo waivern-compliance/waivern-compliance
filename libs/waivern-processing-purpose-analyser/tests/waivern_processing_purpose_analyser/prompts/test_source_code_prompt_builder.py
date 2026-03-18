@@ -54,7 +54,7 @@ class PaymentService {
         assert "gateway->charge" in prompt
 
     def test_build_prompt_raises_when_content_missing(self) -> None:
-        """ValueError raised when content is None (required for EXTENDED_CONTEXT)."""
+        """ValueError raised when content is None (required for source code validation)."""
         finding = _make_finding("Payment Processing", "payment")
         builder = SourceCodePromptBuilder()
 
