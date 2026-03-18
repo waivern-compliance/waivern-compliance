@@ -1,33 +1,33 @@
-"""Unit tests for GDPRComplianceClassifier."""
+"""Unit tests for GDPRProcessingPurposeClassifier."""
 
 import pytest
 from waivern_core import ClassifierContractTests, Schema
 from waivern_core.message import Message
 
-from waivern_gdpr_compliance_classifier import GDPRComplianceClassifier
+from waivern_gdpr_processing_purpose_classifier import GDPRProcessingPurposeClassifier
 
 
-class TestGDPRComplianceClassifierContract(
-    ClassifierContractTests[GDPRComplianceClassifier]
+class TestGDPRProcessingPurposeClassifierContract(
+    ClassifierContractTests[GDPRProcessingPurposeClassifier]
 ):
     """Contract tests inherited from ClassifierContractTests."""
 
     @pytest.fixture
-    def processor_class(self) -> type[GDPRComplianceClassifier]:
+    def processor_class(self) -> type[GDPRProcessingPurposeClassifier]:
         """Provide the classifier class to test."""
-        return GDPRComplianceClassifier
+        return GDPRProcessingPurposeClassifier
 
 
 @pytest.fixture
-def classifier() -> GDPRComplianceClassifier:
+def classifier() -> GDPRProcessingPurposeClassifier:
     """Create a classifier instance with default config."""
-    return GDPRComplianceClassifier()
+    return GDPRProcessingPurposeClassifier()
 
 
 @pytest.fixture
 def output_schema() -> Schema:
     """Create output schema for tests."""
-    return Schema("gdpr_compliance_classification", "1.0.0")
+    return Schema("gdpr_processing_purpose", "1.0.0")
 
 
 def make_indicator_finding(
@@ -57,11 +57,11 @@ def make_input_message(findings: list[dict[str, object]]) -> Message:
 # =============================================================================
 
 
-class TestGDPRComplianceClassification:
+class TestGDPRProcessingPurposeClassification:
     """Test GDPR classification enrichment."""
 
     def test_classifies_analytics_as_sensitive(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that Analytics is classified as sensitive with appropriate fields."""
         # Use actual purpose name from processing_purposes ruleset
@@ -79,7 +79,7 @@ class TestGDPRComplianceClassification:
         assert classified["dpia_recommendation"] == "recommended"
 
     def test_classifies_payment_processing_as_operational(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that Payment Processing is classified as operational."""
         # Use actual purpose name from processing_purposes ruleset
@@ -94,7 +94,7 @@ class TestGDPRComplianceClassification:
         assert "contract" in classified["typical_lawful_bases"]
 
     def test_classifies_ai_and_ml_as_sensitive_with_dpia_required(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that AI and ML is classified as sensitive with DPIA required."""
         # Use actual purpose name from processing_purposes ruleset
@@ -109,7 +109,7 @@ class TestGDPRComplianceClassification:
         assert classified["dpia_recommendation"] == "required"
 
     def test_classifies_security_as_operational(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that Security is classified correctly."""
         # Use actual purpose name from processing_purposes ruleset
@@ -126,7 +126,7 @@ class TestGDPRComplianceClassification:
         assert "legitimate_interests" in classified["typical_lawful_bases"]
 
     def test_classifies_marketing_as_sensitive(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that Marketing is classified as sensitive."""
         # Use actual purpose name from processing_purposes ruleset
@@ -140,7 +140,7 @@ class TestGDPRComplianceClassification:
         assert classified["sensitive_purpose"] is True
 
     def test_unknown_purpose_classified_as_unclassified(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that unknown purposes are marked as unclassified."""
         finding = make_indicator_finding("Unknown Purpose XYZ")
@@ -153,7 +153,7 @@ class TestGDPRComplianceClassification:
         assert classified["sensitive_purpose"] is False
 
     def test_context_dependent_purposes_require_review(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that context_dependent purposes have require_review set to True."""
         # SQL Database Queries is a technical mechanism mapped to context_dependent
@@ -167,7 +167,7 @@ class TestGDPRComplianceClassification:
         assert classified["require_review"] is True
 
     def test_non_context_dependent_purposes_do_not_require_review(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that non-context_dependent purposes don't have require_review in output."""
         finding = make_indicator_finding("Payment, Billing, and Invoicing")
@@ -190,7 +190,7 @@ class TestSummaryGeneration:
     """Test summary statistics generation."""
 
     def test_summary_counts_by_category(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that summary counts findings by purpose category."""
         findings = [
@@ -212,7 +212,7 @@ class TestSummaryGeneration:
         assert summary["purpose_categories"]["operational"] == 1
 
     def test_summary_counts_sensitive_purposes(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that summary counts sensitive purpose findings."""
         findings = [
@@ -232,7 +232,7 @@ class TestSummaryGeneration:
         assert summary["sensitive_purposes_count"] == 2
 
     def test_summary_counts_dpia_required(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that summary counts DPIA required findings."""
         findings = [
@@ -254,7 +254,7 @@ class TestSummaryGeneration:
         assert summary["dpia_required_count"] == 1
 
     def test_summary_counts_requires_review(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that summary counts findings requiring human review."""
         findings = [
@@ -279,14 +279,14 @@ class TestEdgeCases:
     """Test edge cases and error handling."""
 
     def test_raises_on_empty_inputs(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that classifier raises ValueError on empty inputs."""
         with pytest.raises(ValueError, match="requires at least one input message"):
             classifier.process([], output_schema)
 
     def test_handles_multiple_input_messages(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that classifier aggregates findings from multiple inputs."""
         msg1 = make_input_message(
@@ -301,7 +301,7 @@ class TestEdgeCases:
         assert result.content["summary"]["total_findings"] == 2
 
     def test_handles_finding_without_metadata(
-        self, classifier: GDPRComplianceClassifier, output_schema: Schema
+        self, classifier: GDPRProcessingPurposeClassifier, output_schema: Schema
     ) -> None:
         """Test that classifier handles findings without metadata gracefully."""
         # Note: evidence and matched_patterns must have at least 1 item (BaseFindingModel constraint)

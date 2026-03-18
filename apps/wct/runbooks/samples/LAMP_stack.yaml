@@ -114,7 +114,7 @@ artifacts:
     description: "Classify detected processing purposes according to GDPR categories, sensitivity, and DPIA requirements"
     inputs: logs_processing_purpose_indicators
     process:
-      type: "gdpr_compliance_classifier"
+      type: "gdpr_processing_purpose_classifier"
     output: true
 
   # MySQL analysis artifacts
@@ -140,7 +140,7 @@ artifacts:
     description: "Classify detected processing purposes according to GDPR categories, sensitivity, and DPIA requirements"
     inputs: mysql_processing_purpose_indicators
     process:
-      type: "gdpr_compliance_classifier"
+      type: "gdpr_processing_purpose_classifier"
     output: true
 
   mysql_personal_data_indicators:
@@ -227,7 +227,7 @@ artifacts:
     description: "Classify detected processing purposes from PHP code according to GDPR categories, sensitivity, and DPIA requirements"
     inputs: php_processing_purpose_indicators
     process:
-      type: "gdpr_compliance_classifier"
+      type: "gdpr_processing_purpose_classifier"
     output: true
 
   php_data_subject_indicators:

@@ -1,4 +1,4 @@
-"""Schema data models for GDPR compliance classification findings."""
+"""Schema data models for GDPR processing purpose classification findings."""
 
 from typing import ClassVar, Literal, override
 
@@ -12,8 +12,8 @@ from waivern_core.schemas import (
 )
 
 
-class GDPRComplianceClassificationFindingMetadata(BaseFindingMetadata):
-    """Metadata for GDPR compliance classification findings.
+class GDPRProcessingPurposeFindingMetadata(BaseFindingMetadata):
+    """Metadata for GDPR processing purpose classification findings.
 
     Extends BaseFindingMetadata which provides:
     - source: str - Source file or location where the data was found
@@ -23,27 +23,27 @@ class GDPRComplianceClassificationFindingMetadata(BaseFindingMetadata):
     pass
 
 
-class GDPRComplianceClassificationFindingModel(
-    BaseFindingModel[GDPRComplianceClassificationFindingMetadata]
+class GDPRProcessingPurposeFindingModel(
+    BaseFindingModel[GDPRProcessingPurposeFindingMetadata]
 ):
-    """GDPR compliance classification finding structure.
+    """GDPR processing purpose classification finding structure.
 
-    Represents an indicator finding that has been enriched with
+    Represents a processing purpose indicator that has been enriched with
     GDPR-specific classification information. Sensitive purposes (e.g., AI/ML,
     analytics, marketing) may require additional considerations such as
     explicit consent or DPIA under GDPR.
 
-    Inherits from BaseFindingModel[GDPRComplianceClassificationFindingMetadata] which provides:
+    Inherits from BaseFindingModel[GDPRProcessingPurposeFindingMetadata] which provides:
     - id: str - Unique identifier (auto-generated UUID)
     - evidence: list[BaseFindingEvidence] - Evidence items with content
     - matched_patterns: list[PatternMatchDetail] - Patterns that matched
-    - metadata: GDPRComplianceClassificationFindingMetadata - Required metadata with source
+    - metadata: GDPRProcessingPurposeFindingMetadata - Required metadata with source
     - require_review: bool | None - Whether this finding requires human review
     """
 
     # Original indicator data (propagated)
-    indicator_value: str = Field(
-        description="Indicator value from upstream analyser (e.g., processing purpose name, service category)"
+    processing_purpose: str = Field(
+        description="Processing purpose name from indicator (e.g., 'Analytics', 'Payment Processing')"
     )
 
     # GDPR classification (from ruleset mapping)
@@ -73,13 +73,15 @@ class GDPRComplianceClassificationFindingModel(
     def __str__(self) -> str:
         """Human-readable representation for logging and debugging."""
         sensitive = " [SENSITIVE]" if self.sensitive_purpose else ""
-        return f"{self.indicator_value} → {self.purpose_category}{sensitive}"
+        return f"{self.processing_purpose} → {self.purpose_category}{sensitive}"
 
 
-class GDPRComplianceClassificationSummary(BaseModel):
-    """Summary statistics for GDPR compliance classification findings."""
+class GDPRProcessingPurposeSummary(BaseModel):
+    """Summary statistics for GDPR processing purpose classification findings."""
 
-    total_findings: int = Field(ge=0, description="Total number of classified findings")
+    total_findings: int = Field(
+        ge=0, description="Total number of classified processing purpose findings"
+    )
     purpose_categories: dict[str, int] = Field(
         default_factory=dict,
         description="Count of findings per GDPR purpose category",
@@ -98,20 +100,20 @@ class GDPRComplianceClassificationSummary(BaseModel):
     )
 
 
-class GDPRComplianceClassificationOutput(BaseSchemaOutput):
-    """Complete output structure for gdpr_compliance_classification schema.
+class GDPRProcessingPurposeFindingOutput(BaseSchemaOutput):
+    """Complete output structure for gdpr_processing_purpose schema.
 
-    This model represents the full wire format for GDPR compliance
+    This model represents the full wire format for GDPR processing purpose
     classification results, including findings enriched with GDPR-specific
     information, summary statistics, and analysis metadata.
     """
 
     __schema_version__: ClassVar[str] = "1.0.0"
 
-    findings: list[GDPRComplianceClassificationFindingModel] = Field(
-        description="List of findings with GDPR classification"
+    findings: list[GDPRProcessingPurposeFindingModel] = Field(
+        description="List of processing purpose findings with GDPR classification"
     )
-    summary: GDPRComplianceClassificationSummary = Field(
+    summary: GDPRProcessingPurposeSummary = Field(
         description="Summary statistics of the GDPR classification analysis"
     )
     analysis_metadata: BaseAnalysisOutputMetadata = Field(
@@ -121,8 +123,8 @@ class GDPRComplianceClassificationOutput(BaseSchemaOutput):
 
 __all__ = [
     "BaseFindingEvidence",
-    "GDPRComplianceClassificationFindingMetadata",
-    "GDPRComplianceClassificationFindingModel",
-    "GDPRComplianceClassificationOutput",
-    "GDPRComplianceClassificationSummary",
+    "GDPRProcessingPurposeFindingMetadata",
+    "GDPRProcessingPurposeFindingModel",
+    "GDPRProcessingPurposeFindingOutput",
+    "GDPRProcessingPurposeSummary",
 ]

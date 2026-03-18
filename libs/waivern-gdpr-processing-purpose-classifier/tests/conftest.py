@@ -1,11 +1,11 @@
-"""Pytest configuration for waivern-gdpr-compliance-classifier tests."""
+"""Pytest configuration for waivern-gdpr-processing-purpose-classifier tests."""
 
 import pytest
 from waivern_processing_purpose_analyser import (
     register_schemas as register_analyser_schemas,
 )
 
-from waivern_gdpr_compliance_classifier import register_schemas
+from waivern_gdpr_processing_purpose_classifier import register_schemas
 
 
 def pytest_configure(config: pytest.Config) -> None:

@@ -1,4 +1,4 @@
-"""Integration test: ProcessingPurposeAnalyser -> GDPRComplianceClassifier.
+"""Integration test: ProcessingPurposeAnalyser → GDPRProcessingPurposeClassifier.
 
 This test verifies the real analyser output is compatible with the classifier input.
 It catches format mismatches that unit tests with mocked data wouldn't reveal.
@@ -17,7 +17,7 @@ from waivern_core.message import Message
 from waivern_processing_purpose_analyser import ProcessingPurposeAnalyser
 from waivern_processing_purpose_analyser.types import ProcessingPurposeAnalyserConfig
 
-from waivern_gdpr_compliance_classifier import GDPRComplianceClassifier
+from waivern_gdpr_processing_purpose_classifier import GDPRProcessingPurposeClassifier
 
 
 class TestAnalyserToClassifierPipeline:
@@ -37,9 +37,9 @@ class TestAnalyserToClassifierPipeline:
         return ProcessingPurposeAnalyser(config=config)
 
     @pytest.fixture
-    def classifier(self) -> GDPRComplianceClassifier:
+    def classifier(self) -> GDPRProcessingPurposeClassifier:
         """Create classifier with default config."""
-        return GDPRComplianceClassifier()
+        return GDPRProcessingPurposeClassifier()
 
     @pytest.fixture
     def standard_input_with_processing_purposes(self) -> Message:
@@ -75,7 +75,7 @@ class TestAnalyserToClassifierPipeline:
     def test_real_analyser_output_flows_into_classifier(
         self,
         analyser: ProcessingPurposeAnalyser,
-        classifier: GDPRComplianceClassifier,
+        classifier: GDPRProcessingPurposeClassifier,
         standard_input_with_processing_purposes: Message,
     ) -> None:
         """Test that real analyser output is accepted by the classifier.
@@ -96,11 +96,11 @@ class TestAnalyserToClassifierPipeline:
         # Run real classifier on analyser output
         gdpr_output = classifier.process(
             [indicator_output],
-            Schema("gdpr_compliance_classification", "1.0.0"),
+            Schema("gdpr_processing_purpose", "1.0.0"),
         )
 
         # Verify classifier accepted the input and produced valid output
-        assert gdpr_output.schema.name == "gdpr_compliance_classification"
+        assert gdpr_output.schema.name == "gdpr_processing_purpose"
         assert "findings" in gdpr_output.content
         assert "summary" in gdpr_output.content
         assert "analysis_metadata" in gdpr_output.content

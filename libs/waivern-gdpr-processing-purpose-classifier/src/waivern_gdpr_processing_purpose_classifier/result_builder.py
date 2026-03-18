@@ -1,4 +1,4 @@
-"""Result builder for GDPR compliance classification output.
+"""Result builder for GDPR processing purpose classification output.
 
 Handles construction of output messages and summaries.
 Keeps the classifier focused on orchestration.
@@ -11,16 +11,16 @@ from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
 
 from .schemas import (
-    GDPRComplianceClassificationFindingModel,
-    GDPRComplianceClassificationOutput,
-    GDPRComplianceClassificationSummary,
+    GDPRProcessingPurposeFindingModel,
+    GDPRProcessingPurposeFindingOutput,
+    GDPRProcessingPurposeSummary,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class GDPRComplianceClassificationResultBuilder:
-    """Builds output results for GDPR compliance classification.
+class GDPRProcessingPurposeResultBuilder:
+    """Builds output results for GDPR processing purpose classification.
 
     Encapsulates all result construction logic, keeping the classifier
     focused on processing orchestration.
@@ -28,7 +28,7 @@ class GDPRComplianceClassificationResultBuilder:
 
     def build_output_message(
         self,
-        findings: list[GDPRComplianceClassificationFindingModel],
+        findings: list[GDPRProcessingPurposeFindingModel],
         output_schema: Schema,
         ruleset_name: str,
         ruleset_version: str,
@@ -36,7 +36,7 @@ class GDPRComplianceClassificationResultBuilder:
         """Build the complete output message.
 
         Args:
-            findings: Classified GDPR compliance findings.
+            findings: Classified GDPR processing purpose findings.
             output_schema: Schema for output validation.
             ruleset_name: Name of the ruleset used.
             ruleset_version: Version of the ruleset used.
@@ -48,7 +48,7 @@ class GDPRComplianceClassificationResultBuilder:
         summary = self._build_summary(findings)
         analysis_metadata = self._build_analysis_metadata(ruleset_name, ruleset_version)
 
-        output = GDPRComplianceClassificationOutput(
+        output = GDPRProcessingPurposeFindingOutput(
             findings=findings,
             summary=summary,
             analysis_metadata=analysis_metadata,
@@ -57,7 +57,7 @@ class GDPRComplianceClassificationResultBuilder:
         result_data = output.model_dump(mode="json", exclude_none=True)
 
         output_message = Message(
-            id="gdpr_compliance_classification",
+            id="gdpr_processing_purpose_classification",
             content=result_data,
             schema=output_schema,
         )
@@ -65,14 +65,14 @@ class GDPRComplianceClassificationResultBuilder:
         output_message.validate()
 
         logger.info(
-            f"GDPRComplianceClassifier processed with {len(result_data['findings'])} findings"
+            f"GDPRProcessingPurposeClassifier processed with {len(result_data['findings'])} findings"
         )
 
         return output_message
 
     def _build_summary(
-        self, findings: list[GDPRComplianceClassificationFindingModel]
-    ) -> GDPRComplianceClassificationSummary:
+        self, findings: list[GDPRProcessingPurposeFindingModel]
+    ) -> GDPRProcessingPurposeSummary:
         """Build summary statistics from classified findings.
 
         Args:
@@ -92,7 +92,7 @@ class GDPRComplianceClassificationResultBuilder:
         )
         requires_review_count = len([f for f in findings if f.require_review is True])
 
-        return GDPRComplianceClassificationSummary(
+        return GDPRProcessingPurposeSummary(
             total_findings=len(findings),
             purpose_categories=dict(sorted(category_counts.items())),
             sensitive_purposes_count=sensitive_count,

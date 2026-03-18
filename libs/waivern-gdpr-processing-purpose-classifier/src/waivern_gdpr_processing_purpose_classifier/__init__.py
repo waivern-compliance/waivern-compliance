@@ -1,22 +1,22 @@
-"""GDPR compliance classifier for Waivern Compliance Framework."""
+"""GDPR processing purpose classifier for Waivern Compliance Framework."""
 
 from importlib.resources import files
 from pathlib import Path
 
 from waivern_core.schemas import SchemaRegistry
 
-from .classifier import GDPRComplianceClassifier
-from .factory import GDPRComplianceClassifierFactory
+from .classifier import GDPRProcessingPurposeClassifier
+from .factory import GDPRProcessingPurposeClassifierFactory
 from .schemas import (
-    GDPRComplianceClassificationFindingModel,
-    GDPRComplianceClassificationOutput,
+    GDPRProcessingPurposeFindingModel,
+    GDPRProcessingPurposeFindingOutput,
 )
 
 __all__ = [
-    "GDPRComplianceClassifier",
-    "GDPRComplianceClassifierFactory",
-    "GDPRComplianceClassificationFindingModel",
-    "GDPRComplianceClassificationOutput",
+    "GDPRProcessingPurposeClassifier",
+    "GDPRProcessingPurposeClassifierFactory",
+    "GDPRProcessingPurposeFindingModel",
+    "GDPRProcessingPurposeFindingOutput",
     "register_schemas",
 ]
 

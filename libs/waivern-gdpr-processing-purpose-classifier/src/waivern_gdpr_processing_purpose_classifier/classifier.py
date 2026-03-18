@@ -1,4 +1,4 @@
-"""GDPR compliance classifier implementation."""
+"""GDPR processing purpose classifier implementation."""
 
 import logging
 from typing import Any, Literal, cast, override
@@ -9,32 +9,33 @@ from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
 from waivern_rulesets import GDPRProcessingPurposeClassificationRule
 
-from waivern_gdpr_compliance_classifier.result_builder import (
-    GDPRComplianceClassificationResultBuilder,
+from waivern_gdpr_processing_purpose_classifier.result_builder import (
+    GDPRProcessingPurposeResultBuilder,
 )
-from waivern_gdpr_compliance_classifier.schemas import (
-    GDPRComplianceClassificationFindingMetadata,
-    GDPRComplianceClassificationFindingModel,
+from waivern_gdpr_processing_purpose_classifier.schemas import (
+    GDPRProcessingPurposeFindingMetadata,
+    GDPRProcessingPurposeFindingModel,
 )
-from waivern_gdpr_compliance_classifier.types import (
-    GDPRComplianceClassifierConfig,
+from waivern_gdpr_processing_purpose_classifier.types import (
+    GDPRProcessingPurposeClassifierConfig,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class GDPRComplianceClassifier(Classifier):
-    """Classifier that enriches indicator findings with GDPR classification.
+class GDPRProcessingPurposeClassifier(Classifier):
+    """Classifier that enriches processing purpose indicators with GDPR classification.
 
-    Takes indicator findings (processing purpose, service integration, or data
-    collection) and adds GDPR-specific information:
+    Takes processing purpose indicator findings and adds GDPR-specific information:
     - Purpose category (normalised for reporting/governance)
     - Relevant GDPR article references
     - Typical lawful bases for processing
     - Sensitivity indicators and DPIA recommendations
     """
 
-    def __init__(self, config: GDPRComplianceClassifierConfig | None = None) -> None:
+    def __init__(
+        self, config: GDPRProcessingPurposeClassifierConfig | None = None
+    ) -> None:
         """Initialise the classifier.
 
         Args:
@@ -42,12 +43,12 @@ class GDPRComplianceClassifier(Classifier):
                    uses default configuration.
 
         """
-        config = config or GDPRComplianceClassifierConfig()
+        config = config or GDPRProcessingPurposeClassifierConfig()
         self._ruleset = RulesetManager.get_ruleset(
             config.ruleset, GDPRProcessingPurposeClassificationRule
         )
         self._classification_map = self._build_classification_map()
-        self._result_builder = GDPRComplianceClassificationResultBuilder()
+        self._result_builder = GDPRProcessingPurposeResultBuilder()
 
     def _build_classification_map(self) -> dict[str, dict[str, Any]]:
         """Build a lookup map from indicator purpose to GDPR classification.
@@ -72,7 +73,7 @@ class GDPRComplianceClassifier(Classifier):
     @override
     def get_name(cls) -> str:
         """Return the name of the classifier."""
-        return "gdpr_compliance_classifier"
+        return "gdpr_processing_purpose_classifier"
 
     @classmethod
     @override
@@ -90,18 +91,18 @@ class GDPRComplianceClassifier(Classifier):
     @override
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Declare output schemas this classifier can produce."""
-        return [Schema("gdpr_compliance_classification", "1.0.0")]
+        return [Schema("gdpr_processing_purpose", "1.0.0")]
 
     @override
     def process(self, inputs: list[Message], output_schema: Schema) -> Message:
         """Process input findings and classify according to GDPR.
 
         Args:
-            inputs: List of input messages containing indicator findings.
+            inputs: List of input messages containing processing purpose indicators.
             output_schema: The schema to use for the output message.
 
         Returns:
-            Message containing GDPR-classified findings.
+            Message containing GDPR-classified processing purpose findings.
 
         Raises:
             ValueError: If inputs list is empty.
@@ -109,7 +110,7 @@ class GDPRComplianceClassifier(Classifier):
         """
         if not inputs:
             raise ValueError(
-                "GDPRComplianceClassifier requires at least one input message. "
+                "GDPRProcessingPurposeClassifier requires at least one input message. "
                 "Received empty inputs list."
             )
 
@@ -119,7 +120,7 @@ class GDPRComplianceClassifier(Classifier):
             input_findings.extend(input_message.content.get("findings", []))
 
         # Classify each finding
-        classified_findings: list[GDPRComplianceClassificationFindingModel] = []
+        classified_findings: list[GDPRProcessingPurposeFindingModel] = []
         for finding in input_findings:
             classified = self._classify_finding(finding)
             classified_findings.append(classified)
@@ -134,7 +135,7 @@ class GDPRComplianceClassifier(Classifier):
 
     def _classify_finding(
         self, finding: dict[str, Any]
-    ) -> GDPRComplianceClassificationFindingModel:
+    ) -> GDPRProcessingPurposeFindingModel:
         """Classify a single finding according to GDPR rules.
 
         Args:
@@ -145,26 +146,26 @@ class GDPRComplianceClassifier(Classifier):
 
         """
         # Look up classification based on purpose field from indicator schema
-        indicator_value = finding.get("purpose", "")
-        classification = self._classification_map.get(indicator_value, {})
+        processing_purpose = finding.get("purpose", "")
+        classification = self._classification_map.get(processing_purpose, {})
 
         if not classification:
             logger.warning(
-                "Indicator value '%s' has no GDPR classification mapping. "
+                "Indicator purpose '%s' has no GDPR classification mapping. "
                 "Add mapping to gdpr_processing_purpose_classification.yaml",
-                indicator_value,
+                processing_purpose,
             )
 
         # Propagate metadata from indicator finding (always present, fallback to "unknown")
         raw_metadata = finding.get("metadata")
         if isinstance(raw_metadata, dict):
             meta_dict = cast(dict[str, Any], raw_metadata)
-            metadata = GDPRComplianceClassificationFindingMetadata(
+            metadata = GDPRProcessingPurposeFindingMetadata(
                 source=meta_dict.get("source", "unknown"),
                 context=meta_dict.get("context", {}),
             )
         else:
-            metadata = GDPRComplianceClassificationFindingMetadata(source="unknown")
+            metadata = GDPRProcessingPurposeFindingMetadata(source="unknown")
 
         purpose_category = classification.get("purpose_category", "unclassified")
 
@@ -173,8 +174,8 @@ class GDPRComplianceClassifier(Classifier):
         # Leave as None (default) otherwise - excluded from JSON output by exclude_none.
         require_review = True if purpose_category == "context_dependent" else None
 
-        return GDPRComplianceClassificationFindingModel(
-            indicator_value=indicator_value,
+        return GDPRProcessingPurposeFindingModel(
+            processing_purpose=processing_purpose,
             purpose_category=purpose_category,
             article_references=tuple(classification.get("article_references", ())),
             typical_lawful_bases=tuple(classification.get("typical_lawful_bases", ())),
