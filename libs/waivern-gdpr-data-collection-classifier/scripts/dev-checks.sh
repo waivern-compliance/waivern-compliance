@@ -4,13 +4,6 @@
 # Usage: bash scripts/dev-checks.sh
 # Runs format, lint, type-check, and tests
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
-
-cd "$PACKAGE_DIR"
-
 echo "Formatting..."
 ./scripts/format.sh
 

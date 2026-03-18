@@ -1,4 +1,7 @@
 #!/bin/bash
-set -e
-cd "$(dirname "$0")/.."
-uv run basedpyright src/
+
+# Run type checking for waivern-security-evidence-normaliser package
+# Usage: bash scripts/type-check.sh
+# Checks types using basedpyright
+
+uv run --group dev basedpyright src/

@@ -1,8 +1,7 @@
 #!/bin/bash
-set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
+# Run code formatting for waivern-gdpr-service-integration-classifier package
+# Usage: bash scripts/format.sh [--check]
+# Formats code using Ruff formatter
 
-cd "$PACKAGE_DIR"
-uv run ruff format --config pyproject.toml .
+uv run --group dev ruff format "$@"

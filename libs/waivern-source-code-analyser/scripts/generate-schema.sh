@@ -3,13 +3,6 @@
 # Generate JSON schema from Pydantic model for source_code
 # Usage: bash scripts/generate-schema.sh
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
-
-cd "$PACKAGE_DIR"
-
 echo "Generating source_code JSON schema..."
 
 uv run python -c "

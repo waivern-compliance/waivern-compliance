@@ -1,4 +1,7 @@
 #!/bin/bash
-set -e
-cd "$(dirname "$0")/.."
-uv run ruff check src/ tests/
+
+# Run code linting checks for waivern-security-evidence-normaliser package
+# Usage: bash scripts/lint.sh [--fix]
+# Checks code for style and quality issues using Ruff
+
+uv run --group dev ruff check "$@"

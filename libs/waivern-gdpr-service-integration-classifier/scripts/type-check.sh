@@ -1,8 +1,7 @@
 #!/bin/bash
-set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
+# Run type checking for waivern-gdpr-service-integration-classifier package
+# Usage: bash scripts/type-check.sh
+# Checks types using basedpyright
 
-cd "$PACKAGE_DIR"
-uv run basedpyright --project pyproject.toml
+uv run --group dev basedpyright src/
