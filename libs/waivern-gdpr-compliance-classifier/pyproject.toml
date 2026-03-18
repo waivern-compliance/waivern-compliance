@@ -1,7 +1,7 @@
 [project]
-name = "waivern-gdpr-processing-purpose-classifier"
+name = "waivern-gdpr-compliance-classifier"
 version = "0.1.0"
-description = "GDPR processing purpose classifier for Waivern Compliance Framework"
+description = "GDPR compliance classifier for Waivern Compliance Framework"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -11,10 +11,10 @@ dependencies = [
 ]
 
 [project.entry-points."waivern.processors"]
-gdpr_processing_purpose_classifier = "waivern_gdpr_processing_purpose_classifier:GDPRProcessingPurposeClassifierFactory"
+gdpr_compliance_classifier = "waivern_gdpr_compliance_classifier:GDPRComplianceClassifierFactory"
 
 [project.entry-points."waivern.schemas"]
-gdpr_processing_purpose_classifier = "waivern_gdpr_processing_purpose_classifier:register_schemas"
+gdpr_compliance_classifier = "waivern_gdpr_compliance_classifier:register_schemas"
 
 [dependency-groups]
 dev = [
@@ -31,13 +31,13 @@ dev-mode-dirs = ["src"]
 
 # Include JSON schemas and py.typed marker
 include = [
-    "src/waivern_gdpr_processing_purpose_classifier/**/*.py",
-    "src/waivern_gdpr_processing_purpose_classifier/**/schemas/json_schemas/**/*.json",
-    "src/waivern_gdpr_processing_purpose_classifier/py.typed",
+    "src/waivern_gdpr_compliance_classifier/**/*.py",
+    "src/waivern_gdpr_compliance_classifier/**/schemas/json_schemas/**/*.json",
+    "src/waivern_gdpr_compliance_classifier/py.typed",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/waivern_gdpr_processing_purpose_classifier"]
+packages = ["src/waivern_gdpr_compliance_classifier"]
 
 [tool.basedpyright]
 typeCheckingMode = "strict"

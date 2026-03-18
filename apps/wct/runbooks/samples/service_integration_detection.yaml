@@ -62,5 +62,5 @@ artifacts:
     description: "Classify detected service integrations and processing purposes according to GDPR categories, sensitivity levels, and DPIA requirements"
     inputs: service_integration_indicators
     process:
-      type: "gdpr_processing_purpose_classifier"
+      type: "gdpr_compliance_classifier"
     output: true

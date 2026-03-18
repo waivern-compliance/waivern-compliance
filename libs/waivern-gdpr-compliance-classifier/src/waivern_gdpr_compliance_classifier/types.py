@@ -1,11 +1,11 @@
-"""Configuration types for GDPR processing purpose classifier."""
+"""Configuration types for GDPR compliance classifier."""
 
 from pydantic import Field
 from waivern_core import BaseComponentConfiguration
 
 
-class GDPRProcessingPurposeClassifierConfig(BaseComponentConfiguration):
-    """Configuration for GDPRProcessingPurposeClassifier.
+class GDPRComplianceClassifierConfig(BaseComponentConfiguration):
+    """Configuration for GDPRComplianceClassifier.
 
     Inherits from BaseComponentConfiguration to support:
     - Pydantic validation for type safety

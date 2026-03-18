@@ -100,7 +100,7 @@ artifacts:
     description: "Classify detected processing purposes according to GDPR categories, sensitivity, and DPIA requirements"
     inputs: sqlite_processing_purpose_indicators
     process:
-      type: "gdpr_processing_purpose_classifier"
+      type: "gdpr_compliance_classifier"
     output: true
 
   # Filesystem analysis artifacts
@@ -151,7 +151,7 @@ artifacts:
     description: "Classify detected processing purposes according to GDPR categories, sensitivity, and DPIA requirements"
     inputs: filesystem_processing_purpose_indicators
     process:
-      type: "gdpr_processing_purpose_classifier"
+      type: "gdpr_compliance_classifier"
     output: true
 
   # PHP source code pipeline: Filesystem → SourceCode → DataSubject
@@ -222,5 +222,5 @@ artifacts:
     description: "Classify detected processing purposes from PHP code according to GDPR categories, sensitivity, and DPIA requirements"
     inputs: php_processing_purpose_indicators
     process:
-      type: "gdpr_processing_purpose_classifier"
+      type: "gdpr_compliance_classifier"
     output: true

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Run all development checks for waivern-gdpr-processing-purpose-classifier package
+# Run all development checks for waivern-gdpr-compliance-classifier package
 # Usage: bash scripts/dev-checks.sh
 # Runs format, lint, type-check, and tests
 

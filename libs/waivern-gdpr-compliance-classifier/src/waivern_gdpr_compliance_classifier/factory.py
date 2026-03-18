@@ -1,4 +1,4 @@
-"""Factory for creating GDPRProcessingPurposeClassifier instances."""
+"""Factory for creating GDPRComplianceClassifier instances."""
 
 from typing import override
 
@@ -7,14 +7,12 @@ from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
 from waivern_rulesets import GDPRProcessingPurposeClassificationRule
 
-from .classifier import GDPRProcessingPurposeClassifier
-from .types import GDPRProcessingPurposeClassifierConfig
+from .classifier import GDPRComplianceClassifier
+from .types import GDPRComplianceClassifierConfig
 
 
-class GDPRProcessingPurposeClassifierFactory(
-    ComponentFactory[GDPRProcessingPurposeClassifier]
-):
-    """Factory for creating GDPRProcessingPurposeClassifier instances.
+class GDPRComplianceClassifierFactory(ComponentFactory[GDPRComplianceClassifier]):
+    """Factory for creating GDPRComplianceClassifier instances.
 
     This factory parses configuration from runbook properties and creates
     classifiers with the specified ruleset URI.
@@ -30,20 +28,18 @@ class GDPRProcessingPurposeClassifierFactory(
         self._container = container
 
     @override
-    def create(self, config: ComponentConfig) -> GDPRProcessingPurposeClassifier:
-        """Create GDPRProcessingPurposeClassifier instance.
+    def create(self, config: ComponentConfig) -> GDPRComplianceClassifier:
+        """Create GDPRComplianceClassifier instance.
 
         Args:
             config: Configuration dict from runbook properties
 
         Returns:
-            Configured GDPRProcessingPurposeClassifier instance
+            Configured GDPRComplianceClassifier instance
 
         """
-        classifier_config = GDPRProcessingPurposeClassifierConfig.from_properties(
-            config
-        )
-        return GDPRProcessingPurposeClassifier(config=classifier_config)
+        classifier_config = GDPRComplianceClassifierConfig.from_properties(config)
+        return GDPRComplianceClassifier(config=classifier_config)
 
     @override
     def can_create(self, config: ComponentConfig) -> bool:
@@ -61,9 +57,7 @@ class GDPRProcessingPurposeClassifierFactory(
 
         """
         try:
-            classifier_config = GDPRProcessingPurposeClassifierConfig.from_properties(
-                config
-            )
+            classifier_config = GDPRComplianceClassifierConfig.from_properties(config)
         except Exception:
             return False
 
@@ -79,9 +73,9 @@ class GDPRProcessingPurposeClassifierFactory(
 
     @property
     @override
-    def component_class(self) -> type[GDPRProcessingPurposeClassifier]:
+    def component_class(self) -> type[GDPRComplianceClassifier]:
         """Get the component class this factory creates."""
-        return GDPRProcessingPurposeClassifier
+        return GDPRComplianceClassifier
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:
