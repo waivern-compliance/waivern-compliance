@@ -1,15 +1,15 @@
-"""Unit tests for GDPR processing purpose classification ruleset."""
+"""Unit tests for GDPR compliance classification ruleset."""
 
 import pytest
 from pydantic import ValidationError
 
 from waivern_rulesets import AbstractRuleset
-from waivern_rulesets.gdpr_processing_purpose_classification import (
-    GDPRProcessingPurposeClassificationRule,
-    GDPRProcessingPurposeClassificationRuleset,
+from waivern_rulesets.gdpr_compliance_classification import (
+    GDPRComplianceClassificationRule,
+    GDPRComplianceClassificationRuleset,
 )
-from waivern_rulesets.gdpr_processing_purpose_classification.ruleset import (
-    GDPRProcessingPurposeClassificationRulesetData,
+from waivern_rulesets.gdpr_compliance_classification.ruleset import (
+    GDPRComplianceClassificationRulesetData,
 )
 from waivern_rulesets.testing import RulesetContractTests
 
@@ -18,27 +18,27 @@ from waivern_rulesets.testing import RulesetContractTests
 # =============================================================================
 
 
-class TestGDPRProcessingPurposeClassificationRulesetContract(
-    RulesetContractTests[GDPRProcessingPurposeClassificationRule]
+class TestGDPRComplianceClassificationRulesetContract(
+    RulesetContractTests[GDPRComplianceClassificationRule]
 ):
-    """Contract tests for GDPRProcessingPurposeClassificationRuleset."""
+    """Contract tests for GDPRComplianceClassificationRuleset."""
 
     @pytest.fixture
     def ruleset_class(
         self,
-    ) -> type[AbstractRuleset[GDPRProcessingPurposeClassificationRule]]:
+    ) -> type[AbstractRuleset[GDPRComplianceClassificationRule]]:
         """Provide the ruleset class to test."""
-        return GDPRProcessingPurposeClassificationRuleset
+        return GDPRComplianceClassificationRuleset
 
     @pytest.fixture
-    def rule_class(self) -> type[GDPRProcessingPurposeClassificationRule]:
+    def rule_class(self) -> type[GDPRComplianceClassificationRule]:
         """Provide the rule class used by the ruleset."""
-        return GDPRProcessingPurposeClassificationRule
+        return GDPRComplianceClassificationRule
 
     @pytest.fixture
     def expected_name(self) -> str:
         """Provide the expected canonical name of the ruleset."""
-        return "gdpr_processing_purpose_classification"
+        return "gdpr_compliance_classification"
 
 
 # =============================================================================
@@ -46,12 +46,12 @@ class TestGDPRProcessingPurposeClassificationRulesetContract(
 # =============================================================================
 
 
-class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
+class TestGDPRComplianceClassificationRulesetDataValidation:
     """Test our custom model validators on the ruleset data class."""
 
     def test_rejects_invalid_purpose_category(self) -> None:
         """Test that rules with purpose_category not in master list are rejected."""
-        rule = GDPRProcessingPurposeClassificationRule(
+        rule = GDPRComplianceClassificationRule(
             name="Invalid Rule",
             description="Test",
             purpose_category="invalid_category",
@@ -61,7 +61,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
         )
 
         with pytest.raises(ValidationError, match="invalid purpose_category"):
-            GDPRProcessingPurposeClassificationRulesetData(
+            GDPRComplianceClassificationRulesetData(
                 name="test",
                 version="1.0.0",
                 description="Test",
@@ -72,7 +72,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
 
     def test_rejects_invalid_indicator_purposes(self) -> None:
         """Test that rules with indicator_purposes not in master list are rejected."""
-        rule = GDPRProcessingPurposeClassificationRule(
+        rule = GDPRComplianceClassificationRule(
             name="Invalid Rule",
             description="Test",
             purpose_category="operational",
@@ -82,7 +82,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
         )
 
         with pytest.raises(ValidationError, match="invalid indicator_purposes"):
-            GDPRProcessingPurposeClassificationRulesetData(
+            GDPRComplianceClassificationRulesetData(
                 name="test",
                 version="1.0.0",
                 description="Test",
@@ -93,7 +93,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
 
     def test_rejects_sensitive_categories_not_in_purpose_categories(self) -> None:
         """Test that sensitive_categories must be subset of purpose_categories."""
-        rule = GDPRProcessingPurposeClassificationRule(
+        rule = GDPRComplianceClassificationRule(
             name="Test Rule",
             description="Test",
             purpose_category="operational",
@@ -102,7 +102,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
         )
 
         with pytest.raises(ValidationError, match="invalid categories"):
-            GDPRProcessingPurposeClassificationRulesetData(
+            GDPRComplianceClassificationRulesetData(
                 name="test",
                 version="1.0.0",
                 description="Test",
@@ -114,7 +114,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
 
     def test_rejects_inconsistent_sensitive_purpose_flag(self) -> None:
         """Test that sensitive_purpose must match sensitive_categories membership."""
-        rule = GDPRProcessingPurposeClassificationRule(
+        rule = GDPRComplianceClassificationRule(
             name="Inconsistent Rule",
             description="Test",
             purpose_category="ai_and_ml",
@@ -124,7 +124,7 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
         )
 
         with pytest.raises(ValidationError, match="sensitive_purpose"):
-            GDPRProcessingPurposeClassificationRulesetData(
+            GDPRComplianceClassificationRulesetData(
                 name="test",
                 version="1.0.0",
                 description="Test",
@@ -140,12 +140,12 @@ class TestGDPRProcessingPurposeClassificationRulesetDataValidation:
 # =============================================================================
 
 
-class TestGDPRProcessingPurposeClassificationRulesetCompleteness:
+class TestGDPRComplianceClassificationRulesetCompleteness:
     """Test that the actual YAML ruleset data is complete."""
 
     def test_all_indicator_purposes_are_mapped(self) -> None:
         """Test that all indicator purposes have classifications."""
-        ruleset = GDPRProcessingPurposeClassificationRuleset()
+        ruleset = GDPRComplianceClassificationRuleset()
         rules = ruleset.get_rules()
 
         all_mapped_purposes: set[str] = set()

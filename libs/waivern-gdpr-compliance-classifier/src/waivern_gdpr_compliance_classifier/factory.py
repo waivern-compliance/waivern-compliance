@@ -5,7 +5,7 @@ from typing import override
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
-from waivern_rulesets import GDPRProcessingPurposeClassificationRule
+from waivern_rulesets import GDPRComplianceClassificationRule
 
 from .classifier import GDPRComplianceClassifier
 from .types import GDPRComplianceClassifierConfig
@@ -64,7 +64,7 @@ class GDPRComplianceClassifierFactory(ComponentFactory[GDPRComplianceClassifier]
         # Validate ruleset exists
         try:
             RulesetManager.get_ruleset(
-                classifier_config.ruleset, GDPRProcessingPurposeClassificationRule
+                classifier_config.ruleset, GDPRComplianceClassificationRule
             )
         except Exception:
             return False

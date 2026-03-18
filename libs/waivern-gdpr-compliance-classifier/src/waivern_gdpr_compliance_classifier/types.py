@@ -15,6 +15,6 @@ class GDPRComplianceClassifierConfig(BaseComponentConfiguration):
     """
 
     ruleset: str = Field(
-        default="local/gdpr_processing_purpose_classification/1.0.0",
-        description="Ruleset URI for GDPR processing purpose classification rules",
+        default="local/gdpr_compliance_classification/1.0.0",
+        description="Ruleset URI for GDPR compliance classification rules",
     )

@@ -7,7 +7,7 @@ from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
-from waivern_rulesets import GDPRProcessingPurposeClassificationRule
+from waivern_rulesets import GDPRComplianceClassificationRule
 
 from waivern_gdpr_compliance_classifier.result_builder import (
     GDPRComplianceClassificationResultBuilder,
@@ -44,7 +44,7 @@ class GDPRComplianceClassifier(Classifier):
         """
         config = config or GDPRComplianceClassifierConfig()
         self._ruleset = RulesetManager.get_ruleset(
-            config.ruleset, GDPRProcessingPurposeClassificationRule
+            config.ruleset, GDPRComplianceClassificationRule
         )
         self._classification_map = self._build_classification_map()
         self._result_builder = GDPRComplianceClassificationResultBuilder()
@@ -151,7 +151,7 @@ class GDPRComplianceClassifier(Classifier):
         if not classification:
             logger.warning(
                 "Indicator value '%s' has no GDPR classification mapping. "
-                "Add mapping to gdpr_processing_purpose_classification.yaml",
+                "Add mapping to gdpr_compliance_classification.yaml",
                 indicator_value,
             )
 

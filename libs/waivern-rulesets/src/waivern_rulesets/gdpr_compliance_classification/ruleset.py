@@ -1,7 +1,7 @@
-"""GDPR processing purpose classification ruleset.
+"""GDPR compliance classification ruleset.
 
-This module defines a ruleset for classifying processing purpose indicators
-according to GDPR requirements. It maps processing purpose names to GDPR-specific
+This module defines a ruleset for classifying indicator findings
+according to GDPR requirements. It maps indicator values to GDPR-specific
 purpose categories and article references.
 """
 
@@ -14,12 +14,12 @@ from waivern_rulesets.core.base import YAMLRuleset
 from waivern_rulesets.types import GDPRClassificationRule
 
 
-class GDPRProcessingPurposeClassificationRule(GDPRClassificationRule):
-    """GDPR processing purpose classification rule.
+class GDPRComplianceClassificationRule(GDPRClassificationRule):
+    """GDPR compliance classification rule.
 
-    Maps processing purpose indicator names to GDPR-specific classifications.
+    Maps indicator values to GDPR-specific classifications.
     Unlike detection rules, these rules don't have patterns - they map from
-    indicator purpose names to GDPR purpose categories.
+    indicator values to GDPR purpose categories.
     """
 
     purpose_category: str = Field(
@@ -27,7 +27,7 @@ class GDPRProcessingPurposeClassificationRule(GDPRClassificationRule):
     )
     indicator_purposes: tuple[str, ...] = Field(
         min_length=1,
-        description="Processing purpose names this rule classifies (from indicator)",
+        description="Indicator values this rule classifies (from upstream analysers)",
     )
     typical_lawful_bases: tuple[str, ...] = Field(
         min_length=1,
@@ -56,10 +56,10 @@ class GDPRProcessingPurposeClassificationRule(GDPRClassificationRule):
         return v
 
 
-class GDPRProcessingPurposeClassificationRulesetData(
-    RulesetData[GDPRProcessingPurposeClassificationRule]
+class GDPRComplianceClassificationRulesetData(
+    RulesetData[GDPRComplianceClassificationRule]
 ):
-    """GDPR processing purpose classification ruleset data with validation."""
+    """GDPR compliance classification ruleset data with validation."""
 
     # Master list of valid purpose categories (for reporting/governance)
     purpose_categories: list[str] = Field(
@@ -67,10 +67,10 @@ class GDPRProcessingPurposeClassificationRulesetData(
         description="Master list of valid GDPR purpose categories",
     )
 
-    # Valid indicator purposes that can be mapped (from processing_purposes ruleset)
+    # Valid indicator values that can be mapped (from upstream analysers)
     indicator_purposes: list[str] = Field(
         min_length=1,
-        description="Master list of valid processing purpose indicator names",
+        description="Master list of valid indicator values",
     )
 
     # Sensitive categories subset
@@ -80,7 +80,7 @@ class GDPRProcessingPurposeClassificationRulesetData(
     )
 
     @model_validator(mode="after")
-    def validate_rules(self) -> "GDPRProcessingPurposeClassificationRulesetData":
+    def validate_rules(self) -> "GDPRComplianceClassificationRulesetData":
         """Validate all rules against master lists."""
         valid_cats = set(self.purpose_categories)
         valid_purposes = set(self.indicator_purposes)
@@ -128,17 +128,17 @@ class GDPRProcessingPurposeClassificationRulesetData(
         return self
 
 
-class GDPRProcessingPurposeClassificationRuleset(
-    YAMLRuleset[GDPRProcessingPurposeClassificationRule]
+class GDPRComplianceClassificationRuleset(
+    YAMLRuleset[GDPRComplianceClassificationRule]
 ):
-    """GDPR processing purpose classification ruleset.
+    """GDPR compliance classification ruleset.
 
-    Provides classification mappings for processing purpose indicators,
+    Provides classification mappings for indicator findings,
     enriching generic findings with GDPR-specific information.
     """
 
-    ruleset_name: ClassVar[str] = "gdpr_processing_purpose_classification"
+    ruleset_name: ClassVar[str] = "gdpr_compliance_classification"
     ruleset_version: ClassVar[str] = "1.0.0"
     _data_class: ClassVar[  # pyright: ignore[reportIncompatibleVariableOverride]
-        type[GDPRProcessingPurposeClassificationRulesetData]
-    ] = GDPRProcessingPurposeClassificationRulesetData
+        type[GDPRComplianceClassificationRulesetData]
+    ] = GDPRComplianceClassificationRulesetData
