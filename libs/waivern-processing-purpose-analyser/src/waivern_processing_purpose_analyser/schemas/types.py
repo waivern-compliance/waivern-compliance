@@ -1,8 +1,6 @@
 """Schema data models for processing purpose indicators."""
 
-from typing import ClassVar, Literal, override
-
-SourceCodeContextWindow = Literal["small", "medium", "large", "full"]
+from typing import ClassVar, override
 
 from pydantic import BaseModel, Field
 from waivern_core.schemas import (
@@ -45,17 +43,6 @@ class ProcessingPurposeIndicatorModel(
     """
 
     purpose: str = Field(description="Processing purpose name (from ruleset)")
-
-    # Technical metadata about data collection mechanism (optional, from DataCollectionRule)
-    # These are framework-agnostic and useful for auditing across compliance frameworks
-    collection_type: str | None = Field(
-        default=None,
-        description="Technical mechanism of data collection (e.g., form_data, cookies, api_endpoint)",
-    )
-    data_source: str | None = Field(
-        default=None,
-        description="Origin of collected data (e.g., http_request, browser_storage)",
-    )
 
     @override
     def __str__(self) -> str:

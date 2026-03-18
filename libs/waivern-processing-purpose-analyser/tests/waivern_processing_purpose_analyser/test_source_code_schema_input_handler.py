@@ -86,52 +86,18 @@ class CustomerService {
         )
 
     @pytest.fixture
-    def service_integration_file_data(
+    def analytics_file_data(
         self, sample_file_metadata: SourceCodeFileMetadataModel
     ) -> SourceCodeFileDataModel:
-        """Create file data with actual service integration patterns from ruleset."""
+        """Create file data with analytics patterns for multi-file testing."""
         return SourceCodeFileDataModel(
-            file_path="/src/CloudStorageService.php",
+            file_path="/src/AnalyticsService.php",
             language="php",
             raw_content="""<?php
-require_once 'vendor/aws/aws-sdk-php/src/functions.php';
-
-class CloudStorageService {
-    public function uploadToAWS($file) {
-        // Upload file to amazon s3 storage
-        $client = new S3Client();
-        return $client->upload($file);
-    }
-
-    public function uploadToDropbox($message) {
-        // Upload to dropbox cloud storage
-        $this->dropbox->upload($message);
-    }
-}
-""",
-            metadata=sample_file_metadata,
-        )
-
-    @pytest.fixture
-    def data_collection_file_data(
-        self, sample_file_metadata: SourceCodeFileMetadataModel
-    ) -> SourceCodeFileDataModel:
-        """Create file data with actual data collection patterns from ruleset."""
-        return SourceCodeFileDataModel(
-            file_path="/src/UserFormHandler.php",
-            language="php",
-            raw_content="""<?php
-class UserFormHandler {
-    public function processForm() {
-        // Collect form data via POST
-        $userData = $_POST['user_data'];
-        $userId = $_GET['user_id'];
-
-        // Access cookies for session
-        $sessionId = $_COOKIE['session_id'];
-        setcookie('user_pref', $userData);
-
-        return $userData;
+class AnalyticsService {
+    public function trackUserBehaviour($event) {
+        $this->analytics->track($event);
+        return $this->analytics->getReport();
     }
 }
 """,
@@ -233,7 +199,7 @@ class UserFormHandler {
         self,
         handler: SourceCodeSchemaInputHandler,
         simple_php_file_data: SourceCodeFileDataModel,
-        service_integration_file_data: SourceCodeFileDataModel,
+        analytics_file_data: SourceCodeFileDataModel,
         sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
     ) -> None:
         """Test that analyse handles multiple files correctly."""
@@ -244,7 +210,7 @@ class UserFormHandler {
             description="Analysis of multiple files",
             source="source_code",
             metadata=sample_analysis_metadata,
-            data=[simple_php_file_data, service_integration_file_data],
+            data=[simple_php_file_data, analytics_file_data],
         )
 
         # Act
@@ -259,7 +225,7 @@ class UserFormHandler {
         # All findings should have file paths as metadata.source
         sources = {f.metadata.source for f in findings}
         assert simple_php_file_data.file_path in sources
-        assert service_integration_file_data.file_path in sources
+        assert analytics_file_data.file_path in sources
 
         # Validate at least one finding has evidence with timestamps
         if findings:
@@ -358,63 +324,6 @@ class UserFormHandler {
             # Validate timestamp can be round-tripped through ISO format
             parsed_timestamp = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
             assert parsed_timestamp.tzinfo is not None
-
-    # =========================================================================
-    # Rule-Specific Tests (ServiceIntegration, DataCollection)
-    # =========================================================================
-
-    def test_data_collection_findings_include_collection_type_and_data_source(
-        self,
-        handler: SourceCodeSchemaInputHandler,
-        data_collection_file_data: SourceCodeFileDataModel,
-        sample_analysis_metadata: SourceCodeAnalysisMetadataModel,
-    ) -> None:
-        """Test that findings from DataCollectionRule include collection_type and data_source fields."""
-        # Arrange
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Data collection test",
-            description="Test data collection categorical data",
-            source="source_code",
-            metadata=sample_analysis_metadata,
-            data=[data_collection_file_data],
-        )
-
-        # Act
-        findings = handler.analyse(source_data)
-
-        # Assert
-        data_collection_findings = [
-            f
-            for f in findings
-            if any(
-                p.pattern in ["$_POST[", "$_GET[", "$_COOKIE[", "setcookie("]
-                for p in f.matched_patterns
-            )
-        ]
-
-        assert len(data_collection_findings) > 0, (
-            "Expected at least one data collection finding"
-        )
-
-        for finding in data_collection_findings:
-            assert hasattr(finding, "collection_type"), (
-                "Finding should have collection_type field from DataCollectionRule"
-            )
-            assert isinstance(finding.collection_type, str), (
-                "collection_type should be a string"
-            )
-            assert len(finding.collection_type) > 0, (
-                "collection_type should not be empty"
-            )
-
-            assert hasattr(finding, "data_source"), (
-                "Finding should have data_source field from DataCollectionRule"
-            )
-            assert isinstance(finding.data_source, str), (
-                "data_source should be a string"
-            )
-            assert len(finding.data_source) > 0, "data_source should not be empty"
 
 
 class TestSourceCodeContextWindow:

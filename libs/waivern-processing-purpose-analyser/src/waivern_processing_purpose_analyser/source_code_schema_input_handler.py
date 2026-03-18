@@ -8,14 +8,11 @@ DataSubjectAnalyser groups by subject_category.
 
 from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Literal
 
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
-from waivern_rulesets.data_collection import DataCollectionRule
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
-from waivern_rulesets.service_integrations import ServiceIntegrationRule
 from waivern_source_code_analyser.schemas.source_code import (
     SourceCodeDataModel,
     SourceCodeFileDataModel,
@@ -27,8 +24,6 @@ from .schemas.types import (
 )
 from .types import SourceCodeContextWindow
 
-RuleType = Literal["processing_purpose", "service_integration", "data_collection"]
-
 
 @dataclass
 class MatchInfo:
@@ -36,10 +31,6 @@ class MatchInfo:
 
     pattern: str
     line_number: int
-    rule_type: RuleType
-    # Technical metadata (from DataCollectionRule only)
-    collection_type: str | None = None
-    data_source: str | None = None
 
 
 # Context window sizes (lines before/after match)
@@ -63,15 +54,13 @@ class SourceCodeSchemaInputHandler:
         context_window: SourceCodeContextWindow = "small",
         ruleset: str = "local/processing_purposes/1.0.0",
     ) -> None:
-        """Initialise the handler and load required rulesets.
+        """Initialise the handler and load the processing purposes ruleset.
 
         Args:
             context_window: Size of context to include around matches.
                 'small' = ±3 lines, 'medium' = ±15 lines, 'large' = ±50 lines, 'full' = entire file.
             ruleset: Processing purposes ruleset URI. Configurable to support
-                extension rulesets (e.g. ERP-specific patterns). Service
-                integration and data collection rulesets remain hardcoded
-                as they have no configurable variants.
+                extension rulesets (e.g. ERP-specific patterns).
 
         """
         self.context_window: SourceCodeContextWindow = context_window
@@ -79,12 +68,6 @@ class SourceCodeSchemaInputHandler:
 
         self._processing_purposes_rules = RulesetManager.get_rules(
             ruleset, ProcessingPurposeRule
-        )
-        self._service_integrations_rules = RulesetManager.get_rules(
-            "local/service_integrations/1.0.0", ServiceIntegrationRule
-        )
-        self._data_collection_rules = RulesetManager.get_rules(
-            "local/data_collection/1.0.0", DataCollectionRule
         )
 
     def analyse(self, data: object) -> list[ProcessingPurposeIndicatorModel]:
@@ -135,8 +118,8 @@ class SourceCodeSchemaInputHandler:
         """Analyse a single source code file for processing purpose patterns.
 
         Orchestrates the analysis flow:
-        1. Collect matches from all three rule types
-        2. Group matches by purpose slug (rule.purpose for ProcessingPurposeRule, rule.name for others)
+        1. Collect matches from processing purpose rules
+        2. Group matches by purpose slug (rule.purpose)
         3. Aggregate pattern counts and create one finding per purpose
 
         Args:
@@ -153,7 +136,6 @@ class SourceCodeSchemaInputHandler:
         # Structure: {purpose: [MatchInfo, ...]}
         purpose_matches: dict[str, list[MatchInfo]] = {}
 
-        # Collect matches from processing purpose rules
         for rule in self._processing_purposes_rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule):
                 purpose = rule.purpose
@@ -163,37 +145,6 @@ class SourceCodeSchemaInputHandler:
                     MatchInfo(
                         pattern=pattern,
                         line_number=line_idx + 1,
-                        rule_type="processing_purpose",
-                    )
-                )
-
-        # Collect matches from service integration rules
-        for rule in self._service_integrations_rules:
-            for line_idx, pattern in self._find_pattern_matches(lines, rule):
-                purpose = rule.name
-                if purpose not in purpose_matches:
-                    purpose_matches[purpose] = []
-                purpose_matches[purpose].append(
-                    MatchInfo(
-                        pattern=pattern,
-                        line_number=line_idx + 1,
-                        rule_type="service_integration",
-                    )
-                )
-
-        # Collect matches from data collection rules (includes technical metadata)
-        for rule in self._data_collection_rules:
-            for line_idx, pattern in self._find_pattern_matches(lines, rule):
-                purpose = rule.name
-                if purpose not in purpose_matches:
-                    purpose_matches[purpose] = []
-                purpose_matches[purpose].append(
-                    MatchInfo(
-                        pattern=pattern,
-                        line_number=line_idx + 1,
-                        rule_type="data_collection",
-                        collection_type=rule.collection_type,
-                        data_source=rule.data_source,
                     )
                 )
 
@@ -212,7 +163,7 @@ class SourceCodeSchemaInputHandler:
                 for p, c in pattern_counts.items()
             ]
 
-            # Use first match for evidence, line number, and technical metadata
+            # Use first match for evidence and line number
             first_match = matches[0]
             first_line_idx = first_match.line_number - 1
             evidence = self._create_evidence(first_line_idx, lines)
@@ -225,8 +176,6 @@ class SourceCodeSchemaInputHandler:
                     source=file_path,
                     line_number=first_match.line_number,
                 ),
-                collection_type=first_match.collection_type,
-                data_source=first_match.data_source,
             )
             findings.append(finding)
 
@@ -235,7 +184,7 @@ class SourceCodeSchemaInputHandler:
     def _find_pattern_matches(
         self,
         lines: list[str],
-        rule: ProcessingPurposeRule | ServiceIntegrationRule | DataCollectionRule,
+        rule: ProcessingPurposeRule,
     ) -> Generator[tuple[int, str], None, None]:
         """Find all pattern matches in source code lines.
 
