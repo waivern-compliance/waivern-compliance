@@ -37,7 +37,7 @@ class ItemGroup[T: Finding]:
     """The findings in this group."""
 
     content: str | None = None
-    """Shared context for extended-context mode (e.g., source file content)."""
+    """Shared context for the group (e.g., source file content). Used by EXTENDED_CONTEXT and INDEPENDENT modes."""
 
     group_id: str | None = None
     """Optional identifier for tracking and logging."""
@@ -46,28 +46,64 @@ class ItemGroup[T: Finding]:
 class BatchingMode(Enum):
     """How the LLM service should batch items.
 
-    Processors choose the batching mode based on whether additional context
-    (like source file content) helps validation.
+    Processors choose the batching mode based on the semantic relationship
+    between input items and output decisions.
+
+    DESIGN NOTE — Three Semantic Contracts
+    ---------------------------------------
+
+    The three modes represent distinct caller intents, not just batching
+    strategies. The key distinction is the input→output contract:
+
+    - COUNT_BASED / EXTENDED_CONTEXT → N items in, N decisions out
+      (one decision per item)
+    - INDEPENDENT → N items in, 1 decision out
+      (items collectively inform a single verdict)
+
+    COUNT_BASED is the degenerate case of EXTENDED_CONTEXT with no shared
+    context. EXTENDED_CONTEXT differs only in that items share a context
+    (e.g., source file content) that the LLM needs alongside each item.
+
+    INDEPENDENT produces an atomic, indivisible output — splitting its items
+    across batches would break the semantic because the LLM needs all evidence
+    together to form one verdict.
+
+    EXTENDED_CONTEXT produces per-item decisions — items CAN be split across
+    batches (each carrying the same context) because each decision is
+    independent. This splitting is a future optimisation; currently each group
+    becomes its own batch.
+
+    Decision matrix:
+    - Items need no shared context → COUNT_BASED
+    - Items share context, per-item decisions → EXTENDED_CONTEXT
+    - Items form one unit, single decision → INDEPENDENT
     """
 
     COUNT_BASED = auto()
     """Flatten all items from all groups, split by count.
 
     Use when items are independent and don't benefit from shared context.
+    Example: validating findings based on their own evidence only.
     """
 
     EXTENDED_CONTEXT = auto()
-    """Keep groups intact, bin-pack by tokens.
+    """One group per batch. Items share context, produce per-item decisions.
 
     Use when items benefit from shared context (e.g., findings from the same
-    source file validated together with the file content).
+    source file validated together with the file content). Each group produces
+    a list of per-item decisions.
+
+    Currently each group becomes its own batch. A future optimisation hook
+    supports oversized group splitting and same-context bin-packing.
     """
 
     INDEPENDENT = auto()
-    """One group per batch, no bin-packing.
+    """One group per batch. Items form one unit, produce a single decision.
 
-    Use when each group needs its own independent LLM call and response
-    (e.g., classifying documents where each needs a separate verdict).
+    Use when all items in a group collectively inform a single verdict
+    (e.g., assessing a control using all evidence as a whole). Splitting
+    items across batches would break the semantic.
+
     Preserves input order for 1:1 group-to-response mapping.
     """
 

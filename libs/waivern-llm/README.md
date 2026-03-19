@@ -6,7 +6,7 @@ Multi-provider LLM abstraction for Waivern Compliance Framework.
 
 - **Multi-provider support**: Anthropic, OpenAI, Google
 - **Local LLM support**: LM Studio, Ollama, vLLM via OpenAI-compatible API
-- **Intelligent batching**: Token-aware bin-packing or count-based splitting
+- **Intelligent batching**: Three semantic batching modes (COUNT_BASED, EXTENDED_CONTEXT, INDEPENDENT)
 - **Response caching**: Automatic caching via ArtifactStore
 - **Dependency injection**: Factory pattern with lazy resolution
 
@@ -23,7 +23,7 @@ to focus on domain logic. Key separation of concerns:
 | Prompt building         | Processor   | Domain-specific prompts               |
 | Token estimation        | LLM Service | Model-specific, implementation detail |
 | Batch size calculation  | LLM Service | Based on model context window         |
-| Bin-packing algorithm   | LLM Service | Optimisation detail                   |
+| Batch planning          | LLM Service | Splitting, validation, optimisation   |
 | Response caching        | LLM Service | Cross-cutting concern                 |
 
 ## Usage
@@ -120,14 +120,20 @@ result = asyncio.run(validate_findings(findings, llm_service, "run-123"))
 
 ### Batching Modes
 
-Choose based on whether shared context helps validation:
+Three modes representing distinct semantic contracts (see `BatchingMode`
+docstring for full design rationale):
 
-- **COUNT_BASED**: Flatten all findings, split by count (default)
-  - Use for evidence-only validation
+- **COUNT_BASED**: N items in → N decisions out, no shared context
+  - Flattens all items, splits by count
   - Ignores `ItemGroup.content`
 
-- **EXTENDED_CONTEXT**: Keep groups intact, bin-pack by tokens
-  - Use when source file content helps validation
+- **EXTENDED_CONTEXT**: N items in → N decisions out, with shared context
+  - One group per batch, items share context (e.g., source file content)
+  - Requires `ItemGroup.content` to be set
+  - Groups without content are skipped with `MISSING_CONTENT` reason
+
+- **INDEPENDENT**: N items in → 1 decision out, atomic verdict
+  - One group per batch, items collectively inform a single verdict
   - Requires `ItemGroup.content` to be set
   - Groups without content are skipped with `MISSING_CONTENT` reason
 

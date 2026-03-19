@@ -11,13 +11,13 @@ The LLM service separates concerns between processors and the service layer:
 **Processor responsibilities** (domain logic):
 - What to group by (source files, categories, etc.)
 - What content to include with each group
-- Batching mode selection (COUNT_BASED vs EXTENDED_CONTEXT)
+- Batching mode selection (COUNT_BASED, EXTENDED_CONTEXT, or INDEPENDENT)
 - Prompt building via PromptBuilder protocol
 
 **LLM Service responsibilities** (infrastructure):
 - Token estimation (model-specific)
 - Batch size calculation (based on context window)
-- Bin-packing algorithm (optimisation detail)
+- Batch planning (splitting, validation, optimisation)
 - Response caching (scoped by run_id)
 
 Usage Pattern
@@ -50,16 +50,19 @@ Usage Pattern
 Batching Modes
 --------------
 
-- **COUNT_BASED**: Flattens all items, splits by count. Use for evidence-only
-  validation where source content doesn't help.
+Three modes representing distinct semantic contracts (see BatchingMode
+docstring for full design rationale):
 
-- **EXTENDED_CONTEXT**: Keeps groups intact, bin-packs by tokens. Use when
-  source file content helps validation (e.g., validating findings against
-  the original source code).
+- **COUNT_BASED**: N items in → N decisions out, no shared context.
+  Flattens all items, splits by count. Use for evidence-only validation.
 
-- **INDEPENDENT**: One group per batch, no bin-packing. Use when each group
-  needs its own independent LLM call and response (e.g., classifying
-  documents where each needs a separate verdict).
+- **EXTENDED_CONTEXT**: N items in → N decisions out, with shared context.
+  One group per batch. Use when source file content helps validation
+  (e.g., validating findings against the original source code).
+
+- **INDEPENDENT**: N items in → 1 decision out, atomic verdict.
+  One group per batch. Use when all items collectively inform a single
+  verdict (e.g., assessing a control using all evidence as a whole).
 
 Caching
 -------
