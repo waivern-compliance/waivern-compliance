@@ -120,7 +120,7 @@ def _create_unique_prompt_builder() -> Mock:
     call_count = 0
 
     def build_prompt_side_effect(
-        _items: Sequence[MockFinding], *, content: str | None = None
+        _groups: Sequence[ItemGroup[MockFinding]],
     ) -> str:
         nonlocal call_count
         call_count += 1
@@ -149,8 +149,8 @@ def _create_group(
 class TestDefaultLLMServiceCountBasedMode:
     """Tests for COUNT_BASED batching mode."""
 
-    async def test_passes_none_content_to_prompt_builder(self) -> None:
-        """COUNT_BASED mode should pass content=None to prompt builder."""
+    async def test_passes_groups_with_no_content_to_prompt_builder(self) -> None:
+        """COUNT_BASED mode passes groups with content=None to prompt builder."""
         # Arrange
         store = AsyncInMemoryStore()
         response = MockResponse(valid=True, reason="test")
@@ -169,10 +169,13 @@ class TestDefaultLLMServiceCountBasedMode:
             run_id="test-run",
         )
 
-        # Assert - prompt builder should be called with content=None
+        # Assert - prompt builder receives groups (COUNT_BASED creates synthetic
+        # groups with content=None after flattening)
         prompt_builder.build_prompt.assert_called()
-        _, kwargs = prompt_builder.build_prompt.call_args
-        assert kwargs["content"] is None
+        args, _ = prompt_builder.build_prompt.call_args
+        groups_arg = args[0]
+        assert len(groups_arg) == 1
+        assert groups_arg[0].content is None
 
     async def test_returns_response_for_each_batch(self) -> None:
         """Should return one response per batch processed."""
@@ -208,8 +211,8 @@ class TestDefaultLLMServiceCountBasedMode:
 class TestDefaultLLMServiceExtendedContextMode:
     """Tests for EXTENDED_CONTEXT batching mode."""
 
-    async def test_passes_content_to_prompt_builder(self) -> None:
-        """EXTENDED_CONTEXT mode should pass group content to prompt builder."""
+    async def test_passes_groups_with_content_to_prompt_builder(self) -> None:
+        """EXTENDED_CONTEXT mode passes groups with content to prompt builder."""
         # Arrange
         store = AsyncInMemoryStore()
         response = MockResponse(valid=True, reason="test")
@@ -228,10 +231,12 @@ class TestDefaultLLMServiceExtendedContextMode:
             run_id="test-run",
         )
 
-        # Assert - prompt builder should be called with the content
+        # Assert - prompt builder receives groups with content preserved
         prompt_builder.build_prompt.assert_called_once()
-        _, kwargs = prompt_builder.build_prompt.call_args
-        assert kwargs["content"] == "file content here"
+        args, _ = prompt_builder.build_prompt.call_args
+        groups_arg = args[0]
+        assert len(groups_arg) == 1
+        assert groups_arg[0].content == "file content here"
 
     async def test_returns_response_for_each_batch_with_groups(self) -> None:
         """Should return one response per batch of groups."""
@@ -317,11 +322,11 @@ class TestDefaultLLMServiceCaching:
 
         provider.invoke_structured = AsyncMock(side_effect=invoke_side_effect)
 
-        # Prompt builder returns unique prompts based on items
+        # Prompt builder returns unique prompts based on groups
         prompt_call_count = 0
 
         def build_prompt_side_effect(
-            _items: Sequence[MockFinding], *, content: str | None = None
+            _groups: Sequence[ItemGroup[MockFinding]],
         ) -> str:
             nonlocal prompt_call_count
             prompt_call_count += 1

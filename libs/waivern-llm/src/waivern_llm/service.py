@@ -230,21 +230,7 @@ class DefaultLLMService(LLMService):
             Tuple of (prompt, cache_key).
 
         """
-        all_items: list[T] = []
-        content: str | None = None
-        for group in batch.groups:
-            all_items.extend(group.items)
-            if group.content is not None:
-                if content is not None and content is not group.content:
-                    msg = (
-                        "Batch contains groups with different content. "
-                        "EXTENDED_CONTEXT assumes shared content per batch. "
-                        "Use INDEPENDENT mode for groups with distinct content."
-                    )
-                    raise ValueError(msg)
-                content = group.content
-
-        prompt = prompt_builder.build_prompt(all_items, content=content)
+        prompt = prompt_builder.build_prompt(batch.groups)
 
         cache_key = CacheEntry.compute_key(
             prompt=prompt,

@@ -109,18 +109,20 @@ class BatchingMode(Enum):
 
 
 class PromptBuilder[T: Finding](Protocol):
-    """Protocol for building prompts from items.
+    """Protocol for building prompts from groups of findings.
 
     Processors implement this to create domain-specific prompts.
-    The LLM service calls this for each batch it creates.
+    The LLM service calls this for each batch it creates, passing the
+    batch's groups directly. Each group carries its own items and
+    optional content.
     """
 
-    def build_prompt(self, items: Sequence[T], content: str | None = None) -> str:
-        """Build a complete prompt for the given items.
+    def build_prompt(self, groups: Sequence[ItemGroup[T]]) -> str:
+        """Build a complete prompt for the given groups.
 
         Args:
-            items: The findings to include in the prompt.
-            content: Optional shared context (e.g., source file content).
+            groups: The groups to include in the prompt. Each group contains
+                items and optional content (e.g., source file content).
 
         Returns:
             Complete prompt string including role/context instructions.

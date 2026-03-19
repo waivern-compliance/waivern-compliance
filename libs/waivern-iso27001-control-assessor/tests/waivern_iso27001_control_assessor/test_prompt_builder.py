@@ -1,5 +1,6 @@
 """Tests for ISO27001PromptBuilder — prompt content verification."""
 
+from waivern_llm import ItemGroup
 from waivern_security_evidence import SecurityEvidenceModel
 
 from waivern_iso27001_control_assessor.prompts.prompt_builder import (
@@ -44,6 +45,14 @@ def _make_evidence(
     )
 
 
+def _make_group(
+    items: list[SecurityEvidenceModel] | None = None,
+    content: str | None = None,
+) -> ItemGroup[SecurityEvidenceModel]:
+    """Build an ItemGroup for prompt builder tests."""
+    return ItemGroup(items=items or [], content=content)
+
+
 # =============================================================================
 # Prompt Content
 # =============================================================================
@@ -60,7 +69,7 @@ class TestPromptContent:
         """
         builder = _make_builder()
 
-        prompt = builder.build_prompt(items=[_make_evidence()], content=None)
+        prompt = builder.build_prompt([_make_group(items=[_make_evidence()])])
 
         assert GUIDANCE_TEXT in prompt
 
@@ -72,7 +81,7 @@ class TestPromptContent:
         builder = _make_builder()
         evidence = _make_evidence(description="bcrypt hash with cost factor 12")
 
-        prompt = builder.build_prompt(items=[evidence], content=None)
+        prompt = builder.build_prompt([_make_group(items=[evidence])])
 
         assert "bcrypt hash with cost factor 12" in prompt
 
@@ -85,7 +94,7 @@ class TestPromptContent:
         builder = _make_builder()
         doc_content = "All data at rest must be encrypted using AES-256."
 
-        prompt = builder.build_prompt(items=[], content=doc_content)
+        prompt = builder.build_prompt([_make_group(content=doc_content)])
 
         assert doc_content in prompt
 
@@ -99,7 +108,7 @@ class TestPromptContent:
         builder = _make_builder()
         doc_content = "Information security policy document content."
 
-        prompt = builder.build_prompt(items=[], content=doc_content)
+        prompt = builder.build_prompt([_make_group(content=doc_content)])
 
         assert isinstance(prompt, str)
         assert len(prompt) > 0
@@ -113,7 +122,7 @@ class TestPromptContent:
         """
         builder = _make_builder()
 
-        prompt = builder.build_prompt(items=[], content=None)
+        prompt = builder.build_prompt([_make_group()])
 
         assert "RISK ASSESSMENT PRIORITY" in prompt
         assert "risk treatment plan" in prompt
@@ -125,7 +134,7 @@ class TestPromptContent:
         """
         builder = _make_builder()
 
-        prompt = builder.build_prompt(items=[], content=None)
+        prompt = builder.build_prompt([_make_group()])
 
         assert "RECOMMENDED ACTIONS" in prompt
         assert "recommended_actions" in prompt

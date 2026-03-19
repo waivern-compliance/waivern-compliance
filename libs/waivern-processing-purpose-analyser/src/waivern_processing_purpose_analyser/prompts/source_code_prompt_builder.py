@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from typing import override
 
-from waivern_llm import PromptBuilder
+from waivern_llm import ItemGroup, PromptBuilder
 
 from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeIndicatorModel,
@@ -13,8 +13,8 @@ from waivern_processing_purpose_analyser.schemas.types import (
 class SourceCodePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorModel]):
     """Prompt builder for source code validation with full file content.
 
-    Uses INDEPENDENT batching mode — the `content` parameter contains
-    the full source file content for context-aware validation.
+    Uses INDEPENDENT batching mode — receives a single group per batch
+    where group.content contains the full source file content.
     """
 
     def __init__(self, validation_mode: str = "standard") -> None:
@@ -29,14 +29,13 @@ class SourceCodePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorModel]):
     @override
     def build_prompt(
         self,
-        items: Sequence[ProcessingPurposeIndicatorModel],
-        content: str | None = None,
+        groups: Sequence[ItemGroup[ProcessingPurposeIndicatorModel]],
     ) -> str:
         """Build validation prompt with full file content.
 
         Args:
-            items: Findings from this source file.
-            content: Full source file content (required for INDEPENDENT mode with source context).
+            groups: Groups of findings. INDEPENDENT mode provides a single
+                group with content containing the full source file.
 
         Returns:
             Formatted prompt string.
@@ -45,6 +44,8 @@ class SourceCodePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorModel]):
             ValueError: If items is empty or content is None.
 
         """
+        items = groups[0].items
+        content = groups[0].content
         if not items:
             raise ValueError("At least one finding is required")
         if content is None:

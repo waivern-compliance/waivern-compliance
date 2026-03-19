@@ -1,11 +1,12 @@
 """Tests for SourceCodePromptBuilder.
 
 Tests verify the PromptBuilder protocol implementation for source code validation
-with full file content (EXTENDED_CONTEXT mode).
+with full file content (INDEPENDENT mode).
 """
 
 import pytest
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
+from waivern_llm import ItemGroup
 
 from waivern_processing_purpose_analyser.prompts import SourceCodePromptBuilder
 from waivern_processing_purpose_analyser.schemas.types import (
@@ -46,7 +47,9 @@ class PaymentService {
 """
         builder = SourceCodePromptBuilder()
 
-        prompt = builder.build_prompt([finding], content=file_content)
+        prompt = builder.build_prompt(
+            [ItemGroup(items=[finding], content=file_content)]
+        )
 
         # File content must appear in prompt for context-aware validation
         assert "PaymentService" in prompt
@@ -59,14 +62,14 @@ class PaymentService {
         builder = SourceCodePromptBuilder()
 
         with pytest.raises(ValueError, match="content is required"):
-            builder.build_prompt([finding], content=None)
+            builder.build_prompt([ItemGroup(items=[finding], content=None)])
 
     def test_build_prompt_raises_when_items_empty(self) -> None:
         """ValueError raised when items list is empty."""
         builder = SourceCodePromptBuilder()
 
         with pytest.raises(ValueError, match="At least one finding"):
-            builder.build_prompt([], content="some content")
+            builder.build_prompt([ItemGroup(items=[], content="some content")])
 
     def test_build_prompt_includes_finding_ids(self) -> None:
         """Prompt includes finding IDs for response matching."""
@@ -76,7 +79,9 @@ class PaymentService {
         ]
         builder = SourceCodePromptBuilder()
 
-        prompt = builder.build_prompt(findings, content="file content here")
+        prompt = builder.build_prompt(
+            [ItemGroup(items=findings, content="file content here")]
+        )
 
         # Finding IDs must be in prompt for LLM response matching
         assert findings[0].id in prompt
@@ -87,6 +92,8 @@ class PaymentService {
         finding = _make_finding("Payment Processing", "payment")
         builder = SourceCodePromptBuilder(validation_mode="strict")
 
-        prompt = builder.build_prompt([finding], content="file content")
+        prompt = builder.build_prompt(
+            [ItemGroup(items=[finding], content="file content")]
+        )
 
         assert "strict" in prompt

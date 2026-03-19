@@ -93,8 +93,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         def create_response(groups, **kwargs):
             # Get the prompt builder and build prompt to extract finding IDs
             prompt_builder = kwargs["prompt_builder"]
-            items = groups[0].items
-            prompt = prompt_builder.build_prompt(items)
+            prompt = prompt_builder.build_prompt(groups)
             finding_ids = _extract_finding_ids_from_prompt(prompt)
             return LLMCompletionResult(
                 responses=[
@@ -140,8 +139,7 @@ class TestProcessingPurposeAnalyserLLMValidationBehaviour:
         # Dynamic mock that marks first finding as false positive
         def create_response(groups, **kwargs):
             prompt_builder = kwargs["prompt_builder"]
-            items = groups[0].items
-            prompt = prompt_builder.build_prompt(items)
+            prompt = prompt_builder.build_prompt(groups)
             finding_ids = _extract_finding_ids_from_prompt(prompt)
             return LLMCompletionResult(
                 responses=[

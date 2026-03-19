@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import override
 
-from waivern_llm import PromptBuilder
+from waivern_llm import ItemGroup, PromptBuilder
 from waivern_security_evidence import SecurityEvidenceModel
 
 
@@ -34,10 +34,11 @@ class ISO27001PromptBuilder(PromptBuilder[SecurityEvidenceModel]):
     1. ISO 27001 framework context and assessment methodology
     2. Control guidance text and Annex A attributes
     3. Technical evidence items (code/config findings with polarity)
-    4. Document context (policy/procedure content passed via the content param)
+    4. Document context (policy/procedure content from the group)
 
-    Uses EXTENDED_CONTEXT batching mode — document content arrives via the
-    content parameter, technical evidence via items.
+    Uses INDEPENDENT batching mode — receives a single group per batch
+    where group.content carries document context and group.items carries
+    technical evidence.
     """
 
     def __init__(self, control: ControlContext) -> None:
@@ -52,20 +53,22 @@ class ISO27001PromptBuilder(PromptBuilder[SecurityEvidenceModel]):
     @override
     def build_prompt(
         self,
-        items: Sequence[SecurityEvidenceModel],
-        content: str | None = None,
+        groups: Sequence[ItemGroup[SecurityEvidenceModel]],
     ) -> str:
         """Build an assessment prompt from evidence and document context.
 
         Args:
-            items: Filtered technical evidence items (may be empty for
-                document-only controls).
-            content: Formatted document context (policy/procedure text).
+            groups: Groups of findings. INDEPENDENT mode provides a single
+                group where items are technical evidence and content is
+                formatted document context (may be None).
 
         Returns:
             Complete prompt string for LLM assessment.
 
         """
+        items = groups[0].items
+        content = groups[0].content
+
         sections: list[str] = [
             _FRAMEWORK_CONTEXT,
             self._build_control_section(),
