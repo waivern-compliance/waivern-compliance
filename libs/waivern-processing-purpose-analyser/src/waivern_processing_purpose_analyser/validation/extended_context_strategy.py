@@ -1,6 +1,6 @@
 """Source code validation strategy for processing purpose findings.
 
-Uses LLMService with INDEPENDENT batching mode to validate findings
+Uses LLMService with EXTENDED_CONTEXT batching mode to validate findings
 with full source file content for context-aware validation.
 """
 
@@ -44,7 +44,7 @@ class SourceCodeValidationStrategy(
     """Validation strategy for source_code schema findings.
 
     Uses full file content in prompts for richer validation context.
-    Groups findings by source file and uses INDEPENDENT batching
+    Groups findings by source file and uses EXTENDED_CONTEXT batching
     so each source file gets its own LLM call.
     """
 
@@ -75,7 +75,7 @@ class SourceCodeValidationStrategy(
         Orchestrates the complete validation flow:
         1. Group findings by source file
         2. Create ItemGroup per source with file content
-        3. Call LLMService.complete() with INDEPENDENT mode
+        3. Call LLMService.complete() with EXTENDED_CONTEXT mode
         4. Map responses to validation outcome
 
         Args:
@@ -117,7 +117,7 @@ class SourceCodeValidationStrategy(
             groups,
             prompt_builder=prompt_builder,
             response_model=LLMValidationResponseModel,
-            batching_mode=BatchingMode.INDEPENDENT,
+            batching_mode=BatchingMode.EXTENDED_CONTEXT,
             run_id=run_id,
         )
 

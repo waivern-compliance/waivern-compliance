@@ -8,7 +8,7 @@ Architecture notes:
     This factory makes two types of decisions:
 
     1. **LLM Strategy Selection** (design-time, schema-dependent):
-       - source_code schema + content available → SourceCodeValidationStrategy (INDEPENDENT)
+       - source_code schema + content available → SourceCodeValidationStrategy (EXTENDED_CONTEXT)
        - Otherwise → ProcessingPurposeValidationStrategy (COUNT_BASED, evidence-only)
        This is determined by the input schema, not runtime configuration.
 
@@ -86,7 +86,7 @@ def create_validation_orchestrator(
         raise ValueError("llm_service is required for validation")
 
     # LLM Strategy: Design-time decision based on input schema
-    # - source_code: SourceCodeValidationStrategy (INDEPENDENT batching)
+    # - source_code: SourceCodeValidationStrategy (EXTENDED_CONTEXT batching)
     # - standard_input: ProcessingPurposeValidationStrategy (COUNT_BASED batching)
     llm_strategy: LLMValidationStrategy[ProcessingPurposeIndicatorModel, object]
     fallback_strategy: (
