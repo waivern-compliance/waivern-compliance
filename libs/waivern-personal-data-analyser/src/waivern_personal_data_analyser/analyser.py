@@ -14,7 +14,7 @@ from waivern_core.schemas import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm import LLMService
+from waivern_llm import LLMService, PendingBatchError
 
 from .pattern_matcher import PersonalDataPatternMatcher
 from .result_builder import PersonalDataResultBuilder
@@ -235,6 +235,8 @@ class PersonalDataAnalyser(Analyser):
 
             return result.kept_findings, result.all_succeeded, result
 
+        except PendingBatchError:
+            raise
         except Exception as e:
             logger.error(f"LLM validation failed: {e}")
             logger.warning("Returning original findings due to validation error")

@@ -9,7 +9,7 @@ from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import LLMService
+from waivern_llm import LLMService, PendingBatchError
 from waivern_source_code_analyser import SourceCodeDataModel
 
 from .result_builder import ProcessingPurposeResultBuilder
@@ -237,6 +237,8 @@ class ProcessingPurposeAnalyser(Analyser):
 
             return result.kept_findings, result.all_succeeded, result
 
+        except PendingBatchError:
+            raise
         except Exception as e:
             logger.error(f"LLM validation failed: {e}")
             logger.warning("Returning original findings due to validation error")

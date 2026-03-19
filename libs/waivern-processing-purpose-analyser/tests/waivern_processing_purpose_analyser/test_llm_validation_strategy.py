@@ -261,7 +261,7 @@ class TestProcessingPurposeValidationStrategy:
 class TestSourceCodeValidationStrategy:
     """Test suite for SourceCodeValidationStrategy.
 
-    Tests verify the strategy correctly uses LLMService with INDEPENDENT
+    Tests verify the strategy correctly uses LLMService with EXTENDED_CONTEXT
     batching mode and groups findings by source file.
     """
 
@@ -322,7 +322,7 @@ class TestSourceCodeValidationStrategy:
         config: LLMValidationConfig,
         sample_findings: list[ProcessingPurposeIndicatorModel],
     ) -> None:
-        """Strategy calls LLMService.complete() with INDEPENDENT mode."""
+        """Strategy calls LLMService.complete() with EXTENDED_CONTEXT mode."""
         mock_llm_service.complete.return_value = LLMCompletionResult(
             responses=[LLMValidationResponseModel(results=[])],
             skipped=[],
@@ -341,7 +341,7 @@ class TestSourceCodeValidationStrategy:
         # Verify other args
         assert isinstance(call_kwargs["prompt_builder"], SourceCodePromptBuilder)
         assert call_kwargs["response_model"] == LLMValidationResponseModel
-        assert call_kwargs["batching_mode"] == BatchingMode.INDEPENDENT
+        assert call_kwargs["batching_mode"] == BatchingMode.EXTENDED_CONTEXT
         assert call_kwargs["run_id"] == "test-run"
 
     def test_creates_groups_by_source_file(

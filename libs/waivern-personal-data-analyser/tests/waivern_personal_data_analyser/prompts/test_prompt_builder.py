@@ -5,6 +5,7 @@ Tests verify the PromptBuilder protocol implementation for personal data validat
 
 import pytest
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
+from waivern_llm import ItemGroup
 
 from waivern_personal_data_analyser.prompts import PersonalDataPromptBuilder
 from waivern_personal_data_analyser.schemas.types import (
@@ -37,7 +38,7 @@ class TestPersonalDataPromptBuilder:
         ]
         builder = PersonalDataPromptBuilder()
 
-        prompt = builder.build_prompt(findings)
+        prompt = builder.build_prompt([ItemGroup(items=findings)])
 
         # Finding IDs must be in prompt for response matching
         assert findings[0].id in prompt
@@ -51,16 +52,4 @@ class TestPersonalDataPromptBuilder:
         builder = PersonalDataPromptBuilder()
 
         with pytest.raises(ValueError, match="At least one finding"):
-            builder.build_prompt([])
-
-    def test_build_prompt_ignores_content_parameter(self) -> None:
-        """Content parameter doesn't affect output (COUNT_BASED mode)."""
-        finding = _make_finding("email", "test@example.com")
-        builder = PersonalDataPromptBuilder()
-
-        prompt_without_content = builder.build_prompt([finding])
-        prompt_with_content = builder.build_prompt(
-            [finding], content="Some file content"
-        )
-
-        assert prompt_without_content == prompt_with_content
+            builder.build_prompt([ItemGroup(items=[])])

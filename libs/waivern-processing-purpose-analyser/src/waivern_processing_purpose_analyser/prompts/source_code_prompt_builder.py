@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from typing import override
 
-from waivern_llm import PromptBuilder
+from waivern_llm import ItemGroup, PromptBuilder
 
 from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeIndicatorModel,
@@ -13,8 +13,8 @@ from waivern_processing_purpose_analyser.schemas.types import (
 class SourceCodePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorModel]):
     """Prompt builder for source code validation with full file content.
 
-    Uses INDEPENDENT batching mode — the `content` parameter contains
-    the full source file content for context-aware validation.
+    Uses EXTENDED_CONTEXT batching mode — receives one or more groups per
+    batch, each containing a source file's content and its findings.
     """
 
     def __init__(self, validation_mode: str = "standard") -> None:
@@ -29,39 +29,38 @@ class SourceCodePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorModel]):
     @override
     def build_prompt(
         self,
-        items: Sequence[ProcessingPurposeIndicatorModel],
-        content: str | None = None,
+        groups: Sequence[ItemGroup[ProcessingPurposeIndicatorModel]],
     ) -> str:
-        """Build validation prompt with full file content.
+        """Build validation prompt with per-file sections.
+
+        Each group represents a source file with its content and findings.
+        Multiple groups are bin-packed into a single batch by the planner.
 
         Args:
-            items: Findings from this source file.
-            content: Full source file content (required for INDEPENDENT mode with source context).
+            groups: Groups of findings, each with source file content.
 
         Returns:
             Formatted prompt string.
 
         Raises:
-            ValueError: If items is empty or content is None.
+            ValueError: If any group has empty items or None content.
 
         """
-        if not items:
-            raise ValueError("At least one finding is required")
-        if content is None:
-            raise ValueError("content is required for source code validation")
+        for group in groups:
+            if not group.items:
+                raise ValueError("At least one finding is required")
+            if group.content is None:
+                raise ValueError("content is required for source code validation")
 
-        source_file_section = self._build_source_file_section(items, content)
-        findings_section = self._build_findings_section(items)
+        file_sections = self._build_file_sections(groups)
+        total_findings = sum(len(g.items) for g in groups)
 
         return f"""You are an expert data processing analyst. Validate processing purpose indicators using the full source file context.
 
 **VALIDATION MODE:** {self._validation_mode}
 
-**SOURCE FILE:**
-{source_file_section}
-
-**FINDINGS TO VALIDATE:**
-{findings_section}
+**SOURCE FILES:**
+{file_sections}
 
 **VALIDATION CRITERIA:**
 - TRUE_POSITIVE: Actual business processing activities affecting real users/customers
@@ -91,7 +90,20 @@ IMPORTANT: Echo back the exact finding_id from each finding entry - do not modif
   ]
 }}
 
-Review all {len(items)} findings. Return ONLY the FALSE_POSITIVE ones (empty array if none):"""
+Review all {total_findings} findings. Return ONLY the FALSE_POSITIVE ones (empty array if none):"""
+
+    def _build_file_sections(
+        self,
+        groups: Sequence[ItemGroup[ProcessingPurposeIndicatorModel]],
+    ) -> str:
+        """Build per-file sections with content and findings for each group."""
+        sections: list[str] = []
+        for group in groups:
+            content = group.content or ""
+            file_header = self._build_source_file_section(group.items, content)
+            findings = self._build_findings_section(group.items)
+            sections.append(f"{file_header}\n\nFindings:\n{findings}")
+        return "\n\n".join(sections)
 
     def _build_source_file_section(
         self,

@@ -5,6 +5,7 @@ Tests verify the PromptBuilder protocol implementation for processing purpose va
 
 import pytest
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
+from waivern_llm import ItemGroup
 
 from waivern_processing_purpose_analyser.prompts.prompt_builder import (
     ProcessingPurposePromptBuilder,
@@ -40,7 +41,7 @@ class TestProcessingPurposePromptBuilder:
         ]
         builder = ProcessingPurposePromptBuilder()
 
-        prompt = builder.build_prompt(findings)
+        prompt = builder.build_prompt([ItemGroup(items=findings)])
 
         # Finding IDs must be in prompt for response matching
         assert findings[0].id in prompt
@@ -54,16 +55,4 @@ class TestProcessingPurposePromptBuilder:
         builder = ProcessingPurposePromptBuilder()
 
         with pytest.raises(ValueError, match="At least one finding"):
-            builder.build_prompt([])
-
-    def test_build_prompt_ignores_content_parameter(self) -> None:
-        """Content parameter doesn't affect output (COUNT_BASED mode)."""
-        finding = _make_finding("Payment Processing", "payment")
-        builder = ProcessingPurposePromptBuilder()
-
-        prompt_without_content = builder.build_prompt([finding])
-        prompt_with_content = builder.build_prompt(
-            [finding], content="Some file content that should be ignored"
-        )
-
-        assert prompt_without_content == prompt_with_content
+            builder.build_prompt([ItemGroup(items=[])])

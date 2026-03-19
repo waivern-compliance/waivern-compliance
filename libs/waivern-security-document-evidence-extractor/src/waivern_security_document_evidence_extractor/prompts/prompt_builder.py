@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from typing import override
 
 from waivern_core.types import SecurityDomain
-from waivern_llm import PromptBuilder
+from waivern_llm import ItemGroup, PromptBuilder
 
 from waivern_security_document_evidence_extractor.types import DocumentItem
 
@@ -34,26 +34,30 @@ _DOMAIN_DESCRIPTIONS: dict[SecurityDomain, str] = {
 class DomainClassificationPromptBuilder(PromptBuilder[DocumentItem]):
     """Builds prompts for classifying documents by security domain.
 
-    Uses EXTENDED_CONTEXT batching mode — the document text is passed
-    via the content parameter, not embedded in the items.
+    Uses INDEPENDENT batching mode — receives a single group per batch
+    where group.content carries the document text and group.items carries
+    the document item.
     """
 
     @override
     def build_prompt(
         self,
-        items: Sequence[DocumentItem],
-        content: str | None = None,
+        groups: Sequence[ItemGroup[DocumentItem]],
     ) -> str:
         """Build classification prompt for the given document.
 
         Args:
-            items: Document items (one per group in EXTENDED_CONTEXT mode).
-            content: Full document text to classify.
+            groups: Groups of findings. INDEPENDENT mode provides a single
+                group where content is the full document text and items
+                contains the document item.
 
         Returns:
             Complete prompt string for LLM domain classification.
 
         """
+        items = groups[0].items
+        content = groups[0].content
+
         domain_list = "\n".join(
             f"- {domain.value}: {desc}" for domain, desc in _DOMAIN_DESCRIPTIONS.items()
         )

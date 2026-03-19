@@ -8,7 +8,7 @@ from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import BatchingMode, ItemGroup, LLMService
+from waivern_llm import BatchingMode, ItemGroup, LLMService, PendingBatchError
 from waivern_rulesets.iso27001_domains import ISO27001DomainsRule
 from waivern_security_document_evidence_extractor import SecurityDocumentContextModel
 from waivern_security_evidence import SecurityEvidenceModel
@@ -355,6 +355,8 @@ class ISO27001Assessor(Analyser):
                 output_schema=output_schema,
             )
 
+        except PendingBatchError:
+            raise
         except Exception as e:
             logger.error(
                 f"ISO27001Assessor [{rule.control_ref}]: LLM assessment failed: {e}"

@@ -113,7 +113,7 @@ class PaymentService {
             # Capture prompt from prompt_builder
             prompt_builder = kwargs["prompt_builder"]
             for group in groups:
-                prompt = prompt_builder.build_prompt(group.items, content=group.content)
+                prompt = prompt_builder.build_prompt([group])
                 captured_prompts.append(prompt)
             return LLMCompletionResult(
                 responses=[LLMValidationResponseModel(results=[])],
@@ -165,7 +165,7 @@ class PaymentService {
             results: list[LLMValidationResultModel] = []
 
             for group in groups:
-                prompt = prompt_builder.build_prompt(group.items, content=group.content)
+                prompt = prompt_builder.build_prompt([group])
                 finding_ids = _extract_finding_ids_from_prompt(prompt)
                 if not finding_ids:
                     continue

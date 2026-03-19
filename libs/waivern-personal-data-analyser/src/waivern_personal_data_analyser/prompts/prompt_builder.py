@@ -7,7 +7,7 @@ for personal data indicators.
 from collections.abc import Sequence
 from typing import override
 
-from waivern_llm import PromptBuilder
+from waivern_llm import ItemGroup, PromptBuilder
 
 from waivern_personal_data_analyser.schemas.types import PersonalDataIndicatorModel
 
@@ -15,7 +15,8 @@ from waivern_personal_data_analyser.schemas.types import PersonalDataIndicatorMo
 class PersonalDataPromptBuilder(PromptBuilder[PersonalDataIndicatorModel]):
     """Builds validation prompts for personal data indicators.
 
-    Uses COUNT_BASED batching mode, so the content parameter is ignored.
+    Uses COUNT_BASED batching mode — receives a single group per batch
+    with content=None.
     """
 
     def __init__(self, validation_mode: str = "standard") -> None:
@@ -30,14 +31,13 @@ class PersonalDataPromptBuilder(PromptBuilder[PersonalDataIndicatorModel]):
     @override
     def build_prompt(
         self,
-        items: Sequence[PersonalDataIndicatorModel],
-        content: str | None = None,
+        groups: Sequence[ItemGroup[PersonalDataIndicatorModel]],
     ) -> str:
         """Build validation prompt for the given findings.
 
         Args:
-            items: Findings to validate.
-            content: Ignored - COUNT_BASED mode doesn't use shared content.
+            groups: Groups of findings. COUNT_BASED mode provides a single
+                group with content=None.
 
         Returns:
             Complete prompt string for LLM validation.
@@ -46,6 +46,7 @@ class PersonalDataPromptBuilder(PromptBuilder[PersonalDataIndicatorModel]):
             ValueError: If items is empty.
 
         """
+        items = groups[0].items
         if not items:
             raise ValueError("At least one finding must be provided")
 

@@ -7,7 +7,7 @@ for processing purpose indicators.
 from collections.abc import Sequence
 from typing import override
 
-from waivern_llm import PromptBuilder
+from waivern_llm import ItemGroup, PromptBuilder
 
 from waivern_processing_purpose_analyser.schemas.types import (
     ProcessingPurposeIndicatorModel,
@@ -17,7 +17,8 @@ from waivern_processing_purpose_analyser.schemas.types import (
 class ProcessingPurposePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorModel]):
     """Builds validation prompts for processing purpose indicators.
 
-    Uses COUNT_BASED batching mode, so the content parameter is ignored.
+    Uses COUNT_BASED batching mode — receives a single group per batch
+    with content=None.
     """
 
     def __init__(
@@ -38,14 +39,13 @@ class ProcessingPurposePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorMod
     @override
     def build_prompt(
         self,
-        items: Sequence[ProcessingPurposeIndicatorModel],
-        content: str | None = None,
+        groups: Sequence[ItemGroup[ProcessingPurposeIndicatorModel]],
     ) -> str:
         """Build validation prompt for the given findings.
 
         Args:
-            items: Findings to validate.
-            content: Ignored - COUNT_BASED mode doesn't use shared content.
+            groups: Groups of findings. COUNT_BASED mode provides a single
+                group with content=None.
 
         Returns:
             Complete prompt string for LLM validation.
@@ -54,6 +54,7 @@ class ProcessingPurposePromptBuilder(PromptBuilder[ProcessingPurposeIndicatorMod
             ValueError: If items is empty.
 
         """
+        items = groups[0].items
         if not items:
             raise ValueError("At least one finding must be provided")
 

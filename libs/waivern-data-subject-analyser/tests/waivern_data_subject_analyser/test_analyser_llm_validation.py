@@ -93,8 +93,7 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
             assert prompt_builder is not None
             # Build prompt to extract finding IDs
             groups = args[0]
-            items = groups[0].items
-            prompt = prompt_builder.build_prompt(items)
+            prompt = prompt_builder.build_prompt(groups)
             finding_ids = _extract_finding_ids_from_prompt(prompt)
             return LLMCompletionResult(
                 responses=[
@@ -167,8 +166,7 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
             prompt_builder = kwargs.get("prompt_builder")
             assert prompt_builder is not None
             groups = args[0]
-            items = groups[0].items
-            prompt = prompt_builder.build_prompt(items)
+            prompt = prompt_builder.build_prompt(groups)
             finding_ids = _extract_finding_ids_from_prompt(prompt)
             return LLMCompletionResult(
                 responses=[
@@ -337,8 +335,7 @@ class TestDataSubjectAnalyserLLMValidationBehaviour:
             prompt_builder = kwargs.get("prompt_builder")
             assert prompt_builder is not None
             groups = args[0]
-            items = groups[0].items
-            prompt = prompt_builder.build_prompt(items)
+            prompt = prompt_builder.build_prompt(groups)
             finding_ids = _extract_finding_ids_from_prompt(prompt)
             return LLMCompletionResult(
                 responses=[
