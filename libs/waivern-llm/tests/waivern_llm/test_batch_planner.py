@@ -1,6 +1,6 @@
 """Tests for BatchPlanner in LLM Service v2.
 
-Business behaviour: Plans batches for LLM processing using one-group-per-batch
+Business behaviour: Plans batches for LLM processing using bin-packed groups
 (EXTENDED_CONTEXT), one-group-per-batch isolation (INDEPENDENT),
 or count-based splitting (COUNT_BASED).
 """
@@ -55,8 +55,8 @@ def _create_group(
 # =============================================================================
 
 
-class TestExtendedContextBasicBatching:
-    """Tests for EXTENDED_CONTEXT mode basic batching behaviour."""
+class TestExtendedContextBinPacking:
+    """Tests for EXTENDED_CONTEXT mode bin-packing behaviour."""
 
     def test_single_group_creates_single_batch(self) -> None:
         """Single group that fits should create one batch containing that group."""
@@ -70,31 +70,108 @@ class TestExtendedContextBasicBatching:
         assert len(plan.skipped) == 0
         assert plan.batches[0].groups == [group]
 
-    def test_multiple_groups_each_get_own_batch(self) -> None:
-        """Each group should produce its own batch — no bin-packing."""
-        group1 = _create_group(content="a" * 100, item_count=2, group_id="g1")
-        group2 = _create_group(content="b" * 100, item_count=2, group_id="g2")
+    def test_small_groups_packed_into_single_batch(self) -> None:
+        """Multiple small groups that fit within capacity should be packed into one batch."""
+        # 3 groups, each ~75 tokens (300 chars × 0.25 + 1 item × 50)
+        group1 = _create_group(content="a" * 100, item_count=1, group_id="g1")
+        group2 = _create_group(content="b" * 100, item_count=1, group_id="g2")
+        group3 = _create_group(content="c" * 100, item_count=1, group_id="g3")
+        planner = BatchPlanner(max_payload_tokens=10_000)
+
+        plan = planner.plan(
+            [group1, group2, group3], mode=BatchingMode.EXTENDED_CONTEXT
+        )
+
+        assert len(plan.batches) == 1
+        assert len(plan.batches[0].groups) == 3
+        assert len(plan.skipped) == 0
+
+    def test_groups_exceeding_capacity_spill_to_new_batch(self) -> None:
+        """When groups don't all fit in one batch, they spill into additional batches."""
+        # Each group ~5,050 tokens (20,000 chars × 0.25 + 1 × 50)
+        # Capacity 6,000 → each group alone fills a batch
+        # 3 groups → 3 batches
+        group1 = _create_group(content="a" * 20_000, item_count=1, group_id="g1")
+        group2 = _create_group(content="b" * 20_000, item_count=1, group_id="g2")
+        group3 = _create_group(content="c" * 20_000, item_count=1, group_id="g3")
+        planner = BatchPlanner(max_payload_tokens=6_000)
+
+        plan = planner.plan(
+            [group1, group2, group3], mode=BatchingMode.EXTENDED_CONTEXT
+        )
+
+        assert len(plan.batches) == 3
+        assert all(len(b.groups) == 1 for b in plan.batches)
+        assert len(plan.skipped) == 0
+
+    def test_largest_groups_placed_first(self) -> None:
+        """FFD sorts groups largest-first, so the largest group ends up in the first batch."""
+        # Input order: small, medium, large — FFD should place large first
+        small = _create_group(content="a" * 100, item_count=1, group_id="small")
+        medium = _create_group(content="b" * 2_000, item_count=1, group_id="medium")
+        large = _create_group(content="c" * 8_000, item_count=1, group_id="large")
+        planner = BatchPlanner(max_payload_tokens=10_000)
+
+        plan = planner.plan([small, medium, large], mode=BatchingMode.EXTENDED_CONTEXT)
+
+        # All should fit in one batch; first group should be the largest
+        assert len(plan.batches) == 1
+        group_ids = [g.group_id for g in plan.batches[0].groups]
+        assert group_ids[0] == "large"
+
+    def test_small_groups_fill_gaps_after_large_groups(self) -> None:
+        """After placing a large group, small groups fill remaining capacity in the same batch."""
+        # large: ~4,050 tokens (16,000 chars × 0.25 + 1 × 50)
+        # small1, small2: ~75 tokens each (100 chars × 0.25 + 1 × 50)
+        # Capacity: 5,000 → large + small1 + small2 = ~4,200, fits in one batch
+        large = _create_group(content="a" * 16_000, item_count=1, group_id="large")
+        small1 = _create_group(content="b" * 100, item_count=1, group_id="small1")
+        small2 = _create_group(content="c" * 100, item_count=1, group_id="small2")
+        planner = BatchPlanner(max_payload_tokens=5_000)
+
+        plan = planner.plan([small1, large, small2], mode=BatchingMode.EXTENDED_CONTEXT)
+
+        # All three should be packed into one batch
+        assert len(plan.batches) == 1
+        assert len(plan.batches[0].groups) == 3
+
+    def test_each_group_fills_capacity_produces_one_batch_per_group(self) -> None:
+        """When each group nearly fills capacity, no packing is possible — N groups → N batches."""
+        # Each group ~5,050 tokens (20,000 chars × 0.25 + 1 × 50)
+        # Capacity 5,100 → each group barely fits alone, no room for another
+        group1 = _create_group(content="a" * 20_000, item_count=1, group_id="g1")
+        group2 = _create_group(content="b" * 20_000, item_count=1, group_id="g2")
+        group3 = _create_group(content="c" * 20_000, item_count=1, group_id="g3")
+        planner = BatchPlanner(max_payload_tokens=5_100)
+
+        plan = planner.plan(
+            [group1, group2, group3], mode=BatchingMode.EXTENDED_CONTEXT
+        )
+
+        assert len(plan.batches) == 3
+        assert all(len(b.groups) == 1 for b in plan.batches)
+
+    def test_batch_token_estimate_sums_all_groups(self) -> None:
+        """PlannedBatch.estimated_tokens should equal the sum of all packed groups' token estimates."""
+        from waivern_llm.token_estimation import TOKENS_PER_FINDING, estimate_tokens
+
+        content_a = "a" * 400  # ~100 tokens
+        content_b = "b" * 800  # ~200 tokens
+        group1 = _create_group(content=content_a, item_count=2, group_id="g1")
+        group2 = _create_group(content=content_b, item_count=1, group_id="g2")
         planner = BatchPlanner(max_payload_tokens=10_000)
 
         plan = planner.plan([group1, group2], mode=BatchingMode.EXTENDED_CONTEXT)
 
-        assert len(plan.batches) == 2
-        assert len(plan.skipped) == 0
-        assert plan.batches[0].groups == [group1]
-        assert plan.batches[1].groups == [group2]
-
-    def test_group_order_preserved(self) -> None:
-        """Batches should preserve input group order (no sorting)."""
-        small = _create_group(content="a" * 100, item_count=1, group_id="small")
-        large = _create_group(content="c" * 4000, item_count=1, group_id="large")
-        planner = BatchPlanner(max_payload_tokens=10_000)
-
-        # Input order: small THEN large
-        plan = planner.plan([small, large], mode=BatchingMode.EXTENDED_CONTEXT)
-
-        assert len(plan.batches) == 2
-        assert plan.batches[0].groups[0].group_id == "small"
-        assert plan.batches[1].groups[0].group_id == "large"
+        # Both should be packed into one batch
+        assert len(plan.batches) == 1
+        expected = (
+            estimate_tokens(content_a)
+            + 2 * TOKENS_PER_FINDING
+            + estimate_tokens(content_b)
+            + 1 * TOKENS_PER_FINDING
+        )
+        assert plan.batches[0].estimated_tokens == expected
 
 
 # =============================================================================

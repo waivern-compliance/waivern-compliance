@@ -245,13 +245,15 @@ class TestDefaultLLMServiceExtendedContextMode:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        # Small max_payload forces groups into separate batches
         service = DefaultLLMService(provider=provider, store=store, batch_size=50)
 
-        # Two groups sharing the same content (EXTENDED_CONTEXT contract)
-        shared_content = "shared file content"
-        group1 = _create_group(content=shared_content, item_count=2, group_id="g1")
-        group2 = _create_group(content=shared_content, item_count=2, group_id="g2")
+        # Two large groups that exceed bin-packing capacity when combined.
+        # context_window=100,000 → max_payload≈66,130 tokens.
+        # Each group: 150,000 chars × 0.25 = 37,500 tokens → can't share a batch.
+        large_content_a = "a" * 150_000
+        large_content_b = "b" * 150_000
+        group1 = _create_group(content=large_content_a, item_count=2, group_id="g1")
+        group2 = _create_group(content=large_content_b, item_count=2, group_id="g2")
 
         # Act
         results = await service.complete(
@@ -262,7 +264,7 @@ class TestDefaultLLMServiceExtendedContextMode:
             run_id="test-run",
         )
 
-        # Assert - each group gets its own batch, so we get 2 responses
+        # Assert - groups too large to share a batch, so we get 2 responses
         assert len(results.responses) == 2
         assert all(isinstance(r, MockResponse) for r in results.responses)
 

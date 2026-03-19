@@ -1,6 +1,6 @@
 """Batch planner for LLM Service v2.
 
-Plans batches for LLM processing using one-group-per-batch wrapping
+Plans batches for LLM processing using token-bounded bin-packing
 (EXTENDED_CONTEXT), one-group-per-batch isolation (INDEPENDENT),
 or count-based splitting (COUNT_BASED).
 """
@@ -50,8 +50,7 @@ class BatchPlanner:
     """Plans batches for LLM processing.
 
     Supports three modes:
-    - EXTENDED_CONTEXT: One group per batch, with optimisation hook for future
-      splitting/bin-packing
+    - EXTENDED_CONTEXT: Token-bounded bin-packing (first-fit-decreasing)
     - INDEPENDENT: One group per batch (preserves input order)
     - COUNT_BASED: Simple count-based splitting with flattened items
     """
@@ -137,12 +136,12 @@ class BatchPlanner:
         self,
         groups: Sequence[ItemGroup[T]],
     ) -> BatchPlan[T]:
-        """Plan batches with one group per batch.
+        """Plan batches by bin-packing groups into token-bounded batches.
 
         Algorithm:
         1. Validate groups and estimate tokens
-        2. Pass through optimisation hook (no-op for now)
-        3. Wrap each valid group in its own PlannedBatch
+        2. Bin-pack groups into token-bounded batches (first-fit-decreasing)
+        3. Create PlannedBatch for each packed batch
         """
         if not groups:
             return BatchPlan(batches=[], skipped=[])
@@ -150,8 +149,8 @@ class BatchPlanner:
         group_tokens, skipped = self._validate_groups(groups)
         optimised = self._optimise_extended_context_batches(group_tokens)
         batches = [
-            PlannedBatch(groups=[group], estimated_tokens=tokens)
-            for group, tokens in optimised
+            PlannedBatch(groups=packed_groups, estimated_tokens=tokens)
+            for packed_groups, tokens in optimised
         ]
 
         return BatchPlan(batches=batches, skipped=skipped)
@@ -159,15 +158,36 @@ class BatchPlanner:
     def _optimise_extended_context_batches[T: Finding](
         self,
         group_tokens: list[tuple[ItemGroup[T], int]],
-    ) -> list[tuple[ItemGroup[T], int]]:
-        """Optimise validated groups before batch creation (no-op for now).
+    ) -> list[tuple[list[ItemGroup[T]], int]]:
+        """Pack groups into token-bounded batches using first-fit-decreasing.
 
-        Currently returns groups unchanged — each group becomes its own batch.
-        Future optimisations that plug in here:
-        - Oversized group splitting: split items into chunks, each with same content
-        - Same-context bin-packing: combine groups sharing identical content
+        Algorithm:
+        1. Sort groups by token count (largest first)
+        2. For each group, find the first batch with enough remaining capacity
+        3. If no batch fits, create a new batch
         """
-        return group_tokens
+        if not group_tokens:
+            return []
+
+        # Sort largest first (first-fit-decreasing)
+        sorted_groups = sorted(group_tokens, key=lambda gt: gt[1], reverse=True)
+
+        # Each bin: (list of groups, total tokens)
+        bins: list[tuple[list[ItemGroup[T]], int]] = []
+
+        for group, tokens in sorted_groups:
+            placed = False
+            for i, (bin_groups, bin_tokens) in enumerate(bins):
+                if bin_tokens + tokens <= self._max_payload_tokens:
+                    bin_groups.append(group)
+                    bins[i] = (bin_groups, bin_tokens + tokens)
+                    placed = True
+                    break
+
+            if not placed:
+                bins.append(([group], tokens))
+
+        return bins
 
     def _plan_independent[T: Finding](
         self,
