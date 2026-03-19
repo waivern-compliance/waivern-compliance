@@ -257,33 +257,9 @@ class TestDefaultLLMServiceExtendedContextMode:
             run_id="test-run",
         )
 
-        # Assert - both groups fit in one batch (small content)
-        # so we get 1 response
-        assert len(results.responses) >= 1
+        # Assert - each group gets its own batch, so we get 2 responses
+        assert len(results.responses) == 2
         assert all(isinstance(r, MockResponse) for r in results.responses)
-
-    async def test_raises_when_batch_contains_groups_with_different_content(
-        self,
-    ) -> None:
-        """Should raise ValueError when bin-packed groups have different content."""
-        store = AsyncInMemoryStore()
-        response = MockResponse(valid=True, reason="test")
-        provider = _create_mock_provider(response)
-        prompt_builder = _create_mock_prompt_builder()
-        # Large max_payload so both groups are bin-packed into one batch
-        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
-
-        group1 = _create_group(content="content A", item_count=1, group_id="g1")
-        group2 = _create_group(content="content B", item_count=1, group_id="g2")
-
-        with pytest.raises(ValueError, match="different content"):
-            await service.complete(
-                groups=[group1, group2],
-                prompt_builder=prompt_builder,
-                response_model=MockResponse,
-                batching_mode=BatchingMode.EXTENDED_CONTEXT,
-                run_id="test-run",
-            )
 
 
 # =============================================================================

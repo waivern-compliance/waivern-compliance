@@ -1,7 +1,8 @@
 """Tests for BatchPlanner in LLM Service v2.
 
-Business behaviour: Plans batches for LLM processing using either
-token-aware bin-packing (EXTENDED_CONTEXT) or count-based splitting (COUNT_BASED).
+Business behaviour: Plans batches for LLM processing using one-group-per-batch
+(EXTENDED_CONTEXT), one-group-per-batch isolation (INDEPENDENT),
+or count-based splitting (COUNT_BASED).
 """
 
 from waivern_llm.batch_planner import BatchPlanner
@@ -69,60 +70,31 @@ class TestExtendedContextBasicBatching:
         assert len(plan.skipped) == 0
         assert plan.batches[0].groups == [group]
 
-    def test_multiple_groups_fit_in_single_batch(self) -> None:
-        """Groups whose combined tokens fit should be in one batch."""
-        # Two small groups that together fit within 10,000 tokens
-        group1 = _create_group(
-            content="a" * 100, item_count=2, group_id="g1"
-        )  # ~25 + 100 tokens
-        group2 = _create_group(
-            content="b" * 100, item_count=2, group_id="g2"
-        )  # ~25 + 100 tokens
+    def test_multiple_groups_each_get_own_batch(self) -> None:
+        """Each group should produce its own batch — no bin-packing."""
+        group1 = _create_group(content="a" * 100, item_count=2, group_id="g1")
+        group2 = _create_group(content="b" * 100, item_count=2, group_id="g2")
         planner = BatchPlanner(max_payload_tokens=10_000)
 
         plan = planner.plan([group1, group2], mode=BatchingMode.EXTENDED_CONTEXT)
 
-        assert len(plan.batches) == 1
-        assert len(plan.batches[0].groups) == 2
-        assert group1 in plan.batches[0].groups
-        assert group2 in plan.batches[0].groups
-
-    def test_groups_split_into_multiple_batches_when_exceeding_limit(self) -> None:
-        """Groups that don't fit together should be split into multiple batches."""
-        # Each group is ~2500 tokens (10,000 chars × 0.25), so only one fits in 3,000
-        group1 = _create_group(content="a" * 10_000, item_count=1, group_id="g1")
-        group2 = _create_group(content="b" * 10_000, item_count=1, group_id="g2")
-        planner = BatchPlanner(max_payload_tokens=3_000)
-
-        plan = planner.plan([group1, group2], mode=BatchingMode.EXTENDED_CONTEXT)
-
         assert len(plan.batches) == 2
-        assert len(plan.batches[0].groups) == 1
-        assert len(plan.batches[1].groups) == 1
+        assert len(plan.skipped) == 0
+        assert plan.batches[0].groups == [group1]
+        assert plan.batches[1].groups == [group2]
 
-    def test_largest_groups_placed_first_for_better_packing(self) -> None:
-        """Groups should be sorted by tokens descending for first-fit decreasing.
-
-        Verifies the algorithm sorts groups largest-first by checking the OUTPUT
-        order reflects the sorted order, not the input order.
-        """
-        # Create groups with clearly different sizes
-        small = _create_group(
-            content="a" * 100, item_count=1, group_id="small"
-        )  # ~25 tokens
-        large = _create_group(
-            content="c" * 4000, item_count=1, group_id="large"
-        )  # ~1000 tokens
-        planner = BatchPlanner(max_payload_tokens=2_000)
+    def test_group_order_preserved(self) -> None:
+        """Batches should preserve input group order (no sorting)."""
+        small = _create_group(content="a" * 100, item_count=1, group_id="small")
+        large = _create_group(content="c" * 4000, item_count=1, group_id="large")
+        planner = BatchPlanner(max_payload_tokens=10_000)
 
         # Input order: small THEN large
         plan = planner.plan([small, large], mode=BatchingMode.EXTENDED_CONTEXT)
 
-        # After sorting: large, small (both fit in one batch)
-        assert len(plan.batches) == 1
-        # Large should be FIRST because sorting processes largest first
-        assert plan.batches[0].groups[0].group_id == "large"
-        assert plan.batches[0].groups[1].group_id == "small"
+        assert len(plan.batches) == 2
+        assert plan.batches[0].groups[0].group_id == "small"
+        assert plan.batches[1].groups[0].group_id == "large"
 
 
 # =============================================================================
