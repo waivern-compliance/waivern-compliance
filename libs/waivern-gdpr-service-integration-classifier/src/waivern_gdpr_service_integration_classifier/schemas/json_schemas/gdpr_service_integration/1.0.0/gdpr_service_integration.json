@@ -1,0 +1,317 @@
+{
+  "$defs": {
+    "BaseAnalysisOutputMetadata": {
+      "additionalProperties": true,
+      "description": "Base metadata for analysis outputs.",
+      "properties": {
+        "ruleset_used": {
+          "description": "Name of the ruleset used for analysis",
+          "title": "Ruleset Used",
+          "type": "string"
+        },
+        "llm_validation_enabled": {
+          "description": "Whether LLM validation was enabled for this analysis",
+          "title": "Llm Validation Enabled",
+          "type": "boolean"
+        },
+        "analysis_timestamp": {
+          "description": "ISO 8601 timestamp when the analysis was performed",
+          "title": "Analysis Timestamp",
+          "type": "string"
+        },
+        "evidence_context_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Size of context used for evidence extraction",
+          "title": "Evidence Context Size"
+        }
+      },
+      "required": [
+        "ruleset_used",
+        "llm_validation_enabled"
+      ],
+      "title": "BaseAnalysisOutputMetadata",
+      "type": "object"
+    },
+    "BaseFindingEvidence": {
+      "description": "Evidence item with content and collection timestamp.",
+      "properties": {
+        "content": {
+          "description": "The evidence content snippet",
+          "title": "Content",
+          "type": "string"
+        },
+        "collection_timestamp": {
+          "description": "When the evidence was collected",
+          "title": "Collection Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "BaseFindingEvidence",
+      "type": "object"
+    },
+    "GDPRServiceIntegrationFindingMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata for GDPR service integration classification findings.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "properties": {
+        "source": {
+          "description": "Source file or location where the data was found",
+          "title": "Source",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
+          "title": "Context",
+          "type": "object"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "GDPRServiceIntegrationFindingMetadata",
+      "type": "object"
+    },
+    "GDPRServiceIntegrationFindingModel": {
+      "description": "GDPR service integration classification finding structure.\n\nRepresents a service integration indicator that has been enriched with\nGDPR-specific classification information. Contains both the original\nindicator fields and the GDPR assessment.\n\nInherits from BaseFindingModel[GDPRServiceIntegrationFindingMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: GDPRServiceIntegrationFindingMetadata - Required metadata with source\n- require_review: bool | None - Whether this finding requires human review",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this finding (UUID)",
+          "title": "Id",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "Evidence items with content and timestamps for this finding",
+          "items": {
+            "$ref": "#/$defs/BaseFindingEvidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "matched_patterns": {
+          "description": "Patterns that were matched during analysis with occurrence counts",
+          "items": {
+            "$ref": "#/$defs/PatternMatchDetail"
+          },
+          "minItems": 1,
+          "title": "Matched Patterns",
+          "type": "array"
+        },
+        "metadata": {
+          "$ref": "#/$defs/GDPRServiceIntegrationFindingMetadata",
+          "description": "Metadata with source and context information"
+        },
+        "require_review": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether this finding requires human review. Only present when True.",
+          "title": "Require Review"
+        },
+        "service_category": {
+          "description": "Service category slug from indicator (e.g., 'cloud_infrastructure', 'communication')",
+          "title": "Service Category",
+          "type": "string"
+        },
+        "service_integration_purpose": {
+          "description": "Purpose category from the service integration detection rule (e.g., 'operational', 'analytics')",
+          "title": "Service Integration Purpose",
+          "type": "string"
+        },
+        "gdpr_purpose_category": {
+          "description": "GDPR purpose category from classification (e.g., 'operational', 'context_dependent')",
+          "title": "Gdpr Purpose Category",
+          "type": "string"
+        },
+        "article_references": {
+          "description": "Relevant GDPR article references (e.g., 'Article 28', 'Article 32')",
+          "items": {
+            "type": "string"
+          },
+          "title": "Article References",
+          "type": "array"
+        },
+        "typical_lawful_bases": {
+          "description": "Typical GDPR Article 6 lawful bases for this service integration",
+          "items": {
+            "type": "string"
+          },
+          "title": "Typical Lawful Bases",
+          "type": "array"
+        },
+        "sensitive_purpose": {
+          "default": false,
+          "description": "Whether this service integration's purpose is privacy-sensitive",
+          "title": "Sensitive Purpose",
+          "type": "boolean"
+        },
+        "dpia_recommendation": {
+          "default": "not_required",
+          "description": "DPIA recommendation level for this service integration",
+          "enum": [
+            "required",
+            "recommended",
+            "not_required"
+          ],
+          "title": "Dpia Recommendation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence",
+        "matched_patterns",
+        "metadata",
+        "service_category",
+        "service_integration_purpose",
+        "gdpr_purpose_category"
+      ],
+      "title": "GDPRServiceIntegrationFindingModel",
+      "type": "object"
+    },
+    "GDPRServiceIntegrationSummary": {
+      "description": "Summary statistics for GDPR service integration classification findings.",
+      "properties": {
+        "total_findings": {
+          "description": "Total number of classified service integration findings",
+          "minimum": 0,
+          "title": "Total Findings",
+          "type": "integer"
+        },
+        "gdpr_purpose_categories": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Count of findings per GDPR purpose category",
+          "title": "Gdpr Purpose Categories",
+          "type": "object"
+        },
+        "sensitive_purposes_count": {
+          "description": "Number of findings with sensitive purposes",
+          "minimum": 0,
+          "title": "Sensitive Purposes Count",
+          "type": "integer"
+        },
+        "dpia_required_count": {
+          "description": "Number of findings where DPIA is required",
+          "minimum": 0,
+          "title": "Dpia Required Count",
+          "type": "integer"
+        },
+        "requires_review_count": {
+          "description": "Number of findings that require human review",
+          "minimum": 0,
+          "title": "Requires Review Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total_findings",
+        "sensitive_purposes_count",
+        "dpia_required_count",
+        "requires_review_count"
+      ],
+      "title": "GDPRServiceIntegrationSummary",
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "PatternMatchDetail": {
+      "description": "Detail about a matched pattern including occurrence count.\n\nThis structured type replaces simple pattern strings to provide\nricher information about how many times each pattern was found,\nwhich is useful for auditing and confidence assessment.",
+      "properties": {
+        "pattern": {
+          "description": "The pattern that matched",
+          "title": "Pattern",
+          "type": "string"
+        },
+        "match_count": {
+          "description": "Number of times this pattern matched in the content",
+          "minimum": 1,
+          "title": "Match Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pattern",
+        "match_count"
+      ],
+      "title": "PatternMatchDetail",
+      "type": "object"
+    }
+  },
+  "description": "Complete output structure for gdpr_service_integration schema.\n\nThis model represents the full wire format for GDPR service integration\nclassification results, including findings enriched with GDPR-specific\ninformation, summary statistics, and analysis metadata.",
+  "properties": {
+    "findings": {
+      "description": "List of service integration findings with GDPR classification",
+      "items": {
+        "$ref": "#/$defs/GDPRServiceIntegrationFindingModel"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/GDPRServiceIntegrationSummary",
+      "description": "Summary statistics of the GDPR classification analysis"
+    },
+    "analysis_metadata": {
+      "$ref": "#/$defs/BaseAnalysisOutputMetadata",
+      "description": "Metadata about the classification process"
+    }
+  },
+  "required": [
+    "findings",
+    "summary",
+    "analysis_metadata"
+  ],
+  "title": "GDPRServiceIntegrationFindingOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}

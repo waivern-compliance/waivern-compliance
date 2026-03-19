@@ -714,3 +714,300 @@ class TestSummaryDomainBreakdown:
         assert domains[0]["findings_count"] == 2
         assert domains[1]["security_domain"] == "logging_monitoring"
         assert domains[1]["findings_count"] == 1
+
+
+# =============================================================================
+# Service integration indicator → security evidence mapping
+# =============================================================================
+
+
+class TestNormaliseServiceIntegration:
+    """Tests for service_integration_indicator → security evidence normalisation."""
+
+    @pytest.fixture
+    def valid_config(self) -> SecurityEvidenceNormaliserConfig:
+        """Return default configuration using local domain mapping ruleset."""
+        return SecurityEvidenceNormaliserConfig()
+
+    @pytest.fixture
+    def output_schema(self) -> Schema:
+        """Return the standard output schema for security_evidence."""
+        return Schema("security_evidence", "1.0.0")
+
+    def _make_message(
+        self,
+        service_category: str,
+        purpose_category: str,
+        source: str,
+    ) -> Message:
+        """Build a service_integration_indicator message with a single finding."""
+        return Message(
+            id="test_si",
+            content={
+                "findings": [
+                    {
+                        "id": f"test-{service_category}",
+                        "service_category": service_category,
+                        "purpose_category": purpose_category,
+                        "evidence": [
+                            {"content": f"Detected {service_category} in {source}"}
+                        ],
+                        "matched_patterns": [
+                            {"pattern": service_category, "match_count": 1}
+                        ],
+                        "metadata": {"source": source},
+                    }
+                ],
+                "summary": {
+                    "total_findings": 1,
+                    "categories_identified": 1,
+                    "categories": [
+                        {
+                            "service_category": service_category,
+                            "findings_count": 1,
+                        }
+                    ],
+                },
+                "analysis_metadata": {
+                    "ruleset_used": "local/service_integrations/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("service_integration_indicator", "1.0.0"),
+        )
+
+    def test_service_integration_category_maps_to_expected_security_domain(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """A known category (cloud_infrastructure) maps to supplier_management with neutral polarity."""
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        msg = self._make_message("cloud_infrastructure", "operational", "aws.php")
+
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert findings[0]["security_domain"] == "supplier_management"
+        assert findings[0]["polarity"] == "neutral"
+        assert findings[0]["evidence_type"] == "CODE"
+
+    def test_service_integration_findings_with_same_category_and_source_are_grouped(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """Multiple findings sharing service_category+source produce a single grouped evidence item."""
+        finding: dict[str, object] = {
+            "id": "test-cloud-1",
+            "service_category": "cloud_infrastructure",
+            "purpose_category": "operational",
+            "evidence": [{"content": "AWS SDK usage"}],
+            "matched_patterns": [{"pattern": "cloud_infrastructure", "match_count": 1}],
+            "metadata": {"source": "aws.php"},
+        }
+        msg = Message(
+            id="test_si_grouped",
+            content={
+                "findings": [finding, {**finding, "id": "test-cloud-2"}],
+                "summary": {
+                    "total_findings": 2,
+                    "categories_identified": 1,
+                    "categories": [
+                        {
+                            "service_category": "cloud_infrastructure",
+                            "findings_count": 2,
+                        }
+                    ],
+                },
+                "analysis_metadata": {
+                    "ruleset_used": "local/service_integrations/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("service_integration_indicator", "1.0.0"),
+        )
+
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert "2 occurrence(s)" in findings[0]["description"]
+
+    def test_unknown_service_integration_category_is_skipped_silently(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """An unmapped service category is skipped and a debug message is logged."""
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        msg = self._make_message("unknown_service_xyz", "operational", "file.php")
+
+        with caplog.at_level(logging.DEBUG):
+            result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+
+        assert result.content["findings"] == []
+        assert "unknown_service_xyz" in caplog.text
+
+    def test_service_integration_identity_management_produces_secondary_domain(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """identity_management produces evidence for both supplier_management and authentication."""
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        msg = self._make_message("identity_management", "operational", "auth.php")
+
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        domains = {f["security_domain"] for f in findings}
+        assert len(findings) == 2
+        assert "supplier_management" in domains
+        assert "authentication" in domains
+
+
+# =============================================================================
+# Data collection indicator → security evidence mapping
+# =============================================================================
+
+
+class TestNormaliseDataCollection:
+    """Tests for data_collection_indicator → security evidence normalisation."""
+
+    @pytest.fixture
+    def valid_config(self) -> SecurityEvidenceNormaliserConfig:
+        """Return default configuration using local domain mapping ruleset."""
+        return SecurityEvidenceNormaliserConfig()
+
+    @pytest.fixture
+    def output_schema(self) -> Schema:
+        """Return the standard output schema for security_evidence."""
+        return Schema("security_evidence", "1.0.0")
+
+    def _make_message(
+        self,
+        collection_type: str,
+        data_source: str,
+        source: str,
+    ) -> Message:
+        """Build a data_collection_indicator message with a single finding."""
+        return Message(
+            id="test_dc",
+            content={
+                "findings": [
+                    {
+                        "id": f"test-{collection_type}",
+                        "collection_type": collection_type,
+                        "data_source": data_source,
+                        "evidence": [
+                            {"content": f"Detected {collection_type} in {source}"}
+                        ],
+                        "matched_patterns": [
+                            {"pattern": collection_type, "match_count": 1}
+                        ],
+                        "metadata": {"source": source},
+                    }
+                ],
+                "summary": {
+                    "total_findings": 1,
+                    "categories_identified": 1,
+                    "categories": [
+                        {
+                            "collection_type": collection_type,
+                            "findings_count": 1,
+                        }
+                    ],
+                },
+                "analysis_metadata": {
+                    "ruleset_used": "local/data_collection/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("data_collection_indicator", "1.0.0"),
+        )
+
+    def test_data_collection_type_maps_to_expected_security_domain(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """A known collection type (form_data) maps to data_protection with neutral polarity."""
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        msg = self._make_message("form_data", "http_post", "contact.php")
+
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert findings[0]["security_domain"] == "data_protection"
+        assert findings[0]["polarity"] == "neutral"
+        assert findings[0]["evidence_type"] == "CODE"
+
+    def test_data_collection_findings_with_same_type_and_source_are_grouped(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """Multiple findings sharing collection_type+source produce a single grouped evidence item."""
+        finding: dict[str, object] = {
+            "id": "test-form-1",
+            "collection_type": "form_data",
+            "data_source": "http_post",
+            "evidence": [{"content": "$_POST usage"}],
+            "matched_patterns": [{"pattern": "form_data", "match_count": 1}],
+            "metadata": {"source": "contact.php"},
+        }
+        msg = Message(
+            id="test_dc_grouped",
+            content={
+                "findings": [finding, {**finding, "id": "test-form-2"}],
+                "summary": {
+                    "total_findings": 2,
+                    "categories_identified": 1,
+                    "categories": [
+                        {"collection_type": "form_data", "findings_count": 2}
+                    ],
+                },
+                "analysis_metadata": {
+                    "ruleset_used": "local/data_collection/1.0.0",
+                    "llm_validation_enabled": False,
+                },
+            },
+            schema=Schema("data_collection_indicator", "1.0.0"),
+        )
+
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert "2 occurrence(s)" in findings[0]["description"]
+
+    def test_unknown_data_collection_type_is_skipped_silently(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """An unmapped collection type is skipped and a debug message is logged."""
+        analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
+        msg = self._make_message("unknown_type_xyz", "unknown", "file.php")
+
+        with caplog.at_level(logging.DEBUG):
+            result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+
+        assert result.content["findings"] == []
+        assert "unknown_type_xyz" in caplog.text
+
+    def test_file_upload_collection_maps_to_vulnerability_management(
+        self,
+        valid_config: SecurityEvidenceNormaliserConfig,
+        output_schema: Schema,
+    ) -> None:
+        """file_upload maps to vulnerability_management, not data_protection."""
+        analyser = SecurityEvidenceNormaliser(valid_config)
+        msg = self._make_message("file_upload", "uploaded_files", "upload.php")
+
+        result = analyser.process([msg], output_schema)
+
+        findings = result.content["findings"]
+        assert len(findings) == 1
+        assert findings[0]["security_domain"] == "vulnerability_management"

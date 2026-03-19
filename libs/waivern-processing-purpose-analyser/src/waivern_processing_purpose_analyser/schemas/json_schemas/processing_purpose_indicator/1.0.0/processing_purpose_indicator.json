@@ -197,32 +197,6 @@
           "description": "Processing purpose name (from ruleset)",
           "title": "Purpose",
           "type": "string"
-        },
-        "collection_type": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Technical mechanism of data collection (e.g., form_data, cookies, api_endpoint)",
-          "title": "Collection Type"
-        },
-        "data_source": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Origin of collected data (e.g., http_request, browser_storage)",
-          "title": "Data Source"
         }
       },
       "required": [

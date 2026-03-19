@@ -663,26 +663,6 @@ class TestProcessingPurposeAnalyserOutputValidation:
             assert purposes_identified <= findings_count
             assert purposes_identified >= 0
 
-    def test_null_values_omitted_from_json_output_standard_input(
-        self,
-        analyser: ProcessingPurposeAnalyser,
-        output_schema: Schema,
-        test_message: Message,
-    ) -> None:
-        """Test that null values are omitted from JSON output for standard input (all three fields null)."""
-        # Act
-        result = analyser.process([test_message], output_schema)
-
-        # Assert - check that findings don't contain null fields
-        content = result.content
-        findings = content["findings"]
-
-        for finding in findings:
-            # These fields should not be present in the output when they are null
-            assert "service_category" not in finding
-            assert "collection_type" not in finding
-            assert "data_source" not in finding
-
 
 class TestProcessingPurposeAnalyserSourceCodeProcessing:
     """Test class for source_code schema processing path.

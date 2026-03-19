@@ -1,8 +1,7 @@
 #!/bin/bash
-set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
+# Run code linting checks for waivern-gdpr-processing-purpose-classifier package
+# Usage: bash scripts/lint.sh [--fix]
+# Checks code for style and quality issues using Ruff
 
-cd "$PACKAGE_DIR"
-uv run ruff check --config pyproject.toml .
+uv run --group dev ruff check "$@"

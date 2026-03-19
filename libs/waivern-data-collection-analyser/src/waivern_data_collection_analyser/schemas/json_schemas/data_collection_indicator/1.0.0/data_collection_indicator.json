@@ -1,0 +1,299 @@
+{
+  "$defs": {
+    "BaseAnalysisOutputMetadata": {
+      "additionalProperties": true,
+      "description": "Base metadata for analysis outputs.",
+      "properties": {
+        "ruleset_used": {
+          "description": "Name of the ruleset used for analysis",
+          "title": "Ruleset Used",
+          "type": "string"
+        },
+        "llm_validation_enabled": {
+          "description": "Whether LLM validation was enabled for this analysis",
+          "title": "Llm Validation Enabled",
+          "type": "boolean"
+        },
+        "analysis_timestamp": {
+          "description": "ISO 8601 timestamp when the analysis was performed",
+          "title": "Analysis Timestamp",
+          "type": "string"
+        },
+        "evidence_context_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Size of context used for evidence extraction",
+          "title": "Evidence Context Size"
+        }
+      },
+      "required": [
+        "ruleset_used",
+        "llm_validation_enabled"
+      ],
+      "title": "BaseAnalysisOutputMetadata",
+      "type": "object"
+    },
+    "BaseFindingEvidence": {
+      "description": "Evidence item with content and collection timestamp.",
+      "properties": {
+        "content": {
+          "description": "The evidence content snippet",
+          "title": "Content",
+          "type": "string"
+        },
+        "collection_timestamp": {
+          "description": "When the evidence was collected",
+          "title": "Collection Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "BaseFindingEvidence",
+      "type": "object"
+    },
+    "CollectionTypeBreakdown": {
+      "description": "Per-collection-type breakdown of indicators.",
+      "properties": {
+        "collection_type": {
+          "description": "Collection type slug",
+          "title": "Collection Type",
+          "type": "string"
+        },
+        "findings_count": {
+          "description": "Number of indicators for this collection type",
+          "minimum": 0,
+          "title": "Findings Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "collection_type",
+        "findings_count"
+      ],
+      "title": "CollectionTypeBreakdown",
+      "type": "object"
+    },
+    "DataCollectionIndicatorMetadata": {
+      "additionalProperties": false,
+      "description": "Metadata for data collection indicators.\n\nExtends BaseFindingMetadata which provides:\n- source: str - Source file or location where the data was found\n- context: dict[str, object] - Extensible context for pipeline metadata",
+      "properties": {
+        "source": {
+          "description": "Source file or location where the data was found",
+          "title": "Source",
+          "type": "string"
+        },
+        "context": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Extensible context for pipeline metadata (connector_type, artifact_id, etc.)",
+          "title": "Context",
+          "type": "object"
+        },
+        "line_number": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Line number where the indicator was detected (for source code)",
+          "title": "Line Number"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "DataCollectionIndicatorMetadata",
+      "type": "object"
+    },
+    "DataCollectionIndicatorModel": {
+      "description": "Data collection indicator structure.\n\nA framework-agnostic indicator of a detected data collection mechanism.\nRegulatory classification (e.g., GDPR category) is performed by\ndownstream classifiers.\n\nInherits from BaseFindingModel[DataCollectionIndicatorMetadata] which provides:\n- id: str - Unique identifier (auto-generated UUID)\n- evidence: list[BaseFindingEvidence] - Evidence items with content\n- matched_patterns: list[PatternMatchDetail] - Patterns that matched\n- metadata: DataCollectionIndicatorMetadata - Required metadata with source\n- require_review: bool | None - Whether this finding requires human review",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this finding (UUID)",
+          "title": "Id",
+          "type": "string"
+        },
+        "evidence": {
+          "description": "Evidence items with content and timestamps for this finding",
+          "items": {
+            "$ref": "#/$defs/BaseFindingEvidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "matched_patterns": {
+          "description": "Patterns that were matched during analysis with occurrence counts",
+          "items": {
+            "$ref": "#/$defs/PatternMatchDetail"
+          },
+          "minItems": 1,
+          "title": "Matched Patterns",
+          "type": "array"
+        },
+        "metadata": {
+          "$ref": "#/$defs/DataCollectionIndicatorMetadata",
+          "description": "Metadata with source and context information"
+        },
+        "require_review": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether this finding requires human review. Only present when True.",
+          "title": "Require Review"
+        },
+        "collection_type": {
+          "description": "Type of data collection (e.g. 'form_data', 'cookies')",
+          "title": "Collection Type",
+          "type": "string"
+        },
+        "data_source": {
+          "description": "Source of the data (e.g. 'http_post', 'browser_cookies')",
+          "title": "Data Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence",
+        "matched_patterns",
+        "metadata",
+        "collection_type",
+        "data_source"
+      ],
+      "title": "DataCollectionIndicatorModel",
+      "type": "object"
+    },
+    "DataCollectionIndicatorSummary": {
+      "description": "Summary statistics for data collection indicators.",
+      "properties": {
+        "total_findings": {
+          "description": "Total number of data collection indicators",
+          "minimum": 0,
+          "title": "Total Findings",
+          "type": "integer"
+        },
+        "categories_identified": {
+          "description": "Number of unique collection types identified",
+          "minimum": 0,
+          "title": "Categories Identified",
+          "type": "integer"
+        },
+        "categories": {
+          "description": "Per-collection-type breakdown of indicators",
+          "items": {
+            "$ref": "#/$defs/CollectionTypeBreakdown"
+          },
+          "title": "Categories",
+          "type": "array"
+        }
+      },
+      "required": [
+        "total_findings",
+        "categories_identified"
+      ],
+      "title": "DataCollectionIndicatorSummary",
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "PatternMatchDetail": {
+      "description": "Detail about a matched pattern including occurrence count.\n\nThis structured type replaces simple pattern strings to provide\nricher information about how many times each pattern was found,\nwhich is useful for auditing and confidence assessment.",
+      "properties": {
+        "pattern": {
+          "description": "The pattern that matched",
+          "title": "Pattern",
+          "type": "string"
+        },
+        "match_count": {
+          "description": "Number of times this pattern matched in the content",
+          "minimum": 1,
+          "title": "Match Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pattern",
+        "match_count"
+      ],
+      "title": "PatternMatchDetail",
+      "type": "object"
+    }
+  },
+  "description": "Complete output structure for data_collection_indicator schema.\n\nThis model represents the full wire format for data collection analysis\nresults, including indicators, summary statistics, and analysis metadata.",
+  "properties": {
+    "findings": {
+      "description": "List of data collection indicators from analysis",
+      "items": {
+        "$ref": "#/$defs/DataCollectionIndicatorModel"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/DataCollectionIndicatorSummary",
+      "description": "Summary statistics of the data collection analysis"
+    },
+    "analysis_metadata": {
+      "$ref": "#/$defs/BaseAnalysisOutputMetadata",
+      "description": "Metadata about the analysis process"
+    }
+  },
+  "required": [
+    "findings",
+    "summary",
+    "analysis_metadata"
+  ],
+  "title": "DataCollectionIndicatorOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}

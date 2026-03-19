@@ -20,6 +20,8 @@ waivern-filesystem = { workspace = true }
 waivern-gdpr-personal-data-classifier = { workspace = true }
 waivern-gdpr-data-subject-classifier = { workspace = true }
 waivern-gdpr-processing-purpose-classifier = { workspace = true }
+waivern-gdpr-service-integration-classifier = { workspace = true }
+waivern-gdpr-data-collection-classifier = { workspace = true }
 waivern-processing-purpose-analyser = { workspace = true }
 waivern-sqlite = { workspace = true }
 waivern-source-code-analyser = { workspace = true }
@@ -30,6 +32,8 @@ waivern-crypto-quality-analyser = { workspace = true }
 waivern-security-evidence = { workspace = true }
 waivern-security-evidence-normaliser = { workspace = true }
 waivern-security-control-analyser = { workspace = true }
+waivern-service-integration-analyser = { workspace = true }
+waivern-data-collection-analyser = { workspace = true }
 waivern-security-document-evidence-extractor = { workspace = true }
 waivern-iso27001-control-assessor = { workspace = true }
 waivern-compliance-tool = { workspace = true }

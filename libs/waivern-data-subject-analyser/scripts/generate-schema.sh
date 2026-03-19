@@ -3,13 +3,6 @@
 # Generate JSON schema from Pydantic model for data_subject_indicator
 # Usage: bash scripts/generate-schema.sh
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
-
-cd "$PACKAGE_DIR"
-
 echo "Generating data_subject_indicator JSON schema..."
 
 uv run python -c "

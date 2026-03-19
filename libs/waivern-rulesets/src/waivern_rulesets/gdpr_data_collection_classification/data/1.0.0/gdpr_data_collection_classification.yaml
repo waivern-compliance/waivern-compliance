@@ -1,0 +1,95 @@
+# GDPR Data Collection Classification Ruleset
+# Maps data collection indicators to GDPR classifications
+
+name: "gdpr_data_collection_classification"
+version: "1.0.0"
+description: "Maps data collection indicators to GDPR classification"
+
+# Master list of valid GDPR purpose categories (for reporting/governance)
+purpose_categories:
+  - context_dependent
+
+# Valid collection type slugs (from data_collection ruleset)
+indicator_collection_types:
+  - form_data
+  - url_parameters
+  - html_forms
+  - file_upload
+  - cookies
+  - session_data
+  - client_storage
+  - database_query
+  - database_connection
+
+# Categories considered privacy-sensitive (require extra scrutiny)
+# None for data collection — these are technical mechanisms, not purposes
+sensitive_categories: []
+
+rules:
+  # =============================================================================
+  # Web Form Data Collection
+  # =============================================================================
+
+  - name: "Web Form Data Collection"
+    description: "Technical mechanism for collecting data via web forms and HTTP requests. The actual processing purpose depends on what data is collected (could include special category data) and why. Requires contextual review."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 5"
+      - "Article 6"
+      - "Article 9"
+      - "Article 13"
+    typical_lawful_bases:
+      - "contract"
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_collection_types:
+      - form_data
+      - url_parameters
+      - html_forms
+      - file_upload
+
+  # =============================================================================
+  # Session and Cookie Management
+  # =============================================================================
+
+  - name: "Session and Cookie Management"
+    description: "Technical mechanism for session management, cookies, and client storage. Could be strictly necessary (operational, no consent required) or for tracking/analytics (requires consent under ePrivacy Directive Article 5(3)). Requires contextual review."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 6"
+      - "Article 13"
+      - "ePrivacy Directive Article 5(3)"
+    typical_lawful_bases:
+      - "contract"
+      - "consent"
+      - "legitimate_interests"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_collection_types:
+      - cookies
+      - session_data
+      - client_storage
+
+  # =============================================================================
+  # Database Operations
+  # =============================================================================
+
+  - name: "Database Operations"
+    description: "Technical mechanism for database queries and data persistence. Databases store and process data for ALL purposes - the actual GDPR purpose depends on the business context and what data is being processed. Requires contextual review."
+    purpose_category: "context_dependent"
+    article_references:
+      - "Article 5"
+      - "Article 6"
+      - "Article 32"
+    typical_lawful_bases:
+      - "contract"
+      - "consent"
+      - "legitimate_interests"
+      - "legal_obligation"
+    sensitive_purpose: false
+    dpia_recommendation: "recommended"
+    indicator_collection_types:
+      - database_query
+      - database_connection

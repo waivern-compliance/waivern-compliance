@@ -6,6 +6,7 @@ from waivern_core import SecurityDomain
 
 from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.crypto_quality_indicator import CryptoQualityIndicatorRuleset
+from waivern_rulesets.data_collection import DataCollectionRuleset
 from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRuleset
 from waivern_rulesets.processing_purposes import ProcessingPurposesRuleset
 from waivern_rulesets.security_evidence_domain_mapping import (
@@ -13,6 +14,7 @@ from waivern_rulesets.security_evidence_domain_mapping import (
     SecurityEvidenceDomainMappingRuleset,
     SecurityEvidenceDomainMappingRulesetData,
 )
+from waivern_rulesets.service_integrations import ServiceIntegrationsRuleset
 from waivern_rulesets.testing import RulesetContractTests
 
 # =============================================================================
@@ -98,6 +100,8 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
                 purpose_slugs=["user_identity_login"],
                 indicator_categories=["email"],
                 algorithm_values=["bcrypt"],
+                service_category_values=["cloud_infrastructure"],
+                collection_type_values=["form_data"],
                 rules=[rule],
             )
 
@@ -119,6 +123,8 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
                 purpose_slugs=["user_identity_login"],
                 indicator_categories=["email"],
                 algorithm_values=["bcrypt"],
+                service_category_values=["cloud_infrastructure"],
+                collection_type_values=["form_data"],
                 rules=[rule],
             )
 
@@ -140,6 +146,58 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
                 purpose_slugs=["user_identity_login"],
                 indicator_categories=["email"],
                 algorithm_values=["bcrypt"],
+                service_category_values=["cloud_infrastructure"],
+                collection_type_values=["form_data"],
+                rules=[rule],
+            )
+
+    def test_rejects_invalid_service_category_indicator_values(self) -> None:
+        """Test that service_category rules with values not in service_category_values list are rejected."""
+        rule = SecurityEvidenceDomainMappingRule(
+            name="invalid_service_category_rule",
+            description="Rule with invalid service category",
+            source_type="service_category",
+            indicator_values=("nonexistent_service",),
+            security_domain=SecurityDomain.SUPPLIER_MANAGEMENT,
+        )
+
+        with pytest.raises(
+            ValidationError, match="invalid service_category indicator_values"
+        ):
+            SecurityEvidenceDomainMappingRulesetData(
+                name="test_ruleset",
+                version="1.0.0",
+                description="Test ruleset",
+                purpose_slugs=["user_identity_login"],
+                indicator_categories=["email"],
+                algorithm_values=["bcrypt"],
+                service_category_values=["cloud_infrastructure"],
+                collection_type_values=["form_data"],
+                rules=[rule],
+            )
+
+    def test_rejects_invalid_collection_type_indicator_values(self) -> None:
+        """Test that collection_type rules with values not in collection_type_values list are rejected."""
+        rule = SecurityEvidenceDomainMappingRule(
+            name="invalid_collection_type_rule",
+            description="Rule with invalid collection type",
+            source_type="collection_type",
+            indicator_values=("nonexistent_collection",),
+            security_domain=SecurityDomain.DATA_PROTECTION,
+        )
+
+        with pytest.raises(
+            ValidationError, match="invalid collection_type indicator_values"
+        ):
+            SecurityEvidenceDomainMappingRulesetData(
+                name="test_ruleset",
+                version="1.0.0",
+                description="Test ruleset",
+                purpose_slugs=["user_identity_login"],
+                indicator_categories=["email"],
+                algorithm_values=["bcrypt"],
+                service_category_values=["cloud_infrastructure"],
+                collection_type_values=["form_data"],
                 rules=[rule],
             )
 
@@ -162,6 +220,8 @@ class TestSecurityEvidenceDomainMappingRulesetDataValidation:
             purpose_slugs=["user_identity_login"],
             indicator_categories=["health"],
             algorithm_values=["bcrypt"],
+            service_category_values=["cloud_infrastructure"],
+            collection_type_values=["form_data"],
             rules=[rule],
         )
 
@@ -304,3 +364,86 @@ class TestSecurityEvidenceDomainMappingRulesetBusinessRules:
                 assert not invalid, (
                     f"Rule '{rule.name}' has invalid algorithm values: {invalid}"
                 )
+
+    def test_all_service_categories_are_covered(
+        self, ruleset: SecurityEvidenceDomainMappingRuleset
+    ) -> None:
+        """Test that every service_category from the service_integrations ruleset is mapped."""
+        all_service_categories: set[str] = {
+            rule.service_category for rule in ServiceIntegrationsRuleset().get_rules()
+        }
+
+        mapped_categories: set[str] = {
+            v
+            for rule in ruleset.get_rules()
+            if rule.source_type == "service_category"
+            for v in rule.indicator_values
+        }
+
+        uncovered = all_service_categories - mapped_categories
+        assert not uncovered, f"Service categories not covered by any rule: {uncovered}"
+
+    def test_all_collection_types_are_covered(
+        self, ruleset: SecurityEvidenceDomainMappingRuleset
+    ) -> None:
+        """Test that every collection_type from the data_collection ruleset is mapped."""
+        all_collection_types: set[str] = {
+            rule.collection_type for rule in DataCollectionRuleset().get_rules()
+        }
+
+        mapped_types: set[str] = {
+            v
+            for rule in ruleset.get_rules()
+            if rule.source_type == "collection_type"
+            for v in rule.indicator_values
+        }
+
+        uncovered = all_collection_types - mapped_types
+        assert not uncovered, f"Collection types not covered by any rule: {uncovered}"
+
+    def test_service_category_rules_use_valid_service_categories(
+        self, ruleset: SecurityEvidenceDomainMappingRuleset
+    ) -> None:
+        """Test that all service_category indicator_values are valid from the upstream ruleset."""
+        valid_categories: set[str] = {
+            rule.service_category for rule in ServiceIntegrationsRuleset().get_rules()
+        }
+
+        for rule in ruleset.get_rules():
+            if rule.source_type == "service_category":
+                invalid = [
+                    v for v in rule.indicator_values if v not in valid_categories
+                ]
+                assert not invalid, (
+                    f"Rule '{rule.name}' has invalid service categories: {invalid}"
+                )
+
+    def test_collection_type_rules_use_valid_collection_types(
+        self, ruleset: SecurityEvidenceDomainMappingRuleset
+    ) -> None:
+        """Test that all collection_type indicator_values are valid from the upstream ruleset."""
+        valid_types: set[str] = {
+            rule.collection_type for rule in DataCollectionRuleset().get_rules()
+        }
+
+        for rule in ruleset.get_rules():
+            if rule.source_type == "collection_type":
+                invalid = [v for v in rule.indicator_values if v not in valid_types]
+                assert not invalid, (
+                    f"Rule '{rule.name}' has invalid collection types: {invalid}"
+                )
+
+    def test_third_party_identity_rule_has_authentication_secondary_domain(
+        self, ruleset: SecurityEvidenceDomainMappingRuleset
+    ) -> None:
+        """Test that identity_management maps to supplier_management + authentication secondary."""
+        rules = ruleset.get_rules()
+
+        identity_rule = next(
+            (r for r in rules if r.name == "third_party_identity"), None
+        )
+        assert identity_rule is not None, (
+            "Expected 'third_party_identity' rule in ruleset"
+        )
+        assert identity_rule.security_domain == "supplier_management"
+        assert identity_rule.secondary_domain == "authentication"

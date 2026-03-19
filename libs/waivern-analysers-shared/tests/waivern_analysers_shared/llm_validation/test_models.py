@@ -23,25 +23,21 @@ def _create_test_finding() -> BaseFindingModel[BaseFindingMetadata]:
 class TestLLMValidationResultModel:
     """Test LLM validation result model - focuses on business-critical validation constraints."""
 
-    def test_confidence_bounds_prevent_data_corruption(self) -> None:
-        """Test that confidence bounds prevent invalid data that would break downstream logic.
+    def test_confidence_accepts_llm_output(self) -> None:
+        """Test that confidence field accepts LLM output without range constraints.
 
-        Business requirement: Confidence scores must be 0.0-1.0 for proper risk assessment.
-        Production impact: Invalid confidence scores break validation pipeline.
+        The ge/le constraints were removed because the Anthropic Batch API
+        does not support minimum/maximum on number types in JSON Schema.
+        LLM output is not reliably bounded, so validation is best-effort.
         """
         finding = _create_test_finding()
 
-        # Valid confidence range should work
-        valid_result = LLMValidationResultModel(finding_id=finding.id, confidence=0.85)
-        assert valid_result.confidence == 0.85
+        result = LLMValidationResultModel(finding_id=finding.id, confidence=0.85)
+        assert result.confidence == 0.85
 
-        # Invalid confidence - too high (prevents data corruption)
-        with pytest.raises(ValueError):
-            LLMValidationResultModel(finding_id=finding.id, confidence=1.5)
-
-        # Invalid confidence - negative (prevents data corruption)
-        with pytest.raises(ValueError):
-            LLMValidationResultModel(finding_id=finding.id, confidence=-0.1)
+        # Out-of-range values are accepted (LLM output is not reliably bounded)
+        high = LLMValidationResultModel(finding_id=finding.id, confidence=1.5)
+        assert high.confidence == 1.5
 
     def test_finding_id_must_be_non_empty(self) -> None:
         """Test that finding_id must be a non-empty string.

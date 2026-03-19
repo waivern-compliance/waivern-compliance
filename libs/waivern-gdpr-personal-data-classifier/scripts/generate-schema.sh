@@ -3,13 +3,6 @@
 # Generate JSON schema from Pydantic model for gdpr_personal_data
 # Usage: bash scripts/generate-schema.sh
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGE_DIR="$(dirname "$SCRIPT_DIR")"
-
-cd "$PACKAGE_DIR"
-
 echo "Generating gdpr_personal_data JSON schema..."
 
 uv run python -c "

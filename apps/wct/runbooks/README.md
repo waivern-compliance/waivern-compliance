@@ -167,18 +167,15 @@ Simple demonstration runbook showing:
 - Basic file content analysis using personal_data analyser
 - Ideal for learning WCT basics
 
-#### `samples/LAMP_stack.yaml`
+#### `samples/LAMP_stack_lite.yaml`
 
 Comprehensive example demonstrating:
 
-- Multiple source artifacts (MySQL, filesystem)
-- Pipeline execution: Filesystem → SourceCode → ProcessingPurpose
+- Multiple source artifacts (SQLite, filesystem, source code)
+- Pipeline execution: Filesystem → SourceCode → Analysers → GDPR Classifiers
 - Fan-out pattern (one source, multiple analysers)
-- Personal data, data subject, and processing purpose detection
-
-#### `samples/LAMP_stack_lite.yaml`
-
-Lightweight version of LAMP_stack without MySQL dependency.
+- Personal data, data subject, processing purpose, service integration, and data collection detection
+- Decomposed single-concern analysers for source code — each with its dedicated GDPR classifier
 
 #### `samples/mongodb-personal-data.yaml`
 
@@ -224,7 +221,7 @@ uv run wct validate-runbook runbooks/samples/file_content_analysis.yaml
 uv run wct run runbooks/samples/file_content_analysis.yaml
 
 # Execute with verbose logging
-uv run wct run runbooks/samples/LAMP_stack.yaml -v
+uv run wct run runbooks/samples/LAMP_stack_lite.yaml -v
 
 # Execute with debug logging
 uv run wct run runbooks/samples/file_content_analysis.yaml --log-level DEBUG
@@ -242,7 +239,7 @@ uv run wct runs
 uv run wct runs --status failed
 
 # Resume from a specific run
-uv run wct run runbooks/samples/LAMP_stack.yaml --resume <run-id>
+uv run wct run runbooks/samples/LAMP_stack_lite.yaml --resume <run-id>
 ```
 
 **Resume behaviour:**

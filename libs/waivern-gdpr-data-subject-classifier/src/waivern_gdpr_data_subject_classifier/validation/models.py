@@ -25,8 +25,6 @@ class RiskModifierResultModel(BaseModel):
     )
     confidence: float = Field(
         default=0.0,
-        ge=0.0,
-        le=1.0,
         description="Confidence score from LLM (0.0-1.0)",
     )
 

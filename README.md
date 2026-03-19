@@ -129,7 +129,6 @@ artifacts:
 **Sample Runbooks:**
 - `apps/wct/runbooks/samples/file_content_analysis.yaml` - Basic file analysis
 - `apps/wct/runbooks/samples/LAMP_stack_lite.yaml` - File, database, and source code analysis
-- `apps/wct/runbooks/samples/LAMP_stack.yaml` - Advanced MySQL-based analysis
 - See `apps/wct/runbooks/README.md` for detailed documentation
 
 ## Architecture
