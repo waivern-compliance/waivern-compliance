@@ -60,9 +60,7 @@ class LLMValidationResultModel(BaseModel):
     )
     confidence: float = Field(
         default=0.0,
-        ge=0.0,
-        le=1.0,
-        description="Confidence score from LLM",
+        description="Confidence score from LLM (0.0-1.0)",
     )
     reasoning: str = Field(
         default="No reasoning provided", description="Reasoning provided by LLM"
