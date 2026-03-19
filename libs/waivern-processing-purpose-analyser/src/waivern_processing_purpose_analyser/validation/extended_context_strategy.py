@@ -21,6 +21,7 @@ from waivern_llm import (
     BatchingMode,
     ItemGroup,
     LLMService,
+    PendingBatchError,
     SkippedFinding,
     SkipReason,
 )
@@ -97,6 +98,8 @@ class SourceCodeValidationStrategy(
 
         try:
             return asyncio.run(self._validate_async(findings, config, run_id))
+        except PendingBatchError:
+            raise
         except Exception as e:
             logger.error(f"LLM validation failed: {e}")
             return self._handle_total_failure(findings)

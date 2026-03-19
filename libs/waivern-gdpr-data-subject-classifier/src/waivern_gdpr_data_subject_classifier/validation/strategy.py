@@ -38,6 +38,7 @@ from waivern_llm import (
     BatchingMode,
     ItemGroup,
     LLMService,
+    PendingBatchError,
     SkippedFinding,
 )
 from waivern_rulesets import RiskModifier
@@ -114,6 +115,8 @@ class RiskModifierValidationStrategy:
 
         try:
             return asyncio.run(self._enrich_async(findings, run_id))
+        except PendingBatchError:
+            raise
         except Exception as e:
             logger.error(f"LLM enrichment failed: {e}")
             return self._handle_total_failure(findings)
