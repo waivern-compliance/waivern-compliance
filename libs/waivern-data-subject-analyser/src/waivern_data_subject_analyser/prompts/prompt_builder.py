@@ -8,8 +8,7 @@ from collections.abc import Sequence
 from typing import override
 
 from waivern_llm import ItemGroup, PromptBuilder
-
-from waivern_data_subject_analyser.schemas.types import DataSubjectIndicatorModel
+from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 
 
 class DataSubjectPromptBuilder(PromptBuilder[DataSubjectIndicatorModel]):

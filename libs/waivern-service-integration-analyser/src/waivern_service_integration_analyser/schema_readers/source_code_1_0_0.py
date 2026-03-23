@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from waivern_source_code_analyser.schemas.source_code import SourceCodeDataModel
+from waivern_schemas.source_code import SourceCodeDataModel
 
 
 def read(content: dict[str, Any]) -> SourceCodeDataModel:

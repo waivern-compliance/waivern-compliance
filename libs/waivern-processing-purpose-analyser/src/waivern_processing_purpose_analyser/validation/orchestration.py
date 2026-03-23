@@ -46,12 +46,12 @@ from waivern_analysers_shared.llm_validation import (
 )
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_llm import LLMService
+from waivern_schemas.processing_purpose_indicator import (
+    ProcessingPurposeIndicatorModel,
+)
 
 from waivern_processing_purpose_analyser.llm_validation_strategy import (
     ProcessingPurposeValidationStrategy,
-)
-from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeIndicatorModel,
 )
 
 from .extended_context_strategy import SourceCodeValidationStrategy

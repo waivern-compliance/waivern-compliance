@@ -15,9 +15,6 @@ dependencies = [
 [project.entry-points."waivern.processors"]
 personal_data = "waivern_personal_data_analyser:PersonalDataAnalyserFactory"
 
-[project.entry-points."waivern.schemas"]
-personal_data = "waivern_personal_data_analyser:register_schemas"
-
 [dependency-groups]
 dev = [
     "basedpyright>=1.29.2",
@@ -31,10 +28,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed marker
+# Include py.typed marker
 include = [
     "src/waivern_personal_data_analyser/**/*.py",
-    "src/waivern_personal_data_analyser/**/schemas/json_schemas/**/*.json",
     "src/waivern_personal_data_analyser/py.typed",
 ]
 

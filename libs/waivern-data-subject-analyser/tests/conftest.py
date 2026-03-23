@@ -1,8 +1,7 @@
 """Test configuration for waivern-data-subject-analyser."""
 
 import pytest
-
-from waivern_data_subject_analyser import register_schemas
+from waivern_schemas import register_schemas
 
 
 def pytest_configure(config: pytest.Config) -> None:

@@ -15,9 +15,12 @@ from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
 from waivern_core.schemas import PatternMatchDetail
 from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.data_subject_indicator import (
+    DataSubjectIndicatorMetadata,
+    DataSubjectIndicatorModel,
+)
 
 from .confidence_scorer import DataSubjectConfidenceScorer
-from .schemas.types import DataSubjectIndicatorMetadata, DataSubjectIndicatorModel
 
 
 class DataSubjectPatternMatcher:

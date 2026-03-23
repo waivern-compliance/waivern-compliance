@@ -13,15 +13,15 @@ from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
-from waivern_source_code_analyser.schemas.source_code import (
+from waivern_schemas.processing_purpose_indicator import (
+    ProcessingPurposeIndicatorMetadata,
+    ProcessingPurposeIndicatorModel,
+)
+from waivern_schemas.source_code import (
     SourceCodeDataModel,
     SourceCodeFileDataModel,
 )
 
-from .schemas.types import (
-    ProcessingPurposeIndicatorMetadata,
-    ProcessingPurposeIndicatorModel,
-)
 from .types import SourceCodeContextWindow
 
 

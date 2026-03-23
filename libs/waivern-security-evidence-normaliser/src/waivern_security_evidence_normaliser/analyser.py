@@ -11,32 +11,32 @@ from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_core.schemas.finding_types import BaseFindingEvidence
-from waivern_crypto_quality_analyser.schemas.types import (
+from waivern_rulesets.security_evidence_domain_mapping import (
+    SecurityEvidenceDomainMappingRule,
+)
+from waivern_schemas.crypto_quality_indicator import (
     CryptoQualityIndicatorModel,
     CryptoQualityIndicatorOutput,
 )
-from waivern_data_collection_analyser.schemas.types import (
+from waivern_schemas.data_collection_indicator import (
     DataCollectionIndicatorModel,
     DataCollectionIndicatorOutput,
 )
-from waivern_personal_data_analyser.schemas.types import (
+from waivern_schemas.personal_data_indicator import (
     PersonalDataIndicatorModel,
     PersonalDataIndicatorOutput,
 )
-from waivern_processing_purpose_analyser.schemas.types import (
+from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorModel,
     ProcessingPurposeIndicatorOutput,
 )
-from waivern_rulesets.security_evidence_domain_mapping import (
-    SecurityEvidenceDomainMappingRule,
+from waivern_schemas.service_integration_indicator import (
+    ServiceIntegrationIndicatorModel,
+    ServiceIntegrationIndicatorOutput,
 )
 from waivern_security_evidence.schemas.types import (
     SecurityEvidenceMetadata,
     SecurityEvidenceModel,
-)
-from waivern_service_integration_analyser.schemas.types import (
-    ServiceIntegrationIndicatorModel,
-    ServiceIntegrationIndicatorOutput,
 )
 
 from .result_builder import SecurityEvidenceResultBuilder

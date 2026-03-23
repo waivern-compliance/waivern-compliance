@@ -3,9 +3,9 @@
 from typing import Any
 
 from waivern_analysers_shared import SchemaInputHandler
-from waivern_source_code_analyser import SourceCodeDataModel
+from waivern_schemas.processing_purpose_indicator import ProcessingPurposeIndicatorModel
+from waivern_schemas.source_code import SourceCodeDataModel
 
-from ..schemas.types import ProcessingPurposeIndicatorModel
 from ..source_code_schema_input_handler import SourceCodeSchemaInputHandler
 from ..types import ProcessingPurposeAnalyserConfig
 

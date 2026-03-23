@@ -1,14 +1,13 @@
 """Tests for SourceCodeFileContentProvider."""
 
-from waivern_source_code_analyser import (
-    SourceCodeDataModel,
-    SourceCodeFileContentProvider,
-)
-from waivern_source_code_analyser.schemas.source_code import (
+from waivern_schemas.source_code import (
     SourceCodeAnalysisMetadataModel,
+    SourceCodeDataModel,
     SourceCodeFileDataModel,
     SourceCodeFileMetadataModel,
 )
+
+from waivern_source_code_analyser import SourceCodeFileContentProvider
 
 
 class TestSourceCodeFileContentProvider:

@@ -20,15 +20,15 @@ from waivern_llm import (
     LLMService,
     SkipReason,
 )
+from waivern_schemas.personal_data_indicator import (
+    PersonalDataIndicatorMetadata,
+    PersonalDataIndicatorModel,
+)
 
 from waivern_personal_data_analyser.llm_validation_strategy import (
     PersonalDataValidationStrategy,
 )
 from waivern_personal_data_analyser.prompts import PersonalDataPromptBuilder
-from waivern_personal_data_analyser.schemas.types import (
-    PersonalDataIndicatorMetadata,
-    PersonalDataIndicatorModel,
-)
 
 
 def _make_finding(

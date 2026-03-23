@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from waivern_crypto_quality_analyser.schemas.types import CryptoQualityIndicatorOutput
+from waivern_schemas.crypto_quality_indicator import CryptoQualityIndicatorOutput
 
 
 def read(content: dict[str, Any]) -> CryptoQualityIndicatorOutput:

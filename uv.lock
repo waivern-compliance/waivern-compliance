@@ -2017,6 +2017,7 @@ dependencies = [
     { name = "waivern-analysers-shared" },
     { name = "waivern-core" },
     { name = "waivern-rulesets" },
+    { name = "waivern-schemas" },
     { name = "waivern-source-code-analyser" },
 ]
 
@@ -2032,6 +2033,7 @@ requires-dist = [
     { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
+    { name = "waivern-schemas", editable = "libs/waivern-schemas" },
     { name = "waivern-source-code-analyser", editable = "libs/waivern-source-code-analyser" },
 ]
 
@@ -2779,6 +2781,7 @@ dependencies = [
     { name = "waivern-analysers-shared" },
     { name = "waivern-core" },
     { name = "waivern-rulesets" },
+    { name = "waivern-schemas" },
     { name = "waivern-source-code-analyser" },
 ]
 
@@ -2794,6 +2797,7 @@ requires-dist = [
     { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
+    { name = "waivern-schemas", editable = "libs/waivern-schemas" },
     { name = "waivern-source-code-analyser", editable = "libs/waivern-source-code-analyser" },
 ]
 
@@ -2811,6 +2815,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "waivern-analysers-shared" },
     { name = "waivern-core" },
+    { name = "waivern-schemas" },
 ]
 
 [package.dev-dependencies]
@@ -2824,6 +2829,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-schemas", editable = "libs/waivern-schemas" },
 ]
 
 [package.metadata.requires-dev]

@@ -11,15 +11,15 @@ from waivern_analysers_shared.types import (
 )
 from waivern_core import Schema
 from waivern_core.message import Message
-from waivern_service_integration_analyser import ServiceIntegrationAnalyser
-from waivern_service_integration_analyser.types import (
-    ServiceIntegrationAnalyserConfig,
-)
-from waivern_source_code_analyser.schemas.source_code import (
+from waivern_schemas.source_code import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeDataModel,
     SourceCodeFileDataModel,
     SourceCodeFileMetadataModel,
+)
+from waivern_service_integration_analyser import ServiceIntegrationAnalyser
+from waivern_service_integration_analyser.types import (
+    ServiceIntegrationAnalyserConfig,
 )
 
 from waivern_gdpr_service_integration_classifier import (

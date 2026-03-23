@@ -15,7 +15,7 @@ Testing rationale:
     conditional logic, error handling), you SHOULD add tests for that behaviour.
 """
 
-from waivern_personal_data_analyser.schemas.types import PersonalDataIndicatorModel
+from waivern_schemas.personal_data_indicator import PersonalDataIndicatorModel
 
 
 class PersonalDataConcernProvider:

@@ -309,9 +309,9 @@ class TestDataSubjectAnalyserProcessing:
 
     def test_process_source_code_with_pattern_matches(self) -> None:
         """Test that process handles source_code schema correctly."""
-        from waivern_source_code_analyser import SourceCodeDataModel
-        from waivern_source_code_analyser.schemas.source_code import (
+        from waivern_schemas.source_code import (
             SourceCodeAnalysisMetadataModel,
+            SourceCodeDataModel,
             SourceCodeFileDataModel,
             SourceCodeFileMetadataModel,
         )

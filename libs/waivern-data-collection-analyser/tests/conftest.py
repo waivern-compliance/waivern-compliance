@@ -1,8 +1,7 @@
 """Pytest configuration for waivern-data-collection-analyser tests."""
 
 import pytest
-
-from waivern_data_collection_analyser import register_schemas
+from waivern_schemas import register_schemas
 
 
 @pytest.fixture(autouse=True)

@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
+    "waivern-schemas",
     "waivern-analysers-shared",
     "waivern-rulesets",
     "waivern-source-code-analyser",
@@ -14,9 +15,6 @@ dependencies = [
 
 [project.entry-points."waivern.processors"]
 service_integration = "waivern_service_integration_analyser:ServiceIntegrationAnalyserFactory"
-
-[project.entry-points."waivern.schemas"]
-service_integration = "waivern_service_integration_analyser:register_schemas"
 
 [dependency-groups]
 dev = [
@@ -31,10 +29,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed
+# Include py.typed
 include = [
     "src/waivern_service_integration_analyser/py.typed",
-    "src/waivern_service_integration_analyser/**/schemas/json_schemas/**/*.json",
 ]
 
 [tool.hatch.build.targets.wheel]

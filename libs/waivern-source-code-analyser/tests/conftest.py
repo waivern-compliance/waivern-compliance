@@ -18,6 +18,6 @@ def register_test_schemas() -> None:
     Since we no longer have import-time registration, tests need
     schemas to be explicitly registered.
     """
-    from waivern_source_code_analyser import register_schemas
+    from waivern_schemas import register_schemas
 
     register_schemas()

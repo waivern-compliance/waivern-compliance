@@ -10,9 +10,9 @@ from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm import LLMService, PendingBatchError
+from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 
 from .result_builder import DataSubjectResultBuilder
-from .schemas.types import DataSubjectIndicatorModel
 from .types import DataSubjectAnalyserConfig
 from .validation import create_validation_orchestrator
 

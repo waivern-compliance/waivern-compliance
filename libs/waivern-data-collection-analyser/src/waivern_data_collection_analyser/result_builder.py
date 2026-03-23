@@ -6,13 +6,13 @@ from pprint import pformat
 
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-
-from .schemas.types import (
+from waivern_schemas.data_collection_indicator import (
     CollectionTypeBreakdown,
     DataCollectionIndicatorModel,
     DataCollectionIndicatorOutput,
     DataCollectionIndicatorSummary,
 )
+
 from .types import DataCollectionAnalyserConfig
 
 logger = logging.getLogger(__name__)

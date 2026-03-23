@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from waivern_data_collection_analyser.schemas.types import (
+from waivern_schemas.data_collection_indicator import (
     DataCollectionIndicatorOutput,
 )
 

@@ -1,6 +1,9 @@
-"""Schema for source code connector output."""
+"""Source code schema types.
 
-from waivern_source_code_analyser.schemas.source_code import (
+Re-exports from the current version (v1).
+"""
+
+from waivern_schemas.source_code.v1 import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeDataModel,
     SourceCodeFileDataModel,
@@ -9,9 +12,9 @@ from waivern_source_code_analyser.schemas.source_code import (
 )
 
 __all__ = [
-    "SourceCodeSchema",
+    "SourceCodeAnalysisMetadataModel",
     "SourceCodeDataModel",
     "SourceCodeFileDataModel",
     "SourceCodeFileMetadataModel",
-    "SourceCodeAnalysisMetadataModel",
+    "SourceCodeSchema",
 ]

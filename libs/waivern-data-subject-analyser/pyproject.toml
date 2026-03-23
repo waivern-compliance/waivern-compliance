@@ -27,10 +27,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed
+# Include py.typed
 include = [
     "src/waivern_data_subject_analyser/py.typed",
-    "src/waivern_data_subject_analyser/**/schemas/json_schemas/**/*.json",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -39,9 +38,6 @@ packages = ["src/waivern_data_subject_analyser"]
 # Component discovery via entry points
 [project.entry-points."waivern.processors"]
 data_subject = "waivern_data_subject_analyser:DataSubjectAnalyserFactory"
-
-[project.entry-points."waivern.schemas"]
-data_subject = "waivern_data_subject_analyser:register_schemas"
 
 [tool.basedpyright]
 typeCheckingMode = "strict"

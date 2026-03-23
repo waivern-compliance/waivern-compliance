@@ -7,13 +7,13 @@ following black-box testing principles and proper encapsulation.
 import pytest
 from waivern_analysers_shared.types import EvidenceContextSize, PatternMatchingConfig
 from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.processing_purpose_indicator import (
+    ProcessingPurposeIndicatorMetadata,
+    ProcessingPurposeIndicatorModel,
+)
 
 from waivern_processing_purpose_analyser.pattern_matcher import (
     ProcessingPurposePatternMatcher,
-)
-from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeIndicatorMetadata,
-    ProcessingPurposeIndicatorModel,
 )
 
 

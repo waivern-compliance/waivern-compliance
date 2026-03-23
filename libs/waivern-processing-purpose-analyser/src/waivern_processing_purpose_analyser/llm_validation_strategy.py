@@ -21,9 +21,9 @@ from waivern_llm import (
     SkippedFinding,
     SkipReason,
 )
+from waivern_schemas.processing_purpose_indicator import ProcessingPurposeIndicatorModel
 
 from .prompts.prompt_builder import ProcessingPurposePromptBuilder
-from .schemas.types import ProcessingPurposeIndicatorModel
 
 logger = logging.getLogger(__name__)
 

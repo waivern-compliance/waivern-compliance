@@ -1,8 +1,7 @@
 """Pytest configuration for waivern-service-integration-analyser tests."""
 
 import pytest
-
-from waivern_service_integration_analyser import register_schemas
+from waivern_schemas import register_schemas
 
 
 @pytest.fixture(autouse=True)

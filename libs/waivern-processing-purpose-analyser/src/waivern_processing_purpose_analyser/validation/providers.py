@@ -19,7 +19,7 @@ Testing rationale:
     logic (e.g., error handling for missing metadata, content transformation).
 """
 
-from waivern_processing_purpose_analyser.schemas.types import (
+from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorModel,
 )
 

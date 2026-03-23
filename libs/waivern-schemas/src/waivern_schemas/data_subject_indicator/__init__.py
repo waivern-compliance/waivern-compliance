@@ -1,6 +1,9 @@
-"""Schema for data subject analyser output."""
+"""Data subject indicator schema types.
 
-from waivern_data_subject_analyser.schemas.types import (
+Re-exports from the current version (v1).
+"""
+
+from waivern_schemas.data_subject_indicator.v1 import (
     DataSubjectIndicatorMetadata,
     DataSubjectIndicatorModel,
     DataSubjectIndicatorOutput,

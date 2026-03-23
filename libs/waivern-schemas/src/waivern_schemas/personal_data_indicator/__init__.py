@@ -1,11 +1,9 @@
-"""Schema types for personal data analyser output.
+"""Personal data indicator schema types.
 
-To use the personal_data_indicator schema:
-    from waivern_core.schemas import Schema
-    schema = Schema("personal_data_indicator", "1.0.0")
+Re-exports from the current version (v1).
 """
 
-from .types import (
+from waivern_schemas.personal_data_indicator.v1 import (
     PersonalDataIndicatorMetadata,
     PersonalDataIndicatorModel,
     PersonalDataIndicatorOutput,

@@ -6,7 +6,7 @@ from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_core.services import ServiceContainer
 from waivern_rulesets.service_integrations import ServiceIntegrationRule
-from waivern_source_code_analyser.schemas.source_code import SourceCodeDataModel
+from waivern_schemas.source_code import SourceCodeDataModel
 
 from waivern_service_integration_analyser.analyser import ServiceIntegrationAnalyser
 from waivern_service_integration_analyser.factory import (

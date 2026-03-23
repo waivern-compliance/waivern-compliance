@@ -10,13 +10,13 @@ from datetime import UTC, datetime
 from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-
-from .schemas.types import (
+from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorModel,
     ProcessingPurposeIndicatorOutput,
     ProcessingPurposeIndicatorSummary,
     PurposeBreakdown,
 )
+
 from .types import ProcessingPurposeAnalyserConfig
 
 logger = logging.getLogger(__name__)

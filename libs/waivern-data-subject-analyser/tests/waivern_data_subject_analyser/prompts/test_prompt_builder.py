@@ -6,13 +6,13 @@ Tests verify the PromptBuilder protocol implementation for data subject validati
 import pytest
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_llm import ItemGroup
+from waivern_schemas.data_subject_indicator import (
+    DataSubjectIndicatorMetadata,
+    DataSubjectIndicatorModel,
+)
 
 from waivern_data_subject_analyser.prompts.prompt_builder import (
     DataSubjectPromptBuilder,
-)
-from waivern_data_subject_analyser.schemas.types import (
-    DataSubjectIndicatorMetadata,
-    DataSubjectIndicatorModel,
 )
 
 

@@ -1,6 +1,9 @@
-"""Schema for processing purpose analyser output."""
+"""Processing purpose indicator schema types.
 
-from waivern_processing_purpose_analyser.schemas.types import (
+Re-exports from the current version (v1).
+"""
+
+from waivern_schemas.processing_purpose_indicator.v1 import (
     ProcessingPurposeIndicatorMetadata,
     ProcessingPurposeIndicatorModel,
     ProcessingPurposeIndicatorOutput,

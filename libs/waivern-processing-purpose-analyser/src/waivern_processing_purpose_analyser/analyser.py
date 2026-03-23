@@ -10,10 +10,10 @@ from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm import LLMService, PendingBatchError
-from waivern_source_code_analyser import SourceCodeDataModel
+from waivern_schemas.processing_purpose_indicator import ProcessingPurposeIndicatorModel
+from waivern_schemas.source_code import SourceCodeDataModel
 
 from .result_builder import ProcessingPurposeResultBuilder
-from .schemas.types import ProcessingPurposeIndicatorModel
 from .types import ProcessingPurposeAnalyserConfig
 from .validation import create_validation_orchestrator
 

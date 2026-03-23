@@ -1,11 +1,11 @@
 """Pytest configuration for waivern-gdpr-personal-data-classifier tests."""
 
 import pytest
-from waivern_personal_data_analyser import (
-    register_schemas as register_analyser_schemas,
-)
+from waivern_schemas import register_schemas
 
-from waivern_gdpr_personal_data_classifier import register_schemas
+from waivern_gdpr_personal_data_classifier import (
+    register_schemas as register_classifier_schemas,
+)
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -20,11 +20,8 @@ def pytest_configure(config: pytest.Config) -> None:
 def register_test_schemas() -> None:
     """Automatically register schemas for all tests.
 
-    Since we no longer have import-time registration, tests need
-    schemas to be explicitly registered.
-
-    For pipeline integration tests, we also need the personal_data_indicator
-    schema from waivern-personal-data-analyser.
+    waivern-schemas registers all indicator + classifier schemas in one call.
+    The classifier's own register_schemas() is still needed for its JSON schema.
     """
     register_schemas()
-    register_analyser_schemas()
+    register_classifier_schemas()

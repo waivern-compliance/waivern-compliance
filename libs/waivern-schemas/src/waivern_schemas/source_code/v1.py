@@ -6,8 +6,7 @@ and Pydantic models for runtime validation and type safety.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, ClassVar, override
 
 from pydantic import BaseModel, Field
@@ -15,7 +14,7 @@ from waivern_core.schemas import (
     BaseSchemaOutput,
     JsonSchemaLoader,
     Schema,
-    SchemaLoader,
+    SchemaRegistry,
 )
 
 # Pydantic models for runtime validation and type safety
@@ -88,14 +87,6 @@ class SourceCodeSchema(Schema):
 
     _VERSION = "1.0.0"
 
-    # Custom loader with package-relative search path
-    _loader: SchemaLoader = field(
-        default_factory=lambda: JsonSchemaLoader(
-            search_paths=[Path(__file__).parent / "json_schemas"]
-        ),
-        init=False,
-    )
-
     @property
     @override
     def name(self) -> str:
@@ -112,4 +103,5 @@ class SourceCodeSchema(Schema):
     @override
     def schema(self) -> dict[str, Any]:
         """Return the JSON schema definition for validation."""
-        return self._loader.load(self.name, self.version)
+        loader = JsonSchemaLoader(search_paths=SchemaRegistry.get_search_paths())
+        return loader.load(self.name, self.version)

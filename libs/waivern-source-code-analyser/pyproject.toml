@@ -6,15 +6,13 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
+    "waivern-schemas",
     "waivern-analysers-shared",
     "pydantic>=2.11.5",
 ]
 
 [project.entry-points."waivern.processors"]
 source_code_analyser = "waivern_source_code_analyser.analyser_factory:SourceCodeAnalyserFactory"
-
-[project.entry-points."waivern.schemas"]
-source_code = "waivern_source_code_analyser:register_schemas"
 
 [project.entry-points."waivern.source_code_languages"]
 javascript = "waivern_source_code_analyser.languages.javascript:JavaScriptLanguageSupport"
@@ -34,10 +32,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed
+# Include py.typed
 include = [
     "src/waivern_source_code_analyser/py.typed",
-    "src/waivern_source_code_analyser/**/schemas/json_schemas/**/*.json",
 ]
 
 [tool.hatch.build.targets.wheel]

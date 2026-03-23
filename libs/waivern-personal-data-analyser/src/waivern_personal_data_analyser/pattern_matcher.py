@@ -6,8 +6,10 @@ from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
 from waivern_core.schemas import PatternMatchDetail
 from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
-
-from .schemas.types import PersonalDataIndicatorMetadata, PersonalDataIndicatorModel
+from waivern_schemas.personal_data_indicator import (
+    PersonalDataIndicatorMetadata,
+    PersonalDataIndicatorModel,
+)
 
 
 class PersonalDataPatternMatcher:

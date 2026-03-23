@@ -6,8 +6,7 @@ from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
 from waivern_core.schemas import PatternMatchDetail
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
 from waivern_schemas.connector_types import BaseMetadata
-
-from .schemas.types import (
+from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorMetadata,
     ProcessingPurposeIndicatorModel,
 )

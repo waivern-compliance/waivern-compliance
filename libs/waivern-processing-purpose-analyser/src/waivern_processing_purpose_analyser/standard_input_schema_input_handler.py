@@ -8,10 +8,10 @@ from typing import cast
 
 from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.processing_purpose_indicator import ProcessingPurposeIndicatorModel
 from waivern_schemas.standard_input import StandardInputDataModel
 
 from .pattern_matcher import ProcessingPurposePatternMatcher
-from .schemas.types import ProcessingPurposeIndicatorModel
 
 
 class StandardInputSchemaInputHandler:

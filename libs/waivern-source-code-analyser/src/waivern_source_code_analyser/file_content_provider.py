@@ -2,8 +2,7 @@
 
 from waivern_analysers_shared.llm_validation.file_content import FileInfo
 from waivern_analysers_shared.llm_validation.token_estimation import estimate_tokens
-
-from .schemas.source_code import SourceCodeDataModel
+from waivern_schemas.source_code import SourceCodeDataModel
 
 
 class SourceCodeFileContentProvider:
