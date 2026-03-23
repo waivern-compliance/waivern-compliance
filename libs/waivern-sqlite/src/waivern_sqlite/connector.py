@@ -18,11 +18,9 @@ from waivern_connectors_database import (
 from waivern_core import validate_output_schema
 from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    RelationalDatabaseMetadata,
-    Schema,
-    StandardInputDataItemModel,
-)
+from waivern_core.schemas import Schema
+from waivern_schemas.connector_types import RelationalDatabaseMetadata
+from waivern_schemas.standard_input import StandardInputDataItemModel
 
 from waivern_sqlite.config import SQLiteConnectorConfig
 

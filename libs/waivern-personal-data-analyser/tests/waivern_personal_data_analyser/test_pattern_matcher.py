@@ -6,7 +6,7 @@ evidence collection for personal data detection.
 
 import pytest
 from waivern_analysers_shared.types import EvidenceContextSize, PatternMatchingConfig
-from waivern_core.schemas import BaseMetadata
+from waivern_schemas.connector_types import BaseMetadata
 
 from waivern_personal_data_analyser.pattern_matcher import PersonalDataPatternMatcher
 

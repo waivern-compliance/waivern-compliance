@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from waivern_core.schemas.connector_types import BaseMetadata
+from waivern_schemas.connector_types import BaseMetadata
 
 
 class StandardInputDataItemModel[MetadataT: BaseMetadata](BaseModel):

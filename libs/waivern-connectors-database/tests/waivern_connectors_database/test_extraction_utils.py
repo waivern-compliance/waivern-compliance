@@ -1,7 +1,7 @@
 """Tests for database extraction utility functions following TDD/BDD methodology."""
 
-from waivern_core.schemas import (
-    RelationalDatabaseMetadata,
+from waivern_schemas.connector_types import RelationalDatabaseMetadata
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
 )
 

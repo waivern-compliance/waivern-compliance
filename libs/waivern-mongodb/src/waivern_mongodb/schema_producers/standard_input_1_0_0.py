@@ -6,8 +6,8 @@ from waivern_connectors_database import (
     DocumentExtractionMetadata,
     DocumentProducerConfig,
 )
-from waivern_core.schemas import (
-    DocumentDatabaseMetadata,
+from waivern_schemas.connector_types import DocumentDatabaseMetadata
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )

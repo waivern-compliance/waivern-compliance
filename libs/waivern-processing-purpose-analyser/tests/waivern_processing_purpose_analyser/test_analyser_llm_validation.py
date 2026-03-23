@@ -13,13 +13,13 @@ from waivern_analysers_shared.llm_validation.models import (
     LLMValidationResultModel,
 )
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    BaseMetadata,
-    Schema,
+from waivern_core.schemas import Schema
+from waivern_llm import LLMCompletionResult, LLMService
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm import LLMCompletionResult, LLMService
 
 from waivern_processing_purpose_analyser.analyser import (
     ProcessingPurposeAnalyser,

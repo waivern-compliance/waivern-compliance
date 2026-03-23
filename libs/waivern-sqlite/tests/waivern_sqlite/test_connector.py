@@ -6,11 +6,9 @@ from pathlib import Path
 
 import pytest
 from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
-from waivern_core.schemas import (
-    RelationalDatabaseMetadata,
-    Schema,
-    StandardInputDataModel,
-)
+from waivern_core.schemas import Schema
+from waivern_schemas.connector_types import RelationalDatabaseMetadata
+from waivern_schemas.standard_input import StandardInputDataModel
 
 from waivern_sqlite.config import SQLiteConnectorConfig
 from waivern_sqlite.connector import SQLiteConnector

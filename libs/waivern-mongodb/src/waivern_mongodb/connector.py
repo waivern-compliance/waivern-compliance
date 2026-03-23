@@ -18,10 +18,8 @@ from waivern_core import Schema, validate_output_schema
 from waivern_core.base_connector import Connector
 from waivern_core.errors import ConnectorExtractionError
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    DocumentDatabaseMetadata,
-    StandardInputDataItemModel,
-)
+from waivern_schemas.connector_types import DocumentDatabaseMetadata
+from waivern_schemas.standard_input import StandardInputDataItemModel
 
 from waivern_mongodb.config import MongoDBConnectorConfig
 

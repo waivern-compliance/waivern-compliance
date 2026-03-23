@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from waivern_core.schemas import FilesystemMetadata
+from waivern_schemas.connector_types import FilesystemMetadata
 
 # Connector name constant
 _CONNECTOR_NAME = "filesystem_connector"

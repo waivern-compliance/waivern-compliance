@@ -33,7 +33,7 @@ class TestJsonSchemaLoader:
 
     def test_load_from_file_and_cache(self) -> None:
         """Test loading from file and caching behavior using real schema files."""
-        loader = JsonSchemaLoader()
+        loader = JsonSchemaLoader(search_paths=SchemaRegistry.get_search_paths())
 
         # First load should read from file
         result1 = loader.load("standard_input", "1.0.0")
@@ -70,19 +70,17 @@ class TestJsonSchemaLoader:
 
     def test_version_number_match(self) -> None:
         """Test that loaded schema version matches requested version."""
-        loader = JsonSchemaLoader()
+        loader = JsonSchemaLoader(search_paths=SchemaRegistry.get_search_paths())
 
         # Load schema and verify the version in the JSON matches what we requested
         result = loader.load("standard_input", "1.0.0")
         assert result["version"] == "1.0.0"
 
-    def test_loader_finds_schema_in_package_relative_path(self) -> None:
-        """Test that loader finds schemas in package-relative path."""
-        # Default loader should search package-relative paths first
-        loader = JsonSchemaLoader()
+    def test_loader_finds_schema_in_registered_search_paths(self) -> None:
+        """Test that loader finds schemas in registered search paths."""
+        loader = JsonSchemaLoader(search_paths=SchemaRegistry.get_search_paths())
 
-        # standard_input schema is in package-relative location:
-        # libs/waivern-core/src/waivern_core/schemas/json_schemas/standard_input/1.0.0/
+        # standard_input schema is in waivern-schemas package
         result = loader.load("standard_input", "1.0.0")
 
         assert isinstance(result, dict)

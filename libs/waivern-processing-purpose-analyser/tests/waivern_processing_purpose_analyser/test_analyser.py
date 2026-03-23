@@ -14,15 +14,17 @@ from waivern_analysers_shared.types import (
     PatternMatchingConfig,
 )
 from waivern_core.message import Message
-from waivern_core.schemas import (
+from waivern_core.schemas import Schema
+from waivern_llm import LLMService
+from waivern_schemas.connector_types import (
     BaseMetadata,
     FilesystemMetadata,
     RelationalDatabaseMetadata,
-    Schema,
+)
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm import LLMService
 
 from waivern_processing_purpose_analyser.analyser import (
     ProcessingPurposeAnalyser,

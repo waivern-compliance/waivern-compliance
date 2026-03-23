@@ -12,8 +12,9 @@ to make intelligent decisions about whether matches are genuine data subject ind
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig, PatternMatchResult
 from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
-from waivern_core.schemas import BaseMetadata, PatternMatchDetail
+from waivern_core.schemas import PatternMatchDetail
 from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
+from waivern_schemas.connector_types import BaseMetadata
 
 from .confidence_scorer import DataSubjectConfidenceScorer
 from .schemas.types import DataSubjectIndicatorMetadata, DataSubjectIndicatorModel

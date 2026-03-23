@@ -2,8 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
-
-from waivern_core.schemas import BaseMetadata
+from waivern_schemas.connector_types import BaseMetadata
 
 
 class TestBaseMetadataContext:

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from waivern_core.schemas import StandardInputDataModel
+from waivern_schemas.standard_input import StandardInputDataModel
 
 from waivern_crypto_quality_analyser.schema_readers import source_code_1_0_0
 
