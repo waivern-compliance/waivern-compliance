@@ -1,7 +1,9 @@
-"""Schema types for GDPR service integration classifier."""
+"""GDPR service integration classification schema types.
 
-from .types import (
-    BaseFindingEvidence,
+Re-exports from the current version (v1).
+"""
+
+from waivern_schemas.gdpr_service_integration.v1 import (
     GDPRServiceIntegrationFindingMetadata,
     GDPRServiceIntegrationFindingModel,
     GDPRServiceIntegrationFindingOutput,
@@ -9,7 +11,6 @@ from .types import (
 )
 
 __all__ = [
-    "BaseFindingEvidence",
     "GDPRServiceIntegrationFindingMetadata",
     "GDPRServiceIntegrationFindingModel",
     "GDPRServiceIntegrationFindingOutput",

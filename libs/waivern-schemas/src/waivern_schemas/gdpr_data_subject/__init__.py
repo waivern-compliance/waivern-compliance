@@ -1,7 +1,9 @@
-"""Schema types for GDPR data subject classification."""
+"""GDPR data subject classification schema types.
 
-from waivern_gdpr_data_subject_classifier.schemas.types import (
-    BaseFindingEvidence,
+Re-exports from the current version (v1).
+"""
+
+from waivern_schemas.gdpr_data_subject.v1 import (
     GDPRDataSubjectFindingMetadata,
     GDPRDataSubjectFindingModel,
     GDPRDataSubjectFindingOutput,
@@ -9,7 +11,6 @@ from waivern_gdpr_data_subject_classifier.schemas.types import (
 )
 
 __all__ = [
-    "BaseFindingEvidence",
     "GDPRDataSubjectFindingMetadata",
     "GDPRDataSubjectFindingModel",
     "GDPRDataSubjectFindingOutput",

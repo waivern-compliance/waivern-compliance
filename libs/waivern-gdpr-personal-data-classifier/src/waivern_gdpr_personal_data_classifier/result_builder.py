@@ -8,8 +8,7 @@ import logging
 
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-
-from .schemas import (
+from waivern_schemas.gdpr_personal_data import (
     GDPRPersonalDataFindingModel,
     GDPRPersonalDataFindingOutput,
     GDPRPersonalDataSummary,

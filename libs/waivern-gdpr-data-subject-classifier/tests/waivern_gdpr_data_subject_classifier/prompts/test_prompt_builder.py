@@ -8,13 +8,13 @@ not prompt content (which is configuration, not code).
 import pytest
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_llm import ItemGroup
+from waivern_schemas.gdpr_data_subject import (
+    GDPRDataSubjectFindingMetadata,
+    GDPRDataSubjectFindingModel,
+)
 
 from waivern_gdpr_data_subject_classifier.prompts.prompt_builder import (
     RiskModifierPromptBuilder,
-)
-from waivern_gdpr_data_subject_classifier.schemas import (
-    GDPRDataSubjectFindingMetadata,
-    GDPRDataSubjectFindingModel,
 )
 
 

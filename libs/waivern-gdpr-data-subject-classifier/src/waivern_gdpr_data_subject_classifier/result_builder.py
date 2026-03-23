@@ -8,12 +8,12 @@ import logging
 
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-
-from .schemas import (
+from waivern_schemas.gdpr_data_subject import (
     GDPRDataSubjectFindingModel,
     GDPRDataSubjectFindingOutput,
     GDPRDataSubjectSummary,
 )
+
 from .types import GDPRDataSubjectClassifierConfig
 from .validation.models import RiskModifierValidationResult
 

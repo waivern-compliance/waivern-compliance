@@ -5,7 +5,6 @@ from typing import ClassVar, override
 from pydantic import BaseModel, Field
 from waivern_core.schemas import (
     BaseAnalysisOutputMetadata,
-    BaseFindingEvidence,
     BaseFindingMetadata,
     BaseFindingModel,
     BaseSchemaOutput,
@@ -114,7 +113,6 @@ class GDPRDataSubjectFindingOutput(BaseSchemaOutput):
 
 
 __all__ = [
-    "BaseFindingEvidence",
     "GDPRDataSubjectFindingMetadata",
     "GDPRDataSubjectFindingModel",
     "GDPRDataSubjectFindingOutput",

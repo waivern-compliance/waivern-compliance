@@ -1,7 +1,9 @@
-"""Schema types for GDPR processing purpose classifier."""
+"""GDPR processing purpose classification schema types.
 
-from .types import (
-    BaseFindingEvidence,
+Re-exports from the current version (v1).
+"""
+
+from waivern_schemas.gdpr_processing_purpose.v1 import (
     GDPRProcessingPurposeFindingMetadata,
     GDPRProcessingPurposeFindingModel,
     GDPRProcessingPurposeFindingOutput,
@@ -9,7 +11,6 @@ from .types import (
 )
 
 __all__ = [
-    "BaseFindingEvidence",
     "GDPRProcessingPurposeFindingMetadata",
     "GDPRProcessingPurposeFindingModel",
     "GDPRProcessingPurposeFindingOutput",

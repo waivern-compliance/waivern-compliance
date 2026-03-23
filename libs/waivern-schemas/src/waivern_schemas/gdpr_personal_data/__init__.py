@@ -1,6 +1,9 @@
-"""Schema types for GDPR personal data classifier."""
+"""GDPR personal data classification schema types.
 
-from waivern_gdpr_personal_data_classifier.schemas.types import (
+Re-exports from the current version (v1).
+"""
+
+from waivern_schemas.gdpr_personal_data.v1 import (
     GDPRPersonalDataFindingMetadata,
     GDPRPersonalDataFindingModel,
     GDPRPersonalDataFindingOutput,

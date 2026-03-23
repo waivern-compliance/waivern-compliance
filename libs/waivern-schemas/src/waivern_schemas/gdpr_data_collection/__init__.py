@@ -1,7 +1,9 @@
-"""Schema types for GDPR data collection classifier."""
+"""GDPR data collection classification schema types.
 
-from .types import (
-    BaseFindingEvidence,
+Re-exports from the current version (v1).
+"""
+
+from waivern_schemas.gdpr_data_collection.v1 import (
     GDPRDataCollectionFindingMetadata,
     GDPRDataCollectionFindingModel,
     GDPRDataCollectionFindingOutput,
@@ -9,7 +11,6 @@ from .types import (
 )
 
 __all__ = [
-    "BaseFindingEvidence",
     "GDPRDataCollectionFindingMetadata",
     "GDPRDataCollectionFindingModel",
     "GDPRDataCollectionFindingOutput",
