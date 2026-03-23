@@ -45,7 +45,8 @@ uv run pytest -m batch
 **Component architecture:**
 - ComponentFactory pattern for instantiation with dependency injection
 - Configuration via Pydantic models
-- Schema files: `schemas/json_schemas/{name}/{version}/{name}.json`
+- Schema definitions: centralised in `libs/waivern-schemas/` with directory-based versioning (`waivern_schemas/{name}/v1.py`)
+- JSON schema files: `libs/waivern-schemas/src/waivern_schemas/json_schemas/{name}/{version}/{name}.json`
 - Tests: Contract testing pattern for base classes (inherit from `AnalyserContractTests`, `ComponentFactoryContractTests`)
 
 **Error handling:**

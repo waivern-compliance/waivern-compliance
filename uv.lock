@@ -2017,7 +2017,6 @@ dependencies = [
     { name = "waivern-core" },
     { name = "waivern-rulesets" },
     { name = "waivern-schemas" },
-    { name = "waivern-source-code-analyser" },
 ]
 
 [package.dev-dependencies]
@@ -2033,7 +2032,6 @@ requires-dist = [
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
     { name = "waivern-schemas", editable = "libs/waivern-schemas" },
-    { name = "waivern-source-code-analyser", editable = "libs/waivern-source-code-analyser" },
 ]
 
 [package.metadata.requires-dev]
@@ -2049,6 +2047,7 @@ source = { editable = "libs/waivern-data-export-analyser" }
 dependencies = [
     { name = "pydantic" },
     { name = "waivern-core" },
+    { name = "waivern-schemas" },
 ]
 
 [package.dev-dependencies]
@@ -2061,6 +2060,7 @@ dev = [
 requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-schemas", editable = "libs/waivern-schemas" },
 ]
 
 [package.metadata.requires-dev]
@@ -2080,7 +2080,6 @@ dependencies = [
     { name = "waivern-llm" },
     { name = "waivern-rulesets" },
     { name = "waivern-schemas" },
-    { name = "waivern-source-code-analyser" },
 ]
 
 [package.dev-dependencies]
@@ -2097,7 +2096,6 @@ requires-dist = [
     { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
     { name = "waivern-schemas", editable = "libs/waivern-schemas" },
-    { name = "waivern-source-code-analyser", editable = "libs/waivern-source-code-analyser" },
 ]
 
 [package.metadata.requires-dev]
@@ -2359,7 +2357,6 @@ dependencies = [
     { name = "waivern-llm" },
     { name = "waivern-rulesets" },
     { name = "waivern-schemas" },
-    { name = "waivern-security-document-evidence-extractor" },
 ]
 
 [package.dev-dependencies]
@@ -2376,7 +2373,6 @@ requires-dist = [
     { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
     { name = "waivern-schemas", editable = "libs/waivern-schemas" },
-    { name = "waivern-security-document-evidence-extractor", editable = "libs/waivern-security-document-evidence-extractor" },
 ]
 
 [package.metadata.requires-dev]
@@ -2561,7 +2557,6 @@ dependencies = [
     { name = "waivern-llm" },
     { name = "waivern-rulesets" },
     { name = "waivern-schemas" },
-    { name = "waivern-source-code-analyser" },
 ]
 
 [package.dev-dependencies]
@@ -2578,7 +2573,6 @@ requires-dist = [
     { name = "waivern-llm", editable = "libs/waivern-llm" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
     { name = "waivern-schemas", editable = "libs/waivern-schemas" },
-    { name = "waivern-source-code-analyser", editable = "libs/waivern-source-code-analyser" },
 ]
 
 [package.metadata.requires-dev]
@@ -2717,13 +2711,8 @@ dependencies = [
     { name = "pydantic" },
     { name = "waivern-analysers-shared" },
     { name = "waivern-core" },
-    { name = "waivern-crypto-quality-analyser" },
-    { name = "waivern-data-collection-analyser" },
-    { name = "waivern-personal-data-analyser" },
-    { name = "waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets" },
     { name = "waivern-schemas" },
-    { name = "waivern-service-integration-analyser" },
 ]
 
 [package.dev-dependencies]
@@ -2737,13 +2726,8 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "waivern-analysers-shared", editable = "libs/waivern-analysers-shared" },
     { name = "waivern-core", editable = "libs/waivern-core" },
-    { name = "waivern-crypto-quality-analyser", editable = "libs/waivern-crypto-quality-analyser" },
-    { name = "waivern-data-collection-analyser", editable = "libs/waivern-data-collection-analyser" },
-    { name = "waivern-personal-data-analyser", editable = "libs/waivern-personal-data-analyser" },
-    { name = "waivern-processing-purpose-analyser", editable = "libs/waivern-processing-purpose-analyser" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
     { name = "waivern-schemas", editable = "libs/waivern-schemas" },
-    { name = "waivern-service-integration-analyser", editable = "libs/waivern-service-integration-analyser" },
 ]
 
 [package.metadata.requires-dev]
@@ -2762,7 +2746,6 @@ dependencies = [
     { name = "waivern-core" },
     { name = "waivern-rulesets" },
     { name = "waivern-schemas" },
-    { name = "waivern-source-code-analyser" },
 ]
 
 [package.dev-dependencies]
@@ -2778,7 +2761,6 @@ requires-dist = [
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-rulesets", editable = "libs/waivern-rulesets" },
     { name = "waivern-schemas", editable = "libs/waivern-schemas" },
-    { name = "waivern-source-code-analyser", editable = "libs/waivern-source-code-analyser" },
 ]
 
 [package.metadata.requires-dev]

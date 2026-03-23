@@ -676,8 +676,6 @@ container.register(
 
 ## Related Documents
 
-- **ADR-0001:** [Explicit Schema Loading](0001-explicit-schema-loading-over-autodiscovery.md) - Similar principle of explicit over implicit
-
 ---
 
 ## References
@@ -693,6 +691,5 @@ container.register(
 - **ADR GitHub:** https://adr.github.io/
 
 ### Existing WCF Patterns
-- **Schema Explicit Loading:** ADR-0001 demonstrates preference for explicit over implicit patterns
 - **Package Independence:** Monorepo structure values clean separation of concerns
 - **Type Safety First:** Framework uses basedpyright strict mode throughout

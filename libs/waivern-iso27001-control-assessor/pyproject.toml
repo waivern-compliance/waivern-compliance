@@ -10,7 +10,6 @@ dependencies = [
     "waivern-rulesets",
     "waivern-schemas",
     "waivern-analysers-shared",
-    "waivern-security-document-evidence-extractor",
     "pydantic>=2.11.5",
 ]
 

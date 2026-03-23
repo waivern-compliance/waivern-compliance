@@ -30,7 +30,7 @@ Create or update `.vscode/settings.json` in your project root:
 {
   "yaml.schemas": {
     "./runbook.schema.json": "apps/wct/runbooks/**/*.yaml",
-    "./src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json": "apps/wct/runbooks/**/*.yaml"
+    "./libs/waivern-orchestration/src/waivern_orchestration/schemas/json_schemas/runbook/1.0.0/runbook.json": "apps/wct/runbooks/**/*.yaml"
   },
   "yaml.format.enable": true,
   "yaml.validate": true,
@@ -165,7 +165,7 @@ Schema files are versioned alongside WCT releases:
 For future versions, you may be able to reference remote schemas:
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/waivern-compliance/waivern-compliance/main/src/wct/schemas/json_schemas/runbook/1.0.0/runbook.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/waivern-compliance/waivern-compliance/main/libs/waivern-orchestration/src/waivern_orchestration/schemas/json_schemas/runbook/1.0.0/runbook.json
 
 name: "My Runbook"
 # ... rest of runbook
@@ -322,7 +322,7 @@ artifacts:
 1. **Configure your IDE** following the instructions above
 2. **Generate a schema** for your project
 3. **Create your first runbook** with IDE assistance
-4. **Explore templates** in `src/wct/schemas/json_schemas/runbook/1.0.0/runbook.template.yaml`
+4. **Explore templates** in `apps/wct/runbooks/samples/`
 5. **Share configurations** with your team for consistent development experience
 
 ## Support

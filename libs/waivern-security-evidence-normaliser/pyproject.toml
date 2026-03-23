@@ -9,11 +9,6 @@ dependencies = [
     "waivern-analysers-shared",
     "waivern-rulesets",
     "waivern-schemas",
-    "waivern-personal-data-analyser",
-    "waivern-processing-purpose-analyser",
-    "waivern-crypto-quality-analyser",
-    "waivern-service-integration-analyser",
-    "waivern-data-collection-analyser",
     "pydantic>=2.11.5",
 ]
 
