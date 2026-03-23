@@ -8,17 +8,17 @@ from waivern_analysers_shared import SchemaReader
 from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    BaseMetadata,
-    Schema,
+from waivern_core.schemas import Schema
+from waivern_llm import LLMService, PendingBatchError
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.personal_data_indicator import PersonalDataIndicatorModel
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_llm import LLMService, PendingBatchError
 
 from .pattern_matcher import PersonalDataPatternMatcher
 from .result_builder import PersonalDataResultBuilder
-from .schemas.types import PersonalDataIndicatorModel
 from .types import PersonalDataAnalyserConfig
 from .validation import create_validation_orchestrator
 

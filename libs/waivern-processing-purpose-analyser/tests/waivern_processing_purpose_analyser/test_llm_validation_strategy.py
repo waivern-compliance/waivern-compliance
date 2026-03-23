@@ -21,6 +21,10 @@ from waivern_llm import (
     SkippedFinding,
     SkipReason,
 )
+from waivern_schemas.processing_purpose_indicator import (
+    ProcessingPurposeIndicatorMetadata,
+    ProcessingPurposeIndicatorModel,
+)
 
 from waivern_processing_purpose_analyser.llm_validation_strategy import (
     ProcessingPurposeValidationStrategy,
@@ -28,10 +32,6 @@ from waivern_processing_purpose_analyser.llm_validation_strategy import (
 from waivern_processing_purpose_analyser.prompts import (
     ProcessingPurposePromptBuilder,
     SourceCodePromptBuilder,
-)
-from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeIndicatorMetadata,
-    ProcessingPurposeIndicatorModel,
 )
 from waivern_processing_purpose_analyser.validation.extended_context_strategy import (
     SourceCodeValidationStrategy,

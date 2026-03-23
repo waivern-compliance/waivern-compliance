@@ -3,9 +3,9 @@
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
-from waivern_core.schemas import BaseMetadata
 from waivern_rulesets.security_control_indicator import SecurityControlIndicatorRule
-from waivern_security_evidence import (
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.security_evidence import (
     SecurityEvidenceMetadata,
     SecurityEvidenceModel,
 )

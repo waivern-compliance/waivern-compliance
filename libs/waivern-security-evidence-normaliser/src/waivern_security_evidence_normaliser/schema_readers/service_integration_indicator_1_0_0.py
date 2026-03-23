@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from waivern_service_integration_analyser.schemas.types import (
+from waivern_schemas.service_integration_indicator import (
     ServiceIntegrationIndicatorOutput,
 )
 

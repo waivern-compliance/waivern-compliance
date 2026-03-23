@@ -15,7 +15,7 @@ from waivern_data_collection_analyser import DataCollectionAnalyser
 from waivern_data_collection_analyser.types import (
     DataCollectionAnalyserConfig,
 )
-from waivern_source_code_analyser.schemas.source_code import (
+from waivern_schemas.source_code import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeDataModel,
     SourceCodeFileDataModel,

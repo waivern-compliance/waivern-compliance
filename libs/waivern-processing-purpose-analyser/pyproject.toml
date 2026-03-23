@@ -6,10 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
+    "waivern-schemas",
     "waivern-llm",
     "waivern-analysers-shared",
     "waivern-rulesets",
-    "waivern-source-code-analyser",
     "pydantic>=2.11.5",
 ]
 
@@ -26,10 +26,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed
+# Include py.typed
 include = [
     "src/waivern_processing_purpose_analyser/py.typed",
-    "src/waivern_processing_purpose_analyser/**/schemas/json_schemas/**/*.json",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -38,9 +37,6 @@ packages = ["src/waivern_processing_purpose_analyser"]
 # Component discovery via entry points
 [project.entry-points."waivern.processors"]
 processing_purpose = "waivern_processing_purpose_analyser:ProcessingPurposeAnalyserFactory"
-
-[project.entry-points."waivern.schemas"]
-processing_purpose = "waivern_processing_purpose_analyser:register_schemas"
 
 [tool.basedpyright]
 typeCheckingMode = "strict"

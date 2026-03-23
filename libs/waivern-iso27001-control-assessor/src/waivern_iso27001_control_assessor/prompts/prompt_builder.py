@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import override
 
 from waivern_llm import ItemGroup, PromptBuilder
-from waivern_security_evidence import SecurityEvidenceModel
+from waivern_schemas.security_evidence import SecurityEvidenceModel
 
 
 @dataclass(frozen=True)

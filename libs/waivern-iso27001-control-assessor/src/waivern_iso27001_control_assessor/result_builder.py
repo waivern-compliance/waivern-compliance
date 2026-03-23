@@ -6,8 +6,7 @@ from datetime import UTC, datetime
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
 from waivern_rulesets.iso27001_domains import ISO27001DomainsRule
-
-from .schemas.types import (
+from waivern_schemas.iso27001_assessment import (
     AssessmentVerdict,
     CIAProperty,
     ControlStatus,

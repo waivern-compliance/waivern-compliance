@@ -7,12 +7,12 @@ with full file content (EXTENDED_CONTEXT mode with bin-packing).
 import pytest
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_llm import ItemGroup
-
-from waivern_processing_purpose_analyser.prompts import SourceCodePromptBuilder
-from waivern_processing_purpose_analyser.schemas.types import (
+from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorMetadata,
     ProcessingPurposeIndicatorModel,
 )
+
+from waivern_processing_purpose_analyser.prompts import SourceCodePromptBuilder
 
 
 def _make_finding(

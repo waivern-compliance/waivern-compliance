@@ -7,14 +7,13 @@ requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
     "waivern-rulesets",
+    "waivern-schemas",
     "pydantic>=2.11.5",
 ]
 
 [project.entry-points."waivern.processors"]
 gdpr_personal_data_classifier = "waivern_gdpr_personal_data_classifier:GDPRPersonalDataClassifierFactory"
 
-[project.entry-points."waivern.schemas"]
-gdpr_personal_data_classifier = "waivern_gdpr_personal_data_classifier:register_schemas"
 
 [dependency-groups]
 dev = [
@@ -29,10 +28,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed marker
+# Include py.typed marker
 include = [
     "src/waivern_gdpr_personal_data_classifier/**/*.py",
-    "src/waivern_gdpr_personal_data_classifier/**/schemas/json_schemas/**/*.json",
     "src/waivern_gdpr_personal_data_classifier/py.typed",
 ]
 

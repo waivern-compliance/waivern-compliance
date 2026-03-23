@@ -3,11 +3,9 @@
 import pytest
 from pydantic import ValidationError
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
-from waivern_personal_data_analyser.schemas import (
-    PersonalDataIndicatorModel,
-)
-from waivern_personal_data_analyser.schemas.types import (
+from waivern_schemas.personal_data_indicator import (
     PersonalDataIndicatorMetadata,
+    PersonalDataIndicatorModel,
 )
 
 

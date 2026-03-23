@@ -28,9 +28,9 @@ class TestSourceCodeSchemaInputHandler:
         Multiple matches of the same category in the same file should produce
         ONE indicator, not multiple.
         """
-        from waivern_source_code_analyser import SourceCodeDataModel
-        from waivern_source_code_analyser.schemas.source_code import (
+        from waivern_schemas.source_code import (
             SourceCodeAnalysisMetadataModel,
+            SourceCodeDataModel,
             SourceCodeFileDataModel,
             SourceCodeFileMetadataModel,
         )
@@ -83,9 +83,9 @@ class EmployeeService {
 
     def test_analyse_calculates_confidence(self) -> None:
         """Test that confidence scores are calculated using the confidence scorer."""
-        from waivern_source_code_analyser import SourceCodeDataModel
-        from waivern_source_code_analyser.schemas.source_code import (
+        from waivern_schemas.source_code import (
             SourceCodeAnalysisMetadataModel,
+            SourceCodeDataModel,
             SourceCodeFileDataModel,
             SourceCodeFileMetadataModel,
         )
@@ -135,9 +135,9 @@ class CustomerService {
         When the same pattern (e.g., 'employee') matches multiple times
         across different lines, it should appear only once in matched_patterns.
         """
-        from waivern_source_code_analyser import SourceCodeDataModel
-        from waivern_source_code_analyser.schemas.source_code import (
+        from waivern_schemas.source_code import (
             SourceCodeAnalysisMetadataModel,
+            SourceCodeDataModel,
             SourceCodeFileDataModel,
             SourceCodeFileMetadataModel,
         )
@@ -199,9 +199,9 @@ class EmployeeService {
 
     def test_metadata_includes_file_path_and_line_number(self) -> None:
         """Test that metadata contains file path and line number."""
-        from waivern_source_code_analyser import SourceCodeDataModel
-        from waivern_source_code_analyser.schemas.source_code import (
+        from waivern_schemas.source_code import (
             SourceCodeAnalysisMetadataModel,
+            SourceCodeDataModel,
             SourceCodeFileDataModel,
             SourceCodeFileMetadataModel,
         )

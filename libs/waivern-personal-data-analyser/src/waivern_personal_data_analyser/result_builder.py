@@ -11,12 +11,12 @@ from pprint import pformat
 from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-
-from .schemas.types import (
+from waivern_schemas.personal_data_indicator import (
     PersonalDataIndicatorModel,
     PersonalDataIndicatorOutput,
     PersonalDataIndicatorSummary,
 )
+
 from .types import PersonalDataAnalyserConfig
 
 logger = logging.getLogger(__name__)

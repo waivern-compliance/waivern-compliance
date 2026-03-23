@@ -241,9 +241,6 @@ waivern-source-code-analyser/
 │   ├── analyser_config.py       # Configuration with validation
 │   ├── analyser_factory.py      # Factory for DI
 │   ├── validators.py            # Utility validators
-│   ├── schemas/
-│   │   ├── source_code.py       # Pydantic output models
-│   │   └── json_schemas/        # JSON schema definitions
 │   └── languages/
 │       ├── protocols.py         # LanguageSupport protocol
 │       ├── registry.py          # LanguageRegistry singleton

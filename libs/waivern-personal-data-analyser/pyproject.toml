@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
+    "waivern-schemas",
     "waivern-analysers-shared",
     "waivern-rulesets",
     "pydantic>=2.11.5",
@@ -13,9 +14,6 @@ dependencies = [
 
 [project.entry-points."waivern.processors"]
 personal_data = "waivern_personal_data_analyser:PersonalDataAnalyserFactory"
-
-[project.entry-points."waivern.schemas"]
-personal_data = "waivern_personal_data_analyser:register_schemas"
 
 [dependency-groups]
 dev = [
@@ -30,10 +28,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed marker
+# Include py.typed marker
 include = [
     "src/waivern_personal_data_analyser/**/*.py",
-    "src/waivern_personal_data_analyser/**/schemas/json_schemas/**/*.json",
     "src/waivern_personal_data_analyser/py.typed",
 ]
 

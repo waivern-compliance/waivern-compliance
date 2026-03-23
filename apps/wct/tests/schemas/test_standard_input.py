@@ -2,11 +2,13 @@
 
 import pytest
 from pydantic import ValidationError
-from waivern_core.schemas import (
+from waivern_core.schemas import Schema
+from waivern_schemas.connector_types import (
     BaseMetadata,
     FilesystemMetadata,
     RelationalDatabaseMetadata,
-    Schema,
+)
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )

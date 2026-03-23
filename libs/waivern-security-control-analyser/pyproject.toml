@@ -6,9 +6,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
+    "waivern-schemas",
     "waivern-analysers-shared",
     "waivern-rulesets",
-    "waivern-security-evidence",
     "pydantic>=2.11.5",
 ]
 

@@ -16,9 +16,9 @@ import pytest
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm import ItemGroup, LLMCompletionResult, LLMService
+from waivern_schemas.gdpr_data_subject import GDPRDataSubjectFindingModel
 
 from waivern_gdpr_data_subject_classifier.classifier import GDPRDataSubjectClassifier
-from waivern_gdpr_data_subject_classifier.schemas import GDPRDataSubjectFindingModel
 from waivern_gdpr_data_subject_classifier.types import GDPRDataSubjectClassifierConfig
 from waivern_gdpr_data_subject_classifier.validation.models import (
     RiskModifierResultModel,

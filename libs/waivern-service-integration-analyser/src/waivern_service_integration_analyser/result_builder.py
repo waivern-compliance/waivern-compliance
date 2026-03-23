@@ -6,13 +6,13 @@ from pprint import pformat
 
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-
-from .schemas.types import (
+from waivern_schemas.service_integration_indicator import (
     ServiceCategoryBreakdown,
     ServiceIntegrationIndicatorModel,
     ServiceIntegrationIndicatorOutput,
     ServiceIntegrationIndicatorSummary,
 )
+
 from .types import ServiceIntegrationAnalyserConfig
 
 logger = logging.getLogger(__name__)

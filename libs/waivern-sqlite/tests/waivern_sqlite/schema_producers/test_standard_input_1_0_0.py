@@ -8,10 +8,8 @@ from waivern_connectors_database import (
     RelationalProducerConfig,
     TableMetadata,
 )
-from waivern_core.schemas import (
-    RelationalDatabaseMetadata,
-    StandardInputDataItemModel,
-)
+from waivern_schemas.connector_types import RelationalDatabaseMetadata
+from waivern_schemas.standard_input import StandardInputDataItemModel
 
 
 class TestStandardInputProducer:

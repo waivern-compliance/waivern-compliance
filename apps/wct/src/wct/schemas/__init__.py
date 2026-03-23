@@ -9,23 +9,27 @@ discovers them at runtime. WCT only needs to know about core base types.
 
 Note: If you need component-specific schemas (e.g., SourceCodeDataModel,
 PersonalDataFindingModel), import them directly from the component package
-(e.g., from waivern_source_code_analyser.schemas import SourceCodeDataModel).
+(e.g., from waivern_schemas.source_code import SourceCodeDataModel).
 """
 
 # Core schemas and base types (from waivern-core only)
 from waivern_core.schemas import (
     BaseFindingModel,
-    BaseMetadata,
     DataParsingError,
-    FilesystemMetadata,
     JsonSchemaLoader,
-    RelationalDatabaseMetadata,
     Schema,
     SchemaLoader,
     SchemaLoadError,
+    parse_data_model,
+)
+from waivern_schemas.connector_types import (
+    BaseMetadata,
+    FilesystemMetadata,
+    RelationalDatabaseMetadata,
+)
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
-    parse_data_model,
 )
 
 __all__ = [
@@ -38,7 +42,7 @@ __all__ = [
     "BaseFindingModel",
     "DataParsingError",
     "parse_data_model",
-    # Standard input schema types (from waivern-core)
+    # Standard input schema types (from waivern-schemas)
     "StandardInputDataModel",
     "StandardInputDataItemModel",
     "BaseMetadata",

@@ -1,6 +1,6 @@
 """Tests for standard_input v1.0.0 reader."""
 
-from waivern_core.schemas import StandardInputDataModel
+from waivern_schemas.standard_input import StandardInputDataModel
 
 
 class TestStandardInputReader:

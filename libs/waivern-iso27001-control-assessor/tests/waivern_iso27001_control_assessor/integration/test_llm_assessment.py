@@ -15,13 +15,13 @@ from waivern_llm.di.configuration import LLMServiceConfiguration
 from waivern_llm.errors import LLMConfigurationError
 from waivern_llm.providers import AnthropicProvider, GoogleProvider, OpenAIProvider
 from waivern_llm.service import DefaultLLMService
-
-from waivern_iso27001_control_assessor import ISO27001Assessor
-from waivern_iso27001_control_assessor.schemas.types import (
+from waivern_schemas.iso27001_assessment import (
     ControlStatus,
     EvidenceStatus,
     ISO27001AssessmentOutput,
 )
+
+from waivern_iso27001_control_assessor import ISO27001Assessor
 from waivern_iso27001_control_assessor.types import ISO27001AssessorConfig
 
 OUTPUT_SCHEMA = Schema("iso27001_assessment", "1.0.0")

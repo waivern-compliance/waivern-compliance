@@ -29,7 +29,7 @@ class MyDatabaseConnector(DatabaseConnector):
 ## Database Connectors Using This Package
 
 - `waivern-mysql` - MySQL connector
-- `waivern-community` - Includes SQLite connector
+- `waivern-sqlite` - SQLite connector
 
 ## Installation
 

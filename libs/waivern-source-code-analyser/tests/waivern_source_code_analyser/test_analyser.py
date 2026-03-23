@@ -4,9 +4,9 @@ import tempfile
 from pathlib import Path
 
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    FilesystemMetadata,
-    Schema,
+from waivern_core.schemas import Schema
+from waivern_schemas.connector_types import FilesystemMetadata
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )

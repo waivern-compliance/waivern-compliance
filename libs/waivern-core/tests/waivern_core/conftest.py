@@ -3,7 +3,17 @@
 from dataclasses import dataclass, field
 from typing import Any, override
 
+import pytest
+from waivern_schemas import register_schemas
+
 from waivern_core.schemas import Schema
+
+
+@pytest.fixture(autouse=True)
+def register_test_schemas() -> None:
+    """Register waivern-schemas so standard_input JSON schema is discoverable."""
+    register_schemas()
+
 
 # =============================================================================
 # Mock Schema Classes

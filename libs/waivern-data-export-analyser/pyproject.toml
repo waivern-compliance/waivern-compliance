@@ -6,14 +6,12 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
+    "waivern-schemas",
     "pydantic>=2.11.5",
 ]
 
 [project.entry-points."waivern.processors"]
 data_export = "waivern_data_export_analyser:DataExportAnalyserFactory"
-
-[project.entry-points."waivern.schemas"]
-data_export = "waivern_data_export_analyser:register_schemas"
 
 [dependency-groups]
 dev = [
@@ -31,7 +29,6 @@ dev-mode-dirs = ["src"]
 # Include JSON schemas, vendor database files, and py.typed marker
 include = [
     "src/waivern_data_export_analyser/**/*.py",
-    "src/waivern_data_export_analyser/**/schemas/json_schemas/**/*.json",
     "src/waivern_data_export_analyser/**/vendor_database/**/*.json",
     "src/waivern_data_export_analyser/**/vendor_database/**/*.sql",
     "src/waivern_data_export_analyser/**/vendor_database/**/*.db",

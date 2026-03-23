@@ -8,13 +8,13 @@ from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
 from waivern_rulesets import GDPRServiceIntegrationClassificationRule
+from waivern_schemas.gdpr_service_integration import (
+    GDPRServiceIntegrationFindingMetadata,
+    GDPRServiceIntegrationFindingModel,
+)
 
 from waivern_gdpr_service_integration_classifier.result_builder import (
     GDPRServiceIntegrationResultBuilder,
-)
-from waivern_gdpr_service_integration_classifier.schemas import (
-    GDPRServiceIntegrationFindingMetadata,
-    GDPRServiceIntegrationFindingModel,
 )
 from waivern_gdpr_service_integration_classifier.types import (
     GDPRServiceIntegrationClassifierConfig,

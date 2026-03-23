@@ -6,13 +6,13 @@ Tests verify the PromptBuilder protocol implementation for processing purpose va
 import pytest
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_llm import ItemGroup
+from waivern_schemas.processing_purpose_indicator import (
+    ProcessingPurposeIndicatorMetadata,
+    ProcessingPurposeIndicatorModel,
+)
 
 from waivern_processing_purpose_analyser.prompts.prompt_builder import (
     ProcessingPurposePromptBuilder,
-)
-from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeIndicatorMetadata,
-    ProcessingPurposeIndicatorModel,
 )
 
 

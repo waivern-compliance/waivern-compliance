@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from waivern_personal_data_analyser.schemas.types import PersonalDataIndicatorOutput
+from waivern_schemas.personal_data_indicator import PersonalDataIndicatorOutput
 
 
 def read(content: dict[str, Any]) -> PersonalDataIndicatorOutput:

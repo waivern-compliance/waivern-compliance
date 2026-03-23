@@ -26,10 +26,10 @@ waivern-processing-purpose-analyser = { workspace = true }
 waivern-sqlite = { workspace = true }
 waivern-source-code-analyser = { workspace = true }
 waivern-rulesets = { workspace = true }
+waivern-schemas = { workspace = true }
 waivern-analysers-shared = { workspace = true }
 waivern-personal-data-analyser = { workspace = true }
 waivern-crypto-quality-analyser = { workspace = true }
-waivern-security-evidence = { workspace = true }
 waivern-security-evidence-normaliser = { workspace = true }
 waivern-security-control-analyser = { workspace = true }
 waivern-service-integration-analyser = { workspace = true }

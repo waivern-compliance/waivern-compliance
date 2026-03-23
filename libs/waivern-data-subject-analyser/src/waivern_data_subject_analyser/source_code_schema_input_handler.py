@@ -10,11 +10,13 @@ from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
-from waivern_source_code_analyser import SourceCodeDataModel
-from waivern_source_code_analyser.schemas.source_code import SourceCodeFileDataModel
+from waivern_schemas.data_subject_indicator import (
+    DataSubjectIndicatorMetadata,
+    DataSubjectIndicatorModel,
+)
+from waivern_schemas.source_code import SourceCodeDataModel, SourceCodeFileDataModel
 
 from .confidence_scorer import DataSubjectConfidenceScorer
-from .schemas.types import DataSubjectIndicatorMetadata, DataSubjectIndicatorModel
 from .types import SourceCodeContextWindow
 
 # Context window sizes (lines before/after match)

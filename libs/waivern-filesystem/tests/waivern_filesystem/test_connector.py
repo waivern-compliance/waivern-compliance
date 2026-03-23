@@ -7,11 +7,9 @@ from pathlib import Path
 import pytest
 from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    FilesystemMetadata,
-    Schema,
-    StandardInputDataModel,
-)
+from waivern_core.schemas import Schema
+from waivern_schemas.connector_types import FilesystemMetadata
+from waivern_schemas.standard_input import StandardInputDataModel
 
 from waivern_filesystem.config import FilesystemConnectorConfig
 from waivern_filesystem.connector import FilesystemConnector

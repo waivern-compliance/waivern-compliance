@@ -7,8 +7,8 @@ by SecurityDomain using LLM analysis.
 from collections.abc import Sequence
 from typing import override
 
-from waivern_core.types import SecurityDomain
 from waivern_llm import ItemGroup, PromptBuilder
+from waivern_schemas.security_domain import SecurityDomain
 
 from waivern_security_document_evidence_extractor.types import DocumentItem
 

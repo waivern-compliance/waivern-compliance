@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from waivern_processing_purpose_analyser.schemas.types import (
+from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorOutput,
 )
 

@@ -47,9 +47,9 @@ class JsonSchemaLoader:
 
     The loader caches schemas after first load to improve performance.
 
-    Design note: Each schema explicitly provides custom search_paths for clarity
-    and debuggability. This explicit approach was chosen over alternatives like
-    autodiscovery or automatic path detection. See ADR-0001 for detailed rationale.
+    Design note: Schema search paths are registered centrally by ``waivern-schemas``
+    via ``SchemaRegistry``. Individual components should not configure their own
+    search paths.
     """
 
     def __init__(self, search_paths: list[Path] | None = None) -> None:

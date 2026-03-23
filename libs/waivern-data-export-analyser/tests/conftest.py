@@ -1,8 +1,7 @@
 """Pytest configuration for waivern-data-export-analyser tests."""
 
 import pytest
-
-from waivern_data_export_analyser import register_schemas
+from waivern_schemas import register_schemas
 
 
 def pytest_configure(config: pytest.Config) -> None:

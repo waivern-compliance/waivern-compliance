@@ -6,7 +6,7 @@ from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_core.services import ServiceContainer
 from waivern_rulesets.data_collection import DataCollectionRule
-from waivern_source_code_analyser.schemas.source_code import SourceCodeDataModel
+from waivern_schemas.source_code import SourceCodeDataModel
 
 from waivern_data_collection_analyser.analyser import DataCollectionAnalyser
 from waivern_data_collection_analyser.factory import DataCollectionAnalyserFactory

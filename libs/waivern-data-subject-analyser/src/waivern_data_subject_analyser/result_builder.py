@@ -10,12 +10,12 @@ from datetime import UTC, datetime
 from waivern_analysers_shared.llm_validation import ValidationResult
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-
-from .schemas.types import (
+from waivern_schemas.data_subject_indicator import (
     DataSubjectIndicatorModel,
     DataSubjectIndicatorOutput,
     DataSubjectIndicatorSummary,
 )
+
 from .types import DataSubjectAnalyserConfig
 
 logger = logging.getLogger(__name__)

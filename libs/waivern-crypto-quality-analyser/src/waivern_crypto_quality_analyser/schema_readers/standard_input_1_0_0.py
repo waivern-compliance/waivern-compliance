@@ -2,7 +2,8 @@
 
 from typing import Any
 
-from waivern_core.schemas import BaseMetadata, StandardInputDataModel
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.standard_input import StandardInputDataModel
 
 
 def read(content: dict[str, Any]) -> StandardInputDataModel[BaseMetadata]:

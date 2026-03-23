@@ -6,12 +6,12 @@ from pprint import pformat
 
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-from waivern_security_evidence import (
+from waivern_schemas.security_evidence import (
+    DomainBreakdown,
     SecurityEvidenceModel,
     SecurityEvidenceOutput,
     SecurityEvidenceSummary,
 )
-from waivern_security_evidence.schemas.types import DomainBreakdown
 
 from .types import SecurityControlAnalyserConfig
 

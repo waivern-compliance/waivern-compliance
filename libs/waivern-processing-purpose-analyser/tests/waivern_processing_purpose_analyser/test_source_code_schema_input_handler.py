@@ -8,16 +8,16 @@ from datetime import UTC, datetime
 
 import pytest
 from waivern_core.schemas import BaseFindingEvidence
-from waivern_source_code_analyser import SourceCodeDataModel
-from waivern_source_code_analyser.schemas.source_code import (
+from waivern_schemas.processing_purpose_indicator import (
+    ProcessingPurposeIndicatorModel,
+)
+from waivern_schemas.source_code import (
     SourceCodeAnalysisMetadataModel,
+    SourceCodeDataModel,
     SourceCodeFileDataModel,
     SourceCodeFileMetadataModel,
 )
 
-from waivern_processing_purpose_analyser.schemas.types import (
-    ProcessingPurposeIndicatorModel,
-)
 from waivern_processing_purpose_analyser.source_code_schema_input_handler import (
     SourceCodeSchemaInputHandler,
 )

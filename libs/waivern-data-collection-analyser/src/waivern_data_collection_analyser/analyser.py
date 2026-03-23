@@ -10,10 +10,10 @@ from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_rulesets.data_collection import DataCollectionRule
-from waivern_source_code_analyser.schemas.source_code import SourceCodeDataModel
+from waivern_schemas.data_collection_indicator import DataCollectionIndicatorModel
+from waivern_schemas.source_code import SourceCodeDataModel
 
 from .result_builder import DataCollectionResultBuilder
-from .schemas.types import DataCollectionIndicatorModel
 from .source_code_schema_input_handler import SourceCodeSchemaInputHandler
 from .types import DataCollectionAnalyserConfig
 

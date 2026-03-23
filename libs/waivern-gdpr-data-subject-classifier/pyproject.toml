@@ -9,14 +9,13 @@ dependencies = [
     "waivern-rulesets",
     "waivern-analysers-shared",
     "waivern-llm",
+    "waivern-schemas",
     "pydantic>=2.11.5",
 ]
 
 [project.entry-points."waivern.processors"]
 gdpr_data_subject_classifier = "waivern_gdpr_data_subject_classifier:GDPRDataSubjectClassifierFactory"
 
-[project.entry-points."waivern.schemas"]
-gdpr_data_subject_classifier = "waivern_gdpr_data_subject_classifier:register_schemas"
 
 [dependency-groups]
 dev = [
@@ -31,10 +30,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed marker
+# Include py.typed marker
 include = [
     "src/waivern_gdpr_data_subject_classifier/**/*.py",
-    "src/waivern_gdpr_data_subject_classifier/**/schemas/json_schemas/**/*.json",
     "src/waivern_gdpr_data_subject_classifier/py.typed",
 ]
 

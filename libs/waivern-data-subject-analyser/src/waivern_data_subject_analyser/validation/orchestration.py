@@ -41,11 +41,11 @@ from waivern_analysers_shared.llm_validation import (
 )
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_llm import LLMService
+from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 
 from waivern_data_subject_analyser.llm_validation_strategy import (
     DataSubjectValidationStrategy,
 )
-from waivern_data_subject_analyser.schemas import DataSubjectIndicatorModel
 
 from .providers import DataSubjectConcernProvider
 

@@ -1,11 +1,7 @@
 """Pytest configuration for waivern-gdpr-service-integration-classifier tests."""
 
 import pytest
-from waivern_service_integration_analyser import (
-    register_schemas as register_analyser_schemas,
-)
-
-from waivern_gdpr_service_integration_classifier import register_schemas
+from waivern_schemas import register_schemas
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -18,13 +14,5 @@ def pytest_configure(config: pytest.Config) -> None:
 
 @pytest.fixture(autouse=True)
 def register_test_schemas() -> None:
-    """Automatically register schemas for all tests.
-
-    Since we no longer have import-time registration, tests need
-    schemas to be explicitly registered.
-
-    For pipeline integration tests, we also need the service_integration_indicator
-    schema from waivern-service-integration-analyser.
-    """
+    """Automatically register schemas for all tests."""
     register_schemas()
-    register_analyser_schemas()

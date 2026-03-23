@@ -25,11 +25,11 @@ from waivern_llm import (
     SkippedFinding,
     SkipReason,
 )
-
-from waivern_processing_purpose_analyser.prompts import SourceCodePromptBuilder
-from waivern_processing_purpose_analyser.schemas.types import (
+from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorModel,
 )
+
+from waivern_processing_purpose_analyser.prompts import SourceCodePromptBuilder
 
 from .providers import SourceCodeSourceProvider
 

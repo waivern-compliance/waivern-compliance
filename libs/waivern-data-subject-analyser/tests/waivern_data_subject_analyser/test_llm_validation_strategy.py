@@ -20,15 +20,15 @@ from waivern_llm import (
     LLMService,
     SkipReason,
 )
+from waivern_schemas.data_subject_indicator import (
+    DataSubjectIndicatorMetadata,
+    DataSubjectIndicatorModel,
+)
 
 from waivern_data_subject_analyser.llm_validation_strategy import (
     DataSubjectValidationStrategy,
 )
 from waivern_data_subject_analyser.prompts import DataSubjectPromptBuilder
-from waivern_data_subject_analyser.schemas.types import (
-    DataSubjectIndicatorMetadata,
-    DataSubjectIndicatorModel,
-)
 
 
 def _make_finding(

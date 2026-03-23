@@ -1,7 +1,7 @@
 """Tests for ISO27001PromptBuilder — prompt content verification."""
 
 from waivern_llm import ItemGroup
-from waivern_security_evidence import SecurityEvidenceModel
+from waivern_schemas.security_evidence import SecurityEvidenceModel
 
 from waivern_iso27001_control_assessor.prompts.prompt_builder import (
     ControlContext,

@@ -39,11 +39,11 @@ from waivern_analysers_shared.llm_validation import (
 )
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_llm import LLMService
+from waivern_schemas.personal_data_indicator import PersonalDataIndicatorModel
 
 from waivern_personal_data_analyser.llm_validation_strategy import (
     PersonalDataValidationStrategy,
 )
-from waivern_personal_data_analyser.schemas.types import PersonalDataIndicatorModel
 
 from .providers import PersonalDataConcernProvider
 

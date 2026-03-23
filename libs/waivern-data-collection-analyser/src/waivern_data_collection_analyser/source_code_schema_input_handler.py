@@ -10,15 +10,15 @@ from collections.abc import Generator
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_rulesets.data_collection import DataCollectionRule
-from waivern_source_code_analyser.schemas.source_code import (
+from waivern_schemas.data_collection_indicator import (
+    DataCollectionIndicatorMetadata,
+    DataCollectionIndicatorModel,
+)
+from waivern_schemas.source_code import (
     SourceCodeDataModel,
     SourceCodeFileDataModel,
 )
 
-from .schemas.types import (
-    DataCollectionIndicatorMetadata,
-    DataCollectionIndicatorModel,
-)
 from .types import SourceCodeContextWindow
 
 # Context window sizes (lines before/after match)

@@ -7,8 +7,8 @@ from waivern_connectors_database import (
     RelationalExtractionMetadata,
     RelationalProducerConfig,
 )
-from waivern_core.schemas import (
-    RelationalDatabaseMetadata,
+from waivern_schemas.connector_types import RelationalDatabaseMetadata
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )

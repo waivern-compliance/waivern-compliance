@@ -6,11 +6,9 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
-from waivern_core.schemas import (
-    RelationalDatabaseMetadata,
-    Schema,
-    StandardInputDataModel,
-)
+from waivern_core.schemas import Schema
+from waivern_schemas.connector_types import RelationalDatabaseMetadata
+from waivern_schemas.standard_input import StandardInputDataModel
 
 from waivern_mysql import MySQLConnector, MySQLConnectorConfig
 

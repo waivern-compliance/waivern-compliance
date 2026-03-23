@@ -9,8 +9,7 @@ from collections import Counter
 
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-
-from .schemas import (
+from waivern_schemas.gdpr_data_collection import (
     GDPRDataCollectionFindingModel,
     GDPRDataCollectionFindingOutput,
     GDPRDataCollectionSummary,

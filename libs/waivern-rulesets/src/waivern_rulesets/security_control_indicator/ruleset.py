@@ -12,7 +12,8 @@ is negative evidence. No neutral polarity is permitted.
 from typing import ClassVar, Literal
 
 from pydantic import Field
-from waivern_core import DetectionRule, RulesetData, SecurityDomain
+from waivern_core import DetectionRule, RulesetData
+from waivern_schemas.security_domain import SecurityDomain
 
 from waivern_rulesets.core.base import YAMLRuleset
 

@@ -52,7 +52,6 @@ uv run pytest --cov=waivern_data_export_analyser
 ## Entry Points
 
 This package registers with WCF via entry points:
-- `waivern.analysers`: `data_export` → `DataExportAnalyserFactory`
-- `waivern.schemas`: `data_export` → `register_schemas`
+- `waivern.processors`: `data_export` → `DataExportAnalyserFactory`
 
 Note: The analyser is not yet functional and will raise `NotImplementedError` if used.

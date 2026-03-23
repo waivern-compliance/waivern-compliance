@@ -5,12 +5,7 @@ from unittest.mock import AsyncMock, Mock
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm import LLMCompletionResult, LLMService
-
-from waivern_iso27001_control_assessor import ISO27001Assessor
-from waivern_iso27001_control_assessor.prompts.response_model import (
-    ISO27001LLMResponse,
-)
-from waivern_iso27001_control_assessor.schemas.types import (
+from waivern_schemas.iso27001_assessment import (
     CIAProperty,
     ControlStatus,
     ControlType,
@@ -19,6 +14,11 @@ from waivern_iso27001_control_assessor.schemas.types import (
     ISO27001AssessmentOutput,
     ISOSecurityDomain,
     OperationalCapability,
+)
+
+from waivern_iso27001_control_assessor import ISO27001Assessor
+from waivern_iso27001_control_assessor.prompts.response_model import (
+    ISO27001LLMResponse,
 )
 from waivern_iso27001_control_assessor.types import ISO27001AssessorConfig
 

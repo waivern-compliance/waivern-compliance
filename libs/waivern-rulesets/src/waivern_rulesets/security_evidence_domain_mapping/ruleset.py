@@ -7,7 +7,7 @@ normalisation of indicator findings into structured security evidence items.
 Dependencies (keep in sync when upstream rulesets change):
 - processing_purposes/1.0.0  → purpose_slugs master list and purpose rules
 - personal_data_indicator/1.0.0 → indicator_categories master list and category rules
-- SecurityDomain enum in waivern-security-evidence → security_domains master list
+- SecurityDomain enum in waivern-core → security_domains master list
 
 Tests enforce completeness: test_all_purpose_slugs_are_covered and
 test_all_categories_are_covered will fail if the upstream rulesets diverge.
@@ -16,7 +16,8 @@ test_all_categories_are_covered will fail if the upstream rulesets diverge.
 from typing import ClassVar, Literal
 
 from pydantic import Field, field_validator, model_validator
-from waivern_core import ClassificationRule, RulesetData, SecurityDomain
+from waivern_core import ClassificationRule, RulesetData
+from waivern_schemas.security_domain import SecurityDomain
 
 from waivern_rulesets.core.base import YAMLRuleset
 

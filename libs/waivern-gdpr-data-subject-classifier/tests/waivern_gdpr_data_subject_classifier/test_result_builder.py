@@ -2,13 +2,13 @@
 
 import pytest
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail, Schema
+from waivern_schemas.gdpr_data_subject import (
+    GDPRDataSubjectFindingMetadata,
+    GDPRDataSubjectFindingModel,
+)
 
 from waivern_gdpr_data_subject_classifier.result_builder import (
     GDPRDataSubjectResultBuilder,
-)
-from waivern_gdpr_data_subject_classifier.schemas import (
-    GDPRDataSubjectFindingMetadata,
-    GDPRDataSubjectFindingModel,
 )
 from waivern_gdpr_data_subject_classifier.types import GDPRDataSubjectClassifierConfig
 from waivern_gdpr_data_subject_classifier.validation.models import (

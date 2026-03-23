@@ -7,10 +7,8 @@ from waivern_connectors_database import (
     ServerInfo,
     TableMetadata,
 )
-from waivern_core.schemas import (
-    RelationalDatabaseMetadata,
-    StandardInputDataItemModel,
-)
+from waivern_schemas.connector_types import RelationalDatabaseMetadata
+from waivern_schemas.standard_input import StandardInputDataItemModel
 
 from waivern_mysql.schema_producers import standard_input_1_0_0
 

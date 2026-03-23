@@ -21,9 +21,9 @@ from waivern_llm import (
     SkippedFinding,
     SkipReason,
 )
+from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 
 from .prompts.prompt_builder import DataSubjectPromptBuilder
-from .schemas.types import DataSubjectIndicatorModel
 
 logger = logging.getLogger(__name__)
 

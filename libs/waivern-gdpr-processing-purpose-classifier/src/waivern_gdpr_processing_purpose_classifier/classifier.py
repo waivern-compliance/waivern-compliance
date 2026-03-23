@@ -8,13 +8,13 @@ from waivern_core import InputRequirement, Schema
 from waivern_core.base_classifier import Classifier
 from waivern_core.message import Message
 from waivern_rulesets import GDPRProcessingPurposeClassificationRule
+from waivern_schemas.gdpr_processing_purpose import (
+    GDPRProcessingPurposeFindingMetadata,
+    GDPRProcessingPurposeFindingModel,
+)
 
 from waivern_gdpr_processing_purpose_classifier.result_builder import (
     GDPRProcessingPurposeResultBuilder,
-)
-from waivern_gdpr_processing_purpose_classifier.schemas import (
-    GDPRProcessingPurposeFindingMetadata,
-    GDPRProcessingPurposeFindingModel,
 )
 from waivern_gdpr_processing_purpose_classifier.types import (
     GDPRProcessingPurposeClassifierConfig,

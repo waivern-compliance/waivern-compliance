@@ -8,7 +8,7 @@ and ruleset name differ.
 Extension ruleset contract
 --------------------------
 Extension rulesets MUST only reference security domains already declared
-in the SecurityDomain enum in waivern-security-evidence. This is enforced at
+in the SecurityDomain enum in waivern-core. This is enforced at
 load time by SecurityControlIndicatorRulesetData.validate_rules(), which
 cross-checks every rule's security_domain against the security_domains list
 declared in this ruleset's own YAML.

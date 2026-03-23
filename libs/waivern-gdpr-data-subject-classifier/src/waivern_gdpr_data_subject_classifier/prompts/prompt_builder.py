@@ -9,8 +9,7 @@ from typing import override
 
 from waivern_llm import ItemGroup, PromptBuilder
 from waivern_rulesets import RiskModifier
-
-from waivern_gdpr_data_subject_classifier.schemas import GDPRDataSubjectFindingModel
+from waivern_schemas.gdpr_data_subject import GDPRDataSubjectFindingModel
 
 
 class RiskModifierPromptBuilder(PromptBuilder[GDPRDataSubjectFindingModel]):

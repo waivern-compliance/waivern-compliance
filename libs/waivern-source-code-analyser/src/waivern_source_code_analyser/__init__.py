@@ -11,35 +11,14 @@ on language detection and can be extended with compliance-relevant metadata
 (dependencies, frameworks, security patterns) in the future.
 """
 
-from importlib.resources import files
-from pathlib import Path
-
-from waivern_core.schemas import SchemaRegistry
-
 from .analyser import SourceCodeAnalyser
 from .analyser_config import SourceCodeAnalyserConfig
 from .analyser_factory import SourceCodeAnalyserFactory
 from .file_content_provider import SourceCodeFileContentProvider
-from .schemas import SourceCodeDataModel
-
-
-def register_schemas() -> None:
-    """Register schemas with SchemaRegistry.
-
-    Called explicitly by WCF framework during initialisation.
-    This function is referenced in pyproject.toml entry points.
-
-    NO import-time side effects - registration is explicit.
-    """
-    schema_dir = files(__name__) / "schemas" / "json_schemas"
-    SchemaRegistry.register_search_path(Path(str(schema_dir)))
-
 
 __all__ = [
     "SourceCodeAnalyser",
     "SourceCodeAnalyserConfig",
     "SourceCodeAnalyserFactory",
-    "SourceCodeDataModel",
     "SourceCodeFileContentProvider",
-    "register_schemas",
 ]

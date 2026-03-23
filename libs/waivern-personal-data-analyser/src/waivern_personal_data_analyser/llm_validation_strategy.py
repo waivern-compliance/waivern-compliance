@@ -21,9 +21,9 @@ from waivern_llm import (
     SkippedFinding,
     SkipReason,
 )
+from waivern_schemas.personal_data_indicator import PersonalDataIndicatorModel
 
 from .prompts.prompt_builder import PersonalDataPromptBuilder
-from .schemas.types import PersonalDataIndicatorModel
 
 logger = logging.getLogger(__name__)
 

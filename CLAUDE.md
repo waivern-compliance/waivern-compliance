@@ -149,14 +149,13 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message: ...
 - Inherit from `AnalyserContractTests` for automatic contract validation
 - Use `@override` decorators for abstract methods
 
-**Schema files:** `{package}/schemas/json_schemas/{name}/{version}/{name}.json`
+**Schema definitions:** All analysis schema types (Pydantic models) and JSON schema files live in `libs/waivern-schemas/`. Each schema is a sub-package with directory-based versioning (e.g., `waivern_schemas/personal_data_indicator/v1.py`).
 
 **JSON Schema Generation:**
 - JSON schemas are **auto-generated** from Pydantic models - **NEVER edit them manually**
-- Each analyser/classifier package has a `scripts/generate-schema.sh` script
-- When updating Pydantic models that affect schema output, regenerate using:
+- Regenerate all JSON schemas using the consolidated script:
   ```bash
-  bash libs/<package-name>/scripts/generate-schema.sh
+  bash libs/waivern-schemas/scripts/generate-schemas.sh
   ```
 - The script uses `OutputModel.generate_json_schema(path)` to generate from Pydantic
 

@@ -99,7 +99,6 @@ uv run pytest                           # Run all workspace tests
 ## Documentation
 
 Key documentation within this package:
-- **[Schemas README](src/wct/schemas/README.md)** - Schema architecture and usage
 - **[Processing Purpose Analyser README](src/wct/analysers/processing_purpose_analyser/README.md)** - Processing purpose detection
 
 ## License

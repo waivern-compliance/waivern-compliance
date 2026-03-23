@@ -8,10 +8,9 @@ from datetime import datetime
 
 from waivern_core import InputRequirement
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    BaseFindingEvidence,
-    BaseMetadata,
-    Schema,
+from waivern_core.schemas import BaseFindingEvidence, Schema
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
@@ -310,9 +309,9 @@ class TestDataSubjectAnalyserProcessing:
 
     def test_process_source_code_with_pattern_matches(self) -> None:
         """Test that process handles source_code schema correctly."""
-        from waivern_source_code_analyser import SourceCodeDataModel
-        from waivern_source_code_analyser.schemas.source_code import (
+        from waivern_schemas.source_code import (
             SourceCodeAnalysisMetadataModel,
+            SourceCodeDataModel,
             SourceCodeFileDataModel,
             SourceCodeFileMetadataModel,
         )

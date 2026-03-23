@@ -1,7 +1,7 @@
 """Database data extraction and processing utilities."""
 
-from waivern_core.schemas import (
-    RelationalDatabaseMetadata,
+from waivern_schemas.connector_types import RelationalDatabaseMetadata
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
 )
 

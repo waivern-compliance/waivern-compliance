@@ -3,10 +3,10 @@
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
-from waivern_core.schemas import BaseMetadata, PatternMatchDetail
+from waivern_core.schemas import PatternMatchDetail
 from waivern_rulesets.processing_purposes import ProcessingPurposeRule
-
-from .schemas.types import (
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorMetadata,
     ProcessingPurposeIndicatorModel,
 )

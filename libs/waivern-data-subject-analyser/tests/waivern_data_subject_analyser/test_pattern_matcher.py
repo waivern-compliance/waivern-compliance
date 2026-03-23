@@ -5,7 +5,7 @@ for data subject classification.
 """
 
 from waivern_analysers_shared.types import EvidenceContextSize, PatternMatchingConfig
-from waivern_core.schemas import BaseMetadata
+from waivern_schemas.connector_types import BaseMetadata
 
 from waivern_data_subject_analyser.pattern_matcher import (
     DataSubjectPatternMatcher,

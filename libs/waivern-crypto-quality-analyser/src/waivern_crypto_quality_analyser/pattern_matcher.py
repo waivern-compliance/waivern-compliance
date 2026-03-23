@@ -3,10 +3,13 @@
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
-from waivern_core.schemas import BaseMetadata, PatternMatchDetail
+from waivern_core.schemas import PatternMatchDetail
 from waivern_rulesets.crypto_quality_indicator import CryptoQualityIndicatorRule
-
-from .schemas.types import CryptoQualityIndicatorMetadata, CryptoQualityIndicatorModel
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.crypto_quality_indicator import (
+    CryptoQualityIndicatorMetadata,
+    CryptoQualityIndicatorModel,
+)
 
 # Maps quality_rating to evidence polarity.
 # strong → positive (the implementation uses a secure algorithm)

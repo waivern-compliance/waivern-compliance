@@ -2,12 +2,12 @@
 
 from typing import Any
 
-from waivern_core.schemas import (
-    BaseMetadata,
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.source_code import SourceCodeDataModel
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_source_code_analyser import SourceCodeDataModel
 
 
 def read(content: dict[str, Any]) -> StandardInputDataModel[BaseMetadata]:

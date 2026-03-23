@@ -17,7 +17,7 @@ Testing rationale:
     conditional logic, error handling), you SHOULD add tests for that behaviour.
 """
 
-from waivern_data_subject_analyser.schemas import DataSubjectIndicatorModel
+from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 
 
 class DataSubjectConcernProvider:

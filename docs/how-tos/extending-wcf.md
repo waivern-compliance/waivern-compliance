@@ -99,15 +99,11 @@ my_connector = "my_package:create_my_connector_factory"
 [project.entry-points."waivern.processors"]
 my_analyser = "my_package:create_my_analyser_factory"
 
-# Register schemas for discovery
-[project.entry-points."waivern.schemas"]
-my_finding = "my_package.schemas:get_schema_path"
 ```
 
 **Available entry point groups:**
 - `waivern.connectors` - Data source connectors
 - `waivern.processors` - Analysers and processors
-- `waivern.schemas` - JSON schema discovery
 - `waivern.source_code_languages` - Language support for source code analysis
 
 ### Factory Functions
@@ -484,19 +480,9 @@ Create JSON Schema files for your data contracts:
 }
 ```
 
-### Schema Discovery
+### Schema Definitions
 
-Place schemas in your package:
-```
-my-package/
-└── schemas/
-    └── json_schemas/
-        └── my_custom_finding/
-            └── 1.0.0/
-                └── my_custom_finding.json
-```
-
-WCF discovers schemas automatically from installed packages.
+All schema types (Pydantic models) and JSON schema files are centralised in the `waivern-schemas` package. When creating a new analyser, add your output schema as a sub-package in `waivern-schemas` with directory-based versioning.
 
 ## Source Code Language Extensions
 
@@ -617,12 +603,7 @@ my-compliance-package/
 │   └── my_compliance/
 │       ├── __init__.py           # Entry point functions
 │       ├── connector.py          # Custom connector
-│       ├── analyser.py           # Custom analyser
-│       └── schemas/
-│           └── json_schemas/
-│               └── my_finding/
-│                   └── 1.0.0/
-│                       └── my_finding.json
+│       └── analyser.py           # Custom analyser
 ├── tests/
 │   ├── test_connector.py
 │   └── test_analyser.py
@@ -631,6 +612,8 @@ my-compliance-package/
 ├── pyproject.toml
 └── README.md
 ```
+
+> **Note:** Schema definitions (Pydantic models and JSON schema files) are centralised in the `waivern-schemas` package, not in individual component packages.
 
 ```toml
 # pyproject.toml

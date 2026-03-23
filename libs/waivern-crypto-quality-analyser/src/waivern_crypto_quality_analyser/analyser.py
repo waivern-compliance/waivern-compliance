@@ -7,16 +7,16 @@ from typing import override
 from waivern_analysers_shared import SchemaReader
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    BaseMetadata,
-    Schema,
+from waivern_core.schemas import Schema
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.crypto_quality_indicator import CryptoQualityIndicatorModel
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
 
 from .pattern_matcher import CryptoQualityPatternMatcher
 from .result_builder import CryptoQualityResultBuilder
-from .schemas.types import CryptoQualityIndicatorModel
 from .types import CryptoQualityAnalyserConfig
 
 logger = logging.getLogger(__name__)

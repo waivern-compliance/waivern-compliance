@@ -3,9 +3,10 @@
 from typing import Any
 
 from waivern_analysers_shared import SchemaInputHandler
-from waivern_core.schemas import BaseMetadata, StandardInputDataModel
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.processing_purpose_indicator import ProcessingPurposeIndicatorModel
+from waivern_schemas.standard_input import StandardInputDataModel
 
-from ..schemas.types import ProcessingPurposeIndicatorModel
 from ..standard_input_schema_input_handler import StandardInputSchemaInputHandler
 from ..types import ProcessingPurposeAnalyserConfig
 

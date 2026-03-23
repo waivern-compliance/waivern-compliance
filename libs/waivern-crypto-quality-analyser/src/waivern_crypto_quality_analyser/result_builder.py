@@ -6,12 +6,12 @@ from pprint import pformat
 
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-
-from .schemas.types import (
+from waivern_schemas.crypto_quality_indicator import (
     CryptoQualityIndicatorModel,
     CryptoQualityIndicatorOutput,
     CryptoQualityIndicatorSummary,
 )
+
 from .types import CryptoQualityAnalyserConfig
 
 logger = logging.getLogger(__name__)

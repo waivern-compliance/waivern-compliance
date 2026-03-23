@@ -9,15 +9,15 @@ from waivern_core import Analyser, InputRequirement
 from waivern_core.errors import AnalyserProcessingError
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-
-from waivern_source_code_analyser.analyser_config import SourceCodeAnalyserConfig
-from waivern_source_code_analyser.languages.registry import LanguageRegistry
-from waivern_source_code_analyser.schemas import (
+from waivern_schemas.source_code import (
     SourceCodeAnalysisMetadataModel,
     SourceCodeDataModel,
     SourceCodeFileDataModel,
     SourceCodeFileMetadataModel,
 )
+
+from waivern_source_code_analyser.analyser_config import SourceCodeAnalyserConfig
+from waivern_source_code_analyser.languages.registry import LanguageRegistry
 
 logger = logging.getLogger(__name__)
 

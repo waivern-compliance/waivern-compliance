@@ -6,17 +6,14 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "waivern-core",
+    "waivern-schemas",
     "waivern-analysers-shared",
     "waivern-rulesets",
-    "waivern-source-code-analyser",
     "pydantic>=2.11.5",
 ]
 
 [project.entry-points."waivern.processors"]
 data_collection = "waivern_data_collection_analyser:DataCollectionAnalyserFactory"
-
-[project.entry-points."waivern.schemas"]
-data_collection = "waivern_data_collection_analyser:register_schemas"
 
 [dependency-groups]
 dev = [
@@ -31,10 +28,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed
+# Include py.typed
 include = [
     "src/waivern_data_collection_analyser/py.typed",
-    "src/waivern_data_collection_analyser/**/schemas/json_schemas/**/*.json",
 ]
 
 [tool.hatch.build.targets.wheel]

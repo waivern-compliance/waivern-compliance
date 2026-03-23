@@ -30,11 +30,9 @@ from waivern_core.errors import (
     ConnectorExtractionError,
 )
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    RelationalDatabaseMetadata,
-    Schema,
-    StandardInputDataItemModel,
-)
+from waivern_core.schemas import Schema
+from waivern_schemas.connector_types import RelationalDatabaseMetadata
+from waivern_schemas.standard_input import StandardInputDataItemModel
 
 from waivern_mysql.config import MySQLConnectorConfig
 

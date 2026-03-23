@@ -1,8 +1,7 @@
 """Pytest configuration for waivern-crypto-quality-analyser tests."""
 
 import pytest
-
-from waivern_crypto_quality_analyser import register_schemas
+from waivern_schemas import register_schemas
 
 
 @pytest.fixture(autouse=True)

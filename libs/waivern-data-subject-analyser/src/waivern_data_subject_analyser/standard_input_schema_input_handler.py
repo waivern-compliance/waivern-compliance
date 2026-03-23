@@ -6,10 +6,11 @@ Wraps the existing DataSubjectPatternMatcher for schema-handler consistency.
 from typing import cast
 
 from waivern_analysers_shared.types import PatternMatchingConfig
-from waivern_core.schemas import BaseMetadata, StandardInputDataModel
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
+from waivern_schemas.standard_input import StandardInputDataModel
 
 from .pattern_matcher import DataSubjectPatternMatcher
-from .schemas.types import DataSubjectIndicatorModel
 
 
 class StandardInputSchemaInputHandler:

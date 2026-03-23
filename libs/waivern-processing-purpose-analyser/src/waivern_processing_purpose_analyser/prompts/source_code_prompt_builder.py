@@ -4,8 +4,7 @@ from collections.abc import Sequence
 from typing import override
 
 from waivern_llm import ItemGroup, PromptBuilder
-
-from waivern_processing_purpose_analyser.schemas.types import (
+from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorModel,
 )
 

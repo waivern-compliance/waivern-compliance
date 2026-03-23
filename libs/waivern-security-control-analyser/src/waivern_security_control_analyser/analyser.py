@@ -7,13 +7,13 @@ from typing import override
 from waivern_analysers_shared import SchemaReader
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
-from waivern_core.schemas import (
-    BaseMetadata,
-    Schema,
+from waivern_core.schemas import Schema
+from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.security_evidence import SecurityEvidenceModel
+from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
 )
-from waivern_security_evidence import SecurityEvidenceModel
 
 from .pattern_matcher import SecurityControlPatternMatcher
 from .result_builder import SecurityControlResultBuilder
