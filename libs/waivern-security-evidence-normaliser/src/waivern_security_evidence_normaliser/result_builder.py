@@ -6,7 +6,7 @@ from pprint import pformat
 
 from waivern_core.message import Message
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-from waivern_security_evidence.schemas.types import (
+from waivern_schemas.security_evidence import (
     DomainBreakdown,
     SecurityEvidenceModel,
     SecurityEvidenceOutput,

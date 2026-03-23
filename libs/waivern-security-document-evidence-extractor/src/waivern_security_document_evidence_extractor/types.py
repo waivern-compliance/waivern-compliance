@@ -5,8 +5,7 @@ import uuid
 from pydantic import BaseModel, Field
 from waivern_core import BaseComponentConfiguration
 from waivern_core.types import SecurityDomain
-
-from .schemas.types import SecurityDocumentContextMetadata
+from waivern_schemas.security_document_context import SecurityDocumentContextMetadata
 
 
 class SecurityDocumentEvidenceExtractorConfig(BaseComponentConfiguration):

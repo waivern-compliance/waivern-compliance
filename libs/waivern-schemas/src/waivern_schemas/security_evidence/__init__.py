@@ -1,7 +1,10 @@
-"""Schema types for security evidence output."""
+"""Security evidence schema types.
 
-from .types import (
-    SecurityDomain,
+Re-exports from the current version (v1).
+"""
+
+from waivern_schemas.security_evidence.v1 import (
+    DomainBreakdown,
     SecurityEvidenceMetadata,
     SecurityEvidenceModel,
     SecurityEvidenceOutput,
@@ -9,7 +12,7 @@ from .types import (
 )
 
 __all__ = [
-    "SecurityDomain",
+    "DomainBreakdown",
     "SecurityEvidenceMetadata",
     "SecurityEvidenceModel",
     "SecurityEvidenceOutput",

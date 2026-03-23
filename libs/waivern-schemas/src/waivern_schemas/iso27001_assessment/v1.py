@@ -212,3 +212,19 @@ class ISO27001AssessmentOutput(BaseSchemaOutput):
     analysis_metadata: BaseAnalysisOutputMetadata = Field(
         description="Metadata about the assessment process",
     )
+
+
+__all__ = [
+    "AssessmentVerdict",
+    "CIAProperty",
+    "ControlStatus",
+    "ControlType",
+    "CybersecurityConcept",
+    "EvidenceStatus",
+    "ISO27001AssessmentMetadata",
+    "ISO27001AssessmentModel",
+    "ISO27001AssessmentOutput",
+    "ISO27001AssessmentSummary",
+    "ISOSecurityDomain",
+    "OperationalCapability",
+]

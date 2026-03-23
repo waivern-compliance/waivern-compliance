@@ -11,6 +11,7 @@ from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm import BatchingMode, ItemGroup, LLMService
 from waivern_schemas.connector_types import BaseMetadata
+from waivern_schemas.security_document_context import SecurityDocumentContextMetadata
 from waivern_schemas.standard_input import (
     StandardInputDataItemModel,
     StandardInputDataModel,
@@ -18,7 +19,6 @@ from waivern_schemas.standard_input import (
 
 from .prompts.prompt_builder import DomainClassificationPromptBuilder
 from .result_builder import build_output_message
-from .schemas.types import SecurityDocumentContextMetadata
 from .types import (
     DocumentItem,
     DomainClassificationResponse,

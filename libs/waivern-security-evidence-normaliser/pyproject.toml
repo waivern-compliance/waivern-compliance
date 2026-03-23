@@ -8,7 +8,7 @@ dependencies = [
     "waivern-core",
     "waivern-analysers-shared",
     "waivern-rulesets",
-    "waivern-security-evidence",
+    "waivern-schemas",
     "waivern-personal-data-analyser",
     "waivern-processing-purpose-analyser",
     "waivern-crypto-quality-analyser",

@@ -134,3 +134,12 @@ class SecurityEvidenceOutput(BaseSchemaOutput):
     analysis_metadata: BaseAnalysisOutputMetadata = Field(
         description="Metadata about the analysis process that produced this output",
     )
+
+
+__all__ = [
+    "DomainBreakdown",
+    "SecurityEvidenceMetadata",
+    "SecurityEvidenceModel",
+    "SecurityEvidenceOutput",
+    "SecurityEvidenceSummary",
+]

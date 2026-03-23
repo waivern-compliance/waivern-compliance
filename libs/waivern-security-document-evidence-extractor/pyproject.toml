@@ -15,8 +15,6 @@ dependencies = [
 [project.entry-points."waivern.processors"]
 security_document_evidence_extractor = "waivern_security_document_evidence_extractor:SecurityDocumentEvidenceExtractorFactory"
 
-[project.entry-points."waivern.schemas"]
-security_document_context = "waivern_security_document_evidence_extractor:register_schemas"
 
 [dependency-groups]
 dev = [
@@ -31,10 +29,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed marker
+# Include py.typed marker
 include = [
     "src/waivern_security_document_evidence_extractor/**/*.py",
-    "src/waivern_security_document_evidence_extractor/**/schemas/json_schemas/**/*.json",
     "src/waivern_security_document_evidence_extractor/py.typed",
 ]
 

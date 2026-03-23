@@ -30,13 +30,13 @@ from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorModel,
     ProcessingPurposeIndicatorOutput,
 )
+from waivern_schemas.security_evidence import (
+    SecurityEvidenceMetadata,
+    SecurityEvidenceModel,
+)
 from waivern_schemas.service_integration_indicator import (
     ServiceIntegrationIndicatorModel,
     ServiceIntegrationIndicatorOutput,
-)
-from waivern_security_evidence.schemas.types import (
-    SecurityEvidenceMetadata,
-    SecurityEvidenceModel,
 )
 
 from .result_builder import SecurityEvidenceResultBuilder

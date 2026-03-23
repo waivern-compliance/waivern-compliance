@@ -1,14 +1,10 @@
 """Pytest configuration for waivern-security-evidence-normaliser tests."""
 
 import pytest
-from waivern_security_evidence import register_schemas
+from waivern_schemas import register_schemas
 
 
 @pytest.fixture(autouse=True)
 def register_test_schemas() -> None:
-    """Automatically register schemas for all tests.
-
-    Since we no longer have import-time registration, tests need
-    schemas to be explicitly registered.
-    """
+    """Automatically register schemas for all tests."""
     register_schemas()

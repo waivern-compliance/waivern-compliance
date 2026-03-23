@@ -8,14 +8,11 @@ dependencies = [
     "waivern-core",
     "waivern-llm",
     "waivern-rulesets",
-    "waivern-security-evidence",
+    "waivern-schemas",
     "waivern-analysers-shared",
     "waivern-security-document-evidence-extractor",
     "pydantic>=2.11.5",
 ]
-
-[project.entry-points."waivern.schemas"]
-iso27001_assessment = "waivern_iso27001_control_assessor:register_schemas"
 
 [project.entry-points."waivern.processors"]
 iso27001_assessor = "waivern_iso27001_control_assessor:ISO27001AssessorFactory"
@@ -33,10 +30,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 dev-mode-dirs = ["src"]
 
-# Include JSON schemas and py.typed marker
+# Include py.typed marker
 include = [
     "src/waivern_iso27001_control_assessor/**/*.py",
-    "src/waivern_iso27001_control_assessor/**/schemas/json_schemas/**/*.json",
     "src/waivern_iso27001_control_assessor/py.typed",
 ]
 

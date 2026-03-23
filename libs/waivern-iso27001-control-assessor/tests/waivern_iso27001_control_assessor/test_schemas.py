@@ -1,8 +1,7 @@
 """Tests for iso27001_assessment/1.0.0 schema models."""
 
 from waivern_core.schemas import BaseAnalysisOutputMetadata, Schema
-
-from waivern_iso27001_control_assessor.schemas.types import (
+from waivern_schemas.iso27001_assessment import (
     CIAProperty,
     ControlStatus,
     ControlType,

@@ -10,13 +10,17 @@ from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm import BatchingMode, ItemGroup, LLMService, PendingBatchError
 from waivern_rulesets.iso27001_domains import ISO27001DomainsRule
-from waivern_security_document_evidence_extractor import SecurityDocumentContextModel
-from waivern_security_evidence import SecurityEvidenceModel
+from waivern_schemas.iso27001_assessment import (
+    AssessmentVerdict,
+    ControlStatus,
+    EvidenceStatus,
+)
+from waivern_schemas.security_document_context import SecurityDocumentContextModel
+from waivern_schemas.security_evidence import SecurityEvidenceModel
 
 from .prompts.prompt_builder import ControlContext, ISO27001PromptBuilder
 from .prompts.response_model import ISO27001LLMResponse
 from .result_builder import ISO27001ResultBuilder
-from .schemas.types import AssessmentVerdict, ControlStatus, EvidenceStatus
 from .types import ISO27001AssessorConfig
 
 logger = logging.getLogger(__name__)
