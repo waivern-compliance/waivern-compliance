@@ -2,7 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
-from waivern_core import SecurityDomain
+from waivern_schemas.security_domain import SecurityDomain
 
 from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.crypto_quality_indicator import CryptoQualityIndicatorRuleset

@@ -16,7 +16,8 @@ test_all_categories_are_covered will fail if the upstream rulesets diverge.
 from typing import ClassVar, Literal
 
 from pydantic import Field, field_validator, model_validator
-from waivern_core import ClassificationRule, RulesetData, SecurityDomain
+from waivern_core import ClassificationRule, RulesetData
+from waivern_schemas.security_domain import SecurityDomain
 
 from waivern_rulesets.core.base import YAMLRuleset
 

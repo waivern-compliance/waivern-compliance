@@ -4,9 +4,10 @@ import uuid
 from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
-from waivern_core import SecurityDomain
 from waivern_core.schemas import BaseAnalysisOutputMetadata, BaseSchemaOutput
 from waivern_core.schemas.finding_types import BaseFindingEvidence
+
+from waivern_schemas.security_domain import SecurityDomain
 
 
 class SecurityEvidenceMetadata(BaseModel):

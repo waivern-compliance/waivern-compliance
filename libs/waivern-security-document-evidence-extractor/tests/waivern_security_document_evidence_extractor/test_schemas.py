@@ -2,13 +2,13 @@
 
 import pytest
 from pydantic import ValidationError
-from waivern_core.types import SecurityDomain
 from waivern_schemas.security_document_context import (
     SecurityDocumentContextMetadata,
     SecurityDocumentContextModel,
     SecurityDocumentContextOutput,
     SecurityDocumentContextSummary,
 )
+from waivern_schemas.security_domain import SecurityDomain
 
 
 def _build_context_model(

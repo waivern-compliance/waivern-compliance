@@ -9,7 +9,8 @@ from waivern_core.schemas import (
     BaseFindingMetadata,
     BaseSchemaOutput,
 )
-from waivern_core.types import SecurityDomain
+
+from waivern_schemas.security_domain import SecurityDomain
 
 
 class SecurityDocumentContextMetadata(BaseFindingMetadata):

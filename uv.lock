@@ -2589,6 +2589,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "waivern-core" },
+    { name = "waivern-schemas" },
 ]
 
 [package.dev-dependencies]
@@ -2602,6 +2603,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "waivern-core", editable = "libs/waivern-core" },
+    { name = "waivern-schemas", editable = "libs/waivern-schemas" },
 ]
 
 [package.metadata.requires-dev]
