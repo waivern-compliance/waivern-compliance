@@ -1,12 +1,14 @@
-"""Core types for LLM Service v2.
+"""Core types for the LLM service.
 
-This module defines the foundational types used throughout the v2 LLM service:
+This module defines the foundational types used throughout the LLM service:
 - ItemGroup: Groups findings with optional shared content
 - BatchingMode: How the service should batch items
 - PromptBuilder: Protocol for building prompts from items
 - SkipReason: Why a finding/group was skipped during processing
 - SkippedFinding: A finding that was skipped with its reason
 - LLMCompletionResult: Return type for LLMService.complete()
+- LLMRequest: Dispatch request declaring LLM needs as data
+- LLMDispatchResult: Dispatch result carrying LLM responses and skipped findings
 """
 
 from __future__ import annotations
@@ -14,10 +16,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from waivern_core import Finding
+from waivern_core.dispatch import DispatchRequest, DispatchResult
 
 
 @dataclass(frozen=True)
@@ -108,6 +111,7 @@ class BatchingMode(Enum):
     """
 
 
+@runtime_checkable
 class PromptBuilder[T: Finding](Protocol):
     """Protocol for building prompts from groups of findings.
 
@@ -227,3 +231,56 @@ class LLMCompletionResult[T: Finding, R: BaseModel]:
     This is a FLAT list of findings, not grouped by batch or original group.
     The group structure is internal to the LLM service.
     """
+
+
+class LLMRequest[T: Finding, R: BaseModel](DispatchRequest):
+    """Dispatch request declaring a processor's LLM needs as data.
+
+    Captures everything a processor knows about its LLM requirements:
+    the grouped findings, how to build prompts, the expected response shape,
+    and the batching strategy. The dispatcher interprets this to plan batches,
+    build prompts, and route to the LLM provider.
+
+    Serialisation:
+        ``prompt_builder`` is excluded from serialisation because it is a
+        callable protocol. During dispatch, the dispatcher builds prompts
+        and populates ``built_prompts`` with the resulting strings. On
+        resume, the built prompts enable cache lookup without the builder.
+
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    groups: Sequence[ItemGroup[T]]
+    """Processor-defined groupings of findings."""
+
+    prompt_builder: PromptBuilder[T] = Field(exclude=True)
+    """Domain-specific prompt builder. Excluded from serialisation."""
+
+    response_model: type[R]
+    """Expected response shape from the LLM."""
+
+    batching_mode: BatchingMode
+    """How the dispatcher should batch items."""
+
+    run_id: str
+    """Cache scoping key."""
+
+    built_prompts: list[str] | None = None
+    """Populated by the dispatcher after batch planning; ``None`` until then."""
+
+
+class LLMDispatchResult[T: Finding, R: BaseModel](DispatchResult):
+    """Dispatch result carrying LLM responses and skipped findings.
+
+    Returned by the ``LLMDispatcher`` after processing an ``LLMRequest``.
+    Processors interpret responses according to their domain logic.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    responses: list[R]
+    """One response per batch processed."""
+
+    skipped: list[SkippedFinding[T]]
+    """Findings that could not be processed, with reasons."""
