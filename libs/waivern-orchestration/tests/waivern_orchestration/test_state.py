@@ -24,6 +24,7 @@ class TestExecutionStateFresh:
         assert state.run_id == "test-run-123"
         assert state.not_started == {"source_data", "findings", "validated_findings"}
         assert state.completed == set()
+        assert state.pending == set()
         assert state.failed == set()
         assert state.skipped == set()
 
@@ -136,11 +137,12 @@ class TestExecutionStatePersistence:
         run_id = "test-run-123"
 
         # Create state with mixed statuses
-        original = ExecutionState.fresh(run_id, {"a", "b", "c", "d"})
+        original = ExecutionState.fresh(run_id, {"a", "b", "c", "d", "e"})
         original.mark_completed("a")
         original.mark_failed("b")
         original.mark_skipped({"c"})
-        # "d" remains in not_started
+        original.mark_pending("d")
+        # "e" remains in not_started
 
         await original.save(store)
         loaded = await ExecutionState.load(store, run_id)
@@ -149,7 +151,8 @@ class TestExecutionStatePersistence:
         assert loaded.completed == {"a"}
         assert loaded.failed == {"b"}
         assert loaded.skipped == {"c"}
-        assert loaded.not_started == {"d"}
+        assert loaded.pending == {"d"}
+        assert loaded.not_started == {"e"}
 
     async def test_load_raises_artifact_not_found_for_missing_state(self) -> None:
         store = AsyncInMemoryStore()
@@ -180,3 +183,94 @@ class TestExecutionStatePersistence:
         loaded = await ExecutionState.load(store, run_id)
 
         assert loaded.run_id == run_id
+
+
+# =============================================================================
+# Pending State Tests (mark_pending)
+# =============================================================================
+
+
+class TestExecutionStateMarkPending:
+    """Tests for the mark_pending() method."""
+
+    def test_mark_pending_moves_artifact_from_not_started_to_pending(self) -> None:
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
+
+        state.mark_pending("artifact_a")
+
+        assert "artifact_a" in state.pending
+        assert "artifact_a" not in state.not_started
+        assert "artifact_b" in state.not_started
+
+    def test_mark_pending_updates_last_checkpoint(self) -> None:
+        state = ExecutionState.fresh("run-1", {"artifact_a"})
+        original_checkpoint = state.last_checkpoint
+
+        state.mark_pending("artifact_a")
+
+        assert state.last_checkpoint >= original_checkpoint
+
+    def test_mark_pending_is_idempotent_for_already_pending_artifact(self) -> None:
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
+        state.mark_pending("artifact_a")
+
+        state.mark_pending("artifact_a")
+
+        assert state.pending == {"artifact_a"}
+        assert state.not_started == {"artifact_b"}
+
+    def test_mark_pending_ignores_unknown_artifact(self) -> None:
+        state = ExecutionState.fresh("run-1", {"artifact_a"})
+
+        state.mark_pending("nonexistent_artifact")
+
+        assert "nonexistent_artifact" not in state.pending
+        assert state.not_started == {"artifact_a"}
+
+
+# =============================================================================
+# Transitions From Pending State
+# =============================================================================
+
+
+class TestExecutionStateMarkCompletedFromPending:
+    """Tests for mark_completed() transitioning from pending."""
+
+    def test_mark_completed_moves_artifact_from_pending_to_completed(self) -> None:
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
+        state.mark_pending("artifact_a")
+
+        state.mark_completed("artifact_a")
+
+        assert "artifact_a" in state.completed
+        assert "artifact_a" not in state.pending
+        assert "artifact_b" in state.not_started
+
+
+class TestExecutionStateMarkFailedFromPending:
+    """Tests for mark_failed() transitioning from pending."""
+
+    def test_mark_failed_moves_artifact_from_pending_to_failed(self) -> None:
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
+        state.mark_pending("artifact_a")
+
+        state.mark_failed("artifact_a")
+
+        assert "artifact_a" in state.failed
+        assert "artifact_a" not in state.pending
+        assert "artifact_b" in state.not_started
+
+
+class TestExecutionStateMarkSkippedFromPending:
+    """Tests for mark_skipped() transitioning from pending."""
+
+    def test_mark_skipped_moves_pending_artifacts_to_skipped(self) -> None:
+        state = ExecutionState.fresh("run-1", {"a", "b", "c"})
+        state.mark_pending("a")
+
+        state.mark_skipped({"a", "b"})
+
+        assert state.skipped == {"a", "b"}
+        assert "a" not in state.pending
+        assert "b" not in state.not_started
+        assert state.not_started == {"c"}
