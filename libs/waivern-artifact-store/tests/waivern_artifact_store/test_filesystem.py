@@ -972,3 +972,160 @@ class TestLocalFilesystemStoreBatchJobIsolation:
         artifacts = await store.list_artifacts("test-run")
 
         assert artifacts == ["findings"]
+
+
+# =============================================================================
+# Prepared State Tests
+# =============================================================================
+
+
+class TestLocalFilesystemStoreSavePrepared:
+    """Tests for the save_prepared() method."""
+
+    async def test_save_prepared_creates_file_in_prepared_subdirectory(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        data: dict[str, JsonValue] = {
+            "state": {"evidence_status": "automated"},
+            "requests": {"assessment": {}},
+        }
+
+        await store.save_prepared("test-run", "iso27001-ctrl-1", data)
+
+        expected_path = (
+            tmp_path / "runs" / "test-run" / "prepared" / "iso27001-ctrl-1.json"
+        )
+        assert expected_path.exists()
+        with expected_path.open() as f:
+            saved_data = json.load(f)
+        assert saved_data["state"]["evidence_status"] == "automated"
+
+    async def test_save_prepared_stores_data_retrievable_by_load(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        data: dict[str, JsonValue] = {
+            "state": {"findings_count": 5},
+            "requests": {"validation": {"run_id": "run-1"}},
+        }
+
+        await store.save_prepared("test-run", "personal-data", data)
+
+        retrieved = await store.load_prepared("test-run", "personal-data")
+        assert retrieved["state"] == {"findings_count": 5}
+        assert retrieved["requests"] == {"validation": {"run_id": "run-1"}}
+
+    async def test_save_prepared_overwrites_existing(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        original: dict[str, JsonValue] = {"state": {"status": "initial"}}
+        updated: dict[str, JsonValue] = {"state": {"status": "updated"}}
+
+        await store.save_prepared("test-run", "artifact-1", original)
+        await store.save_prepared("test-run", "artifact-1", updated)
+
+        retrieved = await store.load_prepared("test-run", "artifact-1")
+        assert retrieved["state"] == {"status": "updated"}
+
+
+class TestLocalFilesystemStoreLoadPrepared:
+    """Tests for the load_prepared() method."""
+
+    async def test_load_prepared_raises_not_found_for_missing(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        with pytest.raises(ArtifactNotFoundError, match="nonexistent"):
+            await store.load_prepared("test-run", "nonexistent")
+
+
+class TestLocalFilesystemStoreDeletePrepared:
+    """Tests for the delete_prepared() method."""
+
+    async def test_delete_prepared_removes_saved(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        data: dict[str, JsonValue] = {"state": {"status": "pending"}}
+        await store.save_prepared("test-run", "artifact-1", data)
+
+        await store.delete_prepared("test-run", "artifact-1")
+
+        assert not await store.prepared_exists("test-run", "artifact-1")
+
+    async def test_delete_prepared_does_not_raise_for_missing(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        await store.delete_prepared("test-run", "nonexistent")
+
+
+class TestLocalFilesystemStorePreparedExists:
+    """Tests for the prepared_exists() method."""
+
+    async def test_prepared_exists_returns_true_after_save(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        data: dict[str, JsonValue] = {"state": {"status": "pending"}}
+        await store.save_prepared("test-run", "artifact-1", data)
+
+        assert await store.prepared_exists("test-run", "artifact-1")
+
+    async def test_prepared_exists_returns_false_for_unsaved(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+
+        assert not await store.prepared_exists("test-run", "nonexistent")
+
+
+class TestLocalFilesystemStorePreparedIsolation:
+    """Tests for prepared data isolation between runs and storage domains."""
+
+    async def test_prepared_data_isolated_between_runs(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        data_run1: dict[str, JsonValue] = {"state": {"run": "1"}}
+        data_run2: dict[str, JsonValue] = {"state": {"run": "2"}}
+
+        await store.save_prepared("run-1", "same-artifact", data_run1)
+        await store.save_prepared("run-2", "same-artifact", data_run2)
+
+        retrieved_run1 = await store.load_prepared("run-1", "same-artifact")
+        retrieved_run2 = await store.load_prepared("run-2", "same-artifact")
+        assert retrieved_run1["state"] == {"run": "1"}
+        assert retrieved_run2["state"] == {"run": "2"}
+
+    async def test_clear_artifacts_preserves_prepared_data(
+        self, tmp_path: Path
+    ) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save_artifact("test-run", "findings", message)
+        data: dict[str, JsonValue] = {"state": {"status": "pending"}}
+        await store.save_prepared("test-run", "artifact-1", data)
+
+        await store.clear_artifacts("test-run")
+
+        retrieved = await store.load_prepared("test-run", "artifact-1")
+        assert retrieved["state"] == {"status": "pending"}
+        assert not await store.artifact_exists("test-run", "findings")
+
+    async def test_list_artifacts_excludes_prepared_data(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        data: dict[str, JsonValue] = {"state": {"status": "pending"}}
+        await store.save_prepared("test-run", "artifact-1", data)
+        message = Message(
+            id="msg-1",
+            content={"data": "value"},
+            schema=Schema("test_schema", "1.0.0"),
+        )
+        await store.save_artifact("test-run", "findings", message)
+
+        artifacts = await store.list_artifacts("test-run")
+
+        assert artifacts == ["findings"]

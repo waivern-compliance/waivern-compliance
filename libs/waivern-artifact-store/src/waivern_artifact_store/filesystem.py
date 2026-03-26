@@ -46,6 +46,7 @@ class LocalFilesystemStore(ArtifactStore):
     _SYSTEM_PREFIX = "_system"
     _LLM_CACHE_PREFIX = "llm_cache"
     _BATCH_JOBS_PREFIX = "batch_jobs"
+    _PREPARED_PREFIX = "prepared"
 
     # System file keys
     _STATE_KEY = f"{_SYSTEM_PREFIX}/state"
@@ -102,6 +103,10 @@ class LocalFilesystemStore(ArtifactStore):
     def _batch_job_key(self, batch_id: str) -> str:
         """Convert batch job ID to internal storage key."""
         return f"{self._BATCH_JOBS_PREFIX}/{batch_id}"
+
+    def _prepared_key(self, artifact_id: str) -> str:
+        """Convert artifact ID to prepared state storage key."""
+        return f"{self._PREPARED_PREFIX}/{artifact_id}"
 
     # ========================================================================
     # Artifact Operations
@@ -299,6 +304,50 @@ class LocalFilesystemStore(ArtifactStore):
             return []
 
         return sorted(f.stem for f in batch_dir.glob("*.json"))
+
+    # ========================================================================
+    # Prepared State Operations
+    # ========================================================================
+
+    @override
+    async def save_prepared(
+        self, run_id: str, artifact_id: str, data: dict[str, JsonValue]
+    ) -> None:
+        """Persist prepared state to prepared/{artifact_id}.json."""
+        file_path = self._key_to_path(run_id, self._prepared_key(artifact_id))
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        async with aiofiles.open(file_path, "w") as f:
+            await f.write(json.dumps(data, indent=2))
+
+    @override
+    async def load_prepared(
+        self, run_id: str, artifact_id: str
+    ) -> dict[str, JsonValue]:
+        """Load prepared state from prepared/{artifact_id}.json."""
+        file_path = self._key_to_path(run_id, self._prepared_key(artifact_id))
+
+        if not file_path.exists():
+            raise ArtifactNotFoundError(
+                f"Prepared state for '{artifact_id}' not found in run '{run_id}'."
+            )
+
+        async with aiofiles.open(file_path) as f:
+            content = await f.read()
+        data = json.loads(content)
+        return cast(dict[str, JsonValue], data)
+
+    @override
+    async def delete_prepared(self, run_id: str, artifact_id: str) -> None:
+        """Delete prepared state for an artifact."""
+        file_path = self._key_to_path(run_id, self._prepared_key(artifact_id))
+        if file_path.exists():
+            file_path.unlink()
+
+    @override
+    async def prepared_exists(self, run_id: str, artifact_id: str) -> bool:
+        """Check if prepared state exists for an artifact."""
+        return self._key_to_path(run_id, self._prepared_key(artifact_id)).exists()
 
     # ========================================================================
     # LLM Cache Operations
