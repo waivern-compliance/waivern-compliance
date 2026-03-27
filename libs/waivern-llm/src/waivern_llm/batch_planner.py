@@ -58,19 +58,16 @@ class BatchPlanner:
     def __init__(
         self,
         max_payload_tokens: int,
-        batch_size: int = 50,
         tokens_per_item: int = TOKENS_PER_FINDING,
     ) -> None:
         """Initialise the batch planner.
 
         Args:
-            max_payload_tokens: Maximum tokens allowed per batch (EXTENDED_CONTEXT).
-            batch_size: Maximum items per batch (COUNT_BASED).
+            max_payload_tokens: Maximum tokens allowed per batch.
             tokens_per_item: Estimated tokens per item in prompt.
 
         """
         self._max_payload_tokens = max_payload_tokens
-        self._batch_size = batch_size
         self._tokens_per_item = tokens_per_item
 
     def plan[T: Finding](
@@ -219,8 +216,8 @@ class BatchPlanner:
 
         Algorithm:
         1. Flatten all items from all groups
-        2. Split into chunks of batch_size
-        3. Wrap each chunk in a synthetic ItemGroup with content=None
+        2. Compute items per batch from token budget
+        3. Split into chunks and wrap each in a synthetic ItemGroup
         """
         # Flatten all items
         all_items: list[T] = []
@@ -230,10 +227,13 @@ class BatchPlanner:
         if not all_items:
             return BatchPlan(batches=[], skipped=[])
 
+        # Derive batch size from token budget
+        items_per_batch = max(1, self._max_payload_tokens // self._tokens_per_item)
+
         # Split into chunks
         batches: list[PlannedBatch[T]] = []
-        for i in range(0, len(all_items), self._batch_size):
-            chunk = all_items[i : i + self._batch_size]
+        for i in range(0, len(all_items), items_per_batch):
+            chunk = all_items[i : i + items_per_batch]
             # Create synthetic group with no content
             synthetic_group: ItemGroup[T] = ItemGroup(items=chunk, content=None)
             # Token estimate is just the item tokens (no content)

@@ -39,7 +39,6 @@ artifacts:
           maximum_evidence_count: 3
         llm_validation:
           enable_llm_validation: false
-          llm_batch_size: 80
           llm_validation_mode: "conservative"
 
   mongodb_gdpr_personal_data:
@@ -65,7 +64,6 @@ artifacts:
           maximum_evidence_count: 3
         llm_validation:
           enable_llm_validation: false
-          llm_batch_size: 50
           llm_validation_mode: "conservative"
 
   mongodb_gdpr_data_subject:
