@@ -258,27 +258,27 @@ class TestCountBasedMode:
 
     def test_count_based_flattens_items_across_groups(self) -> None:
         """Items from multiple groups should be combined into batches."""
-        # Two groups with 2 items each
+        # Two groups with 2 items each — capacity fits all 4
         group1 = _create_group(content="content1", item_count=2, group_id="g1")
         group2 = _create_group(content="content2", item_count=2, group_id="g2")
-        planner = BatchPlanner(max_payload_tokens=10_000, batch_size=10)
+        planner = BatchPlanner(max_payload_tokens=10_000)
 
         plan = planner.plan([group1, group2], mode=BatchingMode.COUNT_BASED)
 
-        # All 4 items should be in a single batch (batch_size=10 > 4 items)
         assert len(plan.batches) == 1
         assert len(plan.batches[0].groups) == 1  # Synthetic group
         assert len(plan.batches[0].groups[0].items) == 4
 
-    def test_count_based_splits_by_batch_size(self) -> None:
-        """Items exceeding batch_size should be split into multiple batches."""
-        # Group with 5 items, batch_size=2
+    def test_count_based_splits_when_items_exceed_capacity(self) -> None:
+        """Items exceeding token capacity should be split into multiple batches."""
+        # 5 items × 100 tokens each = 500 tokens total
+        # max_payload_tokens=200 → floor(200/100) = 2 items per batch
+        # 5 items → 3 batches (2, 2, 1)
         group = _create_group(content="content", item_count=5, group_id="g1")
-        planner = BatchPlanner(max_payload_tokens=10_000, batch_size=2)
+        planner = BatchPlanner(max_payload_tokens=200, tokens_per_item=100)
 
         plan = planner.plan([group], mode=BatchingMode.COUNT_BASED)
 
-        # 5 items with batch_size=2 → 3 batches (2, 2, 1)
         assert len(plan.batches) == 3
         assert len(plan.batches[0].groups[0].items) == 2
         assert len(plan.batches[1].groups[0].items) == 2
@@ -287,7 +287,7 @@ class TestCountBasedMode:
     def test_count_based_ignores_content(self) -> None:
         """Groups with content should have content=None in output batches."""
         group = _create_group(content="this content should be ignored", item_count=2)
-        planner = BatchPlanner(max_payload_tokens=10_000, batch_size=10)
+        planner = BatchPlanner(max_payload_tokens=10_000)
 
         plan = planner.plan([group], mode=BatchingMode.COUNT_BASED)
 
@@ -297,7 +297,7 @@ class TestCountBasedMode:
 
     def test_count_based_empty_groups_returns_empty_plan(self) -> None:
         """Empty groups should return empty plan."""
-        planner = BatchPlanner(max_payload_tokens=10_000, batch_size=10)
+        planner = BatchPlanner(max_payload_tokens=10_000)
 
         plan = planner.plan([], mode=BatchingMode.COUNT_BASED)
 

@@ -156,7 +156,7 @@ class TestDefaultLLMServiceCountBasedMode:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store)
 
         group = _create_group(content="some content", item_count=2)
 
@@ -184,8 +184,9 @@ class TestDefaultLLMServiceCountBasedMode:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        # batch_size=2 means 5 items should produce 3 batches
-        service = DefaultLLMService(provider=provider, store=store, batch_size=2)
+        # context_window=4457 → max_payload=100 → 100//50 = 2 items per batch
+        provider.context_window = 4457
+        service = DefaultLLMService(provider=provider, store=store)
 
         group = _create_group(content="some content", item_count=5)
 
@@ -218,7 +219,7 @@ class TestDefaultLLMServiceExtendedContextMode:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store)
 
         group = _create_group(content="file content here", item_count=2)
 
@@ -245,7 +246,7 @@ class TestDefaultLLMServiceExtendedContextMode:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store)
 
         # Two large groups that exceed bin-packing capacity when combined.
         # context_window=100,000 → max_payload≈66,130 tokens.
@@ -284,7 +285,7 @@ class TestDefaultLLMServiceCaching:
         response = MockResponse(valid=True, reason="from provider")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store)
 
         group = _create_group(content="test content", item_count=1)
 
@@ -337,9 +338,11 @@ class TestDefaultLLMServiceCaching:
         prompt_builder = Mock()
         prompt_builder.build_prompt = Mock(side_effect=build_prompt_side_effect)
 
-        service = DefaultLLMService(provider=provider, store=store, batch_size=1)
+        # context_window=4385 → max_payload=50 → 50//50 = 1 item per batch
+        provider.context_window = 4385
+        service = DefaultLLMService(provider=provider, store=store)
 
-        # Two items that will become two batches (batch_size=1, COUNT_BASED flattens)
+        # Two items that will become two batches (1 item per batch, COUNT_BASED flattens)
         group = _create_group(content=None, item_count=2)
 
         # First attempt - should fail on second batch
@@ -384,7 +387,7 @@ class TestDefaultLLMServiceCaching:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store)
 
         group = _create_group(content="test content", item_count=1)
 
@@ -419,7 +422,7 @@ class TestDefaultLLMServiceSkippedFindings:
         response = MockResponse(valid=True, reason="test")
         provider = _create_mock_provider(response)
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store)
 
         # Valid group with content
         valid_group = _create_group(content="valid content", item_count=2)
@@ -463,7 +466,7 @@ class TestDefaultLLMServiceErrorHandling:
             side_effect=RuntimeError("Provider failed")
         )
         prompt_builder = _create_mock_prompt_builder()
-        service = DefaultLLMService(provider=provider, store=store, batch_size=50)
+        service = DefaultLLMService(provider=provider, store=store)
 
         group = _create_group(content="test content", item_count=1)
 
@@ -495,12 +498,13 @@ class TestDefaultLLMServiceBatchMode:
         response = MockResponse(valid=True, reason="test")
         submission = BatchSubmission(batch_id="batch-abc", request_count=2)
         provider = _create_mock_batch_provider(response, submission)
+        # context_window=4385 → max_payload=50 → 1 item per batch
+        provider.context_window = 4385
         prompt_builder = _create_unique_prompt_builder()
 
         service = DefaultLLMService(
             provider=provider,
             store=store,
-            batch_size=1,
             batch_mode=True,
             provider_name="test-provider",
         )
@@ -562,12 +566,13 @@ class TestDefaultLLMServiceBatchMode:
         response = MockResponse(valid=True, reason="test")
         submission = BatchSubmission(batch_id="batch-new", request_count=1)
         provider = _create_mock_batch_provider(response, submission)
+        # context_window=4385 → max_payload=50 → 1 item per batch
+        provider.context_window = 4385
         prompt_builder = _create_unique_prompt_builder()
 
         service = DefaultLLMService(
             provider=provider,
             store=store,
-            batch_size=1,
             batch_mode=True,
             provider_name="test-provider",
         )
@@ -621,12 +626,13 @@ class TestDefaultLLMServiceBatchMode:
         response = MockResponse(valid=True, reason="test")
         submission = BatchSubmission(batch_id="batch-unused", request_count=0)
         provider = _create_mock_batch_provider(response, submission)
+        # context_window=4385 → max_payload=50 → 1 item per batch
+        provider.context_window = 4385
         prompt_builder = _create_unique_prompt_builder()
 
         service = DefaultLLMService(
             provider=provider,
             store=store,
-            batch_size=1,
             batch_mode=True,
             provider_name="test-provider",
         )
@@ -691,7 +697,6 @@ class TestDefaultLLMServiceBatchMode:
         service = DefaultLLMService(
             provider=provider,
             store=store,
-            batch_size=50,
             batch_mode=True,  # batch mode ON, but provider doesn't support it
             provider_name="test-provider",
         )

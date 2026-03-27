@@ -149,7 +149,6 @@ class DefaultLLMService(LLMService):
         self,
         provider: LLMProvider,
         store: ArtifactStore,
-        batch_size: int = 50,
         *,
         batch_mode: bool = False,
         provider_name: str = "",
@@ -159,7 +158,6 @@ class DefaultLLMService(LLMService):
         Args:
             provider: LLM provider for making structured calls.
             store: Artifact store for response caching and batch job persistence.
-            batch_size: Maximum items per batch in COUNT_BASED mode.
             batch_mode: Use batch API for async processing (lower cost).
             provider_name: Provider name for batch job metadata (e.g. "anthropic").
 
@@ -169,7 +167,6 @@ class DefaultLLMService(LLMService):
         # ArtifactStore implementations also satisfy the LLMCache protocol;
         # cast once here so cache operations are type-safe throughout.
         self._cache: LLMCache = cast("LLMCache", store)
-        self._batch_size = batch_size
         self._batch_mode = batch_mode
         self._provider_name = provider_name
 
@@ -197,10 +194,7 @@ class DefaultLLMService(LLMService):
         5. On resume with all completed: return results normally
         """
         max_payload = calculate_max_payload_tokens(self._provider.context_window)
-        planner = BatchPlanner(
-            max_payload_tokens=max_payload,
-            batch_size=self._batch_size,
-        )
+        planner = BatchPlanner(max_payload_tokens=max_payload)
 
         plan = planner.plan(groups, batching_mode)
 
