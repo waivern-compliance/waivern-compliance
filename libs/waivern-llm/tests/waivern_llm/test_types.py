@@ -55,6 +55,7 @@ class TestLLMRequest:
     def test_prompt_builder_excluded_from_serialisation(self) -> None:
         """prompt_builder must be excluded from model_dump() for batch persistence."""
         request = LLMRequest(
+            request_id="test-request",
             groups=[ItemGroup(items=[MockFinding("f1")])],
             prompt_builder=MockPromptBuilder(),
             response_model=MockResponse,
@@ -65,6 +66,7 @@ class TestLLMRequest:
         dumped = request.model_dump()
 
         assert "prompt_builder" not in dumped
+        assert "response_model" not in dumped
         assert "groups" in dumped
         assert "batching_mode" in dumped
         assert "run_id" in dumped

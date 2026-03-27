@@ -19,6 +19,7 @@ Core types:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel
@@ -30,56 +31,72 @@ from waivern_core.schemas import Schema
 class DispatchRequest(BaseModel):
     """Base type for all dispatchable requests.
 
+    Every request carries a ``request_id`` set by the caller. The
+    dispatcher passes it through to the corresponding ``DispatchResult``
+    so the caller can match results back to requests.
+
     Service-specific request types extend this with their own fields.
     For example, ``LLMRequest`` in ``waivern-llm`` adds groups, prompt
     builder, response model, etc.
     """
 
+    request_id: str
+    """Caller-defined identifier for matching results back to requests."""
+
 
 class DispatchResult(BaseModel):
     """Base type for all dispatch results.
+
+    Every result carries the ``request_id`` of the originating request
+    so the caller can match results back without relying on ordering.
 
     Service-specific result types extend this with their own fields.
     For example, ``LLMDispatchResult`` in ``waivern-llm`` adds responses
     and skipped findings.
     """
 
+    request_id: str
+    """Identifier copied from the originating ``DispatchRequest``."""
+
 
 class PrepareResult[S: BaseModel](BaseModel):
     """Result of ``DistributedProcessor.prepare()``.
 
-    Carries the processor's intermediate state and a dict of dispatch requests.
-    The executor inspects ``requests`` to determine the dispatch path:
+    Carries the processor's intermediate state and a list of dispatch
+    requests. The executor inspects ``requests`` to determine the
+    dispatch path:
 
-    - Empty ``requests``: no dispatch needed — executor calls ``finalise()``
-      immediately with an empty results dict.
-    - Non-empty ``requests``: executor routes each request to the matching
-      ``RequestDispatcher``, then calls ``finalise()`` with the results.
-
-    Keys in ``requests`` are processor-defined names that document intent
-    (e.g., ``"assessment"``, ``"classification"``). The same keys appear in
-    the results dict passed to ``finalise()``.
+    - Empty ``requests``: no dispatch needed — executor calls
+      ``finalise()`` immediately with an empty results list.
+    - Non-empty ``requests``: executor routes each request to the
+      matching ``RequestDispatcher``, then calls ``finalise()`` with
+      the results.
 
     Attributes:
-        state: Processor-specific intermediate state, opaque to the executor.
-        requests: Dispatch requests keyed by processor-defined names.
+        state: Processor-specific intermediate state, opaque to the
+            executor.
+        requests: Dispatch requests. Each request carries a
+            ``request_id`` set by the processor to label its intent
+            (e.g., ``"assessment"``, ``"classification"``). The executor
+            may prefix these with the artifact ID to ensure global
+            uniqueness before dispatching.
 
     """
 
     state: S
-    requests: dict[str, DispatchRequest]
+    requests: list[DispatchRequest]
 
 
 class RequestDispatcher[R: DispatchRequest, V: DispatchResult](Protocol):
     """Protocol for dispatching grouped requests to a service.
 
-    Dispatchers coordinate cross-processor requests of the same type. For
-    example, ``LLMDispatcher`` consolidates multiple ``LLMRequest`` objects
-    into a single batch submission.
+    Dispatchers consolidate execution across multiple requests of the
+    same type. For example, ``LLMDispatcher`` collects cache misses
+    from all requests and executes them in a single batch submission.
 
-    The ``dispatch()`` method receives requests keyed by artifact ID and
-    returns results keyed by the same IDs, allowing the executor to route
-    results back to the originating processor.
+    Each request carries a ``request_id``. The dispatcher copies it to
+    the corresponding ``DispatchResult`` so the caller can match results
+    back to requests. The dispatcher does not interpret the IDs.
 
     """
 
@@ -88,14 +105,16 @@ class RequestDispatcher[R: DispatchRequest, V: DispatchResult](Protocol):
         """The concrete ``DispatchRequest`` subclass this dispatcher handles."""
         ...
 
-    def dispatch(self, requests: dict[str, R]) -> dict[str, V]:
+    async def dispatch(self, requests: Sequence[R]) -> Sequence[V]:
         """Dispatch a batch of requests and return results.
 
         Args:
-            requests: Requests keyed by artifact ID.
+            requests: Requests to dispatch. Each carries a
+                ``request_id`` for result matching.
 
         Returns:
-            Results keyed by the same artifact IDs.
+            Results, each carrying the ``request_id`` of the
+            originating request.
 
         """
         ...
@@ -140,7 +159,7 @@ class DistributedProcessor[S: BaseModel](Protocol):
 
         Returns:
             A ``PrepareResult`` carrying intermediate state and dispatch
-            requests (empty dict if no dispatch is needed).
+            requests (empty list if no dispatch is needed).
 
         """
         ...
@@ -148,19 +167,20 @@ class DistributedProcessor[S: BaseModel](Protocol):
     def finalise(
         self,
         state: S,
-        results: dict[str, DispatchResult],
+        results: Sequence[DispatchResult],
         output_schema: Schema,
     ) -> Message | PrepareResult[S]:
         """Produce output from intermediate state and dispatch results.
 
         This method must be synchronous with no internal I/O. It receives
         the state from ``prepare()`` and the results from dispatch (empty
-        dict if no dispatch occurred).
+        sequence if no dispatch occurred).
 
         Args:
             state: The intermediate state from ``prepare()``.
-            results: Dispatch results keyed by the same names used in
-                ``PrepareResult.requests``. Empty dict if no dispatch.
+            results: Dispatch results, each carrying a ``request_id``
+                matching the originating request. Empty sequence if no
+                dispatch occurred.
             output_schema: The schema for the output message.
 
         Returns:

@@ -19,7 +19,7 @@ from enum import Enum, auto
 from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field
-from waivern_core import Finding
+from waivern_core import Finding, JsonValue
 from waivern_core.dispatch import DispatchRequest, DispatchResult
 
 
@@ -233,7 +233,7 @@ class LLMCompletionResult[T: Finding, R: BaseModel]:
     """
 
 
-class LLMRequest[T: Finding, R: BaseModel](DispatchRequest):
+class LLMRequest[T: Finding](DispatchRequest):
     """Dispatch request declaring a processor's LLM needs as data.
 
     Captures everything a processor knows about its LLM requirements:
@@ -242,10 +242,11 @@ class LLMRequest[T: Finding, R: BaseModel](DispatchRequest):
     build prompts, and route to the LLM provider.
 
     Serialisation:
-        ``prompt_builder`` is excluded from serialisation because it is a
-        callable protocol. During dispatch, the dispatcher builds prompts
-        and populates ``built_prompts`` with the resulting strings. On
-        resume, the built prompts enable cache lookup without the builder.
+        ``prompt_builder`` and ``response_model`` are excluded from
+        serialisation — they are live Python objects only needed on first
+        run. During dispatch, the dispatcher builds prompts and populates
+        ``built_prompts`` with the resulting strings. On resume, the built
+        prompts enable cache lookup without the builder or response model.
 
     """
 
@@ -257,8 +258,13 @@ class LLMRequest[T: Finding, R: BaseModel](DispatchRequest):
     prompt_builder: PromptBuilder[T] = Field(exclude=True)
     """Domain-specific prompt builder. Excluded from serialisation."""
 
-    response_model: type[R]
-    """Expected response shape from the LLM."""
+    response_model: type[BaseModel] = Field(exclude=True)
+    """Expected response shape for the LLM. Excluded from serialisation.
+
+    Used by the dispatcher on first run to call
+    ``provider.invoke_structured()`` (sync mode) or generate the JSON
+    schema for ``BatchRequest`` (batch mode). Not needed on resume.
+    """
 
     batching_mode: BatchingMode
     """How the dispatcher should batch items."""
@@ -270,17 +276,18 @@ class LLMRequest[T: Finding, R: BaseModel](DispatchRequest):
     """Populated by the dispatcher after batch planning; ``None`` until then."""
 
 
-class LLMDispatchResult[T: Finding, R: BaseModel](DispatchResult):
-    """Dispatch result carrying LLM responses and skipped findings.
+class LLMDispatchResult(DispatchResult):
+    """Dispatch result carrying raw LLM responses and skipped findings.
 
     Returned by the ``LLMDispatcher`` after processing an ``LLMRequest``.
-    Processors interpret responses according to their domain logic.
+    Responses are raw dicts — the processor deserialises them in
+    ``finalise()`` using its own response model type.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    responses: list[R]
-    """One response per batch processed."""
+    responses: list[dict[str, JsonValue]]
+    """Raw response dicts, one per batch processed."""
 
-    skipped: list[SkippedFinding[T]]
+    skipped: list[SkippedFinding[Finding]]
     """Findings that could not be processed, with reasons."""
