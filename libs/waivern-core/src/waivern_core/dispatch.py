@@ -21,8 +21,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
+from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
@@ -31,17 +32,23 @@ from waivern_core.schemas import Schema
 class DispatchRequest(BaseModel):
     """Base type for all dispatchable requests.
 
-    Every request carries a ``request_id`` set by the caller. The
-    dispatcher passes it through to the corresponding ``DispatchResult``
-    so the caller can match results back to requests.
+    Every request carries an auto-generated ``request_id`` (UUID). The
+    dispatcher copies it to the corresponding ``DispatchResult`` so the
+    caller can match results back to requests.
+
+    An optional ``name`` field provides a human-readable label for
+    logging and debugging (e.g., ``"assessment"``, ``"classification"``).
 
     Service-specific request types extend this with their own fields.
     For example, ``LLMRequest`` in ``waivern-llm`` adds groups, prompt
     builder, response model, etc.
     """
 
-    request_id: str
-    """Caller-defined identifier for matching results back to requests."""
+    request_id: str = Field(default_factory=lambda: str(uuid4()))
+    """Auto-generated UUID for matching results back to requests."""
+
+    name: str = ""
+    """Optional human-readable label for logging and debugging."""
 
 
 class DispatchResult(BaseModel):
@@ -75,11 +82,8 @@ class PrepareResult[S: BaseModel](BaseModel):
     Attributes:
         state: Processor-specific intermediate state, opaque to the
             executor.
-        requests: Dispatch requests. Each request carries a
-            ``request_id`` set by the processor to label its intent
-            (e.g., ``"assessment"``, ``"classification"``). The executor
-            may prefix these with the artifact ID to ensure global
-            uniqueness before dispatching.
+        requests: Dispatch requests. Each request has an auto-generated
+            ``request_id`` (UUID) for result matching.
 
     """
 
