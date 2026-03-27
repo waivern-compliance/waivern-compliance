@@ -23,9 +23,8 @@ from waivern_llm.batch_types import BatchStatusLiteral
 class BatchJob(BaseModel):
     """Tracks a single batch submission within a run.
 
-    Fields ``provider`` and ``model`` are metadata — they record what was
-    used at submission time.  The poller validates that the resolved
-    provider matches these fields before polling.
+    The ``model`` field records what was used at submission time.
+    The poller validates that the resolved model matches before polling.
     """
 
     batch_id: str
@@ -33,9 +32,6 @@ class BatchJob(BaseModel):
 
     run_id: str
     """Which run owns this batch."""
-
-    provider: str
-    """Provider name at submission (validation/audit)."""
 
     model: str
     """Model name at submission (validation/audit)."""

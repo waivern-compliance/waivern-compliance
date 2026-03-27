@@ -313,6 +313,7 @@ class TestMessageSerialization:
                     status="success",
                     duration_seconds=1.5,
                     origin="parent",
+                    model_name="claude-sonnet-4-5-20250929",
                 )
             ),
         )
@@ -323,6 +324,10 @@ class TestMessageSerialization:
         assert result["extensions"]["execution"]["status"] == "success"
         assert result["extensions"]["execution"]["duration_seconds"] == 1.5
         assert result["extensions"]["execution"]["origin"] == "parent"
+        assert (
+            result["extensions"]["execution"]["model_name"]
+            == "claude-sonnet-4-5-20250929"
+        )
 
     def test_to_dict_extensions_none_when_not_set(self) -> None:
         """to_dict has extensions=None when not set."""
@@ -353,6 +358,7 @@ class TestMessageSerialization:
                     "duration_seconds": 0.5,
                     "origin": "child:analyser",
                     "alias": "results",
+                    "model_name": "claude-sonnet-4-5-20250929",
                 }
             },
         }
@@ -364,6 +370,7 @@ class TestMessageSerialization:
         assert message.execution_duration == 0.5
         assert message.execution_origin == "child:analyser"
         assert message.execution_alias == "results"
+        assert message.execution_model_name == "claude-sonnet-4-5-20250929"
 
     def test_from_dict_handles_no_extensions(self) -> None:
         """from_dict handles missing extensions gracefully."""
@@ -384,6 +391,32 @@ class TestMessageSerialization:
         assert message.is_success is False
         assert message.execution_error is None
 
+    def test_from_dict_handles_missing_model_name(self) -> None:
+        """from_dict handles old serialised data without model_name field."""
+        data = {
+            "id": "test-id",
+            "content": {"test": "value"},
+            "schema": {"name": "test_schema", "version": "1.0.0"},
+            "context": None,
+            "run_id": None,
+            "source": None,
+            "timestamp": "2025-01-01T12:00:00+00:00",
+            "extensions": {
+                "execution": {
+                    "status": "success",
+                    "error": None,
+                    "duration_seconds": 1.0,
+                    "origin": "parent",
+                    "alias": None,
+                }
+            },
+        }
+
+        message = Message.from_dict(data)
+
+        assert message.execution_model_name is None
+        assert message.is_success is True
+
     def test_round_trip_preserves_extensions(self) -> None:
         """Round-trip through to_dict/from_dict preserves all extension data."""
         # Use base Schema for round-trip test (MockTypedSchema is a frozen
@@ -401,6 +434,7 @@ class TestMessageSerialization:
                     duration_seconds=2.5,
                     origin="child:processor",
                     alias="output",
+                    model_name="claude-sonnet-4-5-20250929",
                 )
             ),
         )
@@ -415,6 +449,7 @@ class TestMessageSerialization:
         assert restored.execution_duration == original.execution_duration
         assert restored.execution_origin == original.execution_origin
         assert restored.execution_alias == original.execution_alias
+        assert restored.execution_model_name == original.execution_model_name
 
         # Verify other fields preserved too
         assert restored.id == original.id

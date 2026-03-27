@@ -19,7 +19,6 @@ class TestBatchJobSaveAndLoad:
         job = BatchJob(
             batch_id="batch-abc123",
             run_id="run-456",
-            provider="anthropic",
             model="claude-sonnet-4-5-20250929",
             status="completed",
             cache_keys=["key-a", "key-b", "key-c"],
@@ -33,7 +32,6 @@ class TestBatchJobSaveAndLoad:
 
         assert loaded.batch_id == "batch-abc123"
         assert loaded.run_id == "run-456"
-        assert loaded.provider == "anthropic"
         assert loaded.model == "claude-sonnet-4-5-20250929"
         assert loaded.status == "completed"
         assert loaded.cache_keys == ["key-a", "key-b", "key-c"]
@@ -46,7 +44,6 @@ class TestBatchJobSaveAndLoad:
         job = BatchJob(
             batch_id="batch-1",
             run_id="run-1",
-            provider="anthropic",
             model="claude-sonnet-4-5-20250929",
             status="submitted",
             cache_keys=["key-a"],
@@ -81,7 +78,6 @@ class TestBatchJobListForRun:
             job = BatchJob(
                 batch_id=batch_id,
                 run_id="run-1",
-                provider="anthropic",
                 model="claude-sonnet-4-5-20250929",
                 status="submitted",
                 cache_keys=[f"key-{i}"],
