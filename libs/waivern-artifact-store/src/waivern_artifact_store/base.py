@@ -236,6 +236,72 @@ class ArtifactStore(ABC):
         ...
 
     # ========================================================================
+    # Prepared State Operations
+    # ========================================================================
+
+    @abstractmethod
+    async def save_prepared(
+        self, run_id: str, artifact_id: str, data: dict[str, JsonValue]
+    ) -> None:
+        """Persist prepared state for an artifact.
+
+        Uses upsert semantics — overwrites if artifact_id already exists.
+
+        Args:
+            run_id: Unique identifier for the run.
+            artifact_id: The artifact whose prepared state to store.
+            data: The prepared state as a dictionary.
+
+        """
+        ...
+
+    @abstractmethod
+    async def load_prepared(
+        self, run_id: str, artifact_id: str
+    ) -> dict[str, JsonValue]:
+        """Load prepared state for an artifact.
+
+        Args:
+            run_id: Unique identifier for the run.
+            artifact_id: The artifact whose prepared state to load.
+
+        Returns:
+            The prepared state as a dictionary.
+
+        Raises:
+            ArtifactNotFoundError: If prepared state does not exist.
+
+        """
+        ...
+
+    @abstractmethod
+    async def delete_prepared(self, run_id: str, artifact_id: str) -> None:
+        """Delete prepared state for an artifact.
+
+        No-op if prepared state does not exist.
+
+        Args:
+            run_id: Unique identifier for the run.
+            artifact_id: The artifact whose prepared state to delete.
+
+        """
+        ...
+
+    @abstractmethod
+    async def prepared_exists(self, run_id: str, artifact_id: str) -> bool:
+        """Check if prepared state exists for an artifact.
+
+        Args:
+            run_id: Unique identifier for the run.
+            artifact_id: The artifact to check.
+
+        Returns:
+            True if prepared state exists, False otherwise.
+
+        """
+        ...
+
+    # ========================================================================
     # Run Enumeration
     # ========================================================================
 

@@ -14,9 +14,10 @@ See Also:
 
 """
 
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
+@runtime_checkable
 class FindingMetadata(Protocol):
     """Minimal contract for finding metadata.
 
@@ -30,6 +31,7 @@ class FindingMetadata(Protocol):
         ...
 
 
+@runtime_checkable
 class Finding(Protocol):
     """Minimal contract for findings used in generic validation code.
 

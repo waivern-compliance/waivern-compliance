@@ -12,6 +12,13 @@ from waivern_core.base_connector import Connector
 from waivern_core.base_processor import Processor
 from waivern_core.base_ruleset import BaseRuleset, RulesetError
 from waivern_core.component_factory import ComponentConfig, ComponentFactory
+from waivern_core.dispatch import (
+    DispatchRequest,
+    DispatchResult,
+    DistributedProcessor,
+    PrepareResult,
+    RequestDispatcher,
+)
 from waivern_core.errors import (
     AnalyserConfigError,
     AnalyserError,
@@ -100,8 +107,14 @@ __all__ = [
     "InputRequirement",
     "JsonValue",
     # Protocols
+    "DistributedProcessor",
     "Finding",
     "FindingMetadata",
+    "RequestDispatcher",
+    # Dispatch
+    "DispatchRequest",
+    "DispatchResult",
+    "PrepareResult",
     # Utilities
     "validate_output_schema",
     # Errors

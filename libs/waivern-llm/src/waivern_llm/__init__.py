@@ -117,6 +117,8 @@ from waivern_llm.types import (
     BatchingMode,
     ItemGroup,
     LLMCompletionResult,
+    LLMDispatchResult,
+    LLMRequest,
     PromptBuilder,
     SkippedFinding,
     SkipReason,
@@ -132,6 +134,9 @@ __all__ = [
     "SkipReason",
     "SkippedFinding",
     "LLMCompletionResult",
+    # Dispatch types
+    "LLMRequest",
+    "LLMDispatchResult",
     # Service
     "LLMService",
     "DefaultLLMService",

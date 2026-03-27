@@ -34,6 +34,8 @@ class AsyncInMemoryStore(ArtifactStore):
         self._llm_cache: dict[str, dict[str, dict[str, JsonValue]]] = {}
         # Batch job storage: run_id -> batch_id -> data
         self._batch_jobs: dict[str, dict[str, dict[str, JsonValue]]] = {}
+        # Prepared state storage: run_id -> artifact_id -> data
+        self._prepared: dict[str, dict[str, dict[str, JsonValue]]] = {}
 
     def _get_artifact_storage(self, run_id: str) -> dict[str, Message]:
         """Get or create artifact storage dict for a run."""
@@ -58,6 +60,12 @@ class AsyncInMemoryStore(ArtifactStore):
         if run_id not in self._batch_jobs:
             self._batch_jobs[run_id] = {}
         return self._batch_jobs[run_id]
+
+    def _get_prepared_storage(self, run_id: str) -> dict[str, dict[str, JsonValue]]:
+        """Get or create prepared state storage dict for a run."""
+        if run_id not in self._prepared:
+            self._prepared[run_id] = {}
+        return self._prepared[run_id]
 
     # ========================================================================
     # Artifact Operations
@@ -173,6 +181,39 @@ class AsyncInMemoryStore(ArtifactStore):
     async def list_batch_jobs(self, run_id: str) -> list[str]:
         """List all batch job IDs for a run."""
         return sorted(self._get_batch_job_storage(run_id).keys())
+
+    # ========================================================================
+    # Prepared State Operations
+    # ========================================================================
+
+    @override
+    async def save_prepared(
+        self, run_id: str, artifact_id: str, data: dict[str, JsonValue]
+    ) -> None:
+        """Store prepared state by artifact ID."""
+        self._get_prepared_storage(run_id)[artifact_id] = data
+
+    @override
+    async def load_prepared(
+        self, run_id: str, artifact_id: str
+    ) -> dict[str, JsonValue]:
+        """Load prepared state by artifact ID."""
+        prepared = self._get_prepared_storage(run_id)
+        if artifact_id not in prepared:
+            raise ArtifactNotFoundError(
+                f"Prepared state for '{artifact_id}' not found in run '{run_id}'."
+            )
+        return prepared[artifact_id]
+
+    @override
+    async def delete_prepared(self, run_id: str, artifact_id: str) -> None:
+        """Delete prepared state by artifact ID."""
+        self._get_prepared_storage(run_id).pop(artifact_id, None)
+
+    @override
+    async def prepared_exists(self, run_id: str, artifact_id: str) -> bool:
+        """Check if prepared state exists."""
+        return artifact_id in self._get_prepared_storage(run_id)
 
     # ========================================================================
     # LLM Cache Operations

@@ -17,13 +17,16 @@ from waivern_artifact_store.base import ArtifactStore
 class ExecutionState(BaseModel):
     """Tracks execution progress for a run.
 
-    Each artifact can be in one of four states:
+    Each artifact can be in one of five states:
     - not_started: Waiting to be executed
+    - pending: Dispatched but awaiting results (e.g., batch job submitted)
     - completed: Successfully finished
     - failed: Execution failed
     - skipped: Skipped due to upstream failure
 
-    State transitions are one-way: not_started → {completed, failed, skipped}
+    State transitions:
+    - not_started → {pending, completed, failed, skipped}
+    - pending → {completed, failed, skipped}
     """
 
     run_id: str
@@ -34,6 +37,9 @@ class ExecutionState(BaseModel):
 
     not_started: set[str] = Field(default_factory=set)
     """Artifact IDs not yet started."""
+
+    pending: set[str] = Field(default_factory=set)
+    """Artifact IDs dispatched but awaiting results."""
 
     failed: set[str] = Field(default_factory=set)
     """Artifact IDs that failed during execution."""
@@ -53,7 +59,7 @@ class ExecutionState(BaseModel):
             artifact_ids: Set of artifact IDs to track.
 
         Returns:
-            New ExecutionState with all artifacts pending.
+            New ExecutionState with all artifacts in not_started.
 
         """
         return cls(
@@ -66,56 +72,72 @@ class ExecutionState(BaseModel):
         )
 
     def mark_completed(self, artifact_id: str) -> None:
-        """Move artifact from not_started to completed.
+        """Move artifact from not_started or pending to completed.
 
-        No-op if artifact is not in not_started (idempotent, no pollution).
-
-        Note: Currently only checks not_started. If intermediate states are added
-        in the future (e.g., 'running'), this method should check those as well.
+        No-op if artifact is not in not_started or pending (idempotent, no pollution).
 
         Args:
             artifact_id: The artifact ID to mark as completed.
 
         """
-        if artifact_id not in self.not_started:
+        if artifact_id in self.not_started:
+            self.not_started.discard(artifact_id)
+        elif artifact_id in self.pending:
+            self.pending.discard(artifact_id)
+        else:
             return
-        self.not_started.discard(artifact_id)
         self.completed.add(artifact_id)
         self.last_checkpoint = datetime.now(UTC)
 
-    def mark_failed(self, artifact_id: str) -> None:
-        """Move artifact from not_started to failed.
+    def mark_pending(self, artifact_id: str) -> None:
+        """Move artifact from not_started to pending.
 
         No-op if artifact is not in not_started (idempotent, no pollution).
 
-        Note: Currently only checks not_started. If intermediate states are added
-        in the future (e.g., 'running'), this method should check those as well.
+        Args:
+            artifact_id: The artifact ID to mark as pending.
+
+        """
+        if artifact_id not in self.not_started:
+            return
+        self.not_started.discard(artifact_id)
+        self.pending.add(artifact_id)
+        self.last_checkpoint = datetime.now(UTC)
+
+    def mark_failed(self, artifact_id: str) -> None:
+        """Move artifact from not_started or pending to failed.
+
+        No-op if artifact is not in not_started or pending (idempotent, no pollution).
 
         Args:
             artifact_id: The artifact ID to mark as failed.
 
         """
-        if artifact_id not in self.not_started:
+        if artifact_id in self.not_started:
+            self.not_started.discard(artifact_id)
+        elif artifact_id in self.pending:
+            self.pending.discard(artifact_id)
+        else:
             return
-        self.not_started.discard(artifact_id)
         self.failed.add(artifact_id)
         self.last_checkpoint = datetime.now(UTC)
 
     def mark_skipped(self, artifact_ids: set[str]) -> None:
-        """Move multiple artifacts from not_started to skipped.
+        """Move multiple artifacts from not_started or pending to skipped.
 
-        Only moves artifacts that are currently in not_started (no pollution).
-        Used when upstream artifacts fail and dependents cannot run.
-
-        Note: Currently only checks not_started. If intermediate states are added
-        in the future (e.g., 'running'), this method should check those as well.
+        Only moves artifacts that are currently in not_started or pending
+        (no pollution). Used when upstream artifacts fail and dependents
+        cannot run.
 
         Args:
             artifact_ids: Set of artifact IDs to mark as skipped.
 
         """
-        to_skip = artifact_ids & self.not_started
-        self.not_started -= to_skip
+        from_not_started = artifact_ids & self.not_started
+        from_pending = artifact_ids & self.pending
+        to_skip = from_not_started | from_pending
+        self.not_started -= from_not_started
+        self.pending -= from_pending
         self.skipped |= to_skip
         if to_skip:
             self.last_checkpoint = datetime.now(UTC)
