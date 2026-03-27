@@ -23,7 +23,6 @@ from waivern_llm.cache import CacheEntry
 def _create_batch_job(  # noqa: PLR0913 - test helper with many optional params
     batch_id: str = "batch-1",
     run_id: str = "run-1",
-    provider: str = "anthropic",
     model: str = "claude-sonnet-4-5-20250929",
     status: BatchStatusLiteral = "submitted",
     cache_keys: list[str] | None = None,
@@ -33,7 +32,6 @@ def _create_batch_job(  # noqa: PLR0913 - test helper with many optional params
     return BatchJob(
         batch_id=batch_id,
         run_id=run_id,
-        provider=provider,
         model=model,
         status=status,
         cache_keys=cache_keys or ["key-a", "key-b"],
@@ -107,7 +105,6 @@ class TestBatchResultPoller:
         poller = BatchResultPoller(
             store=store,
             provider=provider,
-            provider_name="anthropic",
             model_name="claude-sonnet-4-5-20250929",
         )
 
@@ -164,7 +161,6 @@ class TestBatchResultPoller:
         poller = BatchResultPoller(
             store=store,
             provider=provider,
-            provider_name="anthropic",
             model_name="claude-sonnet-4-5-20250929",
         )
 
@@ -217,7 +213,6 @@ class TestBatchResultPoller:
         poller = BatchResultPoller(
             store=store,
             provider=provider,
-            provider_name="anthropic",
             model_name="claude-sonnet-4-5-20250929",
         )
 
@@ -249,11 +244,11 @@ class TestBatchResultPoller:
             or not provider.get_batch_results.called
         )
 
-    async def test_provider_mismatch_adds_error_and_skips_job(self) -> None:
-        """Provider/model mismatch → error added to PollResult, job skipped."""
-        # Arrange — job recorded for "openai" provider, poller configured for "anthropic"
+    async def test_model_mismatch_adds_error_and_skips_job(self) -> None:
+        """Model mismatch → error added to PollResult, job skipped."""
+        # Arrange — job recorded for gpt-4o, poller configured for claude
         store = AsyncInMemoryStore()
-        job = _create_batch_job(provider="openai", model="gpt-4o")
+        job = _create_batch_job(model="gpt-4o")
         await job.save(store)
 
         provider = Mock()
@@ -261,7 +256,6 @@ class TestBatchResultPoller:
         poller = BatchResultPoller(
             store=store,
             provider=provider,
-            provider_name="anthropic",
             model_name="claude-sonnet-4-5-20250929",
         )
 
@@ -274,8 +268,8 @@ class TestBatchResultPoller:
         assert result.pending == 0
         assert len(result.errors) == 1
         assert "mismatch" in result.errors[0]
-        assert "openai/gpt-4o" in result.errors[0]
-        assert "anthropic/claude-sonnet-4-5-20250929" in result.errors[0]
+        assert "gpt-4o" in result.errors[0]
+        assert "claude-sonnet-4-5-20250929" in result.errors[0]
 
         # Assert — provider never called (job was skipped)
         provider.get_batch_status.assert_not_called()
@@ -299,7 +293,6 @@ class TestBatchResultPoller:
         poller = BatchResultPoller(
             store=store,
             provider=provider,
-            provider_name="anthropic",
             model_name="claude-sonnet-4-5-20250929",
         )
 
@@ -357,7 +350,6 @@ class TestBatchResultPoller:
         poller = BatchResultPoller(
             store=store,
             provider=provider,
-            provider_name="anthropic",
             model_name="claude-sonnet-4-5-20250929",
         )
 

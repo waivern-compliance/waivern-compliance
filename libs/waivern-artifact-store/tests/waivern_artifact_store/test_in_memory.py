@@ -670,7 +670,6 @@ class TestAsyncInMemoryStoreSaveBatchJob:
         data: dict[str, JsonValue] = {
             "batch_id": "batch-123",
             "status": "submitted",
-            "provider": "anthropic",
             "cache_keys": ["key-a", "key-b"],
         }
 
@@ -679,7 +678,6 @@ class TestAsyncInMemoryStoreSaveBatchJob:
         retrieved = await store.load_batch_job("test-run", "batch-123")
         assert retrieved["batch_id"] == "batch-123"
         assert retrieved["status"] == "submitted"
-        assert retrieved["provider"] == "anthropic"
         assert retrieved["cache_keys"] == ["key-a", "key-b"]
 
     async def test_save_batch_job_overwrites_existing(self) -> None:

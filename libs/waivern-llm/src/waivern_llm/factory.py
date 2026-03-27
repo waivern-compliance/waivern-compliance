@@ -146,7 +146,6 @@ class LLMServiceFactory:
                 provider=provider,
                 store=store,
                 batch_mode=config.batch_mode,
-                provider_name=config.provider,
             )
 
         except Exception as e:

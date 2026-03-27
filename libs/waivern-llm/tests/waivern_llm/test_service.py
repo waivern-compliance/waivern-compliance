@@ -506,7 +506,6 @@ class TestDefaultLLMServiceBatchMode:
             provider=provider,
             store=store,
             batch_mode=True,
-            provider_name="test-provider",
         )
 
         group = _create_group(content=None, item_count=2)
@@ -551,7 +550,6 @@ class TestDefaultLLMServiceBatchMode:
         job = jobs[0]
         assert job.batch_id == "batch-abc"
         assert job.run_id == "run-1"
-        assert job.provider == "test-provider"
         assert job.model == "test-model"
         assert job.status == "submitted"
         assert job.request_count == 2
@@ -574,7 +572,6 @@ class TestDefaultLLMServiceBatchMode:
             provider=provider,
             store=store,
             batch_mode=True,
-            provider_name="test-provider",
         )
 
         group = _create_group(content=None, item_count=3)
@@ -634,7 +631,6 @@ class TestDefaultLLMServiceBatchMode:
             provider=provider,
             store=store,
             batch_mode=True,
-            provider_name="test-provider",
         )
 
         group = _create_group(content=None, item_count=2)
@@ -698,7 +694,6 @@ class TestDefaultLLMServiceBatchMode:
             provider=provider,
             store=store,
             batch_mode=True,  # batch mode ON, but provider doesn't support it
-            provider_name="test-provider",
         )
 
         group = _create_group(content=None, item_count=1)

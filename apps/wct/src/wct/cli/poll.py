@@ -81,7 +81,6 @@ def poll_run_command(run_id: str, log_level: str = "INFO") -> None:
         poller = BatchResultPoller(
             store=store,
             provider=provider,
-            provider_name=config.provider,
             model_name=model_name,
         )
 

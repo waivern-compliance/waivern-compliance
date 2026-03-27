@@ -39,6 +39,9 @@ class ExecutionContext:
     alias: str | None = None
     """Parent artifact name if this is from a child runbook."""
 
+    model_name: str | None = None
+    """LLM model that produced this artifact (e.g. 'claude-sonnet-4-5-20250929')."""
+
     def to_dict(self) -> dict[str, Any]:
         """Serialise to dictionary."""
         return {
@@ -47,6 +50,7 @@ class ExecutionContext:
             "duration_seconds": self.duration_seconds,
             "origin": self.origin,
             "alias": self.alias,
+            "model_name": self.model_name,
         }
 
     @classmethod
@@ -58,6 +62,7 @@ class ExecutionContext:
             duration_seconds=data.get("duration_seconds"),
             origin=data.get("origin", "parent"),
             alias=data.get("alias"),
+            model_name=data.get("model_name"),
         )
 
 
@@ -172,6 +177,13 @@ class Message:
         """Get execution alias for child runbook artifacts."""
         if self.extensions and self.extensions.execution:
             return self.extensions.execution.alias
+        return None
+
+    @property
+    def execution_model_name(self) -> str | None:
+        """Get LLM model name that produced this artifact."""
+        if self.extensions and self.extensions.execution:
+            return self.extensions.execution.model_name
         return None
 
     # === Validation ===

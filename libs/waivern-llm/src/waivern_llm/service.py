@@ -151,7 +151,6 @@ class DefaultLLMService(LLMService):
         store: ArtifactStore,
         *,
         batch_mode: bool = False,
-        provider_name: str = "",
     ) -> None:
         """Initialise the service.
 
@@ -159,7 +158,6 @@ class DefaultLLMService(LLMService):
             provider: LLM provider for making structured calls.
             store: Artifact store for response caching and batch job persistence.
             batch_mode: Use batch API for async processing (lower cost).
-            provider_name: Provider name for batch job metadata (e.g. "anthropic").
 
         """
         self._provider = provider
@@ -168,7 +166,6 @@ class DefaultLLMService(LLMService):
         # cast once here so cache operations are type-safe throughout.
         self._cache: LLMCache = cast("LLMCache", store)
         self._batch_mode = batch_mode
-        self._provider_name = provider_name
 
     def _use_batch_path(self) -> bool:
         """Check whether to use the batch API path."""
@@ -355,7 +352,6 @@ class DefaultLLMService(LLMService):
             job = BatchJob(
                 batch_id=submission.batch_id,
                 run_id=run_id,
-                provider=self._provider_name,
                 model=self._provider.model_name,
                 status="submitted",
                 cache_keys=cache_keys_for_submission,

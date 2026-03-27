@@ -8,7 +8,7 @@ path (which expects all cache entries to be completed).
 
 Typical usage from the CLI::
 
-    poller = BatchResultPoller(store, provider, "anthropic", "claude-sonnet-4-5")
+    poller = BatchResultPoller(store, provider, "claude-sonnet-4-5")
     result = await poller.poll_run(run_id)
     if result.pending == 0:
         print("All batches complete — ready to resume")
@@ -53,7 +53,6 @@ class BatchResultPoller:
         self,
         store: ArtifactStore,
         provider: BatchLLMProvider,
-        provider_name: str,
         model_name: str,
     ) -> None:
         """Initialise the poller.
@@ -61,14 +60,12 @@ class BatchResultPoller:
         Args:
             store: Artifact store for cache and batch job persistence.
             provider: Batch-capable LLM provider for status/results queries.
-            provider_name: Expected provider name (validated against BatchJob).
             model_name: Expected model name (validated against BatchJob).
 
         """
         self._store = store
         self._cache: LLMCache = cast("LLMCache", store)
         self._provider = provider
-        self._provider_name = provider_name
         self._model_name = model_name
 
     async def poll_run(self, run_id: str) -> PollResult:
@@ -96,11 +93,11 @@ class BatchResultPoller:
         result = PollResult()
 
         for job in active_jobs:
-            if job.provider != self._provider_name or job.model != self._model_name:
+            if job.model != self._model_name:
                 result.errors.append(
-                    f"Batch {job.batch_id}: provider/model mismatch — "
-                    f"job has {job.provider}/{job.model}, "
-                    f"poller has {self._provider_name}/{self._model_name}"
+                    f"Batch {job.batch_id}: model mismatch — "
+                    f"job has {job.model}, "
+                    f"poller has {self._model_name}"
                 )
                 continue
 
