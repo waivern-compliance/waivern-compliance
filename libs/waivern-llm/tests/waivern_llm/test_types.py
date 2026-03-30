@@ -69,6 +69,6 @@ class TestLLMRequest:
         assert "groups" in dumped
         assert "batching_mode" in dumped
         assert "run_id" in dumped
-        assert dumped["built_prompts"] is None
+        assert dumped["built_cache_keys"] is None
         assert isinstance(dumped["request_id"], str)
         assert len(dumped["request_id"]) > 0
