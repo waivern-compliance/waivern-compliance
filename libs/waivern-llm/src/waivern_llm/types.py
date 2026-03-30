@@ -286,6 +286,9 @@ class LLMDispatchResult(DispatchResult):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    model_name: str
+    """LLM model that produced these responses (e.g. 'claude-sonnet-4-5-20250929')."""
+
     responses: list[dict[str, JsonValue]]
     """Raw response dicts, one per batch processed."""
 
