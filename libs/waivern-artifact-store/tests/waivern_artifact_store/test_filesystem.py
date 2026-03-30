@@ -687,7 +687,6 @@ class TestLocalFilesystemStoreCacheSet:
         entry: dict[str, JsonValue] = {
             "status": "completed",
             "response": {"result": "test-value"},
-            "model_name": "claude-sonnet-4-5",
         }
 
         await store.cache_set("test-run", "key1", entry)
@@ -695,7 +694,7 @@ class TestLocalFilesystemStoreCacheSet:
         retrieved = await store.cache_get("test-run", "key1")
         assert retrieved is not None
         assert retrieved["status"] == "completed"
-        assert retrieved["model_name"] == "claude-sonnet-4-5"
+        assert retrieved["response"] == {"result": "test-value"}
 
     async def test_cache_set_overwrites_existing_entry(self, tmp_path: Path) -> None:
         store = LocalFilesystemStore(base_path=tmp_path)

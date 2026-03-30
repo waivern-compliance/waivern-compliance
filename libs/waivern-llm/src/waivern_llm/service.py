@@ -276,8 +276,6 @@ class DefaultLLMService(LLMService):
                 status="completed",
                 response=response.model_dump(),
                 batch_id=None,
-                model_name=self._provider.model_name,
-                response_model_name=response_model.__name__,
             )
             await self._cache.cache_set(run_id, cache_key, entry.model_dump())
             responses.append(response)
@@ -343,8 +341,6 @@ class DefaultLLMService(LLMService):
                     status="pending",
                     response=None,
                     batch_id=submission.batch_id,
-                    model_name=self._provider.model_name,
-                    response_model_name=response_model.__name__,
                 )
                 await self._cache.cache_set(run_id, key, entry.model_dump())
 

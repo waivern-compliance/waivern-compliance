@@ -520,8 +520,6 @@ class TestAsyncInMemoryStoreCacheSet:
             "status": "completed",
             "response": {"result": "test-value"},
             "batch_id": None,
-            "model_name": "claude-sonnet-4-5",
-            "response_model_name": "TestResponse",
         }
 
         await store.cache_set("test-run", "abc123", entry)
@@ -530,7 +528,6 @@ class TestAsyncInMemoryStoreCacheSet:
         assert retrieved is not None
         assert retrieved["status"] == "completed"
         assert retrieved["response"] == {"result": "test-value"}
-        assert retrieved["model_name"] == "claude-sonnet-4-5"
 
     async def test_cache_set_overwrites_existing_entry(self) -> None:
         store = AsyncInMemoryStore()

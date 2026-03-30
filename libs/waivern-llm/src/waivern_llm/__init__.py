@@ -89,6 +89,8 @@ from waivern_llm.batch_types import (
     BatchSubmission,
 )
 from waivern_llm.cache import CacheEntry
+from waivern_llm.dispatcher import LLMDispatcher
+from waivern_llm.dispatcher_factory import LLMDispatcherFactory
 from waivern_llm.errors import (
     LLMConfigurationError,
     LLMConnectionError,
@@ -134,6 +136,9 @@ __all__ = [
     "SkipReason",
     "SkippedFinding",
     "LLMCompletionResult",
+    # Dispatcher
+    "LLMDispatcher",
+    "LLMDispatcherFactory",
     # Dispatch types
     "LLMRequest",
     "LLMDispatchResult",

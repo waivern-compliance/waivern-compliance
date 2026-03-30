@@ -244,9 +244,9 @@ class LLMRequest[T: Finding](DispatchRequest):
     Serialisation:
         ``prompt_builder`` and ``response_model`` are excluded from
         serialisation — they are live Python objects only needed on first
-        run. During dispatch, the dispatcher builds prompts and populates
-        ``built_prompts`` with the resulting strings. On resume, the built
-        prompts enable cache lookup without the builder or response model.
+        run. During dispatch, the dispatcher computes cache keys and
+        populates ``built_cache_keys``. On resume, the stored keys enable
+        direct cache lookup without the builder or response model.
 
     """
 
@@ -272,8 +272,8 @@ class LLMRequest[T: Finding](DispatchRequest):
     run_id: str
     """Cache scoping key."""
 
-    built_prompts: list[str] | None = None
-    """Populated by the dispatcher after batch planning; ``None`` until then."""
+    built_cache_keys: list[str] | None = None
+    """Cache keys computed during dispatch; ``None`` until first run completes."""
 
 
 class LLMDispatchResult(DispatchResult):
@@ -285,6 +285,9 @@ class LLMDispatchResult(DispatchResult):
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    model_name: str
+    """LLM model that produced these responses (e.g. 'claude-sonnet-4-5-20250929')."""
 
     responses: list[dict[str, JsonValue]]
     """Raw response dicts, one per batch processed."""

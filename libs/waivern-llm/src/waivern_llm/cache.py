@@ -23,8 +23,6 @@ class CacheEntry(BaseModel):
     status: Literal["pending", "completed", "failed"]
     response: dict[str, JsonValue] | None
     batch_id: str | None  # For async batch mode
-    model_name: str
-    response_model_name: str
 
     @classmethod
     def compute_key(cls, prompt: str, model: str, response_model: str) -> str:
