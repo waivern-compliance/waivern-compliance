@@ -582,8 +582,6 @@ class TestDefaultLLMServiceBatchMode:
             status="completed",
             response={"valid": True, "reason": "cached"},
             batch_id=None,
-            model_name="test-model",
-            response_model_name="MockResponse",
         )
         await store.cache_set("run-1", key_1, entry_1.model_dump())
 
@@ -592,8 +590,6 @@ class TestDefaultLLMServiceBatchMode:
             status="pending",
             response=None,
             batch_id="batch-existing",
-            model_name="test-model",
-            response_model_name="MockResponse",
         )
         await store.cache_set("run-1", key_2, entry_2.model_dump())
 
@@ -641,8 +637,6 @@ class TestDefaultLLMServiceBatchMode:
             status="completed",
             response={"valid": True, "reason": "cached-1"},
             batch_id=None,
-            model_name="test-model",
-            response_model_name="MockResponse",
         )
         await store.cache_set("run-1", key_1, entry_1.model_dump())
 
@@ -651,8 +645,6 @@ class TestDefaultLLMServiceBatchMode:
             status="completed",
             response={"valid": False, "reason": "cached-2"},
             batch_id=None,
-            model_name="test-model",
-            response_model_name="MockResponse",
         )
         await store.cache_set("run-1", key_2, entry_2.model_dump())
 

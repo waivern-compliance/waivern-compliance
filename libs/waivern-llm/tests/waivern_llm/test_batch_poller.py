@@ -43,15 +43,12 @@ def _create_batch_job(  # noqa: PLR0913 - test helper with many optional params
 
 def _create_pending_cache_entry(
     batch_id: str = "batch-1",
-    model_name: str = "claude-sonnet-4-5-20250929",
 ) -> CacheEntry:
     """Create a pending cache entry tied to a batch."""
     return CacheEntry(
         status="pending",
         response=None,
         batch_id=batch_id,
-        model_name=model_name,
-        response_model_name="MockResponse",
     )
 
 
