@@ -289,6 +289,10 @@ class LLMDispatchResult(DispatchResult):
     model_name: str
     """LLM model that produced these responses (e.g. 'claude-sonnet-4-5-20250929')."""
 
+    response_model_name: str
+    """Name of the response model type (e.g. 'AssessmentResponse'). Used by
+    ``finalise()`` to match results to the correct deserialisation model."""
+
     responses: list[dict[str, JsonValue]]
     """Raw response dicts, one per batch processed."""
 

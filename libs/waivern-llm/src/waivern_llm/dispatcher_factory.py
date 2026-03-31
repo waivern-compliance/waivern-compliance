@@ -15,7 +15,7 @@ from waivern_artifact_store.base import ArtifactStore
 
 from waivern_llm.di.configuration import LLMServiceConfiguration
 from waivern_llm.dispatcher import LLMDispatcher
-from waivern_llm.factory import LLMServiceFactory
+from waivern_llm.providers import create_provider
 
 if TYPE_CHECKING:
     from waivern_core.services import ServiceContainer
@@ -103,7 +103,7 @@ class LLMDispatcherFactory:
 
         try:
             store = self._container.get_service(ArtifactStore)
-            provider = LLMServiceFactory.create_provider(config)
+            provider = create_provider(config)
 
             logger.info(
                 f"LLM dispatcher created (provider={config.provider}, "

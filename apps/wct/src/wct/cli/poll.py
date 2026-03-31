@@ -8,8 +8,9 @@ import logging
 from rich.console import Console
 from rich.panel import Panel
 from waivern_artifact_store import ArtifactStoreFactory
-from waivern_llm import BatchResultPoller, LLMServiceFactory, PollResult
+from waivern_llm import BatchResultPoller, PollResult
 from waivern_llm.di.configuration import LLMServiceConfiguration
+from waivern_llm.providers import create_provider
 from waivern_llm.providers.protocol import BatchLLMProvider
 from waivern_orchestration.run_metadata import RunMetadata
 
@@ -66,7 +67,7 @@ def poll_run_command(run_id: str, log_level: str = "INFO") -> None:
                 original_error=e,
             ) from e
 
-        provider = LLMServiceFactory.create_provider(config)
+        provider = create_provider(config)
 
         if not isinstance(provider, BatchLLMProvider):
             raise CLIError(

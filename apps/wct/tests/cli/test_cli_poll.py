@@ -85,9 +85,9 @@ def _setup_happy_path_mocks(
     monkeypatch.setattr("wct.cli.poll.LLMServiceConfiguration", mock_llm_config_class)
 
     # Batch-capable provider (spec= required for isinstance() with Protocol)
-    mock_factory_class = Mock()
-    mock_factory_class.create_provider.return_value = Mock(spec=BatchLLMProvider)
-    monkeypatch.setattr("wct.cli.poll.LLMServiceFactory", mock_factory_class)
+    monkeypatch.setattr(
+        "wct.cli.poll.create_provider", lambda _config: Mock(spec=BatchLLMProvider)
+    )
 
     # BatchResultPoller returning controlled result
     mock_poller = Mock()
@@ -230,9 +230,9 @@ class TestPollRunCommand:
         )
 
         # Provider that does NOT implement BatchLLMProvider
-        mock_factory_class = Mock()
-        mock_factory_class.create_provider.return_value = _SyncOnlyProvider()
-        monkeypatch.setattr("wct.cli.poll.LLMServiceFactory", mock_factory_class)
+        monkeypatch.setattr(
+            "wct.cli.poll.create_provider", lambda _config: _SyncOnlyProvider()
+        )
 
         # Act
         from wct.cli import poll_run_command

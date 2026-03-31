@@ -14,12 +14,7 @@ from pydantic import ValidationError
 from waivern_artifact_store.base import ArtifactStore
 
 from waivern_llm.di.configuration import LLMServiceConfiguration
-from waivern_llm.providers import (
-    AnthropicProvider,
-    GoogleProvider,
-    LLMProvider,
-    OpenAIProvider,
-)
+from waivern_llm.providers import create_provider
 from waivern_llm.service import DefaultLLMService, LLMService
 
 if TYPE_CHECKING:
@@ -135,7 +130,7 @@ class LLMServiceFactory:
             store = self._container.get_service(ArtifactStore)
 
             # Create provider based on configuration
-            provider = self.create_provider(config)
+            provider = create_provider(config)
 
             logger.info(
                 f"LLM service created (provider={config.provider}, "
@@ -151,30 +146,3 @@ class LLMServiceFactory:
         except Exception as e:
             logger.warning(f"Failed to create LLM service: {e}")
             return None
-
-    @staticmethod
-    def create_provider(
-        config: LLMServiceConfiguration,
-    ) -> LLMProvider:
-        """Create the appropriate LLM provider based on configuration.
-
-        Args:
-            config: Validated LLM service configuration.
-
-        Returns:
-            LLMProvider instance for the configured provider.
-
-        """
-        match config.provider:
-            case "anthropic":
-                return AnthropicProvider(api_key=config.api_key, model=config.model)
-            case "openai":
-                return OpenAIProvider(
-                    api_key=config.api_key, model=config.model, base_url=config.base_url
-                )
-            case "google":
-                return GoogleProvider(api_key=config.api_key, model=config.model)
-            case _:
-                # LLMServiceConfiguration validates provider, so this is unreachable
-                msg = f"Unsupported provider: {config.provider}"
-                raise ValueError(msg)

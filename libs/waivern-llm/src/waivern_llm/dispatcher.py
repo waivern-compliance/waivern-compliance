@@ -85,6 +85,17 @@ class LLMDispatcher:
         2. Consolidated: execute all cache misses together
         3. Per-request: build results with responses and skipped findings
         """
+        if not requests:
+            return []
+
+        run_ids = {r.run_id for r in requests}
+        if len(run_ids) > 1:
+            raise ValueError(
+                f"All requests must share the same run_id, got: {sorted(run_ids)}"
+            )
+
+        run_id = requests[0].run_id
+
         # Per-request state accumulators
         request_responses: dict[str, list[dict[str, JsonValue]]] = {}
         request_skipped: dict[str, list[SkippedFinding[Finding]]] = {}
@@ -92,9 +103,7 @@ class LLMDispatcher:
         pending_batch_ids: list[str] = []
 
         # Phase A — per-request planning or resume cache lookup
-        run_id = ""
         for request in requests:
-            run_id = request.run_id
             request_responses[request.request_id] = []
             request_skipped[request.request_id] = []
 
@@ -132,7 +141,9 @@ class LLMDispatcher:
         return [
             LLMDispatchResult(
                 request_id=request.request_id,
+                name=request.name,
                 model_name=self._provider.model_name,
+                response_model_name=request.response_model.__name__,
                 responses=request_responses[request.request_id],
                 skipped=request_skipped.get(request.request_id, []),
             )
