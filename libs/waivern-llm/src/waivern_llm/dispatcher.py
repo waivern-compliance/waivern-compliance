@@ -141,7 +141,9 @@ class LLMDispatcher:
         return [
             LLMDispatchResult(
                 request_id=request.request_id,
+                name=request.name,
                 model_name=self._provider.model_name,
+                response_model_name=request.response_model.__name__,
                 responses=request_responses[request.request_id],
                 skipped=request_skipped.get(request.request_id, []),
             )

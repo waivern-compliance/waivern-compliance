@@ -65,6 +65,9 @@ class DispatchResult(BaseModel):
     request_id: str
     """Identifier copied from the originating ``DispatchRequest``."""
 
+    name: str = ""
+    """Human-readable label copied from the originating ``DispatchRequest``."""
+
 
 class PrepareResult[S: BaseModel](BaseModel):
     """Result of ``DistributedProcessor.prepare()``.
