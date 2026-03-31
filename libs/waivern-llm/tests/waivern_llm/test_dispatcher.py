@@ -615,3 +615,43 @@ class TestLLMDispatcherConfiguration:
         assert len(results[0].responses) == 1
         assert results[0].responses[0]["reason"] == "from sync"
         provider.invoke_structured.assert_called_once()
+
+
+# =============================================================================
+# Input Validation
+# =============================================================================
+
+
+class TestLLMDispatcherValidation:
+    """Tests for dispatch input validation."""
+
+    async def test_mixed_run_ids_raises_value_error(self) -> None:
+        """Requests with different run_ids → ValueError before any processing."""
+        import pytest
+
+        store = AsyncInMemoryStore()
+        response = MockResponse(valid=True, reason="unused")
+        provider = _create_mock_provider(response)
+
+        dispatcher = LLMDispatcher(provider=provider, store=store)
+        request_a = _create_request(run_id="run-1")
+        request_b = _create_request(run_id="run-2")
+
+        with pytest.raises(ValueError, match="run_id"):
+            await dispatcher.dispatch([request_a, request_b])
+
+        # No processing should have occurred
+        provider.invoke_structured.assert_not_called()
+
+    async def test_empty_requests_returns_empty_sequence(self) -> None:
+        """Empty request sequence → empty result, no errors."""
+        store = AsyncInMemoryStore()
+        response = MockResponse(valid=True, reason="unused")
+        provider = _create_mock_provider(response)
+
+        dispatcher = LLMDispatcher(provider=provider, store=store)
+
+        results = await dispatcher.dispatch([])
+
+        assert results == []
+        provider.invoke_structured.assert_not_called()
