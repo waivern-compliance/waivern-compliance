@@ -8,7 +8,7 @@ dependencies lazily from the ServiceContainer.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 from waivern_artifact_store.base import ArtifactStore
@@ -16,6 +16,7 @@ from waivern_artifact_store.base import ArtifactStore
 from waivern_llm.di.configuration import LLMServiceConfiguration
 from waivern_llm.dispatcher import LLMDispatcher
 from waivern_llm.providers import create_provider
+from waivern_llm.types import LLMRequest
 
 if TYPE_CHECKING:
     from waivern_core.services import ServiceContainer
@@ -26,9 +27,8 @@ logger = logging.getLogger(__name__)
 class LLMDispatcherFactory:
     """Factory for creating LLMDispatcher instances with DI support.
 
-    Implements the ``ServiceFactory[LLMDispatcher]`` protocol, resolving
-    dependencies lazily from the ``ServiceContainer``. Follows the same
-    pattern as ``LLMServiceFactory``.
+    Satisfies the ``DispatcherFactory[LLMRequest, LLMDispatchResult]``
+    protocol, resolving dependencies lazily from the ``ServiceContainer``.
 
     """
 
@@ -47,6 +47,11 @@ class LLMDispatcherFactory:
         """
         self._container = container
         self._config = config
+
+    @property
+    def request_type(self) -> type[LLMRequest[Any]]:
+        """The request type this factory's dispatchers handle."""
+        return LLMRequest
 
     def _get_config(self) -> LLMServiceConfiguration | None:
         """Get configuration, either from constructor or environment.
