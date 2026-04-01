@@ -56,6 +56,8 @@ import asyncio
 import logging
 import time
 import uuid
+from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
@@ -65,8 +67,13 @@ from typing import Any
 
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.errors import ArtifactNotFoundError
-from waivern_core import ExecutionContext, JsonValue, Message, MessageExtensions, Schema
-from waivern_core.dispatch import DistributedProcessor, PrepareResult
+from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
+from waivern_core.dispatch import (
+    DispatchRequest,
+    DispatchResult,
+    DistributedProcessor,
+    PrepareResult,
+)
 from waivern_core.errors import PendingProcessingError
 from waivern_core.services import ComponentRegistry
 
@@ -116,7 +123,7 @@ class _DistributedEntry:
     processor: DistributedProcessor[Any]
     inputs: list[Message]
     output_schema: Schema
-    prepare_result: dict[str, JsonValue] | None = None
+    prepare_result: PrepareResult[Any] | None = None
 
 
 class DAGExecutor:
@@ -430,15 +437,16 @@ class DAGExecutor:
 
             # 1. Pending → resuming
             if aid in ctx.state.pending:
-                prepared_data = await ctx.store.load_prepared(ctx.run_id, aid)
+                raw = await ctx.store.load_prepared(ctx.run_id, aid)
                 processor = self._create_distributed_processor(definition)
+                prepare_result = processor.deserialise_prepare_result(raw)
                 resuming.append(
                     _DistributedEntry(
                         artifact_id=aid,
                         processor=processor,
                         inputs=[],
                         output_schema=output_schema,
-                        prepare_result=prepared_data,
+                        prepare_result=prepare_result,
                     )
                 )
                 continue
@@ -548,6 +556,104 @@ class DAGExecutor:
                 entry.inputs,
                 entry.output_schema,
             )
+
+    async def _dispatch_all(
+        self,
+        entries: list[_DistributedEntry],
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+    ) -> Mapping[str, Sequence[DispatchResult]]:
+        """Group requests by type, dispatch each group, and route results back.
+
+        Orchestrates Phase 2 of the distributed processor lifecycle:
+        1. Collect all requests from entries and build request-to-artifact mapping
+        2. Group requests by concrete type (e.g., all LLMRequest together)
+        3. Resolve a dispatcher per group and dispatch
+        4. Route results back to artifacts via request_id
+
+        Short-circuited entries (empty requests) get empty result sequences
+        without going through dispatch.
+
+        Args:
+            entries: Distributed entries with ``prepare_result`` populated.
+            plan: The execution plan (needed for failure handling).
+            ctx: The execution context with store, state, and registry access.
+
+        Returns:
+            Mapping from artifact_id to its dispatch results. Artifacts
+            that were marked pending (PendingBatchError) or failed are
+            excluded from the returned mapping.
+
+        """
+        results_by_artifact: dict[str, list[DispatchResult]] = {
+            entry.artifact_id: [] for entry in entries
+        }
+
+        # Map request_id → artifact_id for result routing
+        request_to_artifact: dict[str, str] = {}
+        # Group requests by concrete type for consolidated dispatch
+        requests_by_type: dict[type[DispatchRequest], list[DispatchRequest]] = (
+            defaultdict(list)
+        )
+        # Track which entries are affected by each request type group
+        entries_by_type: dict[type[DispatchRequest], list[_DistributedEntry]] = (
+            defaultdict(list)
+        )
+
+        for entry in entries:
+            if entry.prepare_result is None or not entry.prepare_result.requests:
+                continue
+
+            request_type = type(entry.prepare_result.requests[0])
+            for request in entry.prepare_result.requests:
+                request_to_artifact[request.request_id] = entry.artifact_id
+                requests_by_type[request_type].append(request)
+
+            if entry not in entries_by_type[request_type]:
+                entries_by_type[request_type].append(entry)
+
+        # Dispatch each type group
+        for request_type, requests in requests_by_type.items():
+            affected_entries = entries_by_type[request_type]
+            try:
+                dispatcher = self._registry.get_dispatcher_for(request_type)
+                group_results = await dispatcher.dispatch(requests)
+            except PendingProcessingError:
+                await self._persist_pending_entries(affected_entries, ctx)
+                continue
+            except Exception:
+                for entry in affected_entries:
+                    await self._mark_failed_and_skip_dependents(
+                        entry.artifact_id, plan, ctx
+                    )
+                    results_by_artifact.pop(entry.artifact_id, None)
+                continue
+
+            # Route results back to artifacts via request_id
+            for result in group_results:
+                artifact_id = request_to_artifact[result.request_id]
+                results_by_artifact[artifact_id].append(result)
+
+        return results_by_artifact
+
+    async def _persist_pending_entries(
+        self,
+        entries: list[_DistributedEntry],
+        ctx: _ExecutionContext,
+    ) -> None:
+        """Persist PrepareResult for entries affected by PendingBatchError.
+
+        Serialises each entry's PrepareResult, saves to store, marks the
+        artifact as pending, and adds to the pending tracking set.
+
+        """
+        for entry in entries:
+            if entry.prepare_result is not None:
+                data = entry.prepare_result.model_dump(mode="json")
+                await ctx.store.save_prepared(ctx.run_id, entry.artifact_id, data)
+            ctx.state.mark_pending(entry.artifact_id)
+            ctx.pending_batch_artifacts.add(entry.artifact_id)
+        await ctx.state.save(ctx.store)
 
     async def _handle_artifact_result(
         self,

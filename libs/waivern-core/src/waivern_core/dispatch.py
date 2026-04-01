@@ -22,10 +22,10 @@ Core types:
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializeAsAny
 
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
@@ -93,7 +93,8 @@ class PrepareResult[S: BaseModel](BaseModel):
     """
 
     state: S
-    requests: list[DispatchRequest]
+    requests: SerializeAsAny[list[DispatchRequest]]
+    """Dispatch requests, serialised with runtime type to preserve subclass fields."""
 
 
 class RequestDispatcher[R: DispatchRequest, V: DispatchResult](Protocol):
@@ -206,6 +207,25 @@ class DistributedProcessor[S: BaseModel](Protocol):
         Returns:
             A ``PrepareResult`` carrying intermediate state and dispatch
             requests (empty list if no dispatch is needed).
+
+        """
+        ...
+
+    def deserialise_prepare_result(self, raw: dict[str, Any]) -> PrepareResult[S]:
+        """Reconstruct a typed ``PrepareResult`` from a raw dict.
+
+        Called on the resume path where a persisted ``PrepareResult``
+        must be restored to its typed form. The processor knows its
+        concrete state type ``S`` and request subclass, so it is the
+        natural owner of deserialisation.
+
+        Args:
+            raw: Raw dict from ``PrepareResult.model_dump(mode="json")``,
+                loaded from the artifact store.
+
+        Returns:
+            Typed ``PrepareResult`` with properly deserialised state
+            and request objects.
 
         """
         ...
