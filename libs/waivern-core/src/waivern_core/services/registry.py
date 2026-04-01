@@ -2,7 +2,7 @@
 
 The ComponentRegistry provides a single source of truth for component
 discovery via entry points. It wraps the ServiceContainer and provides
-lazy-loaded access to connector and processor factories.
+lazy-loaded access to connector, processor, and dispatcher factories.
 """
 
 from __future__ import annotations
@@ -14,6 +14,12 @@ from importlib.metadata import entry_points
 from waivern_core.base_connector import Connector
 from waivern_core.base_processor import Processor
 from waivern_core.component_factory import ComponentFactory
+from waivern_core.dispatch import (
+    DispatcherFactory,
+    DispatchRequest,
+    DispatchResult,
+    RequestDispatcher,
+)
 from waivern_core.services.container import ServiceContainer
 
 logger = logging.getLogger(__name__)
@@ -22,11 +28,12 @@ logger = logging.getLogger(__name__)
 class ComponentRegistry:
     """Centralises component discovery and factory management.
 
-    ComponentRegistry discovers connector and processor factories from entry points
-    and provides unified access for all consumers (Planner, Executor, CLI commands).
+    ComponentRegistry discovers connector, processor, and dispatcher factories from
+    entry points and provides unified access for all consumers (Planner, Executor,
+    CLI commands).
 
     Discovery is lazy - factories are only instantiated on first access to
-    connector_factories or processor_factories properties.
+    connector_factories, processor_factories, or dispatcher_factories properties.
 
     Example:
         >>> container = ServiceContainer()
@@ -49,6 +56,9 @@ class ComponentRegistry:
         self._container = container
         self._connector_factories: dict[str, ComponentFactory[Connector]] | None = None
         self._processor_factories: dict[str, ComponentFactory[Processor]] | None = None
+        self._dispatcher_factories: (
+            dict[str, DispatcherFactory[DispatchRequest, DispatchResult]] | None
+        ) = None
 
     @property
     def container(self) -> ServiceContainer:
@@ -69,8 +79,59 @@ class ComponentRegistry:
             self._discover_components()
         return self._processor_factories  # type: ignore[return-value]
 
+    @property
+    def dispatcher_factories(
+        self,
+    ) -> Mapping[str, DispatcherFactory[DispatchRequest, DispatchResult]]:
+        """Get discovered dispatcher factories (lazy discovery)."""
+        if self._dispatcher_factories is None:
+            self._discover_components()
+        return self._dispatcher_factories  # type: ignore[return-value]
+
+    def get_dispatcher_for(
+        self, request_type: type[DispatchRequest]
+    ) -> RequestDispatcher[DispatchRequest, DispatchResult]:
+        """Resolve a dispatcher for the given request type.
+
+        Iterates discovered dispatcher factories and returns a dispatcher
+        from the first factory whose ``request_type`` matches.
+
+        Args:
+            request_type: The concrete ``DispatchRequest`` subclass to
+                dispatch.
+
+        Raises:
+            ValueError: If no registered factory handles this request type.
+            RuntimeError: If a matching factory cannot create a dispatcher
+                (e.g., missing API key or required service).
+
+        """
+        for name, factory in self.dispatcher_factories.items():
+            if factory.request_type is not request_type:
+                continue
+
+            if not factory.can_create():
+                msg = (
+                    f"Dispatcher factory '{name}' matches request type "
+                    f"'{request_type.__name__}' but cannot create a dispatcher"
+                )
+                raise RuntimeError(msg)
+
+            dispatcher = factory.create()
+            if dispatcher is None:
+                msg = (
+                    f"Dispatcher factory '{name}' matched request type "
+                    f"'{request_type.__name__}' but create() returned None"
+                )
+                raise RuntimeError(msg)
+
+            return dispatcher
+
+        msg = f"No dispatcher factory registered for request type '{request_type.__name__}'"
+        raise ValueError(msg)
+
     def _discover_components(self) -> None:
-        """Discover connector and processor factories from entry points.
+        """Discover connector, processor, and dispatcher factories from entry points.
 
         Also registers schemas from packages via waivern.schemas entry points.
         Schema registration must happen before components are used to ensure
@@ -81,6 +142,7 @@ class ComponentRegistry:
 
         self._connector_factories = {}
         self._processor_factories = {}
+        self._dispatcher_factories = {}
 
         # Discover connectors
         for ep in entry_points(group="waivern.connectors"):
@@ -93,6 +155,12 @@ class ComponentRegistry:
             factory_class = ep.load()
             factory = factory_class(self._container)
             self._processor_factories[ep.name] = factory
+
+        # Discover dispatchers
+        for ep in entry_points(group="waivern.dispatchers"):
+            factory_class = ep.load()
+            factory = factory_class(self._container)
+            self._dispatcher_factories[ep.name] = factory
 
     def _register_schemas(self) -> None:
         """Register schemas from all packages via entry points."""

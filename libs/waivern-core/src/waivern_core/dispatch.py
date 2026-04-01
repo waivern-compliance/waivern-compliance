@@ -12,6 +12,8 @@ Core types:
     - ``PrepareResult``: Returned by ``DistributedProcessor.prepare()`` — carries
       processor-specific intermediate state and a dict of dispatch requests.
     - ``RequestDispatcher``: Protocol for dispatching grouped requests to a service.
+    - ``DispatcherFactory``: Protocol for factories that create dispatchers,
+      discovered via entry points by the ``ComponentRegistry``.
     - ``DistributedProcessor``: Protocol for processors that separate domain logic
       (prepare/finalise) from external I/O (dispatch).
 
@@ -122,6 +124,43 @@ class RequestDispatcher[R: DispatchRequest, V: DispatchResult](Protocol):
         Returns:
             Results, each carrying the ``request_id`` of the
             originating request.
+
+        """
+        ...
+
+
+class DispatcherFactory[R: DispatchRequest, V: DispatchResult](Protocol):
+    """Protocol for factories that create ``RequestDispatcher`` instances.
+
+    Dispatcher factories are discovered via entry points and instantiated
+    with a ``ServiceContainer`` for dependency injection. The registry
+    uses ``request_type`` to match factories to request types without
+    creating a dispatcher instance.
+
+    The generic parameters mirror ``RequestDispatcher`` — concrete
+    implementations declare which request/result pair they produce.
+
+    """
+
+    @property
+    def request_type(self) -> type[R]:
+        """The concrete ``DispatchRequest`` subclass this factory's dispatchers handle."""
+        ...
+
+    def can_create(self) -> bool:
+        """Check if a dispatcher can be created.
+
+        Validates prerequisites such as configuration availability
+        and service dependencies without attempting creation.
+
+        """
+        ...
+
+    def create(self) -> RequestDispatcher[R, V] | None:
+        """Create a dispatcher instance, or ``None`` if unavailable.
+
+        Returns ``None`` when prerequisites are not met (e.g., missing
+        API key, required service not registered in the container).
 
         """
         ...
