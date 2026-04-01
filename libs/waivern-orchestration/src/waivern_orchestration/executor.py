@@ -66,7 +66,7 @@ from typing import Any
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.errors import ArtifactNotFoundError
 from waivern_core import ExecutionContext, JsonValue, Message, MessageExtensions, Schema
-from waivern_core.dispatch import DistributedProcessor
+from waivern_core.dispatch import DistributedProcessor, PrepareResult
 from waivern_core.errors import PendingProcessingError
 from waivern_core.services import ComponentRegistry
 
@@ -527,6 +527,27 @@ class DAGExecutor:
 
         input_refs = [inputs] if isinstance(inputs, str) else inputs
         return [await ctx.store.get_artifact(ctx.run_id, ref) for ref in input_refs]
+
+    async def _run_prepare(
+        self,
+        entry: _DistributedEntry,
+        ctx: _ExecutionContext,
+    ) -> PrepareResult[Any]:
+        """Run prepare() in the thread pool, governed by the semaphore.
+
+        Follows the same bridge pattern as ``_run_connector`` and
+        ``_run_processor``, but acquires the semaphore internally
+        (called from ``asyncio.gather``, not wrapped by ``_produce``).
+
+        """
+        async with ctx.semaphore:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                ctx.thread_pool,
+                entry.processor.prepare,
+                entry.inputs,
+                entry.output_schema,
+            )
 
     async def _handle_artifact_result(
         self,
