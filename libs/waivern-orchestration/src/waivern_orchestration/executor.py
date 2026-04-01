@@ -61,10 +61,12 @@ from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.errors import ArtifactNotFoundError
-from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
+from waivern_core import ExecutionContext, JsonValue, Message, MessageExtensions, Schema
+from waivern_core.dispatch import DistributedProcessor
 from waivern_core.errors import PendingProcessingError
 from waivern_core.services import ComponentRegistry
 
@@ -98,6 +100,23 @@ class _ExecutionContext:
     semaphore: asyncio.Semaphore
     thread_pool: ThreadPoolExecutor
     pending_batch_artifacts: set[str] = dataclass_field(default_factory=set)
+
+
+@dataclass
+class _DistributedEntry:
+    """Tracks a distributed processor through its prepare-dispatch-finalise lifecycle.
+
+    Bundles the processor instance, inputs, and schema so they survive
+    across phases. ``prepare_result`` is populated after Phase 1 (or
+    loaded from store on resume).
+
+    """
+
+    artifact_id: str
+    processor: DistributedProcessor[Any]
+    inputs: list[Message]
+    output_schema: Schema
+    prepare_result: dict[str, JsonValue] | None = None
 
 
 class DAGExecutor:
@@ -377,6 +396,138 @@ class DAGExecutor:
 
         return ready, done
 
+    async def _classify_artifacts(
+        self,
+        ready_aids: list[str],
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+    ) -> tuple[list[str], list[_DistributedEntry], list[_DistributedEntry]]:
+        """Classify ready artifacts into regular, distributed, and resuming.
+
+        Classification order for each artifact:
+        1. In ``state.pending`` → resuming (load PrepareResult from store)
+        2. Source/reuse artifact → regular
+        3. Has process config with ``DistributedProcessor`` → distributed
+        4. Has process config without ``DistributedProcessor`` → regular
+        5. Passthrough (no process config) → regular
+
+        Args:
+            ready_aids: Artifact IDs ready for execution at this level.
+            plan: The execution plan with artifact definitions and schemas.
+            ctx: The execution context with store and state.
+
+        Returns:
+            Tuple of (regular_aids, distributed_entries, resuming_entries).
+
+        """
+        regular: list[str] = []
+        distributed: list[_DistributedEntry] = []
+        resuming: list[_DistributedEntry] = []
+
+        for aid in ready_aids:
+            definition = plan.runbook.artifacts[aid]
+            _, output_schema = plan.artifact_schemas[aid]
+
+            # 1. Pending → resuming
+            if aid in ctx.state.pending:
+                prepared_data = await ctx.store.load_prepared(ctx.run_id, aid)
+                processor = self._create_distributed_processor(definition)
+                resuming.append(
+                    _DistributedEntry(
+                        artifact_id=aid,
+                        processor=processor,
+                        inputs=[],
+                        output_schema=output_schema,
+                        prepare_result=prepared_data,
+                    )
+                )
+                continue
+
+            # 2. Source/reuse → regular
+            if definition.source is not None or definition.reuse is not None:
+                regular.append(aid)
+                continue
+
+            # 3. Has process config → check isinstance
+            if definition.process is not None:
+                factory = self._registry.processor_factories[definition.process.type]
+                processor_instance = factory.create(definition.process.properties)
+
+                if isinstance(processor_instance, DistributedProcessor):
+                    inputs = await self._load_inputs(definition, ctx)
+                    distributed.append(
+                        _DistributedEntry(
+                            artifact_id=aid,
+                            processor=processor_instance,
+                            inputs=inputs,
+                            output_schema=output_schema,
+                        )
+                    )
+                else:
+                    regular.append(aid)
+                continue
+
+            # 4. Passthrough → regular
+            regular.append(aid)
+
+        return regular, distributed, resuming
+
+    def _create_distributed_processor(
+        self,
+        definition: ArtifactDefinition,
+    ) -> DistributedProcessor[Any]:
+        """Re-create a DistributedProcessor from its factory.
+
+        Used on the resume path where the processor must be re-created
+        (stateless — all state lives in the persisted PrepareResult).
+
+        Raises:
+            KeyError: If processor type not found in registry.
+            TypeError: If the processor does not implement DistributedProcessor.
+
+        """
+        if definition.process is None:
+            msg = f"Cannot create distributed processor: no process config on '{definition}'"
+            raise TypeError(msg)
+
+        factory = self._registry.processor_factories[definition.process.type]
+        processor = factory.create(definition.process.properties)
+
+        if not isinstance(processor, DistributedProcessor):
+            msg = (
+                f"Processor '{definition.process.type}' does not implement "
+                f"DistributedProcessor but artifact is in pending state"
+            )
+            raise TypeError(msg)
+
+        return processor
+
+    async def _load_inputs(
+        self,
+        definition: ArtifactDefinition,
+        ctx: _ExecutionContext,
+    ) -> list[Message]:
+        """Load input messages for an artifact from the store.
+
+        Args:
+            definition: The artifact definition with input references.
+            ctx: The execution context with store and run_id.
+
+        Returns:
+            List of input messages.
+
+        Raises:
+            ValueError: If the artifact has no inputs defined.
+
+        """
+        inputs = definition.inputs
+        if inputs is None:
+            msg = "Cannot load inputs: artifact has no inputs defined"
+            raise ValueError(msg)
+
+        input_refs = [inputs] if isinstance(inputs, str) else inputs
+        return [await ctx.store.get_artifact(ctx.run_id, ref) for ref in input_refs]
+
     async def _handle_artifact_result(
         self,
         artifact_id: str,
@@ -640,20 +791,7 @@ class DAGExecutor:
             The produced message.
 
         """
-        # Get input artifact IDs
-        inputs = definition.inputs
-        if inputs is None:
-            # Should never happen - Planner validates this
-            raise ValueError(
-                "Bug: derived artifact has no inputs (Planner should have caught this)"
-            )
-
-        input_refs = [inputs] if isinstance(inputs, str) else inputs
-
-        # Retrieve input messages from store (async)
-        input_messages = [
-            await ctx.store.get_artifact(ctx.run_id, ref) for ref in input_refs
-        ]
+        input_messages = await self._load_inputs(definition, ctx)
 
         if definition.process is not None:
             return await self._run_processor(
