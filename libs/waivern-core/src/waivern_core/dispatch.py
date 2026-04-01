@@ -27,7 +27,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, SerializeAsAny
 
-from waivern_core.message import Message
+from waivern_core.message import ExecutionContext, Message
 from waivern_core.schemas import Schema
 
 
@@ -69,6 +69,19 @@ class DispatchResult(BaseModel):
 
     name: str = ""
     """Human-readable label copied from the originating ``DispatchRequest``."""
+
+    def enrich_execution_context(self, context: ExecutionContext) -> ExecutionContext:
+        """Enrich execution context with dispatch-specific metadata.
+
+        Subclasses override to contribute metadata from their dispatch
+        results (e.g., ``LLMDispatchResult`` sets ``model_name``).
+        The executor calls this on each result to build the final
+        execution context for the artifact.
+
+        Default implementation returns the context unchanged.
+
+        """
+        return context
 
 
 class PrepareResult[S: BaseModel](BaseModel):
