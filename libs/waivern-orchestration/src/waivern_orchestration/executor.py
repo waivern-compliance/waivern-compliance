@@ -62,6 +62,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
 from datetime import UTC, datetime
+from graphlib import TopologicalSorter
 from pathlib import Path
 from typing import Any
 
@@ -556,6 +557,159 @@ class DAGExecutor:
                 entry.inputs,
                 entry.output_schema,
             )
+
+    async def _run_finalise(
+        self,
+        entry: _DistributedEntry,
+        results: Sequence[DispatchResult],
+        ctx: _ExecutionContext,
+    ) -> Message | PrepareResult[Any]:
+        """Run finalise() in the thread pool, governed by the semaphore.
+
+        Follows the same bridge pattern as ``_run_prepare``.
+
+        Args:
+            entry: The distributed entry with processor, state, and schema.
+            results: Dispatch results routed to this entry.
+            ctx: The execution context with semaphore and thread pool.
+
+        """
+        if entry.prepare_result is None:
+            msg = f"Cannot finalise '{entry.artifact_id}': no prepare_result"
+            raise RuntimeError(msg)
+
+        async with ctx.semaphore:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                ctx.thread_pool,
+                entry.processor.finalise,
+                entry.prepare_result.state,
+                results,
+                entry.output_schema,
+            )
+
+    async def _finalise_distributed_artifacts(
+        self,
+        entries: list[_DistributedEntry],
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+        sorter: TopologicalSorter[str],
+        *,
+        max_rounds: int = 3,
+    ) -> None:
+        """Orchestrate Phase 2–3 with multi-round loop for distributed entries.
+
+        Drives the dispatch → finalise cycle until all entries produce a
+        ``Message`` or max rounds is exceeded:
+        1. Filter out entries already marked pending by dispatch
+        2. Dispatch all entries with requests (Phase 2)
+        3. Finalise each entry (Phase 3)
+        4. Message → save artifact, mark completed, clean up, notify sorter
+        5. PrepareResult → queue for another round
+        6. Repeat until no entries remain or max rounds exceeded
+
+        Args:
+            entries: Distributed entries with ``prepare_result`` populated.
+            plan: The execution plan (for failure handling and metadata).
+            ctx: The execution context.
+            sorter: The topological sorter (to notify on completion).
+            max_rounds: Maximum dispatch-finalise cycles (default 3).
+
+        """
+        active_entries = [
+            e for e in entries if e.artifact_id not in ctx.pending_batch_artifacts
+        ]
+
+        for _round in range(max_rounds):
+            if not active_entries:
+                return
+
+            # Phase 2: dispatch
+            results_by_artifact = await self._dispatch_all(active_entries, plan, ctx)
+
+            # Phase 3: finalise each non-pending entry
+            next_round: list[_DistributedEntry] = []
+            for entry in active_entries:
+                if entry.artifact_id in ctx.pending_batch_artifacts:
+                    continue
+                if entry.artifact_id not in results_by_artifact:
+                    continue
+
+                try:
+                    result = await self._run_finalise(
+                        entry, results_by_artifact[entry.artifact_id], ctx
+                    )
+                except Exception as exc:
+                    message = self._create_error_message_for_exception(
+                        entry.artifact_id, exc, plan, ctx
+                    )
+                    await ctx.store.save_artifact(
+                        ctx.run_id, entry.artifact_id, message
+                    )
+                    await self._mark_failed_and_skip_dependents(
+                        entry.artifact_id, plan, ctx
+                    )
+                    continue
+
+                if isinstance(result, Message):
+                    await self._save_distributed_artifact(
+                        entry, result, results_by_artifact[entry.artifact_id], plan, ctx
+                    )
+                    sorter.done(entry.artifact_id)
+                else:
+                    entry.prepare_result = result
+                    next_round.append(entry)
+
+            active_entries = next_round
+
+        # Entries still active after max rounds → fail
+        for entry in active_entries:
+            logger.warning(
+                "Artifact '%s' exceeded max dispatch rounds (%d)",
+                entry.artifact_id,
+                max_rounds,
+            )
+            await self._mark_failed_and_skip_dependents(entry.artifact_id, plan, ctx)
+
+    async def _save_distributed_artifact(
+        self,
+        entry: _DistributedEntry,
+        message: Message,
+        results: Sequence[DispatchResult],
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+    ) -> None:
+        """Save a completed distributed artifact with metadata.
+
+        Follows the same metadata pattern as ``_produce``: populates
+        ``run_id``, ``source``, and ``extensions`` with ``ExecutionContext``.
+        Calls ``enrich_execution_context`` on each dispatch result to
+        propagate dispatch-specific metadata (e.g., ``model_name``).
+
+        """
+        definition = plan.runbook.artifacts[entry.artifact_id]
+        origin = get_origin_from_artifact_id(entry.artifact_id)
+        alias = plan.reversed_aliases.get(entry.artifact_id)
+
+        execution_context = ExecutionContext(
+            status="success",
+            duration_seconds=0.0,
+            origin=origin,
+            alias=alias,
+        )
+        for result in results:
+            execution_context = result.enrich_execution_context(execution_context)
+
+        message = replace(
+            message,
+            run_id=ctx.run_id,
+            source=self._determine_source(definition),
+            extensions=MessageExtensions(execution=execution_context),
+        )
+        await ctx.store.save_artifact(ctx.run_id, entry.artifact_id, message)
+        await ctx.store.delete_prepared(ctx.run_id, entry.artifact_id)
+        ctx.state.mark_completed(entry.artifact_id)
+        await ctx.state.save(ctx.store)
 
     async def _dispatch_all(
         self,
