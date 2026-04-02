@@ -1,14 +1,17 @@
 """Shared test helpers for waivern-orchestration tests."""
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Literal
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import yaml
+from pydantic import BaseModel
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
 from waivern_artifact_store.factory import ArtifactStoreFactory
 from waivern_core import ExecutionContext, Message, MessageExtensions
+from waivern_core.dispatch import DispatchResult, PrepareResult
 from waivern_core.schemas import Schema
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
 
@@ -95,7 +98,9 @@ def create_mock_processor_factory(
     factory.component_class = mock_class
 
     if process_result is not None:
-        mock_processor = MagicMock()
+        # Use spec to limit mock to only 'process' — prevents matching
+        # DistributedProcessor's runtime_checkable isinstance check
+        mock_processor = MagicMock(spec=["process"])
         mock_processor.process.return_value = process_result
         factory.create.return_value = mock_processor
 
@@ -276,3 +281,110 @@ def write_runbook(path: Path, runbook: dict[str, object]) -> None:
 
     """
     path.write_text(yaml.dump(runbook))
+
+
+# =============================================================================
+# Distributed Processor Helpers
+# =============================================================================
+
+
+class StubState(BaseModel):
+    """Minimal Pydantic state model for distributed processor tests."""
+
+    value: str = "test_state"
+
+
+class StubDistributedProcessor:
+    """Stub implementing DistributedProcessor for tests.
+
+    Uses concrete methods instead of MagicMock to correctly satisfy
+    the ``@runtime_checkable`` isinstance check for DistributedProcessor.
+    Call tracking is done via ``call_log`` list.
+
+    Args:
+        prepare_result: The PrepareResult to return from prepare().
+        finalise_results: Sequence of results to return from successive
+            finalise() calls. If a single item, it's returned every time.
+
+    """
+
+    def __init__(
+        self,
+        prepare_result: PrepareResult[StubState],
+        finalise_results: Sequence[Message | PrepareResult[StubState]],
+    ) -> None:
+        self.prepare_result = prepare_result
+        self.finalise_results = list(finalise_results)
+        self._finalise_call_count = 0
+        self.call_log: list[str] = []
+
+    def prepare(
+        self, inputs: list[Message], output_schema: Schema
+    ) -> PrepareResult[StubState]:
+        self.call_log.append("prepare")
+        return self.prepare_result
+
+    def deserialise_prepare_result(
+        self, raw: dict[str, Any]
+    ) -> PrepareResult[StubState]:
+        self.call_log.append("deserialise_prepare_result")
+        return PrepareResult[StubState].model_validate(raw)
+
+    def finalise(
+        self,
+        state: StubState,
+        results: Sequence[DispatchResult],
+        output_schema: Schema,
+    ) -> Message | PrepareResult[StubState]:
+        self.call_log.append("finalise")
+        idx = min(self._finalise_call_count, len(self.finalise_results) - 1)
+        self._finalise_call_count += 1
+        return self.finalise_results[idx]
+
+
+def create_distributed_processor_factory(
+    name: str,
+    processor: StubDistributedProcessor,
+) -> MagicMock:
+    """Create a mock factory that returns a StubDistributedProcessor.
+
+    The factory mock has a component_class with the expected class methods,
+    and create() returns the real StubDistributedProcessor instance.
+
+    Args:
+        name: Component name (e.g., "distributed_analyser").
+        processor: The StubDistributedProcessor instance to return.
+
+    Returns:
+        Mock ComponentFactory whose create() returns the given processor.
+
+    """
+    factory = MagicMock()
+    mock_class = MagicMock()
+    mock_class.get_name.return_value = name
+    factory.component_class = mock_class
+    factory.create.return_value = processor
+    return factory
+
+
+def create_mock_dispatcher(
+    results: Sequence[DispatchResult],
+    *,
+    side_effect: BaseException | None = None,
+) -> MagicMock:
+    """Create a mock RequestDispatcher.
+
+    Args:
+        results: Results to return from dispatch(). Ignored if side_effect is set.
+        side_effect: If set, dispatch() raises this exception.
+
+    Returns:
+        Mock dispatcher with an async dispatch() method.
+
+    """
+    dispatcher = MagicMock()
+    if side_effect is not None:
+        dispatcher.dispatch = AsyncMock(side_effect=side_effect)
+    else:
+        dispatcher.dispatch = AsyncMock(return_value=results)
+    return dispatcher

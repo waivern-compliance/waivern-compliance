@@ -14,12 +14,12 @@ This module defines the foundational types used throughout the LLM service:
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum, auto
-from typing import Protocol, runtime_checkable
+from typing import Protocol, override, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field
-from waivern_core import Finding, JsonValue
+from waivern_core import ExecutionContext, Finding, JsonValue
 from waivern_core.dispatch import DispatchRequest, DispatchResult
 
 
@@ -298,3 +298,8 @@ class LLMDispatchResult(DispatchResult):
 
     skipped: list[SkippedFinding[Finding]]
     """Findings that could not be processed, with reasons."""
+
+    @override
+    def enrich_execution_context(self, context: ExecutionContext) -> ExecutionContext:
+        """Set ``model_name`` from the LLM response."""
+        return replace(context, model_name=self.model_name)

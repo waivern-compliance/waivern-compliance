@@ -56,15 +56,25 @@ import asyncio
 import logging
 import time
 import uuid
+from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
 from datetime import UTC, datetime
+from graphlib import TopologicalSorter
 from pathlib import Path
+from typing import Any
 
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.errors import ArtifactNotFoundError
 from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
+from waivern_core.dispatch import (
+    DispatchRequest,
+    DispatchResult,
+    DistributedProcessor,
+    PrepareResult,
+)
 from waivern_core.errors import PendingProcessingError
 from waivern_core.services import ComponentRegistry
 
@@ -98,6 +108,24 @@ class _ExecutionContext:
     semaphore: asyncio.Semaphore
     thread_pool: ThreadPoolExecutor
     pending_batch_artifacts: set[str] = dataclass_field(default_factory=set)
+
+
+@dataclass
+class _DistributedEntry:
+    """Tracks a distributed processor through its prepare-dispatch-finalise lifecycle.
+
+    Bundles the processor instance, inputs, and schema so they survive
+    across phases. ``prepare_result`` is populated after Phase 1 (or
+    loaded from store on resume).
+
+    """
+
+    artifact_id: str
+    processor: DistributedProcessor[Any]
+    inputs: list[Message]
+    output_schema: Schema
+    prepare_result: PrepareResult[Any] | None = None
+    start_time: float = 0.0
 
 
 class DAGExecutor:
@@ -308,10 +336,14 @@ class DAGExecutor:
     ) -> None:
         """Execute artifacts in topological order with parallel batches.
 
-        Handles three artifact outcomes:
-        1. Success — mark completed, notify sorter
-        2. Failure — mark failed, skip dependents, notify sorter
-        3. PendingProcessingError — leave in not_started, do NOT notify sorter
+        Each level of the DAG is processed in three phases:
+        1. **Classification** — split ready artifacts into regular,
+           distributed, and resuming groups
+        2. **Concurrent execution** — ``_produce`` for regular artifacts
+           and ``_run_prepare`` for distributed artifacts run together
+           in ``asyncio.gather``
+        3. **Dispatch and finalise** — distributed entries go through
+           dispatch → finalise (possibly multi-round)
 
         The loop exits when no more progress is possible. If pending batch
         artifacts exist at that point, the run is marked interrupted.
@@ -341,15 +373,60 @@ class DAGExecutor:
                     break
                 continue
 
-            logger.debug("Starting batch execution for artifacts: %s", ready)
-            tasks = [self._produce(aid, plan, ctx) for aid in ready]
-            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-            logger.debug("Batch execution complete for artifacts: %s", ready)
+            # ── Classification ──
+            (
+                regular_aids,
+                distributed_entries,
+                resuming_entries,
+            ) = await self._classify_artifacts(ready, plan, ctx)
 
-            for aid, result in zip(ready, batch_results, strict=True):
-                await self._handle_artifact_result(aid, result, plan, ctx)
-                if aid not in ctx.pending_batch_artifacts:
-                    sorter.done(aid)
+            # ── Regular + Phase 1 (concurrent) ──
+            regular_tasks = [self._produce(aid, plan, ctx) for aid in regular_aids]
+            prepare_tasks = [
+                self._run_prepare(entry, ctx) for entry in distributed_entries
+            ]
+
+            logger.debug(
+                "Starting batch: %d regular, %d distributed, %d resuming",
+                len(regular_aids),
+                len(distributed_entries),
+                len(resuming_entries),
+            )
+            regular_batch, prepare_batch = await asyncio.gather(
+                asyncio.gather(*regular_tasks, return_exceptions=True),
+                asyncio.gather(*prepare_tasks, return_exceptions=True),
+            )
+
+            # ── Handle regular results ──
+            for aid, regular_result in zip(regular_aids, regular_batch, strict=True):
+                await self._handle_artifact_result(aid, regular_result, plan, ctx)
+                sorter.done(aid)
+
+            # ── Collect Phase 1 results ──
+            phase2_entries: list[_DistributedEntry] = list(resuming_entries)
+            for entry, prepare_result in zip(
+                distributed_entries, prepare_batch, strict=True
+            ):
+                if isinstance(prepare_result, BaseException):
+                    message = self._create_error_message_for_exception(
+                        entry.artifact_id, prepare_result, plan, ctx
+                    )
+                    await ctx.store.save_artifact(
+                        ctx.run_id, entry.artifact_id, message
+                    )
+                    await self._mark_failed_and_skip_dependents(
+                        entry.artifact_id, plan, ctx
+                    )
+                    sorter.done(entry.artifact_id)
+                else:
+                    entry.prepare_result = prepare_result
+                    phase2_entries.append(entry)
+
+            # ── Phase 2→3: Dispatch and Finalise (with multi-round) ──
+            if phase2_entries:
+                await self._finalise_distributed_artifacts(
+                    phase2_entries, plan, ctx, sorter
+                )
 
         logger.debug("DAG execution complete.")
 
@@ -377,6 +454,428 @@ class DAGExecutor:
 
         return ready, done
 
+    async def _classify_artifacts(
+        self,
+        ready_aids: list[str],
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+    ) -> tuple[list[str], list[_DistributedEntry], list[_DistributedEntry]]:
+        """Classify ready artifacts into regular, distributed, and resuming.
+
+        Classification order for each artifact:
+        1. In ``state.pending`` → resuming (load PrepareResult from store)
+        2. Source/reuse artifact → regular
+        3. Has process config with ``DistributedProcessor`` → distributed
+        4. Has process config without ``DistributedProcessor`` → regular
+        5. Passthrough (no process config) → regular
+
+        Args:
+            ready_aids: Artifact IDs ready for execution at this level.
+            plan: The execution plan with artifact definitions and schemas.
+            ctx: The execution context with store and state.
+
+        Returns:
+            Tuple of (regular_aids, distributed_entries, resuming_entries).
+
+        """
+        regular: list[str] = []
+        distributed: list[_DistributedEntry] = []
+        resuming: list[_DistributedEntry] = []
+
+        for aid in ready_aids:
+            definition = plan.runbook.artifacts[aid]
+            _, output_schema = plan.artifact_schemas[aid]
+
+            # 1. Pending → resuming
+            if aid in ctx.state.pending:
+                raw = await ctx.store.load_prepared(ctx.run_id, aid)
+                processor = self._create_distributed_processor(definition)
+                prepare_result = processor.deserialise_prepare_result(raw)
+                resuming.append(
+                    _DistributedEntry(
+                        artifact_id=aid,
+                        processor=processor,
+                        inputs=[],
+                        output_schema=output_schema,
+                        prepare_result=prepare_result,
+                        start_time=time.monotonic(),
+                    )
+                )
+                continue
+
+            # 2. Source/reuse → regular
+            if definition.source is not None or definition.reuse is not None:
+                regular.append(aid)
+                continue
+
+            # 3. Has process config → check isinstance
+            if definition.process is not None:
+                try:
+                    factory = self._registry.processor_factories[
+                        definition.process.type
+                    ]
+                    processor_instance = factory.create(definition.process.properties)
+                except KeyError:
+                    # Unknown processor type — classify as regular so _produce
+                    # handles it with a proper error message
+                    regular.append(aid)
+                    continue
+
+                if isinstance(processor_instance, DistributedProcessor):
+                    inputs = await self._load_inputs(definition, ctx)
+                    distributed.append(
+                        _DistributedEntry(
+                            artifact_id=aid,
+                            processor=processor_instance,
+                            inputs=inputs,
+                            output_schema=output_schema,
+                            start_time=time.monotonic(),
+                        )
+                    )
+                else:
+                    regular.append(aid)
+                continue
+
+            # 4. Passthrough → regular
+            regular.append(aid)
+
+        return regular, distributed, resuming
+
+    def _create_distributed_processor(
+        self,
+        definition: ArtifactDefinition,
+    ) -> DistributedProcessor[Any]:
+        """Re-create a DistributedProcessor from its factory.
+
+        Used on the resume path where the processor must be re-created
+        (stateless — all state lives in the persisted PrepareResult).
+
+        Raises:
+            KeyError: If processor type not found in registry.
+            TypeError: If the processor does not implement DistributedProcessor.
+
+        """
+        if definition.process is None:
+            msg = f"Cannot create distributed processor: no process config on '{definition}'"
+            raise TypeError(msg)
+
+        factory = self._registry.processor_factories[definition.process.type]
+        processor = factory.create(definition.process.properties)
+
+        if not isinstance(processor, DistributedProcessor):
+            msg = (
+                f"Processor '{definition.process.type}' does not implement "
+                f"DistributedProcessor but artifact is in pending state"
+            )
+            raise TypeError(msg)
+
+        return processor
+
+    async def _load_inputs(
+        self,
+        definition: ArtifactDefinition,
+        ctx: _ExecutionContext,
+    ) -> list[Message]:
+        """Load input messages for an artifact from the store.
+
+        Args:
+            definition: The artifact definition with input references.
+            ctx: The execution context with store and run_id.
+
+        Returns:
+            List of input messages.
+
+        Raises:
+            ValueError: If the artifact has no inputs defined.
+
+        """
+        inputs = definition.inputs
+        if inputs is None:
+            msg = "Cannot load inputs: artifact has no inputs defined"
+            raise ValueError(msg)
+
+        input_refs = [inputs] if isinstance(inputs, str) else inputs
+        return [await ctx.store.get_artifact(ctx.run_id, ref) for ref in input_refs]
+
+    async def _run_prepare(
+        self,
+        entry: _DistributedEntry,
+        ctx: _ExecutionContext,
+    ) -> PrepareResult[Any]:
+        """Run prepare() in the thread pool, governed by the semaphore.
+
+        Follows the same bridge pattern as ``_run_connector`` and
+        ``_run_processor``, but acquires the semaphore internally
+        (called from ``asyncio.gather``, not wrapped by ``_produce``).
+
+        """
+        async with ctx.semaphore:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                ctx.thread_pool,
+                entry.processor.prepare,
+                entry.inputs,
+                entry.output_schema,
+            )
+
+    async def _run_finalise(
+        self,
+        entry: _DistributedEntry,
+        results: Sequence[DispatchResult],
+        ctx: _ExecutionContext,
+    ) -> Message | PrepareResult[Any]:
+        """Run finalise() in the thread pool, governed by the semaphore.
+
+        Follows the same bridge pattern as ``_run_prepare``.
+
+        Args:
+            entry: The distributed entry with processor, state, and schema.
+            results: Dispatch results routed to this entry.
+            ctx: The execution context with semaphore and thread pool.
+
+        """
+        if entry.prepare_result is None:
+            msg = f"Cannot finalise '{entry.artifact_id}': no prepare_result"
+            raise RuntimeError(msg)
+
+        async with ctx.semaphore:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                ctx.thread_pool,
+                entry.processor.finalise,
+                entry.prepare_result.state,
+                results,
+                entry.output_schema,
+            )
+
+    async def _finalise_distributed_artifacts(
+        self,
+        entries: list[_DistributedEntry],
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+        sorter: TopologicalSorter[str],
+        *,
+        max_rounds: int = 3,
+    ) -> None:
+        """Orchestrate Phase 2–3 with multi-round loop for distributed entries.
+
+        Drives the dispatch → finalise cycle until all entries produce a
+        ``Message`` or max rounds is exceeded:
+        1. Filter out entries already marked pending by dispatch
+        2. Dispatch all entries with requests (Phase 2)
+        3. Finalise each entry (Phase 3)
+        4. Message → save artifact, mark completed, clean up, notify sorter
+        5. PrepareResult → queue for another round
+        6. Repeat until no entries remain or max rounds exceeded
+
+        Args:
+            entries: Distributed entries with ``prepare_result`` populated.
+            plan: The execution plan (for failure handling and metadata).
+            ctx: The execution context.
+            sorter: The topological sorter (to notify on completion).
+            max_rounds: Maximum dispatch-finalise cycles (default 3).
+
+        """
+        active_entries = [
+            e for e in entries if e.artifact_id not in ctx.pending_batch_artifacts
+        ]
+
+        for _round in range(max_rounds):
+            if not active_entries:
+                return
+
+            # Phase 2: dispatch
+            results_by_artifact = await self._dispatch_all(active_entries, plan, ctx)
+
+            # Phase 3: finalise each non-pending entry
+            next_round: list[_DistributedEntry] = []
+            for entry in active_entries:
+                if entry.artifact_id in ctx.pending_batch_artifacts:
+                    continue
+                if entry.artifact_id not in results_by_artifact:
+                    continue
+
+                try:
+                    result = await self._run_finalise(
+                        entry, results_by_artifact[entry.artifact_id], ctx
+                    )
+                except Exception as exc:
+                    message = self._create_error_message_for_exception(
+                        entry.artifact_id, exc, plan, ctx
+                    )
+                    await ctx.store.save_artifact(
+                        ctx.run_id, entry.artifact_id, message
+                    )
+                    await self._mark_failed_and_skip_dependents(
+                        entry.artifact_id, plan, ctx
+                    )
+                    continue
+
+                if isinstance(result, Message):
+                    await self._save_distributed_artifact(
+                        entry, result, results_by_artifact[entry.artifact_id], plan, ctx
+                    )
+                    sorter.done(entry.artifact_id)
+                else:
+                    entry.prepare_result = result
+                    next_round.append(entry)
+
+            active_entries = next_round
+
+        # Entries still active after max rounds → fail
+        for entry in active_entries:
+            logger.warning(
+                "Artifact '%s' exceeded max dispatch rounds (%d)",
+                entry.artifact_id,
+                max_rounds,
+            )
+            await self._mark_failed_and_skip_dependents(entry.artifact_id, plan, ctx)
+
+    async def _save_distributed_artifact(
+        self,
+        entry: _DistributedEntry,
+        message: Message,
+        results: Sequence[DispatchResult],
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+    ) -> None:
+        """Save a completed distributed artifact with metadata.
+
+        Follows the same metadata pattern as ``_produce``: populates
+        ``run_id``, ``source``, and ``extensions`` with ``ExecutionContext``.
+        Calls ``enrich_execution_context`` on each dispatch result to
+        propagate dispatch-specific metadata (e.g., ``model_name``).
+
+        """
+        definition = plan.runbook.artifacts[entry.artifact_id]
+        origin = get_origin_from_artifact_id(entry.artifact_id)
+        alias = plan.reversed_aliases.get(entry.artifact_id)
+
+        duration = time.monotonic() - entry.start_time
+        execution_context = ExecutionContext(
+            status="success",
+            duration_seconds=duration,
+            origin=origin,
+            alias=alias,
+        )
+        for result in results:
+            execution_context = result.enrich_execution_context(execution_context)
+
+        message = replace(
+            message,
+            run_id=ctx.run_id,
+            source=self._determine_source(definition),
+            extensions=MessageExtensions(execution=execution_context),
+        )
+        await ctx.store.save_artifact(ctx.run_id, entry.artifact_id, message)
+        await ctx.store.delete_prepared(ctx.run_id, entry.artifact_id)
+        ctx.state.mark_completed(entry.artifact_id)
+        await ctx.state.save(ctx.store)
+
+    async def _dispatch_all(
+        self,
+        entries: list[_DistributedEntry],
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+    ) -> Mapping[str, Sequence[DispatchResult]]:
+        """Group requests by type, dispatch each group, and route results back.
+
+        Orchestrates Phase 2 of the distributed processor lifecycle:
+        1. Collect all requests from entries and build request-to-artifact mapping
+        2. Group requests by concrete type (e.g., all LLMRequest together)
+        3. Resolve a dispatcher per group and dispatch
+        4. Route results back to artifacts via request_id
+
+        Short-circuited entries (empty requests) get empty result sequences
+        without going through dispatch.
+
+        Args:
+            entries: Distributed entries with ``prepare_result`` populated.
+            plan: The execution plan (needed for failure handling).
+            ctx: The execution context with store, state, and registry access.
+
+        Returns:
+            Mapping from artifact_id to its dispatch results. Artifacts
+            that were marked pending (PendingBatchError) or failed are
+            excluded from the returned mapping.
+
+        """
+        results_by_artifact: dict[str, list[DispatchResult]] = {
+            entry.artifact_id: [] for entry in entries
+        }
+
+        # Map request_id → artifact_id for result routing
+        request_to_artifact: dict[str, str] = {}
+        # Group requests by concrete type for consolidated dispatch
+        requests_by_type: dict[type[DispatchRequest], list[DispatchRequest]] = (
+            defaultdict(list)
+        )
+        # Track which entries are affected by each request type group
+        entries_by_type: dict[type[DispatchRequest], list[_DistributedEntry]] = (
+            defaultdict(list)
+        )
+
+        for entry in entries:
+            if entry.prepare_result is None or not entry.prepare_result.requests:
+                continue
+
+            request_type = type(entry.prepare_result.requests[0])
+            for request in entry.prepare_result.requests:
+                request_to_artifact[request.request_id] = entry.artifact_id
+                requests_by_type[request_type].append(request)
+
+            if entry not in entries_by_type[request_type]:
+                entries_by_type[request_type].append(entry)
+
+        # Dispatch each type group
+        for request_type, requests in requests_by_type.items():
+            affected_entries = entries_by_type[request_type]
+            try:
+                dispatcher = self._registry.get_dispatcher_for(request_type)
+                group_results = await dispatcher.dispatch(requests)
+            except PendingProcessingError:
+                await self._persist_pending_entries(affected_entries, ctx)
+                continue
+            except Exception:
+                affected_ids = [e.artifact_id for e in affected_entries]
+                logger.exception(
+                    "Dispatch failed for request type %s affecting artifacts %s",
+                    request_type.__name__,
+                    affected_ids,
+                )
+                for entry in affected_entries:
+                    await self._mark_failed_and_skip_dependents(
+                        entry.artifact_id, plan, ctx
+                    )
+                    results_by_artifact.pop(entry.artifact_id, None)
+                continue
+
+            # Route results back to artifacts via request_id
+            for result in group_results:
+                artifact_id = request_to_artifact[result.request_id]
+                results_by_artifact[artifact_id].append(result)
+
+        return results_by_artifact
+
+    async def _persist_pending_entries(
+        self,
+        entries: list[_DistributedEntry],
+        ctx: _ExecutionContext,
+    ) -> None:
+        """Persist PrepareResult for entries affected by PendingBatchError.
+
+        Serialises each entry's PrepareResult, saves to store, marks the
+        artifact as pending, and adds to the pending tracking set.
+
+        """
+        for entry in entries:
+            if entry.prepare_result is not None:
+                data = entry.prepare_result.model_dump(mode="json")
+                await ctx.store.save_prepared(ctx.run_id, entry.artifact_id, data)
+            ctx.state.mark_pending(entry.artifact_id)
+            ctx.pending_batch_artifacts.add(entry.artifact_id)
+        await ctx.state.save(ctx.store)
+
     async def _handle_artifact_result(
         self,
         artifact_id: str,
@@ -384,23 +883,14 @@ class DAGExecutor:
         plan: ExecutionPlan,
         ctx: _ExecutionContext,
     ) -> None:
-        """Handle the result of producing an artifact.
+        """Handle the result of producing a regular artifact.
 
         Persists state transitions. On failure, skips all dependent artifacts.
-        PendingProcessingError leaves the artifact in not_started for retry
-        on resume. Success messages are saved in _produce(). Error messages
-        from exceptions caught in _produce() need to be saved here.
+        Success messages are saved in _produce(). Error messages from
+        exceptions caught in _produce() need to be saved here.
 
         """
-        if isinstance(result, PendingProcessingError):
-            # Async processing pending — leave artifact in not_started
-            ctx.pending_batch_artifacts.add(artifact_id)
-            logger.info(
-                "Artifact '%s' has pending async processing: %s",
-                artifact_id,
-                result,
-            )
-        elif isinstance(result, BaseException):
+        if isinstance(result, BaseException):
             # Exception during production (from asyncio.gather) - create and save
             message = self._create_error_message_for_exception(
                 artifact_id, result, plan, ctx
@@ -517,8 +1007,6 @@ class DAGExecutor:
 
                 return message
 
-            except PendingProcessingError:
-                raise
             except Exception as e:
                 duration = time.monotonic() - start_time
                 logger.debug(
@@ -640,20 +1128,7 @@ class DAGExecutor:
             The produced message.
 
         """
-        # Get input artifact IDs
-        inputs = definition.inputs
-        if inputs is None:
-            # Should never happen - Planner validates this
-            raise ValueError(
-                "Bug: derived artifact has no inputs (Planner should have caught this)"
-            )
-
-        input_refs = [inputs] if isinstance(inputs, str) else inputs
-
-        # Retrieve input messages from store (async)
-        input_messages = [
-            await ctx.store.get_artifact(ctx.run_id, ref) for ref in input_refs
-        ]
+        input_messages = await self._load_inputs(definition, ctx)
 
         if definition.process is not None:
             return await self._run_processor(
