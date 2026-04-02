@@ -62,7 +62,7 @@ def llm_service() -> LLMService:
 
 def _make_extractor(llm_service: LLMService) -> SecurityDocumentEvidenceExtractor:
     """Create extractor with real LLM service."""
-    config = SecurityDocumentEvidenceExtractorConfig(enable_llm_classification=True)
+    config = SecurityDocumentEvidenceExtractorConfig()
     return SecurityDocumentEvidenceExtractor(config=config, llm_service=llm_service)
 
 
