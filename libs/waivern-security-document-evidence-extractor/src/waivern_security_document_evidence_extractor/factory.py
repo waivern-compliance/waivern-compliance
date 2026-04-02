@@ -18,16 +18,16 @@ class SecurityDocumentEvidenceExtractorFactory(
 ):
     """Factory for creating SecurityDocumentEvidenceExtractor instances.
 
-    Resolves LLMService from the DI container when LLM classification
-    is enabled. When disabled, the extractor runs without LLM and assigns
-    empty security_domains to all documents.
+    Always resolves LLMService from the DI container — the extractor
+    requires LLM for domain classification. LLM availability is
+    determined by service injection, not configuration.
     """
 
     def __init__(self, container: ServiceContainer) -> None:
         """Initialise factory with dependency injection container.
 
         Args:
-            container: Service container for resolving dependencies
+            container: Service container for resolving dependencies.
 
         """
         self._container = container
@@ -52,12 +52,7 @@ class SecurityDocumentEvidenceExtractorFactory(
         extractor_config = SecurityDocumentEvidenceExtractorConfig.from_properties(
             config
         )
-
-        llm_service = (
-            self._container.get_service(LLMService)
-            if extractor_config.enable_llm_classification
-            else None
-        )
+        llm_service = self._container.get_service(LLMService)
 
         return SecurityDocumentEvidenceExtractor(
             config=extractor_config,
@@ -70,7 +65,7 @@ class SecurityDocumentEvidenceExtractorFactory(
 
         Validates:
         1. Configuration structure
-        2. LLM service available (if classification enabled)
+        2. LLM service available in the container
 
         Args:
             config: Configuration dict to validate.
@@ -80,17 +75,14 @@ class SecurityDocumentEvidenceExtractorFactory(
 
         """
         try:
-            extractor_config = SecurityDocumentEvidenceExtractorConfig.from_properties(
-                config
-            )
+            SecurityDocumentEvidenceExtractorConfig.from_properties(config)
         except Exception:
             return False
 
-        if extractor_config.enable_llm_classification:
-            try:
-                self._container.get_service(LLMService)
-            except (ValueError, KeyError):
-                return False
+        try:
+            self._container.get_service(LLMService)
+        except (ValueError, KeyError):
+            return False
 
         return True
 

@@ -31,9 +31,7 @@ class TestSecurityDocumentEvidenceExtractorFactoryContract(
 
     @pytest.fixture
     def valid_config(self) -> ComponentConfig:
-        return {
-            "enable_llm_classification": True,
-        }
+        return {}
 
 
 class TestSecurityDocumentEvidenceExtractorFactory:
@@ -49,11 +47,11 @@ class TestSecurityDocumentEvidenceExtractorFactory:
 
         factory = SecurityDocumentEvidenceExtractorFactory(container)
 
-        assert factory.can_create({"enable_llm_classification": True}) is True
+        assert factory.can_create({}) is True
 
-    def test_can_create_without_llm_when_classification_disabled(self):
-        """can_create() returns True without LLM when enable_llm_classification=False."""
+    def test_can_create_fails_without_llm_service(self):
+        """can_create() returns False when LLM service is not in container."""
         container = ServiceContainer()
         factory = SecurityDocumentEvidenceExtractorFactory(container)
 
-        assert factory.can_create({"enable_llm_classification": False}) is True
+        assert factory.can_create({}) is False

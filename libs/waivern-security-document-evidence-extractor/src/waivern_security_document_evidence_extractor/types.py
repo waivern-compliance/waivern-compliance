@@ -12,16 +12,9 @@ class SecurityDocumentEvidenceExtractorConfig(BaseComponentConfiguration):
     """Configuration for SecurityDocumentEvidenceExtractor.
 
     Domain vocabulary comes from the SecurityDomain enum directly —
-    no ruleset config needed.
+    no ruleset config needed. LLM availability is determined by service
+    injection, not configuration.
     """
-
-    enable_llm_classification: bool = Field(
-        default=True,
-        description=(
-            "Enable LLM-based domain classification. "
-            "When False, all documents get security_domains: [] (dry-run mode)"
-        ),
-    )
 
 
 class DocumentItem(BaseModel):
@@ -39,6 +32,19 @@ class DocumentItem(BaseModel):
     metadata: SecurityDocumentContextMetadata = Field(
         description="Metadata with source file information",
     )
+
+
+class SecurityDocEvidencePrepareState(BaseModel):
+    """Intermediate state produced by prepare(), consumed by finalise().
+
+    Captures everything finalise() needs to build the output message,
+    independent of whether LLM dispatch occurred.
+    """
+
+    document_items: list[DocumentItem]
+    document_contents: list[str]
+    llm_enabled: bool
+    run_id: str
 
 
 class DomainClassificationResponse(BaseModel):
