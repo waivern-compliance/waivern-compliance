@@ -618,7 +618,9 @@ class TestDistributedErrorIsolation:
         # Processor whose prepare() raises
         class FailingPrepareProcessor(StubDistributedProcessor):
             @override
-            def prepare(self, inputs, output_schema):  # type: ignore[override]
+            def prepare(
+                self, inputs: list[Message], output_schema: Schema
+            ) -> PrepareResult[StubState]:
                 raise RuntimeError("prepare failed")
 
         failing_processor = FailingPrepareProcessor(

@@ -125,6 +125,7 @@ class _DistributedEntry:
     inputs: list[Message]
     output_schema: Schema
     prepare_result: PrepareResult[Any] | None = None
+    start_time: float = 0.0
 
 
 class DAGExecutor:
@@ -497,6 +498,7 @@ class DAGExecutor:
                         inputs=[],
                         output_schema=output_schema,
                         prepare_result=prepare_result,
+                        start_time=time.monotonic(),
                     )
                 )
                 continue
@@ -527,6 +529,7 @@ class DAGExecutor:
                             processor=processor_instance,
                             inputs=inputs,
                             output_schema=output_schema,
+                            start_time=time.monotonic(),
                         )
                     )
                 else:
@@ -748,9 +751,10 @@ class DAGExecutor:
         origin = get_origin_from_artifact_id(entry.artifact_id)
         alias = plan.reversed_aliases.get(entry.artifact_id)
 
+        duration = time.monotonic() - entry.start_time
         execution_context = ExecutionContext(
             status="success",
-            duration_seconds=0.0,
+            duration_seconds=duration,
             origin=origin,
             alias=alias,
         )
@@ -833,6 +837,12 @@ class DAGExecutor:
                 await self._persist_pending_entries(affected_entries, ctx)
                 continue
             except Exception:
+                affected_ids = [e.artifact_id for e in affected_entries]
+                logger.exception(
+                    "Dispatch failed for request type %s affecting artifacts %s",
+                    request_type.__name__,
+                    affected_ids,
+                )
                 for entry in affected_entries:
                     await self._mark_failed_and_skip_dependents(
                         entry.artifact_id, plan, ctx

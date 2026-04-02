@@ -114,6 +114,8 @@ class TestDistributedArtifactMetadata:
         assert stored.extensions is not None
         assert stored.extensions.execution is not None
         assert stored.extensions.execution.status == "success"
+        assert stored.extensions.execution.duration_seconds is not None
+        assert stored.extensions.execution.duration_seconds >= 0
 
     async def test_model_name_flows_from_dispatch_result(self) -> None:
         """enrich_execution_context propagates model_name to saved artifact.
