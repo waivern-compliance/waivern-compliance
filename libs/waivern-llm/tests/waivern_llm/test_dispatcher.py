@@ -53,12 +53,6 @@ class MockResponse(BaseModel):
     reason: str
 
 
-class MockClassification(BaseModel):
-    """Second mock response model for multi-request tests."""
-
-    category: str
-
-
 def _create_mock_provider(response: MockResponse) -> Mock:
     """Create a mock LLM provider that returns the given response."""
     provider = Mock()
@@ -118,7 +112,7 @@ class TestLLMDispatcherSyncFirstRun:
     """Tests for sync mode first-run dispatch."""
 
     async def test_single_request_returns_result_with_correct_metadata(self) -> None:
-        """Single request → result has matching request_id, model_name, name, and response_model_name."""
+        """Single request → result has matching request_id, model_name, and name."""
         store = AsyncInMemoryStore()
         response = MockResponse(valid=True, reason="ok")
         provider = _create_mock_provider(response)
@@ -132,7 +126,6 @@ class TestLLMDispatcherSyncFirstRun:
         assert results[0].request_id == request.request_id
         assert results[0].model_name == "test-model"
         assert results[0].name == ""
-        assert results[0].response_model_name == "MockResponse"
 
     async def test_cache_miss_calls_provider_and_returns_raw_response(self) -> None:
         """Cache miss → invoke_structured() called, response returned as raw dict."""
@@ -253,56 +246,6 @@ class TestLLMDispatcherSyncFirstRun:
 
         # Provider called twice (one per miss, consolidated via gather)
         assert provider.invoke_structured.call_count == 2
-
-    async def test_multiple_requests_carry_correct_response_model_names(self) -> None:
-        """Two requests with different response models → each result has the correct response_model_name."""
-        store = AsyncInMemoryStore()
-
-        async def invoke_side_effect(
-            prompt: str, response_model: type[BaseModel]
-        ) -> BaseModel:
-            if response_model is MockClassification:
-                return MockClassification(category="personal-data")
-            return MockResponse(valid=True, reason="ok")
-
-        provider = Mock()
-        provider.model_name = "test-model"
-        provider.context_window = 100_000
-        provider.invoke_structured = AsyncMock(side_effect=invoke_side_effect)
-
-        dispatcher = LLMDispatcher(provider=provider, store=store)
-
-        builder_a = Mock()
-        builder_a.build_prompt = Mock(return_value="prompt-A")
-        request_a = LLMRequest(
-            name="assessment",
-            groups=[ItemGroup(items=[MockFinding("f1")])],
-            prompt_builder=builder_a,
-            response_model=MockResponse,
-            batching_mode=BatchingMode.COUNT_BASED,
-            run_id="run-1",
-        )
-
-        builder_b = Mock()
-        builder_b.build_prompt = Mock(return_value="prompt-B")
-        request_b = LLMRequest(
-            name="classification",
-            groups=[ItemGroup(items=[MockFinding("f2")])],
-            prompt_builder=builder_b,
-            response_model=MockClassification,
-            batching_mode=BatchingMode.COUNT_BASED,
-            run_id="run-1",
-        )
-
-        results = await dispatcher.dispatch([request_a, request_b])
-
-        result_a = next(r for r in results if r.request_id == request_a.request_id)
-        result_b = next(r for r in results if r.request_id == request_b.request_id)
-
-        assert result_a.response_model_name == "MockResponse"
-        assert result_a.name == "assessment"
-        assert result_b.response_model_name == "MockClassification"
-        assert result_b.name == "classification"
 
     async def test_skipped_findings_included_in_result(self) -> None:
         """Request with oversized/missing-content groups → skipped findings in result."""
