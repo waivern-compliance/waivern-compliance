@@ -255,15 +255,18 @@ class LLMRequest[T: Finding](DispatchRequest):
     groups: Sequence[ItemGroup[T]]
     """Processor-defined groupings of findings."""
 
-    prompt_builder: PromptBuilder[T] = Field(exclude=True)
-    """Domain-specific prompt builder. Excluded from serialisation."""
+    prompt_builder: PromptBuilder[T] | None = Field(default=None, exclude=True)
+    """Domain-specific prompt builder. Excluded from serialisation.
 
-    response_model: type[BaseModel] = Field(exclude=True)
+    Required on first run. ``None`` on resume (prompts already cached).
+    """
+
+    response_model: type[BaseModel] | None = Field(default=None, exclude=True)
     """Expected response shape for the LLM. Excluded from serialisation.
 
     Used by the dispatcher on first run to call
     ``provider.invoke_structured()`` (sync mode) or generate the JSON
-    schema for ``BatchRequest`` (batch mode). Not needed on resume.
+    schema for ``BatchRequest`` (batch mode). ``None`` on resume.
     """
 
     batching_mode: BatchingMode
@@ -288,10 +291,6 @@ class LLMDispatchResult(DispatchResult):
 
     model_name: str
     """LLM model that produced these responses (e.g. 'claude-sonnet-4-5-20250929')."""
-
-    response_model_name: str
-    """Name of the response model type (e.g. 'AssessmentResponse'). Used by
-    ``finalise()`` to match results to the correct deserialisation model."""
 
     responses: list[dict[str, JsonValue]]
     """Raw response dicts, one per batch processed."""

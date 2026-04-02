@@ -1,7 +1,11 @@
-"""Configuration types for ISO 27001 control assessor."""
+"""Configuration and state types for ISO 27001 control assessor."""
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 from waivern_core import BaseComponentConfiguration
+from waivern_rulesets.iso27001_domains import ISO27001DomainsRule
+from waivern_schemas.iso27001_assessment import EvidenceStatus
+from waivern_schemas.security_document_context import SecurityDocumentContextModel
+from waivern_schemas.security_evidence import SecurityEvidenceModel
 
 
 class ISO27001AssessorConfig(BaseComponentConfiguration):
@@ -25,3 +29,19 @@ class ISO27001AssessorConfig(BaseComponentConfiguration):
         min_length=1,
         description="ISO 27001:2022 Annex A control reference (e.g. 'A.5.1')",
     )
+
+
+class ISO27001PrepareState(BaseModel):
+    """Intermediate state for the distributed processor prepare/finalise split.
+
+    Captures everything ``finalise()`` needs to produce the output message
+    after dispatch results arrive. The executor treats this as opaque and
+    persists it for batch-mode resume.
+    """
+
+    rule: ISO27001DomainsRule
+    evidence_status: EvidenceStatus
+    evidence: list[SecurityEvidenceModel]
+    documents: list[SecurityDocumentContextModel]
+    run_id: str
+    llm_enabled: bool

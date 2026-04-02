@@ -143,7 +143,6 @@ class LLMDispatcher:
                 request_id=request.request_id,
                 name=request.name,
                 model_name=self._provider.model_name,
-                response_model_name=request.response_model.__name__,
                 responses=request_responses[request.request_id],
                 skipped=request_skipped.get(request.request_id, []),
             )
@@ -159,6 +158,12 @@ class LLMDispatcher:
         pending_batch_ids: list[str],
     ) -> None:
         """Phase A (first run): plan batches, build prompts, check cache."""
+        if request.prompt_builder is None or request.response_model is None:
+            raise ValueError(
+                "prompt_builder and response_model are required on first run "
+                f"(request_id={request.request_id})"
+            )
+
         max_payload = calculate_max_payload_tokens(self._provider.context_window)
         planner = BatchPlanner(max_payload_tokens=max_payload)
         plan = planner.plan(request.groups, request.batching_mode)
