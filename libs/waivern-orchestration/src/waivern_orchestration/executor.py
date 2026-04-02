@@ -335,10 +335,14 @@ class DAGExecutor:
     ) -> None:
         """Execute artifacts in topological order with parallel batches.
 
-        Handles three artifact outcomes:
-        1. Success — mark completed, notify sorter
-        2. Failure — mark failed, skip dependents, notify sorter
-        3. PendingProcessingError — leave in not_started, do NOT notify sorter
+        Each level of the DAG is processed in three phases:
+        1. **Classification** — split ready artifacts into regular,
+           distributed, and resuming groups
+        2. **Concurrent execution** — ``_produce`` for regular artifacts
+           and ``_run_prepare`` for distributed artifacts run together
+           in ``asyncio.gather``
+        3. **Dispatch and finalise** — distributed entries go through
+           dispatch → finalise (possibly multi-round)
 
         The loop exits when no more progress is possible. If pending batch
         artifacts exist at that point, the run is marked interrupted.
@@ -368,15 +372,60 @@ class DAGExecutor:
                     break
                 continue
 
-            logger.debug("Starting batch execution for artifacts: %s", ready)
-            tasks = [self._produce(aid, plan, ctx) for aid in ready]
-            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-            logger.debug("Batch execution complete for artifacts: %s", ready)
+            # ── Classification ──
+            (
+                regular_aids,
+                distributed_entries,
+                resuming_entries,
+            ) = await self._classify_artifacts(ready, plan, ctx)
 
-            for aid, result in zip(ready, batch_results, strict=True):
-                await self._handle_artifact_result(aid, result, plan, ctx)
-                if aid not in ctx.pending_batch_artifacts:
-                    sorter.done(aid)
+            # ── Regular + Phase 1 (concurrent) ──
+            regular_tasks = [self._produce(aid, plan, ctx) for aid in regular_aids]
+            prepare_tasks = [
+                self._run_prepare(entry, ctx) for entry in distributed_entries
+            ]
+
+            logger.debug(
+                "Starting batch: %d regular, %d distributed, %d resuming",
+                len(regular_aids),
+                len(distributed_entries),
+                len(resuming_entries),
+            )
+            regular_batch, prepare_batch = await asyncio.gather(
+                asyncio.gather(*regular_tasks, return_exceptions=True),
+                asyncio.gather(*prepare_tasks, return_exceptions=True),
+            )
+
+            # ── Handle regular results ──
+            for aid, regular_result in zip(regular_aids, regular_batch, strict=True):
+                await self._handle_artifact_result(aid, regular_result, plan, ctx)
+                sorter.done(aid)
+
+            # ── Collect Phase 1 results ──
+            phase2_entries: list[_DistributedEntry] = list(resuming_entries)
+            for entry, prepare_result in zip(
+                distributed_entries, prepare_batch, strict=True
+            ):
+                if isinstance(prepare_result, BaseException):
+                    message = self._create_error_message_for_exception(
+                        entry.artifact_id, prepare_result, plan, ctx
+                    )
+                    await ctx.store.save_artifact(
+                        ctx.run_id, entry.artifact_id, message
+                    )
+                    await self._mark_failed_and_skip_dependents(
+                        entry.artifact_id, plan, ctx
+                    )
+                    sorter.done(entry.artifact_id)
+                else:
+                    entry.prepare_result = prepare_result
+                    phase2_entries.append(entry)
+
+            # ── Phase 2→3: Dispatch and Finalise (with multi-round) ──
+            if phase2_entries:
+                await self._finalise_distributed_artifacts(
+                    phase2_entries, plan, ctx, sorter
+                )
 
         logger.debug("DAG execution complete.")
 
@@ -459,8 +508,16 @@ class DAGExecutor:
 
             # 3. Has process config → check isinstance
             if definition.process is not None:
-                factory = self._registry.processor_factories[definition.process.type]
-                processor_instance = factory.create(definition.process.properties)
+                try:
+                    factory = self._registry.processor_factories[
+                        definition.process.type
+                    ]
+                    processor_instance = factory.create(definition.process.properties)
+                except KeyError:
+                    # Unknown processor type — classify as regular so _produce
+                    # handles it with a proper error message
+                    regular.append(aid)
+                    continue
 
                 if isinstance(processor_instance, DistributedProcessor):
                     inputs = await self._load_inputs(definition, ctx)
@@ -816,23 +873,14 @@ class DAGExecutor:
         plan: ExecutionPlan,
         ctx: _ExecutionContext,
     ) -> None:
-        """Handle the result of producing an artifact.
+        """Handle the result of producing a regular artifact.
 
         Persists state transitions. On failure, skips all dependent artifacts.
-        PendingProcessingError leaves the artifact in not_started for retry
-        on resume. Success messages are saved in _produce(). Error messages
-        from exceptions caught in _produce() need to be saved here.
+        Success messages are saved in _produce(). Error messages from
+        exceptions caught in _produce() need to be saved here.
 
         """
-        if isinstance(result, PendingProcessingError):
-            # Async processing pending — leave artifact in not_started
-            ctx.pending_batch_artifacts.add(artifact_id)
-            logger.info(
-                "Artifact '%s' has pending async processing: %s",
-                artifact_id,
-                result,
-            )
-        elif isinstance(result, BaseException):
+        if isinstance(result, BaseException):
             # Exception during production (from asyncio.gather) - create and save
             message = self._create_error_message_for_exception(
                 artifact_id, result, plan, ctx
@@ -949,8 +997,6 @@ class DAGExecutor:
 
                 return message
 
-            except PendingProcessingError:
-                raise
             except Exception as e:
                 duration = time.monotonic() - start_time
                 logger.debug(
