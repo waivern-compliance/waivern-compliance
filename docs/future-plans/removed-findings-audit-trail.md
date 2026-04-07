@@ -2,7 +2,7 @@
 
 - **Status:** Design Proposal
 - **Last Updated:** 2025-01-07
-- **Related:** [Execution Persistence](./execution-persistence.md), [Export Architecture](./export-architecture.md)
+- **Related:** [Export Architecture](./export-architecture.md)
 
 ## Problem
 
@@ -158,7 +158,7 @@ def _execute_analyser(self, analyser, inputs, output_schema):
 
 ## Dependencies
 
-- Requires [Execution Persistence](./execution-persistence.md) for artifact store with run IDs
+- Requires execution persistence for artifact store with run IDs (✅ implemented)
 - Integrates with [Export Architecture](./export-architecture.md) for audit report generation
 
 ## Implementation Path

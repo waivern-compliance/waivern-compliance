@@ -1,8 +1,8 @@
 # Export Re-Export Command (`wct export`)
 
-- **Status:** Deferred - Awaiting Execution Persistence
-- **Last Updated:** 2025-12-10
-- **Related:** [Export Architecture](./export-architecture.md), [Execution Persistence](./execution-persistence.md)
+- **Status:** Deferred - Awaiting Multiple Exporters
+- **Last Updated:** 2026-04-07
+- **Related:** [Export Architecture](./export-architecture.md)
 
 ## Problem
 
@@ -30,17 +30,11 @@ These decisions ensure that:
 
 ## Rationale for Deferral
 
-The `wct export` command requires access to the original `ExecutionResult` and `ExecutionPlan` objects to call exporters. The current system saves only the final exported format (CoreExport JSON), not the raw execution artifacts.
+Execution persistence is now implemented — `ExecutionPlan` and `ExecutionResult` artifacts are persisted to the `ArtifactStore` at run time. The remaining blockers are:
 
-**Key considerations:**
+1. **Limited testing value** - Without multiple exporters (GDPR, CCPA, etc.) implemented, re-export functionality cannot be meaningfully tested.
 
-1. **Data availability** - Exporters require `ExecutionResult` and `ExecutionPlan` as inputs. Reconstructing these from CoreExport JSON is fragile and lossy.
-
-2. **Dependency on persistence** - Proper re-export requires execution persistence (see [Execution Persistence](./execution-persistence.md)) to save raw execution artifacts alongside exported formats.
-
-3. **Limited testing value** - Without multiple exporters (GDPR, CCPA, etc.) implemented, re-export functionality cannot be meaningfully tested.
-
-4. **Core functionality complete** - The essential export infrastructure is implemented:
+2. **Core functionality complete** - The essential export infrastructure is implemented:
    - Exporter protocol and registry
    - Auto-detection based on compliance frameworks
    - Manual override via `--exporter` flag
@@ -70,7 +64,7 @@ wct export <run-id> --exporter gdpr --jurisdiction EU --output eu_ropa.json
 
 ## Implementation Dependencies
 
-1. **Execution Persistence** - Implement ExecutionStore and ArtifactStore to save raw execution data (see [Execution Persistence](./execution-persistence.md))
+1. ~~**Execution Persistence**~~ — ✅ Implemented. `ExecutionPlan` and artifacts are persisted to `ArtifactStore`.
 
 2. **Multiple Exporters** - Implement framework-specific exporters (GDPR, CCPA) to validate re-export functionality
 
@@ -89,7 +83,6 @@ Rejected because:
 ## Next Steps
 
 When ready to implement:
-1. Implement execution persistence (ExecutionStore + ArtifactStore)
-2. Implement GDPR exporter for testing re-export across formats
-3. Add `wct export` command reading from persisted stores
-4. Add integration tests validating re-export with multiple formats
+1. Implement GDPR exporter for testing re-export across formats
+2. Add `wct export` command reading from persisted stores
+3. Add integration tests validating re-export with multiple formats
