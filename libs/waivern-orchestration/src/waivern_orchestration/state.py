@@ -151,6 +151,28 @@ class ExecutionState(BaseModel):
         if to_skip:
             self.last_checkpoint = datetime.now(UTC)
 
+    def remaining_actionable(self, all_artifact_ids: set[str]) -> set[str]:
+        """Compute artifact IDs that are not in any terminal or pending state.
+
+        Returns the set difference of all artifacts minus those that are
+        completed, failed, skipped, or pending. These are the artifacts
+        that have not yet been acted on.
+
+        Args:
+            all_artifact_ids: The complete set of artifact IDs in the plan.
+
+        Returns:
+            Set of artifact IDs still in not_started state.
+
+        """
+        return (
+            all_artifact_ids
+            - self.completed
+            - self.skipped
+            - self.failed
+            - self.pending
+        )
+
     # -------------------------------------------------------------------------
     # Persistence
     # -------------------------------------------------------------------------
@@ -170,7 +192,7 @@ class ExecutionState(BaseModel):
             ArtifactNotFoundError: If state does not exist for this run.
 
         """
-        data = await store.load_execution_state(run_id)
+        data = await store.load_system_data(run_id, "state")
         return cls.model_validate(data)
 
     async def save(self, store: ArtifactStore) -> None:
@@ -184,4 +206,4 @@ class ExecutionState(BaseModel):
         """
         self.last_checkpoint = datetime.now(UTC)
         data = self.model_dump(mode="json")
-        await store.save_execution_state(self.run_id, data)
+        await store.save_system_data(self.run_id, "state", data)

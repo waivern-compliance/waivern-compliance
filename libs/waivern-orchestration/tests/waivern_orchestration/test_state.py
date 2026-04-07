@@ -292,3 +292,35 @@ class TestExecutionStateMarkSkippedFromPending:
         assert "a" not in state.pending
         assert "b" not in state.not_started
         assert state.not_started == {"c"}
+
+
+# =============================================================================
+# Remaining Actionable Tests
+# =============================================================================
+
+
+class TestExecutionStateRemainingActionable:
+    """Tests for remaining_actionable() computation."""
+
+    def test_remaining_excludes_all_terminal_and_pending_states(self) -> None:
+        """Only not_started artifacts are returned as remaining actionable."""
+        state = ExecutionState.fresh("run-1", {"a", "b", "c", "d", "e"})
+        state.mark_completed("a")
+        state.mark_pending("b")
+        state.mark_failed("c")
+        state.mark_skipped({"d"})
+        # e remains not_started
+
+        remaining = state.remaining_actionable({"a", "b", "c", "d", "e"})
+
+        assert remaining == {"e"}
+
+    def test_remaining_returns_empty_when_all_accounted_for(self) -> None:
+        """Returns empty set when all artifacts are in terminal/pending state."""
+        state = ExecutionState.fresh("run-1", {"a", "b"})
+        state.mark_completed("a")
+        state.mark_pending("b")
+
+        remaining = state.remaining_actionable({"a", "b"})
+
+        assert remaining == set()

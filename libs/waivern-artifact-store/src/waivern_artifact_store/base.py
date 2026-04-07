@@ -124,63 +124,55 @@ class ArtifactStore(ABC):
         ...
 
     # ========================================================================
-    # System Metadata Operations (raw dict to avoid circular imports)
+    # System Data Operations (generic key-value for run-scoped metadata)
     # ========================================================================
 
     @abstractmethod
-    async def save_execution_state(
-        self, run_id: str, state_data: dict[str, JsonValue]
+    async def save_system_data(
+        self, run_id: str, key: str, data: dict[str, JsonValue]
     ) -> None:
-        """Persist execution state for a run.
+        """Persist system data for a run under the given key.
+
+        Uses upsert semantics — overwrites if the key already exists.
+
+        Well-known keys: ``"metadata"`` (run metadata), ``"state"``
+        (execution state), ``"plan"`` (execution plan).
 
         Args:
             run_id: Unique identifier for the run.
-            state_data: The execution state as a dictionary.
+            key: The system data key (e.g., ``"metadata"``, ``"state"``).
+            data: The data to persist as a dictionary.
 
         """
         ...
 
     @abstractmethod
-    async def load_execution_state(self, run_id: str) -> dict[str, JsonValue]:
-        """Load execution state for a run.
+    async def load_system_data(self, run_id: str, key: str) -> dict[str, JsonValue]:
+        """Load system data for a run by key.
 
         Args:
             run_id: Unique identifier for the run.
+            key: The system data key to load.
 
         Returns:
-            The execution state as a dictionary.
+            The stored data as a dictionary.
 
         Raises:
-            ArtifactNotFoundError: If state does not exist for this run.
+            ArtifactNotFoundError: If no data exists for this key.
 
         """
         ...
 
     @abstractmethod
-    async def save_run_metadata(
-        self, run_id: str, metadata: dict[str, JsonValue]
-    ) -> None:
-        """Persist run metadata.
+    async def system_data_exists(self, run_id: str, key: str) -> bool:
+        """Check if system data exists for a run under the given key.
 
         Args:
             run_id: Unique identifier for the run.
-            metadata: The run metadata as a dictionary.
-
-        """
-        ...
-
-    @abstractmethod
-    async def load_run_metadata(self, run_id: str) -> dict[str, JsonValue]:
-        """Load run metadata.
-
-        Args:
-            run_id: Unique identifier for the run.
+            key: The system data key to check.
 
         Returns:
-            The run metadata as a dictionary.
-
-        Raises:
-            ArtifactNotFoundError: If metadata does not exist for this run.
+            True if data exists for this key, False otherwise.
 
         """
         ...

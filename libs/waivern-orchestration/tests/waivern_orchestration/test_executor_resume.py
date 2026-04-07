@@ -12,11 +12,11 @@ from waivern_core.schemas import Schema
 
 from waivern_orchestration.errors import (
     RunAlreadyActiveError,
-    RunbookChangedError,
     RunNotFoundError,
 )
 from waivern_orchestration.executor import DAGExecutor
 from waivern_orchestration.models import ArtifactDefinition, SourceConfig
+from waivern_orchestration.planner import ExecutionPlan
 from waivern_orchestration.run_metadata import RunMetadata
 
 from .test_helpers import (
@@ -25,6 +25,12 @@ from .test_helpers import (
     create_simple_plan,
     create_test_message,
 )
+
+
+async def _persist_plan(store: ArtifactStore, run_id: str, plan: ExecutionPlan) -> None:
+    """Persist an ExecutionPlan to the store for resume tests."""
+    await store.save_system_data(run_id, "plan", plan.to_dict())
+
 
 # =============================================================================
 # Resume Validation Tests
@@ -69,53 +75,11 @@ class TestResumeValidation:
                 resume_run_id="nonexistent-run-id",
             )
 
-    async def test_resume_with_changed_runbook_raises_error(
-        self, tmp_path: Path
-    ) -> None:
-        """Resuming with modified runbook raises RunbookChangedError."""
-        # Arrange - create a successful run first
-        output_schema = Schema("standard_input", "1.0.0")
-        message = create_test_message({"files": []})
-        connector_factory = create_mock_connector_factory(
-            "source", [output_schema], message
-        )
-
-        artifacts = {
-            "data": ArtifactDefinition(
-                source=SourceConfig(type="source", properties={})
-            ),
-        }
-        plan = create_simple_plan(artifacts, {"data": (None, output_schema)})
-
-        runbook_file = tmp_path / "runbook.yaml"
-        runbook_file.write_text("name: test\ndescription: original\n")
-
-        registry = create_mock_registry(
-            with_container=True, connector_factories={"source": connector_factory}
-        )
-        executor = DAGExecutor(registry)
-
-        # Execute first run
-        result = await executor.execute(plan, runbook_path=runbook_file)
-        original_run_id = result.run_id
-
-        # Modify the runbook
-        runbook_file.write_text("name: test\ndescription: modified\n")
-
-        # Act & Assert - resuming should fail due to changed runbook
-        with pytest.raises(RunbookChangedError):
-            await executor.execute(
-                plan,
-                runbook_path=runbook_file,
-                resume_run_id=original_run_id,
-            )
-
     async def test_resume_while_already_running_raises_error(
         self, tmp_path: Path
     ) -> None:
         """Resuming a run with status='running' raises RunAlreadyActiveError."""
         # Arrange - manually create a run with status='running'
-        from waivern_orchestration.run_metadata import compute_runbook_hash
         from waivern_orchestration.state import ExecutionState
 
         output_schema = Schema("standard_input", "1.0.0")
@@ -144,13 +108,13 @@ class TestResumeValidation:
         metadata = RunMetadata.fresh(
             run_id=running_run_id,
             runbook_path=runbook_file,
-            runbook_hash=compute_runbook_hash(runbook_file),
         )
         await metadata.save(store)
 
-        # Also save state so it can be loaded
+        # Also save state and plan so they can be loaded
         state = ExecutionState.fresh(running_run_id, {"data"})
         await state.save(store)
+        await _persist_plan(store, running_run_id, plan)
 
         executor = DAGExecutor(registry)
 
@@ -295,7 +259,6 @@ class TestRunStatusLifecycle:
 
         assert metadata.run_id == result.run_id
         assert metadata.runbook_path == str(runbook_file)
-        assert metadata.runbook_hash.startswith("sha256:")
         assert metadata.started_at is not None
 
 
@@ -374,7 +337,6 @@ class TestResumeExecutionFlow:
 
     async def test_resume_executes_not_started_artifacts(self, tmp_path: Path) -> None:
         """Not-started artifacts are executed on resume."""
-        from waivern_orchestration.run_metadata import compute_runbook_hash
         from waivern_orchestration.state import ExecutionState
 
         # Arrange - create a run with one artifact completed, one not started
@@ -419,7 +381,6 @@ class TestResumeExecutionFlow:
         metadata = RunMetadata.fresh(
             run_id=run_id,
             runbook_path=runbook_file,
-            runbook_hash=compute_runbook_hash(runbook_file),
         )
         metadata.status = "interrupted"  # Allow resume
         await metadata.save(store)
@@ -428,6 +389,7 @@ class TestResumeExecutionFlow:
         state = ExecutionState.fresh(run_id, {"artifact_a", "artifact_b"})
         state.mark_completed("artifact_a")
         await state.save(store)
+        await _persist_plan(store, run_id, plan)
 
         # Save artifact_a data (simulating it was already produced)
         await store.save_artifact(run_id, "artifact_a", message_a)
@@ -451,7 +413,6 @@ class TestResumeExecutionFlow:
         self, tmp_path: Path
     ) -> None:
         """Previously completed artifact data remains accessible."""
-        from waivern_orchestration.run_metadata import compute_runbook_hash
         from waivern_orchestration.state import ExecutionState
 
         # Arrange
@@ -483,7 +444,6 @@ class TestResumeExecutionFlow:
         metadata = RunMetadata.fresh(
             run_id=run_id,
             runbook_path=runbook_file,
-            runbook_hash=compute_runbook_hash(runbook_file),
         )
         metadata.status = "interrupted"  # Allow resume
         await metadata.save(store)
@@ -491,6 +451,7 @@ class TestResumeExecutionFlow:
         state = ExecutionState.fresh(run_id, {"data"})
         state.mark_completed("data")
         await state.save(store)
+        await _persist_plan(store, run_id, plan)
 
         # Save original artifact data
         original_message = create_test_message(original_content)
@@ -513,7 +474,6 @@ class TestResumeExecutionFlow:
         """Resuming a fully completed run executes nothing."""
         from unittest.mock import MagicMock
 
-        from waivern_orchestration.run_metadata import compute_runbook_hash
         from waivern_orchestration.state import ExecutionState
 
         # Arrange - track if connector is called
@@ -556,7 +516,6 @@ class TestResumeExecutionFlow:
         metadata = RunMetadata.fresh(
             run_id=run_id,
             runbook_path=runbook_file,
-            runbook_hash=compute_runbook_hash(runbook_file),
         )
         metadata.status = "interrupted"  # Allow resume (even though all done)
         await metadata.save(store)
@@ -564,6 +523,7 @@ class TestResumeExecutionFlow:
         state = ExecutionState.fresh(run_id, {"data"})
         state.mark_completed("data")
         await state.save(store)
+        await _persist_plan(store, run_id, plan)
 
         # Save artifact data
         await store.save_artifact(run_id, "data", message)

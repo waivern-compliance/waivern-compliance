@@ -9,8 +9,9 @@ The Planner is responsible for:
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Self, cast
 
+from waivern_core import JsonValue
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.schemas import Schema
 from waivern_core.services import ComponentRegistry
@@ -45,6 +46,70 @@ class ExecutionPlan:
     aliases: dict[str, str] = field(default_factory=dict)
     reversed_aliases: dict[str, str] = field(default_factory=dict)
     """Maps artifact IDs to alias names (reverse of aliases)."""
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        """Serialise for persistence.
+
+        Persists runbook, artifact_schemas, and aliases. The DAG is
+        reconstructed from runbook artifacts on deserialisation, and
+        reversed_aliases is derived from aliases.
+
+        """
+        return {
+            "runbook": self.runbook.model_dump(mode="json"),
+            "artifact_schemas": {
+                aid: {
+                    "inputs": (
+                        [{"name": s.name, "version": s.version} for s in inputs]
+                        if inputs is not None
+                        else None
+                    ),
+                    "output": {
+                        "name": output.name,
+                        "version": output.version,
+                    },
+                }
+                for aid, (inputs, output) in self.artifact_schemas.items()
+            },
+            "aliases": cast(dict[str, JsonValue], self.aliases),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        """Deserialise from persisted dict.
+
+        Reconstructs the DAG from runbook artifacts and derives
+        reversed_aliases from aliases.
+
+        """
+        runbook = Runbook.model_validate(data["runbook"])
+        dag = ExecutionDAG(runbook.artifacts)
+        dag.validate()
+
+        artifact_schemas: dict[str, tuple[list[Schema] | None, Schema]] = {}
+        for aid, schema_data in data["artifact_schemas"].items():
+            raw_inputs = schema_data["inputs"]
+            inputs = (
+                [Schema(s["name"], s["version"]) for s in raw_inputs]
+                if raw_inputs is not None
+                else None
+            )
+            output = Schema(
+                schema_data["output"]["name"],
+                schema_data["output"]["version"],
+            )
+            artifact_schemas[aid] = (inputs, output)
+
+        aliases = data.get("aliases", {})
+        reversed_aliases = {v: k for k, v in aliases.items()}
+
+        return cls(
+            runbook=runbook,
+            dag=dag,
+            artifact_schemas=artifact_schemas,
+            aliases=aliases,
+            reversed_aliases=reversed_aliases,
+        )
 
 
 class Planner:
