@@ -173,6 +173,32 @@ class TestBuildCoreExportStatus:
 
         assert export.run.status == "partial"
 
+    async def test_interrupted_status_when_artifacts_pending(
+        self, empty_runbook: Runbook
+    ) -> None:
+        """Status is interrupted when artifacts are pending batch results."""
+        from wct.exporters.core import build_core_export
+
+        plan = ExecutionPlan(runbook=empty_runbook, dag=Mock(), artifact_schemas={})
+        result = ExecutionResult(
+            run_id="123e4567-e89b-12d3-a456-426614174000",
+            start_timestamp="2024-01-15T10:30:00+00:00",
+            completed={"art1"},
+            failed=set(),
+            skipped=set(),
+            pending={"art2"},
+            total_duration_seconds=1.0,
+        )
+
+        store = AsyncInMemoryStore()
+        await store.save_artifact(
+            result.run_id, "art1", create_success_message(duration=1.0)
+        )
+
+        export = await build_core_export(result, plan, store)
+
+        assert export.run.status == "interrupted"
+
 
 # =============================================================================
 # Errors & Skipped Lists
@@ -284,6 +310,33 @@ class TestBuildCoreExportSummary:
         assert export.summary.succeeded == 2
         assert export.summary.failed == 1
         assert export.summary.skipped == 2
+
+    async def test_summary_includes_pending_count(self, empty_runbook: Runbook) -> None:
+        """Summary includes pending count and total includes pending artifacts."""
+        from wct.exporters.core import build_core_export
+
+        plan = ExecutionPlan(runbook=empty_runbook, dag=Mock(), artifact_schemas={})
+        result = ExecutionResult(
+            run_id="123e4567-e89b-12d3-a456-426614174000",
+            start_timestamp="2024-01-15T10:30:00+00:00",
+            completed={"art1"},
+            failed=set(),
+            skipped=set(),
+            pending={"art2", "art3"},
+            total_duration_seconds=1.0,
+        )
+
+        store = AsyncInMemoryStore()
+        await store.save_artifact(
+            result.run_id, "art1", create_success_message(duration=1.0)
+        )
+
+        export = await build_core_export(result, plan, store)
+
+        assert export.summary.total == 3
+        assert export.summary.succeeded == 1
+        assert export.summary.pending == 2
+        assert set(export.pending) == {"art2", "art3"}
 
 
 # =============================================================================

@@ -219,6 +219,24 @@ class TestExecutionStateMarkPending:
         assert state.pending == {"artifact_a"}
         assert state.not_started == {"artifact_b"}
 
+    def test_mark_pending_is_noop_for_skipped_artifact(self) -> None:
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
+        state.mark_skipped({"artifact_a"})
+
+        state.mark_pending("artifact_a")
+
+        assert "artifact_a" in state.skipped
+        assert "artifact_a" not in state.pending
+
+    def test_mark_pending_is_noop_for_failed_artifact(self) -> None:
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
+        state.mark_failed("artifact_a")
+
+        state.mark_pending("artifact_a")
+
+        assert "artifact_a" in state.failed
+        assert "artifact_a" not in state.pending
+
     def test_mark_pending_ignores_unknown_artifact(self) -> None:
         state = ExecutionState.fresh("run-1", {"artifact_a"})
 
@@ -274,3 +292,35 @@ class TestExecutionStateMarkSkippedFromPending:
         assert "a" not in state.pending
         assert "b" not in state.not_started
         assert state.not_started == {"c"}
+
+
+# =============================================================================
+# Remaining Actionable Tests
+# =============================================================================
+
+
+class TestExecutionStateRemainingActionable:
+    """Tests for remaining_actionable() computation."""
+
+    def test_remaining_excludes_all_terminal_and_pending_states(self) -> None:
+        """Only not_started artifacts are returned as remaining actionable."""
+        state = ExecutionState.fresh("run-1", {"a", "b", "c", "d", "e"})
+        state.mark_completed("a")
+        state.mark_pending("b")
+        state.mark_failed("c")
+        state.mark_skipped({"d"})
+        # e remains not_started
+
+        remaining = state.remaining_actionable({"a", "b", "c", "d", "e"})
+
+        assert remaining == {"e"}
+
+    def test_remaining_returns_empty_when_all_accounted_for(self) -> None:
+        """Returns empty set when all artifacts are in terminal/pending state."""
+        state = ExecutionState.fresh("run-1", {"a", "b"})
+        state.mark_completed("a")
+        state.mark_pending("b")
+
+        remaining = state.remaining_actionable({"a", "b"})
+
+        assert remaining == set()

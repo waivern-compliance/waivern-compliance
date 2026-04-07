@@ -110,40 +110,30 @@ class AsyncInMemoryStore(ArtifactStore):
             self._artifacts[run_id].clear()
 
     # ========================================================================
-    # System Metadata Operations
+    # System Data Operations
     # ========================================================================
 
     @override
-    async def save_execution_state(
-        self, run_id: str, state_data: dict[str, JsonValue]
+    async def save_system_data(
+        self, run_id: str, key: str, data: dict[str, JsonValue]
     ) -> None:
-        """Persist execution state."""
-        self._get_system_storage(run_id)["state"] = state_data
+        """Persist system data under the given key."""
+        self._get_system_storage(run_id)[key] = data
 
     @override
-    async def load_execution_state(self, run_id: str) -> dict[str, JsonValue]:
-        """Load execution state."""
-        system_data = self._get_system_storage(run_id)
-        if "state" not in system_data:
+    async def load_system_data(self, run_id: str, key: str) -> dict[str, JsonValue]:
+        """Load system data by key."""
+        system_storage = self._get_system_storage(run_id)
+        if key not in system_storage:
             raise ArtifactNotFoundError(
-                f"Execution state not found for run '{run_id}'."
+                f"System data '{key}' not found for run '{run_id}'."
             )
-        return system_data["state"]
+        return system_storage[key]
 
     @override
-    async def save_run_metadata(
-        self, run_id: str, metadata: dict[str, JsonValue]
-    ) -> None:
-        """Persist run metadata."""
-        self._get_system_storage(run_id)["run"] = metadata
-
-    @override
-    async def load_run_metadata(self, run_id: str) -> dict[str, JsonValue]:
-        """Load run metadata."""
-        system_data = self._get_system_storage(run_id)
-        if "run" not in system_data:
-            raise ArtifactNotFoundError(f"Run metadata not found for run '{run_id}'.")
-        return system_data["run"]
+    async def system_data_exists(self, run_id: str, key: str) -> bool:
+        """Check if system data exists for the given key."""
+        return key in self._get_system_storage(run_id)
 
     # ========================================================================
     # Run Enumeration

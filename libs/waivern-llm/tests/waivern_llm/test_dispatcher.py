@@ -357,6 +357,34 @@ class TestLLMDispatcherSyncFirstRun:
 class TestLLMDispatcherSyncResume:
     """Tests for sync mode resume path (built_cache_keys populated)."""
 
+    async def test_resume_with_failed_cache_entry_skips_and_returns_empty(self) -> None:
+        """Failed cache entry on resume is skipped — processor receives empty responses."""
+        from waivern_llm.cache import CacheEntry
+
+        store = AsyncInMemoryStore()
+        provider = _create_mock_provider(MockResponse(valid=True, reason="unused"))
+
+        key_1 = "aaa" * 21 + "a"
+        await store.cache_set(
+            "run-1",
+            key_1,
+            CacheEntry(
+                status="failed",
+                response=None,
+                batch_id="batch_123",
+            ).model_dump(),
+        )
+
+        dispatcher = LLMDispatcher(provider=provider, store=store)
+        request = _create_request(run_id="run-1")
+        request.built_cache_keys = [key_1]
+
+        results = await dispatcher.dispatch([request])
+
+        assert len(results) == 1
+        assert results[0].responses == []
+        provider.invoke_structured.assert_not_called()
+
     async def test_resume_uses_built_cache_keys_directly(self) -> None:
         """built_cache_keys populated + cache completed → results without planning or provider calls."""
         from waivern_llm.cache import CacheEntry

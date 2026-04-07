@@ -48,9 +48,8 @@ class LocalFilesystemStore(ArtifactStore):
     _BATCH_JOBS_PREFIX = "batch_jobs"
     _PREPARED_PREFIX = "prepared"
 
-    # System file keys
-    _STATE_KEY = f"{_SYSTEM_PREFIX}/state"
-    _RUN_METADATA_KEY = f"{_SYSTEM_PREFIX}/run"
+    # System file keys (used internally by _system_key_to_path)
+    # Well-known keys: "metadata", "state", "plan"
 
     def __init__(self, base_path: Path) -> None:
         """Initialise filesystem store.
@@ -192,28 +191,32 @@ class LocalFilesystemStore(ArtifactStore):
             artifacts_dir.rmdir()
 
     # ========================================================================
-    # System Metadata Operations
+    # System Data Operations
     # ========================================================================
 
+    def _system_key_path(self, run_id: str, key: str) -> Path:
+        """Map a system data key to its filesystem path."""
+        return self._key_to_path(run_id, f"{self._SYSTEM_PREFIX}/{key}")
+
     @override
-    async def save_execution_state(
-        self, run_id: str, state_data: dict[str, JsonValue]
+    async def save_system_data(
+        self, run_id: str, key: str, data: dict[str, JsonValue]
     ) -> None:
-        """Persist execution state to _system/state.json."""
-        file_path = self._key_to_path(run_id, self._STATE_KEY)
+        """Persist system data to _system/{key}.json."""
+        file_path = self._system_key_path(run_id, key)
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         async with aiofiles.open(file_path, "w") as f:
-            await f.write(json.dumps(state_data, indent=2))
+            await f.write(json.dumps(data, indent=2))
 
     @override
-    async def load_execution_state(self, run_id: str) -> dict[str, JsonValue]:
-        """Load execution state from _system/state.json."""
-        file_path = self._key_to_path(run_id, self._STATE_KEY)
+    async def load_system_data(self, run_id: str, key: str) -> dict[str, JsonValue]:
+        """Load system data from _system/{key}.json."""
+        file_path = self._system_key_path(run_id, key)
 
         if not file_path.exists():
             raise ArtifactNotFoundError(
-                f"Execution state not found for run '{run_id}'."
+                f"System data '{key}' not found for run '{run_id}'."
             )
 
         async with aiofiles.open(file_path) as f:
@@ -221,37 +224,15 @@ class LocalFilesystemStore(ArtifactStore):
         data = json.loads(content)
         if not isinstance(data, dict):
             raise ArtifactStoreError(
-                f"Invalid execution state format for run '{run_id}': expected dict."
+                f"Invalid system data format for key '{key}' in run '{run_id}': "
+                "expected dict."
             )
         return cast(dict[str, JsonValue], data)
 
     @override
-    async def save_run_metadata(
-        self, run_id: str, metadata: dict[str, JsonValue]
-    ) -> None:
-        """Persist run metadata to _system/run.json."""
-        file_path = self._key_to_path(run_id, self._RUN_METADATA_KEY)
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-
-        async with aiofiles.open(file_path, "w") as f:
-            await f.write(json.dumps(metadata, indent=2))
-
-    @override
-    async def load_run_metadata(self, run_id: str) -> dict[str, JsonValue]:
-        """Load run metadata from _system/run.json."""
-        file_path = self._key_to_path(run_id, self._RUN_METADATA_KEY)
-
-        if not file_path.exists():
-            raise ArtifactNotFoundError(f"Run metadata not found for run '{run_id}'.")
-
-        async with aiofiles.open(file_path) as f:
-            content = await f.read()
-        data = json.loads(content)
-        if not isinstance(data, dict):
-            raise ArtifactStoreError(
-                f"Invalid run metadata format for run '{run_id}': expected dict."
-            )
-        return cast(dict[str, JsonValue], data)
+    async def system_data_exists(self, run_id: str, key: str) -> bool:
+        """Check if system data exists at _system/{key}.json."""
+        return self._system_key_path(run_id, key).exists()
 
     # ========================================================================
     # Run Enumeration

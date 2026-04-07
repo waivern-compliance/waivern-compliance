@@ -382,14 +382,14 @@ class TestLocalFilesystemStoreListRuns:
 
 
 # =============================================================================
-# Execution State Tests
+# System Data Tests
 # =============================================================================
 
 
-class TestLocalFilesystemStoreSaveExecutionState:
-    """Tests for the save_execution_state() method."""
+class TestLocalFilesystemStoreSaveSystemData:
+    """Tests for the save_system_data() method."""
 
-    async def test_save_execution_state_creates_file_in_system_directory(
+    async def test_save_system_data_creates_file_in_system_directory(
         self, tmp_path: Path
     ) -> None:
         store = LocalFilesystemStore(base_path=tmp_path)
@@ -397,11 +397,9 @@ class TestLocalFilesystemStoreSaveExecutionState:
             "run_id": "test-run",
             "completed": ["artifact_a"],
             "failed": [],
-            "skipped": [],
-            "not_started": ["artifact_b"],
         }
 
-        await store.save_execution_state("test-run", state_data)
+        await store.save_system_data("test-run", "state", state_data)
 
         expected_path = tmp_path / "runs" / "test-run" / "_system" / "state.json"
         assert expected_path.exists()
@@ -410,184 +408,117 @@ class TestLocalFilesystemStoreSaveExecutionState:
         assert saved_data["run_id"] == "test-run"
         assert saved_data["completed"] == ["artifact_a"]
 
-    async def test_save_execution_state_overwrites_existing(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_save_system_data_overwrites_existing(self, tmp_path: Path) -> None:
         store = LocalFilesystemStore(base_path=tmp_path)
-        original_state: dict[str, JsonValue] = {"completed": [], "status": "running"}
-        updated_state: dict[str, JsonValue] = {
-            "completed": ["a", "b"],
-            "status": "completed",
-        }
+        original: dict[str, JsonValue] = {"status": "running"}
+        updated: dict[str, JsonValue] = {"status": "completed"}
 
-        await store.save_execution_state("test-run", original_state)
-        await store.save_execution_state("test-run", updated_state)
+        await store.save_system_data("test-run", "metadata", original)
+        await store.save_system_data("test-run", "metadata", updated)
 
-        loaded = await store.load_execution_state("test-run")
+        loaded = await store.load_system_data("test-run", "metadata")
         assert loaded["status"] == "completed"
-        assert loaded["completed"] == ["a", "b"]
+
+    async def test_save_system_data_creates_metadata_file(self, tmp_path: Path) -> None:
+        store = LocalFilesystemStore(base_path=tmp_path)
+        metadata: dict[str, JsonValue] = {"run_id": "test-run", "status": "running"}
+
+        await store.save_system_data("test-run", "metadata", metadata)
+
+        expected_path = tmp_path / "runs" / "test-run" / "_system" / "metadata.json"
+        assert expected_path.exists()
 
 
-class TestLocalFilesystemStoreLoadExecutionState:
-    """Tests for the load_execution_state() method."""
+class TestLocalFilesystemStoreLoadSystemData:
+    """Tests for the load_system_data() method."""
 
-    async def test_load_execution_state_returns_saved_data(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_load_system_data_returns_saved_data(self, tmp_path: Path) -> None:
         store = LocalFilesystemStore(base_path=tmp_path)
         state_data: dict[str, JsonValue] = {
             "run_id": "test-run",
             "completed": ["a", "b"],
             "failed": ["c"],
-            "skipped": ["d"],
-            "not_started": [],
-            "last_checkpoint": "2024-01-15T10:30:00Z",
         }
-        await store.save_execution_state("test-run", state_data)
+        await store.save_system_data("test-run", "state", state_data)
 
-        loaded = await store.load_execution_state("test-run")
+        loaded = await store.load_system_data("test-run", "state")
 
         assert loaded["run_id"] == "test-run"
         assert loaded["completed"] == ["a", "b"]
         assert loaded["failed"] == ["c"]
-        assert loaded["skipped"] == ["d"]
-        assert loaded["last_checkpoint"] == "2024-01-15T10:30:00Z"
 
-    async def test_load_execution_state_raises_not_found_for_missing(
+    async def test_load_system_data_raises_not_found_for_missing_key(
         self, tmp_path: Path
     ) -> None:
         store = LocalFilesystemStore(base_path=tmp_path)
 
-        with pytest.raises(ArtifactNotFoundError) as exc_info:
-            await store.load_execution_state("nonexistent-run")
+        with pytest.raises(ArtifactNotFoundError):
+            await store.load_system_data("nonexistent-run", "state")
 
-        assert "Execution state not found" in str(exc_info.value)
-
-    async def test_load_execution_state_raises_error_for_invalid_format(
+    async def test_load_system_data_raises_error_for_invalid_format(
         self, tmp_path: Path
     ) -> None:
         """Loading non-dict JSON should raise ArtifactStoreError."""
         store = LocalFilesystemStore(base_path=tmp_path)
 
-        # Manually create invalid state file (array instead of dict)
         system_dir = tmp_path / "runs" / "test-run" / "_system"
         system_dir.mkdir(parents=True)
         (system_dir / "state.json").write_text('["invalid", "format"]')
 
-        with pytest.raises(ArtifactStoreError) as exc_info:
-            await store.load_execution_state("test-run")
-
-        assert "Invalid execution state format" in str(exc_info.value)
+        with pytest.raises(ArtifactStoreError):
+            await store.load_system_data("test-run", "state")
 
 
-# =============================================================================
-# Run Metadata Tests
-# =============================================================================
+class TestLocalFilesystemStoreSystemDataExists:
+    """Tests for the system_data_exists() method."""
 
-
-class TestLocalFilesystemStoreSaveRunMetadata:
-    """Tests for the save_run_metadata() method."""
-
-    async def test_save_run_metadata_creates_file_in_system_directory(
+    async def test_system_data_exists_returns_true_after_save(
         self, tmp_path: Path
     ) -> None:
         store = LocalFilesystemStore(base_path=tmp_path)
-        metadata: dict[str, JsonValue] = {
-            "run_id": "test-run",
-            "runbook_path": "/path/to/runbook.yaml",
-            "runbook_hash": "sha256:abc123",
-            "status": "running",
-            "started_at": "2024-01-15T10:00:00Z",
-        }
+        data: dict[str, JsonValue] = {"status": "running"}
+        await store.save_system_data("test-run", "metadata", data)
 
-        await store.save_run_metadata("test-run", metadata)
+        assert await store.system_data_exists("test-run", "metadata") is True
 
-        expected_path = tmp_path / "runs" / "test-run" / "_system" / "run.json"
-        assert expected_path.exists()
-        with expected_path.open() as f:
-            saved_data = json.load(f)
-        assert saved_data["run_id"] == "test-run"
-        assert saved_data["status"] == "running"
-
-    async def test_save_run_metadata_overwrites_existing(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(base_path=tmp_path)
-        original: dict[str, JsonValue] = {"status": "running", "completed_at": None}
-        updated: dict[str, JsonValue] = {
-            "status": "completed",
-            "completed_at": "2024-01-15T11:00:00Z",
-        }
-
-        await store.save_run_metadata("test-run", original)
-        await store.save_run_metadata("test-run", updated)
-
-        loaded = await store.load_run_metadata("test-run")
-        assert loaded["status"] == "completed"
-        assert loaded["completed_at"] == "2024-01-15T11:00:00Z"
-
-
-class TestLocalFilesystemStoreLoadRunMetadata:
-    """Tests for the load_run_metadata() method."""
-
-    async def test_load_run_metadata_returns_saved_data(self, tmp_path: Path) -> None:
-        store = LocalFilesystemStore(base_path=tmp_path)
-        metadata: dict[str, JsonValue] = {
-            "run_id": "test-run",
-            "runbook_path": "/path/to/runbook.yaml",
-            "runbook_hash": "sha256:abc123def456",
-            "status": "completed",
-            "started_at": "2024-01-15T10:00:00Z",
-            "completed_at": "2024-01-15T10:30:00Z",
-        }
-        await store.save_run_metadata("test-run", metadata)
-
-        loaded = await store.load_run_metadata("test-run")
-
-        assert loaded["run_id"] == "test-run"
-        assert loaded["runbook_hash"] == "sha256:abc123def456"
-        assert loaded["status"] == "completed"
-
-    async def test_load_run_metadata_raises_not_found_for_missing(
+    async def test_system_data_exists_returns_false_for_unsaved(
         self, tmp_path: Path
     ) -> None:
         store = LocalFilesystemStore(base_path=tmp_path)
 
-        with pytest.raises(ArtifactNotFoundError) as exc_info:
-            await store.load_run_metadata("nonexistent-run")
+        assert await store.system_data_exists("test-run", "metadata") is False
 
-        assert "Run metadata not found" in str(exc_info.value)
 
-    async def test_load_run_metadata_raises_error_for_invalid_format(
-        self, tmp_path: Path
-    ) -> None:
-        """Loading non-dict JSON should raise ArtifactStoreError."""
+class TestLocalFilesystemStoreSystemDataKeyIsolation:
+    """Tests for key isolation within system data."""
+
+    async def test_different_keys_do_not_interfere(self, tmp_path: Path) -> None:
         store = LocalFilesystemStore(base_path=tmp_path)
+        state: dict[str, JsonValue] = {"completed": ["a"]}
+        metadata: dict[str, JsonValue] = {"status": "running"}
 
-        # Manually create invalid metadata file (string instead of dict)
-        system_dir = tmp_path / "runs" / "test-run" / "_system"
-        system_dir.mkdir(parents=True)
-        (system_dir / "run.json").write_text('"just a string"')
+        await store.save_system_data("test-run", "state", state)
+        await store.save_system_data("test-run", "metadata", metadata)
 
-        with pytest.raises(ArtifactStoreError) as exc_info:
-            await store.load_run_metadata("test-run")
+        loaded_state = await store.load_system_data("test-run", "state")
+        loaded_metadata = await store.load_system_data("test-run", "metadata")
 
-        assert "Invalid run metadata format" in str(exc_info.value)
+        assert loaded_state["completed"] == ["a"]
+        assert loaded_metadata["status"] == "running"
 
 
 # =============================================================================
-# System Metadata Isolation Tests
+# System Data Isolation Tests
 # =============================================================================
 
 
-class TestLocalFilesystemStoreSystemMetadataIsolation:
-    """Tests for isolation between artifacts and system metadata."""
+class TestLocalFilesystemStoreSystemDataIsolation:
+    """Tests for isolation between artifacts and system data."""
 
-    async def test_system_metadata_isolated_from_artifacts(
-        self, tmp_path: Path
-    ) -> None:
-        """System metadata should not appear in artifact listings."""
+    async def test_system_data_isolated_from_artifacts(self, tmp_path: Path) -> None:
+        """System data should not appear in artifact listings."""
         store = LocalFilesystemStore(base_path=tmp_path)
 
-        # Save both artifacts and system metadata
         message = Message(
             id="msg-1",
             content={"data": "value"},
@@ -596,25 +527,17 @@ class TestLocalFilesystemStoreSystemMetadataIsolation:
         await store.save_artifact("test-run", "findings", message)
         state_data: dict[str, JsonValue] = {"completed": []}
         metadata: dict[str, JsonValue] = {"status": "running"}
-        await store.save_execution_state("test-run", state_data)
-        await store.save_run_metadata("test-run", metadata)
+        await store.save_system_data("test-run", "state", state_data)
+        await store.save_system_data("test-run", "metadata", metadata)
 
-        # List artifacts should only show artifacts
         artifact_ids = await store.list_artifacts("test-run")
 
         assert artifact_ids == ["findings"]
-        assert "state" not in artifact_ids
-        assert "run" not in artifact_ids
-        assert "_system/state" not in artifact_ids
-        assert "_system/run" not in artifact_ids
 
-    async def test_clear_artifacts_preserves_system_metadata_via_api(
-        self, tmp_path: Path
-    ) -> None:
-        """clear_artifacts() should preserve system metadata saved via API."""
+    async def test_clear_artifacts_preserves_system_data(self, tmp_path: Path) -> None:
+        """clear_artifacts() should preserve system data."""
         store = LocalFilesystemStore(base_path=tmp_path)
 
-        # Save artifacts and system metadata via API
         message = Message(
             id="msg-1",
             content={"data": "value"},
@@ -623,35 +546,31 @@ class TestLocalFilesystemStoreSystemMetadataIsolation:
         await store.save_artifact("test-run", "findings", message)
         state_data: dict[str, JsonValue] = {"completed": ["findings"]}
         metadata: dict[str, JsonValue] = {"status": "completed"}
-        await store.save_execution_state("test-run", state_data)
-        await store.save_run_metadata("test-run", metadata)
+        await store.save_system_data("test-run", "state", state_data)
+        await store.save_system_data("test-run", "metadata", metadata)
 
-        # Clear artifacts
         await store.clear_artifacts("test-run")
 
-        # Artifacts should be gone, system metadata should remain
         assert await store.list_artifacts("test-run") == []
-        state = await store.load_execution_state("test-run")
+        state = await store.load_system_data("test-run", "state")
         assert state["completed"] == ["findings"]
-        metadata = await store.load_run_metadata("test-run")
-        assert metadata["status"] == "completed"
+        loaded_meta = await store.load_system_data("test-run", "metadata")
+        assert loaded_meta["status"] == "completed"
 
-    async def test_system_metadata_isolated_between_runs(self, tmp_path: Path) -> None:
-        """System metadata should be isolated between different runs."""
+    async def test_system_data_isolated_between_runs(self, tmp_path: Path) -> None:
+        """System data should be isolated between different runs."""
         store = LocalFilesystemStore(base_path=tmp_path)
 
-        # Save metadata for two different runs
         state_1: dict[str, JsonValue] = {"completed": ["a"]}
         state_2: dict[str, JsonValue] = {"completed": ["b", "c"]}
-        await store.save_execution_state("run-1", state_1)
-        await store.save_execution_state("run-2", state_2)
+        await store.save_system_data("run-1", "state", state_1)
+        await store.save_system_data("run-2", "state", state_2)
 
-        # Load and verify isolation
-        state_1 = await store.load_execution_state("run-1")
-        state_2 = await store.load_execution_state("run-2")
+        loaded_1 = await store.load_system_data("run-1", "state")
+        loaded_2 = await store.load_system_data("run-2", "state")
 
-        assert state_1["completed"] == ["a"]
-        assert state_2["completed"] == ["b", "c"]
+        assert loaded_1["completed"] == ["a"]
+        assert loaded_2["completed"] == ["b", "c"]
 
 
 # =============================================================================
@@ -782,27 +701,23 @@ class TestLocalFilesystemStoreCacheClear:
         # Cache should be cleared
         assert await store.cache_get("test-run", "cache-key") is None
 
-    async def test_cache_clear_does_not_affect_system_metadata(
+    async def test_cache_clear_does_not_affect_system_data(
         self, tmp_path: Path
     ) -> None:
         store = LocalFilesystemStore(base_path=tmp_path)
-        # Save system metadata
         state_data: dict[str, JsonValue] = {"completed": ["a"]}
         metadata: dict[str, JsonValue] = {"status": "running"}
-        await store.save_execution_state("test-run", state_data)
-        await store.save_run_metadata("test-run", metadata)
-        # Save a cache entry
+        await store.save_system_data("test-run", "state", state_data)
+        await store.save_system_data("test-run", "metadata", metadata)
         entry: dict[str, JsonValue] = {"status": "completed"}
         await store.cache_set("test-run", "cache-key", entry)
 
         await store.cache_clear("test-run")
 
-        # System metadata should still exist
-        state = await store.load_execution_state("test-run")
+        state = await store.load_system_data("test-run", "state")
         assert state["completed"] == ["a"]
-        run_meta = await store.load_run_metadata("test-run")
+        run_meta = await store.load_system_data("test-run", "metadata")
         assert run_meta["status"] == "running"
-        # Cache should be cleared
         assert await store.cache_get("test-run", "cache-key") is None
 
 

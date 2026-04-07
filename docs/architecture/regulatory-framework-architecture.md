@@ -2,7 +2,7 @@
 
 - **Status:** Implemented (Foundation)
 - **Last Updated:** 2026-01-18
-- **Related:** [Export Architecture](../future-plans/export-architecture.md), [Business Logic Centric Analysers](../future-plans/business-logic-centric-analysers.md)
+- **Related:** [Export Architecture](../future-plans/export-architecture.md)
 
 ## Overview
 
@@ -260,5 +260,4 @@ A legal firm's GDPR ruleset is consumed by the `GDPRClassifier`. The ruleset pro
 ## Related Documents
 
 - [Export Architecture](../future-plans/export-architecture.md) - Exporter design and selection
-- [Business Logic Centric Analysers](../future-plans/business-logic-centric-analysers.md) - Related design thinking
 - [Artifact-Centric Orchestration](artifact-centric-orchestration.md) - Execution model for pipelines

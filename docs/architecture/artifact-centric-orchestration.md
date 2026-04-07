@@ -2,7 +2,7 @@
 
 - **Status:** Implemented
 - **Last Updated:** 2026-01-30
-- **Related:** [Child Runbook Composition](child-runbook-composition.md), [Execution Persistence](../future-plans/execution-persistence.md)
+- **Related:** [Child Runbook Composition](child-runbook-composition.md)
 
 ## Overview
 

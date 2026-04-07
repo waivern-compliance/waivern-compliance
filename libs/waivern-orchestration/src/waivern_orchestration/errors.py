@@ -49,9 +49,5 @@ class RunNotFoundError(OrchestrationError):
     """Raised when attempting to resume a non-existent run."""
 
 
-class RunbookChangedError(OrchestrationError):
-    """Raised when runbook has changed since the original run."""
-
-
 class RunAlreadyActiveError(OrchestrationError):
     """Raised when attempting to resume a run that is already executing."""

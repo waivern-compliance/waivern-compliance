@@ -31,7 +31,6 @@ def _create_run_metadata(
     return RunMetadata(
         run_id=run_id,
         runbook_path=runbook_path,
-        runbook_hash="sha256:abc123",
         started_at=datetime(2025, 6, 15, 10, 0, 0, tzinfo=UTC),
         completed_at=datetime(2025, 6, 15, 10, 5, 0, tzinfo=UTC),
         status=status,

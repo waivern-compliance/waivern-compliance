@@ -3,7 +3,7 @@
 - **Version:** 1.0.0 (Draft)
 - **Last Updated:** 2025-11-26
 - **Status:** Specification Draft
-- **Related:** [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md)
+- **Related:** [WCF Core Components](../core-concepts/wcf-core-components.md)
 
 ## Overview
 
@@ -1005,7 +1005,6 @@ deployment:
 
 ## Related Documents
 
-- [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md) - Internal `HttpService` pattern for remote calls
 - [WCF Core Components](../core-concepts/wcf-core-components.md) - Framework architecture
 
 ## Future Enhancements

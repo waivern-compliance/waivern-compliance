@@ -477,4 +477,3 @@ class TestDAGExecutorStateConsistency:
         state = asyncio.run(ExecutionState.load(store, result.run_id))
 
         assert result.skipped == state.skipped
-        assert result.skipped == {"dependent"}

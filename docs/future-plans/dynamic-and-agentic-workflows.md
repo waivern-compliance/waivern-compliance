@@ -2,7 +2,7 @@
 
 - **Status:** Future Vision
 - **Last Updated:** 2025-11-26
-- **Related:** [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md), [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md)
+- **Related:** [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md)
 
 ## Vision
 
@@ -24,9 +24,8 @@ An analyser receives a privacy policy document:
 
 **Now covered by:**
 - [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md) - Composable/recursive runbooks, Planner/Executor separation, parallel execution
-- [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md) - Service injection pattern
 
-The core infrastructure for child workflow execution and runbook generation is designed in these documents.
+The core infrastructure for child workflow execution and runbook generation is designed in the above document. The service injection pattern (ComponentFactory, DispatcherFactory) is established in the codebase.
 
 ### Phase 3: Agent Framework Integration (Future)
 
@@ -84,5 +83,4 @@ The core infrastructure for child workflow execution and runbook generation is d
 ## Related Documents
 
 - [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md) - Runbook format and execution engine
-- [Business-Logic-Centric Analysers](./business-logic-centric-analysers.md) - Service injection pattern
 - [WCF Core Components](../core-concepts/wcf-core-components.md) - Framework architecture

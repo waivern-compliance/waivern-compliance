@@ -9,6 +9,7 @@ cache misses; batch mode uses a single ``submit_batch()`` call.
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
@@ -33,6 +34,8 @@ if TYPE_CHECKING:
     from waivern_artifact_store.base import ArtifactStore
     from waivern_artifact_store.llm_cache import LLMCache
     from waivern_core import Finding, JsonValue
+
+logger = logging.getLogger(__name__)
 
 
 class LLMDispatcher:
@@ -224,6 +227,14 @@ class LLMDispatcher:
                     continue
                 if cached.status == "pending" and cached.batch_id:
                     pending_batch_ids.append(cached.batch_id)
+                    continue
+                if cached.status == "failed":
+                    logger.warning(
+                        "Skipping failed cache entry '%s' (batch_id=%s) "
+                        "— processor will receive empty responses",
+                        cache_key,
+                        cached.batch_id,
+                    )
                     continue
 
             raise LLMServiceError(

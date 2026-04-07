@@ -6,8 +6,10 @@ import asyncio
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 from waivern_artifact_store import ArtifactStore
+from waivern_artifact_store.errors import ArtifactNotFoundError
 from waivern_core.services import ComponentRegistry
 from waivern_orchestration import (
     DAGExecutor,
@@ -52,6 +54,36 @@ def _plan_runbook(runbook_path: Path, registry: ComponentRegistry) -> ExecutionP
         logger.error("Planning failed: %s", e)
         raise CLIError(
             f"Failed to plan runbook execution: {e}",
+            command="run",
+            original_error=e,
+        ) from e
+
+
+def _load_persisted_plan(store: ArtifactStore, run_id: str) -> ExecutionPlan:
+    """Load a persisted execution plan from the store.
+
+    On resume, the plan is loaded from the store rather than re-planned
+    from the runbook file. This ensures stable artifact IDs across resume
+    cycles.
+
+    Args:
+        store: The artifact store containing the persisted plan.
+        run_id: The run identifier to load the plan for.
+
+    Returns:
+        The deserialised ExecutionPlan.
+
+    Raises:
+        CLIError: If the plan cannot be loaded.
+
+    """
+    try:
+        data: dict[str, Any] = asyncio.run(store.load_system_data(run_id, "plan"))
+        return ExecutionPlan.from_dict(data)
+    except ArtifactNotFoundError as e:
+        raise CLIError(
+            f"Cannot resume run '{run_id}': no persisted plan found. "
+            f"This run may have been created before plan persistence was added.",
             command="run",
             original_error=e,
         ) from e
@@ -219,14 +251,25 @@ def execute_runbook_command(  # noqa: PLR0913 - Matches CLI entry point signatur
     with cli_error_handler("run", "Execution failed"):
         # Setup infrastructure
         registry = setup_infrastructure()
+        store = registry.container.get_service(ArtifactStore)
 
-        # Plan and execute
-        plan = _plan_runbook(runbook_path, registry)
+        # Plan: load persisted plan on resume, otherwise plan from runbook
+        if resume_run_id is not None:
+            plan = _load_persisted_plan(store, resume_run_id)
+            logger.info(
+                "Loaded persisted plan for run '%s' with %d artifacts",
+                resume_run_id,
+                len(plan.runbook.artifacts),
+            )
+        else:
+            plan = _plan_runbook(runbook_path, registry)
+
+        # Execute
         result = _execute_plan(plan, registry, runbook_path, resume_run_id)
 
         # Display results (load artifact data from store for duration/errors)
-        store = registry.container.get_service(ArtifactStore)
-        formatter.show_execution_completion()
+        interrupted = len(result.pending) > 0
+        formatter.show_execution_completion(interrupted=interrupted)
         asyncio.run(formatter.format_execution_result(result, plan, store, verbose))
 
         # Export results
