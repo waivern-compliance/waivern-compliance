@@ -107,7 +107,7 @@ class ComponentRegistry:
 
         """
         for name, factory in self.dispatcher_factories.items():
-            if factory.request_type is not request_type:
+            if not issubclass(request_type, factory.request_type):
                 continue
 
             if not factory.can_create():
