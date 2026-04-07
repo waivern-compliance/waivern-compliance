@@ -27,6 +27,7 @@ class ExecutionState(BaseModel):
     State transitions:
     - not_started → {pending, completed, failed, skipped}
     - pending → {completed, failed, skipped}
+    - completed, failed, skipped → terminal (no outgoing transitions)
     """
 
     run_id: str
@@ -90,13 +91,9 @@ class ExecutionState(BaseModel):
         self.last_checkpoint = datetime.now(UTC)
 
     def mark_pending(self, artifact_id: str) -> None:
-        """Move artifact from not_started, skipped, or failed to pending.
+        """Move artifact from not_started to pending.
 
-        Handles recovery scenarios where a previously skipped or failed
-        artifact is re-dispatched on resume (e.g., after a cascading failure
-        from an upstream artifact that has since been resolved).
-
-        No-op if artifact is not in any source state (idempotent, no pollution).
+        No-op if artifact is not in not_started (idempotent, no pollution).
 
         Args:
             artifact_id: The artifact ID to mark as pending.
@@ -104,10 +101,6 @@ class ExecutionState(BaseModel):
         """
         if artifact_id in self.not_started:
             self.not_started.discard(artifact_id)
-        elif artifact_id in self.skipped:
-            self.skipped.discard(artifact_id)
-        elif artifact_id in self.failed:
-            self.failed.discard(artifact_id)
         else:
             return
         self.pending.add(artifact_id)

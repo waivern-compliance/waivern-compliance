@@ -23,8 +23,8 @@ Execution Flow
     2. Run DAG sorter - sorter handles dependencies:
        ├─ sorter.get_ready() returns artifacts whose deps are satisfied
        ├─ For each ready artifact:
-       │   ├─ If in state.completed → sorter.done(id), skip execution
-       │   ├─ If not completed → execute, then state.mark_completed(id)
+       │   ├─ If in terminal state (completed/failed/skipped) → sorter.done(id)
+       │   ├─ If actionable → execute, then state.mark_completed(id)
        │   └─ On failure: state.mark_failed(id), skip dependents
        └─ Save state after each artifact completes
 
@@ -312,7 +312,7 @@ class DAGExecutor:
                 list(sorter.get_ready()), ctx
             )
 
-            # Mark already-done artifacts (completed or skipped) as done in sorter
+            # Mark already-done artifacts (completed, skipped, or failed) as done in sorter
             for aid in already_done:
                 sorter.done(aid)
 
@@ -396,12 +396,13 @@ class DAGExecutor:
         Artifacts are considered 'already done' if they are in:
         - state.completed (already executed successfully, e.g., from resume)
         - state.skipped (skipped due to upstream failure)
+        - state.failed (execution failed — no retry at executor level)
 
         Returns:
             Tuple of (ready_to_execute, already_done).
 
         """
-        already_done = ctx.state.completed | ctx.state.skipped
+        already_done = ctx.state.completed | ctx.state.skipped | ctx.state.failed
         ready = [aid for aid in all_ready if aid not in already_done]
         done = [aid for aid in all_ready if aid in already_done]
 
@@ -685,6 +686,14 @@ class DAGExecutor:
                 entry.artifact_id,
                 max_rounds,
             )
+            exc = RuntimeError(
+                f"Artifact '{entry.artifact_id}' exceeded max dispatch rounds "
+                f"({max_rounds})"
+            )
+            message = self._create_error_message_for_exception(
+                entry.artifact_id, exc, plan, ctx
+            )
+            await ctx.store.save_artifact(ctx.run_id, entry.artifact_id, message)
             await self._mark_failed_and_skip_dependents(entry.artifact_id, plan, ctx)
 
     async def _save_distributed_artifact(
@@ -792,7 +801,7 @@ class DAGExecutor:
             except PendingProcessingError:
                 await self._persist_pending_entries(affected_entries, ctx)
                 continue
-            except Exception:
+            except Exception as exc:
                 affected_ids = [e.artifact_id for e in affected_entries]
                 logger.exception(
                     "Dispatch failed for request type %s affecting artifacts %s",
@@ -800,6 +809,12 @@ class DAGExecutor:
                     affected_ids,
                 )
                 for entry in affected_entries:
+                    message = self._create_error_message_for_exception(
+                        entry.artifact_id, exc, plan, ctx
+                    )
+                    await ctx.store.save_artifact(
+                        ctx.run_id, entry.artifact_id, message
+                    )
                     await self._mark_failed_and_skip_dependents(
                         entry.artifact_id, plan, ctx
                     )

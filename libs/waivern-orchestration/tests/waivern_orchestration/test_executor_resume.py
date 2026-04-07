@@ -346,6 +346,87 @@ class TestResumeExecutionFlow:
         assert call_count["source"] == 1  # Still 1, not 2
         assert "data" in result2.completed
 
+    async def test_resume_does_not_retry_failed_artifacts(self, tmp_path: Path) -> None:
+        """Failed artifacts are not re-executed on resume.
+
+        A failed artifact stays failed — the executor does not retry.
+        Its dependents remain skipped.
+        """
+        from unittest.mock import MagicMock
+
+        output_schema = Schema("standard_input", "1.0.0")
+        findings_schema = Schema("findings", "1.0.0")
+        source_message = create_test_message({"files": []})
+
+        # Connector that tracks whether it's called
+        connector_factory = create_mock_connector_factory(
+            "src", [output_schema], source_message
+        )
+
+        # Processor that tracks whether it's called
+        processor_factory = MagicMock()
+        mock_class = MagicMock()
+        mock_class.get_name.return_value = "analyser"
+        mock_class.get_supported_output_schemas.return_value = [findings_schema]
+        mock_class.get_input_requirements.return_value = [
+            [MagicMock(schema=output_schema)]
+        ]
+        processor_factory.component_class = mock_class
+
+        artifacts = {
+            "source": ArtifactDefinition(
+                source=SourceConfig(type="src", properties={})
+            ),
+            "findings": ArtifactDefinition(
+                inputs="source",
+                process=ProcessConfig(type="analyser", properties={}),
+            ),
+        }
+        plan = create_simple_plan(
+            artifacts,
+            {
+                "source": (None, output_schema),
+                "findings": ([output_schema], findings_schema),
+            },
+        )
+
+        runbook_file = tmp_path / "runbook.yaml"
+        runbook_file.write_text("name: test\ndescription: test\n")
+
+        registry = create_mock_registry(
+            with_container=True,
+            connector_factories={"src": connector_factory},
+            processor_factories={"analyser": processor_factory},
+        )
+        store = registry.container.get_service(ArtifactStore)
+
+        # Manually create a run: source completed, findings failed, no dependents
+        run_id = "failed-artifact-run"
+        metadata = RunMetadata.fresh(run_id=run_id, runbook_path=runbook_file)
+        metadata.status = "interrupted"
+        await metadata.save(store)
+
+        state = ExecutionState.fresh(run_id, {"source", "findings"})
+        state.mark_completed("source")
+        state.mark_failed("findings")
+        await state.save(store)
+        await _persist_plan(store, run_id, plan)
+
+        # Save source artifact (completed artifact needs data)
+        await store.save_artifact(run_id, "source", source_message)
+
+        executor = DAGExecutor(registry)
+
+        # Act — resume the run
+        result = await executor.execute(
+            plan, runbook_path=runbook_file, resume_run_id=run_id
+        )
+
+        # Assert — findings stays failed, never re-executed
+        assert "source" in result.completed
+        assert "findings" in result.failed
+        assert processor_factory.create.call_count == 0
+
     async def test_resume_executes_not_started_artifacts(self, tmp_path: Path) -> None:
         """Not-started artifacts are executed on resume."""
 
