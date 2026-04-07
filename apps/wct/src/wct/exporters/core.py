@@ -41,7 +41,7 @@ class RunInfo(BaseModel):
     id: str = Field(..., description="Unique run identifier (UUID)")
     timestamp: str = Field(..., description="ISO8601 timestamp with timezone")
     duration_seconds: float = Field(..., ge=0, description="Total execution time")
-    status: Literal["completed", "partial", "failed"] = Field(
+    status: Literal["completed", "partial", "failed", "interrupted"] = Field(
         ..., description="Execution status"
     )
 
@@ -61,6 +61,7 @@ class SummaryInfo(BaseModel):
     succeeded: int = Field(..., ge=0, description="Number of successful artifacts")
     failed: int = Field(..., ge=0, description="Number of failed artifacts")
     skipped: int = Field(..., ge=0, description="Number of skipped artifacts")
+    pending: int = Field(0, ge=0, description="Number of pending artifacts")
 
 
 class CoreExport(BaseModel):
@@ -84,29 +85,31 @@ class CoreExport(BaseModel):
     skipped: list[str] = Field(
         default_factory=list, description="IDs of skipped artifacts"
     )
+    pending: list[str] = Field(
+        default_factory=list, description="IDs of pending artifacts (batch awaiting)"
+    )
 
 
 def _calculate_status(
     result: ExecutionResult,
-) -> Literal["completed", "partial", "failed"]:
+) -> Literal["completed", "partial", "failed", "interrupted"]:
     """Calculate execution status from result.
 
     Args:
         result: Execution result with artifact outcomes.
 
     Returns:
-        Status string: "failed" if any failures, "partial" if skipped, else "completed".
+        Status string: "interrupted" if pending, "failed" if any failures,
+        "partial" if skipped, else "completed".
 
     """
-    has_failures = len(result.failed) > 0
-    has_skipped = len(result.skipped) > 0
-
-    if has_failures:
+    if len(result.pending) > 0:
+        return "interrupted"
+    if len(result.failed) > 0:
         return "failed"
-    elif has_skipped:
+    if len(result.skipped) > 0:
         return "partial"
-    else:
-        return "completed"
+    return "completed"
 
 
 async def _build_error_entries(
@@ -160,13 +163,15 @@ def _calculate_summary(result: ExecutionResult) -> SummaryInfo:
     succeeded = len(result.completed)
     failed = len(result.failed)
     skipped = len(result.skipped)
-    total = succeeded + failed + skipped
+    pending = len(result.pending)
+    total = succeeded + failed + skipped + pending
 
     return SummaryInfo(
         total=total,
         succeeded=succeeded,
         failed=failed,
         skipped=skipped,
+        pending=pending,
     )
 
 
@@ -249,5 +254,6 @@ async def build_core_export(
         summary=_calculate_summary(result),
         errors=await _build_error_entries(result, store),
         skipped=_build_skipped_list(result),
+        pending=list(result.pending),
         outputs=await _build_output_entries(result, plan, store),
     )
