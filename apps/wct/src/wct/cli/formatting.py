@@ -26,6 +26,7 @@ class OutputFormatter:
     STATUS_SUCCESS = "[green]Success[/green]"
     STATUS_FAILED = "[red]Failed[/red]"
     STATUS_SKIPPED = "[yellow]Skipped[/yellow]"
+    STATUS_PENDING = "[magenta]Pending[/magenta]"
 
     def _get_schema_text(self, plan: ExecutionPlan, artifact_id: str) -> str:
         """Get schema text for verbose output.
@@ -147,6 +148,12 @@ class OutputFormatter:
 
         for artifact_id in result.skipped:
             row = [artifact_id, self.STATUS_SKIPPED, "-"]
+            if verbose:
+                row.append("-")
+            table.add_row(*row)
+
+        for artifact_id in result.pending:
+            row = [artifact_id, self.STATUS_PENDING, "-"]
             if verbose:
                 row.append("-")
             table.add_row(*row)
@@ -292,9 +299,14 @@ class OutputFormatter:
         )
         console.print(startup_panel)
 
-    def show_execution_completion(self) -> None:
-        """Show execution completion message."""
-        console.print("\n[bold green]✅ Execution completed![/bold green]")
+    def show_execution_completion(self, *, interrupted: bool = False) -> None:
+        """Show execution completion or interruption message."""
+        if interrupted:
+            console.print(
+                "\n[bold yellow]⏸  Execution interrupted — batch pending[/bold yellow]"
+            )
+        else:
+            console.print("\n[bold green]✅ Execution completed![/bold green]")
 
     def show_file_save_success(self, file_path: Path) -> None:
         """Show successful file save message.
@@ -317,7 +329,7 @@ class OutputFormatter:
     def show_completion_summary(
         self, result: ExecutionResult, output_path: Path
     ) -> None:
-        """Show completion summary banner.
+        """Show completion or interrupted summary banner.
 
         Args:
             result: ExecutionResult for summary statistics.
@@ -327,17 +339,38 @@ class OutputFormatter:
         succeeded = len(result.completed)
         failed = len(result.failed)
         skipped = len(result.skipped)
-        total = succeeded + failed + skipped
+        pending = len(result.pending)
+        total = succeeded + failed + skipped + pending
+        interrupted = pending > 0
 
-        completion_panel = Panel(
-            f"[bold green]✅ Execution Complete[/bold green]\n\n"
-            f"[bold]Total Artifacts:[/bold] {total}\n"
-            f"[bold]Succeeded:[/bold] {succeeded}\n"
-            f"[bold]Failed:[/bold] {failed}\n"
-            f"[bold]Skipped:[/bold] {skipped}\n"
-            f"[bold]Duration:[/bold] {result.total_duration_seconds:.2f}s\n"
-            f"[bold]JSON Output:[/bold] {output_path}",
-            title="🎉 Completion Summary",
-            border_style="green",
-        )
-        console.print(completion_panel)
+        lines = [
+            f"[bold]Total Artifacts:[/bold] {total}",
+            f"[bold]Succeeded:[/bold] {succeeded}",
+            f"[bold]Failed:[/bold] {failed}",
+            f"[bold]Skipped:[/bold] {skipped}",
+        ]
+
+        if interrupted:
+            header = "[bold yellow]⏸  Execution Interrupted[/bold yellow]"
+            title = "⏸  Interrupted — Batch Pending"
+            border = "yellow"
+            lines += [
+                f"[bold]Pending:[/bold] {pending}",
+                f"[bold]Duration:[/bold] {result.total_duration_seconds:.2f}s",
+                f"[bold]JSON Output:[/bold] {output_path}",
+                "",
+                f"[bold]Run ID:[/bold] {result.run_id}",
+                f"[bold]Next:[/bold] wct poll {result.run_id}",
+                f"[bold]Resume:[/bold] wct run <runbook> --resume {result.run_id}",
+            ]
+        else:
+            header = "[bold green]✅ Execution Complete[/bold green]"
+            title = "🎉 Completion Summary"
+            border = "green"
+            lines += [
+                f"[bold]Duration:[/bold] {result.total_duration_seconds:.2f}s",
+                f"[bold]JSON Output:[/bold] {output_path}",
+            ]
+
+        body = header + "\n\n" + "\n".join(lines)
+        console.print(Panel(body, title=title, border_style=border))

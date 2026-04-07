@@ -226,7 +226,8 @@ def execute_runbook_command(  # noqa: PLR0913 - Matches CLI entry point signatur
 
         # Display results (load artifact data from store for duration/errors)
         store = registry.container.get_service(ArtifactStore)
-        formatter.show_execution_completion()
+        interrupted = len(result.pending) > 0
+        formatter.show_execution_completion(interrupted=interrupted)
         asyncio.run(formatter.format_execution_result(result, plan, store, verbose))
 
         # Export results

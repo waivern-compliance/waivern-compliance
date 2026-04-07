@@ -298,4 +298,6 @@ class ExecutionResult(BaseModel):
     """Artifact IDs that failed during execution."""
     skipped: set[str] = Field(default_factory=set)
     """Artifact IDs skipped due to upstream failures or timeout."""
+    pending: set[str] = Field(default_factory=set)
+    """Artifact IDs awaiting batch results (run interrupted)."""
     total_duration_seconds: float

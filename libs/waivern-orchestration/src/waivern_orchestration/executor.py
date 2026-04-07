@@ -221,6 +221,7 @@ class DAGExecutor:
             completed=ctx.state.completed,
             failed=ctx.state.failed,
             skipped=ctx.state.skipped,
+            pending=ctx.state.pending,
             total_duration_seconds=total_duration,
         )
 
