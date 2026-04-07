@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 from waivern_artifact_store import ArtifactStore
+from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
+from waivern_core.errors import PendingProcessingError
 from waivern_core.schemas import Schema
 
 from waivern_orchestration.errors import (
@@ -15,12 +17,22 @@ from waivern_orchestration.errors import (
     RunNotFoundError,
 )
 from waivern_orchestration.executor import DAGExecutor
-from waivern_orchestration.models import ArtifactDefinition, SourceConfig
+from waivern_orchestration.models import (
+    ArtifactDefinition,
+    ProcessConfig,
+    SourceConfig,
+)
 from waivern_orchestration.planner import ExecutionPlan
 from waivern_orchestration.run_metadata import RunMetadata
+from waivern_orchestration.state import ExecutionState
 
 from .test_helpers import (
+    StubDistributedProcessor,
+    StubState,
+    create_distributed_processor_factory,
     create_mock_connector_factory,
+    create_mock_dispatcher,
+    create_mock_processor_factory,
     create_mock_registry,
     create_simple_plan,
     create_test_message,
@@ -80,7 +92,6 @@ class TestResumeValidation:
     ) -> None:
         """Resuming a run with status='running' raises RunAlreadyActiveError."""
         # Arrange - manually create a run with status='running'
-        from waivern_orchestration.state import ExecutionState
 
         output_schema = Schema("standard_input", "1.0.0")
         message = create_test_message({"files": []})
@@ -337,7 +348,6 @@ class TestResumeExecutionFlow:
 
     async def test_resume_executes_not_started_artifacts(self, tmp_path: Path) -> None:
         """Not-started artifacts are executed on resume."""
-        from waivern_orchestration.state import ExecutionState
 
         # Arrange - create a run with one artifact completed, one not started
         output_schema = Schema("standard_input", "1.0.0")
@@ -413,7 +423,6 @@ class TestResumeExecutionFlow:
         self, tmp_path: Path
     ) -> None:
         """Previously completed artifact data remains accessible."""
-        from waivern_orchestration.state import ExecutionState
 
         # Arrange
         output_schema = Schema("standard_input", "1.0.0")
@@ -473,8 +482,6 @@ class TestResumeExecutionFlow:
     async def test_resume_with_all_completed_is_noop(self, tmp_path: Path) -> None:
         """Resuming a fully completed run executes nothing."""
         from unittest.mock import MagicMock
-
-        from waivern_orchestration.state import ExecutionState
 
         # Arrange - track if connector is called
         connector_called = {"value": False}
@@ -540,3 +547,259 @@ class TestResumeExecutionFlow:
         # Assert - connector should NOT be called
         assert connector_called["value"] is False
         assert "data" in result.completed
+
+
+# =============================================================================
+# Full Lifecycle: Init → Interrupt → Resume → Complete
+# =============================================================================
+
+
+class TestInterruptResumeLifecycle:
+    """Tests for the full init → interrupt → resume → complete lifecycle.
+
+    These tests exercise the real executor flow end-to-end: a fresh run is
+    interrupted by PendingProcessingError, then resumed with a successful
+    dispatcher. The resumed run loads the persisted ExecutionPlan and state
+    from the store — no plan is passed in from outside.
+    """
+
+    async def test_interrupt_then_resume_completes_pending_artifact(
+        self, tmp_path: Path
+    ) -> None:
+        """Single distributed artifact: interrupt on dispatch, resume completes.
+
+        Run 1: source completes, distributed processor prepares, dispatcher
+        raises PendingProcessingError → run interrupted, PrepareResult persisted.
+        Run 2: resume loads persisted state and plan, dispatcher succeeds,
+        finalise produces Message → artifact completed.
+        """
+        source_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("findings", "1.0.0")
+        source_message = create_test_message({"files": []})
+        final_message = create_test_message(
+            {"findings": ["validated"]}, schema=output_schema
+        )
+
+        request = DispatchRequest(name="batch_req")
+        dispatch_result = DispatchResult(request_id=request.request_id)
+
+        processor = StubDistributedProcessor(
+            prepare_result=PrepareResult(
+                state=StubState(value="batch_state"),
+                requests=[request],
+            ),
+            finalise_results=[final_message],
+        )
+
+        connector_factory = create_mock_connector_factory(
+            "src", [source_schema], source_message
+        )
+
+        artifacts = {
+            "source": ArtifactDefinition(
+                source=SourceConfig(type="src", properties={})
+            ),
+            "findings": ArtifactDefinition(
+                inputs="source",
+                process=ProcessConfig(type="dist_proc", properties={}),
+            ),
+        }
+        plan = create_simple_plan(
+            artifacts,
+            {
+                "source": (None, source_schema),
+                "findings": ([source_schema], output_schema),
+            },
+        )
+
+        runbook_file = tmp_path / "runbook.yaml"
+        runbook_file.write_text("name: test\ndescription: test\n")
+
+        # --- Run 1: init + interrupt ---
+        pending_dispatcher = create_mock_dispatcher(
+            [], side_effect=PendingProcessingError("Batch pending")
+        )
+        registry = create_mock_registry(
+            with_container=True,
+            connector_factories={"src": connector_factory},
+            processor_factories={
+                "dist_proc": create_distributed_processor_factory(
+                    "dist_proc", processor
+                ),
+            },
+        )
+        registry.get_dispatcher_for.return_value = pending_dispatcher
+        executor = DAGExecutor(registry)
+
+        result1 = await executor.execute(plan, runbook_path=runbook_file)
+
+        assert "source" in result1.completed
+        assert "findings" not in result1.completed
+
+        store = registry.container.get_service(ArtifactStore)
+        metadata1 = await RunMetadata.load(store, result1.run_id)
+        assert metadata1.status == "interrupted"
+
+        # --- Run 2: resume + complete ---
+        ok_dispatcher = create_mock_dispatcher([dispatch_result])
+        registry.get_dispatcher_for.return_value = ok_dispatcher
+
+        processor2 = StubDistributedProcessor(
+            prepare_result=PrepareResult(
+                state=StubState(value="batch_state"),
+                requests=[request],
+            ),
+            finalise_results=[final_message],
+        )
+        registry.processor_factories["dist_proc"] = (
+            create_distributed_processor_factory("dist_proc", processor2)
+        )
+
+        result2 = await executor.execute(
+            plan, runbook_path=runbook_file, resume_run_id=result1.run_id
+        )
+
+        assert result2.completed == {"source", "findings"}
+        assert result2.failed == set()
+        assert result2.skipped == set()
+
+        metadata2 = await RunMetadata.load(store, result2.run_id)
+        assert metadata2.status == "completed"
+
+        # prepare() must NOT be called on resume — only deserialise + finalise
+        assert "prepare" not in processor2.call_log
+        assert "deserialise_prepare_result" in processor2.call_log
+        assert "finalise" in processor2.call_log
+
+    async def test_interrupt_then_resume_unblocks_downstream_dependents(
+        self, tmp_path: Path
+    ) -> None:
+        """DAG with downstream dependent: interrupt blocks dependent, resume unblocks.
+
+        DAG: source → findings (distributed) → validated (regular processor)
+
+        Run 1: source completes, findings interrupted (PendingProcessingError),
+        validated stays not_started (blocked by dependency).
+        Run 2: findings completes on resume, validated runs and completes.
+        """
+        source_schema = Schema("standard_input", "1.0.0")
+        findings_schema = Schema("findings", "1.0.0")
+        validated_schema = Schema("validated_findings", "1.0.0")
+        source_message = create_test_message({"files": []})
+        findings_message = create_test_message(
+            {"findings": ["raw"]}, schema=findings_schema
+        )
+        validated_message = create_test_message(
+            {"findings": ["validated"]}, schema=validated_schema
+        )
+
+        request = DispatchRequest(name="batch_req")
+        dispatch_result = DispatchResult(request_id=request.request_id)
+
+        processor = StubDistributedProcessor(
+            prepare_result=PrepareResult(
+                state=StubState(value="batch_state"),
+                requests=[request],
+            ),
+            finalise_results=[findings_message],
+        )
+
+        connector_factory = create_mock_connector_factory(
+            "src", [source_schema], source_message
+        )
+        validator_factory = create_mock_processor_factory(
+            "validator",
+            [findings_schema],
+            [validated_schema],
+            process_result=validated_message,
+        )
+
+        artifacts = {
+            "source": ArtifactDefinition(
+                source=SourceConfig(type="src", properties={})
+            ),
+            "findings": ArtifactDefinition(
+                inputs="source",
+                process=ProcessConfig(type="dist_proc", properties={}),
+            ),
+            "validated": ArtifactDefinition(
+                inputs="findings",
+                process=ProcessConfig(type="validator", properties={}),
+            ),
+        }
+        artifact_schemas: dict[str, tuple[list[Schema] | None, Schema]] = {
+            "source": (None, source_schema),
+            "findings": ([source_schema], findings_schema),
+            "validated": ([findings_schema], validated_schema),
+        }
+        plan = create_simple_plan(artifacts, artifact_schemas)
+
+        runbook_file = tmp_path / "runbook.yaml"
+        runbook_file.write_text("name: test\ndescription: test\n")
+
+        # --- Run 1: init + interrupt ---
+        pending_dispatcher = create_mock_dispatcher(
+            [], side_effect=PendingProcessingError("Batch pending")
+        )
+        registry = create_mock_registry(
+            with_container=True,
+            connector_factories={"src": connector_factory},
+            processor_factories={
+                "dist_proc": create_distributed_processor_factory(
+                    "dist_proc", processor
+                ),
+                "validator": validator_factory,
+            },
+        )
+        registry.get_dispatcher_for.return_value = pending_dispatcher
+        executor = DAGExecutor(registry)
+
+        result1 = await executor.execute(plan, runbook_path=runbook_file)
+
+        assert "source" in result1.completed
+        assert "findings" not in result1.completed
+        assert "validated" not in result1.completed
+
+        store = registry.container.get_service(ArtifactStore)
+
+        # Verify intermediate state: findings pending, validated not_started
+        state1 = await ExecutionState.load(store, result1.run_id)
+        assert "findings" in state1.pending
+        assert "validated" in state1.not_started
+
+        # --- Run 2: resume + complete ---
+        ok_dispatcher = create_mock_dispatcher([dispatch_result])
+        registry.get_dispatcher_for.return_value = ok_dispatcher
+
+        processor2 = StubDistributedProcessor(
+            prepare_result=PrepareResult(
+                state=StubState(value="batch_state"),
+                requests=[request],
+            ),
+            finalise_results=[findings_message],
+        )
+        registry.processor_factories["dist_proc"] = (
+            create_distributed_processor_factory("dist_proc", processor2)
+        )
+
+        result2 = await executor.execute(
+            plan, runbook_path=runbook_file, resume_run_id=result1.run_id
+        )
+
+        # All three artifacts completed
+        assert result2.completed == {"source", "findings", "validated"}
+        assert result2.failed == set()
+        assert result2.skipped == set()
+
+        metadata2 = await RunMetadata.load(store, result2.run_id)
+        assert metadata2.status == "completed"
+
+        # source connector must NOT be called again
+        assert connector_factory.create.call_count == 1
+
+        # findings: deserialise + finalise only, no prepare
+        assert "prepare" not in processor2.call_log
+        assert "deserialise_prepare_result" in processor2.call_log
+
+        # validated: regular processor ran on resume
+        validator_factory.create.assert_called()
