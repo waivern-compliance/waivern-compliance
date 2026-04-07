@@ -219,6 +219,24 @@ class TestExecutionStateMarkPending:
         assert state.pending == {"artifact_a"}
         assert state.not_started == {"artifact_b"}
 
+    def test_mark_pending_moves_artifact_from_skipped_to_pending(self) -> None:
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
+        state.mark_skipped({"artifact_a"})
+
+        state.mark_pending("artifact_a")
+
+        assert "artifact_a" in state.pending
+        assert "artifact_a" not in state.skipped
+
+    def test_mark_pending_moves_artifact_from_failed_to_pending(self) -> None:
+        state = ExecutionState.fresh("run-1", {"artifact_a", "artifact_b"})
+        state.mark_failed("artifact_a")
+
+        state.mark_pending("artifact_a")
+
+        assert "artifact_a" in state.pending
+        assert "artifact_a" not in state.failed
+
     def test_mark_pending_ignores_unknown_artifact(self) -> None:
         state = ExecutionState.fresh("run-1", {"artifact_a"})
 
