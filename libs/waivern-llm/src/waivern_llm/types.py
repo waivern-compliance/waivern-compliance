@@ -19,6 +19,7 @@ from enum import Enum, auto
 from typing import Protocol, override, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic.dataclasses import dataclass as pydantic_dataclass
 from waivern_core import ExecutionContext, Finding, JsonValue
 from waivern_core.dispatch import DispatchRequest, DispatchResult
 
@@ -178,13 +179,20 @@ class SkipReason(Enum):
     """LLM call failed for this batch after retries."""
 
 
-@dataclass(frozen=True)
+@pydantic_dataclass(
+    frozen=True,
+    config=ConfigDict(arbitrary_types_allowed=True),
+)
 class SkippedFinding[T: Finding]:
     """A finding that was skipped during LLM processing.
 
     The batch/group structure is an internal LLM service concern and is not
     exposed to callers. Processors receive a flat list of skipped findings
     to handle according to their domain logic.
+
+    Implemented as a Pydantic dataclass so it can serialise cleanly when
+    embedded inside BaseModel fields (e.g. ``LLMValidationOutcome.skipped``)
+    via ``model_dump(mode="json")`` on the distributed-processor resume path.
     """
 
     finding: T

@@ -20,6 +20,7 @@ from waivern_core import AnalyserContractTests
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm import LLMCompletionResult, LLMService
+from waivern_llm.types import LLMDispatchResult
 from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 
 from waivern_personal_data_analyser.analyser import PersonalDataAnalyser
@@ -265,42 +266,55 @@ class TestPersonalDataAnalyser:
             analysis_metadata["ruleset_used"] == "local/personal_data_indicator/1.0.0"
         )
 
-    def test_process_includes_validation_summary_when_llm_validation_enabled(
+    def test_distributed_path_includes_validation_summary_when_llm_validation_enabled(
         self,
         valid_config: PersonalDataAnalyserConfig,
         mock_llm_service: Mock,
         sample_input_message: Message,
     ) -> None:
-        """Test that validation summary is included when LLM validation is enabled."""
-        # Arrange
-        analyser = PersonalDataAnalyser(
-            valid_config,
-            mock_llm_service,
-        )
+        """Output metadata carries a well-formed validation_summary when LLM runs.
 
-        # Mock LLM v2 complete() - return empty results (keeps all findings)
-        # Note: v2 API doesn't expose the prompt directly, so we can't extract finding IDs
-        # Instead, just verify the validation summary structure is present
-        mock_llm_service.complete.return_value = LLMCompletionResult(
-            responses=[LLMValidationResponseModel(results=[])],
-            skipped=[],
-        )
+        The validation_summary is a structural contract of the analyser's
+        output: downstream consumers rely on ``strategy``, ``samples_validated``
+        and ``all_succeeded`` being present whenever LLM validation actually
+        executed. In the dual-protocol design the LLM path runs through
+        ``prepare()``/``finalise()`` rather than through ``process()``, so
+        this test pins the contract at the distributed path.
+        """
+        # Arrange
+        analyser = PersonalDataAnalyser(valid_config, mock_llm_service)
         output_schema = Schema("personal_data_indicator", "1.0.0")
 
+        prepare_result = analyser.prepare([sample_input_message], output_schema)
+        # sample_input_message carries PII-matching content so prepare() must
+        # build an LLMRequest — otherwise this test is not exercising the
+        # LLM-enabled path it claims to.
+        assert len(prepare_result.requests) == 1
+
+        # Dispatch result with no FALSE_POSITIVE responses means every
+        # sampled finding is kept (via the not_flagged fail-safe), and the
+        # orchestrator reports all_succeeded=True.
+        dispatch_result = LLMDispatchResult(
+            request_id=prepare_result.requests[0].request_id,
+            model_name="mock-model",
+            responses=[LLMValidationResponseModel(results=[]).model_dump(mode="json")],
+            skipped=[],
+        )
+
         # Act
-        result_message = analyser.process([sample_input_message], output_schema)
+        result_message = analyser.finalise(
+            prepare_result.state, [dispatch_result], output_schema
+        )
 
-        # Assert - Verify validation summary in analysis_metadata
-        result_content = result_message.content
-        analysis_metadata = result_content["analysis_metadata"]
-
-        # Validation summary is in analysis_metadata when using orchestrator
-        if result_content["summary"]["total_findings"] >= 0:
-            assert "validation_summary" in analysis_metadata
-            validation_summary = analysis_metadata["validation_summary"]
-            assert validation_summary["strategy"] == "orchestrated"
-            assert "samples_validated" in validation_summary
-            assert "all_succeeded" in validation_summary
+        # Assert
+        assert isinstance(result_message, Message)
+        analysis_metadata = result_message.content["analysis_metadata"]
+        assert "validation_summary" in analysis_metadata
+        validation_summary = analysis_metadata["validation_summary"]
+        assert validation_summary["strategy"] == "orchestrated"
+        assert "samples_validated" in validation_summary
+        assert "all_succeeded" in validation_summary
+        assert validation_summary["all_succeeded"] is True
 
     def test_process_excludes_validation_summary_when_llm_validation_disabled(
         self,
@@ -358,6 +372,7 @@ class TestPersonalDataAnalyser:
                 ],
             },
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",
         )
 
         output_schema = Schema("personal_data_indicator", "1.0.0")
@@ -391,6 +406,7 @@ class TestPersonalDataAnalyser:
             id="empty_test",
             content=empty_input_data,
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",
         )
 
         output_schema = Schema("personal_data_indicator", "1.0.0")
@@ -448,6 +464,7 @@ class TestPersonalDataAnalyser:
                 id="test_category",
                 content=input_content,
                 schema=Schema("standard_input", "1.0.0"),
+                run_id="test-run-id",
             )
 
             output_schema = Schema("personal_data_indicator", "1.0.0")
@@ -514,6 +531,7 @@ class TestPersonalDataAnalyser:
                 ],
             },
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",
         )
         message2 = Message(
             id="file_data",
@@ -531,6 +549,7 @@ class TestPersonalDataAnalyser:
                 ],
             },
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",
         )
         output_schema = Schema("personal_data_indicator", "1.0.0")
 

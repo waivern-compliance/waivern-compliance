@@ -2,14 +2,20 @@
 
 import importlib
 import logging
-from typing import override
+from collections.abc import Sequence
+from typing import Any, override
 
 from waivern_analysers_shared import SchemaReader
-from waivern_analysers_shared.llm_validation import ValidationResult
+from waivern_analysers_shared.llm_validation import ValidationOrchestrator
+from waivern_analysers_shared.llm_validation.validation_orchestrator import (
+    FallbackNeeded,
+)
 from waivern_core import Analyser, InputRequirement
+from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import LLMService, PendingBatchError
+from waivern_llm import LLMService
+from waivern_llm.types import LLMDispatchResult, LLMRequest
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.personal_data_indicator import PersonalDataIndicatorModel
 from waivern_schemas.standard_input import (
@@ -19,7 +25,7 @@ from waivern_schemas.standard_input import (
 
 from .pattern_matcher import PersonalDataPatternMatcher
 from .result_builder import PersonalDataResultBuilder
-from .types import PersonalDataAnalyserConfig
+from .types import PersonalDataAnalyserConfig, PersonalDataPrepareState
 from .validation import create_validation_orchestrator
 
 logger = logging.getLogger(__name__)
@@ -31,6 +37,11 @@ class PersonalDataAnalyser(Analyser):
     This analyser uses predefined rulesets to identify personal data patterns
     in structured data content. It supports LLM-based validation to filter
     false positives.
+
+    Dual protocol: implements both ``Processor`` (via ``process()``) and
+    ``DistributedProcessor`` (via ``prepare()``/``finalise()``). The executor
+    prefers the distributed path; ``process()`` is a degraded standalone
+    fallback that forces LLM off.
     """
 
     def __init__(
@@ -42,13 +53,21 @@ class PersonalDataAnalyser(Analyser):
 
         Args:
             config: Validated configuration object
-            llm_service: LLM service for validation (injected by factory)
+            llm_service: LLM service for validation (injected by factory).
+                Pass ``None`` for LLM-disabled mode (degraded output only).
 
         """
         self._config = config
         self._pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
         self._llm_service = llm_service
         self._result_builder = PersonalDataResultBuilder(config)
+        self._orchestrator: (
+            ValidationOrchestrator[PersonalDataIndicatorModel] | None
+        ) = (
+            create_validation_orchestrator(config.llm_validation, llm_service)
+            if llm_service is not None
+            else None
+        )
 
     @classmethod
     @override
@@ -75,6 +94,181 @@ class PersonalDataAnalyser(Analyser):
     def get_supported_output_schemas(cls) -> list[Schema]:
         """Declare output schemas this analyser can produce."""
         return [Schema("personal_data_indicator", "1.0.0")]
+
+    # ── DistributedProcessor ─────────────────────────────────────────────
+
+    def prepare(
+        self, inputs: list[Message], output_schema: Schema
+    ) -> PrepareResult[PersonalDataPrepareState]:
+        """Analyse inputs and declare LLM dispatch needs.
+
+        1. Validate inputs and extract run_id
+        2. Merge input data items (fan-in) and run pattern matching
+        3. If LLM enabled and findings exist, run orchestrator.prepare() to
+           build the LLMRequest. Otherwise, return empty requests.
+
+        """
+        if not inputs:
+            raise ValueError("No input messages provided")
+        run_id = inputs[0].run_id
+        if not run_id:
+            raise ValueError("run_id is required but not set on input messages")
+
+        data_items = self._merge_input_data_items(inputs)
+        findings = self._find_patterns_in_data_items(data_items)
+        llm_enabled = self._is_llm_enabled()
+
+        if not llm_enabled or not findings or self._orchestrator is None:
+            return PrepareResult(
+                state=PersonalDataPrepareState(
+                    all_findings=findings,
+                    run_id=run_id,
+                    llm_enabled=llm_enabled,
+                ),
+                requests=[],
+            )
+
+        orchestrator_state, llm_request = self._orchestrator.prepare(
+            findings, self._config.llm_validation, run_id
+        )
+
+        requests: list[DispatchRequest] = []
+        if llm_request is not None:
+            requests.append(llm_request)
+
+        return PrepareResult(
+            state=PersonalDataPrepareState(
+                all_findings=findings,
+                run_id=run_id,
+                llm_enabled=llm_enabled,
+                orchestrator_state=orchestrator_state,
+            ),
+            requests=requests,
+        )
+
+    def finalise(
+        self,
+        state: PersonalDataPrepareState,
+        results: Sequence[DispatchResult],
+        output_schema: Schema,
+    ) -> Message | PrepareResult[PersonalDataPrepareState]:
+        """Produce output message from state and dispatch results.
+
+        Paths:
+        - LLM disabled or no orchestrator state → build output from raw
+          findings, no validation metadata.
+        - LLM enabled → invoke ``orchestrator.finalise()`` with the LLM
+          dispatch result and marker callback, then build output from the
+          resulting ``ValidationResult``.
+
+        PersonalDataAnalyser does not configure a fallback strategy, so the
+        orchestrator never returns ``FallbackNeeded`` here. The branch is
+        retained defensively to satisfy the typed return union.
+        """
+        if (
+            not state.llm_enabled
+            or state.orchestrator_state is None
+            or self._orchestrator is None
+        ):
+            return self._result_builder.build_output_message(
+                state.all_findings,
+                output_schema,
+                validation_result=None,
+            )
+
+        llm_result = self._extract_llm_result(results)
+        outcome = self._orchestrator.finalise(
+            state.orchestrator_state,
+            llm_result,
+            marker=self._mark_finding_validated,
+        )
+
+        if isinstance(outcome, FallbackNeeded):
+            # PersonalDataAnalyser has no fallback strategy; reaching here
+            # would indicate a configuration error in the orchestrator.
+            raise RuntimeError(
+                "PersonalDataAnalyser does not support fallback dispatch rounds"
+            )
+
+        logger.info(
+            f"Validation complete: {len(state.all_findings)} → "
+            f"{len(outcome.kept_findings)} findings "
+            f"({len(outcome.removed_groups)} groups removed)"
+        )
+
+        return self._result_builder.build_output_message(
+            outcome.kept_findings,
+            output_schema,
+            validation_result=outcome,
+        )
+
+    def deserialise_prepare_result(
+        self, raw: dict[str, Any]
+    ) -> PrepareResult[PersonalDataPrepareState]:
+        """Reconstruct a typed PrepareResult from a raw dict.
+
+        Called on the resume path where a persisted PrepareResult must be
+        restored. Handles LLMRequest reconstruction with correct field types.
+        ``prompt_builder`` and ``response_model`` remain ``None`` on resume —
+        they are not needed since ``built_cache_keys`` drives cache lookup.
+
+        """
+        state = PersonalDataPrepareState.model_validate(raw["state"])
+        requests: list[DispatchRequest] = [
+            LLMRequest[PersonalDataIndicatorModel].model_validate(r)
+            for r in raw.get("requests", [])
+        ]
+        return PrepareResult(state=state, requests=requests)
+
+    # ── Processor (standalone fallback) ──────────────────────────────────
+
+    @override
+    def process(
+        self,
+        inputs: list[Message],
+        output_schema: Schema,
+    ) -> Message:
+        """Standalone fallback producing degraded (LLM-disabled) output.
+
+        Delegates to prepare/finalise with LLM forced off. In the executor,
+        the DistributedProcessor path is always used instead.
+
+        """
+        prepare_result = self.prepare(inputs, output_schema)
+        state = prepare_result.state.model_copy(
+            update={"llm_enabled": False, "orchestrator_state": None}
+        )
+        result = self.finalise(state, [], output_schema)
+        # With llm_enabled=False, finalise always returns a Message.
+        return result  # pyright: ignore[reportReturnType]
+
+    # ── Private helpers ──────────────────────────────────────────────────
+
+    def _is_llm_enabled(self) -> bool:
+        """Derive the enabled flag from config + injected service.
+
+        Both signals must agree: ``enable_llm_validation=True`` is the
+        caller's intent, and a non-None ``llm_service`` is the capability.
+        Either being absent means no dispatch path.
+        """
+        return (
+            self._llm_service is not None
+            and self._orchestrator is not None
+            and self._config.llm_validation.enable_llm_validation
+        )
+
+    def _extract_llm_result(
+        self,
+        results: Sequence[DispatchResult],
+    ) -> LLMDispatchResult | None:
+        """Extract the first LLMDispatchResult from dispatch results."""
+        for result in results:
+            match result:
+                case LLMDispatchResult() as llm_result:
+                    return llm_result
+                case _:
+                    continue
+        return None
 
     def _load_reader(
         self, schema: Schema
@@ -138,109 +332,6 @@ class PersonalDataAnalyser(Analyser):
             )
             findings.extend(item_findings)
         return findings
-
-    @override
-    def process(
-        self,
-        inputs: list[Message],
-        output_schema: Schema,
-    ) -> Message:
-        """Process data to find personal data patterns using dynamic reader/producer.
-
-        Supports same-schema fan-in: multiple standard_input messages are merged
-        before processing. Each data item retains its original metadata for tracing.
-
-        Args:
-            inputs: List of input messages (same schema, fan-in supported).
-            output_schema: Expected output schema.
-
-        Returns:
-            Output message with findings from all inputs combined.
-
-        """
-        # Merge inputs, find patterns
-        data_items = self._merge_input_data_items(inputs)
-        findings = self._find_patterns_in_data_items(data_items)
-
-        # Extract run_id from inputs (set by executor, used for cache scoping)
-        run_id = inputs[0].run_id
-
-        # Apply LLM validation if enabled
-        validation_result: ValidationResult[PersonalDataIndicatorModel] | None = None
-        final_findings = findings
-        if self._config.llm_validation.enable_llm_validation:
-            validated_findings, _, validation_result = self._validate_findings(
-                findings, run_id=run_id
-            )
-            final_findings = validated_findings
-
-        # Build and return output message
-        return self._result_builder.build_output_message(
-            final_findings,
-            output_schema,
-            validation_result,
-        )
-
-    def _validate_findings(
-        self,
-        findings: list[PersonalDataIndicatorModel],
-        run_id: str | None = None,
-    ) -> tuple[
-        list[PersonalDataIndicatorModel],
-        bool,
-        ValidationResult[PersonalDataIndicatorModel] | None,
-    ]:
-        """Validate findings using ValidationOrchestrator.
-
-        The orchestrator handles:
-        - Grouping by category (when sampling is enabled)
-        - Sampling and group-level decisions
-
-        Args:
-            findings: List of findings to validate.
-            run_id: Unique identifier for the current run, used for cache scoping.
-
-        Returns:
-            Tuple of (validated findings, validation applied, validation result).
-
-        """
-        if not findings:
-            return findings, False, None
-
-        if not self._llm_service:
-            logger.warning("LLM service unavailable, returning original findings")
-            return findings, False, None
-
-        if run_id is None:
-            logger.warning("run_id is required for LLM validation, skipping")
-            return findings, False, None
-
-        try:
-            # Create orchestrator and validate with marker callback
-            # Marker is applied at strategy level to only mark actually-validated findings
-            orchestrator = create_validation_orchestrator(
-                self._config.llm_validation, self._llm_service
-            )
-            result = orchestrator.validate(
-                findings,
-                self._config.llm_validation,
-                run_id,
-                marker=self._mark_finding_validated,
-            )
-
-            logger.info(
-                f"Validation complete: {len(findings)} → {len(result.kept_findings)} findings "
-                f"({len(result.removed_groups)} groups removed)"
-            )
-
-            return result.kept_findings, result.all_succeeded, result
-
-        except PendingBatchError:
-            raise
-        except Exception as e:
-            logger.error(f"LLM validation failed: {e}")
-            logger.warning("Returning original findings due to validation error")
-            return findings, False, None
 
     def _mark_finding_validated(
         self, finding: PersonalDataIndicatorModel
