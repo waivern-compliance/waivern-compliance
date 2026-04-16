@@ -149,6 +149,7 @@ class TestProcessingPurposeAnalyserInitialisation:
             id="test_llm_default",
             content=test_data.model_dump(exclude_none=True),
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",
         )
 
         result = analyser.process(
@@ -183,6 +184,7 @@ class TestProcessingPurposeAnalyserInitialisation:
             id="test_llm_disabled",
             content=test_data.model_dump(exclude_none=True),
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",
         )
 
         result = analyser.process(
@@ -278,6 +280,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             id="test_empty",
             content=data.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
     @pytest.fixture
@@ -300,6 +303,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             id="test_simple",
             content=data.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
     def test_process_standard_input_returns_valid_message_for_empty_data(
@@ -437,6 +441,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             id="test_empty",
             content=data.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
         # Act
@@ -488,6 +493,7 @@ class TestProcessingPurposeAnalyserStandardInputProcessing:
             id="test_duplicate_purposes",
             content=data.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
         # Act
@@ -553,6 +559,7 @@ class TestProcessingPurposeAnalyserErrorHandling:
             id="test_unsupported",
             content={"data": []},
             schema=unsupported_schema,  # type: ignore
+            run_id="test-run-id",
         )
 
         # Act & Assert
@@ -608,6 +615,7 @@ class TestProcessingPurposeAnalyserOutputValidation:
             id="test_output_validation",
             content=data.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
     def test_process_output_message_validates_against_schema(
@@ -735,6 +743,7 @@ class CustomerService {
             id="test_source_code",
             content=content,
             schema=source_code_schema,
+            run_id="test-run-id",
         )
 
     def test_process_source_code_returns_valid_message(
@@ -856,6 +865,7 @@ class TestFanInSupport:
             id="input_1",
             content=data_1.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
         # Arrange - Message 2: marketing content (distinct from message 1)
@@ -878,6 +888,7 @@ class TestFanInSupport:
             id="input_2",
             content=data_2.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
         # Act - process both messages together
@@ -922,6 +933,7 @@ class TestFanInSupport:
             id="input_1",
             content=data_1.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
         # Arrange - Message 2: marketing content
@@ -942,6 +954,7 @@ class TestFanInSupport:
             id="input_2",
             content=data_2.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
         # Act
@@ -985,6 +998,7 @@ class TestFanInSupport:
             id="input_1",
             content=data_1.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
         data_2 = StandardInputDataModel(
@@ -1010,6 +1024,7 @@ class TestFanInSupport:
             id="input_2",
             content=data_2.model_dump(exclude_none=True),
             schema=standard_input_schema,
+            run_id="test-run-id",
         )
 
         # Act
@@ -1059,6 +1074,7 @@ class TestFanInSupport:
             id="source_1",
             content=content_1,
             schema=source_code_schema,
+            run_id="test-run-id",
         )
 
         # Arrange - Message 2: analytics service file
@@ -1086,6 +1102,7 @@ class TestFanInSupport:
             id="source_2",
             content=content_2,
             schema=source_code_schema,
+            run_id="test-run-id",
         )
 
         # Act - process both messages together
@@ -1133,7 +1150,12 @@ class TestFanInSupport:
                 }
             ],
         }
-        message_1 = Message(id="source_1", content=content_1, schema=source_code_schema)
+        message_1 = Message(
+            id="source_1",
+            content=content_1,
+            schema=source_code_schema,
+            run_id="test-run-id",
+        )
 
         # Arrange - Message 2: analytics service
         # Use word-boundary-compatible patterns (standalone word in comment)
@@ -1156,7 +1178,12 @@ class TestFanInSupport:
                 }
             ],
         }
-        message_2 = Message(id="source_2", content=content_2, schema=source_code_schema)
+        message_2 = Message(
+            id="source_2",
+            content=content_2,
+            schema=source_code_schema,
+            run_id="test-run-id",
+        )
 
         # Act
         result = analyser_no_llm.process([message_1, message_2], output_schema)
@@ -1195,7 +1222,12 @@ class TestFanInSupport:
                 }
             ],
         }
-        message_1 = Message(id="source_1", content=content_1, schema=source_code_schema)
+        message_1 = Message(
+            id="source_1",
+            content=content_1,
+            schema=source_code_schema,
+            run_id="test-run-id",
+        )
 
         content_2 = {
             "schemaVersion": "1.0.0",
@@ -1216,7 +1248,12 @@ class TestFanInSupport:
                 }
             ],
         }
-        message_2 = Message(id="source_2", content=content_2, schema=source_code_schema)
+        message_2 = Message(
+            id="source_2",
+            content=content_2,
+            schema=source_code_schema,
+            run_id="test-run-id",
+        )
 
         # Act
         result = analyser_no_llm.process([message_1, message_2], output_schema)

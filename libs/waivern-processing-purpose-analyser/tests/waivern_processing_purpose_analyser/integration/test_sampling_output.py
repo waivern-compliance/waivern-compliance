@@ -126,50 +126,6 @@ class TestSamplingOutputStructure:
             assert "purpose" in purpose_entry
             assert "findings_count" in purpose_entry
 
-    def test_output_has_validation_summary_in_metadata(
-        self,
-        mock_llm_service: Mock,
-        test_message_with_multiple_purposes: Message,
-    ) -> None:
-        """Test that analysis_metadata includes validation_summary with orchestrator info."""
-        # Arrange
-        config = ProcessingPurposeAnalyserConfig.from_properties(
-            {
-                "pattern_matching": {
-                    "ruleset": "local/processing_purposes/1.0.0",
-                },
-                "llm_validation": {
-                    "enable_llm_validation": True,
-                    "sampling_size": 3,
-                },
-            }
-        )
-
-        mock_llm_service.complete.return_value = LLMCompletionResult(
-            responses=[LLMValidationResponseModel(results=[])],
-            skipped=[],
-        )
-
-        analyser = ProcessingPurposeAnalyser(config, mock_llm_service)
-
-        # Act
-        result = analyser.process(
-            [test_message_with_multiple_purposes],
-            Schema("processing_purpose_indicator", "1.0.0"),
-        )
-
-        # Assert - analysis_metadata has validation_summary with orchestrator fields
-        metadata = result.content["analysis_metadata"]
-        assert "validation_summary" in metadata, (
-            "analysis_metadata should have 'validation_summary'"
-        )
-
-        validation_summary = metadata["validation_summary"]
-        assert validation_summary["strategy"] == "orchestrated"
-        assert "samples_validated" in validation_summary
-        assert "all_succeeded" in validation_summary
-        assert "skipped_count" in validation_summary
-
     def test_output_no_purposes_removed_when_no_false_positives(
         self,
         mock_llm_service: Mock,

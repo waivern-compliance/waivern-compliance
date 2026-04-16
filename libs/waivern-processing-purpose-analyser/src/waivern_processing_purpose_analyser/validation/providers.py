@@ -70,6 +70,14 @@ class SourceCodeSourceProvider:
         """
         return self._file_contents.get(source_id)
 
+    def snapshot_contents(self) -> dict[str, str]:
+        """Return a copy of the underlying file content map.
+
+        Used by strategies that need to persist their construction state
+        across dispatch rounds (see ``SourceCodeValidationStrategy.export_persistence_state``).
+        """
+        return dict(self._file_contents)
+
 
 class ProcessingPurposeConcernProvider:
     """Groups findings by processing purpose.

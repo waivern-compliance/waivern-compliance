@@ -173,3 +173,13 @@ class TestDefaultFinaliseValidation:
         assert len(outcome.skipped) == 2
         assert all(s.reason == SkipReason.BATCH_ERROR for s in outcome.skipped)
         assert {s.finding.id for s in outcome.skipped} == {"first", "second"}
+
+
+class TestExportPersistenceStateDefault:
+    """Tests for the default export_persistence_state() on LLMValidationStrategy."""
+
+    def test_default_returns_none(self) -> None:
+        """Strategy that does not override export_persistence_state -> returns None."""
+        strategy = _FilteringStrategyForTests()
+
+        assert strategy.export_persistence_state() is None
