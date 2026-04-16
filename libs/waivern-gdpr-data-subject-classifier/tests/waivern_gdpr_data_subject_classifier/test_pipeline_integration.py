@@ -70,6 +70,7 @@ class TestDataSubjectToGDPRPipeline:
             id="test_input",
             content=content,
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",
         )
 
     def test_real_analyser_output_flows_into_classifier(

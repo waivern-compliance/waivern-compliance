@@ -2,18 +2,24 @@
 
 import importlib
 import logging
+from collections.abc import Sequence
 from types import ModuleType
-from typing import override
+from typing import Any, override
 
-from waivern_analysers_shared.llm_validation import ValidationResult
+from waivern_analysers_shared.llm_validation import ValidationOrchestrator
+from waivern_analysers_shared.llm_validation.validation_orchestrator import (
+    FallbackNeeded,
+)
 from waivern_core import Analyser, InputRequirement
+from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import LLMService, PendingBatchError
+from waivern_llm import LLMService
+from waivern_llm.types import LLMDispatchResult, LLMRequest
 from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 
 from .result_builder import DataSubjectResultBuilder
-from .types import DataSubjectAnalyserConfig
+from .types import DataSubjectAnalyserConfig, DataSubjectPrepareState
 from .validation import create_validation_orchestrator
 
 logger = logging.getLogger(__name__)
@@ -24,6 +30,11 @@ class DataSubjectAnalyser(Analyser):
 
     This analyser identifies and categorises data subjects from various data sources
     to help organisations maintain systematic records of data processing activities.
+
+    Dual protocol: implements both ``Processor`` (via ``process()``) and
+    ``DistributedProcessor`` (via ``prepare()``/``finalise()``). The executor
+    prefers the distributed path; ``process()`` is a degraded standalone
+    fallback that forces LLM off.
     """
 
     def __init__(
@@ -34,40 +45,25 @@ class DataSubjectAnalyser(Analyser):
         """Initialise the data subject analyser with configuration and dependencies.
 
         Args:
-            config: Analyser configuration
-            llm_service: Optional LLM service for validation (injected by DI)
+            config: Analyser configuration.
+            llm_service: LLM service for validation (injected by factory).
+                Pass ``None`` for LLM-disabled mode (degraded output only).
 
         """
         self._config = config
         self._result_builder = DataSubjectResultBuilder(config)
         self._llm_service = llm_service
+        self._orchestrator: ValidationOrchestrator[DataSubjectIndicatorModel] | None = (
+            create_validation_orchestrator(config.llm_validation, llm_service)
+            if llm_service is not None
+            else None
+        )
 
     @classmethod
     @override
     def get_name(cls) -> str:
         """Get the name of the analyser."""
         return "data_subject_analyser"
-
-    def _load_reader(self, schema: Schema) -> ModuleType:
-        """Dynamically import reader module.
-
-        The reader module provides both read() and create_handler() functions,
-        co-locating schema reading and handler creation.
-
-        Args:
-            schema: Input schema to load reader for
-
-        Returns:
-            Reader module with read() and create_handler() functions
-
-        Raises:
-            ModuleNotFoundError: If reader module doesn't exist for this version
-
-        """
-        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
-        return importlib.import_module(
-            f"waivern_data_subject_analyser.schema_readers.{module_name}"
-        )
 
     @classmethod
     @override
@@ -89,141 +85,233 @@ class DataSubjectAnalyser(Analyser):
         """Return the output schemas supported by this analyser."""
         return [Schema("data_subject_indicator", "1.0.0")]
 
+    # ── DistributedProcessor ─────────────────────────────────────────────
+
+    def prepare(
+        self, inputs: list[Message], output_schema: Schema
+    ) -> PrepareResult[DataSubjectPrepareState]:
+        """Analyse inputs and declare LLM dispatch needs.
+
+        1. Validate inputs and extract run_id
+        2. Load schema reader + handler once per input schema and aggregate
+           indicators across messages (fan-in)
+        3. If LLM enabled and findings exist, run orchestrator.prepare() to
+           build the LLMRequest. Otherwise, return empty requests.
+
+        """
+        if not inputs:
+            raise ValueError("No input messages provided")
+        run_id = inputs[0].run_id
+        if not run_id:
+            raise ValueError("run_id is required but not set on input messages")
+
+        findings = self._merge_input_findings(inputs)
+        llm_enabled = self._is_llm_enabled()
+
+        if not llm_enabled or not findings or self._orchestrator is None:
+            return PrepareResult(
+                state=DataSubjectPrepareState(
+                    all_findings=findings,
+                    run_id=run_id,
+                    llm_enabled=llm_enabled,
+                ),
+                requests=[],
+            )
+
+        orchestrator_state, llm_request = self._orchestrator.prepare(
+            findings, self._config.llm_validation, run_id
+        )
+
+        requests: list[DispatchRequest] = []
+        if llm_request is not None:
+            requests.append(llm_request)
+
+        return PrepareResult(
+            state=DataSubjectPrepareState(
+                all_findings=findings,
+                run_id=run_id,
+                llm_enabled=llm_enabled,
+                orchestrator_state=orchestrator_state,
+            ),
+            requests=requests,
+        )
+
+    def finalise(
+        self,
+        state: DataSubjectPrepareState,
+        results: Sequence[DispatchResult],
+        output_schema: Schema,
+    ) -> Message | PrepareResult[DataSubjectPrepareState]:
+        """Produce output message from state and dispatch results.
+
+        Paths:
+        - LLM disabled or no orchestrator state → build output from raw
+          findings, no validation metadata.
+        - LLM enabled → invoke ``orchestrator.finalise()`` with the LLM
+          dispatch result and marker callback, then build output from the
+          resulting ``ValidationResult``.
+
+        DataSubjectAnalyser does not configure a fallback strategy, so the
+        orchestrator never returns ``FallbackNeeded`` here. The branch is
+        retained defensively to satisfy the typed return union.
+        """
+        if (
+            not state.llm_enabled
+            or state.orchestrator_state is None
+            or self._orchestrator is None
+        ):
+            return self._result_builder.build_output_message(
+                state.all_findings,
+                output_schema,
+                validation_result=None,
+            )
+
+        llm_result = self._extract_llm_result(results)
+        outcome = self._orchestrator.finalise(
+            state.orchestrator_state,
+            llm_result,
+            marker=self._mark_finding_validated,
+        )
+
+        if isinstance(outcome, FallbackNeeded):
+            # DataSubjectAnalyser has no fallback strategy; reaching here
+            # would indicate a configuration error in the orchestrator.
+            raise RuntimeError(
+                "DataSubjectAnalyser does not support fallback dispatch rounds"
+            )
+
+        logger.info(
+            f"Validation complete: {len(state.all_findings)} → "
+            f"{len(outcome.kept_findings)} findings "
+            f"({len(outcome.removed_groups)} groups removed)"
+        )
+
+        return self._result_builder.build_output_message(
+            outcome.kept_findings,
+            output_schema,
+            validation_result=outcome,
+        )
+
+    def deserialise_prepare_result(
+        self, raw: dict[str, Any]
+    ) -> PrepareResult[DataSubjectPrepareState]:
+        """Reconstruct a typed PrepareResult from a raw dict.
+
+        Called on the resume path where a persisted PrepareResult must be
+        restored. Handles LLMRequest reconstruction with correct field types.
+        ``prompt_builder`` and ``response_model`` remain ``None`` on resume —
+        they are not needed since ``built_cache_keys`` drives cache lookup.
+
+        """
+        state = DataSubjectPrepareState.model_validate(raw["state"])
+        requests: list[DispatchRequest] = [
+            LLMRequest[DataSubjectIndicatorModel].model_validate(r)
+            for r in raw.get("requests", [])
+        ]
+        return PrepareResult(state=state, requests=requests)
+
+    # ── Processor (standalone fallback) ──────────────────────────────────
+
     @override
     def process(
         self,
         inputs: list[Message],
         output_schema: Schema,
     ) -> Message:
-        """Process data to identify data subjects using dynamic reader/handler dispatch.
+        """Standalone fallback producing degraded (LLM-disabled) output.
 
-        Supports same-schema fan-in: multiple messages of the same schema type are
-        processed and their findings aggregated. Each finding retains its original
-        metadata for tracing.
-
-        Args:
-            inputs: List of input messages (same schema, fan-in supported).
-            output_schema: Expected output schema.
-
-        Returns:
-            Output message with findings from all inputs combined.
+        Delegates to prepare/finalise with LLM forced off. In the executor,
+        the DistributedProcessor path is always used instead.
 
         """
-        logger.info("Starting data subject analysis")
+        prepare_result = self.prepare(inputs, output_schema)
+        state = prepare_result.state.model_copy(
+            update={"llm_enabled": False, "orchestrator_state": None}
+        )
+        result = self.finalise(state, [], output_schema)
+        # With llm_enabled=False, finalise always returns a Message.
+        return result  # pyright: ignore[reportReturnType]
 
-        input_schema = inputs[0].schema
-        logger.debug(
-            f"Processing {len(inputs)} message(s) with schema: {input_schema.name}"
+    # ── Private helpers ──────────────────────────────────────────────────
+
+    def _is_llm_enabled(self) -> bool:
+        """Derive the enabled flag from config + injected service.
+
+        Both signals must agree: ``enable_llm_validation=True`` is the
+        caller's intent, and a non-None ``llm_service`` is the capability.
+        Either being absent means no dispatch path.
+        """
+        return (
+            self._llm_service is not None
+            and self._orchestrator is not None
+            and self._config.llm_validation.enable_llm_validation
         )
 
-        # Load reader and handler once (same schema for all messages)
-        reader = self._load_reader_module(input_schema)
-        handler = reader.create_handler(self._config)
+    def _extract_llm_result(
+        self,
+        results: Sequence[DispatchResult],
+    ) -> LLMDispatchResult | None:
+        """Extract the first LLMDispatchResult from dispatch results."""
+        for result in results:
+            match result:
+                case LLMDispatchResult() as llm_result:
+                    return llm_result
+                case _:
+                    continue
+        return None
 
-        # Process all input messages and aggregate findings (fan-in)
-        indicators: list[DataSubjectIndicatorModel] = []
-        for message in inputs:
-            input_data = reader.read(message.content)
-            message_indicators = handler.analyse(input_data)
-            indicators.extend(message_indicators)
+    def _load_reader(self, schema: Schema) -> ModuleType:
+        """Dynamically import reader module.
 
-        # Extract run_id from inputs (set by executor, used for cache scoping)
-        run_id = inputs[0].run_id
-
-        # Apply LLM validation if enabled
-        validation_result: ValidationResult[DataSubjectIndicatorModel] | None = None
-        final_findings = indicators
-        if self._config.llm_validation.enable_llm_validation:
-            validated_findings, _, validation_result = self._validate_findings(
-                indicators, run_id=run_id
-            )
-            final_findings = validated_findings
-
-        # Build and return output message
-        return self._result_builder.build_output_message(
-            final_findings,
-            output_schema,
-            validation_result,
-        )
-
-    def _load_reader_module(self, schema: Schema) -> ModuleType:
-        """Load reader module for the given schema.
+        The reader module provides both read() and create_handler() functions,
+        co-locating schema reading and handler creation.
 
         Args:
-            schema: Input schema to load reader for
+            schema: Input schema to load reader for.
 
         Returns:
-            Reader module
+            Reader module with read() and create_handler() functions.
 
         Raises:
-            ValueError: If schema is not supported
+            ValueError: If reader module doesn't exist for this schema version.
 
         """
+        module_name = f"{schema.name}_{schema.version.replace('.', '_')}"
         try:
-            return self._load_reader(schema)
+            return importlib.import_module(
+                f"waivern_data_subject_analyser.schema_readers.{module_name}"
+            )
         except (ModuleNotFoundError, AttributeError) as e:
             raise ValueError(f"Unsupported input schema: {schema.name}") from e
 
-    def _validate_findings(
-        self,
-        findings: list[DataSubjectIndicatorModel],
-        run_id: str | None = None,
-    ) -> tuple[
-        list[DataSubjectIndicatorModel],
-        bool,
-        ValidationResult[DataSubjectIndicatorModel] | None,
-    ]:
-        """Validate findings using ValidationOrchestrator.
+    def _merge_input_findings(
+        self, inputs: list[Message]
+    ) -> list[DataSubjectIndicatorModel]:
+        """Aggregate indicators across input messages (fan-in).
 
-        The orchestrator handles:
-        - Grouping by subject_category (design-time decision)
-        - Sampling and group-level decisions (when sampling enabled)
+        Loads the reader/handler once per schema and applies it to each
+        message with that schema. Supports mixed-schema fan-in (standard_input
+        and source_code messages in the same call).
 
         Args:
-            findings: List of findings to validate.
-            run_id: Unique identifier for the current run, used for cache scoping.
+            inputs: List of input messages (same or mixed schemas).
 
         Returns:
-            Tuple of (validated findings, validation applied, validation result).
+            Flattened list of all indicators from all inputs.
 
         """
-        if not findings:
-            return findings, False, None
-
-        if not self._llm_service:
-            logger.warning("LLM service unavailable, returning original findings")
-            return findings, False, None
-
-        if run_id is None:
-            logger.warning("run_id is required for LLM validation, skipping")
-            return findings, False, None
-
-        try:
-            # Create orchestrator and validate with marker callback
-            # Marker is applied at strategy level to only mark actually-validated findings
-            orchestrator = create_validation_orchestrator(
-                self._config.llm_validation, self._llm_service
-            )
-            result = orchestrator.validate(
-                findings,
-                self._config.llm_validation,
-                run_id,
-                marker=self._mark_finding_validated,
-            )
-
-            logger.info(
-                f"Validation complete: {len(findings)} → {len(result.kept_findings)} findings "
-                f"({len(result.removed_groups)} groups removed)"
-            )
-
-            return result.kept_findings, result.all_succeeded, result
-
-        except PendingBatchError:
-            raise
-        except Exception as e:
-            logger.error(f"LLM validation failed: {e}")
-            logger.warning("Returning original findings due to validation error")
-            return findings, False, None
+        readers_by_schema: dict[tuple[str, str], ModuleType] = {}
+        findings: list[DataSubjectIndicatorModel] = []
+        for message in inputs:
+            schema_key = (message.schema.name, message.schema.version)
+            reader = readers_by_schema.get(schema_key)
+            if reader is None:
+                reader = self._load_reader(message.schema)
+                readers_by_schema[schema_key] = reader
+            handler = reader.create_handler(self._config)
+            input_data = reader.read(message.content)
+            findings.extend(handler.analyse(input_data))
+        return findings
 
     def _mark_finding_validated(
         self, finding: DataSubjectIndicatorModel

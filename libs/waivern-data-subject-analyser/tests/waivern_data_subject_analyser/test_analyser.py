@@ -112,6 +112,7 @@ class TestDataSubjectAnalyserProcessing:
             id="test_empty",
             content=empty_data.model_dump(exclude_none=True),
             schema=input_schema,
+            run_id="test-run-id",
         )
 
         # Act
@@ -155,6 +156,7 @@ class TestDataSubjectAnalyserProcessing:
             id="test_patterns",
             content=test_data.model_dump(exclude_none=True),
             schema=input_schema,
+            run_id="test-run-id",
         )
 
         # Act
@@ -200,6 +202,7 @@ class TestDataSubjectAnalyserProcessing:
             id="test_datetime_serialisation",
             content=test_data.model_dump(exclude_none=True),
             schema=input_schema,
+            run_id="test-run-id",
         )
 
         # Act
@@ -275,6 +278,7 @@ class TestDataSubjectAnalyserProcessing:
             id="test_matched_patterns",
             content=test_data.model_dump(exclude_none=True),
             schema=input_schema,
+            run_id="test-run-id",
         )
 
         # Act
@@ -354,6 +358,7 @@ class EmployeeService {
             id="test_source_code",
             content=source_data.model_dump(exclude_none=True),
             schema=input_schema,
+            run_id="test-run-id",
         )
 
         # Act
