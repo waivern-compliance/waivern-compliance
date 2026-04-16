@@ -29,6 +29,7 @@ The orchestrator handles grouping and sampling; the LLMService handles batching.
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from pydantic import BaseModel, ConfigDict
 from waivern_core import Finding
 from waivern_llm import LLMDispatchResult, LLMRequest
 
@@ -48,13 +49,21 @@ from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrate
 from waivern_analysers_shared.types import LLMValidationConfig
 
 
-@dataclass
-class OrchestratorPrepareState[T: Finding]:
+class OrchestratorPrepareState[T: Finding](BaseModel):
     """State captured by ValidationOrchestrator.prepare() for use in finalise().
 
     Captures everything finalise() needs to produce the final ValidationResult,
     including fallback round state for multi-round dispatch.
+
+    Implemented as a Pydantic BaseModel so it can be embedded inside a
+    processor's ``PrepareResult[S: BaseModel].state`` and round-trip through
+    ``model_dump(mode="json")`` on the distributed-processor resume path.
+    ``arbitrary_types_allowed`` is required because the ``Finding`` bound is
+    a Protocol — concrete BaseModel finding types still validate correctly
+    via their own pydantic machinery.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     strategy_findings: list[T]
     """Findings passed to the strategy's prepare_validation()."""

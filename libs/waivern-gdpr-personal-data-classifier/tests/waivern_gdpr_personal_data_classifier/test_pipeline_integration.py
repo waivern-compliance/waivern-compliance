@@ -83,6 +83,7 @@ class TestPersonalDataToGDPRPipeline:
             id="database_extract",
             content=content,
             schema=Schema("standard_input", "1.0.0"),
+            run_id="test-run-id",
         )
 
     def test_pipeline_produces_valid_gdpr_output(

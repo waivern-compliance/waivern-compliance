@@ -12,7 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from waivern_core import Finding
 from waivern_llm import SkippedFinding, SkipReason
 
@@ -173,8 +173,7 @@ class ValidationResult[T: Finding]:
 # =============================================================================
 
 
-@dataclass
-class LLMValidationOutcome[T: Finding]:
+class LLMValidationOutcome[T: Finding](BaseModel):
     """Result of LLM validation strategy with full transparency.
 
     Provides detailed breakdown of what happened to each finding during
@@ -182,7 +181,17 @@ class LLMValidationOutcome[T: Finding]:
     handling and reporting.
 
     Type parameter T is the finding type, bound to Finding protocol.
+
+    Implemented as a Pydantic BaseModel so it can be embedded inside
+    ``OrchestratorPrepareState.primary_outcome`` and round-trip through
+    ``model_dump(mode="json")`` on the distributed-processor resume path
+    for multi-round fallback dispatch. ``arbitrary_types_allowed`` is
+    required because the ``Finding`` bound is a Protocol — pydantic cannot
+    generate a core schema for it directly, so concrete BaseModel finding
+    types are validated via their own ``__get_pydantic_core_schema__``.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     llm_validated_kept: list[T]
     """Findings LLM saw and marked as TRUE_POSITIVE."""
