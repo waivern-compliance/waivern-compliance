@@ -14,7 +14,6 @@ from waivern_core.message import Message
 from waivern_llm import (
     BatchingMode,
     ItemGroup,
-    LLMService,
 )
 from waivern_llm.types import LLMDispatchResult, LLMRequest
 from waivern_rulesets import (
@@ -97,36 +96,25 @@ class GDPRDataSubjectClassifier(Classifier):
     - Typical lawful bases for processing
     - Risk modifiers detected from evidence context
 
-    Dual protocol: implements both ``Processor`` (via ``process()``) and
-    ``DistributedProcessor`` (via ``prepare()``/``finalise()``). The executor
-    prefers the distributed path; ``process()`` is a degraded standalone
-    fallback that forces LLM off and uses regex-based risk modifier detection.
-
-    Enrichment paradigm: unlike filtering analysers, the LLM enriches findings
-    with category-level risk modifiers. When dispatch is unavailable or fails,
-    ``finalise()`` falls back to per-finding regex detection — no data loss.
+    Implements the ``DistributedProcessor`` protocol via
+    ``prepare()``/``finalise()``. The executor drives LLM dispatch; when
+    dispatch is unavailable or fails, ``finalise()`` falls back to
+    per-finding regex risk modifier detection — no data loss.
     """
 
     def __init__(
         self,
         config: GDPRDataSubjectClassifierConfig | None = None,
-        llm_service: LLMService | None = None,
     ) -> None:
         """Initialise the classifier.
 
         Args:
             config: Configuration for the classifier. If not provided,
                    uses default configuration.
-            llm_service: Optional LLM service. Its presence signals LLM
-                enablement for ``prepare()`` when ``config.llm_validation``
-                is enabled; it is not called directly by the distributed
-                path. ``process()`` always runs in degraded mode and never
-                invokes the service.
 
         """
         config = config or GDPRDataSubjectClassifierConfig()
         self._config = config
-        self._llm_service = llm_service
         self._ruleset = RulesetManager.get_ruleset(
             config.ruleset, GDPRDataSubjectClassificationRule
         )
@@ -204,7 +192,7 @@ class GDPRDataSubjectClassifier(Classifier):
         # Missing run_id means no cache scope for LLM dispatch — degrade to
         # the regex path rather than failing. This preserves the classifier's
         # long-standing graceful behaviour under partial upstream metadata.
-        llm_enabled = self._is_llm_enabled() and bool(run_id)
+        llm_enabled = self._config.llm_validation.enable_llm_validation and bool(run_id)
 
         requests: list[DispatchRequest] = []
         if llm_enabled and classified_findings:
@@ -277,30 +265,7 @@ class GDPRDataSubjectClassifier(Classifier):
         ]
         return PrepareResult(state=state, requests=requests)
 
-    # ── Processor (standalone fallback) ──────────────────────────────────
-
-    @override
-    def process(self, inputs: list[Message], output_schema: Schema) -> Message:
-        """Standalone fallback producing degraded (LLM-disabled) output.
-
-        Delegates to prepare/finalise with LLM forced off. The executor uses
-        the DistributedProcessor path instead; ``process()`` exists to
-        satisfy the Classifier contract and support scripts/tests that need
-        a synchronous, dispatch-free entry point.
-
-        """
-        prepare_result = self.prepare(inputs, output_schema)
-        state = prepare_result.state.model_copy(update={"llm_enabled": False})
-        return self.finalise(state, [], output_schema)
-
     # ── Private helpers ──────────────────────────────────────────────────
-
-    def _is_llm_enabled(self) -> bool:
-        """Derive the enabled flag from config + injected service."""
-        return (
-            self._llm_service is not None
-            and self._config.llm_validation.enable_llm_validation
-        )
 
     def _aggregate_findings(self, inputs: list[Message]) -> list[dict[str, Any]]:
         """Concatenate ``findings`` lists across input messages (fan-in)."""

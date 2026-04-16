@@ -18,11 +18,12 @@ Architecture
     │  • LLMValidationStrategy: How to validate findings via LLM     │
     └────────────────────────────────────────────────────────────────┘
 
-Validation strategies use LLMService (from waivern_llm) for batching:
-- COUNT_BASED: Simple count-based batching for evidence-only validation
-- EXTENDED_CONTEXT: Token-aware batching with source content
+Validation strategies declare batching intent on the ``LLMRequest`` they build:
+- COUNT_BASED: Simple count-based batching for evidence-only validation.
+- EXTENDED_CONTEXT: Token-aware batching with source content.
 
-The orchestrator handles grouping and sampling; the LLMService handles batching.
+The orchestrator handles grouping and sampling; the executor's dispatcher
+handles batching and LLM calls.
 
 """
 
@@ -129,13 +130,13 @@ class ValidationOrchestrator[T: Finding]:
     strategies return ``LLMValidationOutcome``. For enrichment strategies
     that return different result types, use a different orchestrator.
 
-    Validation flow:
-    1. Group findings using GroupingStrategy (if provided)
-    2. Sample from groups using SamplingStrategy (if provided)
-    3. Flatten all sampled findings into a single list
-    4. Validate via llm_strategy.validate_findings()
-    5. Match results back to groups by finding ID
-    6. Apply group-level decisions (Case A/B/C)
+    Validation flow (driven by the executor's prepare/finalise cycle):
+    1. ``prepare()``: group findings -> sample -> flatten -> strategy builds
+       an ``LLMRequest``.
+    2. Executor dispatches the request and hands results to ``finalise()``.
+    3. ``finalise()``: strategy deserialises results into an
+       ``LLMValidationOutcome``; the orchestrator applies group-level
+       decisions (Case A/B/C) and merges fallback outcomes when needed.
 
     """
 
@@ -385,200 +386,6 @@ class ValidationOrchestrator[T: Finding]:
             is_fallback_round=True,
         )
         return FallbackNeeded(state=next_state, request=fallback_request)
-
-    def validate(
-        self,
-        findings: list[T],
-        config: LLMValidationConfig,
-        run_id: str,
-        marker: Callable[[T], T] | None = None,
-    ) -> ValidationResult[T]:
-        """Validate findings using the configured strategies.
-
-        Args:
-            findings: List of findings to validate.
-            config: LLM validation configuration.
-            run_id: Unique identifier for the current run, used for cache scoping.
-            marker: Optional callback to mark validated findings. Called on findings
-                that actually went through LLM validation (not skipped/errored).
-                Applied at the strategy level before aggregation into ValidationResult.
-
-        Returns:
-            ValidationResult with validated findings and metadata.
-
-        """
-        # Empty findings - return empty result
-        if not findings:
-            return ValidationResult(
-                kept_findings=[],
-                removed_findings=[],
-                removed_groups=[],
-                samples_validated=0,
-                all_succeeded=True,
-                skipped_samples=[],
-            )
-
-        # No grouping - direct validation
-        if self._grouping_strategy is None:
-            return self._validate_without_grouping(findings, config, run_id, marker)
-
-        # With grouping - full orchestration flow
-        return self._validate_with_grouping(findings, config, run_id, marker)
-
-    def _validate_without_grouping(
-        self,
-        findings: list[T],
-        config: LLMValidationConfig,
-        run_id: str,
-        marker: Callable[[T], T] | None = None,
-    ) -> ValidationResult[T]:
-        """Validate findings directly without grouping.
-
-        Calls LLM strategy directly, runs fallback if configured and needed,
-        then maps outcome to ValidationResult. No group-level decisions apply.
-
-        """
-        outcome = self._llm_strategy.validate_findings(findings, config, run_id)
-
-        # Run fallback on eligible skipped findings
-        if self._fallback_strategy is not None:
-            outcome = self._run_fallback_validation(outcome, config, run_id)
-
-        # Apply marker at strategy level (before aggregation) if provided
-        if marker:
-            outcome = outcome.with_marked_findings(marker)
-
-        return ValidationResult(
-            kept_findings=outcome.kept_findings,
-            removed_findings=outcome.llm_validated_removed,
-            removed_groups=[],  # No grouping = no group removal
-            samples_validated=len(findings),
-            all_succeeded=outcome.validation_succeeded,
-            skipped_samples=outcome.skipped,
-        )
-
-    def _validate_with_grouping(
-        self,
-        findings: list[T],
-        config: LLMValidationConfig,
-        run_id: str,
-        marker: Callable[[T], T] | None = None,
-    ) -> ValidationResult[T]:
-        """Validate findings with grouping and optional sampling.
-
-        Full orchestration flow:
-        1. Group findings
-        2. Sample from groups (if sampling strategy provided)
-        3. Flatten samples and validate via LLM
-        4. Apply marker at strategy level (before aggregation)
-        5. Match results back to groups
-        6. Apply group-level decisions (Case A/B/C)
-
-        Precondition: self._grouping_strategy is not None (caller verified).
-        """
-        # Caller ensures _grouping_strategy is not None before calling
-        grouping_strategy = self._grouping_strategy
-        if grouping_strategy is None:
-            raise RuntimeError("Grouping strategy required but not configured")
-
-        # Step 1: Group findings
-        groups = grouping_strategy.group(findings)
-
-        # Step 2: Sample from groups (or use all findings as samples)
-        if self._sampling_strategy is not None:
-            sampling_result = self._sampling_strategy.sample(groups)
-            sampled = sampling_result.sampled
-            non_sampled = sampling_result.non_sampled
-        else:
-            # No sampling - all findings are samples, none are non-sampled
-            sampled = groups
-            non_sampled: dict[str, list[T]] = {}
-
-        # Step 3: Flatten samples for single LLM call
-        all_samples = [f for group_samples in sampled.values() for f in group_samples]
-
-        if not all_samples:
-            # No samples to validate - keep all findings
-            return ValidationResult(
-                kept_findings=findings,
-                removed_findings=[],
-                removed_groups=[],
-                samples_validated=0,
-                all_succeeded=True,
-                skipped_samples=[],
-            )
-
-        # Step 4: Validate samples via LLM
-        outcome = self._llm_strategy.validate_findings(all_samples, config, run_id)
-
-        # Step 4b: Run fallback on eligible skipped findings
-        if self._fallback_strategy is not None:
-            outcome = self._run_fallback_validation(outcome, config, run_id)
-
-        # Step 5: Apply marker at strategy level (before aggregation) if provided
-        if marker:
-            outcome = outcome.with_marked_findings(marker)
-
-        # Step 6: Apply group-level decisions
-        return self._apply_group_decisions(
-            grouping_strategy=grouping_strategy,
-            groups=groups,
-            sampled=sampled,
-            non_sampled=non_sampled,
-            outcome=outcome,
-        )
-
-    def _run_fallback_validation(
-        self,
-        primary_outcome: LLMValidationOutcome[T],
-        config: LLMValidationConfig,
-        run_id: str,
-    ) -> LLMValidationOutcome[T]:
-        """Run fallback validation on eligible skipped findings.
-
-        Orchestrates fallback flow:
-        1. Extract findings eligible for fallback (based on skip reason)
-        2. If none eligible, return primary outcome unchanged
-        3. Run fallback strategy on eligible findings
-        4. Merge results back into primary outcome
-
-        Args:
-            primary_outcome: Outcome from primary strategy.
-            config: LLM validation configuration.
-            run_id: Unique identifier for the current run, used for cache scoping.
-
-        Returns:
-            LLMValidationOutcome with fallback results merged in.
-
-        """
-        # Caller ensures _fallback_strategy is not None before calling this method
-        fallback_strategy = self._fallback_strategy
-        if fallback_strategy is None:
-            return primary_outcome
-
-        # Extract findings eligible for fallback
-        eligible_for_fallback: list[T] = []
-        ineligible_skipped: list[SkippedFinding[T]] = []
-
-        for skipped in primary_outcome.skipped:
-            if skipped.reason in FALLBACK_ELIGIBLE_SKIP_REASONS:
-                eligible_for_fallback.append(skipped.finding)
-            else:
-                ineligible_skipped.append(skipped)
-
-        # No eligible findings - return unchanged
-        if not eligible_for_fallback:
-            return primary_outcome
-
-        # Run fallback strategy
-        fallback_outcome = fallback_strategy.validate_findings(
-            eligible_for_fallback, config, run_id
-        )
-
-        # Merge results
-        return self._merge_fallback_outcome(
-            primary_outcome, fallback_outcome, ineligible_skipped
-        )
 
     def _merge_fallback_outcome(
         self,

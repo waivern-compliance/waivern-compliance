@@ -111,7 +111,6 @@ class Processor(abc.ABC):
 
         """
 
-    @abc.abstractmethod
     def process(
         self,
         inputs: list[Message],
@@ -119,9 +118,15 @@ class Processor(abc.ABC):
     ) -> Message:
         """Process input data and produce output.
 
-        This is the core method where data transformation happens. The processor
-        receives validated input messages and returns results that will be
-        automatically validated against the output schema.
+        This is the synchronous path. Subclasses override it for in-process
+        transformation. Subclasses implementing the ``DistributedProcessor``
+        protocol inherit this default and are driven through
+        ``prepare()``/``finalise()`` by the executor instead — the executor
+        never invokes ``process()`` for distributed processors.
+
+        The default raises ``NotImplementedError`` so that a subclass which
+        implements neither path fails loudly at the call site rather than
+        silently returning.
 
         Args:
             inputs: List of input messages to process. For single-input
@@ -133,7 +138,15 @@ class Processor(abc.ABC):
             Processed results that conform to the processor's output schema
 
         Raises:
+            NotImplementedError: If the subclass does not override this method
+                and is not routed through the ``DistributedProcessor`` path.
             ProcessorError: If processing fails
             SchemaLoadError: If schema validation fails
 
         """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement process(). "
+            "Override process() for the synchronous path, or implement the "
+            "DistributedProcessor protocol (prepare/finalise) so the executor "
+            "drives this processor through the distributed path instead."
+        )

@@ -64,8 +64,7 @@ class ComponentFactoryContractTests[T]:
         Example:
             @pytest.fixture
             def factory(self) -> ComponentFactory[PersonalDataAnalyser]:
-                llm_service = MockLLMService()
-                return PersonalDataAnalyserFactory(llm_service=llm_service)
+                return PersonalDataAnalyserFactory(container=ServiceContainer())
 
         """
         raise NotImplementedError(

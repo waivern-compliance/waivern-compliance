@@ -114,7 +114,7 @@ class ISO27001AssessmentModel(BaseModel):
     One instance per assessed control. Does NOT extend BaseFindingModel —
     this is an assessment verdict, not a pattern-matched finding. It has no
     evidence snippets or matched_patterns. It satisfies the Finding protocol
-    (id + metadata) for LLMService.complete() compatibility.
+    (id + metadata) so it can be used as an item type in LLMRequest groups.
 
     If future requirements arise, evidence and/or matched_patterns fields
     can be added to the model when appropriate.

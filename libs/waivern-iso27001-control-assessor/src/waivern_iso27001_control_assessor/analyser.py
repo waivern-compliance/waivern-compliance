@@ -9,7 +9,7 @@ from waivern_core import Analyser, InputRequirement
 from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import BatchingMode, ItemGroup, LLMService
+from waivern_llm import BatchingMode, ItemGroup
 from waivern_llm.types import LLMDispatchResult, LLMRequest
 from waivern_rulesets.iso27001_domains import ISO27001DomainsRule
 from waivern_schemas.iso27001_assessment import (
@@ -41,21 +41,14 @@ class ISO27001Assessor(Analyser):
     2. security_evidence only (attestation-required controls emit not_assessed)
     """
 
-    def __init__(
-        self,
-        config: ISO27001AssessorConfig,
-        llm_service: LLMService | None = None,
-    ) -> None:
-        """Initialise the assessor with dependency injection.
+    def __init__(self, config: ISO27001AssessorConfig) -> None:
+        """Initialise the assessor.
 
         Args:
             config: Validated configuration with control_ref and ruleset URI.
-            llm_service: LLM service for standalone ``process()`` fallback.
-                Pass ``None`` for LLM-disabled mode (degraded output only).
 
         """
         self._config = config
-        self._llm_service = llm_service
         self._result_builder = ISO27001ResultBuilder(config.domain_ruleset)
 
     @classmethod
@@ -115,10 +108,9 @@ class ISO27001Assessor(Analyser):
         rule = self._load_rule()
         evidence, documents = self._partition_and_filter(inputs, rule)
         evidence_status = self._derive_evidence_status(rule, evidence, documents)
-        llm_enabled = self._llm_service is not None
 
         requests: list[DispatchRequest] = []
-        if evidence_status == EvidenceStatus.AUTOMATED and llm_enabled:
+        if evidence_status == EvidenceStatus.AUTOMATED:
             requests.append(self._build_llm_request(rule, evidence, documents, run_id))
 
         return PrepareResult(
@@ -128,7 +120,6 @@ class ISO27001Assessor(Analyser):
                 evidence=evidence,
                 documents=documents,
                 run_id=run_id,
-                llm_enabled=llm_enabled,
             ),
             requests=requests,
         )
@@ -174,10 +165,9 @@ class ISO27001Assessor(Analyser):
     ) -> Message:
         """Produce assessment verdict from state and dispatch results.
 
-        1. Short-circuit paths (empty results): build NOT_ASSESSED from evidence_status
-        2. AUTOMATED + LLM result: parse response and build verdict
-        3. AUTOMATED + empty LLM responses: evidence exceeded context window
-
+        1. Short-circuit paths (insufficient/requires-attestation): emit NOT_ASSESSED.
+        2. AUTOMATED + LLM result: parse response and build verdict.
+        3. AUTOMATED + empty LLM responses: evidence exceeded context window.
         """
         rule = state.rule
 
@@ -208,22 +198,6 @@ class ISO27001Assessor(Analyser):
                             "Awaiting document evidence. This control requires "
                             "human-produced documentation (e.g. policy, procedure, "
                             "inspection report) that has not yet been provided."
-                        ),
-                        gap_description=None,
-                    ),
-                    llm_enabled=False,
-                    output_schema=output_schema,
-                )
-            case EvidenceStatus.AUTOMATED if not state.llm_enabled:
-                return self._result_builder.build_output_message(
-                    rule,
-                    verdict=AssessmentVerdict(
-                        status=ControlStatus.NOT_ASSESSED,
-                        evidence_status=state.evidence_status,
-                        rationale=(
-                            "LLM assessment not available. Evidence was sufficient "
-                            "for automated assessment but LLM service is not "
-                            "configured."
                         ),
                         gap_description=None,
                     ),
@@ -305,27 +279,6 @@ class ISO27001Assessor(Analyser):
             for r in raw.get("requests", [])
         ]
         return PrepareResult(state=state, requests=requests)
-
-    # ── Processor (standalone fallback) ──────────────────────────────────
-
-    @override
-    def process(
-        self,
-        inputs: list[Message],
-        output_schema: Schema,
-    ) -> Message:
-        """Standalone fallback producing degraded (LLM-disabled) output.
-
-        Delegates to prepare/finalise with LLM forced off. In the executor,
-        the DistributedProcessor path is always used instead. This method
-        exists to satisfy the Processor abstract contract.
-
-        """
-        prepare_result = self.prepare(inputs, output_schema)
-        state = prepare_result.state.model_copy(update={"llm_enabled": False})
-        result = self.finalise(state, [], output_schema)
-        # finalise() with llm_enabled=False always returns Message (no multi-round)
-        return result  # pyright: ignore[reportReturnType]
 
     # ── Private helpers ─────────────────────────────────────────────────
 

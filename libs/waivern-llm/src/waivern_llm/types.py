@@ -2,11 +2,10 @@
 
 This module defines the foundational types used throughout the LLM service:
 - ItemGroup: Groups findings with optional shared content
-- BatchingMode: How the service should batch items
+- BatchingMode: How the dispatcher should batch items
 - PromptBuilder: Protocol for building prompts from items
 - SkipReason: Why a finding/group was skipped during processing
 - SkippedFinding: A finding that was skipped with its reason
-- LLMCompletionResult: Return type for LLMService.complete()
 - LLMRequest: Dispatch request declaring LLM needs as data
 - LLMDispatchResult: Dispatch result carrying LLM responses and skipped findings
 """
@@ -200,45 +199,6 @@ class SkippedFinding[T: Finding]:
 
     reason: SkipReason
     """Why this finding was skipped."""
-
-
-@dataclass(frozen=True)
-class LLMCompletionResult[T: Finding, R: BaseModel]:
-    """Result of LLM completion - responses plus skipped findings.
-
-    The responses list contains one response per batch processed. Processors
-    interpret responses according to their domain logic:
-    - Filtering processors: R contains TRUE_POSITIVE/FALSE_POSITIVE verdicts
-    - Enriching processors: R contains classifications to add
-
-    The skipped list contains individual findings that could not be processed.
-    Processors decide how to handle these (e.g., keep as-is, mark as
-    unvalidated, fall back to simpler validation).
-
-    DESIGN NOTE - Why no batch/group info exposed:
-    The batch and group structure is an INTERNAL LLM service concern for
-    optimising API calls. Callers don't need to know how findings were batched -
-    they only need to know:
-    1. What responses came back (one per batch, but batch count is opaque)
-    2. Which individual findings were skipped and why
-
-    The old v1 design didn't expose batch info either. Don't add it.
-    """
-
-    responses: list[R]
-    """One response per batch processed.
-
-    Note: Callers should NOT assume a 1:1 mapping between input items and
-    responses. Batching is an internal optimisation. The processor must
-    correlate responses with findings based on response content.
-    """
-
-    skipped: list[SkippedFinding[T]]
-    """Individual findings that could not be processed, with reasons.
-
-    This is a FLAT list of findings, not grouped by batch or original group.
-    The group structure is internal to the LLM service.
-    """
 
 
 class LLMRequest[T: Finding](DispatchRequest):

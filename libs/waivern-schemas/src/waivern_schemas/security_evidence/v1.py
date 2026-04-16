@@ -14,7 +14,8 @@ class SecurityEvidenceMetadata(BaseModel):
     """Metadata for a security evidence item.
 
     Satisfies the FindingMetadata protocol via its source field, enabling
-    SecurityEvidenceModel to be used directly with LLMService.complete[T, R].
+    SecurityEvidenceModel to be used directly as an item type in LLMRequest
+    groups dispatched through the LLM dispatcher.
     """
 
     source: str = Field(

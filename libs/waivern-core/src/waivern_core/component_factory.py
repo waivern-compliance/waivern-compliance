@@ -76,24 +76,11 @@ class ComponentFactory[T](ABC):
         ...
         ...     def create(self, config: ComponentConfig) -> PersonalDataAnalyser:
         ...         analyser_config = PersonalDataAnalyserConfig.from_properties(config)
-        ...         # Resolve dependencies from container
-        ...         try:
-        ...             llm_service = self._container.get_service(LLMService)
-        ...         except ValueError:
-        ...             llm_service = None
-        ...         return PersonalDataAnalyser(analyser_config, llm_service)
+        ...         return PersonalDataAnalyser(analyser_config)
         ...
         ...     def can_create(self, config: ComponentConfig) -> bool:
-        ...         # Validate config and check service availability
         ...         try:
-        ...             analyser_config = PersonalDataAnalyserConfig.from_properties(config)
-        ...             if analyser_config.llm_validation.enable_llm_validation:
-        ...                 # Check if service is available in container
-        ...                 try:
-        ...                     self._container.get_service(LLMService)
-        ...                     return True
-        ...                 except ValueError:
-        ...                     return False
+        ...             PersonalDataAnalyserConfig.from_properties(config)
         ...             return True
         ...         except Exception:
         ...             return False
@@ -198,7 +185,7 @@ class ComponentFactory[T](ABC):
 
         Example:
             >>> factory.get_service_dependencies()
-            {"llm_service": LLMService}
+            {"artifact_store": ArtifactStore}
 
         """
         return {}

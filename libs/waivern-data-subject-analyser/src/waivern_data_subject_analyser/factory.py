@@ -5,7 +5,6 @@ from typing import override
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
-from waivern_llm import LLMService
 from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 
 from .analyser import DataSubjectAnalyser
@@ -13,71 +12,39 @@ from .types import DataSubjectAnalyserConfig
 
 
 class DataSubjectAnalyserFactory(ComponentFactory[DataSubjectAnalyser]):
-    """Factory for creating DataSubjectAnalyser instances with dependency injection."""
+    """Factory for creating DataSubjectAnalyser instances.
+
+    Takes a ``ServiceContainer`` for symmetry with other processor
+    factories; DataSubjectAnalyser currently has no injected services.
+    """
 
     def __init__(self, container: ServiceContainer) -> None:
-        """Initialise factory with dependency injection container.
+        """Initialise factory.
 
         Args:
-            container: Service container for resolving dependencies
+            container: Service container for resolving dependencies (unused today).
 
         """
         self._container = container
 
     @override
     def create(self, config: ComponentConfig) -> DataSubjectAnalyser:
-        """Create DataSubjectAnalyser instance with injected dependencies.
-
-        Args:
-            config: Configuration dict from runbook properties
-
-        Returns:
-            Configured DataSubjectAnalyser instance
-
-        Raises:
-            ValueError: If configuration is invalid or requirements cannot be met
-
-        """
+        """Create a DataSubjectAnalyser from configuration."""
         if not self.can_create(config):
             raise ValueError("Cannot create analyser with given configuration")
 
-        analyser_config = DataSubjectAnalyserConfig.from_properties(config)
-
-        # Safe to resolve - can_create() already validated availability
-        llm_service = (
-            self._container.get_service(LLMService)
-            if analyser_config.llm_validation.enable_llm_validation
-            else None
-        )
-
         return DataSubjectAnalyser(
-            config=analyser_config,
-            llm_service=llm_service,
+            config=DataSubjectAnalyserConfig.from_properties(config),
         )
 
     @override
     def can_create(self, config: ComponentConfig) -> bool:
-        """Check if factory can create analyser with given configuration.
-
-        Validates:
-        1. Configuration structure and required fields
-        2. Ruleset exists and can be loaded
-        3. LLM service available (if LLM validation enabled)
-
-        Args:
-            config: Configuration dict to validate
-
-        Returns:
-            True if factory can create analyser, False otherwise
-
-        """
-        # Try to parse and validate configuration
+        """Validate configuration and ruleset availability."""
         try:
             analyser_config = DataSubjectAnalyserConfig.from_properties(config)
         except Exception:
             return False
 
-        # Validate ruleset exists
         try:
             RulesetManager.get_ruleset(
                 analyser_config.pattern_matching.ruleset, DataSubjectIndicatorRule
@@ -85,24 +52,14 @@ class DataSubjectAnalyserFactory(ComponentFactory[DataSubjectAnalyser]):
         except Exception:
             return False
 
-        # If LLM validation enabled, must have LLM service available in container
-        if analyser_config.llm_validation.enable_llm_validation:
-            try:
-                self._container.get_service(LLMService)
-            except (ValueError, KeyError):
-                return False
-
         return True
 
     @property
     @override
     def component_class(self) -> type[DataSubjectAnalyser]:
-        """Get the component class this factory creates."""
         return DataSubjectAnalyser
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:
-        """Declare service dependencies for DI container."""
-        return {
-            "llm_service": LLMService,
-        }
+        """DataSubjectAnalyser has no service dependencies."""
+        return {}

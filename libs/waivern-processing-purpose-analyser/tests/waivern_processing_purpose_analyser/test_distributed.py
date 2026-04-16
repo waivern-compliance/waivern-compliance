@@ -6,7 +6,6 @@ skipped findings.
 """
 
 from typing import Any, cast
-from unittest.mock import Mock
 
 from waivern_analysers_shared.llm_validation.models import (
     LLMValidationResponseModel,
@@ -19,7 +18,7 @@ from waivern_analysers_shared.types import LLMValidationConfig, PatternMatchingC
 from waivern_core.dispatch import PrepareResult
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import LLMService, SkippedFinding, SkipReason
+from waivern_llm import SkippedFinding, SkipReason
 from waivern_llm.types import BatchingMode, LLMDispatchResult, LLMRequest
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.processing_purpose_indicator import ProcessingPurposeIndicatorModel
@@ -68,23 +67,9 @@ def _make_config(enable_llm: bool = True) -> ProcessingPurposeAnalyserConfig:
     )
 
 
-def _make_analyser(
-    *,
-    enable_llm: bool = True,
-    with_service: bool = True,
-) -> ProcessingPurposeAnalyser:
-    """Build an analyser with controllable LLM enablement.
-
-    Args:
-        enable_llm: Sets ``config.llm_validation.enable_llm_validation``.
-        with_service: When True, injects a mock ``LLMService``; when False,
-            injects ``None`` (representing a missing capability).
-
-    """
-    service: LLMService | None = Mock(spec=LLMService) if with_service else None
-    return ProcessingPurposeAnalyser(
-        config=_make_config(enable_llm), llm_service=service
-    )
+def _make_analyser(*, enable_llm: bool = True) -> ProcessingPurposeAnalyser:
+    """Build an analyser with controllable LLM enablement via config."""
+    return ProcessingPurposeAnalyser(config=_make_config(enable_llm))
 
 
 def _make_no_pattern_message() -> Message:
@@ -258,20 +243,9 @@ class TestPrepare:
         assert isinstance(llm_request.prompt_builder, ProcessingPurposePromptBuilder)
         assert llm_request.run_id == RUN_ID
 
-    def test_findings_without_llm_service_returns_empty_requests(self) -> None:
-        """Findings + no LLM service → empty requests, llm_enabled=False."""
-        analyser = _make_analyser(with_service=False)
-        message = _make_standard_input_purpose_message()
-
-        result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
-
-        assert result.requests == []
-        assert result.state.llm_enabled is False
-        assert result.state.orchestrator_state is None
-
-    def test_findings_with_llm_disabled_in_config_returns_empty_requests(self) -> None:
-        """Findings + LLM service but config disabled → empty requests."""
-        analyser = _make_analyser(enable_llm=False, with_service=True)
+    def test_findings_with_llm_disabled_returns_empty_requests(self) -> None:
+        """Findings with ``enable_llm_validation=False`` yield no dispatch requests."""
+        analyser = _make_analyser(enable_llm=False)
         message = _make_standard_input_purpose_message()
 
         result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
@@ -328,7 +302,7 @@ class TestFinalise:
 
     def test_llm_disabled_produces_output_without_validation_summary(self) -> None:
         """llm_enabled=False state → output message with no validation_summary."""
-        analyser = _make_analyser(with_service=False)
+        analyser = _make_analyser(enable_llm=False)
         message = _make_standard_input_purpose_message()
 
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
@@ -596,29 +570,6 @@ class TestFinaliseMultiRound:
 
 
 # =============================================================================
-# Process (degraded fallback)
-# =============================================================================
-
-
-class TestProcessDegradedFallback:
-    """Tests for process() — standalone degraded-mode wrapper."""
-
-    def test_process_never_calls_llm_even_when_configured(self) -> None:
-        """process() delegates to prepare/finalise with LLM forced off."""
-        service = Mock(spec=LLMService)
-        analyser = ProcessingPurposeAnalyser(config=_make_config(), llm_service=service)
-        message = _make_standard_input_purpose_message()
-
-        result = analyser.process([message], OUTPUT_SCHEMA)
-
-        assert isinstance(result, Message)
-        # No validation_summary because process() degrades LLM to off
-        assert "validation_summary" not in result.content.get("analysis_metadata", {})
-        # Mock service was never invoked
-        assert not service.method_calls
-
-
-# =============================================================================
 # Deserialise
 # =============================================================================
 
@@ -671,7 +622,7 @@ class TestDeserialise:
 
     def test_round_trip_without_llm_request(self) -> None:
         """LLM disabled → orchestrator_state=None, no requests."""
-        analyser = _make_analyser(with_service=False)
+        analyser = _make_analyser(enable_llm=False)
         message = _make_standard_input_purpose_message()
 
         original = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)

@@ -41,26 +41,6 @@ class LLMValidationStrategy[TFinding: Finding, TResult](ABC):
     """
 
     @abstractmethod
-    def validate_findings(
-        self,
-        findings: list[TFinding],
-        config: LLMValidationConfig,
-        run_id: str,
-    ) -> TResult:
-        """Validate findings using LLM.
-
-        Args:
-            findings: List of findings to validate.
-            config: LLM validation configuration.
-            run_id: Unique identifier for the current run, used for cache scoping.
-
-        Returns:
-            Strategy-specific result type.
-
-        """
-        ...
-
-    @abstractmethod
     def prepare_validation(
         self,
         findings: list[TFinding],
@@ -131,7 +111,7 @@ class FilteringValidationStrategy[TFinding: Finding](
     Provides a default finalise_validation() implementation that handles the
     standard deserialise -> categorise -> outcome flow used by all filtering
     strategies. Concrete filtering strategies only need to implement
-    prepare_validation() (and retained validate_findings() during migration).
+    prepare_validation().
     """
 
     @override

@@ -89,9 +89,9 @@ class BatchLLMProvider(Protocol):
     """Protocol for providers that support asynchronous batch APIs.
 
     Batch-capable providers implement this protocol alongside ``LLMProvider``
-    to enable bulk prompt submission.  The ``DefaultLLMService`` checks at
-    runtime via ``isinstance(provider, BatchLLMProvider)`` to decide between
-    the synchronous and batch code paths.
+    to enable bulk prompt submission.  The dispatcher checks at runtime via
+    ``isinstance(provider, BatchLLMProvider)`` to decide between the
+    synchronous and batch code paths.
 
     Not all providers support batch mode — implementing this protocol is
     optional.  A provider that only implements ``LLMProvider`` will always

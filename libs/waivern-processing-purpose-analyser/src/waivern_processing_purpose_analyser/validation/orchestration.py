@@ -46,7 +46,6 @@ from waivern_analysers_shared.llm_validation import (
 )
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core.types import JsonValue
-from waivern_llm import LLMService
 from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorModel,
 )
@@ -70,7 +69,6 @@ def create_validation_orchestrator(
     input_schema_name: str,
     source_contents: dict[str, str] | None = None,
     strategy_state: dict[str, JsonValue] | None = None,
-    llm_service: LLMService | None = None,
 ) -> ValidationOrchestrator[ProcessingPurposeIndicatorModel]:
     """Create orchestrator configured for processing purpose validation.
 
@@ -83,18 +81,11 @@ def create_validation_orchestrator(
             reconstruct the orchestrator on fallback/resume rounds. Consulted
             only when ``source_contents`` is not provided. Opaque to callers;
             its shape is defined by the strategy's ``export_persistence_state()``.
-        llm_service: LLM service instance for validation.
 
     Returns:
         Configured ValidationOrchestrator instance.
 
-    Raises:
-        ValueError: If llm_service is not provided.
-
     """
-    if llm_service is None:
-        raise ValueError("llm_service is required for validation")
-
     # LLM Strategy: Design-time decision based on input schema
     # - source_code: SourceCodeValidationStrategy (EXTENDED_CONTEXT batching)
     # - standard_input: ProcessingPurposeValidationStrategy (COUNT_BASED batching)
@@ -115,13 +106,13 @@ def create_validation_orchestrator(
         # An empty provider (missing contents) routes all findings to the
         # fallback via SkipReason.MISSING_CONTENT — graceful degradation.
         source_provider = SourceCodeSourceProvider(source_contents or {})
-        llm_strategy = SourceCodeValidationStrategy(llm_service, source_provider)
+        llm_strategy = SourceCodeValidationStrategy(source_provider)
         # Fallback to evidence-only strategy for findings that can't be validated
         # with extended context (e.g., oversized sources, missing content)
-        fallback_strategy = ProcessingPurposeValidationStrategy(llm_service)
+        fallback_strategy = ProcessingPurposeValidationStrategy()
     else:
         # Standard input - use evidence-only strategy
-        llm_strategy = ProcessingPurposeValidationStrategy(llm_service)
+        llm_strategy = ProcessingPurposeValidationStrategy()
         # No fallback needed - already using evidence-only strategy
 
     # Grouping: Design-time decision

@@ -6,7 +6,6 @@ import logging
 
 from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
 from waivern_core.services import ComponentRegistry, ServiceContainer, ServiceDescriptor
-from waivern_llm import LLMService, LLMServiceFactory
 
 from wct.exporters.json_exporter import JsonExporter
 from wct.exporters.registry import ExporterRegistry
@@ -28,8 +27,10 @@ def build_service_container() -> ServiceContainer:
     """Build a ServiceContainer with required services.
 
     Creates and configures a ServiceContainer with:
-    - LLMService (singleton) - shared across components
     - ArtifactStore (singleton) - shared between executor and exporter
+
+    LLM dispatch is wired separately by the executor via ``LLMDispatcherFactory``;
+    processors themselves have no LLM service dependencies.
 
     Returns:
         Configured ServiceContainer.
@@ -37,17 +38,12 @@ def build_service_container() -> ServiceContainer:
     """
     container = ServiceContainer()
 
-    # Register LLM service as singleton (shared across components)
-    container.register(
-        ServiceDescriptor(LLMService, LLMServiceFactory(container), "singleton")
-    )
-
     # Register ArtifactStore as singleton (shared between executor and exporter)
     container.register(
         ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(), "singleton")
     )
 
-    logger.debug("ServiceContainer configured with LLM and ArtifactStore services")
+    logger.debug("ServiceContainer configured with ArtifactStore service")
     return container
 
 

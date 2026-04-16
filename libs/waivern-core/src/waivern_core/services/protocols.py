@@ -18,13 +18,13 @@ class ServiceFactory[T](Protocol):
         Two valid patterns:
         1. Environment-only (zero-config):
            ```python
-           factory = LLMServiceFactory()  # Reads from env vars
+           factory = LLMDispatcherFactory()  # Reads from env vars
            ```
 
         2. Explicit config with env fallback:
            ```python
            config = LLMServiceConfiguration(provider="anthropic", api_key="sk-...")
-           factory = LLMServiceFactory(config)  # Uses config, falls back to env
+           factory = LLMDispatcherFactory(container, config)  # Uses config, falls back to env
            ```
 
         The protocol methods (create, can_create) take NO parameters. Configuration

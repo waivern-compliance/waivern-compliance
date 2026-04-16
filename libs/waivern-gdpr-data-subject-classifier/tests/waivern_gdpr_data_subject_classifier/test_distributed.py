@@ -6,12 +6,11 @@ degradation to per-finding regex fallback when dispatch is unavailable.
 """
 
 from typing import Any, cast
-from unittest.mock import Mock
 
 import pytest
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import BatchingMode, LLMService, SkippedFinding
+from waivern_llm import BatchingMode, SkippedFinding
 from waivern_llm.types import LLMDispatchResult, LLMRequest
 from waivern_schemas.gdpr_data_subject import GDPRDataSubjectFindingModel
 
@@ -36,24 +35,12 @@ RUN_ID = "test-run-id"
 # =============================================================================
 
 
-def _make_classifier(
-    *,
-    enable_llm: bool = True,
-    with_service: bool = True,
-) -> GDPRDataSubjectClassifier:
-    """Build a classifier with controllable LLM enablement.
-
-    Args:
-        enable_llm: Sets ``config.llm_validation.enable_llm_validation``.
-        with_service: When True, injects a mock ``LLMService``; when False,
-            injects ``None`` (representing a missing capability).
-
-    """
+def _make_classifier(*, enable_llm: bool = True) -> GDPRDataSubjectClassifier:
+    """Build a classifier with controllable LLM enablement via config."""
     config = GDPRDataSubjectClassifierConfig.from_properties(
         {"llm_validation": {"enable_llm_validation": enable_llm}}
     )
-    service: LLMService | None = Mock(spec=LLMService) if with_service else None
-    return GDPRDataSubjectClassifier(config=config, llm_service=service)
+    return GDPRDataSubjectClassifier(config=config)
 
 
 def _make_message(findings: list[dict[str, Any]]) -> Message:
@@ -162,20 +149,9 @@ class TestPrepare:
         assert llm_request.run_id == RUN_ID
         assert len(llm_request.groups) == 1
 
-    def test_findings_without_llm_service_returns_empty_requests(self) -> None:
-        """Findings + no LLM service → empty requests, llm_enabled=False."""
-        classifier = _make_classifier(with_service=False)
-        message = _make_message(findings=[_make_patient_finding()])
-
-        result = classifier.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
-
-        assert result.requests == []
-        assert result.state.llm_enabled is False
-        assert len(result.state.classified_findings) == 1
-
-    def test_findings_with_llm_disabled_in_config_returns_empty_requests(self) -> None:
-        """Findings + LLM service but enable_llm_validation=False → empty requests."""
-        classifier = _make_classifier(enable_llm=False, with_service=True)
+    def test_findings_with_llm_disabled_returns_empty_requests(self) -> None:
+        """Findings with ``enable_llm_validation=False`` yield no dispatch requests."""
+        classifier = _make_classifier(enable_llm=False)
         message = _make_message(findings=[_make_patient_finding()])
 
         result = classifier.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
@@ -199,7 +175,7 @@ class TestFinalise:
         The "child patient" evidence should match the 'minor' risk modifier
         pattern through regex detection.
         """
-        classifier = _make_classifier(with_service=False)
+        classifier = _make_classifier(enable_llm=False)
         message = _make_message(
             findings=[_make_patient_finding("child patient admitted to ward")]
         )
@@ -370,7 +346,7 @@ class TestDeserialise:
 
     def test_round_trip_without_llm_request(self) -> None:
         """LLM disabled → empty requests preserved through round-trip."""
-        classifier = _make_classifier(with_service=False)
+        classifier = _make_classifier(enable_llm=False)
         message = _make_message(findings=[_make_patient_finding()])
 
         original = classifier.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
@@ -380,30 +356,3 @@ class TestDeserialise:
         assert restored.requests == []
         assert restored.state.llm_enabled is False
         assert len(restored.state.classified_findings) == 1
-
-
-class TestProcessDegradedFallback:
-    """Tests for process() — standalone degraded-mode wrapper."""
-
-    def test_process_never_calls_llm_even_when_configured(self) -> None:
-        """process() with LLM service + config enabled must NOT invoke the service.
-
-        The executor uses the DistributedProcessor path; process() degrades
-        to regex-only and must be dispatch-free.
-        """
-        service = Mock(spec=LLMService)
-        config = GDPRDataSubjectClassifierConfig.from_properties(
-            {"llm_validation": {"enable_llm_validation": True}}
-        )
-        classifier = GDPRDataSubjectClassifier(config=config, llm_service=service)
-        message = _make_message(
-            findings=[_make_patient_finding("child patient, age 8")]
-        )
-
-        result = classifier.process([message], OUTPUT_SCHEMA)
-
-        # Regex fallback ran: 'child' still detected as 'minor'
-        metadata = result.content["analysis_metadata"]
-        assert metadata["validation_summary"]["method_used"] == "regex"
-        # Mock service was never called
-        assert not service.method_calls

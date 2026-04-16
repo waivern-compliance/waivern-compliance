@@ -30,7 +30,7 @@ class SecurityDocumentContextModel(BaseModel):
     Carries the full document content and its classified security domains
     for downstream assessors. This is NOT a compliance finding — it is a
     document context carrier. It satisfies the Finding protocol (id + metadata)
-    for LLMService.complete() compatibility.
+    so it can be used directly in LLMRequest groups.
 
     An empty security_domains list means the document is cross-cutting and
     flows to every assessor instance regardless of domain filter.

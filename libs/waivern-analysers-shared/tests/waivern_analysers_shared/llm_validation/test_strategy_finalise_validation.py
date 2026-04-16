@@ -21,7 +21,6 @@ from waivern_llm import (
     SkipReason,
 )
 
-from waivern_analysers_shared.llm_validation.models import LLMValidationOutcome
 from waivern_analysers_shared.llm_validation.strategy import (
     FilteringValidationStrategy,
 )
@@ -31,16 +30,7 @@ _TestFinding = BaseFindingModel[BaseFindingMetadata]
 
 
 class _FilteringStrategyForTests(FilteringValidationStrategy[_TestFinding]):
-    """Concrete subclass — abstract methods unused by these tests."""
-
-    @override
-    def validate_findings(
-        self,
-        findings: list[_TestFinding],
-        config: LLMValidationConfig,
-        run_id: str,
-    ) -> LLMValidationOutcome[_TestFinding]:
-        raise NotImplementedError
+    """Concrete subclass — prepare_validation is unused by these tests."""
 
     @override
     def prepare_validation(
