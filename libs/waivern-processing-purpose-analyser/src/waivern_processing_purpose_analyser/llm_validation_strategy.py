@@ -11,11 +11,14 @@ from waivern_analysers_shared.llm_validation.models import (
     LLMValidationOutcome,
     LLMValidationResponseModel,
 )
-from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrategy
+from waivern_analysers_shared.llm_validation.strategy import (
+    FilteringValidationStrategy,
+)
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_llm import (
     BatchingMode,
     ItemGroup,
+    LLMRequest,
     LLMService,
     PendingBatchError,
     SkippedFinding,
@@ -29,10 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProcessingPurposeValidationStrategy(
-    LLMValidationStrategy[
-        ProcessingPurposeIndicatorModel,
-        LLMValidationOutcome[ProcessingPurposeIndicatorModel],
-    ]
+    FilteringValidationStrategy[ProcessingPurposeIndicatorModel]
 ):
     """LLM validation strategy for processing purpose indicators.
 
@@ -48,6 +48,33 @@ class ProcessingPurposeValidationStrategy(
 
         """
         self._llm_service = llm_service
+
+    @override
+    def prepare_validation(
+        self,
+        findings: list[ProcessingPurposeIndicatorModel],
+        config: LLMValidationConfig,
+        run_id: str,
+    ) -> tuple[
+        list[ProcessingPurposeIndicatorModel],
+        LLMRequest[ProcessingPurposeIndicatorModel] | None,
+    ]:
+        """Build LLMRequest for processing purpose validation (COUNT_BASED)."""
+        if not findings:
+            return ([], None)
+
+        groups = [ItemGroup(items=findings, content=None)]
+        prompt_builder = ProcessingPurposePromptBuilder(
+            validation_mode=config.llm_validation_mode
+        )
+        request: LLMRequest[ProcessingPurposeIndicatorModel] = LLMRequest(
+            groups=groups,
+            prompt_builder=prompt_builder,
+            response_model=LLMValidationResponseModel,
+            batching_mode=BatchingMode.COUNT_BASED,
+            run_id=run_id,
+        )
+        return (findings, request)
 
     @override
     def validate_findings(

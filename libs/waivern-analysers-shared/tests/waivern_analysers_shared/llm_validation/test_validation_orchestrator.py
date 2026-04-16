@@ -990,8 +990,8 @@ class TestFallbackValidation:
         assert (
             result.skipped_samples[0].reason == SkipReason.BATCH_ERROR
         )  # Fallback's reason
-        # Finding is still kept (conservative - skipped findings are kept)
-        assert len(result.kept_findings) == 0  # Without grouping, skipped not in kept
+        # Conservative semantics: skipped findings are kept in output
+        assert [f.id for f in result.kept_findings] == ["1"]
         assert result.all_succeeded is False
 
     def test_fallback_with_grouping_influences_group_decisions(self) -> None:
@@ -1133,6 +1133,7 @@ class TestFallbackValidation:
         assert result.skipped_samples[0].finding.id == "3"
         assert result.skipped_samples[0].reason == SkipReason.BATCH_ERROR
 
-        # Eligible findings are now kept
-        assert len(result.kept_findings) == 2
-        assert set(f.id for f in result.kept_findings) == {"1", "2"}
+        # Eligible findings are kept (validated by fallback); the BATCH_ERROR
+        # finding is also kept conservatively even though still skipped.
+        assert len(result.kept_findings) == 3
+        assert set(f.id for f in result.kept_findings) == {"1", "2", "3"}

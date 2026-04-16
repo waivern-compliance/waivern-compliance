@@ -142,6 +142,11 @@ class ValidationResult[T: Finding]:
     - Sampled findings that passed LLM validation (TRUE_POSITIVE or not flagged)
     - Non-sampled findings from groups that weren't removed (kept by inference)
     - Skipped findings (conservative: kept but not validated)
+
+    Exception: when a group is removed wholesale because all its validated
+    samples were FALSE_POSITIVE, skipped findings in that group are also
+    removed. Once we are confident a whole group is false-positive, its
+    skipped members inherit the group-level judgement.
     """
 
     removed_findings: list[T]

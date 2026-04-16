@@ -15,11 +15,14 @@ from waivern_analysers_shared.llm_validation.models import (
     LLMValidationOutcome,
     LLMValidationResponseModel,
 )
-from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrategy
+from waivern_analysers_shared.llm_validation.strategy import (
+    FilteringValidationStrategy,
+)
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_llm import (
     BatchingMode,
     ItemGroup,
+    LLMRequest,
     LLMService,
     PendingBatchError,
     SkippedFinding,
@@ -37,10 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 class SourceCodeValidationStrategy(
-    LLMValidationStrategy[
-        ProcessingPurposeIndicatorModel,
-        LLMValidationOutcome[ProcessingPurposeIndicatorModel],
-    ]
+    FilteringValidationStrategy[ProcessingPurposeIndicatorModel]
 ):
     """Validation strategy for source_code schema findings.
 
@@ -63,6 +63,33 @@ class SourceCodeValidationStrategy(
         """
         self._llm_service = llm_service
         self._source_provider = source_provider
+
+    @override
+    def prepare_validation(
+        self,
+        findings: list[ProcessingPurposeIndicatorModel],
+        config: LLMValidationConfig,
+        run_id: str,
+    ) -> tuple[
+        list[ProcessingPurposeIndicatorModel],
+        LLMRequest[ProcessingPurposeIndicatorModel] | None,
+    ]:
+        """Build LLMRequest for source code validation (EXTENDED_CONTEXT)."""
+        if not findings:
+            return ([], None)
+
+        groups = self._create_groups_by_source(findings)
+        prompt_builder = SourceCodePromptBuilder(
+            validation_mode=config.llm_validation_mode
+        )
+        request: LLMRequest[ProcessingPurposeIndicatorModel] = LLMRequest(
+            groups=groups,
+            prompt_builder=prompt_builder,
+            response_model=LLMValidationResponseModel,
+            batching_mode=BatchingMode.EXTENDED_CONTEXT,
+            run_id=run_id,
+        )
+        return (findings, request)
 
     @override
     def validate_findings(
