@@ -101,6 +101,27 @@ class LLMValidationStrategy[TFinding: Finding, TResult](ABC):
         """
         ...
 
+    def export_persistence_state(self) -> dict[str, JsonValue] | None:
+        """Return construction-time state needed for cross-round reconstruction.
+
+        Strategies whose construction requires stateful inputs beyond injected
+        services (e.g., a source content map held by a ``SourceProvider``)
+        override this to return a serialisable snapshot. All other strategies
+        inherit the default ``None``, signalling that their reconstruction
+        needs nothing beyond their injected dependencies.
+
+        Captured by ``ValidationOrchestrator.prepare()`` into
+        ``OrchestratorPrepareState.strategy_state``. Interpreted by the
+        processor's reconstruction path (typically inside a processor-specific
+        factory) on the fallback/resume rounds.
+
+        Returns:
+            A JSON-serialisable dict representing the strategy's persistence
+            state, or ``None`` if no reconstruction state is needed.
+
+        """
+        return None
+
 
 class FilteringValidationStrategy[TFinding: Finding](
     LLMValidationStrategy[TFinding, LLMValidationOutcome[TFinding]]

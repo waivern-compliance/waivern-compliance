@@ -35,6 +35,7 @@ from waivern_processing_purpose_analyser.prompts import (
     SourceCodePromptBuilder,
 )
 from waivern_processing_purpose_analyser.validation.extended_context_strategy import (
+    SourceCodeStrategyState,
     SourceCodeValidationStrategy,
 )
 from waivern_processing_purpose_analyser.validation.providers import (
@@ -639,3 +640,27 @@ class TestSourceCodeValidationStrategy:
         assert len(outcome.skipped) == 1
         assert outcome.skipped[0].finding.id == sample_findings[1].id
         assert outcome.skipped[0].reason == SkipReason.MISSING_CONTENT
+
+
+class TestStrategyPersistenceState:
+    """Tests for export_persistence_state() — captures reconstruction state."""
+
+    def test_source_code_strategy_exports_source_contents(self) -> None:
+        """SourceCodeValidationStrategy exports source_contents in a round-trippable form."""
+        file_contents = {"a.py": "content_a", "b.py": "content_b"}
+        provider = SourceCodeSourceProvider(file_contents)
+        strategy = SourceCodeValidationStrategy(Mock(spec=LLMService), provider)
+
+        exported = strategy.export_persistence_state()
+
+        assert exported is not None
+        restored = SourceCodeStrategyState.model_validate(exported)
+        assert restored.source_contents == file_contents
+
+    def test_processing_purpose_validation_strategy_has_no_persistence_state(
+        self,
+    ) -> None:
+        """ProcessingPurposeValidationStrategy inherits the default None."""
+        strategy = ProcessingPurposeValidationStrategy(Mock(spec=LLMService))
+
+        assert strategy.export_persistence_state() is None

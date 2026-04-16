@@ -31,6 +31,7 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, ConfigDict
 from waivern_core import Finding
+from waivern_core.types import JsonValue
 from waivern_llm import LLMDispatchResult, LLMRequest
 
 from waivern_analysers_shared.llm_validation.decision_engine import (
@@ -88,6 +89,17 @@ class OrchestratorPrepareState[T: Finding](BaseModel):
 
     is_fallback_round: bool = False
     """True when finalise is being called with fallback results."""
+
+    strategy_state: dict[str, JsonValue] | None = None
+    """Persisted primary-strategy construction state (opaque to the orchestrator).
+
+    Populated from ``LLMValidationStrategy.export_persistence_state()`` during
+    ``prepare()``. Used by the processor's factory to reconstruct strategies on
+    the fallback/resume round when the strategy's construction requires inputs
+    beyond its injected services (e.g., a source content map held by a
+    ``SourceProvider``). Strategies that do not override
+    ``export_persistence_state()`` leave this as ``None``.
+    """
 
 
 @dataclass(frozen=True)
@@ -180,10 +192,15 @@ class ValidationOrchestrator[T: Finding]:
             Tuple of (state for finalise, LLMRequest or None if no dispatch needed).
 
         """
+        strategy_state = self._llm_strategy.export_persistence_state()
+
         if not findings:
             return (
                 OrchestratorPrepareState(
-                    strategy_findings=[], config=config, run_id=run_id
+                    strategy_findings=[],
+                    config=config,
+                    run_id=run_id,
+                    strategy_state=strategy_state,
                 ),
                 None,
             )
@@ -197,6 +214,7 @@ class ValidationOrchestrator[T: Finding]:
                     strategy_findings=strategy_findings,
                     config=config,
                     run_id=run_id,
+                    strategy_state=strategy_state,
                 ),
                 request,
             )
@@ -224,6 +242,7 @@ class ValidationOrchestrator[T: Finding]:
                 groups=groups,
                 sampled=sampled,
                 non_sampled=non_sampled,
+                strategy_state=strategy_state,
             ),
             request,
         )

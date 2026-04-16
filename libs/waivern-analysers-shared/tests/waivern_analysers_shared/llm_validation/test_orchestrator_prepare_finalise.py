@@ -101,6 +101,8 @@ def _make_prepare_mock(
         return (strategy_findings_override or findings, request)
 
     strategy.prepare_validation.side_effect = _prepare
+    # Default to None — tests that need a specific strategy_state override explicitly.
+    strategy.export_persistence_state.return_value = None
     return strategy
 
 
@@ -212,6 +214,46 @@ class TestOrchestratorPrepare:
         assert state.groups == {"GroupA": [a1, a2], "GroupB": [b1]}
         assert state.sampled == {"GroupA": [a1], "GroupB": [b1]}
         assert state.non_sampled == {"GroupA": [a2], "GroupB": []}
+
+    def test_prepare_captures_strategy_persistence_state(self) -> None:
+        """Strategy that overrides export_persistence_state() -> captured in state."""
+        findings = [_make_finding("1")]
+        marker_state: dict[str, JsonValue] = {"marker": "x", "value": 42}
+        strategy = _make_prepare_mock(request=Mock(spec=LLMRequest))
+        strategy.export_persistence_state.return_value = marker_state
+        orchestrator = ValidationOrchestrator(llm_strategy=strategy)
+
+        state, _ = orchestrator.prepare(findings, _make_config(), _TEST_RUN_ID)
+
+        assert state.strategy_state == marker_state
+
+    def test_prepare_state_strategy_state_is_none_for_default_strategies(self) -> None:
+        """Strategy using the default export_persistence_state() -> state.strategy_state is None."""
+        findings = [_make_finding("1")]
+        strategy = _make_prepare_mock(request=Mock(spec=LLMRequest))
+        strategy.export_persistence_state.return_value = None
+        orchestrator = ValidationOrchestrator(llm_strategy=strategy)
+
+        state, _ = orchestrator.prepare(findings, _make_config(), _TEST_RUN_ID)
+
+        assert state.strategy_state is None
+
+    def test_orchestrator_prepare_state_round_trips_with_strategy_state(self) -> None:
+        """OrchestratorPrepareState.strategy_state survives model_dump -> model_validate."""
+        original = OrchestratorPrepareState[_Finding](
+            strategy_findings=[_make_finding("f1")],
+            config=_make_config(),
+            run_id=_TEST_RUN_ID,
+            strategy_state={
+                "source_contents": {"a.py": "content_a", "b.py": "content_b"},
+                "nested": {"flag": True, "values": [1, 2, 3]},
+            },
+        )
+
+        raw: dict[str, JsonValue] = original.model_dump(mode="json")
+        restored = OrchestratorPrepareState[_Finding].model_validate(raw)
+
+        assert restored.strategy_state == original.strategy_state
 
 
 class TestOrchestratorFinalise:

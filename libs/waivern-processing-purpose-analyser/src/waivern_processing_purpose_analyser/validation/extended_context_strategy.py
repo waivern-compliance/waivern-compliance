@@ -8,6 +8,7 @@ import asyncio
 import logging
 from typing import override
 
+from pydantic import BaseModel
 from waivern_analysers_shared.llm_validation.decision_engine import (
     ValidationDecisionEngine,
 )
@@ -19,6 +20,7 @@ from waivern_analysers_shared.llm_validation.strategy import (
     FilteringValidationStrategy,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
+from waivern_core.types import JsonValue
 from waivern_llm import (
     BatchingMode,
     ItemGroup,
@@ -37,6 +39,17 @@ from waivern_processing_purpose_analyser.prompts import SourceCodePromptBuilder
 from .providers import SourceCodeSourceProvider
 
 logger = logging.getLogger(__name__)
+
+
+class SourceCodeStrategyState(BaseModel):
+    """Persistence state for ``SourceCodeValidationStrategy`` across dispatch rounds.
+
+    Captures the file content map held by the strategy's source provider so
+    that the orchestrator can be reconstructed (with its primary strategy in
+    the correct shape) on the fallback or batch-mode resume rounds.
+    """
+
+    source_contents: dict[str, str]
 
 
 class SourceCodeValidationStrategy(
@@ -63,6 +76,20 @@ class SourceCodeValidationStrategy(
         """
         self._llm_service = llm_service
         self._source_provider = source_provider
+
+    @override
+    def export_persistence_state(self) -> dict[str, JsonValue] | None:
+        """Return the strategy's source content map for multi-round reconstruction.
+
+        The strategy's identity is its ``(llm_service, source_provider)`` pair.
+        ``llm_service`` is an injected dependency restored by the processor
+        factory; ``source_provider`` holds a file content map that must survive
+        across dispatch rounds so that the primary strategy can be reconstructed
+        identically on the fallback/resume path.
+        """
+        return SourceCodeStrategyState(
+            source_contents=self._source_provider.snapshot_contents()
+        ).model_dump(mode="json")
 
     @override
     def prepare_validation(

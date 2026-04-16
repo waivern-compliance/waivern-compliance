@@ -45,6 +45,7 @@ from waivern_analysers_shared.llm_validation import (
     ValidationOrchestrator,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
+from waivern_core.types import JsonValue
 from waivern_llm import LLMService
 from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorModel,
@@ -54,7 +55,10 @@ from waivern_processing_purpose_analyser.llm_validation_strategy import (
     ProcessingPurposeValidationStrategy,
 )
 
-from .extended_context_strategy import SourceCodeValidationStrategy
+from .extended_context_strategy import (
+    SourceCodeStrategyState,
+    SourceCodeValidationStrategy,
+)
 from .providers import (
     ProcessingPurposeConcernProvider,
     SourceCodeSourceProvider,
@@ -65,6 +69,7 @@ def create_validation_orchestrator(
     config: LLMValidationConfig,
     input_schema_name: str,
     source_contents: dict[str, str] | None = None,
+    strategy_state: dict[str, JsonValue] | None = None,
     llm_service: LLMService | None = None,
 ) -> ValidationOrchestrator[ProcessingPurposeIndicatorModel]:
     """Create orchestrator configured for processing purpose validation.
@@ -72,7 +77,12 @@ def create_validation_orchestrator(
     Args:
         config: LLM validation configuration.
         input_schema_name: Name of the input schema (e.g., "source_code", "standard_input").
-        source_contents: Map of file paths to content (for source_code schema).
+        source_contents: Map of file paths to content. Round-1 callers pass this
+            directly from the input messages.
+        strategy_state: Persisted ``SourceCodeValidationStrategy`` state used to
+            reconstruct the orchestrator on fallback/resume rounds. Consulted
+            only when ``source_contents`` is not provided. Opaque to callers;
+            its shape is defined by the strategy's ``export_persistence_state()``.
         llm_service: LLM service instance for validation.
 
     Returns:
@@ -93,9 +103,18 @@ def create_validation_orchestrator(
         LLMValidationStrategy[ProcessingPurposeIndicatorModel, object] | None
     ) = None
 
-    if input_schema_name == "source_code" and source_contents:
-        # Extended context strategy - uses full file content for validation
-        source_provider = SourceCodeSourceProvider(source_contents)
+    if input_schema_name == "source_code":
+        # Reconstruction: recover source_contents from persisted strategy state
+        # when the caller did not supply them directly (round-2 / resume path).
+        if source_contents is None and strategy_state is not None:
+            source_contents = SourceCodeStrategyState.model_validate(
+                strategy_state
+            ).source_contents
+
+        # Extended context strategy - uses full file content for validation.
+        # An empty provider (missing contents) routes all findings to the
+        # fallback via SkipReason.MISSING_CONTENT — graceful degradation.
+        source_provider = SourceCodeSourceProvider(source_contents or {})
         llm_strategy = SourceCodeValidationStrategy(llm_service, source_provider)
         # Fallback to evidence-only strategy for findings that can't be validated
         # with extended context (e.g., oversized sources, missing content)
