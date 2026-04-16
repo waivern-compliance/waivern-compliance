@@ -42,7 +42,7 @@ class RiskModifierValidationResponseModel(BaseModel):
 
 
 # =============================================================================
-# Strategy Result Types (dataclasses)
+# Aggregation Result Types (dataclasses)
 # =============================================================================
 
 
@@ -71,7 +71,9 @@ class CategoryRiskModifierResult:
 class RiskModifierValidationResult:
     """Complete result of risk modifier validation.
 
-    This is the result type returned by RiskModifierValidationStrategy.enrich().
+    Produced by the classifier's ``finalise()`` method from aggregated LLM
+    dispatch responses. Passed to the result builder to populate the
+    ``validation_summary`` metadata block on the output message.
     """
 
     category_results: list[CategoryRiskModifierResult]
