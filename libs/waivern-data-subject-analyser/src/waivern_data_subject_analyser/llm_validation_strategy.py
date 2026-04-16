@@ -11,11 +11,14 @@ from waivern_analysers_shared.llm_validation.models import (
     LLMValidationOutcome,
     LLMValidationResponseModel,
 )
-from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrategy
+from waivern_analysers_shared.llm_validation.strategy import (
+    FilteringValidationStrategy,
+)
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_llm import (
     BatchingMode,
     ItemGroup,
+    LLMRequest,
     LLMService,
     PendingBatchError,
     SkippedFinding,
@@ -29,9 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class DataSubjectValidationStrategy(
-    LLMValidationStrategy[
-        DataSubjectIndicatorModel, LLMValidationOutcome[DataSubjectIndicatorModel]
-    ]
+    FilteringValidationStrategy[DataSubjectIndicatorModel]
 ):
     """LLM validation strategy for data subject indicators.
 
@@ -47,6 +48,33 @@ class DataSubjectValidationStrategy(
 
         """
         self._llm_service = llm_service
+
+    @override
+    def prepare_validation(
+        self,
+        findings: list[DataSubjectIndicatorModel],
+        config: LLMValidationConfig,
+        run_id: str,
+    ) -> tuple[
+        list[DataSubjectIndicatorModel],
+        LLMRequest[DataSubjectIndicatorModel] | None,
+    ]:
+        """Build LLMRequest for data subject validation (COUNT_BASED)."""
+        if not findings:
+            return ([], None)
+
+        groups = [ItemGroup(items=findings, content=None)]
+        prompt_builder = DataSubjectPromptBuilder(
+            validation_mode=config.llm_validation_mode
+        )
+        request: LLMRequest[DataSubjectIndicatorModel] = LLMRequest(
+            groups=groups,
+            prompt_builder=prompt_builder,
+            response_model=LLMValidationResponseModel,
+            batching_mode=BatchingMode.COUNT_BASED,
+            run_id=run_id,
+        )
+        return (findings, request)
 
     @override
     def validate_findings(

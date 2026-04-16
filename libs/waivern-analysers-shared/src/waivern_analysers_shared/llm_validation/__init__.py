@@ -39,8 +39,13 @@ from waivern_analysers_shared.llm_validation.sampling import (
     SamplingResult,
     SamplingStrategy,
 )
-from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrategy
+from waivern_analysers_shared.llm_validation.strategy import (
+    FilteringValidationStrategy,
+    LLMValidationStrategy,
+)
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
+    FallbackNeeded,
+    OrchestratorPrepareState,
     ValidationOrchestrator,
 )
 
@@ -74,10 +79,13 @@ __all__ = [
     "ConcernProvider",
     "SourceProvider",
     # Strategies
+    "FilteringValidationStrategy",
     "LLMValidationStrategy",
     # Orchestration
     "EnrichmentOrchestrator",
     "EnrichmentResult",
     "EnrichmentStrategy",
+    "FallbackNeeded",
+    "OrchestratorPrepareState",
     "ValidationOrchestrator",
 ]

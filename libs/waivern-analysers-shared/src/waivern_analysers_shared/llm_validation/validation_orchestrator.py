@@ -27,8 +27,10 @@ The orchestrator handles grouping and sampling; the LLMService handles batching.
 """
 
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from waivern_core import Finding
+from waivern_llm import LLMDispatchResult, LLMRequest
 
 from waivern_analysers_shared.llm_validation.decision_engine import (
     ValidationDecisionEngine,
@@ -44,6 +46,54 @@ from waivern_analysers_shared.llm_validation.models import (
 from waivern_analysers_shared.llm_validation.sampling import SamplingStrategy
 from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrategy
 from waivern_analysers_shared.types import LLMValidationConfig
+
+
+@dataclass
+class OrchestratorPrepareState[T: Finding]:
+    """State captured by ValidationOrchestrator.prepare() for use in finalise().
+
+    Captures everything finalise() needs to produce the final ValidationResult,
+    including fallback round state for multi-round dispatch.
+    """
+
+    strategy_findings: list[T]
+    """Findings passed to the strategy's prepare_validation()."""
+
+    config: LLMValidationConfig
+    """LLM validation configuration for this run."""
+
+    run_id: str
+    """Run identifier for cache scoping (needed for fallback prepare)."""
+
+    groups: dict[str, list[T]] | None = None
+    """Groups from grouping strategy (None if no grouping)."""
+
+    sampled: dict[str, list[T]] | None = None
+    """Sampled findings per group (None if no grouping)."""
+
+    non_sampled: dict[str, list[T]] | None = None
+    """Non-sampled findings per group (None if no grouping)."""
+
+    primary_outcome: LLMValidationOutcome[T] | None = None
+    """Primary strategy outcome, set between fallback rounds."""
+
+    is_fallback_round: bool = False
+    """True when finalise is being called with fallback results."""
+
+
+@dataclass(frozen=True)
+class FallbackNeeded[T: Finding]:
+    """Signal returned from finalise() when a fallback dispatch round is needed.
+
+    The processor wraps this into a PrepareResult, triggering another
+    Phase 2 -> 3 cycle in the executor.
+    """
+
+    state: OrchestratorPrepareState[T]
+    """Updated state carrying primary_outcome and is_fallback_round=True."""
+
+    request: LLMRequest[T]
+    """LLMRequest for the fallback strategy."""
 
 
 class ValidationOrchestrator[T: Finding]:
@@ -100,6 +150,213 @@ class ValidationOrchestrator[T: Finding]:
         self._grouping_strategy = grouping_strategy
         self._sampling_strategy = sampling_strategy
         self._fallback_strategy = fallback_strategy
+
+    def prepare(
+        self,
+        findings: list[T],
+        config: LLMValidationConfig,
+        run_id: str,
+    ) -> tuple[OrchestratorPrepareState[T], LLMRequest[T] | None]:
+        """Prepare an LLM request for dispatch without making any LLM calls.
+
+        Orchestrates: group -> sample -> flatten -> strategy.prepare_validation().
+        Returns the captured state plus the LLMRequest for the executor to dispatch.
+
+        Args:
+            findings: List of findings to validate.
+            config: LLM validation configuration.
+            run_id: Unique identifier for the current run, used for cache scoping.
+
+        Returns:
+            Tuple of (state for finalise, LLMRequest or None if no dispatch needed).
+
+        """
+        if not findings:
+            return (
+                OrchestratorPrepareState(
+                    strategy_findings=[], config=config, run_id=run_id
+                ),
+                None,
+            )
+
+        if self._grouping_strategy is None:
+            strategy_findings, request = self._llm_strategy.prepare_validation(
+                findings, config, run_id
+            )
+            return (
+                OrchestratorPrepareState(
+                    strategy_findings=strategy_findings,
+                    config=config,
+                    run_id=run_id,
+                ),
+                request,
+            )
+
+        groups = self._grouping_strategy.group(findings)
+
+        if self._sampling_strategy is not None:
+            sampling_result = self._sampling_strategy.sample(groups)
+            sampled = sampling_result.sampled
+            non_sampled = sampling_result.non_sampled
+        else:
+            sampled = groups
+            non_sampled: dict[str, list[T]] = {key: [] for key in groups}
+
+        all_samples = [f for group_samples in sampled.values() for f in group_samples]
+
+        strategy_findings, request = self._llm_strategy.prepare_validation(
+            all_samples, config, run_id
+        )
+        return (
+            OrchestratorPrepareState(
+                strategy_findings=strategy_findings,
+                config=config,
+                run_id=run_id,
+                groups=groups,
+                sampled=sampled,
+                non_sampled=non_sampled,
+            ),
+            request,
+        )
+
+    def finalise(
+        self,
+        state: OrchestratorPrepareState[T],
+        result: LLMDispatchResult | None,
+        marker: Callable[[T], T] | None = None,
+    ) -> ValidationResult[T] | FallbackNeeded[T]:
+        """Finalise validation from dispatch results.
+
+        Round 1 (primary): interpret primary results, check fallback eligibility.
+            - If fallback needed -> returns FallbackNeeded for another round.
+            - Otherwise -> applies marker, group decisions -> ValidationResult.
+        Round 2 (fallback): merges primary + fallback outcomes, applies marker
+            and group decisions -> ValidationResult.
+
+        Args:
+            state: State captured by prepare().
+            result: Dispatch result for the strategy's LLMRequest, or None.
+            marker: Optional callback to mark validated findings.
+
+        Returns:
+            ValidationResult when complete, or FallbackNeeded when another round
+            of dispatch is required.
+
+        """
+        # Empty findings short-circuit (matches prepare with empty input)
+        if not state.strategy_findings:
+            return ValidationResult(
+                kept_findings=[],
+                removed_findings=[],
+                removed_groups=[],
+                samples_validated=0,
+                all_succeeded=True,
+                skipped_samples=[],
+            )
+
+        if state.is_fallback_round:
+            outcome = self._run_fallback_round(state, result)
+        else:
+            outcome = self._run_primary_round(state, result)
+            fallback_signal = self._build_fallback_request_if_needed(outcome, state)
+            if fallback_signal is not None:
+                return fallback_signal
+
+        if marker:
+            outcome = outcome.with_marked_findings(marker)
+
+        if state.groups is not None and self._grouping_strategy is not None:
+            return self._apply_group_decisions(
+                grouping_strategy=self._grouping_strategy,
+                groups=state.groups,
+                sampled=state.sampled or {},
+                non_sampled=state.non_sampled or {},
+                outcome=outcome,
+            )
+
+        # Ungrouped path: include skipped findings in kept_findings
+        # (conservative semantics — see ValidationResult.kept_findings docstring).
+        return ValidationResult(
+            kept_findings=outcome.kept_findings,
+            removed_findings=outcome.llm_validated_removed,
+            removed_groups=[],
+            samples_validated=len(state.strategy_findings),
+            all_succeeded=outcome.validation_succeeded,
+            skipped_samples=outcome.skipped,
+        )
+
+    def _run_primary_round(
+        self,
+        state: OrchestratorPrepareState[T],
+        result: LLMDispatchResult | None,
+    ) -> LLMValidationOutcome[T]:
+        """Delegate to the primary strategy's finalise_validation (round 1)."""
+        return self._llm_strategy.finalise_validation(state.strategy_findings, result)
+
+    def _run_fallback_round(
+        self,
+        state: OrchestratorPrepareState[T],
+        result: LLMDispatchResult | None,
+    ) -> LLMValidationOutcome[T]:
+        """Merge fallback outcome into primary outcome (round 2).
+
+        Precondition: ``state.is_fallback_round`` implies the fallback strategy
+        and primary outcome were set by ``_build_fallback_request_if_needed``.
+        """
+        fallback_strategy = self._fallback_strategy
+        primary_outcome = state.primary_outcome
+        if fallback_strategy is None or primary_outcome is None:
+            raise RuntimeError(
+                "is_fallback_round=True requires fallback_strategy and "
+                "primary_outcome to be set"
+            )
+        fallback_outcome = fallback_strategy.finalise_validation(
+            state.strategy_findings, result
+        )
+        ineligible_skipped = [
+            s
+            for s in primary_outcome.skipped
+            if s.reason not in FALLBACK_ELIGIBLE_SKIP_REASONS
+        ]
+        return self._merge_fallback_outcome(
+            primary_outcome, fallback_outcome, ineligible_skipped
+        )
+
+    def _build_fallback_request_if_needed(
+        self,
+        primary_outcome: LLMValidationOutcome[T],
+        state: OrchestratorPrepareState[T],
+    ) -> FallbackNeeded[T] | None:
+        """Build a FallbackNeeded signal if eligible skipped findings exist."""
+        fallback_strategy = self._fallback_strategy
+        if fallback_strategy is None:
+            return None
+
+        eligible = [
+            s.finding
+            for s in primary_outcome.skipped
+            if s.reason in FALLBACK_ELIGIBLE_SKIP_REASONS
+        ]
+        if not eligible:
+            return None
+
+        fallback_strategy_findings, fallback_request = (
+            fallback_strategy.prepare_validation(eligible, state.config, state.run_id)
+        )
+        if fallback_request is None:
+            return None
+
+        next_state = OrchestratorPrepareState(
+            strategy_findings=fallback_strategy_findings,
+            config=state.config,
+            run_id=state.run_id,
+            groups=state.groups,
+            sampled=state.sampled,
+            non_sampled=state.non_sampled,
+            primary_outcome=primary_outcome,
+            is_fallback_round=True,
+        )
+        return FallbackNeeded(state=next_state, request=fallback_request)
 
     def validate(
         self,
@@ -164,7 +421,7 @@ class ValidationOrchestrator[T: Finding]:
             outcome = outcome.with_marked_findings(marker)
 
         return ValidationResult(
-            kept_findings=outcome.llm_validated_kept + outcome.llm_not_flagged,
+            kept_findings=outcome.kept_findings,
             removed_findings=outcome.llm_validated_removed,
             removed_groups=[],  # No grouping = no group removal
             samples_validated=len(findings),
@@ -375,7 +632,11 @@ class ValidationOrchestrator[T: Finding]:
                     all_kept.extend(group_findings)
 
                 case "remove_group":
-                    # All validated samples are FALSE_POSITIVE - remove entire group
+                    # All validated samples are FALSE_POSITIVE - remove entire group,
+                    # including any skipped findings. Rationale: once we are confident
+                    # a whole group is false-positive, the skipped members of that
+                    # group inherit the group-level judgement. Conservative handling
+                    # of skipped findings only applies when the group is NOT removed.
                     all_removed.extend(group_findings)
                     removed_groups.append(
                         RemovedGroup(

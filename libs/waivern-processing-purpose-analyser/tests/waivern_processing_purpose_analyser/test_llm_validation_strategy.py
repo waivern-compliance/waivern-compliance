@@ -17,6 +17,7 @@ from waivern_llm import (
     BatchingMode,
     ItemGroup,
     LLMCompletionResult,
+    LLMRequest,
     LLMService,
     SkippedFinding,
     SkipReason,
@@ -86,6 +87,49 @@ class TestProcessingPurposeValidationStrategy:
                 "User Analytics", "analytics", "mysql_database_(prod)_table_(events)"
             ),
         ]
+
+    # =========================================================================
+    # prepare_validation (dispatcher-ready request construction)
+    # =========================================================================
+
+    def test_prepare_validation_builds_count_based_llm_request(
+        self,
+        mock_llm_service: Mock,
+        config: LLMValidationConfig,
+    ) -> None:
+        """prepare_validation returns an LLMRequest configured for COUNT_BASED batching."""
+        findings = [
+            _make_finding("Payment Processing"),
+            _make_finding("User Analytics"),
+        ]
+        strategy = ProcessingPurposeValidationStrategy(mock_llm_service)
+
+        strategy_findings, request = strategy.prepare_validation(
+            findings, config, "test-run"
+        )
+
+        assert strategy_findings == findings
+        assert isinstance(request, LLMRequest)
+        assert request.batching_mode == BatchingMode.COUNT_BASED
+        assert request.run_id == "test-run"
+        assert isinstance(request.prompt_builder, ProcessingPurposePromptBuilder)
+        assert request.response_model == LLMValidationResponseModel
+        assert len(request.groups) == 1
+        assert isinstance(request.groups[0], ItemGroup)
+        assert list(request.groups[0].items) == findings
+
+    def test_prepare_validation_returns_no_request_for_empty_findings(
+        self,
+        mock_llm_service: Mock,
+        config: LLMValidationConfig,
+    ) -> None:
+        """Empty findings -> ([], None) so the orchestrator can skip dispatch."""
+        strategy = ProcessingPurposeValidationStrategy(mock_llm_service)
+
+        strategy_findings, request = strategy.prepare_validation([], config, "test-run")
+
+        assert strategy_findings == []
+        assert request is None
 
     # =========================================================================
     # Core Validation Behaviour
@@ -310,6 +354,56 @@ class TestSourceCodeValidationStrategy:
                 "/src/AnalyticsService.php",
             ),
         ]
+
+    # =========================================================================
+    # prepare_validation (dispatcher-ready request construction)
+    # =========================================================================
+
+    def test_prepare_validation_builds_extended_context_llm_request(
+        self,
+        mock_llm_service: Mock,
+        source_provider: SourceCodeSourceProvider,
+        config: LLMValidationConfig,
+        sample_findings: list[ProcessingPurposeIndicatorModel],
+    ) -> None:
+        """prepare_validation returns LLMRequest configured for EXTENDED_CONTEXT.
+
+        Groups are created per source file and carry the file content needed for
+        context-aware validation.
+        """
+        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
+
+        strategy_findings, request = strategy.prepare_validation(
+            sample_findings, config, "test-run"
+        )
+
+        assert strategy_findings == sample_findings
+        assert isinstance(request, LLMRequest)
+        assert request.batching_mode == BatchingMode.EXTENDED_CONTEXT
+        assert request.run_id == "test-run"
+        assert isinstance(request.prompt_builder, SourceCodePromptBuilder)
+        assert request.response_model == LLMValidationResponseModel
+        # One group per source file; content populated from the source provider
+        assert len(request.groups) == 2
+        assert {g.group_id for g in request.groups} == {
+            "/src/PaymentService.php",
+            "/src/AnalyticsService.php",
+        }
+        assert all(g.content is not None for g in request.groups)
+
+    def test_prepare_validation_returns_no_request_for_empty_findings(
+        self,
+        mock_llm_service: Mock,
+        source_provider: SourceCodeSourceProvider,
+        config: LLMValidationConfig,
+    ) -> None:
+        """Empty findings -> ([], None) so the orchestrator can skip dispatch."""
+        strategy = SourceCodeValidationStrategy(mock_llm_service, source_provider)
+
+        strategy_findings, request = strategy.prepare_validation([], config, "test-run")
+
+        assert strategy_findings == []
+        assert request is None
 
     # =========================================================================
     # Core Validation Behaviour

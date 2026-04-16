@@ -17,6 +17,7 @@ from waivern_llm import (
     BatchingMode,
     ItemGroup,
     LLMCompletionResult,
+    LLMRequest,
     LLMService,
     SkipReason,
 )
@@ -80,6 +81,46 @@ class TestDataSubjectValidationStrategy:
                 "Employee", "employee_id", "mysql_database_(prod)_table_(employees)"
             ),
         ]
+
+    # =========================================================================
+    # prepare_validation (dispatcher-ready request construction)
+    # =========================================================================
+
+    def test_prepare_validation_builds_count_based_llm_request(
+        self,
+        mock_llm_service: Mock,
+        config: LLMValidationConfig,
+    ) -> None:
+        """prepare_validation returns an LLMRequest configured for COUNT_BASED batching."""
+        findings = [_make_finding("Customer"), _make_finding("Employee")]
+        strategy = DataSubjectValidationStrategy(mock_llm_service)
+
+        strategy_findings, request = strategy.prepare_validation(
+            findings, config, "test-run"
+        )
+
+        assert strategy_findings == findings
+        assert isinstance(request, LLMRequest)
+        assert request.batching_mode == BatchingMode.COUNT_BASED
+        assert request.run_id == "test-run"
+        assert isinstance(request.prompt_builder, DataSubjectPromptBuilder)
+        assert request.response_model == LLMValidationResponseModel
+        assert len(request.groups) == 1
+        assert isinstance(request.groups[0], ItemGroup)
+        assert list(request.groups[0].items) == findings
+
+    def test_prepare_validation_returns_no_request_for_empty_findings(
+        self,
+        mock_llm_service: Mock,
+        config: LLMValidationConfig,
+    ) -> None:
+        """Empty findings -> ([], None) so the orchestrator can skip dispatch."""
+        strategy = DataSubjectValidationStrategy(mock_llm_service)
+
+        strategy_findings, request = strategy.prepare_validation([], config, "test-run")
+
+        assert strategy_findings == []
+        assert request is None
 
     # =========================================================================
     # Core Validation Behaviour
