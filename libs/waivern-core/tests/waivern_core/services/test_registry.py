@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from waivern_core.dispatch import DispatchRequest
+from waivern_core.dispatch import DispatcherUnavailableError, DispatchRequest
 from waivern_core.services import ComponentRegistry, ServiceContainer
 
 # =============================================================================
@@ -329,8 +329,8 @@ class TestGetDispatcherFor:
             with pytest.raises(ValueError, match="No dispatcher factory registered"):
                 registry.get_dispatcher_for(DispatchRequest)
 
-    def test_raises_runtime_error_when_factory_cannot_create(self) -> None:
-        """Raises RuntimeError when the matching factory's can_create returns False."""
+    def test_raises_dispatcher_unavailable_when_factory_cannot_create(self) -> None:
+        """Raises DispatcherUnavailableError when can_create returns False."""
         # Arrange
         container = ServiceContainer()
         registry = ComponentRegistry(container)
@@ -351,11 +351,13 @@ class TestGetDispatcherFor:
             )
 
             # Act / Assert
-            with pytest.raises(RuntimeError, match="cannot create a dispatcher"):
+            with pytest.raises(
+                DispatcherUnavailableError, match="cannot create a dispatcher"
+            ):
                 registry.get_dispatcher_for(DispatchRequest)
 
-    def test_raises_runtime_error_when_create_returns_none(self) -> None:
-        """Raises RuntimeError when the matching factory cannot create."""
+    def test_raises_dispatcher_unavailable_when_create_returns_none(self) -> None:
+        """Raises DispatcherUnavailableError when create() returns None."""
         # Arrange
         container = ServiceContainer()
         registry = ComponentRegistry(container)
@@ -377,5 +379,7 @@ class TestGetDispatcherFor:
             )
 
             # Act / Assert
-            with pytest.raises(RuntimeError, match="create\\(\\) returned None"):
+            with pytest.raises(
+                DispatcherUnavailableError, match="create\\(\\) returned None"
+            ):
                 registry.get_dispatcher_for(DispatchRequest)

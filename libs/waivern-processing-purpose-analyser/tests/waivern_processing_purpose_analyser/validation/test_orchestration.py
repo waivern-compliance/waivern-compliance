@@ -1,21 +1,19 @@
 """Tests for create_validation_orchestrator factory.
 
-The factory was originally documented as having no dedicated tests because
-it was pure wiring. Step 13 introduces non-trivial logic — strategy_state
-unpacking for multi-round reconstruction — which this module covers.
+The factory has non-trivial logic in the ``source_code`` branch — unpacking
+persisted ``strategy_state`` to reconstruct the orchestrator on multi-round
+dispatch (fallback / batch-mode resume). This module covers that path.
 
-Tests verify the factory's observable behaviour via the orchestrator it
-produces: calling ``orchestrator.prepare()`` reveals the primary strategy's
-batching mode and the content available to its prompt builder, which is
-sufficient to assert the factory wired the right strategies.
+Tests verify observable behaviour via the orchestrator the factory produces:
+calling ``orchestrator.prepare()`` reveals the primary strategy's batching
+mode and the content available to its prompt builder, which is sufficient
+to assert the factory wired the right strategies.
 """
-
-from unittest.mock import Mock
 
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_core.types import JsonValue
-from waivern_llm import BatchingMode, LLMService
+from waivern_llm import BatchingMode
 from waivern_schemas.processing_purpose_indicator import (
     ProcessingPurposeIndicatorMetadata,
     ProcessingPurposeIndicatorModel,
@@ -67,7 +65,6 @@ class TestFactoryReconstruction:
             config=_make_config(),
             input_schema_name="source_code",
             source_contents=contents,
-            llm_service=Mock(spec=LLMService),
         )
         original_state, original_request = original.prepare(
             [_make_finding()], _make_config(), RUN_ID
@@ -81,7 +78,6 @@ class TestFactoryReconstruction:
             input_schema_name="source_code",
             source_contents=None,
             strategy_state=original_state.strategy_state,
-            llm_service=Mock(spec=LLMService),
         )
         reconstructed_state, reconstructed_request = reconstructed.prepare(
             [_make_finding()], _make_config(), RUN_ID
@@ -101,7 +97,6 @@ class TestFactoryReconstruction:
             input_schema_name="source_code",
             source_contents=explicit,
             strategy_state=_source_code_strategy_state(persisted),
-            llm_service=Mock(spec=LLMService),
         )
         state, _ = orchestrator.prepare([_make_finding()], _make_config(), RUN_ID)
 
@@ -114,7 +109,6 @@ class TestFactoryReconstruction:
             input_schema_name="standard_input",
             source_contents=None,
             strategy_state=_source_code_strategy_state({"a.py": "x"}),
-            llm_service=Mock(spec=LLMService),
         )
         state, request = orchestrator.prepare([_make_finding()], _make_config(), RUN_ID)
 

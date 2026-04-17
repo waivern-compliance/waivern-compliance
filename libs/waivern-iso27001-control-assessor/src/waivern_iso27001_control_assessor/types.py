@@ -44,4 +44,3 @@ class ISO27001PrepareState(BaseModel):
     evidence: list[SecurityEvidenceModel]
     documents: list[SecurityDocumentContextModel]
     run_id: str
-    llm_enabled: bool

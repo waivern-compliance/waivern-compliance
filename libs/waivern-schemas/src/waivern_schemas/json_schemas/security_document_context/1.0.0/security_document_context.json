@@ -96,7 +96,7 @@
       "type": "object"
     },
     "SecurityDocumentContextModel": {
-      "description": "Individual document context item.\n\nCarries the full document content and its classified security domains\nfor downstream assessors. This is NOT a compliance finding \u2014 it is a\ndocument context carrier. It satisfies the Finding protocol (id + metadata)\nfor LLMService.complete() compatibility.\n\nAn empty security_domains list means the document is cross-cutting and\nflows to every assessor instance regardless of domain filter.",
+      "description": "Individual document context item.\n\nCarries the full document content and its classified security domains\nfor downstream assessors. This is NOT a compliance finding \u2014 it is a\ndocument context carrier. It satisfies the Finding protocol (id + metadata)\nso it can be used directly in LLMRequest groups.\n\nAn empty security_domains list means the document is cross-cutting and\nflows to every assessor instance regardless of domain filter.",
       "properties": {
         "id": {
           "description": "Unique identifier for this document context item (UUID)",

@@ -1,53 +1,25 @@
 """LLM validation strategy for personal data analysis."""
 
-import asyncio
-import logging
 from typing import override
 
-from waivern_analysers_shared.llm_validation.decision_engine import (
-    ValidationDecisionEngine,
-)
-from waivern_analysers_shared.llm_validation.models import (
-    LLMValidationOutcome,
-    LLMValidationResponseModel,
-)
-from waivern_analysers_shared.llm_validation.strategy import (
-    FilteringValidationStrategy,
-)
+from waivern_analysers_shared.llm_validation.models import LLMValidationResponseModel
+from waivern_analysers_shared.llm_validation.strategy import FilteringValidationStrategy
 from waivern_analysers_shared.types import LLMValidationConfig
-from waivern_llm import (
-    BatchingMode,
-    ItemGroup,
-    LLMRequest,
-    LLMService,
-    PendingBatchError,
-    SkippedFinding,
-    SkipReason,
-)
+from waivern_llm import BatchingMode, ItemGroup, LLMRequest
 from waivern_schemas.personal_data_indicator import PersonalDataIndicatorModel
 
 from .prompts.prompt_builder import PersonalDataPromptBuilder
-
-logger = logging.getLogger(__name__)
 
 
 class PersonalDataValidationStrategy(
     FilteringValidationStrategy[PersonalDataIndicatorModel]
 ):
-    """LLM validation strategy for personal data indicators.
+    """Count-based filtering strategy for personal data indicators.
 
-    Uses LLMService to validate findings, categorising them as
-    TRUE_POSITIVE (keep) or FALSE_POSITIVE (remove).
+    ``prepare_validation()`` builds a single COUNT_BASED LLMRequest for
+    dispatch by the executor. Response deserialisation and outcome
+    categorisation are inherited from ``FilteringValidationStrategy``.
     """
-
-    def __init__(self, llm_service: LLMService) -> None:
-        """Initialise strategy with LLM service.
-
-        Args:
-            llm_service: LLMService instance for making validation calls.
-
-        """
-        self._llm_service = llm_service
 
     @override
     def prepare_validation(
@@ -59,160 +31,17 @@ class PersonalDataValidationStrategy(
         list[PersonalDataIndicatorModel],
         LLMRequest[PersonalDataIndicatorModel] | None,
     ]:
-        """Build LLMRequest for personal data validation (COUNT_BASED)."""
+        """Build a COUNT_BASED LLMRequest for personal data validation."""
         if not findings:
             return ([], None)
 
-        groups = [ItemGroup(items=findings, content=None)]
-        prompt_builder = PersonalDataPromptBuilder(
-            validation_mode=config.llm_validation_mode
-        )
         request: LLMRequest[PersonalDataIndicatorModel] = LLMRequest(
-            groups=groups,
-            prompt_builder=prompt_builder,
+            groups=[ItemGroup(items=findings, content=None)],
+            prompt_builder=PersonalDataPromptBuilder(
+                validation_mode=config.llm_validation_mode
+            ),
             response_model=LLMValidationResponseModel,
             batching_mode=BatchingMode.COUNT_BASED,
             run_id=run_id,
         )
         return (findings, request)
-
-    @override
-    def validate_findings(
-        self,
-        findings: list[PersonalDataIndicatorModel],
-        config: LLMValidationConfig,
-        run_id: str,
-    ) -> LLMValidationOutcome[PersonalDataIndicatorModel]:
-        """Validate findings using LLM service.
-
-        Args:
-            findings: Findings to validate.
-            config: Validation configuration.
-            run_id: Unique identifier for the current run, used for cache scoping.
-
-        Returns:
-            LLMValidationOutcome with categorised findings.
-
-        """
-        if not findings:
-            return LLMValidationOutcome(
-                llm_validated_kept=[],
-                llm_validated_removed=[],
-                llm_not_flagged=[],
-                skipped=[],
-            )
-
-        try:
-            return asyncio.run(self._validate_async(findings, config, run_id))
-        except PendingBatchError:
-            raise
-        except Exception as e:
-            logger.error(f"LLM validation failed: {e}")
-            return self._handle_total_failure(findings)
-
-    async def _validate_async(
-        self,
-        findings: list[PersonalDataIndicatorModel],
-        config: LLMValidationConfig,
-        run_id: str,
-    ) -> LLMValidationOutcome[PersonalDataIndicatorModel]:
-        """Async validation implementation."""
-        groups = [ItemGroup(items=findings, content=None)]
-        prompt_builder = PersonalDataPromptBuilder(
-            validation_mode=config.llm_validation_mode
-        )
-
-        result = await self._llm_service.complete(
-            groups,
-            prompt_builder=prompt_builder,
-            response_model=LLMValidationResponseModel,
-            batching_mode=BatchingMode.COUNT_BASED,
-            run_id=run_id,
-        )
-
-        return self._map_to_outcome(findings, result.responses, result.skipped)
-
-    def _map_to_outcome(
-        self,
-        findings: list[PersonalDataIndicatorModel],
-        responses: list[LLMValidationResponseModel],
-        skipped: list[SkippedFinding[PersonalDataIndicatorModel]],
-    ) -> LLMValidationOutcome[PersonalDataIndicatorModel]:
-        """Map LLM responses to validation outcome."""
-        findings_by_id = {f.id: f for f in findings}
-
-        kept, removed, processed_ids = self._categorise_by_responses(
-            responses, findings_by_id
-        )
-        not_flagged = self._get_not_flagged(findings_by_id, processed_ids, skipped)
-
-        return LLMValidationOutcome(
-            llm_validated_kept=kept,
-            llm_validated_removed=removed,
-            llm_not_flagged=not_flagged,
-            skipped=list(skipped),
-        )
-
-    def _categorise_by_responses(
-        self,
-        responses: list[LLMValidationResponseModel],
-        findings_by_id: dict[str, PersonalDataIndicatorModel],
-    ) -> tuple[
-        list[PersonalDataIndicatorModel],
-        list[PersonalDataIndicatorModel],
-        set[str],
-    ]:
-        """Categorise findings based on LLM responses."""
-        kept: list[PersonalDataIndicatorModel] = []
-        removed: list[PersonalDataIndicatorModel] = []
-        processed_ids: set[str] = set()
-
-        for response in responses:
-            for result in response.results:
-                finding = findings_by_id.get(result.finding_id)
-                if finding is None:
-                    logger.warning(f"Unknown finding_id from LLM: {result.finding_id}")
-                    continue
-
-                processed_ids.add(result.finding_id)
-                ValidationDecisionEngine.log_validation_decision(result, finding)
-
-                if ValidationDecisionEngine.should_keep_finding(result, finding):
-                    kept.append(finding)
-                else:
-                    removed.append(finding)
-
-        return kept, removed, processed_ids
-
-    def _get_not_flagged(
-        self,
-        findings_by_id: dict[str, PersonalDataIndicatorModel],
-        processed_ids: set[str],
-        skipped: list[SkippedFinding[PersonalDataIndicatorModel]],
-    ) -> list[PersonalDataIndicatorModel]:
-        """Get findings not flagged by LLM (kept via fail-safe)."""
-        skipped_ids = {s.finding.id for s in skipped}
-        not_flagged_ids = set(findings_by_id.keys()) - processed_ids - skipped_ids
-        not_flagged = [findings_by_id[fid] for fid in not_flagged_ids]
-
-        if not_flagged:
-            logger.debug(
-                f"{len(not_flagged)} findings not flagged by LLM, keeping as valid"
-            )
-
-        return not_flagged
-
-    def _handle_total_failure(
-        self,
-        findings: list[PersonalDataIndicatorModel],
-    ) -> LLMValidationOutcome[PersonalDataIndicatorModel]:
-        """Handle total validation failure."""
-        return LLMValidationOutcome(
-            llm_validated_kept=[],
-            llm_validated_removed=[],
-            llm_not_flagged=[],
-            skipped=[
-                SkippedFinding(finding=f, reason=SkipReason.BATCH_ERROR)
-                for f in findings
-            ],
-        )

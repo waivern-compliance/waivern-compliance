@@ -12,41 +12,41 @@ Multi-provider LLM abstraction for Waivern Compliance Framework.
 
 ## Architecture
 
-The LLM service handles batching and caching internally, allowing processors
-to focus on domain logic. Key separation of concerns:
+The LLM dispatcher handles batching and caching internally, allowing processors
+to focus on domain logic. Processors declare their LLM needs as typed
+`LLMRequest` objects; the executor routes them to the `LLMDispatcher` which
+handles token estimation, batch planning, caching, and provider calls.
 
-| Concern                 | Owner       | Rationale                             |
-| ----------------------- | ----------- | ------------------------------------- |
-| What to group by        | Processor   | Domain knowledge (source files, etc.) |
-| What content to include | Processor   | Knows data relationships              |
-| Batching mode selection | Processor   | Knows if context helps validation     |
-| Prompt building         | Processor   | Domain-specific prompts               |
-| Token estimation        | LLM Service | Model-specific, implementation detail |
-| Batch size calculation  | LLM Service | Based on model context window         |
-| Batch planning          | LLM Service | Splitting, validation, optimisation   |
-| Response caching        | LLM Service | Cross-cutting concern                 |
+| Concern                 | Owner      | Rationale                             |
+| ----------------------- | ---------- | ------------------------------------- |
+| What to group by        | Processor  | Domain knowledge (source files, etc.) |
+| What content to include | Processor  | Knows data relationships              |
+| Batching mode selection | Processor  | Knows if context helps validation     |
+| Prompt building         | Processor  | Domain-specific prompts               |
+| Token estimation        | Dispatcher | Model-specific, implementation detail |
+| Batch size calculation  | Dispatcher | Based on model context window         |
+| Batch planning          | Dispatcher | Splitting, validation, optimisation   |
+| Response caching        | Dispatcher | Cross-cutting concern                 |
 
 ## Usage
 
-### Basic Usage (with DI Container)
+### Building an LLMRequest
+
+Processors declare LLM needs by building an `LLMRequest` inside `prepare()`:
 
 ```python
-from waivern_core.services import ServiceContainer, ServiceDescriptor
-from waivern_artifact_store import ArtifactStore, ArtifactStoreFactory
-from waivern_llm import LLMService, LLMServiceFactory
+from waivern_llm import LLMRequest, ItemGroup, BatchingMode
 
-# Create container and register services
-container = ServiceContainer()
-container.register(
-    ServiceDescriptor(ArtifactStore, ArtifactStoreFactory(), "singleton")
+request = LLMRequest(
+    groups=[ItemGroup(items=findings, content=None)],
+    prompt_builder=MyPromptBuilder(),
+    response_model=MyResponseModel,
+    batching_mode=BatchingMode.COUNT_BASED,
+    run_id=run_id,
 )
-container.register(
-    ServiceDescriptor(LLMService, LLMServiceFactory(container), "singleton")
-)
-
-# Resolve service (created lazily on first request)
-llm_service = container.get_service(LLMService)
 ```
+
+The executor dispatches the request and hands the `LLMDispatchResult` to `finalise()`.
 
 ### Implementing a PromptBuilder
 
@@ -67,104 +67,53 @@ class MyPromptBuilder(PromptBuilder[MyFindingModel]):
         items: Sequence[MyFindingModel],
         content: str | None = None,
     ) -> str:
-        """Build prompt for the given findings.
-
-        Args:
-            items: Findings to include in the prompt.
-            content: Optional source content (for EXTENDED_CONTEXT mode).
-
-        Returns:
-            Complete prompt string.
-        """
-        findings_block = self._format_findings(items)
-
+        findings_block = "\n".join(
+            f"- [{f.id}] {f.category}: {f.evidence}" for f in items
+        )
         if content:
-            # EXTENDED_CONTEXT mode - include source file content
-            return f"Validate these findings against the source:\n\n{content}\n\n{findings_block}"
-        else:
-            # COUNT_BASED mode - findings only
-            return f"Validate these findings:\n\n{findings_block}"
-
-    def _format_findings(self, items: Sequence[MyFindingModel]) -> str:
-        return "\n".join(f"- [{f.id}] {f.category}: {f.evidence}" for f in items)
-```
-
-### Calling LLMService.complete()
-
-```python
-import asyncio
-from waivern_llm import LLMService, ItemGroup, BatchingMode, LLMCompletionResult
-from my_analyser.prompts import MyPromptBuilder
-from my_analyser.schemas import MyFindingModel, LLMResponseModel
-
-async def validate_findings(
-    findings: list[MyFindingModel],
-    llm_service: LLMService,
-    run_id: str,
-) -> LLMCompletionResult[MyFindingModel, LLMResponseModel]:
-    # Group findings (processor decides grouping logic)
-    groups = [ItemGroup(items=tuple(findings), content=None)]
-
-    # Call LLM service
-    return await llm_service.complete(
-        groups,
-        prompt_builder=MyPromptBuilder(),
-        response_model=LLMResponseModel,
-        batching_mode=BatchingMode.COUNT_BASED,
-        run_id=run_id,
-    )
-
-# Sync wrapper if needed
-result = asyncio.run(validate_findings(findings, llm_service, "run-123"))
+            return f"Validate against source:\n\n{content}\n\n{findings_block}"
+        return f"Validate these findings:\n\n{findings_block}"
 ```
 
 ### Batching Modes
 
-Three modes representing distinct semantic contracts (see `BatchingMode`
-docstring for full design rationale):
+Three modes representing distinct semantic contracts:
 
-- **COUNT_BASED**: N items in → N decisions out, no shared context
-  - Flattens all items, splits by count
-  - Ignores `ItemGroup.content`
+- **COUNT_BASED**: N items in → N decisions out, no shared context.
+  Flattens all items, splits by count. Ignores `ItemGroup.content`.
 
-- **EXTENDED_CONTEXT**: N items in → N decisions out, with shared context
-  - One group per batch, items share context (e.g., source file content)
-  - Requires `ItemGroup.content` to be set
-  - Groups without content are skipped with `MISSING_CONTENT` reason
+- **EXTENDED_CONTEXT**: N items in → N decisions out, with shared context.
+  One group per batch; items share context (e.g., source file content).
+  Groups without content are skipped with `MISSING_CONTENT` reason.
 
-- **INDEPENDENT**: N items in → 1 decision out, atomic verdict
-  - One group per batch, items collectively inform a single verdict
-  - Requires `ItemGroup.content` to be set
-  - Groups without content are skipped with `MISSING_CONTENT` reason
+- **INDEPENDENT**: N items in → 1 decision out, atomic verdict.
+  One group per batch; items collectively inform a single verdict.
+  Groups without content are skipped with `MISSING_CONTENT` reason.
 
 ### Handling Skipped Findings
 
 ```python
 from waivern_llm import SkipReason
 
-result = await llm_service.complete(...)
-
-# Check for skipped findings
 for skipped in result.skipped:
     match skipped.reason:
         case SkipReason.OVERSIZED:
-            # Group exceeded context window - implement fallback
-            pass
+            pass  # Group exceeded context window
         case SkipReason.MISSING_CONTENT:
-            # Extended context requested but content was None
-            pass
+            pass  # Extended context requested but content was None
         case SkipReason.BATCH_ERROR:
-            # LLM call failed for this batch
-            pass
+            pass  # LLM call failed for this batch
 ```
 
 ## Batch Mode
 
-When enabled, `DefaultLLMService.complete()` submits prompts to the provider's asynchronous Batch API instead of making synchronous calls. This allows large analysis runs to submit prompts in bulk, pause, and resume once results are ready — without any changes to analysers.
+When enabled, the dispatcher submits prompts to the provider's asynchronous
+Batch API instead of making synchronous calls. This allows large analysis runs
+to submit prompts in bulk, pause, and resume once results are ready.
 
 ### How It Works
 
-1. **Submission** (`wct run`): Cache misses are submitted as a batch via `BatchLLMProvider.submit_batch()`. Cache entries are written as `"pending"` and a `BatchJob` is saved. The service raises `PendingBatchError`, which the DAGExecutor catches — leaving the artifact in `not_started` and marking the run `interrupted`.
+1. **Submission** (`wct run`): Cache misses are submitted as a batch via `BatchLLMProvider.submit_batch()`. Cache entries are written as `"pending"` and a `BatchJob` is saved. The dispatcher raises `PendingBatchError`, which the executor catches — leaving the artifact in `not_started` and marking the run `interrupted`.
 
 2. **Polling** (`wct poll <run-id>`): The `BatchResultPoller` checks batch status with the provider. When complete, it updates cache entries from `"pending"` to `"completed"` with actual responses.
 
@@ -176,7 +125,7 @@ When enabled, `DefaultLLMService.complete()` submits prompts to the provider's a
 export WAIVERN_LLM_BATCH_MODE=true
 ```
 
-The provider must implement the `BatchLLMProvider` protocol. If the provider only implements `LLMProvider`, the service falls back to synchronous calls automatically. Currently, `OpenAIProvider` implements `BatchLLMProvider`.
+The provider must implement the `BatchLLMProvider` protocol. If the provider only implements `LLMProvider`, the dispatcher falls back to synchronous calls automatically. Currently, `OpenAIProvider` implements `BatchLLMProvider`.
 
 ### BatchLLMProvider Protocol
 

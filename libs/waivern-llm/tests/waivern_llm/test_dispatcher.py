@@ -298,8 +298,8 @@ class TestLLMDispatcherSyncFirstRun:
         assert len(cache_keys) == 2
         assert all(len(key) == 64 for key in cache_keys)  # SHA256 hex
 
-    async def test_clears_cache_after_successful_sync_dispatch(self) -> None:
-        """Cache empty after successful sync dispatch."""
+    async def test_cache_entries_persist_after_dispatch(self) -> None:
+        """Cache entries remain after dispatch — cleanup is the executor's responsibility."""
         from waivern_llm.cache import CacheEntry
 
         store = AsyncInMemoryStore()
@@ -311,10 +311,13 @@ class TestLLMDispatcherSyncFirstRun:
 
         await dispatcher.dispatch([request])
 
-        # Cache should be cleared after successful completion
+        # Cache entries persist — the executor calls cache_clear after
+        # all type-grouped dispatch calls complete for the run
         cache_key = CacheEntry.compute_key("test prompt", "test-model", "MockResponse")
         cached = await store.cache_get("run-1", cache_key)
-        assert cached is None
+        assert cached is not None
+        entry = CacheEntry.model_validate(cached)
+        assert entry.status == "completed"
 
     async def test_provider_error_produces_batch_error_skipped_findings(self) -> None:
         """invoke_structured() raises for one batch → affected findings get BATCH_ERROR."""

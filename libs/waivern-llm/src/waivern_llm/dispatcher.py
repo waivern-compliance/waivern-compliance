@@ -139,8 +139,6 @@ class LLMDispatcher:
             raise PendingBatchError(run_id=run_id, batch_ids=pending_batch_ids)
 
         # Phase C — build results
-        await self._cache.cache_clear(run_id)
-
         return [
             LLMDispatchResult(
                 request_id=request.request_id,

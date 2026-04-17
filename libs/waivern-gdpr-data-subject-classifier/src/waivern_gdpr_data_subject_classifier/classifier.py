@@ -1,14 +1,21 @@
 """GDPR data subject classifier implementation."""
 
 import logging
+from collections import defaultdict
+from collections.abc import Sequence
 from typing import Any, cast, override
 
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import InputRequirement, JsonValue, Schema
 from waivern_core.base_classifier import Classifier
+from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
 from waivern_core.message import Message
-from waivern_llm import LLMService
+from waivern_llm import (
+    BatchingMode,
+    ItemGroup,
+)
+from waivern_llm.types import LLMDispatchResult, LLMRequest
 from waivern_rulesets import (
     GDPRDataSubjectClassificationRule,
     RiskModifiers,
@@ -18,15 +25,18 @@ from waivern_schemas.gdpr_data_subject import (
     GDPRDataSubjectFindingModel,
 )
 
+from waivern_gdpr_data_subject_classifier.prompts import RiskModifierPromptBuilder
 from waivern_gdpr_data_subject_classifier.result_builder import (
     GDPRDataSubjectResultBuilder,
 )
-from waivern_gdpr_data_subject_classifier.types import GDPRDataSubjectClassifierConfig
-from waivern_gdpr_data_subject_classifier.validation.models import (
-    RiskModifierValidationResult,
+from waivern_gdpr_data_subject_classifier.types import (
+    GDPRDataSubjectClassifierConfig,
+    GDPRDataSubjectPrepareState,
 )
-from waivern_gdpr_data_subject_classifier.validation.strategy import (
-    RiskModifierValidationStrategy,
+from waivern_gdpr_data_subject_classifier.validation.models import (
+    CategoryRiskModifierResult,
+    RiskModifierValidationResponseModel,
+    RiskModifierValidationResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -85,56 +95,39 @@ class GDPRDataSubjectClassifier(Classifier):
     - Relevant GDPR article references
     - Typical lawful bases for processing
     - Risk modifiers detected from evidence context
+
+    Implements the ``DistributedProcessor`` protocol via
+    ``prepare()``/``finalise()``. The executor drives LLM dispatch; when
+    dispatch is unavailable or fails, ``finalise()`` falls back to
+    per-finding regex risk modifier detection — no data loss.
     """
 
     def __init__(
         self,
         config: GDPRDataSubjectClassifierConfig | None = None,
-        llm_service: LLMService | None = None,
     ) -> None:
         """Initialise the classifier.
 
         Args:
             config: Configuration for the classifier. If not provided,
                    uses default configuration.
-            llm_service: Optional LLM service for risk modifier validation.
-                        When provided and LLM validation is enabled in config,
-                        risk modifiers will be validated/enriched via LLM.
 
         """
         config = config or GDPRDataSubjectClassifierConfig()
         self._config = config
-        self._llm_service = llm_service
         self._ruleset = RulesetManager.get_ruleset(
             config.ruleset, GDPRDataSubjectClassificationRule
         )
         self._classification_map = self._build_classification_map()
-        self._risk_modifier_detector = RiskModifierDetector(
-            self._ruleset.get_risk_modifiers()
+        risk_modifiers = self._ruleset.get_risk_modifiers()
+        self._available_modifiers = list(
+            risk_modifiers.risk_increasing + risk_modifiers.risk_decreasing
         )
+        self._risk_modifier_detector = RiskModifierDetector(risk_modifiers)
         self._result_builder = GDPRDataSubjectResultBuilder(config)
 
-        # Create validation strategy when LLM validation is enabled
-        # (Factory ensures llm_service is available when config enables validation)
-        risk_modifiers = self._ruleset.get_risk_modifiers()
-        self._validation_strategy = (
-            RiskModifierValidationStrategy(
-                available_modifiers=list(
-                    risk_modifiers.risk_increasing + risk_modifiers.risk_decreasing
-                ),
-                llm_service=llm_service,
-            )
-            if config.llm_validation.enable_llm_validation and llm_service
-            else None
-        )
-
     def _build_classification_map(self) -> dict[str, dict[str, Any]]:
-        """Build a lookup map from indicator category to GDPR classification.
-
-        Returns:
-            Dictionary mapping indicator categories to their GDPR classification data.
-
-        """
+        """Build a lookup map from indicator category to GDPR classification."""
         classification_map: dict[str, dict[str, Any]] = {}
         for rule in self._ruleset.get_rules():
             for indicator_category in rule.indicator_categories:
@@ -169,25 +162,19 @@ class GDPRDataSubjectClassifier(Classifier):
         """Declare output schemas this classifier can produce."""
         return [Schema("gdpr_data_subject", "1.0.0")]
 
-    @override
-    def process(self, inputs: list[Message], output_schema: Schema) -> Message:
-        """Process input findings and classify according to GDPR.
+    # ── DistributedProcessor ─────────────────────────────────────────────
 
-        Orchestrates the classification flow:
-        1. Aggregate findings from all inputs
-        2. Classify each finding (GDPR mapping, no risk modifiers yet)
-        3. Detect risk modifiers via LLM (category-level) or regex (per-finding)
-        4. Build and return output message
+    def prepare(
+        self, inputs: list[Message], output_schema: Schema
+    ) -> PrepareResult[GDPRDataSubjectPrepareState]:
+        """Classify findings and declare LLM dispatch needs.
 
-        Args:
-            inputs: List of input messages containing data subject indicators.
-            output_schema: The schema to use for the output message.
-
-        Returns:
-            Message containing GDPR-classified data subject findings.
-
-        Raises:
-            ValueError: If inputs list is empty.
+        1. Validate inputs and extract run_id.
+        2. Aggregate findings across input messages (fan-in).
+        3. Classify each finding (GDPR category, articles, lawful bases);
+           risk_modifiers stay empty pending enrichment.
+        4. If LLM is enabled and findings exist, build a single COUNT_BASED
+           LLMRequest so the dispatcher can detect category-level modifiers.
 
         """
         if not inputs:
@@ -196,33 +183,212 @@ class GDPRDataSubjectClassifier(Classifier):
                 "Received empty inputs list."
             )
 
-        # Extract run_id from inputs (set by executor, used for cache scoping)
-        run_id = inputs[0].run_id
-
-        # Step 1: Aggregate findings from all input messages (fan-in support)
-        input_findings: list[dict[str, object]] = []
-        for input_message in inputs:
-            input_findings.extend(input_message.content.get("findings", []))
-
-        # Step 2: Classify each finding (without risk modifiers)
+        run_id = inputs[0].run_id or ""
+        input_findings = self._aggregate_findings(inputs)
         classified_findings = [
             self._classify_finding(finding, include_risk_modifiers=False)
             for finding in input_findings
         ]
+        # Missing run_id means no cache scope for LLM dispatch — degrade to
+        # the regex path rather than failing. This preserves the classifier's
+        # long-standing graceful behaviour under partial upstream metadata.
+        llm_enabled = self._config.llm_validation.enable_llm_validation and bool(run_id)
 
-        # Step 3: Detect risk modifiers
-        classified_findings, validation_result = self._apply_risk_modifiers(
-            classified_findings, run_id=run_id
+        requests: list[DispatchRequest] = []
+        if llm_enabled and classified_findings:
+            requests.append(self._build_llm_request(classified_findings, run_id))
+
+        return PrepareResult(
+            state=GDPRDataSubjectPrepareState(
+                classified_findings=classified_findings,
+                run_id=run_id,
+                llm_enabled=llm_enabled,
+            ),
+            requests=requests,
         )
 
-        # Step 4: Build and return output message
+    def finalise(
+        self,
+        state: GDPRDataSubjectPrepareState,
+        results: Sequence[DispatchResult],
+        output_schema: Schema,
+    ) -> Message:
+        """Produce output from classified findings and dispatch results.
+
+        Paths:
+        - LLM disabled / no usable dispatch result → regex-based per-finding
+          modifier detection, ``validation_result=None`` so the result builder
+          reports method_used="regex".
+        - Valid LLM result with responses → category-level modifier aggregation
+          applied to all findings per category (union semantics).
+        """
+        llm_result = self._extract_llm_result(results)
+        if not state.llm_enabled or llm_result is None or not llm_result.responses:
+            enriched = self._apply_risk_modifiers_via_regex(state.classified_findings)
+            return self._result_builder.build_output_message(
+                enriched,
+                output_schema,
+                self._ruleset.name,
+                self._ruleset.version,
+                validation_result=None,
+            )
+
+        validation_result = self._aggregate_llm_responses(
+            state.classified_findings, llm_result
+        )
+        enriched = self._apply_category_modifiers(
+            state.classified_findings, validation_result
+        )
         return self._result_builder.build_output_message(
-            classified_findings,
+            enriched,
             output_schema,
             self._ruleset.name,
             self._ruleset.version,
-            validation_result,
+            validation_result=validation_result,
         )
+
+    def deserialise_prepare_result(
+        self, raw: dict[str, Any]
+    ) -> PrepareResult[GDPRDataSubjectPrepareState]:
+        """Reconstruct a typed PrepareResult from a raw dict.
+
+        Called on the resume path where a persisted PrepareResult must be
+        restored. ``prompt_builder`` and ``response_model`` remain ``None``
+        on resume — they are not needed since ``built_cache_keys`` drives
+        cache lookup.
+
+        """
+        state = GDPRDataSubjectPrepareState.model_validate(raw["state"])
+        requests: list[DispatchRequest] = [
+            LLMRequest[GDPRDataSubjectFindingModel].model_validate(r)
+            for r in raw.get("requests", [])
+        ]
+        return PrepareResult(state=state, requests=requests)
+
+    # ── Private helpers ──────────────────────────────────────────────────
+
+    def _aggregate_findings(self, inputs: list[Message]) -> list[dict[str, Any]]:
+        """Concatenate ``findings`` lists across input messages (fan-in)."""
+        aggregated: list[dict[str, Any]] = []
+        for input_message in inputs:
+            raw_findings = cast(
+                list[dict[str, Any]], input_message.content.get("findings", [])
+            )
+            aggregated.extend(raw_findings)
+        return aggregated
+
+    def _build_llm_request(
+        self,
+        classified_findings: list[GDPRDataSubjectFindingModel],
+        run_id: str,
+    ) -> LLMRequest[GDPRDataSubjectFindingModel]:
+        """Build the COUNT_BASED LLMRequest for risk modifier enrichment."""
+        return LLMRequest(
+            name="risk_modifier_enrichment",
+            groups=[ItemGroup(items=classified_findings, content=None)],
+            prompt_builder=RiskModifierPromptBuilder(self._available_modifiers),
+            response_model=RiskModifierValidationResponseModel,
+            batching_mode=BatchingMode.COUNT_BASED,
+            run_id=run_id,
+        )
+
+    def _extract_llm_result(
+        self, results: Sequence[DispatchResult]
+    ) -> LLMDispatchResult | None:
+        """Extract the first LLMDispatchResult from dispatch results."""
+        for result in results:
+            match result:
+                case LLMDispatchResult() as llm_result:
+                    return llm_result
+                case _:
+                    continue
+        return None
+
+    def _aggregate_llm_responses(
+        self,
+        findings: list[GDPRDataSubjectFindingModel],
+        llm_result: LLMDispatchResult,
+    ) -> RiskModifierValidationResult:
+        """Aggregate LLM responses into category-level results.
+
+        Groups findings by data_subject_category and aggregates:
+        - Modifiers: union of all modifiers per category
+        - Confidence: average of per-finding confidences
+        - Count: number of findings per category
+        """
+        findings_by_id = {f.id: f for f in findings}
+
+        category_modifiers: dict[str, set[str]] = defaultdict(set)
+        category_confidences: dict[str, list[float]] = defaultdict(list)
+        category_counts: dict[str, int] = defaultdict(int)
+
+        for raw_response in llm_result.responses:
+            response = RiskModifierValidationResponseModel.model_validate(raw_response)
+            for result in response.results:
+                finding = findings_by_id.get(result.finding_id)
+                if finding is None:
+                    logger.warning(f"Unknown finding_id from LLM: {result.finding_id}")
+                    continue
+
+                category = finding.data_subject_category
+                category_modifiers[category].update(result.risk_modifiers)
+                category_confidences[category].append(result.confidence)
+                category_counts[category] += 1
+
+        category_results = [
+            CategoryRiskModifierResult(
+                category=cat,
+                detected_modifiers=sorted(category_modifiers[cat]),
+                sample_count=category_counts[cat],
+                confidence=(
+                    sum(category_confidences[cat]) / len(category_confidences[cat])
+                    if category_confidences[cat]
+                    else 0.0
+                ),
+            )
+            for cat in category_modifiers
+        ]
+
+        return RiskModifierValidationResult(
+            category_results=category_results,
+            total_findings=len(findings),
+            total_sampled=sum(category_counts.values()),
+            validation_succeeded=len(llm_result.skipped) == 0,
+        )
+
+    def _apply_category_modifiers(
+        self,
+        findings: list[GDPRDataSubjectFindingModel],
+        validation_result: RiskModifierValidationResult,
+    ) -> list[GDPRDataSubjectFindingModel]:
+        """Apply category-level modifiers to ALL findings in each category."""
+        category_modifiers: dict[str, list[str]] = {
+            cat_result.category: cat_result.detected_modifiers
+            for cat_result in validation_result.category_results
+        }
+        return [
+            self._finding_with_modifiers(
+                finding,
+                category_modifiers.get(finding.data_subject_category, []),
+            )
+            for finding in findings
+        ]
+
+    def _apply_risk_modifiers_via_regex(
+        self,
+        findings: list[GDPRDataSubjectFindingModel],
+    ) -> list[GDPRDataSubjectFindingModel]:
+        """Apply risk modifiers using regex pattern matching per-finding."""
+        result: list[GDPRDataSubjectFindingModel] = []
+        for finding in findings:
+            evidence_texts = [
+                ev.content if hasattr(ev, "content") else str(ev)
+                for ev in finding.evidence
+                if ev
+            ]
+            modifiers = self._risk_modifier_detector.detect(evidence_texts)
+            result.append(self._finding_with_modifiers(finding, modifiers))
+        return result
 
     def _classify_finding(
         self,
@@ -237,11 +403,7 @@ class GDPRDataSubjectClassifier(Classifier):
                 If False, return empty risk_modifiers (for LLM path where
                 modifiers are applied at category level later).
 
-        Returns:
-            Classified finding with GDPR enrichment.
-
         """
-        # Classification: Map category to GDPR articles and lawful bases
         subject_category = finding.get("subject_category", "")
         classification = self._classification_map.get(subject_category, {})
 
@@ -252,14 +414,12 @@ class GDPRDataSubjectClassifier(Classifier):
                 subject_category,
             )
 
-        # Risk detection (regex) - only when include_risk_modifiers=True
         if include_risk_modifiers:
             evidence_texts = self._extract_evidence_texts(finding)
-            risk_modifiers = self._detect_risk_modifiers(evidence_texts)
+            risk_modifiers = self._risk_modifier_detector.detect(evidence_texts)
         else:
             risk_modifiers = []
 
-        # Propagate metadata from indicator finding (always present, fallback to "unknown")
         raw_metadata = finding.get("metadata")
         if isinstance(raw_metadata, dict):
             meta_dict = cast(dict[str, Any], raw_metadata)
@@ -289,13 +449,6 @@ class GDPRDataSubjectClassifier(Classifier):
         Handles two evidence formats:
         - Dict with 'content' field (BaseFindingEvidence format)
         - Direct string evidence
-
-        Args:
-            finding: Raw finding dictionary containing evidence.
-
-        Returns:
-            List of evidence text strings.
-
         """
         evidence_list: list[JsonValue] = finding.get("evidence", [])
         evidence_texts: list[str] = []
@@ -309,131 +462,16 @@ class GDPRDataSubjectClassifier(Classifier):
                 case str():
                     evidence_texts.append(ev)
                 case _:
-                    pass  # Skip non-dict, non-string evidence (int, float, bool, None, list)
+                    pass
 
         return evidence_texts
-
-    def _detect_risk_modifiers(self, evidence_texts: list[str]) -> list[str]:
-        """Detect risk modifiers from evidence texts using regex.
-
-        Args:
-            evidence_texts: List of evidence text strings to analyse.
-
-        Returns:
-            Sorted list of detected risk modifier names.
-
-        """
-        return self._risk_modifier_detector.detect(evidence_texts)
-
-    def _apply_risk_modifiers(
-        self,
-        findings: list[GDPRDataSubjectFindingModel],
-        run_id: str | None = None,
-    ) -> tuple[list[GDPRDataSubjectFindingModel], RiskModifierValidationResult | None]:
-        """Apply risk modifiers to findings via LLM or regex fallback.
-
-        Two paths:
-        - LLM path: Detect modifiers at category level, apply to ALL findings in category
-        - Regex path: Detect modifiers per-finding using pattern matching
-
-        Args:
-            findings: Classified findings without risk modifiers.
-            run_id: Unique identifier for the current run, used for cache scoping.
-                    If None, falls back to regex path.
-
-        Returns:
-            Tuple of (findings with risk modifiers applied, validation result or None).
-
-        """
-        if self._validation_strategy and self._llm_service and run_id is not None:
-            return self._apply_risk_modifiers_via_llm(findings, run_id=run_id)
-        return self._apply_risk_modifiers_via_regex(findings), None
-
-    def _apply_risk_modifiers_via_llm(
-        self,
-        findings: list[GDPRDataSubjectFindingModel],
-        run_id: str,
-    ) -> tuple[list[GDPRDataSubjectFindingModel], RiskModifierValidationResult | None]:
-        """Apply risk modifiers using LLM validation at category level.
-
-        Args:
-            findings: Classified findings without risk modifiers.
-            run_id: Unique identifier for the current run, used for cache scoping.
-
-        Returns:
-            Tuple of (findings with category-level risk modifiers, validation result).
-
-        """
-        # Type narrowing handled by caller check, but be explicit for type checker
-        if self._validation_strategy is None:
-            return self._apply_risk_modifiers_via_regex(findings), None
-
-        # Call LLM enrichment strategy
-        result = self._validation_strategy.enrich(findings, run_id=run_id)
-
-        # If validation failed, fall back to regex
-        if not result.validation_succeeded or not result.category_results:
-            logger.warning(
-                "LLM validation failed or returned no results, falling back to regex"
-            )
-            return self._apply_risk_modifiers_via_regex(findings), None
-
-        # Build category → modifiers mapping
-        category_modifiers: dict[str, list[str]] = {
-            cat_result.category: cat_result.detected_modifiers
-            for cat_result in result.category_results
-        }
-
-        # Apply modifiers to ALL findings in each category
-        enriched_findings = [
-            self._finding_with_modifiers(
-                finding,
-                category_modifiers.get(finding.data_subject_category, []),
-            )
-            for finding in findings
-        ]
-
-        return enriched_findings, result
-
-    def _apply_risk_modifiers_via_regex(
-        self,
-        findings: list[GDPRDataSubjectFindingModel],
-    ) -> list[GDPRDataSubjectFindingModel]:
-        """Apply risk modifiers using regex pattern matching per-finding.
-
-        Args:
-            findings: Classified findings without risk modifiers.
-
-        Returns:
-            Findings with per-finding risk modifiers applied.
-
-        """
-        result: list[GDPRDataSubjectFindingModel] = []
-        for finding in findings:
-            evidence_texts = [
-                ev.content if hasattr(ev, "content") else str(ev)
-                for ev in finding.evidence
-                if ev
-            ]
-            modifiers = self._detect_risk_modifiers(evidence_texts)
-            result.append(self._finding_with_modifiers(finding, modifiers))
-        return result
 
     def _finding_with_modifiers(
         self,
         finding: GDPRDataSubjectFindingModel,
         modifiers: list[str],
     ) -> GDPRDataSubjectFindingModel:
-        """Create a new finding with the specified risk modifiers.
-
-        Args:
-            finding: Original finding.
-            modifiers: Risk modifiers to apply.
-
-        Returns:
-            New finding with updated risk_modifiers field.
-
-        """
+        """Create a new finding with the specified risk modifiers."""
         return GDPRDataSubjectFindingModel(
             data_subject_category=finding.data_subject_category,
             article_references=finding.article_references,

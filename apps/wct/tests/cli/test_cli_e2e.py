@@ -24,10 +24,10 @@ class TestWCTCLIE2E:
     def test_wct_cli_runs_lamp_stack_lite_successfully(self, tmp_path: Path) -> None:
         """WCT CLI executes LAMP_stack_lite.yaml runbook and generates JSON outputs."""
         # Arrange
-        runbook_path = Path("apps/wct/runbooks/samples/LAMP_stack_lite.yaml")
+        runbook_path = Path("apps/wct/tests/integration/test_data/LAMP_stack_lite.yaml")
         assert runbook_path.exists(), f"Runbook not found: {runbook_path}"
-        assert runbook_path.parent == Path("apps/wct/runbooks/samples"), (
-            "Runbook must be in samples directory"
+        assert runbook_path.parent == Path("apps/wct/tests/integration/test_data"), (
+            "Runbook must be in test data directory"
         )
 
         output_dir = tmp_path / "cli_output"
@@ -70,9 +70,9 @@ class TestWCTCLIE2E:
     def test_wct_cli_generates_expected_json_files(self, tmp_path: Path) -> None:
         """WCT CLI creates expected JSON output files with correct structure."""
         # Arrange
-        runbook_path = Path("apps/wct/runbooks/samples/LAMP_stack_lite.yaml")
-        assert runbook_path.parent == Path("apps/wct/runbooks/samples"), (
-            "Runbook must be in samples directory"
+        runbook_path = Path("apps/wct/tests/integration/test_data/LAMP_stack_lite.yaml")
+        assert runbook_path.parent == Path("apps/wct/tests/integration/test_data"), (
+            "Runbook must be in test data directory"
         )
         output_dir = tmp_path / "json_validation"
         output_dir.mkdir()
@@ -179,9 +179,9 @@ class TestWCTCLIE2E:
     def test_wct_cli_respects_output_directory_parameter(self, tmp_path: Path) -> None:
         """WCT CLI writes output files to specified directory."""
         # Arrange
-        runbook_path = Path("apps/wct/runbooks/samples/LAMP_stack_lite.yaml")
-        assert runbook_path.parent == Path("apps/wct/runbooks/samples"), (
-            "Runbook must be in samples directory"
+        runbook_path = Path("apps/wct/tests/integration/test_data/LAMP_stack_lite.yaml")
+        assert runbook_path.parent == Path("apps/wct/tests/integration/test_data"), (
+            "Runbook must be in test data directory"
         )
         custom_output_dir = tmp_path / "custom_location" / "nested"
         custom_output_dir.mkdir(parents=True)
@@ -218,9 +218,9 @@ class TestWCTCLIE2E:
         """WCT CLI completes LAMP_stack_lite analysis within performance benchmarks."""
 
         # Arrange
-        runbook_path = Path("apps/wct/runbooks/samples/LAMP_stack_lite.yaml")
-        assert runbook_path.parent == Path("apps/wct/runbooks/samples"), (
-            "Runbook must be in samples directory"
+        runbook_path = Path("apps/wct/tests/integration/test_data/LAMP_stack_lite.yaml")
+        assert runbook_path.parent == Path("apps/wct/tests/integration/test_data"), (
+            "Runbook must be in test data directory"
         )
         output_dir = tmp_path / "performance_test"
         output_dir.mkdir()

@@ -27,7 +27,7 @@ class TestWCTRunsCommand:
     ) -> None:
         """Lists all recorded runs with metadata after executing a runbook."""
         # Arrange - Execute a runbook to create a run
-        runbook_path = Path("apps/wct/runbooks/samples/LAMP_stack_lite.yaml")
+        runbook_path = Path("apps/wct/tests/integration/test_data/LAMP_stack_lite.yaml")
         assert runbook_path.exists(), f"Runbook not found: {runbook_path}"
 
         output_dir = tmp_path / "output"
@@ -82,7 +82,7 @@ class TestWCTRunsCommand:
     ) -> None:
         """Filters runs by status when --status flag is provided."""
         # Arrange - Execute a runbook to create a completed run
-        runbook_path = Path("apps/wct/runbooks/samples/LAMP_stack_lite.yaml")
+        runbook_path = Path("apps/wct/tests/integration/test_data/LAMP_stack_lite.yaml")
         assert runbook_path.exists(), f"Runbook not found: {runbook_path}"
 
         output_dir = tmp_path / "output"

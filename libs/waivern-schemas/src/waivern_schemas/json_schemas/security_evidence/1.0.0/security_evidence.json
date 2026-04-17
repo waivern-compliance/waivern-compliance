@@ -105,7 +105,7 @@
       "type": "string"
     },
     "SecurityEvidenceMetadata": {
-      "description": "Metadata for a security evidence item.\n\nSatisfies the FindingMetadata protocol via its source field, enabling\nSecurityEvidenceModel to be used directly with LLMService.complete[T, R].",
+      "description": "Metadata for a security evidence item.\n\nSatisfies the FindingMetadata protocol via its source field, enabling\nSecurityEvidenceModel to be used directly as an item type in LLMRequest\ngroups dispatched through the LLM dispatcher.",
       "properties": {
         "source": {
           "description": "Where the evidence was found. For code/config: file path. For documents: document name and section reference.",

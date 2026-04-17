@@ -12,15 +12,14 @@ class SecurityDocumentEvidenceExtractorConfig(BaseComponentConfiguration):
     """Configuration for SecurityDocumentEvidenceExtractor.
 
     Domain vocabulary comes from the SecurityDomain enum directly —
-    no ruleset config needed. LLM availability is determined by service
-    injection, not configuration.
+    no ruleset config needed.
     """
 
 
 class DocumentItem(BaseModel):
     """Lightweight document item satisfying the Finding protocol.
 
-    Used as the item type for LLMService.complete() — provides the
+    Used as the item type in ``LLMRequest`` groups — provides the
     id and metadata.source required by the Finding protocol, without
     carrying the full document content (which goes in ItemGroup.content).
     """
@@ -43,7 +42,6 @@ class SecurityDocEvidencePrepareState(BaseModel):
 
     document_items: list[DocumentItem]
     document_contents: list[str]
-    llm_enabled: bool
     run_id: str
 
 

@@ -64,7 +64,7 @@ class LLMCache(Protocol):
     async def cache_clear(self, run_id: str) -> None:
         """Delete all cache entries for a run.
 
-        Called after LLMService.complete() returns successfully.
+        Called by the executor after all dispatch calls for a batch complete.
 
         Args:
             run_id: Unique identifier for the run.

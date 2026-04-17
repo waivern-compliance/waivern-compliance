@@ -1,12 +1,13 @@
 """Multi-provider LLM abstraction for Waivern Compliance Framework.
 
-This module provides the LLM service interface that handles batching internally,
-moving this responsibility from processors/analysers to the LLM service layer.
+This package exposes the LLM dispatcher that processors declare against:
+processors build an ``LLMRequest`` describing groups, prompts, response models
+and batching mode; the executor hands it to the :class:`LLMDispatcher`, which
+handles batching, caching and provider calls and returns an
+``LLMDispatchResult``.
 
 Architecture
 ------------
-
-The LLM service separates concerns between processors and the service layer:
 
 **Processor responsibilities** (domain logic):
 - What to group by (source files, categories, etc.)
@@ -14,7 +15,7 @@ The LLM service separates concerns between processors and the service layer:
 - Batching mode selection (COUNT_BASED, EXTENDED_CONTEXT, or INDEPENDENT)
 - Prompt building via PromptBuilder protocol
 
-**LLM Service responsibilities** (infrastructure):
+**LLM dispatcher responsibilities** (infrastructure):
 - Token estimation (model-specific)
 - Batch size calculation (based on context window)
 - Batch planning (splitting, validation, optimisation)
@@ -32,17 +33,17 @@ Usage Pattern
     class MyPromptBuilder(PromptBuilder[MyFinding]):
         def build_prompt(self, items, content=None) -> str: ...
 
-3. Call LLMService.complete()::
+3. Build an ``LLMRequest`` and let the executor dispatch it::
 
-    result = await llm_service.complete(
-        groups,
+    request = LLMRequest(
+        groups=groups,
         prompt_builder=MyPromptBuilder(),
         response_model=MyResponseModel,
         batching_mode=BatchingMode.COUNT_BASED,
         run_id=run_id,
     )
 
-4. Handle results and skipped findings::
+4. Handle the ``LLMDispatchResult`` returned to ``finalise()``::
 
     for response in result.responses: ...
     for skipped in result.skipped: ...
@@ -67,7 +68,7 @@ docstring for full design rationale):
 Caching
 -------
 
-The LLMService caches responses per run_id. Cache keys are computed from
+The dispatcher caches responses per run_id. Cache keys are computed from
 prompt + model + response_model. Cache is cleared after successful completion
 (temporary working storage, not permanent state).
 """
@@ -97,7 +98,6 @@ from waivern_llm.errors import (
     LLMServiceError,
     PendingBatchError,
 )
-from waivern_llm.factory import LLMServiceFactory
 from waivern_llm.providers import (
     AnthropicProvider,
     BatchLLMProvider,
@@ -105,7 +105,6 @@ from waivern_llm.providers import (
     LLMProvider,
     OpenAIProvider,
 )
-from waivern_llm.service import DefaultLLMService, LLMService
 from waivern_llm.token_estimation import (
     OUTPUT_RATIO,
     PROMPT_OVERHEAD_TOKENS,
@@ -118,7 +117,6 @@ from waivern_llm.token_estimation import (
 from waivern_llm.types import (
     BatchingMode,
     ItemGroup,
-    LLMCompletionResult,
     LLMDispatchResult,
     LLMRequest,
     PromptBuilder,
@@ -135,17 +133,12 @@ __all__ = [
     "PromptBuilder",
     "SkipReason",
     "SkippedFinding",
-    "LLMCompletionResult",
     # Dispatcher
     "LLMDispatcher",
     "LLMDispatcherFactory",
     # Dispatch types
     "LLMRequest",
     "LLMDispatchResult",
-    # Service
-    "LLMService",
-    "DefaultLLMService",
-    "LLMServiceFactory",
     # Providers
     "LLMProvider",
     "BatchLLMProvider",

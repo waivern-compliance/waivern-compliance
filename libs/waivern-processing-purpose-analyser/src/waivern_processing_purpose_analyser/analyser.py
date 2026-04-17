@@ -14,7 +14,6 @@ from waivern_core import Analyser, InputRequirement
 from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import LLMService
 from waivern_llm.types import LLMDispatchResult, LLMRequest
 from waivern_schemas.processing_purpose_indicator import ProcessingPurposeIndicatorModel
 from waivern_schemas.source_code import SourceCodeDataModel
@@ -32,10 +31,9 @@ class ProcessingPurposeAnalyser(Analyser):
     This analyser identifies and categorises data processing purposes from textual
     content to help organisations understand what they're using personal data for.
 
-    Dual protocol: implements both ``Processor`` (via ``process()``) and
-    ``DistributedProcessor`` (via ``prepare()``/``finalise()``). The executor
-    prefers the distributed path; ``process()`` is a degraded standalone
-    fallback that forces LLM off.
+    Implements the ``DistributedProcessor`` protocol: ``prepare()`` builds
+    the request for the executor to dispatch, and ``finalise()`` consumes
+    the dispatch results.
 
     Multi-round behaviour: when the input schema is ``source_code`` and primary
     (extended-context) validation leaves fallback-eligible skipped findings
@@ -45,21 +43,14 @@ class ProcessingPurposeAnalyser(Analyser):
     merges primary and fallback outcomes into the final output ``Message``.
     """
 
-    def __init__(
-        self,
-        config: ProcessingPurposeAnalyserConfig,
-        llm_service: LLMService | None = None,
-    ) -> None:
-        """Initialise the processing purpose analyser with dependency injection.
+    def __init__(self, config: ProcessingPurposeAnalyserConfig) -> None:
+        """Initialise the processing purpose analyser.
 
         Args:
             config: Configuration object with analysis settings.
-            llm_service: LLM service for validation (injected by factory).
-                Pass ``None`` for LLM-disabled mode (degraded output only).
 
         """
         self._config = config
-        self._llm_service = llm_service
         self._result_builder = ProcessingPurposeResultBuilder(config)
 
     @classmethod
@@ -111,7 +102,7 @@ class ProcessingPurposeAnalyser(Analyser):
         input_schema = inputs[0].schema
         findings = self._merge_input_findings(inputs)
         source_contents = self._extract_source_contents(inputs)
-        llm_enabled = self._is_llm_enabled()
+        llm_enabled = self._config.llm_validation.enable_llm_validation
 
         if not llm_enabled or not findings:
             return PrepareResult(
@@ -124,12 +115,10 @@ class ProcessingPurposeAnalyser(Analyser):
                 requests=[],
             )
 
-        # Safe: _is_llm_enabled() guarantees self._llm_service is not None.
         orchestrator = create_validation_orchestrator(
             config=self._config.llm_validation,
             input_schema_name=input_schema.name,
             source_contents=source_contents,
-            llm_service=self._llm_service,
         )
         orchestrator_state, llm_request = orchestrator.prepare(
             findings, self._config.llm_validation, run_id
@@ -167,11 +156,7 @@ class ProcessingPurposeAnalyser(Analyser):
           executor runs another Phase 2 → 3 cycle. The fallback round's
           ``finalise()`` merges primary + fallback outcomes into a Message.
         """
-        if (
-            not state.llm_enabled
-            or state.orchestrator_state is None
-            or self._llm_service is None
-        ):
+        if not state.llm_enabled or state.orchestrator_state is None:
             return self._result_builder.build_output_message(
                 state.all_findings,
                 output_schema,
@@ -222,41 +207,7 @@ class ProcessingPurposeAnalyser(Analyser):
         ]
         return PrepareResult(state=state, requests=requests)
 
-    # ── Processor (standalone fallback) ──────────────────────────────────
-
-    @override
-    def process(
-        self,
-        inputs: list[Message],
-        output_schema: Schema,
-    ) -> Message:
-        """Standalone fallback producing degraded (LLM-disabled) output.
-
-        Delegates to prepare/finalise with LLM forced off. In the executor,
-        the DistributedProcessor path is always used instead.
-
-        """
-        prepare_result = self.prepare(inputs, output_schema)
-        state = prepare_result.state.model_copy(
-            update={"llm_enabled": False, "orchestrator_state": None}
-        )
-        result = self.finalise(state, [], output_schema)
-        # With llm_enabled=False, finalise always returns a Message.
-        return result  # pyright: ignore[reportReturnType]
-
     # ── Private helpers ──────────────────────────────────────────────────
-
-    def _is_llm_enabled(self) -> bool:
-        """Derive the enabled flag from config + injected service.
-
-        Both signals must agree: ``enable_llm_validation=True`` is the
-        caller's intent, and a non-None ``llm_service`` is the capability.
-        Either being absent means no dispatch path.
-        """
-        return (
-            self._llm_service is not None
-            and self._config.llm_validation.enable_llm_validation
-        )
 
     def _rebuild_orchestrator(
         self, state: ProcessingPurposePrepareState
@@ -267,8 +218,7 @@ class ProcessingPurposeAnalyser(Analyser):
         The factory extracts source contents from it when reconstructing a
         source_code strategy configuration.
 
-        Precondition: ``state.orchestrator_state`` is not None (caller
-        checks) and ``self._llm_service`` is not None (enabled path).
+        Precondition: ``state.orchestrator_state`` is not None (caller checks).
         """
         strategy_state = (
             state.orchestrator_state.strategy_state
@@ -279,7 +229,6 @@ class ProcessingPurposeAnalyser(Analyser):
             config=self._config.llm_validation,
             input_schema_name=state.input_schema_name,
             strategy_state=strategy_state,
-            llm_service=self._llm_service,
         )
 
     def _extract_llm_result(

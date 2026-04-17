@@ -6,9 +6,6 @@ Verifies the prepare/finalise/deserialise contract:
 - deserialise_prepare_result() round-trips through JSON serialisation
 """
 
-from unittest.mock import Mock
-
-from waivern_llm import LLMService
 from waivern_llm.types import BatchingMode, LLMDispatchResult, LLMRequest
 from waivern_schemas.iso27001_assessment import (
     ControlStatus,
@@ -32,29 +29,10 @@ from .test_helpers import (
 )
 
 
-def _make_assessor(
-    control_ref: str,
-    *,
-    llm_service: LLMService | None = None,
-) -> ISO27001Assessor:
-    """Build an assessor with optional LLM service.
-
-    Args:
-        control_ref: ISO 27001 control reference (e.g. "A.8.24").
-        llm_service: LLM service instance. Pass None for LLM-disabled mode.
-            Defaults to a mock LLMService (LLM enabled).
-
-    """
+def _make_assessor(control_ref: str) -> ISO27001Assessor:
+    """Build an assessor configured for the given control reference."""
     config = ISO27001AssessorConfig.from_properties({"control_ref": control_ref})
-    if llm_service is None:
-        llm_service = Mock(spec=LLMService)
-    return ISO27001Assessor(config=config, llm_service=llm_service)
-
-
-def _make_assessor_without_llm(control_ref: str) -> ISO27001Assessor:
-    """Build an assessor with LLM disabled (llm_service=None)."""
-    config = ISO27001AssessorConfig.from_properties({"control_ref": control_ref})
-    return ISO27001Assessor(config=config, llm_service=None)
+    return ISO27001Assessor(config=config)
 
 
 # =============================================================================
@@ -91,8 +69,8 @@ class TestPrepare:
         assert result.requests == []
         assert result.state.evidence_status == EvidenceStatus.REQUIRES_ATTESTATION
 
-    def test_automated_with_llm_builds_llm_request(self) -> None:
-        """Matching evidence + LLM enabled → LLMRequest with correct properties.
+    def test_automated_evidence_builds_llm_request(self) -> None:
+        """Matching evidence → LLMRequest with correct properties.
 
         A.8.24 (cryptography) has security_domains=[encryption].
         Providing matching evidence should produce an LLMRequest with
@@ -107,7 +85,6 @@ class TestPrepare:
 
         assert len(result.requests) == 1
         assert result.state.evidence_status == EvidenceStatus.AUTOMATED
-        assert result.state.llm_enabled is True
 
         llm_request = result.requests[0]
         assert isinstance(llm_request, LLMRequest)
@@ -116,23 +93,6 @@ class TestPrepare:
         assert llm_request.response_model is ISO27001LLMResponse
         assert len(llm_request.groups) == 1
         assert llm_request.groups[0].group_id == "A.8.24"
-
-    def test_automated_without_llm_returns_empty_requests(self) -> None:
-        """Matching evidence + LLM disabled → empty requests, llm_enabled=False.
-
-        Even though evidence is sufficient for automated assessment,
-        the absence of LLM service means no dispatch request is built.
-        """
-        assessor = _make_assessor_without_llm("A.8.24")
-        evidence_msg = make_evidence_message(
-            [make_evidence_finding(security_domain="encryption")]
-        )
-
-        result = assessor.prepare(inputs=[evidence_msg], output_schema=OUTPUT_SCHEMA)
-
-        assert result.requests == []
-        assert result.state.evidence_status == EvidenceStatus.AUTOMATED
-        assert result.state.llm_enabled is False
 
 
 # =============================================================================
@@ -180,24 +140,6 @@ class TestFinalise:
         assert finding.status == ControlStatus.NOT_ASSESSED
         assert finding.evidence_status == EvidenceStatus.REQUIRES_ATTESTATION
         assert "Awaiting document evidence" in finding.rationale
-
-    def test_automated_without_llm_produces_not_assessed(self) -> None:
-        """AUTOMATED + llm_enabled=False → NOT_ASSESSED with LLM unavailable rationale."""
-        assessor = _make_assessor_without_llm("A.8.24")
-        evidence_msg = make_evidence_message(
-            [make_evidence_finding(security_domain="encryption")]
-        )
-
-        prepare_result = assessor.prepare(
-            inputs=[evidence_msg], output_schema=OUTPUT_SCHEMA
-        )
-        result = assessor.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
-
-        output = parse_output(result)
-        finding = output.findings[0]
-        assert finding.status == ControlStatus.NOT_ASSESSED
-        assert finding.evidence_status == EvidenceStatus.AUTOMATED
-        assert "LLM" in finding.rationale
 
     def test_compliant_llm_result(self) -> None:
         """AUTOMATED + compliant LLMDispatchResult → COMPLIANT verdict."""
@@ -323,7 +265,6 @@ class TestDeserialise:
         # State fields
         assert restored.state.rule.control_ref == original.state.rule.control_ref
         assert restored.state.evidence_status == original.state.evidence_status
-        assert restored.state.llm_enabled == original.state.llm_enabled
         assert restored.state.run_id == original.state.run_id
         assert len(restored.state.evidence) == len(original.state.evidence)
 

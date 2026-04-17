@@ -5,7 +5,6 @@ from typing import override
 
 from waivern_core import ComponentConfig, ComponentFactory
 from waivern_core.services.container import ServiceContainer
-from waivern_llm import LLMService
 
 from .extractor import SecurityDocumentEvidenceExtractor
 from .types import SecurityDocumentEvidenceExtractorConfig
@@ -18,70 +17,36 @@ class SecurityDocumentEvidenceExtractorFactory(
 ):
     """Factory for creating SecurityDocumentEvidenceExtractor instances.
 
-    Always resolves LLMService from the DI container — the extractor
-    requires LLM for domain classification. LLM availability is
-    determined by service injection, not configuration.
+    Takes a ``ServiceContainer`` for symmetry with other processor
+    factories; SecurityDocumentEvidenceExtractor currently has no injected
+    services.
     """
 
     def __init__(self, container: ServiceContainer) -> None:
-        """Initialise factory with dependency injection container.
+        """Initialise factory.
 
         Args:
-            container: Service container for resolving dependencies.
+            container: Service container for resolving dependencies (unused today).
 
         """
         self._container = container
 
     @override
     def create(self, config: ComponentConfig) -> SecurityDocumentEvidenceExtractor:
-        """Create extractor instance with injected dependencies.
-
-        Args:
-            config: Configuration dict from runbook properties.
-
-        Returns:
-            Configured SecurityDocumentEvidenceExtractor instance.
-
-        Raises:
-            ValueError: If configuration is invalid or requirements cannot be met.
-
-        """
+        """Create a SecurityDocumentEvidenceExtractor from configuration."""
         if not self.can_create(config):
             raise ValueError("Cannot create extractor with given configuration")
 
-        extractor_config = SecurityDocumentEvidenceExtractorConfig.from_properties(
-            config
-        )
-        llm_service = self._container.get_service(LLMService)
-
         return SecurityDocumentEvidenceExtractor(
-            config=extractor_config,
-            llm_service=llm_service,
+            config=SecurityDocumentEvidenceExtractorConfig.from_properties(config),
         )
 
     @override
     def can_create(self, config: ComponentConfig) -> bool:
-        """Check if factory can create extractor with given configuration.
-
-        Validates:
-        1. Configuration structure
-        2. LLM service available in the container
-
-        Args:
-            config: Configuration dict to validate.
-
-        Returns:
-            True if factory can create extractor, False otherwise.
-
-        """
+        """Validate configuration parsing."""
         try:
             SecurityDocumentEvidenceExtractorConfig.from_properties(config)
         except Exception:
-            return False
-
-        try:
-            self._container.get_service(LLMService)
-        except (ValueError, KeyError):
             return False
 
         return True
@@ -89,12 +54,9 @@ class SecurityDocumentEvidenceExtractorFactory(
     @property
     @override
     def component_class(self) -> type[SecurityDocumentEvidenceExtractor]:
-        """Get the component class this factory creates."""
         return SecurityDocumentEvidenceExtractor
 
     @override
     def get_service_dependencies(self) -> dict[str, type]:
-        """Declare service dependencies for DI container."""
-        return {
-            "llm_service": LLMService,
-        }
+        """SecurityDocumentEvidenceExtractor has no service dependencies."""
+        return {}

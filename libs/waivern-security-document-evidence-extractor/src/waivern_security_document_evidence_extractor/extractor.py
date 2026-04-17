@@ -1,15 +1,21 @@
 """Security document evidence extractor processor."""
 
 import importlib
+import logging
 from collections.abc import Sequence
 from typing import Any, override
 
 from waivern_analysers_shared import SchemaReader
 from waivern_core import InputRequirement, Processor
-from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
+from waivern_core.dispatch import (
+    DispatcherNotConfigured,
+    DispatchRequest,
+    DispatchResult,
+    PrepareResult,
+)
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import BatchingMode, ItemGroup, LLMService
+from waivern_llm import BatchingMode, ItemGroup
 from waivern_llm.types import LLMDispatchResult, LLMRequest
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.security_document_context import SecurityDocumentContextMetadata
@@ -27,6 +33,8 @@ from .types import (
     SecurityDocumentEvidenceExtractorConfig,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class SecurityDocumentEvidenceExtractor(Processor):
     """Classifies policy documents by security domain using LLM analysis.
@@ -34,22 +42,22 @@ class SecurityDocumentEvidenceExtractor(Processor):
     Receives standard_input/1.0.0 (from filesystem connector) containing
     policy document text, calls the LLM to classify which SecurityDomain
     values apply, and emits security_document_context/1.0.0.
+
+    Always dispatches an LLM request — there is no config-level disable
+    flag because the extractor cannot produce meaningful domain
+    classifications without LLM analysis. When the dispatcher is not
+    configured, ``finalise()`` receives a ``DispatcherNotConfigured``
+    result and falls back to default responses (empty domains, raw
+    content as summary).
     """
 
-    def __init__(
-        self,
-        config: SecurityDocumentEvidenceExtractorConfig,
-        llm_service: LLMService | None = None,
-    ) -> None:
-        """Initialise the extractor with dependency injection.
+    def __init__(self, config: SecurityDocumentEvidenceExtractorConfig) -> None:
+        """Initialise the extractor.
 
         Args:
             config: Validated configuration object.
-            llm_service: LLM service for domain classification.
-                Pass ``None`` for LLM-disabled mode (degraded output only).
 
         """
-        self._llm_service = llm_service
 
     @classmethod
     @override
@@ -79,7 +87,7 @@ class SecurityDocumentEvidenceExtractor(Processor):
         1. Validate inputs and extract run_id
         2. Parse and merge input data items (fan-in)
         3. Create DocumentItem + content pairs
-        4. If LLM enabled, build LLMRequest; otherwise empty requests
+        4. Build an LLMRequest for domain classification
 
         """
         if not inputs:
@@ -90,22 +98,16 @@ class SecurityDocumentEvidenceExtractor(Processor):
 
         data_items = self._merge_input_data_items(inputs)
         document_items, document_contents = self._build_document_pairs(data_items)
-        llm_enabled = self._llm_service is not None
-
-        requests: list[DispatchRequest] = []
-        if llm_enabled:
-            requests.append(
-                self._build_llm_request(document_items, document_contents, run_id)
-            )
 
         return PrepareResult(
             state=SecurityDocEvidencePrepareState(
                 document_items=document_items,
                 document_contents=document_contents,
-                llm_enabled=llm_enabled,
                 run_id=run_id,
             ),
-            requests=requests,
+            requests=[
+                self._build_llm_request(document_items, document_contents, run_id)
+            ],
         )
 
     def _build_llm_request(
@@ -136,43 +138,62 @@ class SecurityDocumentEvidenceExtractor(Processor):
     ) -> Message:
         """Produce classified document output from state and dispatch results.
 
-        1. If LLM disabled: generate default responses (empty domains, content as summary)
-        2. If LLM result with responses: validate as DomainClassificationResponse
-        3. If LLM result with empty responses: fall back to defaults
-
+        1. If LLM result with responses: validate as DomainClassificationResponse.
+        2. If LLM result with empty responses or no dispatch result: fall back
+           to default responses (empty domains, content as summary). The
+           output's ``llm_classification_enabled`` flag reflects whether real
+           LLM responses were actually used.
         """
-        if not state.llm_enabled:
-            responses = self._build_default_responses(state.document_contents)
-        else:
-            responses = self._extract_llm_responses(state, results)
+        responses, llm_used = self._extract_llm_responses(state, results)
 
         return build_output_message(
             document_items=state.document_items,
             document_contents=state.document_contents,
             responses=responses,
             output_schema=output_schema,
-            llm_classification_enabled=state.llm_enabled,
+            llm_classification_enabled=llm_used,
         )
 
     def _extract_llm_responses(
         self,
         state: SecurityDocEvidencePrepareState,
         results: Sequence[DispatchResult],
-    ) -> list[DomainClassificationResponse]:
-        """Extract classification responses from LLM dispatch results."""
+    ) -> tuple[list[DomainClassificationResponse], bool]:
+        """Extract classification responses from LLM dispatch results.
+
+        Returns ``(responses, llm_used)`` where ``llm_used`` is ``True`` only
+        when real LLM responses were parsed — a missing or empty dispatch
+        result degrades to defaults with ``llm_used=False``.
+        """
         for result in results:
             match result:
+                case DispatcherNotConfigured() as nc:
+                    logger.warning(
+                        "LLM dispatcher not configured: %s — "
+                        "falling back to default responses",
+                        nc.reason,
+                    )
+                    return (
+                        self._build_default_responses(state.document_contents),
+                        False,
+                    )
                 case LLMDispatchResult() as llm_result:
                     if not llm_result.responses:
-                        return self._build_default_responses(state.document_contents)
-                    return [
-                        DomainClassificationResponse.model_validate(r)
-                        for r in llm_result.responses
-                    ]
+                        return (
+                            self._build_default_responses(state.document_contents),
+                            False,
+                        )
+                    return (
+                        [
+                            DomainClassificationResponse.model_validate(r)
+                            for r in llm_result.responses
+                        ],
+                        True,
+                    )
                 case _:
                     continue
 
-        return self._build_default_responses(state.document_contents)
+        return self._build_default_responses(state.document_contents), False
 
     def _build_default_responses(
         self,
@@ -198,24 +219,6 @@ class SecurityDocumentEvidenceExtractor(Processor):
             LLMRequest[DocumentItem].model_validate(r) for r in raw.get("requests", [])
         ]
         return PrepareResult(state=state, requests=requests)
-
-    # ── Processor (standalone fallback) ──────────────────────────────────
-
-    @override
-    def process(
-        self,
-        inputs: list[Message],
-        output_schema: Schema,
-    ) -> Message:
-        """Standalone fallback producing degraded (LLM-disabled) output.
-
-        Delegates to prepare/finalise with LLM forced off. In the executor,
-        the DistributedProcessor path is always used instead.
-
-        """
-        prepare_result = self.prepare(inputs, output_schema)
-        state = prepare_result.state.model_copy(update={"llm_enabled": False})
-        return self.finalise(state, [], output_schema)
 
     # ── Private helpers ──────────────────────────────────────────────────
 

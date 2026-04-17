@@ -2,7 +2,7 @@
 
 Business behaviour: Creates LLMDispatcher instances with the correct provider
 and cache store, resolving dependencies lazily from the ServiceContainer.
-Follows the same ServiceFactory pattern as LLMServiceFactory.
+Follows the standard ServiceFactory DI pattern.
 """
 
 from __future__ import annotations

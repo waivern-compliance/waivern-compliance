@@ -6,9 +6,6 @@ Verifies the prepare/finalise/deserialise contract:
 - deserialise_prepare_result() round-trips through JSON serialisation
 """
 
-from unittest.mock import Mock
-
-from waivern_llm import LLMService
 from waivern_llm.types import BatchingMode, LLMDispatchResult, LLMRequest
 from waivern_schemas.security_domain import SecurityDomain
 
@@ -26,27 +23,11 @@ from waivern_security_document_evidence_extractor.types import (
 from .test_helpers import OUTPUT_SCHEMA, RUN_ID, make_input_message, parse_output
 
 
-def _make_extractor(
-    *,
-    llm_service: LLMService | None = None,
-) -> SecurityDocumentEvidenceExtractor:
-    """Build an extractor with optional LLM service.
-
-    Args:
-        llm_service: LLM service instance. Pass None for LLM-disabled mode.
-            Defaults to a mock LLMService (LLM enabled).
-
-    """
-    config = SecurityDocumentEvidenceExtractorConfig()
-    if llm_service is None:
-        llm_service = Mock(spec=LLMService)
-    return SecurityDocumentEvidenceExtractor(config=config, llm_service=llm_service)
-
-
-def _make_extractor_without_llm() -> SecurityDocumentEvidenceExtractor:
-    """Build an extractor with LLM disabled (llm_service=None)."""
-    config = SecurityDocumentEvidenceExtractorConfig()
-    return SecurityDocumentEvidenceExtractor(config=config, llm_service=None)
+def _make_extractor() -> SecurityDocumentEvidenceExtractor:
+    """Build an extractor with default configuration."""
+    return SecurityDocumentEvidenceExtractor(
+        config=SecurityDocumentEvidenceExtractorConfig()
+    )
 
 
 # =============================================================================
@@ -57,8 +38,8 @@ def _make_extractor_without_llm() -> SecurityDocumentEvidenceExtractor:
 class TestPrepare:
     """Tests for prepare() — document parsing and request building."""
 
-    def test_single_document_with_llm_builds_request(self) -> None:
-        """One document + LLM enabled → LLMRequest with correct properties."""
+    def test_single_document_builds_request(self) -> None:
+        """One document → LLMRequest with correct properties."""
         extractor = _make_extractor()
         msg = make_input_message(
             [{"content": "Encryption policy", "source": "enc.docx"}]
@@ -67,7 +48,6 @@ class TestPrepare:
         result = extractor.prepare(inputs=[msg], output_schema=OUTPUT_SCHEMA)
 
         assert len(result.requests) == 1
-        assert result.state.llm_enabled is True
 
         llm_request = result.requests[0]
         assert isinstance(llm_request, LLMRequest)
@@ -98,16 +78,6 @@ class TestPrepare:
         assert llm_request.groups[1].group_id == "incident.docx"
         assert llm_request.groups[2].group_id == "isms.md"
 
-    def test_without_llm_returns_empty_requests(self) -> None:
-        """No llm_service → empty requests, llm_enabled=False in state."""
-        extractor = _make_extractor_without_llm()
-        msg = make_input_message([{"content": "Policy doc", "source": "policy.md"}])
-
-        result = extractor.prepare(inputs=[msg], output_schema=OUTPUT_SCHEMA)
-
-        assert result.requests == []
-        assert result.state.llm_enabled is False
-
     def test_state_captures_documents_and_contents(self) -> None:
         """State contains correct document_items, document_contents, and run_id."""
         extractor = _make_extractor()
@@ -137,9 +107,9 @@ class TestPrepare:
 class TestFinalise:
     """Tests for finalise() — output production from state and results."""
 
-    def test_llm_disabled_produces_degraded_output(self) -> None:
-        """llm_enabled=False → all docs get empty domains, content as summary."""
-        extractor = _make_extractor_without_llm()
+    def test_missing_llm_result_produces_degraded_output(self) -> None:
+        """Empty results (dispatch failure) → defaults: empty domains, content as summary."""
+        extractor = _make_extractor()
         msg = make_input_message(
             [
                 {"content": "Encryption policy text", "source": "enc.docx"},
@@ -289,7 +259,6 @@ class TestDeserialise:
             == original.state.document_items[0].metadata.source
         )
         assert restored.state.document_contents == original.state.document_contents
-        assert restored.state.llm_enabled == original.state.llm_enabled
         assert restored.state.run_id == original.state.run_id
 
         # Request metadata (prompt_builder/response_model excluded from serialisation)

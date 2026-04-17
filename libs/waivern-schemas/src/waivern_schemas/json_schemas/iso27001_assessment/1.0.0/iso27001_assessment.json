@@ -118,7 +118,7 @@
       "type": "object"
     },
     "ISO27001AssessmentModel": {
-      "description": "Individual ISO 27001 control assessment verdict.\n\nOne instance per assessed control. Does NOT extend BaseFindingModel \u2014\nthis is an assessment verdict, not a pattern-matched finding. It has no\nevidence snippets or matched_patterns. It satisfies the Finding protocol\n(id + metadata) for LLMService.complete() compatibility.\n\nIf future requirements arise, evidence and/or matched_patterns fields\ncan be added to the model when appropriate.",
+      "description": "Individual ISO 27001 control assessment verdict.\n\nOne instance per assessed control. Does NOT extend BaseFindingModel \u2014\nthis is an assessment verdict, not a pattern-matched finding. It has no\nevidence snippets or matched_patterns. It satisfies the Finding protocol\n(id + metadata) so it can be used as an item type in LLMRequest groups.\n\nIf future requirements arise, evidence and/or matched_patterns fields\ncan be added to the model when appropriate.",
       "properties": {
         "id": {
           "description": "Unique identifier for this assessment (UUID)",

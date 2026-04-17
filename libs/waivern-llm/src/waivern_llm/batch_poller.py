@@ -2,7 +2,7 @@
 
 Polls a batch-capable LLM provider for completed results and updates
 the cache entries from ``pending`` to ``completed`` (or ``failed``).
-This bridges the gap between ``DefaultLLMService._complete_batch()``
+This bridges the gap between the dispatcher's batch-submission path
 (which submits work and raises ``PendingBatchError``) and the resume
 path (which expects all cache entries to be completed).
 

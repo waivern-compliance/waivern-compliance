@@ -14,7 +14,6 @@ from waivern_core import Analyser, InputRequirement
 from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
-from waivern_llm import LLMService
 from waivern_llm.types import LLMDispatchResult, LLMRequest
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.personal_data_indicator import PersonalDataIndicatorModel
@@ -36,37 +35,23 @@ class PersonalDataAnalyser(Analyser):
 
     This analyser uses predefined rulesets to identify personal data patterns
     in structured data content. It supports LLM-based validation to filter
-    false positives.
-
-    Dual protocol: implements both ``Processor`` (via ``process()``) and
-    ``DistributedProcessor`` (via ``prepare()``/``finalise()``). The executor
-    prefers the distributed path; ``process()`` is a degraded standalone
-    fallback that forces LLM off.
+    false positives via the DistributedProcessor protocol: ``prepare()``
+    builds the request for the executor to dispatch, and ``finalise()``
+    consumes the dispatch results.
     """
 
-    def __init__(
-        self,
-        config: PersonalDataAnalyserConfig,
-        llm_service: LLMService | None = None,
-    ) -> None:
-        """Initialise the analyser with dependency injection.
+    def __init__(self, config: PersonalDataAnalyserConfig) -> None:
+        """Initialise the analyser.
 
         Args:
-            config: Validated configuration object
-            llm_service: LLM service for validation (injected by factory).
-                Pass ``None`` for LLM-disabled mode (degraded output only).
+            config: Validated configuration object.
 
         """
         self._config = config
         self._pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
-        self._llm_service = llm_service
         self._result_builder = PersonalDataResultBuilder(config)
-        self._orchestrator: (
-            ValidationOrchestrator[PersonalDataIndicatorModel] | None
-        ) = (
-            create_validation_orchestrator(config.llm_validation, llm_service)
-            if llm_service is not None
-            else None
+        self._orchestrator: ValidationOrchestrator[PersonalDataIndicatorModel] = (
+            create_validation_orchestrator(config.llm_validation)
         )
 
     @classmethod
@@ -116,9 +101,9 @@ class PersonalDataAnalyser(Analyser):
 
         data_items = self._merge_input_data_items(inputs)
         findings = self._find_patterns_in_data_items(data_items)
-        llm_enabled = self._is_llm_enabled()
+        llm_enabled = self._config.llm_validation.enable_llm_validation
 
-        if not llm_enabled or not findings or self._orchestrator is None:
+        if not llm_enabled or not findings:
             return PrepareResult(
                 state=PersonalDataPrepareState(
                     all_findings=findings,
@@ -165,11 +150,7 @@ class PersonalDataAnalyser(Analyser):
         orchestrator never returns ``FallbackNeeded`` here. The branch is
         retained defensively to satisfy the typed return union.
         """
-        if (
-            not state.llm_enabled
-            or state.orchestrator_state is None
-            or self._orchestrator is None
-        ):
+        if not state.llm_enabled or state.orchestrator_state is None:
             return self._result_builder.build_output_message(
                 state.all_findings,
                 output_schema,
@@ -220,42 +201,7 @@ class PersonalDataAnalyser(Analyser):
         ]
         return PrepareResult(state=state, requests=requests)
 
-    # ── Processor (standalone fallback) ──────────────────────────────────
-
-    @override
-    def process(
-        self,
-        inputs: list[Message],
-        output_schema: Schema,
-    ) -> Message:
-        """Standalone fallback producing degraded (LLM-disabled) output.
-
-        Delegates to prepare/finalise with LLM forced off. In the executor,
-        the DistributedProcessor path is always used instead.
-
-        """
-        prepare_result = self.prepare(inputs, output_schema)
-        state = prepare_result.state.model_copy(
-            update={"llm_enabled": False, "orchestrator_state": None}
-        )
-        result = self.finalise(state, [], output_schema)
-        # With llm_enabled=False, finalise always returns a Message.
-        return result  # pyright: ignore[reportReturnType]
-
     # ── Private helpers ──────────────────────────────────────────────────
-
-    def _is_llm_enabled(self) -> bool:
-        """Derive the enabled flag from config + injected service.
-
-        Both signals must agree: ``enable_llm_validation=True`` is the
-        caller's intent, and a non-None ``llm_service`` is the capability.
-        Either being absent means no dispatch path.
-        """
-        return (
-            self._llm_service is not None
-            and self._orchestrator is not None
-            and self._config.llm_validation.enable_llm_validation
-        )
 
     def _extract_llm_result(
         self,
