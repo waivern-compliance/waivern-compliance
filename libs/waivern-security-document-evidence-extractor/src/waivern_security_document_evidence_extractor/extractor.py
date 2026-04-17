@@ -1,12 +1,18 @@
 """Security document evidence extractor processor."""
 
 import importlib
+import logging
 from collections.abc import Sequence
 from typing import Any, override
 
 from waivern_analysers_shared import SchemaReader
 from waivern_core import InputRequirement, Processor
-from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
+from waivern_core.dispatch import (
+    DispatcherNotConfigured,
+    DispatchRequest,
+    DispatchResult,
+    PrepareResult,
+)
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm import BatchingMode, ItemGroup
@@ -27,6 +33,8 @@ from .types import (
     SecurityDocumentEvidenceExtractorConfig,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class SecurityDocumentEvidenceExtractor(Processor):
     """Classifies policy documents by security domain using LLM analysis.
@@ -34,6 +42,13 @@ class SecurityDocumentEvidenceExtractor(Processor):
     Receives standard_input/1.0.0 (from filesystem connector) containing
     policy document text, calls the LLM to classify which SecurityDomain
     values apply, and emits security_document_context/1.0.0.
+
+    Always dispatches an LLM request — there is no config-level disable
+    flag because the extractor cannot produce meaningful domain
+    classifications without LLM analysis. When the dispatcher is not
+    configured, ``finalise()`` receives a ``DispatcherNotConfigured``
+    result and falls back to default responses (empty domains, raw
+    content as summary).
     """
 
     def __init__(self, config: SecurityDocumentEvidenceExtractorConfig) -> None:
@@ -43,7 +58,6 @@ class SecurityDocumentEvidenceExtractor(Processor):
             config: Validated configuration object.
 
         """
-        self._config = config
 
     @classmethod
     @override
@@ -153,6 +167,16 @@ class SecurityDocumentEvidenceExtractor(Processor):
         """
         for result in results:
             match result:
+                case DispatcherNotConfigured() as nc:
+                    logger.warning(
+                        "LLM dispatcher not configured: %s — "
+                        "falling back to default responses",
+                        nc.reason,
+                    )
+                    return (
+                        self._build_default_responses(state.document_contents),
+                        False,
+                    )
                 case LLMDispatchResult() as llm_result:
                     if not llm_result.responses:
                         return (

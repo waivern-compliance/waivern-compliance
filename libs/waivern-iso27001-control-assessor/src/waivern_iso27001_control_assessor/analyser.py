@@ -6,7 +6,12 @@ from typing import Any, override
 
 from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import Analyser, InputRequirement
-from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
+from waivern_core.dispatch import (
+    DispatcherNotConfigured,
+    DispatchRequest,
+    DispatchResult,
+    PrepareResult,
+)
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm import BatchingMode, ItemGroup
@@ -35,6 +40,13 @@ class ISO27001Assessor(Analyser):
     Receives security evidence and optional document context as inputs,
     filters by security domain, derives evidence_status, and calls the
     LLM to produce a structured assessment verdict.
+
+    Always dispatches an LLM request when evidence_status is AUTOMATED —
+    there is no config-level disable flag because the assessor cannot produce
+    meaningful verdicts without LLM analysis. When the dispatcher is not
+    configured (e.g., missing API key), ``finalise()`` receives a
+    ``DispatcherNotConfigured`` result and emits a NOT_ASSESSED verdict
+    with an actionable rationale.
 
     Two input alternatives are supported:
     1. security_evidence + security_document_context (full assessment)
@@ -216,6 +228,22 @@ class ISO27001Assessor(Analyser):
         """Interpret LLM dispatch results into an assessment verdict."""
         for result in results:
             match result:
+                case DispatcherNotConfigured() as nc:
+                    return self._result_builder.build_output_message(
+                        rule,
+                        verdict=AssessmentVerdict(
+                            status=ControlStatus.NOT_ASSESSED,
+                            evidence_status=EvidenceStatus.AUTOMATED,
+                            rationale=(
+                                "LLM dispatcher not configured. Evidence was "
+                                "sufficient for automated assessment but the "
+                                f"dispatcher is unavailable: {nc.reason}"
+                            ),
+                            gap_description=None,
+                        ),
+                        llm_enabled=False,
+                        output_schema=output_schema,
+                    )
                 case LLMDispatchResult() as llm_result:
                     if not llm_result.responses:
                         return self._result_builder.build_output_message(
@@ -251,7 +279,7 @@ class ISO27001Assessor(Analyser):
                 case _:
                     continue
 
-        # No LLMDispatchResult found — unexpected but handle gracefully
+        # No recognised DispatchResult found
         return self._result_builder.build_output_message(
             rule,
             verdict=AssessmentVerdict(

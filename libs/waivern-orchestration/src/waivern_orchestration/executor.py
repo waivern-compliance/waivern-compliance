@@ -69,6 +69,8 @@ from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.errors import ArtifactNotFoundError
 from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 from waivern_core.dispatch import (
+    DispatcherNotConfigured,
+    DispatcherUnavailableError,
     DispatchRequest,
     DispatchResult,
     DistributedProcessor,
@@ -797,10 +799,29 @@ class DAGExecutor:
             affected_entries = entries_by_type[request_type]
             try:
                 dispatcher = self._registry.get_dispatcher_for(request_type)
-                group_results = await dispatcher.dispatch(requests)
+                group_results: Sequence[DispatchResult] = await dispatcher.dispatch(
+                    requests
+                )
             except PendingProcessingError:
                 await self._persist_pending_entries(affected_entries, ctx)
                 continue
+            except DispatcherUnavailableError as exc:
+                # Dispatcher not configured (e.g., missing API key).
+                # Produce soft-failure results so processors can degrade
+                # gracefully in finalise() rather than failing the artifact.
+                logger.warning(
+                    "Dispatcher unavailable for %s: %s",
+                    request_type.__name__,
+                    exc,
+                )
+                group_results = [
+                    DispatcherNotConfigured(
+                        request_id=req.request_id,
+                        name=req.name,
+                        reason=str(exc),
+                    )
+                    for req in requests
+                ]
             except Exception as exc:
                 affected_ids = [e.artifact_id for e in affected_entries]
                 logger.exception(

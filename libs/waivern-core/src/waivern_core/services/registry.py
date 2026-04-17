@@ -16,6 +16,7 @@ from waivern_core.base_processor import Processor
 from waivern_core.component_factory import ComponentFactory
 from waivern_core.dispatch import (
     DispatcherFactory,
+    DispatcherUnavailableError,
     DispatchRequest,
     DispatchResult,
     RequestDispatcher,
@@ -102,8 +103,8 @@ class ComponentRegistry:
 
         Raises:
             ValueError: If no registered factory handles this request type.
-            RuntimeError: If a matching factory cannot create a dispatcher
-                (e.g., missing API key or required service).
+            DispatcherUnavailableError: If a matching factory cannot create
+                a dispatcher (e.g., missing API key or required service).
 
         """
         for name, factory in self.dispatcher_factories.items():
@@ -115,7 +116,7 @@ class ComponentRegistry:
                     f"Dispatcher factory '{name}' matches request type "
                     f"'{request_type.__name__}' but cannot create a dispatcher"
                 )
-                raise RuntimeError(msg)
+                raise DispatcherUnavailableError(msg)
 
             dispatcher = factory.create()
             if dispatcher is None:
@@ -123,7 +124,7 @@ class ComponentRegistry:
                     f"Dispatcher factory '{name}' matched request type "
                     f"'{request_type.__name__}' but create() returned None"
                 )
-                raise RuntimeError(msg)
+                raise DispatcherUnavailableError(msg)
 
             return dispatcher
 

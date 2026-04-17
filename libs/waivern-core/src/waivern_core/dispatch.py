@@ -84,6 +84,36 @@ class DispatchResult(BaseModel):
         return context
 
 
+class DispatcherNotConfigured(DispatchResult):
+    """Signal result indicating the dispatcher for a request type is unavailable.
+
+    Produced by the executor when a ``DispatcherFactory`` exists for the
+    request type but cannot create a dispatcher (e.g., missing API key or
+    required service). Processors pattern-match on this in ``finalise()``
+    to produce targeted degraded output rather than a generic failure.
+
+    Processors that gate dispatch via a config flag (e.g.,
+    ``enable_llm_validation``) will never see this result — they emit no
+    requests when the flag is off. This result is relevant for processors
+    that always dispatch (e.g., ISO 27001 assessor, security document
+    extractor) where LLM availability is a deployment concern.
+    """
+
+    reason: str
+    """Human-readable reason the dispatcher could not be created."""
+
+
+class DispatcherUnavailableError(RuntimeError):
+    """Raised when a dispatcher factory matches but cannot create a dispatcher.
+
+    Distinct from ``ValueError`` (no factory registered at all), which
+    indicates a deployment or programming error. This exception signals
+    a recoverable configuration gap — the executor converts it into
+    ``DispatcherNotConfigured`` results so processors can degrade
+    gracefully.
+    """
+
+
 class PrepareResult[S: BaseModel](BaseModel):
     """Result of ``DistributedProcessor.prepare()``.
 
