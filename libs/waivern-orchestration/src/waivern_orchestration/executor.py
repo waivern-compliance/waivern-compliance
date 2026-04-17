@@ -63,10 +63,11 @@ from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
 from graphlib import TopologicalSorter
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.errors import ArtifactNotFoundError
+from waivern_artifact_store.llm_cache import LLMCache
 from waivern_core import ExecutionContext, Message, MessageExtensions, Schema
 from waivern_core.dispatch import (
     DispatcherNotConfigured,
@@ -214,6 +215,14 @@ class DAGExecutor:
             run_ctx.metadata.mark_failed()
         else:
             run_ctx.metadata.mark_completed()
+            # Clean up LLM cache only on successful completion — all
+            # dispatchers across all DAG phases have consumed their
+            # results. Cannot clear earlier: the DAG runs multiple
+            # phases and later phases need cache entries written by
+            # earlier batch submissions. Cannot clear when interrupted
+            # (pending batches still need cache for poller + resume).
+            llm_cache = cast("LLMCache", store)
+            await llm_cache.cache_clear(run_ctx.metadata.run_id)
         await run_ctx.save_metadata(store)
 
         total_duration = time.monotonic() - start_time
