@@ -4,10 +4,13 @@ Verifies the prepare/finalise/deserialise contract:
 - prepare() runs pattern matching and builds an LLMRequest when enabled
 - finalise() interprets dispatch results via the ValidationOrchestrator
 - deserialise_prepare_result() round-trips through JSON serialisation
+
+Uses monkeypatched RulesetManager to decouple from production ruleset data.
 """
 
 from typing import Any, cast
 
+import pytest
 from waivern_analysers_shared.llm_validation.models import (
     LLMValidationResponseModel,
     LLMValidationResultModel,
@@ -16,9 +19,11 @@ from waivern_analysers_shared.llm_validation.validation_orchestrator import (
     OrchestratorPrepareState,
 )
 from waivern_analysers_shared.types import LLMValidationConfig, PatternMatchingConfig
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm.types import BatchingMode, LLMDispatchResult, LLMRequest
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 from waivern_schemas.standard_input import (
@@ -35,22 +40,52 @@ from waivern_data_subject_analyser.types import (
     DataSubjectPrepareState,
 )
 
-OUTPUT_SCHEMA = Schema("data_subject_indicator", "1.0.0")
-INPUT_SCHEMA = Schema("standard_input", "1.0.0")
-RUN_ID = "test-run-id"
+# =============================================================================
+# Synthetic rules
+# =============================================================================
+
+RULE_EMPLOYEE = DataSubjectIndicatorRule(
+    name="Test Employee",
+    description="Employee indicator",
+    subject_category="test_employee",
+    indicator_type="primary",
+    confidence_weight=45,
+    patterns=("test_employee_kw",),
+)
+
+RULE_CUSTOMER = DataSubjectIndicatorRule(
+    name="Test Customer",
+    description="Customer indicator",
+    subject_category="test_customer",
+    indicator_type="primary",
+    confidence_weight=50,
+    patterns=("test_customer_kw",),
+)
+
+SYNTHETIC_RULES = (RULE_EMPLOYEE, RULE_CUSTOMER)
+
+_UNUSED_RULESET_URI = "unused/test/1.0.0"
+
+
+def _mock_get_rules(
+    uri: str, rule_type: type[DataSubjectIndicatorRule]
+) -> tuple[DataSubjectIndicatorRule, ...]:
+    return SYNTHETIC_RULES
 
 
 # =============================================================================
 # Helpers
 # =============================================================================
 
+OUTPUT_SCHEMA = Schema("data_subject_indicator", "1.0.0")
+INPUT_SCHEMA = Schema("standard_input", "1.0.0")
+RUN_ID = "test-run-id"
+
 
 def _make_config(enable_llm: bool = True) -> DataSubjectAnalyserConfig:
     """Build a DataSubjectAnalyserConfig for tests."""
     return DataSubjectAnalyserConfig(
-        pattern_matching=PatternMatchingConfig(
-            ruleset="local/data_subject_indicator/1.0.0"
-        ),
+        pattern_matching=PatternMatchingConfig(ruleset=_UNUSED_RULESET_URI),
         llm_validation=LLMValidationConfig(
             enable_llm_validation=enable_llm,
             llm_validation_mode="standard",
@@ -83,18 +118,18 @@ def _make_no_pattern_message() -> Message:
     )
 
 
-def _make_customer_employee_message() -> Message:
-    """Build a message with items containing customer and employee indicators."""
+def _make_employee_customer_message() -> Message:
+    """Build a message with items containing employee and customer indicators."""
     data = StandardInputDataModel(
         schemaVersion="1.0.0",
         name="test_data",
         data=[
             StandardInputDataItemModel(
-                content="customer_id field in database table",
+                content="test_customer_kw field in database table",
                 metadata=BaseMetadata(source="customer_source", connector_type="test"),
             ),
             StandardInputDataItemModel(
-                content="employee records with employee_id",
+                content="test_employee_kw records with identifiers",
                 metadata=BaseMetadata(source="employee_source", connector_type="test"),
             ),
         ],
@@ -147,6 +182,11 @@ def _build_llm_dispatch_result(
 class TestPrepare:
     """Tests for prepare() — pattern matching and request building."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
+
     def test_no_findings_returns_empty_requests(self) -> None:
         """No pattern matches → empty requests and orchestrator_state=None."""
         analyser = _make_analyser()
@@ -162,14 +202,14 @@ class TestPrepare:
     def test_findings_with_llm_enabled_builds_llm_request(self) -> None:
         """Findings + LLM enabled → LLMRequest with expected shape."""
         analyser = _make_analyser()
-        message = _make_customer_employee_message()
+        message = _make_employee_customer_message()
 
         result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
 
         assert len(result.requests) == 1
         assert result.state.llm_enabled is True
         assert result.state.orchestrator_state is not None
-        assert len(result.state.all_findings) >= 2  # at least customer + employee
+        assert len(result.state.all_findings) >= 2
 
         assert isinstance(result.requests[0], LLMRequest)
         llm_request = cast(LLMRequest[DataSubjectIndicatorModel], result.requests[0])
@@ -181,7 +221,7 @@ class TestPrepare:
     def test_findings_with_llm_disabled_returns_empty_requests(self) -> None:
         """Findings with ``enable_llm_validation=False`` yield no dispatch requests."""
         analyser = _make_analyser(enable_llm=False)
-        message = _make_customer_employee_message()
+        message = _make_employee_customer_message()
 
         result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
 
@@ -199,17 +239,21 @@ class TestPrepare:
 class TestFinalise:
     """Tests for finalise() — result interpretation and output building."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
+
     def test_llm_disabled_produces_output_without_validation_summary(self) -> None:
         """llm_enabled=False state → output message with no validation_summary."""
         analyser = _make_analyser(enable_llm=False)
-        message = _make_customer_employee_message()
+        message = _make_employee_customer_message()
 
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
         result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
 
         assert isinstance(result, Message)
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
-        # Findings preserved without filtering
         assert len(result.content["findings"]) == len(prepare_result.state.all_findings)
 
     def test_no_findings_produces_empty_output(self) -> None:
@@ -227,17 +271,13 @@ class TestFinalise:
     def test_llm_result_filters_false_positives_and_marks_kept(self) -> None:
         """LLM TRUE_POSITIVE/FALSE_POSITIVE verdicts → filtering + marking."""
         analyser = _make_analyser()
-        message = _make_customer_employee_message()
+        message = _make_employee_customer_message()
 
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
         assert prepare_result.state.orchestrator_state is not None
         sampled = prepare_result.state.orchestrator_state.strategy_findings
         assert len(sampled) >= 2
 
-        # Verdicts: mark ALL sampled findings so every group has a decision.
-        # To exercise keep_partial (some kept, some removed) we need at least
-        # one group with a mix — DataSubjectAnalyser groups by subject_category,
-        # so we mark the first sampled finding per category as TRUE_POSITIVE.
         assert isinstance(prepare_result.requests[0], LLMRequest)
         llm_request = cast(
             LLMRequest[DataSubjectIndicatorModel], prepare_result.requests[0]
@@ -255,7 +295,6 @@ class TestFinalise:
         assert metadata["validation_summary"]["all_succeeded"] is True
 
         findings = result.content["findings"]
-        # All TRUE_POSITIVE → findings survive; sampled ones carry the marker
         sampled_ids = {f.id for f in sampled}
         for finding in findings:
             if finding["id"] in sampled_ids:
@@ -272,21 +311,17 @@ class TestFinalise:
         in validation_summary rather than being silently hidden.
         """
         analyser = _make_analyser()
-        message = _make_customer_employee_message()
+        message = _make_employee_customer_message()
 
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
         original_count = len(prepare_result.state.all_findings)
 
-        # Empty results list: the orchestrator treats this as a failed dispatch
-        # and all strategy findings are categorised as skipped (BATCH_ERROR).
         result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
 
         assert isinstance(result, Message)
         metadata = result.content["analysis_metadata"]
         assert metadata["validation_summary"]["all_succeeded"] is False
         assert metadata["validation_summary"]["skipped_count"] > 0
-        # Conservative keep: every original finding preserved via "keep_all"
-        # group decision (no validated samples -> keep entire group).
         assert len(result.content["findings"]) == original_count
 
 
@@ -298,6 +333,11 @@ class TestFinalise:
 class TestDeserialise:
     """Tests for deserialise_prepare_result() round-trip fidelity."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
+
     def test_round_trip_with_llm_request(self) -> None:
         """prepare() → model_dump → deserialise → equivalent state and request.
 
@@ -307,13 +347,12 @@ class TestDeserialise:
         must survive the round-trip.
         """
         analyser = _make_analyser()
-        message = _make_customer_employee_message()
+        message = _make_employee_customer_message()
 
         original = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
         raw: dict[str, Any] = original.model_dump(mode="json")
         restored = analyser.deserialise_prepare_result(raw)
 
-        # State fields
         assert isinstance(restored.state, DataSubjectPrepareState)
         assert restored.state.run_id == original.state.run_id
         assert restored.state.llm_enabled == original.state.llm_enabled
@@ -321,7 +360,6 @@ class TestDeserialise:
         assert isinstance(restored.state.orchestrator_state, OrchestratorPrepareState)
         assert restored.state.orchestrator_state.run_id == RUN_ID
 
-        # Request metadata (prompt_builder/response_model are excluded)
         assert len(restored.requests) == len(original.requests)
         assert restored.requests[0].request_id == original.requests[0].request_id
         original_llm_request = original.requests[0]
@@ -334,7 +372,7 @@ class TestDeserialise:
     def test_round_trip_without_llm_request(self) -> None:
         """Round-trip when LLM disabled: orchestrator_state=None, no requests."""
         analyser = _make_analyser(enable_llm=False)
-        message = _make_customer_employee_message()
+        message = _make_employee_customer_message()
 
         original = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
         raw: dict[str, Any] = original.model_dump(mode="json")

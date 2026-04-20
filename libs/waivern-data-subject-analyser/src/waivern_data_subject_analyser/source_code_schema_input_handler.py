@@ -7,7 +7,6 @@ from collections.abc import Generator, Sequence
 
 from waivern_analysers_shared.matching import WordBoundaryMatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
-from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core.schemas import BaseFindingEvidence, PatternMatchDetail
 from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_schemas.data_subject_indicator import (
@@ -37,21 +36,23 @@ class SourceCodeSchemaInputHandler:
 
     def __init__(
         self,
+        rules: tuple[DataSubjectIndicatorRule, ...],
         config: PatternMatchingConfig,
         context_window: SourceCodeContextWindow = "small",
     ) -> None:
-        """Initialise the handler with configuration.
+        """Initialise the handler with rules and configuration.
 
         Args:
-            config: Pattern matching configuration (contains ruleset path).
+            rules: Pre-loaded data subject indicator rules.
+            config: Pattern matching configuration.
             context_window: Size of context to include around matches.
                 'small' = ±3 lines, 'medium' = ±15 lines,
                 'large' = ±50 lines, 'full' = entire file.
 
         """
+        self._rules = rules
         self._config = config
         self._context_window: SourceCodeContextWindow = context_window
-        self._ruleset_manager = RulesetManager()
         self._confidence_scorer = DataSubjectConfidenceScorer()
         self._word_boundary_matcher = WordBoundaryMatcher()
 
@@ -98,11 +99,9 @@ class SourceCodeSchemaInputHandler:
         """Analyse a single source code file for data subject patterns.
 
         Orchestrates the analysis flow:
-        1. Load rules from ruleset
-        2. Filter rules to source_code context
-        3. Find pattern matches line-by-line
-        4. Group matches by category
-        5. Calculate confidence and create indicators
+        1. Find pattern matches line-by-line
+        2. Group matches by category
+        3. Calculate confidence and create indicators
 
         Args:
             file_data: Source code file data to analyse.
@@ -111,11 +110,6 @@ class SourceCodeSchemaInputHandler:
             List of data subject indicators for this file.
 
         """
-        # Load rules using config-driven ruleset
-        rules = self._ruleset_manager.get_rules(
-            self._config.ruleset, DataSubjectIndicatorRule
-        )
-
         lines = file_data.raw_content.splitlines()
         file_path = file_data.file_path
 
@@ -126,7 +120,7 @@ class SourceCodeSchemaInputHandler:
         ] = {}
 
         # Find pattern matches line-by-line
-        for rule in rules:
+        for rule in self._rules:
             for line_idx, pattern in self._find_pattern_matches(lines, rule.patterns):
                 category = rule.subject_category
                 line_number = line_idx + 1  # Convert to 1-based

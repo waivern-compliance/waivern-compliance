@@ -10,11 +10,13 @@ from waivern_analysers_shared.llm_validation import ValidationOrchestrator
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
     FallbackNeeded,
 )
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import Analyser, InputRequirement
 from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm.types import LLMDispatchResult, LLMRequest
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 
 from .result_builder import DataSubjectResultBuilder
@@ -43,6 +45,9 @@ class DataSubjectAnalyser(Analyser):
 
         """
         self._config = config
+        self._rules = RulesetManager.get_rules(
+            config.pattern_matching.ruleset, DataSubjectIndicatorRule
+        )
         self._result_builder = DataSubjectResultBuilder(config)
         self._orchestrator: ValidationOrchestrator[DataSubjectIndicatorModel] = (
             create_validation_orchestrator(config.llm_validation)
@@ -258,7 +263,7 @@ class DataSubjectAnalyser(Analyser):
             if reader is None:
                 reader = self._load_reader(message.schema)
                 readers_by_schema[schema_key] = reader
-            handler = reader.create_handler(self._config)
+            handler = reader.create_handler(self._config, self._rules)
             input_data = reader.read(message.content)
             findings.extend(handler.analyse(input_data))
         return findings
