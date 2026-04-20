@@ -5,9 +5,11 @@ import logging
 from typing import override
 
 from waivern_analysers_shared import SchemaReader
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
+from waivern_rulesets.crypto_quality_indicator import CryptoQualityIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.crypto_quality_indicator import CryptoQualityIndicatorModel
 from waivern_schemas.standard_input import (
@@ -38,7 +40,12 @@ class CryptoQualityAnalyser(Analyser):
 
         """
         self._config = config
-        self._pattern_matcher = CryptoQualityPatternMatcher(config.pattern_matching)
+        rules = RulesetManager.get_rules(
+            config.pattern_matching.ruleset, CryptoQualityIndicatorRule
+        )
+        self._pattern_matcher = CryptoQualityPatternMatcher(
+            rules, config.pattern_matching
+        )
         self._result_builder = CryptoQualityResultBuilder(config)
 
     @classmethod
